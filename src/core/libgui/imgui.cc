@@ -175,23 +175,23 @@ void gui_Window::StartImGuiFrame()
 {
     ImGuiIO *io = &ImGui::GetIO();
 
-    io->DisplaySize = ImVec2((float)info.display.width, (float)info.display.height);
-    io->DeltaTime = (float)info.time.monotonic_delta;
+    io->DisplaySize = ImVec2((float)state.display.width, (float)state.display.height);
+    io->DeltaTime = (float)state.time.monotonic_delta;
 
     memset_safe(io->KeysDown, 0, RG_SIZE(io->KeysDown));
-    for (Size idx: info.input.keys) {
+    for (Size idx: state.input.keys) {
         io->KeysDown[idx] = true;
     }
-    io->KeyCtrl = info.input.keys.Test((Size)gui_InputKey::Control);
-    io->KeyAlt = info.input.keys.Test((Size)gui_InputKey::Alt);
-    io->KeyShift = info.input.keys.Test((Size)gui_InputKey::Shift);
-    io->AddInputCharactersUTF8(info.input.text.data);
+    io->KeyCtrl = state.input.keys.Test((Size)gui_InputKey::Control);
+    io->KeyAlt = state.input.keys.Test((Size)gui_InputKey::Alt);
+    io->KeyShift = state.input.keys.Test((Size)gui_InputKey::Shift);
+    io->AddInputCharactersUTF8(state.input.text.data);
 
-    io->MousePos = ImVec2((float)info.input.x, (float)info.input.y);
+    io->MousePos = ImVec2((float)state.input.x, (float)state.input.y);
     for (Size i = 0; i < RG_LEN(io->MouseDown); i++) {
-        io->MouseDown[i] = info.input.buttons & (unsigned int)(1 << i);
+        io->MouseDown[i] = state.input.buttons & (unsigned int)(1 << i);
     }
-    io->MouseWheel = (float)info.input.wheel_y;
+    io->MouseWheel = (float)state.input.wheel_y;
 
     ImGui::NewFrame();
 }
@@ -232,7 +232,7 @@ void gui_Window::RenderImGui()
     RG_ASSERT(imgui_local);
 
     // Clear screen
-    glViewport(0, 0, info.display.width, info.display.height);
+    glViewport(0, 0, state.display.width, state.display.height);
     glDisable(GL_SCISSOR_TEST);
     glClearColor(0.14f, 0.14f, 0.14f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -286,7 +286,7 @@ void gui_Window::RenderImGui()
                     cmd.UserCallback(cmds, &cmd);
                 } else {
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)cmd.GetTexID());
-                    glScissor((int)cmd.ClipRect.x, info.display.height - (int)cmd.ClipRect.w,
+                    glScissor((int)cmd.ClipRect.x, state.display.height - (int)cmd.ClipRect.w,
                               (int)(cmd.ClipRect.z - cmd.ClipRect.x),
                               (int)(cmd.ClipRect.w - cmd.ClipRect.y));
 

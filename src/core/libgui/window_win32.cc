@@ -57,7 +57,7 @@ struct gui_Win32Window {
     uint32_t surrogate_buf;
 };
 
-static RG_THREAD_LOCAL gui_Info *thread_info;
+static RG_THREAD_LOCAL gui_State *thread_info;
 static RG_THREAD_LOCAL gui_Win32Window *thread_window;
 
 static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)

@@ -71,7 +71,7 @@ enum class gui_InputButton {
     Middle
 };
 
-struct gui_Info {
+struct gui_State {
     struct {
         double monotonic;
         double monotonic_delta;
@@ -97,7 +97,7 @@ struct gui_Info {
 class gui_Window {
     RG_DELETE_COPY(gui_Window)
 
-    gui_Info priv = {};
+    gui_State priv = {};
 
 #ifdef _WIN32
     struct gui_Win32Window *window = nullptr;
@@ -110,7 +110,7 @@ class gui_Window {
     static bool imgui_ready; // = false
 
 public:
-    const gui_Info &info = priv;
+    const gui_State &state = priv;
 
     gui_Window() = default;
     ~gui_Window() { Release(); }

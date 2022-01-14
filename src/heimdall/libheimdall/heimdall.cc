@@ -42,7 +42,7 @@ enum class VisColor {
 
 // At this time, libheimdall only supports one window at a time, and so does
 // libgui so there is no problem here.
-static const gui_Info *gui_info;
+static const gui_State *gui_state;
 
 static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
 {
@@ -967,8 +967,8 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
             }
 
             // Try to stabilize highlighted entity if any
-            if (gui_info->input.mouseover && !state.grab_canvas && !cache_refreshed &&
-                    gui_info->input.y >= bb.Min.y + base_y && gui_info->input.y < bb.Min.y + y &&
+            if (gui_state->input.mouseover && !state.grab_canvas && !cache_refreshed &&
+                    gui_state->input.y >= bb.Min.y + base_y && gui_state->input.y < bb.Min.y + y &&
                     !ImGui::IsPopupOpen("tree_menu")) {
                 state.highlight_idx = i;
                 state.scroll_to_idx = i;
@@ -1251,26 +1251,26 @@ static void DrawView(InterfaceState &state,
     }
 
     // Handle controls
-    double entities_mouse_x = (state.scroll_x + (double)gui_info->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
+    double entities_mouse_x = (state.scroll_x + (double)gui_state->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
     if (ImGui::IsWindowHovered()) {
-        if ((gui_info->input.buttons & MaskEnum(gui_InputButton::Left)) &&
-                (double)gui_info->input.x > state.settings.tree_width) {
+        if ((gui_state->input.buttons & MaskEnum(gui_InputButton::Left)) &&
+                (double)gui_state->input.x > state.settings.tree_width) {
             if (state.grab_canvas) {
-                state.scroll_x += state.grab_canvas_x - (double)gui_info->input.x;
-                state.scroll_y += state.grab_canvas_y - (double)gui_info->input.y;
-            } else if (entity_rect.Contains(ImVec2((float)gui_info->input.x, (float)gui_info->input.y))) {
+                state.scroll_x += state.grab_canvas_x - (double)gui_state->input.x;
+                state.scroll_y += state.grab_canvas_y - (double)gui_state->input.y;
+            } else if (entity_rect.Contains(ImVec2((float)gui_state->input.x, (float)gui_state->input.y))) {
                 state.grab_canvas = true;
             }
 
-            state.grab_canvas_x = (double)gui_info->input.x;
-            state.grab_canvas_y = (double)gui_info->input.y;
+            state.grab_canvas_x = (double)gui_state->input.x;
+            state.grab_canvas_y = (double)gui_state->input.y;
         } else {
             state.grab_canvas = false;
         }
 
-        if (gui_info->input.keys.Test((int)gui_InputKey::Control) && gui_info->input.wheel_y) {
+        if (gui_state->input.keys.Test((int)gui_InputKey::Control) && gui_state->input.wheel_y) {
             double (*animator)(double relative_time) = nullptr;
-            if (state.time_zoom.animation.Running(gui_info->time.monotonic)) {
+            if (state.time_zoom.animation.Running(gui_state->time.monotonic)) {
                 state.scroll_x += AdjustScrollAfterZoom(entities_mouse_x, state.time_zoom, state.time_zoom.end_value);
                 state.time_zoom = state.time_zoom.end_value;
                 animator = TweenOutQuad;
@@ -1280,24 +1280,24 @@ static void DrawView(InterfaceState &state,
 
             double new_zoom;
             {
-                double multiplier = ((gui_info->input.keys.Test((int)gui_InputKey::Shift)) ? 2.0736 : 1.2);
-                if (gui_info->input.wheel_y > 0) {
-                    new_zoom = state.time_zoom * (double)gui_info->input.wheel_y * multiplier;
+                double multiplier = ((gui_state->input.keys.Test((int)gui_InputKey::Shift)) ? 2.0736 : 1.2);
+                if (gui_state->input.wheel_y > 0) {
+                    new_zoom = state.time_zoom * (double)gui_state->input.wheel_y * multiplier;
                 } else {
-                    new_zoom = state.time_zoom / -(double)gui_info->input.wheel_y / multiplier;
+                    new_zoom = state.time_zoom / -(double)gui_state->input.wheel_y / multiplier;
                 }
                 new_zoom = ImClamp(new_zoom, 0.00001, 100000.0);
             }
 
-            state.time_zoom = MakeAnimatedValue(state.time_zoom, new_zoom, gui_info->time.monotonic,
-                                                gui_info->time.monotonic + 0.05, animator);
+            state.time_zoom = MakeAnimatedValue(state.time_zoom, new_zoom, gui_state->time.monotonic,
+                                                gui_state->time.monotonic + 0.05, animator);
         }
     }
 
     // Update and animate time scroll and zoom
     {
         double prev_zoom = state.time_zoom;
-        state.time_zoom.Update(gui_info->time.monotonic);
+        state.time_zoom.Update(gui_state->time.monotonic);
         state.scroll_x += AdjustScrollAfterZoom(entities_mouse_x, prev_zoom, state.time_zoom);
     }
 
@@ -1515,7 +1515,7 @@ static void ChangeConceptsPath(ConceptSet *concept_set,
 bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSet> &concept_sets,
                   const EntitySet &entity_set)
 {
-    gui_info = &window.info;
+    gui_state = &window.state;
 
     // Theme
     if (state.settings.dark_theme) {
@@ -1742,7 +1742,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
     window.SwapBuffers();
 
     // Stop running loop enough time has passed since last user interaction
-    state.idle = (gui_info->time.monotonic - gui_info->input.interaction_time) > 0.1;
+    state.idle = (gui_state->time.monotonic - gui_state->input.interaction_time) > 0.1;
 
     return true;
 }
