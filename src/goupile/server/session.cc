@@ -299,11 +299,7 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
 
     session->type = type;
     session->userid = userid;
-    if (!CopyString(local_key, session->local_key)) {
-        // Should never happen, but let's be careful
-        LogError("User local key is too big");
-        return {};
-    }
+    CopyString(local_key, session->local_key);
     CopyString(username, MakeSpan((char *)session->username, username_bytes));
 
     return ptr;
@@ -323,11 +319,9 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
         }
 
         session = CreateUserSession(SessionType::Auto, 0, "Guest", local_key);
+        session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
 
-        if (RG_LIKELY(session)) {
-            session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
-            // sessions.Open(request, io, session);
-        }
+        // sessions.Open(request, io, session);
     }
 
     return session;
@@ -619,8 +613,6 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         }
 
         session = CreateUserSession(type, userid, username, local_key);
-        if (RG_UNLIKELY(!session))
-            return nullptr;
         session->confirm = SessionConfirm::Mail;
         CopyString(code, session->secret);
 
@@ -651,8 +643,6 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         }
 
         session = CreateUserSession(type, userid, username, local_key);
-        if (RG_UNLIKELY(!session))
-            return nullptr;
         session->confirm = SessionConfirm::SMS;
         CopyString(code, session->secret);
 
@@ -662,8 +652,6 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             return nullptr;
     } else {
         session = CreateUserSession(type, userid, username, local_key);
-        if (RG_UNLIKELY(!session))
-            return nullptr;
     }
 
     session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
@@ -1321,8 +1309,6 @@ RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, Insta
     userid = -userid;
 
     RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, key, local_key);
-    if (!session)
-        return nullptr;
     session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
 
     sessions.Open(request, io, session);
