@@ -21,7 +21,7 @@ all:
 
 override OBJECTS := $(addprefix ./${R_ARCH}_, heimdallR.cc.o Rcc.cc.o libcc.cc.o libgui.cc.o opengl.cc.o libheimdall.cc.o\
                                               imgui.cpp.o imgui_demo.cpp.o imgui_draw.cpp.o imgui_tables.cpp.o imgui_widgets.cpp.o\
-                                              miniz.c.o roboto_medium_ttf.c.o)
+                                              miniz.c.o)
 
 ./${R_ARCH}_heimdallR.cc.o: ../heimdallR.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
@@ -35,8 +35,6 @@ override OBJECTS := $(addprefix ./${R_ARCH}_, heimdallR.cc.o Rcc.cc.o libcc.cc.o
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_libheimdall.cc.o: ../../libheimdall/libheimdall.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
-./${R_ARCH}_roboto_medium_ttf.c.o: ../../libheimdall/roboto_medium_ttf.c
-	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) -Wno-pedantic -c -o $@ $<
 
 ./${R_ARCH}_imgui.cpp.o: ../../../../vendor/imgui/imgui.cpp
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<

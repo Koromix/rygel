@@ -13,6 +13,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
 typedef int64_t Size;
 #elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
@@ -49,3 +53,7 @@ static const uint8_t raw_data[] = {
 
 EXPORT_SYMBOL extern const AssetInfo RobotoMediumTtf;
 const AssetInfo RobotoMediumTtf = {"Roboto-Medium.ttf", 0, {raw_data + 0, 162588}, 0};
+
+#ifdef __cplusplus
+}
+#endif

@@ -22,6 +22,8 @@ RG_POP_NO_WARNINGS()
 
 namespace RG {
 
+extern "C" const AssetInfo RobotoMediumTtf;
+
 static const char *const ImGuiVertexCode =
 #ifdef __EMSCRIPTEN__
 R"!(#version 300 es
@@ -79,11 +81,29 @@ static GLuint elements_buffer = 0;
 static GLuint vao = 0;
 static GLuint font_texture = 0;
 
+static ImFontAtlas default_atlas;
+
 bool gui_Window::imgui_ready = false;
 
 bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
 {
     RG_ASSERT(!imgui_ready);
+
+    if (!font_atlas) {
+        static std::once_flag flag;
+
+        std::call_once(flag, []() {
+            const AssetInfo &font = RobotoMediumTtf;
+            RG_ASSERT(font.data.len <= INT_MAX);
+
+            ImFontConfig font_config;
+            font_config.FontDataOwnedByAtlas = false;
+
+            default_atlas.AddFontFromMemoryTTF((void *)font.data.ptr, (int)font.data.len, 16, &font_config);
+        });
+
+        font_atlas = &default_atlas;
+    }
 
     ImGui::CreateContext(font_atlas);
     RG_DEFER_N(imgui_guard) { ReleaseImGui(); };

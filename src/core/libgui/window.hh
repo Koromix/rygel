@@ -115,7 +115,7 @@ public:
     gui_Window() = default;
     ~gui_Window() { Release(); }
 
-    bool Init(const char *application_name);
+    bool Create(const char *application_name);
     bool InitImGui(ImFontAtlas *font_atlas = nullptr);
     void Release();
 

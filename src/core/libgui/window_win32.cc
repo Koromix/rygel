@@ -443,7 +443,7 @@ static bool SetGLContext(HDC dc, HGLRC gl)
     return true;
 }
 
-bool gui_Window::Init(const char *application_name)
+bool gui_Window::Create(const char *application_name)
 {
     RG_ASSERT(!window);
 

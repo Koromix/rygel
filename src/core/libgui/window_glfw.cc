@@ -53,7 +53,7 @@ static void TerminateGLFW()
     }
 }
 
-bool gui_Window::Init(const char *application_name)
+bool gui_Window::Create(const char *application_name)
 {
     if (!InitGLFW())
         return false;

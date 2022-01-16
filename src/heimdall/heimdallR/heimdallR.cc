@@ -21,8 +21,6 @@
 
 namespace RG {
 
-extern "C" const AssetInfo RobotoMediumTtf;
-
 struct Instance {
     ~Instance();
 
@@ -35,8 +33,6 @@ struct Instance {
     std::thread run_thread;
     std::mutex lock;
 };
-
-static ImFontAtlas font_atlas;
 
 RcppExport SEXP heimdallR_Init()
 {
@@ -269,19 +265,6 @@ RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_
     END_RCPP
 }
 
-static void InitFontAtlas()
-{
-    if (font_atlas.Fonts.empty()) {
-        const AssetInfo &font = RobotoMediumTtf;
-        RG_ASSERT(font.data.len <= INT_MAX);
-
-        ImFontConfig font_config;
-        font_config.FontDataOwnedByAtlas = false;
-
-        font_atlas.AddFontFromMemoryTTF((void *)font.data.ptr, (int)font.data.len, 16, &font_config);
-    }
-}
-
 RcppExport SEXP heimdallR_Run(SEXP inst_xp)
 {
     BEGIN_RCPP
@@ -299,12 +282,10 @@ RcppExport SEXP heimdallR_Run(SEXP inst_xp)
         inst->run_thread = std::thread([=]() {
             RG_DEFER { inst->run = false; };
 
-            InitFontAtlas();
-
             gui_Window window;
-            if (!window.Init(RG_HEIMDALL_NAME))
+            if (!window.Create(RG_HEIMDALL_NAME))
                 rcc_StopWithLastError();
-            if (!window.InitImGui(&font_atlas))
+            if (!window.InitImGui())
                 rcc_StopWithLastError();
 
             InterfaceState render_state = {};
@@ -337,12 +318,10 @@ RcppExport SEXP heimdallR_RunSync(SEXP inst_xp)
         rcc_StopWithLastError();
     }
 
-    InitFontAtlas();
-
     gui_Window window;
-    if (!window.Init(RG_HEIMDALL_NAME))
+    if (!window.Create(RG_HEIMDALL_NAME))
         rcc_StopWithLastError();
-    if (!window.InitImGui(&font_atlas))
+    if (!window.InitImGui())
         rcc_StopWithLastError();
 
     InterfaceState render_state = {};

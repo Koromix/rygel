@@ -18,29 +18,16 @@
 
 namespace RG {
 
-extern "C" const AssetInfo RobotoMediumTtf;
-
 int Main(int, char **)
 {
     InterfaceState render_state = {};
     HeapArray<ConceptSet> concept_sets;
     EntitySet entity_set = {};
 
-    ImFontAtlas font_atlas;
-    {
-        const AssetInfo &font = RobotoMediumTtf;
-        RG_ASSERT(font.data.len <= INT_MAX);
-
-        ImFontConfig font_config;
-        font_config.FontDataOwnedByAtlas = false;
-
-        font_atlas.AddFontFromMemoryTTF((void *)font.data.ptr, (int)font.data.len, 16, &font_config);
-    }
-
     gui_Window window;
-    if (!window.Init(RG_HEIMDALL_NAME))
+    if (!window.Create(RG_HEIMDALL_NAME))
         return 1;
-    if (!window.InitImGui(&font_atlas))
+    if (!window.InitImGui())
         return 1;
 
     for (;;) {
