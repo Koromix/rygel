@@ -747,7 +747,7 @@ function InstanceController() {
                                                    'Effacer', () => {});
 
                             if (form_record.saved) {
-                                let record = await loadRecord(form_record.ulid, form_record.version);
+                                let record = await loadRecord(form_record.ulid, null);
 
                                 let load = route.page.getOption('load', record, []);
                                 await expandRecord(record, load);
