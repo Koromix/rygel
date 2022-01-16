@@ -334,9 +334,13 @@ function InstanceController() {
         `;
     }
 
-    async function togglePanel(e, key) {
-        let enable = !ui.isPanelActive(key);
-        ui.setPanelState(key, enable, key === 'view');
+    async function togglePanel(e, key, enable = null) {
+        if (enable == null) {
+            enable = !ui.isPanelActive(key);
+            ui.setPanelState(key, enable, key === 'view');
+        } else {
+            ui.setPanelState(key, enable);
+        }
 
         await self.run();
 
@@ -437,9 +441,12 @@ function InstanceController() {
             hid_width = Math.max(hid_width, computeHidWidth(row.hid));
         }
 
+        let recording = (form_record.chain[0].saved || form_state.hasChanged());
+        let recording_new = !form_record.chain[0].saved && form_state.hasChanged();
+
         return html`
             <div class="padded">
-                ${app.panels.view ? html`
+                ${app.panels.view && (recording || ui.isPanelActive('view')) ? html`
                     <button class=${ui.isPanelActive('view') ? 'ui_pin active' : 'ui_pin'}
                             @click=${ui.wrapAction(e => togglePanel(e, 'view'))}></button>
                 ` : ''}
@@ -527,7 +534,13 @@ function InstanceController() {
                                 </tr>
                             `;
                         })}
-                        ${!visible_rows.length ? html`<tr><td colspan=${1 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
+                        ${!visible_rows.length && !recording ? html`<tr><td colspan=${1 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
+                        ${recording_new ? html`
+                            <tr>
+                                <td class="missing">NA</td>
+                                <td class="missing" colspan=${data_form.menu.length}><a @click=${e => togglePanel(e, 'view', true)}>Nouvel enregistrement</a></td>
+                            </tr>
+                        ` : ''}
                     </tbody>
                 </table>
 
