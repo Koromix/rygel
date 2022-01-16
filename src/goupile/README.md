@@ -24,5 +24,4 @@ Use `./felix --help` for more information.
 
 # Documentation
 
-You can find more information on [the official website](https://goupile.fr/), only in French
-for the time being.
+You can find more information on [the official website](https://goupile.fr/), in french and english.
