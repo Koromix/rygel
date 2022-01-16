@@ -651,9 +651,6 @@ function InstanceController() {
         form_builder = new FormBuilder(form_state, model, readonly);
 
         try {
-            // Don't mess with the editor when render accidently triggers a scroll event!
-            ignore_page_scroll = true;
-
             form_builder.pushOptions({});
 
             let meta = Object.assign({}, form_record);
@@ -772,8 +769,6 @@ function InstanceController() {
             if (!page_div.children.length)
                 render('Impossible de générer la page à cause d\'une erreur', page_div);
             page_div.classList.add('disabled');
-
-            ignore_page_scroll = false;
         }
 
         let menu = (route.form.menu.length > 1 || route.form.chain.length > 1);
@@ -1784,7 +1779,14 @@ function InstanceController() {
             document.title = `${route.page.title} — ${ENV.title}`;
         }
 
-        ui.render();
+        try {
+            // Don't mess with the editor when render accidently triggers a scroll event!
+            ignore_page_scroll = true;
+
+            ui.render();
+        } finally {
+            ignore_page_scroll = false;
+        }
     };
     this.run = util.serialize(this.run, mutex);
 
