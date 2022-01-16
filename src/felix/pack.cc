@@ -35,10 +35,6 @@ R"(// This program is free software: you can redistribute it and/or modify
 
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
 typedef int64_t Size;
 #elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
@@ -53,6 +49,11 @@ typedef int32_t Size;
     #endif
 #else
     #define EXPORT_SYMBOL
+#endif
+#ifdef __cplusplus
+    #define EXTERN_SYMBOL extern "C"
+#else
+    #define EXTERN_SYMBOL extern
 #endif
 
 typedef struct Span {
@@ -398,7 +399,7 @@ static const uint8_t raw_data[] = {)");
     if (!(flags & (int)PackFlag::NoArray)) {
         PrintLn(&st);
 
-        PrintLn(&st, "EXPORT_SYMBOL extern const Span PackedAssets;");
+        PrintLn(&st, "EXPORT_SYMBOL EXTERN_SYMBOL const Span PackedAssets;");
         if (assets.len) {
             PrintLn(&st, "static AssetInfo assets[%1] = {", blobs.len);
 
@@ -430,23 +431,18 @@ static const uint8_t raw_data[] = {)");
             const char *var = MakeVariableName(blob.name, &temp_alloc);
 
             if (blob.source_map) {
-                PrintLn(&st, "EXPORT_SYMBOL extern const AssetInfo %1;", var);
+                PrintLn(&st, "EXPORT_SYMBOL EXTERN_SYMBOL const AssetInfo %1;", var);
                 PrintLn(&st, "const AssetInfo %1 = {\"%2\", %3, {raw_data + %4, %5}, \"%6\"};",
                              var, blob.name, (int)blob.compression_type, raw_offset,
                              blob.len, blob.source_map);
             } else {
-                PrintLn(&st, "EXPORT_SYMBOL extern const AssetInfo %1;", var);
+                PrintLn(&st, "EXPORT_SYMBOL EXTERN_SYMBOL const AssetInfo %1;", var);
                 PrintLn(&st, "const AssetInfo %1 = {\"%2\", %3, {raw_data + %4, %5}, 0};",
                              var, blob.name, (int)blob.compression_type, raw_offset, blob.len);
             }
             raw_offset += blob.len + 1;
         }
     }
-
-    PrintLn(&st, R"(
-#ifdef __cplusplus
-}
-#endif)");
 
     return st.Close();
 }
