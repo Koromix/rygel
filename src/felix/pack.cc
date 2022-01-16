@@ -35,6 +35,10 @@ R"(// This program is free software: you can redistribute it and/or modify
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
 typedef int64_t Size;
 #elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
@@ -438,6 +442,11 @@ static const uint8_t raw_data[] = {)");
             raw_offset += blob.len + 1;
         }
     }
+
+    PrintLn(&st, R"(
+#ifdef __cplusplus
+}
+#endif)");
 
     return st.Close();
 }
