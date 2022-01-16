@@ -731,9 +731,10 @@ function InstanceController() {
                 });
 
                 if (!goupile.isLocked()) {
-                    if (form_state.just_triggered) {
+                    if (form_state.just_triggered || form_state.hasChanged())
                         form_builder.action('-');
 
+                    if (form_state.just_triggered) {
                         form_builder.action('Forcer l\'enregistrement', {}, async e => {
                             await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
                                                    'Enregistrer', () => {});
@@ -742,6 +743,9 @@ function InstanceController() {
 
                             self.run();
                         });
+                    }
+
+                    if (form_state.hasChanged()) {
                         form_builder.action('Effacer les modifications', {}, async e => {
                             await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                                    'Effacer', () => {});
