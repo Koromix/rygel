@@ -4161,7 +4161,7 @@ bool OptionToFlag(Span<const OptionDesc> options, Span<const char> str, T *out_f
 // ------------------------------------------------------------------------
 
 class ConsolePrompter {
-    int prompt_columns;
+    int prompt_columns = 0;
 
     HeapArray<HeapArray<char>> entries;
     Size entry_idx = 0;
@@ -4186,12 +4186,16 @@ public:
 
     ConsolePrompter();
 
-    bool Read();
+    bool Read(Span<const char> *out_str = nullptr);
+    bool ReadYN(bool *out_value);
+
     void Commit();
 
 private:
-    bool ReadRaw();
-    bool ReadBuffered();
+    bool ReadRaw(Span<const char> *out_str);
+    bool ReadRawYN(bool *out_value);
+    bool ReadBuffered(Span<const char> *out_str);
+    bool ReadBufferedYN(bool *out_value);
 
     void ChangeEntry(Size new_idx);
 
@@ -4202,7 +4206,8 @@ private:
 
     void Delete(Size start, Size end);
 
-    void Prompt();
+    void RenderRaw();
+    void RenderBuffered();
 
     Vec2<int> GetConsoleSize();
     int32_t ReadChar();
@@ -4215,5 +4220,6 @@ private:
 const char *Prompt(const char *prompt, const char *default_value, const char *mask, Allocator *alloc);
 static inline const char *Prompt(const char *prompt, Allocator *alloc)
     { return Prompt(prompt, nullptr, nullptr, alloc); }
+bool PromptYN(const char *prompt, bool *out_value);
 
 }

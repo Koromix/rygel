@@ -6274,19 +6274,24 @@ static void DisableRawMode()
     }
 }
 
-bool ConsolePrompter::Read()
+#ifndef _WIN32
+static void IgnoreSigWinch(struct sigaction *old_sa)
+{
+    struct sigaction sa;
+
+    sa.sa_handler = [](int) {};
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    sigaction(SIGWINCH, &sa, old_sa);
+}
+#endif
+
+bool ConsolePrompter::Read(Span<const char> *out_str)
 {
 #ifndef _WIN32
     struct sigaction old_sa;
-    {
-        struct sigaction sa;
-
-        sa.sa_handler = [](int) {};
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = 0;
-
-        sigaction(SIGWINCH, &sa, &old_sa);
-    }
+    IgnoreSigWinch(&old_sa);
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
 #endif
 
@@ -6296,9 +6301,29 @@ bool ConsolePrompter::Read()
             DisableRawMode();
         };
 
-        return ReadRaw();
+        return ReadRaw(out_str);
     } else {
-        return ReadBuffered();
+        return ReadBuffered(out_str);
+    }
+}
+
+bool ConsolePrompter::ReadYN(bool *out_value)
+{
+#ifndef _WIN32
+    struct sigaction old_sa;
+    IgnoreSigWinch(&old_sa);
+    RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
+#endif
+
+    if (FileIsVt100(stderr) && EnableRawMode()) {
+        RG_DEFER {
+            Print(stderr, "%!0");
+            DisableRawMode();
+        };
+
+        return ReadRawYN(out_value);
+    } else {
+        return ReadBufferedYN(out_value);
     }
 }
 
@@ -6320,18 +6345,20 @@ void ConsolePrompter::Commit()
     y = 0;
 }
 
-bool ConsolePrompter::ReadRaw()
+bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
 {
     fflush(stderr);
 
+    prompt_columns = ComputeWidth(prompt);
+
     str_offset = str.len;
-    Prompt();
+    RenderRaw();
 
     int32_t uc;
     while ((uc = ReadChar()) >= 0) {
         // Fix display if terminal is resized
         if (GetConsoleSize().x != columns) {
-            Prompt();
+            RenderRaw();
         }
 
         switch (uc) {
@@ -6362,21 +6389,21 @@ bool ConsolePrompter::ReadRaw()
 
                 if (match_escape("[1;5D")) { // Ctrl-Left
                     str_offset = FindBackward(str_offset, " \t\r\n");
-                    Prompt();
+                    RenderRaw();
                 } else if (match_escape("[1;5C")) { // Ctrl-Right
                     str_offset = FindForward(str_offset, " \t\r\n");
-                    Prompt();
+                    RenderRaw();
                 } else if (match_escape("[3~")) { // Delete
                     if (str_offset < str.len) {
                         Delete(str_offset, SkipForward(str_offset, 1));
-                        Prompt();
+                        RenderRaw();
                     }
                 } else if (match_escape("\x7F")) { // Alt-Backspace
                     Delete(FindBackward(str_offset, " \t\r\n"), str_offset);
-                    Prompt();
+                    RenderRaw();
                 } else if (match_escape("d")) { // Alt-D
                     Delete(str_offset, FindForward(str_offset, " \t\r\n"));
-                    Prompt();
+                    RenderRaw();
                 } else if (match_escape("[A")) { // Up
                     fake_input = "\x10";
                 } else if (match_escape("[B")) { // Down
@@ -6395,13 +6422,13 @@ bool ConsolePrompter::ReadRaw()
             case 0x2: { // Left
                 if (str_offset > 0) {
                     str_offset = SkipBackward(str_offset, 1);
-                    Prompt();
+                    RenderRaw();
                 }
             } break;
             case 0x6: { // Right
                 if (str_offset < str.len) {
                     str_offset = SkipForward(str_offset, 1);
-                    Prompt();
+                    RenderRaw();
                 }
             } break;
             case 0xE: { // Down
@@ -6414,10 +6441,10 @@ bool ConsolePrompter::ReadRaw()
                     Size line_offset = std::min(line.len, (Size)x - prompt_columns);
                     str_offset = std::min((Size)(line.ptr - str.ptr + line_offset), str.len);
 
-                    Prompt();
+                    RenderRaw();
                 } else if (entry_idx < entries.len - 1) {
                     ChangeEntry(entry_idx + 1);
-                    Prompt();
+                    RenderRaw();
                 }
             } break;
             case 0x10: { // Up
@@ -6430,27 +6457,27 @@ bool ConsolePrompter::ReadRaw()
                     Size line_offset = std::min(line.len, (Size)x - prompt_columns);
                     str_offset = std::min((Size)(line.ptr - str.ptr + line_offset), str.len);
 
-                    Prompt();
+                    RenderRaw();
                 } else if (entry_idx > 0) {
                     ChangeEntry(entry_idx - 1);
-                    Prompt();
+                    RenderRaw();
                 }
             } break;
 
             case 0x1: { // Home
                 str_offset = FindBackward(str_offset, "\n");
-                Prompt();
+                RenderRaw();
             } break;
             case 0x5: { // End
                 str_offset = FindForward(str_offset, "\n");
-                Prompt();
+                RenderRaw();
             } break;
 
             case 0x8:
             case 0x7F: { // Backspace
                 if (str.len) {
                     Delete(SkipBackward(str_offset, 1), str_offset);
-                    Prompt();
+                    RenderRaw();
                 }
             } break;
             case 0x3: { // Ctrl-C
@@ -6460,7 +6487,7 @@ bool ConsolePrompter::ReadRaw()
                     entry_idx = entries.len - 1;
                     entries[entry_idx].RemoveFrom(0);
 
-                    Prompt();
+                    RenderRaw();
                 } else {
                     fputs("\r\n", stderr);
                     fflush(stderr);
@@ -6470,7 +6497,7 @@ bool ConsolePrompter::ReadRaw()
             case 0x4: { // Ctrl-D
                 if (str.len) {
                     Delete(str_offset, SkipForward(str_offset, 1));
-                    Prompt();
+                    RenderRaw();
                 } else {
                     return false;
                 }
@@ -6481,20 +6508,20 @@ bool ConsolePrompter::ReadRaw()
 
                 if (start < middle) {
                     std::rotate(str.ptr + start, str.ptr + middle, str.ptr + str_offset);
-                    Prompt();
+                    RenderRaw();
                 }
             } break;
             case 0xB: { // Ctrl-K
                 Delete(str_offset, FindForward(str_offset, "\n"));
-                Prompt();
+                RenderRaw();
             } break;
             case 0x15: { // Ctrl-U
                 Delete(FindBackward(str_offset, "\n"), str_offset);
-                Prompt();
+                RenderRaw();
             } break;
             case 0xC: { // Ctrl-L
                 fputs("\x1B[2J\x1B[999A", stderr);
-                Prompt();
+                RenderRaw();
             } break;
 
             case '\r':
@@ -6507,6 +6534,9 @@ bool ConsolePrompter::ReadRaw()
                 y = rows + 1;
 
                 EnsureNulTermination();
+                if (out_str) {
+                    *out_str = str;
+                }
                 return true;
             } break;
 
@@ -6531,36 +6561,86 @@ bool ConsolePrompter::ReadRaw()
                     fflush(stderr);
                     x += (int)frag.len;
                 } else {
-                    Prompt();
+                    RenderRaw();
                 }
             } break;
         }
     }
 
     EnsureNulTermination();
+    if (out_str) {
+        *out_str = str;
+    }
     return true;
 }
 
-bool ConsolePrompter::ReadBuffered()
+bool ConsolePrompter::ReadRawYN(bool *out_value)
+{
+    const char *yn = "[Y/N]";
+
+    fflush(stderr);
+
+    prompt_columns = ComputeWidth(prompt) + ComputeWidth(yn) + 1;
+
+    str.RemoveFrom(0);
+    str_offset = 0;
+    RenderRaw();
+    Print(stderr, "%!D..%1%!0 ", yn);
+
+    int32_t uc;
+    while ((uc = ReadChar()) >= 0) {
+        // Fix display if terminal is resized
+        if (GetConsoleSize().x != columns) {
+            RenderRaw();
+            Print(stderr, "%!D..[Y/N]%!0 ");
+        }
+
+        switch (uc) {
+            case 0x3: { // Ctrl-C
+                fputs("\r\n", stderr);
+                fflush(stderr);
+
+                return false;
+            } break;
+            case 0x4: { // Ctrl-D
+                return false;
+            } break;
+
+            case 'Y':
+            case 'y': {
+                fputs("Y\n", stderr);
+                fflush(stderr);
+
+                *out_value = true;
+                return true;
+            } break;
+            case 'N':
+            case 'n': {
+                fputs("N\n", stderr);
+                fflush(stderr);
+
+                *out_value = false;
+                return true;
+            } break;
+        }
+    }
+
+    return false;
+}
+
+bool ConsolePrompter::ReadBuffered(Span<const char> *out_str)
 {
     prompt_columns = ComputeWidth(prompt);
 
-    // Print prompt
-    {
-        Span<const char> remain = str;
-        Span<const char> line = SplitStr(remain, '\n', &remain);
-
-        Print(stderr, "%1%2", prompt, line);
-        while (remain.len) {
-            line = SplitStr(remain, '\n', &remain);
-            Print(stderr, "\n%1 %2", FmtArg('.').Repeat(prompt_columns - 1), line);
-        }
-    }
+    RenderBuffered();
 
     int c;
     while ((c = fgetc(stdin)) != EOF) {
         if (c == '\n') {
             EnsureNulTermination();
+            if (out_str) {
+                *out_str = str;
+            }
             return true;
         } else if (c >= 32 || c == '\t') {
             str.Append((char)c);
@@ -6574,6 +6654,44 @@ bool ConsolePrompter::ReadBuffered()
 
     // EOF
     return false;
+}
+
+bool ConsolePrompter::ReadBufferedYN(bool *out_value)
+{
+    const char *yn = "[Yes/No]";
+
+    prompt_columns = ComputeWidth(prompt) + ComputeWidth(yn) + 1;
+
+    for (;;) {
+        str.RemoveFrom(0);
+        str_offset = 0;
+        RenderBuffered();
+        Print(stderr, "%1 ", yn);
+
+        int c;
+        while ((c = fgetc(stdin)) != EOF) {
+            if (c == '\n') {
+                if (TestStrI(str, "y") || TestStrI(str, "yes")) {
+                    *out_value = true;
+                    return true;
+                } else if (TestStrI(str, "n") || TestStrI(str, "no")) {
+                    *out_value = false;
+                    return true;
+                } else {
+                    break;
+                }
+            } else if (c >= 32 || c == '\t') {
+                str.Append((char)c);
+            }
+        }
+
+        if (ferror(stdin)) {
+            LogError("Failed to read from standard input: %1", strerror(errno));
+            return false;
+        } else if (feof(stdin)) {
+            return false;
+        }
+    }
 }
 
 void ConsolePrompter::ChangeEntry(Size new_idx)
@@ -6657,13 +6775,12 @@ void ConsolePrompter::Delete(Size start, Size end)
     }
 }
 
-void ConsolePrompter::Prompt()
+void ConsolePrompter::RenderRaw()
 {
     columns = GetConsoleSize().x;
     rows = 0;
 
     int mask_columns = mask ? ComputeWidth(mask) : 0;
-    prompt_columns = ComputeWidth(prompt);
 
     // Hide cursor during refresh
     fprintf(stderr, "\x1B[?25l");
@@ -6724,6 +6841,18 @@ void ConsolePrompter::Prompt()
     fprintf(stderr, "\x1B[?25h");
 
     fflush(stderr);
+}
+
+void ConsolePrompter::RenderBuffered()
+{
+    Span<const char> remain = str;
+    Span<const char> line = SplitStr(remain, '\n', &remain);
+
+    Print(stderr, "%1%2", prompt, line);
+    while (remain.len) {
+        line = SplitStr(remain, '\n', &remain);
+        Print(stderr, "\n%1 %2", FmtArg('.').Repeat(prompt_columns - 1), line);
+    }
 }
 
 Vec2<int> ConsolePrompter::GetConsoleSize()
@@ -6918,6 +7047,14 @@ const char *Prompt(const char *prompt, const char *default_value, const char *ma
 
     const char *str = prompter.str.Leak().ptr;
     return str;
+}
+
+bool PromptYN(const char *prompt, bool *out_value)
+{
+    ConsolePrompter prompter;
+    prompter.prompt = prompt;
+
+    return prompter.ReadYN(out_value);
 }
 
 }
