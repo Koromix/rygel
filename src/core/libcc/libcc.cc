@@ -4454,8 +4454,8 @@ void AsyncPool::RunTasks(int queue_idx)
     // The '12' factor is pretty arbitrary, don't try to find meaning there
     for (int i = 0; i < workers_state.len * 12; i++) {
         TaskQueue *queue = &queues[queue_idx];
-
         std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
+
         if (lock_queue.owns_lock() && queue->tasks.len) {
             Task task = std::move(queue->tasks[0]);
 
@@ -4463,12 +4463,10 @@ void AsyncPool::RunTasks(int queue_idx)
             queue->tasks.Trim();
 
             lock_queue.unlock();
-            RunTask(&task);
-        }
 
-        queue_idx++;
-        if (queue_idx >= queues.len) {
-            queue_idx = 0;
+            RunTask(&task);
+        } else {
+            queue_idx = (++queue_idx < queues.len) ? queue_idx : 0;
         }
     }
 }
