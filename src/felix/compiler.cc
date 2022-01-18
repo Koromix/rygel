@@ -357,8 +357,7 @@ public:
         // Platform flags
         switch (host) {
             case HostPlatform::Windows: {
-                Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                          " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
+                Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
                           " -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE"
                           " -D_MT -Xclang --dependent-lib=oldnames"
                           " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
@@ -765,8 +764,7 @@ public:
         // Platform flags
         switch (host) {
             case HostPlatform::Windows: {
-                Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                          " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
+                Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
                           " -D__USE_MINGW_ANSI_STDIO=1");
             } break;
 
@@ -1105,7 +1103,6 @@ public:
 
         // Platform flags
         Fmt(&buf, " /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE"
-                  " /D_LARGEFILE_SOURCE /D_LARGEFILE64_SOURCE /D_FILE_OFFSET_BITS=64"
                   " /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
 
         // Features
