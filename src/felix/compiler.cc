@@ -1134,7 +1134,12 @@ public:
             Fmt(&buf, " \"/I%1\"", include_directory);
         }
         for (const char *include_file: include_files) {
-            Fmt(&buf, " \"/FI%1\"", include_file);
+            if (PathIsAbsolute(include_file)) {
+                Fmt(&buf, " \"/FI%1\"", include_file);
+            } else {
+                const char *cwd = GetWorkingDirectory();
+                Fmt(&buf, " \"/FI%1%/%2\"", cwd, include_file);
+            }
         }
 
         if (env_flags) {
