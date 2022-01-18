@@ -455,6 +455,8 @@ public:
         out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
+        } else {
+            Fmt(&buf, " -fno-color-diagnostics");
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
 
@@ -573,6 +575,8 @@ public:
         out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
+        } else {
+            Fmt(&buf, " -fno-color-diagnostics");
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
@@ -832,6 +836,8 @@ public:
         out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fdiagnostics-color=always");
+        } else {
+            Fmt(&buf, " -fdiagnostics-color=never");
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
 
@@ -939,6 +945,8 @@ public:
         out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fdiagnostics-color=always");
+        } else {
+            Fmt(&buf, " -fdiagnostics-color=never");
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
@@ -1489,6 +1497,8 @@ public:
         out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fdiagnostics-color=always");
+        } else {
+            Fmt(&buf, " -fdiagnostics-color=never");
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
 
@@ -1555,6 +1565,8 @@ public:
         out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fdiagnostics-color=always");
+        } else {
+            Fmt(&buf, " -fdiagnostics-color=never");
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
@@ -1741,6 +1753,8 @@ public:
         out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
+        } else {
+            Fmt(&buf, " -fno-color-diagnostics");
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
 
@@ -1790,6 +1804,8 @@ public:
         out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
+        } else {
+            Fmt(&buf, " -fno-color-diagnostics");
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
