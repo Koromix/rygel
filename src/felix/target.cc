@@ -124,14 +124,14 @@ static bool ResolveFileSet(const FileSet &file_set,
 
 static bool CheckTargetName(Span<const char> name)
 {
-    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '-'; };
 
     if (!name.len) {
         LogError("Target name cannot be empty");
         return false;
     }
     if (!std::all_of(name.begin(), name.end(), test_char)) {
-        LogError("Target name must only contain alphanumeric or '_' characters");
+        LogError("Target name must only contain alphanumeric, '_' or '-' characters");
         return false;
     }
 
