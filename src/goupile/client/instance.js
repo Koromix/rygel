@@ -722,7 +722,8 @@ function InstanceController() {
                 let prev_actions = model.actions;
                 model.actions = [];
 
-                form_builder.action('Enregistrer', {disabled: !form_state.hasChanged()}, async () => {
+                form_builder.action('Enregistrer', {disabled: !form_state.hasChanged(),
+                                                    color: '#2d8261'}, async () => {
                     form_builder.triggerErrors();
 
                     await saveRecord(form_record, new_hid, form_values, route.page);
@@ -731,9 +732,6 @@ function InstanceController() {
                 });
 
                 if (!goupile.isLocked()) {
-                    if (form_state.just_triggered || form_state.hasChanged())
-                        form_builder.action('-');
-
                     if (form_state.just_triggered) {
                         form_builder.action('Forcer l\'enregistrement', {}, async e => {
                             await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
@@ -746,7 +744,9 @@ function InstanceController() {
                     }
 
                     if (form_state.hasChanged()) {
-                        form_builder.action('Effacer les modifications', {}, async e => {
+                        form_builder.action('-');
+
+                        form_builder.action('Effacer les modifications', {color: '#db0a0a'}, async e => {
                             await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                                    'Effacer', () => {});
 

@@ -51,6 +51,11 @@ button {
     cursor: pointer;
     border-radius: var(--button_rounding);
 }
+button.color {
+    background: var(--color);
+    border: 1px solid var(--color);
+    color: white;
+}
 button:not(:disabled) { cursor: pointer; }
 button:disabled {
     background-color: #bbb;

@@ -1451,6 +1451,8 @@ instead of:
             let type = model.actions.length ? 'button' : 'submit';
 
             render = intf => html`<button type=${type} ?disabled=${options.disabled}
+                                          class=${options.color ? 'color' : ''}
+                                          style=${options.color ? `--color: ${options.color};` : ''}
                                           title=${options.tooltip || ''}
                                           @click=${ui.wrapAction(func)}>${label}</button>`;
         }
