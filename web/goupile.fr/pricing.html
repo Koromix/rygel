@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<!-- This program is free software: you can redistribute it and/or modify
+     it under the terms of the GNU Affero General Public License as published by
+     the Free Software Foundation, either version 3 of the License, or
+     (at your option) any later version.
+
+     This program is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU Affero General Public License for more details.
+
+     You should have received a copy of the GNU Affero General Public License
+     along with this program. If not, see https://www.gnu.org/licenses/. -->
+<html lang="fr">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+        <link rel="icon" href="favicon.png"/>
+        <title>Goupile — Conception d'eCRF libre et gratuite</title>
+
+        <link rel="stylesheet" href="static/goupile.fr.css"/>
+        <link rel="stylesheet" href="static/opensans/OpenSans.css"/>
+
+        <script src="static/goupile.fr.js" async></script>
+    </head>
+
+    <body>
+        <nav id="header">
+            <div>
+                <a href="/demo/">Tester</a>
+                <a href="/manual">Utilisation</a>
+            </div>
+            <a href="/"><img id="logo" src="favicon.png"/></a>
+            <div>
+                <a href="/contribute">Technique</a>
+                <a href="/pricing" class="active">Tarifs</a>
+                <a href="/en/pricing" class="flag en"></a>
+            </div>
+            <a href="mailto:hello@goupile.fr" class="contact">Contact</a>
+        </nav>
+
+        <main>
+            <h1 id="hds">Service HDS</h1>
+            <h2 id="hds_offres">Hébergement HDS</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Prestation</th>
+                        <th>Description</th>
+                        <th>Tarif</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>Projet HDS</b> (structure publique ou association)</td>
+                        <td>Hébergement d’un eCRF unique par nos soins</td>
+                        <td><b>100€/mois/centre participant</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Projet HDS</b> (structure privée)</td>
+                        <td>Hébergement d’un eCRF unique par nos soins</td>
+                        <td><b>300€/mois/centre participant</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Forfait HDS</b></td>
+                        <td>Hébergement d’un domaine Goupile (avec nombre d’eCRF illimité) par nos soins</td>
+                        <td><b>Sur devis</b></td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="hds_services">Services en supplément</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Description</th>
+                        <th>Tarif</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>SMS</b></td>
+                        <td>Envoi de SMS automatisés pour connexion, rappels, ou autre (programmable depuis Goupile)</td>
+                        <td><b>0,1€/SMS</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Domaine de 2ème niveau</b></td>
+                        <td>Achat et gestion d’un domaine de 2ème niveau (exemple : <a href="http://example.com" target="_blank" rel="noopener">example.com</a>)</td>
+                        <td><b>5€/mois</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Serveur miroir</b></td>
+                        <td>Réplication simultanée des données sur un serveur secondaire, bascule rapide (&lt; 1h) en cas de panne du serveur principal<a href="#fn1" class="footnote_ref" id="fnref1">[1]</a></td>
+                        <td><b>100€/mois</b></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p id="fn1" class="footnote">Avec cette option, le délai de remise en ligne après incident passe de 24-48 heures à 1 heure, et les données inférieures à 24 heures seront disponibles. Sans cette option, vous bénéficiez malgré tout d’une sauvegarde quotidienne, déportée dans un autre datacenter, et restaurable en 24-48 heures. <a href="#fnref1" class="footnote_back">↩︎</a></p>
+
+            <h1 id="formation">Formation</h1>
+            <p>Les séances de formations sont actuellement réalisées en visio avec un formateur habitué à l’utilisation de Goupile.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Séance</th>
+                        <th>Description</th>
+                        <th>Durée</th>
+                        <th>Tarif</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>Prise en main</b></td>
+                        <td>Présentation de Goupile (suivi, données, conception, recueil), conception de recueils simples (utilisation des champs, organisation en sections), publication</td>
+                        <td>1 à 2 heures</td>
+                        <td><b>100€/participant</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Avancé</b></td>
+                        <td>Création d’un eCRF complet (conditions, gestion des erreurs, pages et tables multiples et liées entre elles)</td>
+                        <td>2 heures</td>
+                        <td><b>100€/participant</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Monitoring</b></td>
+                        <td><i>Work in progress</i></td>
+                        <td><s>2 heures</s></td>
+                        <td><s>100€ / participant</s></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Il est également possible d’organiser des formations plus spécifiques en fonction de vos besoins (par exemple : intégration d’une expérience dynamique avec diffusion de vidéos et réponses à des questions réalisable en ligne).</p>
+
+            <h1 id="conception">Aide à la conception</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Prestation</th>
+                        <th>Description</th>
+                        <th>Tarif</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>Aide à la conception</b></td>
+                        <td>Demandes par tickets et mails pour l’aide au développement de votre eCRF</td>
+                        <td><b>100€/mois</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Création eCRF</b></td>
+                        <td>Développement d’un eCRF complet par notre équipe</td>
+                        <td><b>Sur devis</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Fonctionnalités</b></td>
+                        <td>Ajout de fonctionnalités spécifiques à Goupile pour vos besoins</td>
+                        <td><b>Sur devis</b></td>
+                    </tr>
+                </tbody>
+            </table>
+        </main>
+    </body>
+</html>

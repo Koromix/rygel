@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<!-- This program is free software: you can redistribute it and/or modify
+     it under the terms of the GNU Affero General Public License as published by
+     the Free Software Foundation, either version 3 of the License, or
+     (at your option) any later version.
+
+     This program is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU Affero General Public License for more details.
+
+     You should have received a copy of the GNU Affero General Public License
+     along with this program. If not, see https://www.gnu.org/licenses/. -->
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+        <link rel="icon" href="../favicon.png"/>
+        <title>Goupile — Free and open-source EDC application</title>
+
+        <link rel="stylesheet" href="../static/goupile.fr.css"/>
+        <link rel="stylesheet" href="../static/opensans/OpenSans.css"/>
+
+        <script src="../static/goupile.fr.js" async></script>
+    </head>
+
+    <body>
+        <nav id="header">
+            <div>
+                <a href="/demo">Demo</a>
+                <a href="/en/manual" class="active">Manual</a>
+            </div>
+            <a href="/en/"><img id="logo" src="../favicon.png"></a>
+            <div>
+                <a href="/en/contribute">Technical</a>
+                <a href="/en/pricing" class="active">Pricing</a>
+                <a href="/pricing" class="flag en"></a>
+            </div>
+            <a href="mailto:hello@goupile.fr" class="contact">Contact</a>
+        </nav>
+
+        <main>
+            <h1 id="hds">Hosting</h1>
+            <h2 id="hds_offers">Secure (HDS) hosting</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Prestation</th>
+                        <th>Description</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>HDS project</b> (public structure or association)</td>
+                        <td>Hosting of a unique eCRF by us</td>
+                        <td><b>100€/month</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>HDS project</b> (private structure)</td>
+                        <td>Hosting of a unique eCRF by us</td>
+                        <td><b>100€/month/participating center</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Forfait HDS</b></td>
+                        <td>Hosting of a Goupile domain (with unlimited number of eCRFs) by us</td>
+                        <td><b>Quotation</b></td>
+                    </tr>
+                </tbody>
+            </table>
+            <h2 id="hds_services">Additional services</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Description</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>SMS</b></td>
+                        <td>Sending of automated SMS for connection, reminders, or other (programmable from Goupile)</td>
+                        <td><b>0.1€/SMS</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>2nd level domain</b></td>
+                        <td>Purchase and management of a 2nd level domain (exemple : <a href="http://example.com" target="_blank" rel="noopener">example.com</a>)</td>
+                        <td><b>5€/month</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Mirror Server</b></td>
+                        <td>Simultaneous replication of data on a secondary server, fast failover (< 1h) in the event of failure of the main server<a href="#fn1" class="footnote_ref" id="fnref1">[1]</a></td>
+                        <td><b>100€/month</b></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p id="fn1" class="footnote">With this option, the disaster recovery time is reduced from 24-48 hours to 1 hour, and data less than 24 hours will be available. Without this option, you still benefit from a daily backup, deported to another datacenter, and recoverable in 24-48 hours. <a href="#fnref1" class="footnote_back">↩︎</a></p>
+
+            <h1 id="formation">Formation</h1>
+            <p>Training sessions are currently carried out in video with a trainer accustomed to the use of Goupile.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Session</th>
+                        <th>Description</th>
+                        <th>Duration</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>Prise en main</b></td>
+                        <td>Présentation de Goupile (suivi, données, conception, recueil), conception de recueils simples (utilisation des champs, organisation en sections), publication</td>
+                        <td>1 à 2 heures</td>
+                        <td><b>100€/participant</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Avancé</b></td>
+                        <td>Création d’un eCRF complet (conditions, gestion des erreurs, pages et tables multiples et liées entre elles)</td>
+                        <td>2 heures</td>
+                        <td><b>100€/participant</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>Monitoring</b></td>
+                        <td><i>Work in progress</i></td>
+                        <td><s>2 heures</s></td>
+                        <td><s>100€ / participant</s></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>It is also possible to organize more specific training according to your needs (for example: integration of a dynamic experience with video streaming and answers to questions that can be done online).</p>
+
+            <h1 id="design">Design assistance</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Prestation</th>
+                        <th>Description</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>Design assistance</b></td>
+                        <td>Requests by tickets and emails for help in developing your eCRF</td>
+                        <td><b>100€/month</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>eCRF creation</b></td>
+                        <td>Development of a complete eCRF by our team</td>
+                        <td><b>Quotation</b></td>
+                    </tr>
+                    <tr>
+                        <td><b>New ffeatures</b></td>
+                        <td>Add features to Goupile specifically for your needs</td>
+                        <td><b>Quotation</b></td>
+                    </tr>
+                </tbody>
+            </table>
+        </main>
+    </body>
+</html>
