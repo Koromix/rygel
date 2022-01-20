@@ -437,9 +437,9 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         int64_t rowid = sqlite3_last_insert_rowid(*instance->db);
 
                         sq_Statement stmt;
-                        if (!instance->db->Prepare(R"(INSERT INTO rec_sequences (form, counter)
-                                                      VALUES (?1, 1)
-                                                      ON CONFLICT (form) DO UPDATE SET counter = counter + 1
+                        if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
+                                                      VALUES ('hid', ?1, 1)
+                                                      ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
                                                       RETURNING counter)", &stmt))
                             return false;
                         sqlite3_bind_text(stmt, 1, record.form, -1, SQLITE_STATIC);
