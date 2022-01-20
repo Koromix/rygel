@@ -16,7 +16,7 @@
 #include "files.hh"
 #include "instance.hh"
 #include "goupile.hh"
-#include "session.hh"
+#include "user.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {

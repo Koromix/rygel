@@ -16,7 +16,7 @@
 #include "../../core/libcc/libcc.hh"
 #include "../../core/libnet/libnet.hh"
 #include "../../core/libsqlite/libsqlite.hh"
-#include "session.hh"
+#include "user.hh"
 
 namespace RG {
 

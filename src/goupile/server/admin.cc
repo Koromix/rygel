@@ -17,7 +17,7 @@
 #include "files.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "session.hh"
+#include "user.hh"
 #include "../../core/libpasswd/libpasswd.hh"
 #include "../../core/libwrap/json.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"

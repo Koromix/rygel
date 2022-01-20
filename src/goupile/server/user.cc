@@ -16,7 +16,7 @@
 #include "goupile.hh"
 #include "instance.hh"
 #include "messages.hh"
-#include "session.hh"
+#include "user.hh"
 #include "../../core/libnet/libnet.hh"
 #include "../../core/libpasswd/libpasswd.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"

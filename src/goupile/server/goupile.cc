@@ -19,7 +19,7 @@
 #include "instance.hh"
 #include "messages.hh"
 #include "records.hh"
-#include "session.hh"
+#include "user.hh"
 #include "../../core/libnet/libnet.hh"
 #include "../../core/libsandbox/libsandbox.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
