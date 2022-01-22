@@ -53,6 +53,13 @@ struct BrotliEncoderStateStruct;
 
 namespace RG {
 
+#if UINT_MAX != 0xFFFFFFFFu
+    #error This code is not designed to support non-32-bits int types
+#endif
+#if ULLONG_MAX != 0xFFFFFFFFFFFFFFFFull
+    #error This code is not designed to support non-64-bits long long types
+#endif
+
 // ------------------------------------------------------------------------
 // Config
 // ------------------------------------------------------------------------
