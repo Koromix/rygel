@@ -2658,7 +2658,7 @@ class StreamReader {
         } u;
     } compression;
 
-    Size raw_len = -1;
+    int64_t raw_len = -1;
     Size raw_read = 0;
     bool eof = false;
 
@@ -2705,7 +2705,8 @@ public:
     Size ReadAll(Size max_len, HeapArray<char> *out_buf)
         { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
 
-    Size ComputeStreamLen();
+    int64_t ComputeStreamLen();
+
 private:
     bool InitDecompressor(CompressionType type);
 
@@ -2749,13 +2750,13 @@ class LineReader {
     bool eof = false;
 
     Span<char> line = {};
-    Size line_number = 0;
+    int line_number = 0;
 
 public:
     LineReader(StreamReader *st) : st(st), error(!st->IsValid()) {}
 
     const char *GetFileName() const { return st->GetFileName(); }
-    Size GetLineNumber() const { return line_number; }
+    int GetLineNumber() const { return line_number; }
     bool IsValid() const { return !error; }
     bool IsEOF() const { return eof; }
 
@@ -2891,7 +2892,7 @@ static inline bool WriteFile(Span<const char> buf, const char *filename, unsigne
     return st.Close();
 }
 
-bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer);
+bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer);
 
 // For convenience, don't close them
 extern StreamReader stdin_st;

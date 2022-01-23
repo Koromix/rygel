@@ -4773,44 +4773,61 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     if (RG_UNLIKELY(error))
         return -1;
 
+    RG_DEFER_NC(buf_guard, buf_len = out_buf->len) { out_buf->RemoveFrom(buf_len); };
+
+    // Check virtual memory limits
+    {
+        Size memory_max = RG_SIZE_MAX - out_buf->len - 1;
+        if (RG_UNLIKELY(memory_max <= 0)) {
+            LogError("Exhausted memory limit reading file '%1'", filename);
+            return -1;
+        }
+        max_len = std::min(max_len, memory_max);
+    }
+
     if (compression.type == CompressionType::None && ComputeStreamLen() >= 0) {
         if (raw_len > max_len) {
             LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
             return -1;
         }
 
-        // Add one trailing byte to avoid reallocation for users who append a NUL character
-        out_buf->Grow(raw_len + 1);
+        // Count one trailing byte (if possible) to avoid reallocation for users
+        // who need/want to append a NUL character.
+        out_buf->Grow((Size)raw_len + 1);
+
         Size read_len = Read(raw_len, out_buf->end());
         if (read_len < 0)
             return -1;
         out_buf->len += read_len;
 
+        buf_guard.Disable();
         return read_len;
     } else {
-        RG_DEFER_NC(buf_guard, buf_len = out_buf->len) { out_buf->RemoveFrom(buf_len); };
+        Size total_len = 0;
 
-        Size read_len, total_len = 0;
-        out_buf->Grow(Megabytes(1));
-        while ((read_len = Read(out_buf->Available(), out_buf->end())) > 0) {
+        for (;;) {
+            Size grow = std::min(Megabytes(1), RG_SIZE_MAX - out_buf->len);
+            out_buf->Grow(grow);
+
+            Size read_len = Read(out_buf->Available(), out_buf->end());
+            if (read_len < 0)
+                return -1;
+
             if (RG_UNLIKELY(read_len > max_len - total_len)) {
                 LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
                 return -1;
             }
-            total_len += read_len;
 
+            total_len += read_len;
             out_buf->len += read_len;
-            out_buf->Grow(Megabytes(1));
         }
-        if (error)
-            return -1;
 
         buf_guard.Disable();
         return total_len;
     }
 }
 
-Size StreamReader::ComputeStreamLen()
+int64_t StreamReader::ComputeStreamLen()
 {
     if (RG_UNLIKELY(error))
         return -1;
@@ -4828,23 +4845,14 @@ Size StreamReader::ComputeStreamLen()
             RG_DEFER { _fseeki64(source.u.file.fp, pos, SEEK_SET); };
             if (_fseeki64(source.u.file.fp, 0, SEEK_END) < 0)
                 return -1;
-            int64_t len = _ftelli64(source.u.file.fp);
+            raw_len = (int64_t)_ftelli64(source.u.file.fp);
 #else
             off64_t pos = ftello64(source.u.file.fp);
             RG_DEFER { fseeko64(source.u.file.fp, pos, SEEK_SET); };
             if (fseeko64(source.u.file.fp, 0, SEEK_END) < 0)
                 return -1;
-            off64_t len = ftello64(source.u.file.fp);
+            raw_len = (int64_t)ftello64(source.u.file.fp);
 #endif
-            if (len > RG_SIZE_MAX) {
-                static bool warned = false;
-                if (!warned) {
-                    LogError("Files bigger than %1 are not well supported", FmtMemSize(RG_SIZE_MAX));
-                    warned = true;
-                }
-                len = RG_SIZE_MAX;
-            }
-            raw_len = (Size)len;
         } break;
 
         case SourceType::Function: {
@@ -5715,12 +5723,12 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
     RG_UNREACHABLE();
 }
 
-bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
+bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)
 {
     if (!reader->IsValid())
         return false;
 
-    Size total_len = 0;
+    int64_t total_len = 0;
     do {
         LocalArray<uint8_t, 16384> buf;
         buf.len = reader->Read(buf.data);
