@@ -375,8 +375,7 @@ public:
             } break;
 
             default: {
-                Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                          " -pthread -fPIC");
+                Fmt(&buf, " -D_FILE_OFFSET_BITS=64 -pthread -fPIC");
                 if (clang11) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
@@ -777,8 +776,7 @@ public:
             } break;
 
             default: {
-                Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                          " -pthread -fPIC -fno-semantic-interposition");
+                Fmt(&buf, " -D_FILE_OFFSET_BITS=64 -pthread -fPIC -fno-semantic-interposition");
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
                     Fmt(&buf, " -D_FORTIFY_SOURCE=2");
                 }
