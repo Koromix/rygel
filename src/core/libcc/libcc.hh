@@ -3843,15 +3843,27 @@ const char *CreateTemporaryDirectory(Span<const char> directory, const char *pre
 bool CreatePipe(int pfd[2]);
 #endif
 
-bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
+bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code);
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size max_len,
                         HeapArray<uint8_t> *out_buf, int *out_code);
+static inline bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
+                                      FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
+{
+    const auto read_once = [&]() {
+        Span<const uint8_t> buf = in_buf;
+        in_buf = {};
+        return buf;
+    };
+
+    return ExecuteCommandLine(cmd_line, read_once, out_func, out_code);
+}
 static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
                                       FunctionRef<void(Span<char> buf)> out_func, int *out_code)
 {
-    return ExecuteCommandLine(cmd_line, in_buf.CastAs<const uint8_t>(),
-                              [&](Span<uint8_t> buf) { out_func(buf.CastAs<char>()); }, out_code);
+    const auto write = [&](Span<uint8_t> buf) { out_func(buf.CastAs<char>()); };
+
+    return ExecuteCommandLine(cmd_line, in_buf.CastAs<const uint8_t>(), write, out_code);
 }
 static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf, Size max_len,
                                       HeapArray<char> *out_buf, int *out_code)

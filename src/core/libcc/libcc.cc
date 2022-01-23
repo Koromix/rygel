@@ -3385,7 +3385,7 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handle
     return true;
 }
 
-bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
+bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
     STARTUPINFOW startup_info = {};
@@ -3426,16 +3426,22 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         }
     }
 
-    // Create read and write pipes
+    // Create read pipes
     HANDLE in_pipe[2] = {};
-    HANDLE out_pipe[2] = {};
     RG_DEFER {
         CloseHandleSafe(&in_pipe[0]);
         CloseHandleSafe(&in_pipe[1]);
+    };
+    if (in_func.IsValid() && !CreateOverlappedPipe(false, true, in_pipe))
+        return false;
+
+    // Create write pipes
+    HANDLE out_pipe[2] = {};
+    RG_DEFER {
         CloseHandleSafe(&out_pipe[0]);
         CloseHandleSafe(&out_pipe[1]);
     };
-    if (!CreateOverlappedPipe(false, true, in_pipe) || !CreateOverlappedPipe(true, false, out_pipe))
+    if (!CreateOverlappedPipe(true, false, out_pipe))
         return false;
 
     // Start process
@@ -3446,9 +3452,12 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
             CloseHandleSafe(&startup_info.hStdOutput);
             CloseHandleSafe(&startup_info.hStdError);
         };
-        if (!DuplicateHandle(GetCurrentProcess(), in_pipe[0], GetCurrentProcess(),
-                             &startup_info.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
-            !DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
+        if (!DuplicateHandle(GetCurrentProcess(), in_func.IsValid() ? in_pipe[0] : GetStdHandle(STD_INPUT_HANDLE),
+                             GetCurrentProcess(), &startup_info.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
+            LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
+            return false;
+        }
+        if (!DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
                              &startup_info.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
             !DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
                              &startup_info.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
@@ -3478,7 +3487,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
     // Read and write standard process streams
     {
         HANDLE events[3] = {
-            CreateEvent(nullptr, TRUE, FALSE, nullptr),
+            CreateEvent(nullptr, TRUE, in_func.IsValid(), nullptr),
             CreateEvent(nullptr, TRUE, TRUE, nullptr),
             console_ctrl_event
         };
@@ -3491,28 +3500,12 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
             return false;
         }
 
+        Span<const uint8_t> write_buf = {};
         DWORD write_len = 0;
         OVERLAPPED write_ov = {};
         write_ov.hEvent = events[0];
 
-        if (in_buf.len) {
-            if (::WriteFile(in_pipe[1], in_buf.ptr, (DWORD)in_buf.len, &write_len, &write_ov)) {
-                SetEvent(events[0]);
-            } else if (GetLastError() == ERROR_IO_PENDING) {
-                // Go on!
-            } else if (GetLastError() == ERROR_BROKEN_PIPE) {
-                CancelIo(in_pipe[1]);
-                SetEvent(events[0]);
-            } else {
-                LogError("Failed to write process input: %1", GetWin32ErrorString());
-                CancelIo(in_pipe[1]);
-                SetEvent(events[0]);
-            }
-        } else {
-            CloseHandleSafe(&in_pipe[1]);
-        }
-
-        uint8_t read_buf[1024];
+        uint8_t read_buf[4096];
         DWORD read_len = 0;
         bool read_pending = false;
         OVERLAPPED read_ov = {};
@@ -3522,8 +3515,32 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
             DWORD ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE);
 
             if (ret == WAIT_OBJECT_0) {
-                CloseHandleSafe(&in_pipe[1]);
-                ResetEvent(events[0]);
+                RG_ASSERT(in_func.IsValid());
+
+                if (!write_buf.len) {
+                    write_buf = in_func();
+                    RG_ASSERT(write_buf.len >= 0);
+                }
+
+                if (write_buf.len) {
+                    DWORD len = (DWORD)std::min((Size)UINT32_MAX, write_buf.len);
+
+                    if (::WriteFile(in_pipe[1], write_buf.ptr, len, &write_len, &write_ov)) {
+                        SetEvent(events[0]);
+                    } else if (GetLastError() == ERROR_IO_PENDING) {
+                        // Go on!
+                    } else if (GetLastError() == ERROR_BROKEN_PIPE) {
+                        CancelIo(in_pipe[1]);
+                        SetEvent(events[0]);
+                    } else {
+                        LogError("Failed to write process input: %1", GetWin32ErrorString());
+                        CancelIo(in_pipe[1]);
+                        SetEvent(events[0]);
+                    }
+                } else {
+                    CloseHandleSafe(&in_pipe[1]);
+                    ResetEvent(events[0]);
+                }
             } else if (ret == WAIT_OBJECT_0 + 1) {
                 if (read_pending) {
                     if (GetOverlappedResult(out_pipe[0], &read_ov, &read_len, TRUE)) {
@@ -3699,21 +3716,33 @@ static void CloseDescriptorSafe(int *fd_ptr)
     *fd_ptr = -1;
 }
 
-bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
+bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
-    // Create read and write pipes
+    // Create read pipes
     int in_pfd[2] = {-1, -1};
-    int out_pfd[2] = {-1, -1};
     RG_DEFER {
         CloseDescriptorSafe(&in_pfd[0]);
         CloseDescriptorSafe(&in_pfd[1]);
+    };
+    if (in_func.IsValid()) {
+        if (!CreatePipe(in_pfd))
+            return false;
+        if (fcntl(in_pfd[1], F_SETFL, O_NONBLOCK) < 0) {
+            LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
+            return false;
+        }
+    }
+
+    // Create write pipes
+    int out_pfd[2] = {-1, -1};
+    RG_DEFER {
         CloseDescriptorSafe(&out_pfd[0]);
         CloseDescriptorSafe(&out_pfd[1]);
     };
-    if (!CreatePipe(in_pfd) || !CreatePipe(out_pfd))
+    if (!CreatePipe(out_pfd))
         return false;
-    if (fcntl(in_pfd[1], F_SETFL, O_NONBLOCK) < 0 || fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0) {
+    if (fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0) {
         LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
         return false;
     }
@@ -3748,8 +3777,11 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         }
         RG_DEFER { posix_spawn_file_actions_destroy(&file_actions); };
 
-        if ((errno = posix_spawn_file_actions_adddup2(&file_actions, in_pfd[0], STDIN_FILENO)) ||
-                (errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDOUT_FILENO)) ||
+        if (in_func.IsValid() && (errno = posix_spawn_file_actions_adddup2(&file_actions, in_pfd[0], STDIN_FILENO))) {
+            LogError("Failed to set up standard process descriptors: %1", strerror(errno));
+            return false;
+        }
+        if ((errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDOUT_FILENO)) ||
                 (errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDERR_FILENO))) {
             LogError("Failed to set up standard process descriptors: %1", strerror(errno));
             return false;
@@ -3766,8 +3798,10 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         CloseDescriptorSafe(&out_pfd[1]);
     }
 
-    // Read and write standard process streams
+    Span<const uint8_t> write_buf = {};
     bool terminate = false;
+
+    // Read and write standard process streams
     do {
         LocalArray<struct pollfd, 3> pfds;
         int in_idx = -1, out_idx = -1, term_idx = -1;
@@ -3798,12 +3832,19 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
             LogError("Failed to poll process input");
             CloseDescriptorSafe(&in_pfd[1]);
         } else if (in_revents & POLLOUT) {
-            if (in_buf.len) {
-                ssize_t write_len = write(in_pfd[1], in_buf.ptr, (size_t)in_buf.len);
+            RG_ASSERT(in_func.IsValid());
+
+            if (!write_buf.len) {
+                write_buf = in_func();
+                RG_ASSERT(write_buf.len >= 0);
+            }
+
+            if (write_buf.len) {
+                ssize_t write_len = write(in_pfd[1], write_buf.ptr, (size_t)write_buf.len);
 
                 if (write_len > 0) {
-                    in_buf.ptr += write_len;
-                    in_buf.len -= (Size)write_len;
+                    write_buf.ptr += write_len;
+                    write_buf.len -= (Size)write_len;
                 } else if (!write_len) {
                     CloseDescriptorSafe(&in_pfd[1]);
                 } else {
@@ -3909,7 +3950,8 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size m
     // Don't f*ck up the log
     bool warned = false;
 
-    bool success = ExecuteCommandLine(cmd_line, in_buf, [&](Span<uint8_t> buf) {
+    bool success = ExecuteCommandLine(cmd_line, [&]() { return in_buf; },
+                                                [&](Span<uint8_t> buf) {
         if (out_buf->len - start_len <= max_len - buf.len) {
             out_buf->Append(buf);
         } else if (!warned) {
