@@ -493,11 +493,10 @@ DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
     auto Name = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
 
 // Heavily inspired from FunctionRef in LLVM
-// Turned into a POD to make it easier to use inside unions
 template<typename Fn> class FunctionRef;
 template<typename Ret, typename ...Params>
 class FunctionRef<Ret(Params...)> {
-    Ret (*callback)(intptr_t callable, Params ...params);
+    Ret (*callback)(intptr_t callable, Params ...params) = nullptr;
     intptr_t callable;
 
     template<typename Callable>
@@ -509,13 +508,17 @@ public:
 
     template <typename Callable>
     FunctionRef(Callable &&callable,
-                typename std::enable_if<!std::is_same<typename std::remove_reference<Callable>::type,
-                                        FunctionRef>::value>::type * = nullptr)
+                std::enable_if_t<!std::is_same<std::remove_cvref_t<Callable>, FunctionRef>::value> * = nullptr,
+                std::enable_if_t<std::is_void<Ret>::value ||
+                                 std::is_convertible<decltype(std::declval<Callable>()(std::declval<Params>()...)),
+                                                     Ret>::value> * = nullptr)
       : callback(callback_fn<typename std::remove_reference<Callable>::type>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
     Ret operator()(Params ...params) const
         { return callback(callable, std::forward<Params>(params)...); }
+
+    bool IsValid() const { return callback; }
 };
 
 #define RG_INIT(Name) \
