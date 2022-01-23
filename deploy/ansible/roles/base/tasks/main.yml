@@ -143,7 +143,7 @@
     hour: 5
     minute: 0
     state: '{{ "present" if weekly_upgrade else "absent" }}'
-    job: '/usr/bin/apt update && /usr/bin/apt upgrade && /usr/sbin/shutdown -r now'
+    job: '/usr/bin/apt update -y && /usr/bin/apt upgrade -y && /usr/sbin/shutdown -r now'
   become: yes
 
 # - name: Delete default debian user
