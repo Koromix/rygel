@@ -14,13 +14,13 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
-RG_PUSH_NO_WARNINGS()
+RG_PUSH_NO_WARNINGS
 #define RAPIDJSON_NO_SIZETYPEDEFINE
 namespace rapidjson { typedef RG::Size SizeType; }
 #include "../../../vendor/rapidjson/reader.h"
 #include "../../../vendor/rapidjson/writer.h"
 #include "../../../vendor/rapidjson/error/en.h"
-RG_POP_NO_WARNINGS()
+RG_POP_NO_WARNINGS
 
 namespace RG {
 

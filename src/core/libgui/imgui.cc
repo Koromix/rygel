@@ -14,11 +14,11 @@
 #include "../libcc/libcc.hh"
 #include "window.hh"
 #include "../libwrap/opengl.hh"
-RG_PUSH_NO_WARNINGS()
+RG_PUSH_NO_WARNINGS
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include "../../../vendor/imgui/imgui.h"
 #include "../../../vendor/imgui/imgui_internal.h"
-RG_POP_NO_WARNINGS()
+RG_POP_NO_WARNINGS
 
 namespace RG {
 

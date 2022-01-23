@@ -122,7 +122,7 @@ enum class Endianness {
 #define RG_IGNORE (void)!
 
 #if defined(__GNUC__)
-    #define RG_PUSH_NO_WARNINGS() \
+    #define RG_PUSH_NO_WARNINGS \
         _Pragma("GCC diagnostic push") \
         _Pragma("GCC diagnostic ignored \"-Wall\"") \
         _Pragma("GCC diagnostic ignored \"-Wextra\"") \
@@ -131,7 +131,7 @@ enum class Endianness {
         _Pragma("GCC diagnostic ignored \"-Wunused-function\"") \
         _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") \
         _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
-    #define RG_POP_NO_WARNINGS() \
+    #define RG_POP_NO_WARNINGS \
         _Pragma("GCC diagnostic pop")
 
     // thread_local has many bugs with MinGW (Windows):
@@ -155,8 +155,8 @@ enum class Endianness {
         #define SCNu8 "hhu"
     #endif
 #elif defined(_MSC_VER)
-    #define RG_PUSH_NO_WARNINGS() __pragma(warning(push, 0))
-    #define RG_POP_NO_WARNINGS() __pragma(warning(pop))
+    #define RG_PUSH_NO_WARNINGS __pragma(warning(push, 0))
+    #define RG_POP_NO_WARNINGS __pragma(warning(pop))
 
     #define RG_THREAD_LOCAL thread_local
     #define RG_LIKELY(Cond) (Cond)
