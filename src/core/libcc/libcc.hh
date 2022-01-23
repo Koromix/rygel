@@ -53,13 +53,6 @@ struct BrotliEncoderStateStruct;
 
 namespace RG {
 
-#if UINT_MAX != 0xFFFFFFFFu
-    #error This code is not designed to support non-32-bits int types
-#endif
-#if ULLONG_MAX != 0xFFFFFFFFFFFFFFFFull
-    #error This code is not designed to support non-64-bits long long types
-#endif
-
 // ------------------------------------------------------------------------
 // Config
 // ------------------------------------------------------------------------
@@ -90,27 +83,30 @@ extern "C" const char *FelixTarget;
 extern "C" const char *FelixVersion;
 extern "C" const char *FelixCompiler;
 
-enum class Endianness {
-    LittleEndian,
-    BigEndian
-};
-
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
     #define RG_ARCH_64
-    #define RG_ARCH_LITTLE_ENDIAN
-    #define RG_ARCH_ENDIANNESS (Endianness::LittleEndian)
 
     typedef int64_t Size;
     #define RG_SIZE_MAX INT64_MAX
-#elif defined(__i386__) || defined(_M_IX86) || defined(__thumb__) || defined(__arm__) || defined(__EMSCRIPTEN__)
+#elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
+    #error Support for 32-bit desktop operating systems is explicitly disabled
+#elif defined(__thumb__) || defined(__arm__) || defined(__EMSCRIPTEN__)
     #define RG_ARCH_32
-    #define RG_ARCH_LITTLE_ENDIAN
-    #define RG_ARCH_ENDIANNESS (Endianness::LittleEndian)
 
     typedef int32_t Size;
     #define RG_SIZE_MAX INT32_MAX
 #else
     #error Machine architecture not supported
+#endif
+
+#if !defined(_MSC_VER) && __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+    #error This code base is not designed to support big-endian platforms
+#endif
+#if UINT_MAX != 0xFFFFFFFFu
+    #error This code base is not designed to support non-32-bits int types
+#endif
+#if ULLONG_MAX != 0xFFFFFFFFFFFFFFFFull
+    #error This code base is not designed to support non-64-bits long long types
 #endif
 
 #define RG_STRINGIFY_(a) #a
@@ -285,19 +281,11 @@ static inline constexpr int32_t ReverseBytes(int32_t i)
 static inline constexpr int64_t ReverseBytes(int64_t i)
     { return (int64_t)ReverseBytes((uint64_t)i); }
 
-#ifdef RG_ARCH_LITTLE_ENDIAN
-    template <typename T>
-    constexpr T LittleEndian(T v) { return v; }
-
-    template <typename T>
-    constexpr T BigEndian(T v) { return ReverseBytes(v); }
-#else
-    template <typename T>
-    constexpr T LittleEndian(T v) { return ReverseBytes(v); }
-
-    template <typename T>
-    constexpr T BigEndian(T v) { return v; }
-#endif
+// Sensitive to endianness
+template <typename T>
+constexpr T LittleEndian(T v) { return v; }
+template <typename T>
+constexpr T BigEndian(T v) { return ReverseBytes(v); }
 
 #if defined(__GNUC__)
     static inline int CountLeadingZeros(uint32_t u)
@@ -2452,24 +2440,15 @@ public:
 union Date {
     int32_t value;
     struct {
-#ifdef RG_ARCH_LITTLE_ENDIAN
+        // Sensitive to endianness
         int8_t day;
         int8_t month;
         int16_t year;
-#else
-        int16_t year;
-        int8_t month;
-        int8_t day;
-#endif
     } st;
 
     Date() = default;
     Date(int16_t year, int8_t month, int8_t day)
-#ifdef RG_ARCH_LITTLE_ENDIAN
-        : st({day, month, year}) { RG_ASSERT(IsValid()); }
-#else
-        : st({year, month, day}) { RG_ASSERT(IsValid()); }
-#endif
+        : st({day, month, year}) { RG_ASSERT(IsValid()); } // Sensitive to endianness
 
     static inline bool IsLeapYear(int16_t year)
     {

@@ -21,7 +21,7 @@ struct PackHeader {
     char signature[13];
     int8_t version;
     int8_t native_size;
-    int8_t endianness;
+    char _pad1[1];
 
     int64_t stays_len;
     int64_t diagnoses_len;
@@ -44,7 +44,6 @@ bool mco_StaySet::SavePack(StreamWriter *st) const
     CopyString(PACK_SIGNATURE, bh.signature);
     bh.version = PACK_VERSION;
     bh.native_size = (uint8_t)RG_SIZE(Size);
-    bh.endianness = (int8_t)RG_ARCH_ENDIANNESS;
     bh.stays_len = stays.len;
     for (const mco_Stay &stay: stays) {
         bh.diagnoses_len += stay.other_diagnoses.len;
@@ -121,11 +120,6 @@ bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test>
     if (bh.version != PACK_VERSION) {
         LogError("Cannot load '%1' (dspak version %2), expected version %3", st->GetFileName(),
                  bh.version, PACK_VERSION);
-        return false;
-    }
-    if (bh.endianness != (int8_t)RG_ARCH_ENDIANNESS) {
-        LogError("File '%1' is not compatible with this platform (endianness issue)",
-                 st->GetFileName());
         return false;
     }
     if (bh.stays_len < 0 || bh.diagnoses_len < 0 || bh.procedures_len < 0)
