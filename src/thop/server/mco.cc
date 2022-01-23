@@ -107,13 +107,22 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
     {
         const auto enumerate_directory_files = [&](const char *dir) {
             EnumStatus status = EnumerateDirectory(dir, nullptr, 1024,
-                                                   [&](const char *filename, FileType file_type) {
+                                                   [&](const char *basename, FileType file_type) {
+                const char *filename = Fmt(&temp_alloc, "%1%/%2", dir, basename).ptr;
+
                 CompressionType compression_type;
-                Span<const char> ext = GetPathExtension(filename, &compression_type);
+                Span<const char> ext = GetPathExtension(basename, &compression_type);
+
+                if (file_type == FileType::Link) {
+                    FileInfo file_info;
+                    if (!StatFile(filename, (int)StatFlag::FollowSymlink, &file_info))
+                        return false;
+                    file_type = file_info.type;
+                }
 
                 if (file_type == FileType::File &&
                         (ext == ".grp" || ext == ".rss" || ext == ".dmpak" || ext == ".txt")) {
-                    filenames.Append(Fmt(&temp_alloc, "%1%/%2", dir, filename).ptr);
+                    filenames.Append(filename);
                 }
 
                 return true;

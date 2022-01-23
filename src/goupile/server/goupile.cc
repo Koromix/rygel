@@ -767,6 +767,8 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
                     if (PruneOldFiles(filename, filter, true, max_age)) {
                         LogInfo("Prune old directory '%1'", filename);
                         complete &= UnlinkDirectory(filename);
+                    } else {
+                        complete = false;
                     }
                 } else {
                     complete = false;
@@ -785,7 +787,12 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
                 }
             } break;
 
-            case FileType::Unknown: { complete = false; } break;
+            case FileType::Link:
+            case FileType::Unknown: {
+                // Should not happen, don't touch this crap
+                LogError("Unexpected non-regular file '%1'", filename);
+                complete = false;
+            } break;
         }
 
         return true;

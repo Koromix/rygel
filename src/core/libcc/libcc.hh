@@ -3769,9 +3769,15 @@ bool PathIsAbsolute(const char *path);
 bool PathIsAbsolute(Span<const char> path);
 bool PathContainsDotDot(const char *path);
 
+enum class StatFlag {
+    IgnoreMissing = 1 << 0,
+    FollowSymlink = 1 << 1
+};
+
 enum class FileType {
     Directory,
     File,
+    Link,
     Unknown
 };
 
@@ -3788,9 +3794,9 @@ enum class EnumStatus {
     Done
 };
 
-bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info);
+bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info);
 static inline bool StatFile(const char *filename, FileInfo *out_info)
-    { return StatFile(filename, true, out_info); }
+    { return StatFile(filename, 0, out_info); }
 
 // Sync failures are logged but not reported as errors (function returns true)
 bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool sync = true);

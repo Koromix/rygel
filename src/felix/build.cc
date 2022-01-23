@@ -854,7 +854,7 @@ int64_t Builder::GetFileModificationTime(const char *filename, bool retry)
         return *ptr;
     } else {
         FileInfo file_info;
-        if (!StatFile(filename, false, &file_info))
+        if (!StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info))
             return -1;
 
         // filename might be temporary (e.g. dependency filenames in NeedsRebuild())

@@ -1896,8 +1896,11 @@ static FileType FileAttributesToType(uint32_t attr)
     }
 }
 
-bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
+bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
+    // We don't detect symbolic links, but since they are much less of a hazard
+    // than on POSIX systems we care a lot less about them.
+
     HANDLE h;
     if (win32_utf8) {
         h = CreateFileA(filename, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -1912,7 +1915,7 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
     }
     if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
-        if (error_if_missing ||
+        if (!(flags & (int)StatFlag::IgnoreMissing) ||
                 (err != ERROR_FILE_NOT_FOUND && err != ERROR_PATH_NOT_FOUND)) {
             LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
         }
@@ -2035,11 +2038,13 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
 #else
 
-bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
+bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
+    auto func = (flags & (int)StatFlag::FollowSymlink) ? stat : lstat;
+
     struct stat sb;
-    if (stat(filename, &sb) < 0) {
-        if (error_if_missing || errno != ENOENT) {
+    if (func(filename, &sb) < 0) {
+        if (!(flags & (int)StatFlag::IgnoreMissing) || errno != ENOENT) {
             LogError("Cannot stat '%1': %2", filename, strerror(errno));
         }
         return false;
@@ -2049,6 +2054,8 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
         out_info->type = FileType::Directory;
     } else if (S_ISREG(sb.st_mode)) {
         out_info->type = FileType::File;
+    } else if (S_ISLNK(sb.st_mode)) {
+        out_info->type = FileType::Link;
     } else {
         out_info->type = FileType::Unknown;
     }
@@ -2154,25 +2161,28 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
             FileType file_type;
 #ifdef _DIRENT_HAVE_D_TYPE
-            if (dent->d_type != DT_UNKNOWN && dent->d_type != DT_LNK) {
+            if (dent->d_type != DT_UNKNOWN) {
                 switch (dent->d_type) {
                     case DT_DIR: { file_type = FileType::Directory; } break;
                     case DT_REG: { file_type = FileType::File; } break;
+                    case DT_LNK: { file_type = FileType::Link; } break;
                     default: { file_type = FileType::Unknown; } break;
                 }
             } else
 #endif
             {
                 struct stat sb;
-                if (fstatat(dirfd(dirp), dent->d_name, &sb, 0) < 0) {
-                    LogError("Ignoring file '%1' in '%2' (stat failed)",
-                             dent->d_name, dirname);
+                if (fstatat(dirfd(dirp), dent->d_name, &sb, AT_SYMLINK_NOFOLLOW) < 0) {
+                    LogError("Ignoring file '%1' in '%2' (stat failed)", dent->d_name, dirname);
                     continue;
                 }
+
                 if (S_ISDIR(sb.st_mode)) {
                     file_type = FileType::Directory;
                 } else if (S_ISREG(sb.st_mode)) {
                     file_type = FileType::File;
+                } else if (S_ISLNK(sb.st_mode)) {
+                    file_type = FileType::Link;
                 } else {
                     file_type = FileType::Unknown;
                 }
@@ -2210,7 +2220,9 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
                                           max_files, str_alloc, out_files);
                 }
             } break;
-            case FileType::File: {
+
+            case FileType::File:
+            case FileType::Link: {
                 if (!filter || MatchPathName(filename, filter)) {
                     out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
                 }
@@ -2236,14 +2248,23 @@ bool IsDirectoryEmpty(const char *dirname)
 
 bool TestFile(const char *filename, FileType type)
 {
+    RG_ASSERT(type != FileType::Link);
+
     FileInfo file_info;
-    if (!StatFile(filename, false, &file_info))
+    if (!StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info))
         return false;
+
+    // Don't follow, but don't warn if we just wanted a file
+    if (file_info.type == FileType::Link) {
+        file_info.type = FileType::File;
+    }
 
     if (type != FileType::Unknown && type != file_info.type) {
         switch (type) {
             case FileType::Directory: { LogError("Path '%1' is not a directory", filename); } break;
             case FileType::File: { LogError("Path '%1' is not a file", filename); } break;
+
+            case FileType::Link:
             case FileType::Unknown: { RG_UNREACHABLE(); } break;
         }
 
