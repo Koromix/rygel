@@ -65,27 +65,10 @@ static int RunTarget(const char *target_filename, Span<const char *const> argume
     }
     cmd.Append(0);
 
-    // XXX: Use ExecuteCommandLine() but it needs to be improved first, because right
-    // now it always wants to capture output. And we don't want to do that here.
-    STARTUPINFOA startup_info = {};
-    PROCESS_INFORMATION process_info;
-    if (!CreateProcessA(target_filename, cmd.ptr, nullptr, nullptr, FALSE, 0,
-                        nullptr, nullptr, &startup_info, &process_info)) {
-        LogError("Failed to start process: %1", GetWin32ErrorString());
+    int code;
+    if (!ExecuteCommandLine(cmd.ptr, &code))
         return 127;
-    }
-    RG_DEFER {
-        CloseHandle(process_info.hProcess);
-        CloseHandle(process_info.hThread);
-    };
-
-    DWORD exit_code = 0;
-
-    bool success = (WaitForSingleObject(process_info.hProcess, INFINITE) == WAIT_OBJECT_0) &&
-                   GetExitCodeProcess(process_info.hProcess, &exit_code);
-    RG_ASSERT(success);
-
-    return (int)exit_code;
+    return code;
 #else
     HeapArray<const char *> argv;
 
