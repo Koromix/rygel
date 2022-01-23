@@ -4537,7 +4537,7 @@ struct BrotliDecompressContext {
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
 {
-    Close();
+    Close(true);
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
@@ -4557,7 +4557,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 
 bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
-    Close();
+    Close(true);
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
@@ -4579,7 +4579,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
 
 bool StreamReader::Open(const char *filename, CompressionType compression_type)
 {
-    Close();
+    Close(true);
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
@@ -4603,7 +4603,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
 bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename,
                         CompressionType compression_type)
 {
-    Close();
+    Close(true);
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
@@ -4620,8 +4620,10 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
     return true;
 }
 
-bool StreamReader::Close()
+bool StreamReader::Close(bool implicit)
 {
+    RG_ASSERT(implicit || this != &stdin_st);
+
     switch (compression.type) {
         case CompressionType::None: {} break;
 
@@ -5405,6 +5407,9 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
 
 bool StreamWriter::Close(bool implicit)
 {
+    RG_ASSERT(implicit || this != &stdout_st);
+    RG_ASSERT(implicit || this != &stderr_st);
+
     switch (compression.type) {
         case CompressionType::None: {} break;
 

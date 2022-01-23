@@ -2665,7 +2665,7 @@ class StreamReader {
     BlockAllocator str_alloc;
 
 public:
-    StreamReader() { Close(); }
+    StreamReader() { Close(true); }
     StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamReader() { Open(buf, filename, compression_type); }
@@ -2678,7 +2678,7 @@ public:
     StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamReader() { Open(func, filename, compression_type); }
-    ~StreamReader() { Close(); }
+    ~StreamReader() { Close(true); }
 
     bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
@@ -2687,7 +2687,7 @@ public:
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
     bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
-    bool Close();
+    bool Close() { return Close(false); }
 
     // File-specific
     bool Rewind();
@@ -2708,6 +2708,8 @@ public:
     int64_t ComputeStreamLen();
 
 private:
+    bool Close(bool implicit);
+
     bool InitDecompressor(CompressionType type);
 
     Size ReadInflate(Size max_len, void *out_buf);
