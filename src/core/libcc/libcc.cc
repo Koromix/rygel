@@ -3441,7 +3441,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         CloseHandleSafe(&out_pipe[0]);
         CloseHandleSafe(&out_pipe[1]);
     };
-    if (!CreateOverlappedPipe(true, false, out_pipe))
+    if (out_func.IsValid() && !CreateOverlappedPipe(true, false, out_pipe))
         return false;
 
     // Start process
@@ -3452,19 +3452,21 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
             CloseHandleSafe(&startup_info.hStdOutput);
             CloseHandleSafe(&startup_info.hStdError);
         };
-        if (!DuplicateHandle(GetCurrentProcess(), in_func.IsValid() ? in_pipe[0] : GetStdHandle(STD_INPUT_HANDLE),
-                             GetCurrentProcess(), &startup_info.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
-            LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
-            return false;
+        if (in_func.IsValid() || out_func.IsValid()) {
+            if (!DuplicateHandle(GetCurrentProcess(), in_func.IsValid() ? in_pipe[0] : GetStdHandle(STD_INPUT_HANDLE),
+                                 GetCurrentProcess(), &startup_info.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
+                LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
+                return false;
+            }
+            if (!DuplicateHandle(GetCurrentProcess(), out_func.IsValid() ? out_pipe[1] : GetStdHandle(STD_OUTPUT_HANDLE),
+                                 GetCurrentProcess(), &startup_info.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
+                !DuplicateHandle(GetCurrentProcess(), out_func.IsValid() ? out_pipe[1] : GetStdHandle(STD_ERROR_HANDLE),
+                                 GetCurrentProcess(), &startup_info.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
+                LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
+                return false;
+            }
+            startup_info.dwFlags |= STARTF_USESTDHANDLES;
         }
-        if (!DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
-                             &startup_info.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
-            !DuplicateHandle(GetCurrentProcess(), out_pipe[1], GetCurrentProcess(),
-                             &startup_info.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
-            LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
-            return false;
-        }
-        startup_info.dwFlags |= STARTF_USESTDHANDLES;
 
         PROCESS_INFORMATION process_info = {};
         if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP,
@@ -3488,7 +3490,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
     {
         HANDLE events[3] = {
             CreateEvent(nullptr, TRUE, in_func.IsValid(), nullptr),
-            CreateEvent(nullptr, TRUE, TRUE, nullptr),
+            CreateEvent(nullptr, TRUE, out_func.IsValid(), nullptr),
             console_ctrl_event
         };
         RG_DEFER {
@@ -3542,6 +3544,8 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
                     ResetEvent(events[0]);
                 }
             } else if (ret == WAIT_OBJECT_0 + 1) {
+                RG_ASSERT(out_func.IsValid());
+
                 if (read_pending) {
                     if (GetOverlappedResult(out_pipe[0], &read_ov, &read_len, TRUE)) {
                         out_func(MakeSpan(read_buf, read_len));
@@ -3740,11 +3744,13 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         CloseDescriptorSafe(&out_pfd[0]);
         CloseDescriptorSafe(&out_pfd[1]);
     };
-    if (!CreatePipe(out_pfd))
-        return false;
-    if (fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0) {
-        LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
-        return false;
+    if (out_func.IsValid()) {
+        if (!CreatePipe(out_pfd))
+            return false;
+        if (fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0) {
+            LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
+            return false;
+        }
     }
 
     // Create child termination pipe
@@ -3781,8 +3787,8 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
             LogError("Failed to set up standard process descriptors: %1", strerror(errno));
             return false;
         }
-        if ((errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDOUT_FILENO)) ||
-                (errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDERR_FILENO))) {
+        if (out_func.IsValid() && ((errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDOUT_FILENO)) ||
+                                   (errno = posix_spawn_file_actions_adddup2(&file_actions, out_pfd[1], STDERR_FILENO)))) {
             LogError("Failed to set up standard process descriptors: %1", strerror(errno));
             return false;
         }
@@ -3802,7 +3808,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
     bool terminate = false;
 
     // Read and write standard process streams
-    do {
+    while (in_pfd[1] >= 0 || out_pfd[0] >= 0) {
         LocalArray<struct pollfd, 3> pfds;
         int in_idx = -1, out_idx = -1, term_idx = -1;
         if (in_pfd[1] >= 0) {
@@ -3861,7 +3867,9 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
             LogError("Failed to poll process output");
             break;
         } else if (out_revents & POLLIN) {
-            uint8_t read_buf[1024];
+            RG_ASSERT(out_func.IsValid());
+
+            uint8_t read_buf[4096];
             ssize_t read_len = read(out_pfd[0], read_buf, RG_SIZE(read_buf));
 
             if (read_len > 0) {
@@ -3883,7 +3891,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 
             break;
         }
-    } while (in_pfd[1] >= 0 || out_pfd[0] >= 0);
+    }
 
     // Done reading and writing
     CloseDescriptorSafe(&in_pfd[1]);
