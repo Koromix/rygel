@@ -51,7 +51,7 @@ bool mco_StaySet::SavePack(StreamWriter *st) const
     }
 
     st->Write(&bh, RG_SIZE(bh));
-#ifdef RG_ARCH_64
+#if RG_SIZE_MAX == INT64_MAX
     st->Write(stays.ptr, stays.len * RG_SIZE(*stays.ptr));
 #else
     for (const mco_Stay &stay: stays) {
@@ -156,7 +156,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test>
         for (Size i = set.stays.len - (Size)bh.stays_len; i < set.stays.len; i++) {
             mco_Stay *stay = &set.stays[i];
 
-#ifndef RG_ARCH_64
+#if RG_SIZE_MAX < INT64_MAX
             union {
                 uint8_t raw[32];
                 struct {

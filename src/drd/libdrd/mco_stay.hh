@@ -110,7 +110,7 @@ struct mco_Stay {
     // files on 32-bit platforms.
     Span<drd_DiagnosisCode> other_diagnoses;
     Span<mco_ProcedureRealisation> procedures;
-#ifndef RG_ARCH_64
+#if RG_SIZE_MAX < INT64_MAX
     char _pad1[32 - 2 * RG_SIZE(Size) - 2 * RG_SIZE(void *)];
 #endif
 };

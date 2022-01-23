@@ -84,15 +84,11 @@ extern "C" const char *FelixVersion;
 extern "C" const char *FelixCompiler;
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-    #define RG_ARCH_64
-
     typedef int64_t Size;
     #define RG_SIZE_MAX INT64_MAX
 #elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
     #error Support for 32-bit desktop operating systems is explicitly disabled
 #elif defined(__thumb__) || defined(__arm__) || defined(__EMSCRIPTEN__)
-    #define RG_ARCH_32
-
     typedef int32_t Size;
     #define RG_SIZE_MAX INT32_MAX
 #else
@@ -1706,7 +1702,7 @@ public:
     {
         Size count = 0;
         for (size_t bits: data) {
-#ifdef RG_ARCH_64
+#if RG_SIZE_MAX == INT64_MAX
             count += RG::PopCount((uint64_t)bits);
 #else
             count += RG::PopCount((uint32_t)bits);
@@ -2250,7 +2246,7 @@ DEFINE_INTEGER_HASH_TRAITS_32(unsigned int);
 #endif
 DEFINE_INTEGER_HASH_TRAITS_64(long long);
 DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long);
-#ifdef RG_ARCH_64
+#if RG_SIZE_MAX == INT64_MAX
     DEFINE_INTEGER_HASH_TRAITS_64(void *);
     DEFINE_INTEGER_HASH_TRAITS_64(const void *);
 #else
