@@ -12,7 +12,7 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 PKG_CPPFLAGS += -D_FILE_OFFSET_BITS=64 -D__STDC_FORMAT_MACROS -DLIBCC_ACCEPT_DESKTOP32 -DLIBCC_NO_BROTLI\
-                -Wstrict-overflow=0
+                -Wstrict-overflow=0 -fno-strict-aliasing
 PKG_CFLAGS += -std=gnu99
 PKG_CXXFLAGS += -std=gnu++17 -Wno-class-memaccess
 
@@ -47,9 +47,5 @@ override OBJECTS := $(addprefix ./${R_ARCH}_, heimdallR.cc.o Rcc.cc.o libcc.cc.o
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_imgui_widgets.cpp.o: ../../../../vendor/imgui/imgui_widgets.cpp
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
-
-MINIZ_FLAGS = -fno-strict-aliasing -DMINIZ_NO_MALLOC -DMINIZ_NO_STDIO -DMINIZ_NO_TIME\
-              -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ARCHIVE_WRITING_APIS -DMINIZ_NO_ZLIB_APIS\
-              -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
 ./${R_ARCH}_miniz.c.o: ../../../../vendor/miniz/miniz.c
-	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) $(MINIZ_FLAGS) -Wno-pedantic -c -o $@ $<
+	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) -Wno-pedantic -c -o $@ $<
