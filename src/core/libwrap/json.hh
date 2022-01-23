@@ -33,8 +33,8 @@ class json_StreamReader {
     Size buf_offset = 0;
     Size file_offset = 0;
 
-    Size line_number = 1;
-    Size line_offset = 1;
+    int line_number = 1;
+    int line_offset = 1;
 
 public:
     typedef char Ch;
@@ -52,8 +52,8 @@ public:
     Size PutEnd(char *) { return 0; }
 
     const char *GetFileName() const { return st->GetFileName(); }
-    Size GetLineNumber() const { return line_number; }
-    Size GetLineOffset() const { return line_offset; }
+    int GetLineNumber() const { return line_number; }
+    int GetLineOffset() const { return line_offset; }
 
 private:
     void ReadByte();
