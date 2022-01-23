@@ -3893,11 +3893,24 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size m
     Size start_len = out_buf->len;
     RG_DEFER_N(out_guard) { out_buf->RemoveFrom(start_len); };
 
+    // Check virtual memory limits
+    {
+        Size memory_max = RG_SIZE_MAX - out_buf->len - 1;
+
+        if (RG_UNLIKELY(memory_max <= 0)) {
+            LogError("Exhausted memory limit");
+            return -1;
+        }
+
+        RG_ASSERT(max_len);
+        max_len = (max_len >= 0) ? std::min(max_len, memory_max) : memory_max;
+    }
+
     // Don't f*ck up the log
     bool warned = false;
 
     bool success = ExecuteCommandLine(cmd_line, in_buf, [&](Span<uint8_t> buf) {
-        if (max_len < 0 || out_buf->len - start_len <= max_len - buf.len) {
+        if (out_buf->len - start_len <= max_len - buf.len) {
             out_buf->Append(buf);
         } else if (!warned) {
             LogError("Truncated output");
@@ -4780,11 +4793,14 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     // Check virtual memory limits
     {
         Size memory_max = RG_SIZE_MAX - out_buf->len - 1;
+
         if (RG_UNLIKELY(memory_max <= 0)) {
             LogError("Exhausted memory limit reading file '%1'", filename);
             return -1;
         }
-        max_len = std::min(max_len, memory_max);
+
+        RG_ASSERT(max_len);
+        max_len = (max_len >= 0) ? std::min(max_len, memory_max) : memory_max;
     }
 
     if (compression.type == CompressionType::None && ComputeStreamLen() >= 0) {
