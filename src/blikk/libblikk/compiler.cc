@@ -2572,13 +2572,24 @@ void bk_Parser::ParseArraySubscript()
         // Kill the load instructions, we need to adjust the index
         TrimInstructions(ir.len - stack[stack.len - 1].indirect_addr);
 
+        Size idx_pos = pos;
+
         // Parse index expression
         {
-            Size idx_pos = pos;
             const bk_TypeInfo *type = ParseExpression(false, false).type;
 
             if (RG_UNLIKELY(type != bk_IntType)) {
                 MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
+            }
+        }
+
+        // Try to check index statically
+        if (ir[ir.len - 1].code == bk_Opcode::Push && show_errors) {
+            RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Integer);
+            int64_t idx = ir[ir.len - 1].u.i;
+
+            if (idx < 0 || idx >= array_type->len) {
+                MarkError(idx_pos, "Index is out of range: %1 (array length %2)", idx, array_type->len);
             }
         }
 
