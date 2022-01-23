@@ -11,7 +11,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-PKG_CPPFLAGS += -D_FILE_OFFSET_BITS=64 -D__STDC_FORMAT_MACROS -DLIBDRD_NO_WREN -DLIBCC_NO_BROTLI -Wstrict-overflow=0
+PKG_CPPFLAGS += -D_FILE_OFFSET_BITS=64 -D__STDC_FORMAT_MACROS -DLIBCC_ACCEPT_DESKTOP32 -DLIBDRD_NO_WREN -DLIBCC_NO_BROTLI\
+                -Wstrict-overflow=0
 PKG_CFLAGS += -std=gnu99
 PKG_CXXFLAGS += -std=gnu++17 -Wno-class-memaccess
 

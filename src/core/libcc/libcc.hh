@@ -87,7 +87,12 @@ extern "C" const char *FelixCompiler;
     typedef int64_t Size;
     #define RG_SIZE_MAX INT64_MAX
 #elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
-    #error Support for 32-bit desktop operating systems is explicitly disabled
+    #ifdef LIBCC_ACCEPT_DESKTOP32
+        typedef int32_t Size;
+        #define RG_SIZE_MAX INT32_MAX
+    #else
+        #error Support for 32-bit desktop operating systems is explicitly disabled
+    #endif
 #elif defined(__thumb__) || defined(__arm__) || defined(__EMSCRIPTEN__)
     typedef int32_t Size;
     #define RG_SIZE_MAX INT32_MAX
