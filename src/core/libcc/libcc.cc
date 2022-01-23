@@ -3488,9 +3488,10 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 
     // Read and write standard process streams
     {
-        HANDLE events[3] = {
+        HANDLE events[4] = {
             CreateEvent(nullptr, TRUE, in_func.IsValid(), nullptr),
             CreateEvent(nullptr, TRUE, out_func.IsValid(), nullptr),
+            process_handle,
             console_ctrl_event
         };
         RG_DEFER {
@@ -3574,7 +3575,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
                     CancelIo(out_pipe[0]);
                     break;
                 }
-            } else if (ret == WAIT_OBJECT_0 + 2) {
+            } else if (ret == WAIT_OBJECT_0 + 2 || ret == WAIT_OBJECT_0 + 3) {
                 break;
             } else {
                 // Not sure how this could happen, but who knows?
