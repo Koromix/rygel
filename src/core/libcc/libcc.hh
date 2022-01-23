@@ -3847,6 +3847,9 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code);
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size max_len,
                         HeapArray<uint8_t> *out_buf, int *out_code);
+static inline bool ExecuteCommandLine(const char *cmd_line, int *out_code) {
+    return ExecuteCommandLine(cmd_line, {}, {}, out_code);
+}
 static inline bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                                       FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
