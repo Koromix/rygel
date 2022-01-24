@@ -203,31 +203,38 @@ static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
 
 static Size PackAsset(const PackAssetInfo &asset, FunctionRef<void(Span<const uint8_t> buf)> func)
 {
-    HeapArray<uint8_t> compressed_buf;
-    StreamWriter compressor(&compressed_buf, nullptr, asset.compression_type);
+    Size compressed_len = 0;
+    StreamWriter compressor([&](Span<const uint8_t> buf) { 
+        func(buf);
+        compressed_len += buf.len;
 
-    Size written_len = 0;
-    const auto flush_compressor_buffer = [&]() {
-        func(compressed_buf);
-        written_len += compressed_buf.len;
-        compressed_buf.RemoveFrom(0);
-    };
+        return true;
+    }, nullptr, asset.compression_type);
 
     if (asset.transform_cmd) {
-        // XXX: Implement some kind of stream API for external process input / output
-        HeapArray<uint8_t> merge_buf;
-        if (!MergeAssetSourceFiles(asset.sources, [&](Span<const uint8_t> buf) { merge_buf.Append(buf); }))
-            return -1;
+        Span<const uint8_t> bridge = {};
 
-        // Execute transform command
+        // Create user-level thread to run merge function
+        Fiber merger([&]() {
+            const auto write = [&](Span<const uint8_t> buf) {
+                bridge = buf;
+                Fiber::SwitchBack();
+            };
+
+            return MergeAssetSourceFiles(asset.sources, write);
+        });
+
+        // Run transform command
         {
+            const auto read = [&]() {
+                bridge = {};
+                merger.SwitchTo();
+                return bridge;
+            };
+            const auto write = [&](Span<const uint8_t> buf) { compressor.Write(buf); };
+
             int code;
-            bool success = ExecuteCommandLine(asset.transform_cmd, merge_buf,
-                                              [&](Span<const uint8_t> buf) {
-                compressor.Write(buf);
-                flush_compressor_buffer();
-            }, &code);
-            if (!success)
+            if (!ExecuteCommandLine(asset.transform_cmd, read, write, &code))
                 return -1;
 
             if (code) {
@@ -235,20 +242,20 @@ static Size PackAsset(const PackAssetInfo &asset, FunctionRef<void(Span<const ui
                 return -1;
             }
         }
+
+        if (!merger.Finalize())
+            return -1;
     } else {
-        bool success = MergeAssetSourceFiles(asset.sources, [&](Span<const uint8_t> buf) {
-            compressor.Write(buf);
-            flush_compressor_buffer();
-        });
-        if (!success)
+        const auto write = [&](Span<const uint8_t> buf) { compressor.Write(buf); };
+
+        if (!MergeAssetSourceFiles(asset.sources, write))
             return -1;
     }
 
     bool success = compressor.Close();
     RG_ASSERT(success);
-    flush_compressor_buffer();
 
-    return written_len;
+    return compressed_len;
 }
 
 static Size PackSourceMap(const PackAssetInfo &asset, FunctionRef<void(Span<const uint8_t> buf)> func)
