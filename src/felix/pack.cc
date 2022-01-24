@@ -273,37 +273,38 @@ static Size PackSourceMap(const PackAssetInfo &asset, FunctionRef<void(Span<cons
     return buf.len;
 }
 
-static void PrintAsC(Span<const uint8_t> bytes, bool use_literals, StreamWriter *out_st)
+static void PrintAsLiterals(Span<const uint8_t> bytes, StreamWriter *out_st)
 {
-    if (use_literals) {
-        Size i = 0;
-        for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
-            Print(out_st, "\"\\x%1\\x%2\\x%3\\x%4\\x%5\\x%6\\x%7\\x%8\" ",
-                          FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
-                          FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
-                          FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
-                          FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
-        }
+    Size i = 0;
+    for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
+        Print(out_st, "\"\\x%1\\x%2\\x%3\\x%4\\x%5\\x%6\\x%7\\x%8\" ",
+                      FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
+                      FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
+                      FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
+                      FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
+    }
 
-        if (i < bytes.len) {
-            Print(out_st, "\"");
-            for (; i < bytes.len; i++) {
-                Print(out_st, "\\x%1", FmtHex(bytes[i]).Pad0(-2));
-            }
-            Print(out_st, "\" ");
-        }
-    } else {
-        Size i = 0;
-        for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
-            Print(out_st, "0x%1, 0x%2, 0x%3, 0x%4, 0x%5, 0x%6, 0x%7, 0x%8, ",
-                          FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
-                          FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
-                          FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
-                          FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
-        }
+    if (i < bytes.len) {
+        Print(out_st, "\"");
         for (; i < bytes.len; i++) {
-            Print(out_st, "0x%1, ", FmtHex(bytes[i]).Pad0(-2));
+            Print(out_st, "\\x%1", FmtHex(bytes[i]).Pad0(-2));
         }
+        Print(out_st, "\" ");
+    }
+}
+
+static void PrintAsArray(Span<const uint8_t> bytes, StreamWriter *out_st)
+{
+    Size i = 0;
+    for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
+        Print(out_st, "0x%1, 0x%2, 0x%3, 0x%4, 0x%5, 0x%6, 0x%7, 0x%8, ",
+                      FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
+                      FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
+                      FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
+                      FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
+    }
+    for (; i < bytes.len; i++) {
+        Print(out_st, "0x%1, ", FmtHex(bytes[i]).Pad0(-2));
     }
 }
 
@@ -349,6 +350,13 @@ bool PackAssets(Span<const PackAssetInfo> assets, unsigned int flags, const char
     if (assets.len) {
         bool use_literals = flags & (int)PackFlag::UseLiterals;
 
+        std::function<void(Span<const uint8_t>)> print;
+        if (use_literals) {
+            print = [&](Span<const uint8_t> buf) { PrintAsLiterals(buf, &st); };
+        } else {
+            print = [&](Span<const uint8_t> buf) { PrintAsArray(buf, &st); };
+        }
+
         PrintLn(&st, R"(
 static const uint8_t raw_data[] = {)");
 
@@ -361,12 +369,12 @@ static const uint8_t raw_data[] = {)");
 
             PrintLn(&st, "    // %1", blob.name);
             Print(&st, "    ");
-            blob.len = PackAsset(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_literals, &st); });
+            blob.len = PackAsset(asset, print);
             if (blob.len < 0)
                 return false;
 
             // Put NUL byte at the end to make it a valid C string
-            PrintAsC(0, use_literals, &st);
+            print(0);
             PrintLn(&st);
 
             if (asset.source_map_name) {
@@ -379,11 +387,11 @@ static const uint8_t raw_data[] = {)");
                 blob_map.compression_type = asset.compression_type;
                 PrintLn(&st, "    // %1", blob_map.name);
                 Print(&st, "    ");
-                blob_map.len = PackSourceMap(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_literals, &st); });
+                blob_map.len = PackSourceMap(asset, print);
                 if (blob_map.len < 0)
                     return false;
 
-                PrintAsC(0, use_literals, &st);
+                print(0);
                 PrintLn(&st);
 
                 blobs.Append(blob);
