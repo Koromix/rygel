@@ -4642,6 +4642,188 @@ void AsyncPool::RunTask(Task *task)
 }
 
 // ------------------------------------------------------------------------
+// Fibers
+// ------------------------------------------------------------------------
+
+#ifdef _WIN32
+
+static RG_THREAD_LOCAL int fib_fibers;
+static RG_THREAD_LOCAL void *fib_self;
+static RG_THREAD_LOCAL bool fib_run;
+
+Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
+    : f(f)
+{
+    if (!fib_self) {
+        fib_self = ConvertThreadToFiber(nullptr);
+
+        if (!fib_self) {
+            LogError("Failed to convert thread to fiber: %1", GetWin32ErrorString());
+            return;
+        }
+    }
+    RG_DEFER_N(self_guard) {
+        if (!fib_fibers) {
+            bool success = ConvertFiberToThread();
+            RG_ASSERT(success);
+
+            fib_self = nullptr;
+        }
+    };
+
+    fiber = CreateFiber((SIZE_T)stack_size, [](void *udata) {
+        Fiber *self = (Fiber *)udata;
+
+        self->success = self->f();
+        self->done = true;
+
+        SwitchToFiber(fib_self);
+    }, this);
+    if (!fiber) {
+        LogError("Failed to create fiber: %1", GetWin32ErrorString());
+        return;
+    }
+
+    self_guard.Disable();
+    done = false;
+    fib_fibers++;
+}
+
+Fiber::~Fiber()
+{
+    if (fib_run) {
+        // We are forced to execute it until the end
+        Finalize();
+        fib_run = false;
+    }
+
+    if (fiber) {
+        DeleteFiber(fiber);
+        fiber = nullptr;
+
+        if (!--fib_fibers && fib_self) {
+            bool success = ConvertFiberToThread();
+            RG_ASSERT(success);
+
+            fib_self = nullptr;
+        }
+    }
+}
+
+void Fiber::SwitchTo()
+{
+    if (RG_UNLIKELY(!fiber))
+        return;
+
+    if (!done) {
+        fib_run = true;
+        SwitchToFiber(fiber);
+    }
+}
+
+bool Fiber::Finalize()
+{
+    if (RG_UNLIKELY(!fiber))
+        return false;
+
+    if (!done) {
+        fib_run = false;
+        SwitchToFiber(fiber);
+
+        RG_ASSERT(done);
+    }
+
+    return success;
+}
+
+bool Fiber::SwitchBack()
+{
+    if (fib_run) {
+        SwitchToFiber(fib_self);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+#else
+
+static RG_THREAD_LOCAL ucontext_t fib_self;
+static RG_THREAD_LOCAL ucontext_t *fib_run;
+
+Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
+    : f(f)
+{
+    if (getcontext(&fib_self) < 0) {
+        LogError("Failed to get fiber context: %1", strerror(errno));
+        return;
+    }
+    memcpy(&ucp, &fib_self, RG_SIZE(ucp));
+
+    ucp.uc_stack.ss_sp = Allocator::Allocate(nullptr, stack_size);
+    ucp.uc_stack.ss_size = (size_t)stack_size;
+    ucp.uc_link = nullptr;
+
+    makecontext(&ucp, (void (*)())+[](unsigned int high, unsigned int low) {
+        Fiber *self = (Fiber *)(((uint64_t)high << 32) | (uint64_t)low);
+
+        self->success = self->f();
+        self->done = true;
+
+        swapcontext(&self->ucp, &fib_self);
+    }, 2, (unsigned int)((uint64_t)this >> 32), (unsigned int)((uint64_t)this & 0xFFFFFFFFull));
+
+    done = false;
+}
+
+Fiber::~Fiber()
+{
+    if (fib_run) {
+        // We are forced to execute it until the end
+        Finalize();
+        fib_run = nullptr;
+    }
+}
+
+void Fiber::SwitchTo()
+{
+    if (RG_UNLIKELY(!ucp.uc_stack.ss_sp))
+        return;
+
+    if (!done) {
+        fib_run = &ucp;
+        swapcontext(&fib_self, &ucp);
+    }
+}
+
+bool Fiber::Finalize()
+{
+    if (RG_UNLIKELY(!ucp.uc_stack.ss_sp))
+        return false;
+
+    if (!done) {
+        fib_run = nullptr;
+        swapcontext(&fib_self, &ucp);
+
+        RG_ASSERT(done);
+    }
+
+    return success;
+}
+
+bool Fiber::SwitchBack()
+{
+    if (fib_run) {
+        swapcontext(fib_run, &fib_self);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+#endif
+
+// ------------------------------------------------------------------------
 // Streams
 // ------------------------------------------------------------------------
 

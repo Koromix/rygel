@@ -35,6 +35,8 @@
 #include <utility>
 #ifdef _WIN32
     #include <intrin.h>
+#else
+    #include <ucontext.h>
 #endif
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
@@ -74,6 +76,7 @@ namespace RG {
 
 #define RG_ASYNC_MAX_THREADS 256
 #define RG_ASYNC_MAX_IDLE_TIME 10000
+#define RG_FIBER_DEFAULT_STACK_SIZE Kibibytes(128)
 
 // ------------------------------------------------------------------------
 // Utility
@@ -3955,6 +3958,34 @@ public:
     static int GetWorkerIdx();
 
     friend class AsyncPool;
+};
+
+// ------------------------------------------------------------------------
+// Fibers
+// ------------------------------------------------------------------------
+
+class Fiber {
+    RG_DELETE_COPY(Fiber)
+
+    std::function<bool()> f;
+
+#ifdef _WIN32
+    void *fiber = nullptr;
+#else
+    ucontext_t ucp = {};
+#endif
+
+    bool done = true;
+    bool success = false;
+
+public:
+    Fiber(const std::function<bool()> &f, Size stack_size = RG_FIBER_DEFAULT_STACK_SIZE);
+    ~Fiber();
+
+    void SwitchTo();
+    bool Finalize();
+
+    static bool SwitchBack();
 };
 
 // ------------------------------------------------------------------------
