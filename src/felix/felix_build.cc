@@ -267,7 +267,7 @@ int RunBuild(Span<const char *> arguments)
     PlatformSpecifier platform_spec = {};
     BuildSettings build = {};
     uint32_t maybe_features = 0;
-    int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
+    int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_THREADS);
     bool quiet = false;
     bool verbose = false;
     const char *run_target_name = nullptr;

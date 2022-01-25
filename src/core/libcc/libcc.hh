@@ -72,7 +72,7 @@ namespace RG {
 
 #define RG_LINE_READER_STEP_SIZE 65536
 
-#define RG_ASYNC_MAX_WORKERS 255
+#define RG_ASYNC_MAX_THREADS 256
 #define RG_ASYNC_MAX_IDLE_TIME 10000
 
 // ------------------------------------------------------------------------
@@ -3945,7 +3945,7 @@ class Async {
     class AsyncPool *pool;
 
 public:
-    Async(int workers = -1, bool stop_after_error = true);
+    Async(int threads = -1, bool stop_after_error = true);
     ~Async();
 
     void Run(const std::function<bool()> &f);

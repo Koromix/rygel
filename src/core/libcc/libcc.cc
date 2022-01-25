@@ -4371,16 +4371,18 @@ static RG_THREAD_LOCAL AsyncPool *async_running_pool = nullptr;
 static RG_THREAD_LOCAL int async_running_worker_idx;
 static RG_THREAD_LOCAL bool async_running_task = false;
 
-Async::Async(int workers, bool stop_after_error)
+Async::Async(int threads, bool stop_after_error)
     : stop_after_error(stop_after_error)
 {
-    if (workers >= 0) {
-        if (workers > RG_ASYNC_MAX_WORKERS) {
-            LogError("Async cannot use more than %1 workers", RG_ASYNC_MAX_WORKERS);
-            workers = RG_ASYNC_MAX_WORKERS;
+    RG_ASSERT(threads);
+
+    if (threads > 0) {
+        if (threads > RG_ASYNC_MAX_THREADS) {
+            LogError("Async cannot use more than %1 threads", RG_ASYNC_MAX_THREADS);
+            threads = RG_ASYNC_MAX_THREADS;
         }
 
-        pool = new AsyncPool(workers, false);
+        pool = new AsyncPool(threads, false);
     } else if (async_running_pool) {
         pool = async_running_pool;
     } else {
@@ -4389,8 +4391,8 @@ Async::Async(int workers, bool stop_after_error)
             // for the first time. That's only one leak in most cases, when the main thread
             // is the only non-worker thread using Async, but still. Something to keep in mind.
 
-            workers = std::min(GetCoreCount() - 1, RG_ASYNC_MAX_WORKERS);
-            async_default_pool = new AsyncPool(workers, true);
+            threads = std::min(GetCoreCount(), RG_ASYNC_MAX_THREADS);
+            async_default_pool = new AsyncPool(threads, true);
         }
 
         pool = async_default_pool;
@@ -4426,12 +4428,12 @@ int Async::GetWorkerIdx()
     return async_running_worker_idx;
 }
 
-AsyncPool::AsyncPool(int workers, bool leak)
+AsyncPool::AsyncPool(int threads, bool leak)
 {
     // The first queue is for the main thread, whereas workers_state[0] is
     // not used but it's easier to index it the same way.
-    workers_state.AppendDefault(workers + 1);
-    queues.AppendDefault(workers + 1);
+    workers_state.AppendDefault(threads);
+    queues.AppendDefault(threads);
 
     refcount = leak;
 }
