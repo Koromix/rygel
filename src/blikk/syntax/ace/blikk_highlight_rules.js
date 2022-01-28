@@ -36,7 +36,10 @@ var blikkHighlightRules = function() {
             regex: "(?:let|for|func|if|else|while|begin|end|return|in|do|mut|break|continue|record|enum|pass)\\b"
         }, {
             token: "keyword.operator",
-            regex: /<<=?|>>=?|&&|\|\||[:*%\/+\-&\^|~!<>=]=?/
+            regex: /<<=?|>>=?|[:*%\/+\-&\^|~!<>=]=?/
+        }, {
+            token: "keyword.operator",
+            regex: "(?:and|or)\\b"
         }, {
             token: "storage.type",
             regex: "(Null|Bool|Int|Float|String|Type)\\b"

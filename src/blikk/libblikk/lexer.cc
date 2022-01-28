@@ -38,6 +38,10 @@ static const HashMap<Span<const char>, bk_Token> KeywordsMap {
     {"enum", {bk_TokenKind::Enum}},
     {"pass", {bk_TokenKind::Pass}},
 
+    {"and", {bk_TokenKind::AndAnd}},
+    {"or", {bk_TokenKind::OrOr}},
+    {"not", {bk_TokenKind::Not}},
+
     {"null", {bk_TokenKind::Null}},
     {"true", {bk_TokenKind::Boolean, 0, 0, {.b = true}}},
     {"false", {bk_TokenKind::Boolean, 0, 0, {.b = false}}}
@@ -431,9 +435,14 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
             case '/': { Token2('=', bk_TokenKind::DivideAssign) || Token1(bk_TokenKind::Divide); } break;
             case '%': { Token2('=', bk_TokenKind::ModuloAssign) || Token1(bk_TokenKind::Modulo); } break;
             case '~': { Token2('=', bk_TokenKind::XorAssign) || Token1(bk_TokenKind::XorOrComplement); } break;
-            case '&': { Token2('=', bk_TokenKind::AndAssign) || Token2('&', bk_TokenKind::AndAnd) || Token1(bk_TokenKind::And); } break;
-            case '|': { Token2('=', bk_TokenKind::OrAssign) || Token2('|', bk_TokenKind::OrOr) || Token1(bk_TokenKind::Or); } break;
-            case '!': { Token2('=', bk_TokenKind::NotEqual) || Token1(bk_TokenKind::Not); } break;
+            case '&': { Token2('=', bk_TokenKind::AndAssign) || Token1(bk_TokenKind::And); } break;
+            case '|': { Token2('=', bk_TokenKind::OrAssign) || Token1(bk_TokenKind::Or); } break;
+            case '!': {
+                if (!Token2('=', bk_TokenKind::NotEqual)) {
+                    MarkUnexpected(offset, "Unexpected");
+                    return false;
+                };
+            } break;
             case '=': { Token2('=', bk_TokenKind::Equal) || Token1(bk_TokenKind::Assign); } break;
             case '>': { Token4('>', '>', '=', bk_TokenKind::RightRotateAssign) || Token3('>', '>', bk_TokenKind::RightRotate) ||
                         Token3('>', '=', bk_TokenKind::RightShiftAssign) || Token2('>', bk_TokenKind::RightShift) ||

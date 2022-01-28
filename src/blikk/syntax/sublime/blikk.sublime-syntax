@@ -21,7 +21,9 @@ contexts:
       push: for
     - match: \b(Null|Bool|Int|Float|String|Type)\b
       scope: storage.type.blikk
-    - match: (<<=?|>>=?|&&|\|\||[:*%\/+\-&\^|~!<>=]=?)
+    - match: (<<=?|>>=?|[:*%\/+\-&\^|~!<>=]=?)
+      scope: keyword.operator.blikk
+    - match: \b(and|or)\b
       scope: keyword.operator.blikk
     - match: '"'
       push: string

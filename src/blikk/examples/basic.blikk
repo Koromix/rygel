@@ -4,7 +4,7 @@
 let z = 5 + # Les nouvelles lignes mettent fin à une commande, sauf si une expression est
         3   # encore ouverte comme c'est le cas ici avec le + non suivi d'une valeur.
 
-let x = 2 + 8 * 5 - (0x1444 << 5) > 2 && true
+let x = 2 + 8 * 5 - (0x1444 << 5) > 2 and true
 
 # Les variables doivent être déclarées à l'aide du mot-clé let. Par défaut, leur valeur
 # ne pas être modifiée par la suite à moins d'utiliser "let mut".
