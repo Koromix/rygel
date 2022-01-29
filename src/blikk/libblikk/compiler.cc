@@ -1749,8 +1749,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
 
                 if (!parentheses) {
                     if (RG_UNLIKELY(pos == prev_offset + 1)) {
-                        MarkError(pos - 1, "Unexpected token ')', expected value or expression",
-                                  bk_TokenKindNames[(int)tokens[pos - 1].kind]);
+                        MarkError(pos - 1, "Unexpected token ')', expected value or expression");
                         goto error;
                     } else {
                         pos--;
