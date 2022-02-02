@@ -518,7 +518,7 @@ public:
 
     template <typename Callable>
     FunctionRef(Callable &&callable,
-                std::enable_if_t<!std::is_same<std::remove_cvref_t<Callable>, FunctionRef>::value> * = nullptr,
+                std::enable_if_t<!std::is_same<std::remove_cv_t<std::remove_reference_t<Callable>>, FunctionRef>::value> * = nullptr,
                 std::enable_if_t<std::is_void<Ret>::value ||
                                  std::is_convertible<decltype(std::declval<Callable>()(std::declval<Params>()...)),
                                                      Ret>::value> * = nullptr)
