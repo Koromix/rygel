@@ -193,6 +193,13 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
     #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xe7f001f0")
 #endif
 
+#define RG_CRITICAL(Cond, ...) \
+    do { \
+        if (RG_UNLIKELY(!(Cond))) { \
+            PrintLn(stderr, __VA_ARGS__); \
+            abort(); \
+        } \
+    } while (false)
 #ifndef NDEBUG
     #define RG_ASSERT(Cond) \
         do { \

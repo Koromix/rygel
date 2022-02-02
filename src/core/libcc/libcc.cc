@@ -124,13 +124,12 @@ protected:
     void *Allocate(Size size, unsigned int flags = 0) override
     {
         void *ptr = malloc((size_t)size);
-        if (RG_UNLIKELY(!ptr)) {
-            LogError("Failed to allocate %1 of memory", FmtMemSize(size));
-            abort();
-        }
+        RG_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
+
         if (flags & (int)Allocator::Flag::Zero) {
             memset_safe(ptr, 0, (size_t)size);
         }
+
         return ptr;
     }
 
@@ -141,14 +140,13 @@ protected:
             *ptr = nullptr;
         } else {
             void *new_ptr = realloc(*ptr, (size_t)new_size);
-            if (RG_UNLIKELY(new_size && !new_ptr)) {
-                LogError("Failed to resize %1 memory block to %2",
-                         FmtMemSize(old_size), FmtMemSize(new_size));
-                abort();
-            }
+            RG_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
+                                              FmtMemSize(old_size), FmtMemSize(new_size));
+
             if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
                 memset_safe((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
             }
+
             *ptr = new_ptr;
         }
     }
@@ -4770,7 +4768,7 @@ Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
         self->success = self->f();
         self->done = true;
 
-        swapcontext(&self->ucp, &fib_self);
+        RG_CRITICAL(swapcontext(&self->ucp, &fib_self) == 0, "swapcontext() failed: %1", strerror(errno));
     }, 2, (unsigned int)((uint64_t)this >> 32), (unsigned int)((uint64_t)this & 0xFFFFFFFFull));
 
     done = false;
@@ -4792,7 +4790,7 @@ void Fiber::SwitchTo()
 
     if (!done) {
         fib_run = &ucp;
-        swapcontext(&fib_self, &ucp);
+        RG_CRITICAL(swapcontext(&fib_self, &ucp) == 0, "swapcontext() failed: %1", strerror(errno));
     }
 }
 
@@ -4803,7 +4801,7 @@ bool Fiber::Finalize()
 
     if (!done) {
         fib_run = nullptr;
-        swapcontext(&fib_self, &ucp);
+        RG_CRITICAL(swapcontext(&fib_self, &ucp) == 0, "swapcontext() failed: %1", strerror(errno));
 
         RG_ASSERT(done);
     }
@@ -4814,7 +4812,7 @@ bool Fiber::Finalize()
 bool Fiber::SwitchBack()
 {
     if (fib_run) {
-        swapcontext(fib_run, &fib_self);
+        RG_CRITICAL(swapcontext(fib_run, &fib_self) == 0, "swapcontext() failed: %1", strerror(errno));
         return true;
     } else {
         return false;
