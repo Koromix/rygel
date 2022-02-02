@@ -46,7 +46,7 @@
                 <ul>
                     <li><a href="#goupile" class="lv1">Goupile</a></li>
                     <li><a href="#tytools" class="lv1">TyTools</a></li>
-                    <li><a href="#libhs" class="lv1">C/C++ libraries</a></li>
+                    <li><a href="#libhs" class="lv1">libhs</a></li>
                 </ul>
             </nav>
 
@@ -90,25 +90,18 @@
 
                 <p>Find out more on the <a href="https://koromix.dev/tytools">page dedicated to TyTools</a>.</p>
 
-                <h1 id="libhs">C/C++ libraries</h1>
-                <p>All my C/C++ libraries are distributed as <b>single-file headers</b>. Drop the file in
-                your project, add one define for the implementation and start to code. You don't have to mess around
-                with arcane build systems to use C and C++.</p>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Library</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><a href="https://koromix.dev/libhs">libhs</a></td>
-                            <td>Enumerate and interact with USB serial and HID devices on Windows, OSX and Linux</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <h1 id="libhs">libhs</h1>
+                <p>libhs is a C library to enumerate HID and serial devices and interact with them.</p>
+                <ul>
+                    <li><b>single-file</b>: one header is all you need to make it work.</li>
+                    <li><b>public domain</b>: use it, hack it, do whatever you want.</li>
+                    <li><b>multiple platforms</b>: Windows (≥ Vista), Mac OS X (≥ 10.9) and Linux.</li>
+                    <li><b>multiple compilers</b>: MSVC (≥ 2015), GCC and Clang.</li>
+                    <li><b>driverless</b>: uses native OS-provided interfaces and does not require custom drivers.</li>
+                </ul>
+                <p>It is distributed as a <b>single-file header</b>. Drop the file in your project, add one define
+                for the implementation and start to code without messing around an arcane build system.</p>
+                <p>Find out more on the <a href="https://koromix.dev/libhs">page dedicated to libhs</a>.</p>
             </main>
         </div>
 
