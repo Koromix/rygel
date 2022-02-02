@@ -14,12 +14,6 @@
 goupile_commit: deploy_hds
 goupile_update_hour: '*'
 
-goupile_domains:
-  - name: demo.preprod.goupile.fr
-    archive_key: pr3m+wokFdBy2JHyCHZe4yP3vLBdQPsVkVCwG/in5xI=
-  - name: psy-lille.preprod.goupile.fr
-    archive_key: c0cxZblCz4cWCQ5xFqFHUnTnLSw2T9EKwela41402hU=
-
 goupile_default_username: admin
 goupile_default_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
@@ -69,3 +63,9 @@ goupile_sms:
 
 goupile_snapshot_hour: 0
 goupile_snapshot_zone: UTC
+
+goupile_domains:
+  - name: demo.preprod.goupile.fr
+    archive_key: pr3m+wokFdBy2JHyCHZe4yP3vLBdQPsVkVCwG/in5xI=
+  - name: psy-lille.preprod.goupile.fr
+    archive_key: c0cxZblCz4cWCQ5xFqFHUnTnLSw2T9EKwela41402hU=
