@@ -13,14 +13,6 @@
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
 
-## Archived projects
-
-| Project    | Description                                                                | Quality          |
-| ---------- | -------------------------------------------------------------------------- | -----------------|
-| *inPL*     | Dashboards and various tools for IPL's longevity checkup                   | Good             |
-| *simPL*    | Medico-ecomomic modelling of IPL's longevity checkup                       | Proof-of-concept |
-| *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Good             |
-
 # How to build
 
 This repository uses a dedicated build tool called felix. To get started, you need to build
