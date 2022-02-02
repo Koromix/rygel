@@ -11,20 +11,44 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import * as process from 'process';
 import babel from '@rollup/plugin-babel';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 // Tried @rollup/plugin-virtual, it did weird crap
 import hypothetical from 'rollup-plugin-hypothetical';
 
-let code;
-try {
+// fs.readFileSync does not support standard input very well... Hence the crappy loop below
+let code = (() => {
     const fs = require('fs');
-    code = fs.readFileSync(0, 'UTF-8');
-} catch (err) {
-    // Nothing on stdin (probably)
-    code = '';
-}
+
+    let parts = [];
+    let buf = Buffer.allocUnsafe(8192);
+
+    while (true) {
+        let read = 0;
+
+        try {
+            read = fs.readSync(process.stdin.fd, buf, 0, 8192);
+
+            if (!read)
+                break;
+        } catch (err) {
+            if (err.code === 'EAGAIN') {
+                continue;
+            } else if (err.code === 'EOF') {
+                break;
+            } else {
+                throw err;
+            }
+        }
+
+        let part = buf.toString('utf-8', 0, read);
+        parts.push(part);
+    }
+
+    return parts.join('');
+})();
 
 // Quick-and-dirty way to add relevant polyfills
 code = `import 'whatwg-fetch';
