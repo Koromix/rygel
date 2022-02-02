@@ -82,7 +82,7 @@ def add_goupile(path, vault, domain):
 
     print(f'Added domain {domain}\n')
     print(f'Secret archive decryption key: {skey}')
-    print(f'                   public key: ${pkey}')
+    print(f'                   public key: {pkey}')
     print(f'This key cannot be retrieved, you must save it now or encrypted goupile archives will be lost!')
 
 def remove_goupile(path, domain):
