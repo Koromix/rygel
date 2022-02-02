@@ -35,6 +35,10 @@ let code = (() => {
                 break;
         } catch (err) {
             if (err.code === 'EAGAIN') {
+                // Stupid trick to have synchronous sleep of 50ms
+                const array = new Int32Array(new SharedArrayBuffer(4));
+                Atomics.wait(array, 0, 0, 50);
+
                 continue;
             } else if (err.code === 'EOF') {
                 break;
