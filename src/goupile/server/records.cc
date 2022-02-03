@@ -500,6 +500,7 @@ class RecordExporter {
 
     struct Table {
         const char *name;
+        bool root;
 
         BucketArray<Row> rows;
         HashTable<const char *, Row *> rows_map;
@@ -532,7 +533,7 @@ public:
 private:
     bool ParseObject(const char *root_ulid, const char *form, const char *ulid, const char *hid, const char *prefix, int depth);
 
-    Table *GetTable(const char *name);
+    Table *GetTable(const char *name, bool root);
     Row *GetRow(Table *table, const char *root_ulid, const char *ulid, const char *hid);
     Column *GetColumn(Table *table, const char *prefix, const char *key, const char *suffix);
 };
@@ -593,7 +594,10 @@ bool RecordExporter::Export(const char *filename)
     for (const Table &table: tables) {
         HeapArray<char> sql(&str_alloc);
 
-        Fmt(&sql, "CREATE TABLE "); EncodeSqlName(table.name, &sql); Fmt(&sql, " (__ROOT TEXT, __ULID TEXT, __HID, ");
+        Fmt(&sql, "CREATE TABLE "); EncodeSqlName(table.name, &sql); Fmt(&sql, " (__ROOT TEXT, __ULID TEXT,");
+        if (table.root) {
+            Fmt(&sql, "__HID, ");
+        }
         for (const Column *col: table.ordered_columns) {
             EncodeSqlName(col->name, &sql);
             switch (col->type) {
@@ -615,9 +619,12 @@ bool RecordExporter::Export(const char *filename)
     for (const Table &table: tables) {
         HeapArray<char> sql(&str_alloc);
 
-        Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2, ?3");
+        Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2");
+        if (table.root) {
+            Fmt(&sql, ", ?3");
+        }
         for (Size i = 0; i < table.ordered_columns.len; i++) {
-            Fmt(&sql, ", ?%1", i + 4);
+            Fmt(&sql, ", ?%1", i + 3 + table.root);
         }
         Fmt(&sql, ")");
 
@@ -632,10 +639,12 @@ bool RecordExporter::Export(const char *filename)
 
             sqlite3_bind_text(stmt, 1, table.rows[i].root_ulid, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, ulid.ptr, (int)ulid.len, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 3, table.rows[i].hid, -1, SQLITE_STATIC);
+            if (table.root) {
+                sqlite3_bind_text(stmt, 3, table.rows[i].hid, -1, SQLITE_STATIC);
+            }
             for (Size j = 0; j < table.ordered_columns.len; j++) {
                 const Column *col = table.ordered_columns[j];
-                sqlite3_bind_text(stmt, (int)j + 4, col->values[i], -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, (int)j + 3 + table.root, col->values[i], -1, SQLITE_STATIC);
             }
 
             if (!stmt.Run())
@@ -666,7 +675,8 @@ bool RecordExporter::Export(const char *filename)
 bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const char *ulid,
                                  const char *hid, const char *prefix, int depth)
 {
-    Table *table = GetTable(form);
+    bool root = TestStr(root_ulid, ulid) && !prefix;
+    Table *table = GetTable(form, root);
     Row *row = GetRow(table, root_ulid, ulid, hid);
 
     parser->ParseObject();
@@ -792,15 +802,15 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                     const char *form2 = Fmt(&str_alloc, "%1.%2", form, prefix).ptr;
                     const char *ulid2 = Fmt(&str_alloc, "%1.%2", ulid, key).ptr;
 
-                    if (!ParseObject(root_ulid, form2, ulid2, key.ptr, nullptr, depth + 1))
+                    if (!ParseObject(root_ulid, form2, ulid2, nullptr, nullptr, depth + 1))
                         return false;
                 } else if (prefix) {
                     const char *prefix2 = Fmt(&str_alloc, "%1.%2", prefix, key).ptr;
 
-                    if (!ParseObject(root_ulid, form, ulid, hid, prefix2, depth + 1))
+                    if (!ParseObject(root_ulid, form, ulid, nullptr, prefix2, depth + 1))
                         return false;
                 } else {
-                    if (!ParseObject(root_ulid, form, ulid, hid, key.ptr, depth + 1))
+                    if (!ParseObject(root_ulid, form, ulid, nullptr, key.ptr, depth + 1))
                         return false;
                 }
             } break;
@@ -907,7 +917,7 @@ RecordExporter::Column *RecordExporter::GetColumn(RecordExporter::Table *table, 
     return col;
 }
 
-RecordExporter::Table *RecordExporter::GetTable(const char *name)
+RecordExporter::Table *RecordExporter::GetTable(const char *name, bool root)
 {
     Table *table = tables_map.FindValue(name, nullptr);
 
@@ -918,6 +928,7 @@ RecordExporter::Table *RecordExporter::GetTable(const char *name)
         tables_map.Set(table);
     }
 
+    table->root |= root;
     return table;
 }
 
@@ -931,7 +942,7 @@ RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const 
 
         row->root_ulid = DuplicateString(root_ulid, &str_alloc).ptr;
         row->ulid = DuplicateString(ulid, &str_alloc).ptr;
-        row->hid = DuplicateString(hid, &str_alloc).ptr;
+        row->hid = hid && hid[0] ? DuplicateString(hid, &str_alloc).ptr : nullptr;
         row->idx = table->rows.len - 1;
 
         table->rows_map.Set(row);
@@ -967,7 +978,7 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
 
     io->RunAsync([=]() {
         sq_Statement stmt;
-        if (!instance->db->Prepare(R"(SELECT e.root_ulid, e.ulid, e.hid, e.form, f.type, f.json FROM rec_entries e
+        if (!instance->db->Prepare(R"(SELECT e.root_ulid, e.ulid, e.hid, lower(e.form), f.type, f.json FROM rec_entries e
                                       INNER JOIN rec_entries r ON (r.ulid = e.root_ulid)
                                       INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
                                       WHERE r.deleted = 0
