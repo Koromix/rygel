@@ -2038,10 +2038,9 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
 bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
-    auto func = (flags & (int)StatFlag::FollowSymlink) ? stat : lstat;
-
     struct stat sb;
-    if (func(filename, &sb) < 0) {
+    int ret = (flags & (int)StatFlag::FollowSymlink) ? stat(filename, &sb) : lstat(filename, &sb);
+    if (ret < 0) {
         if (!(flags & (int)StatFlag::IgnoreMissing) || errno != ENOENT) {
             LogError("Cannot stat '%1': %2", filename, strerror(errno));
         }
