@@ -746,9 +746,9 @@ function InstanceController() {
                     if (form_state.hasChanged()) {
                         form_builder.action('-');
 
-                        form_builder.action('Effacer les modifications', {color: '#db0a0a'}, async e => {
+                        form_builder.action('Oublier les modifications', {color: '#db0a0a'}, async e => {
                             await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
-                                                   'Effacer', () => {});
+                                                   'Oublier', () => {});
 
                             if (form_record.saved) {
                                 let record = await loadRecord(form_record.ulid, null);
