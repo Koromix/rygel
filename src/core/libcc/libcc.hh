@@ -3993,6 +3993,15 @@ public:
     bool Finalize();
 
     static bool SwitchBack();
+
+private:
+#if defined(_WIN64)
+    static void FiberCallback(void *udata);
+#elif defined(_WIN32)
+    static __stdcall void FiberCallback(void *udata);
+#else
+    static void FiberCallback(unsigned int high, unsigned int low);
+#endif
 };
 
 // ------------------------------------------------------------------------

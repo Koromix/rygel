@@ -4669,14 +4669,7 @@ Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
         }
     };
 
-    fiber = CreateFiber((SIZE_T)stack_size, [](void *udata) {
-        Fiber *self = (Fiber *)udata;
-
-        self->success = self->f();
-        self->done = true;
-
-        SwitchToFiber(fib_self);
-    }, this);
+    fiber = CreateFiber((SIZE_T)stack_size, FiberCallback, this);
     if (!fiber) {
         LogError("Failed to create fiber: %1", GetWin32ErrorString());
         return;
@@ -4744,6 +4737,16 @@ bool Fiber::SwitchBack()
     }
 }
 
+void WINAPI Fiber::FiberCallback(void *udata)
+{
+    Fiber *self = (Fiber *)udata;
+
+    self->success = self->f();
+    self->done = true;
+
+    SwitchToFiber(fib_self);
+}
+
 #else
 
 static RG_THREAD_LOCAL ucontext_t fib_self;
@@ -4762,14 +4765,9 @@ Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
     ucp.uc_stack.ss_size = (size_t)stack_size;
     ucp.uc_link = nullptr;
 
-    makecontext(&ucp, (void (*)())+[](unsigned int high, unsigned int low) {
-        Fiber *self = (Fiber *)(((uint64_t)high << 32) | (uint64_t)low);
-
-        self->success = self->f();
-        self->done = true;
-
-        RG_CRITICAL(swapcontext(&self->ucp, &fib_self) == 0, "swapcontext() failed: %1", strerror(errno));
-    }, 2, (unsigned int)((uint64_t)this >> 32), (unsigned int)((uint64_t)this & 0xFFFFFFFFull));
+    unsigned int high = (unsigned int)((uint64_t)this >> 32);
+    unsigned int low = (unsigned int)((uint64_t)this & 0xFFFFFFFFull);
+    makecontext(&ucp, (void (*)())FiberCallback, 2, high, low);
 
     done = false;
 }
@@ -4817,6 +4815,16 @@ bool Fiber::SwitchBack()
     } else {
         return false;
     }
+}
+
+void Fiber::FiberCallback(unsigned int high, unsigned int low)
+{
+    Fiber *self = (Fiber *)(((uint64_t)high << 32) | (uint64_t)low);
+
+    self->success = self->f();
+    self->done = true;
+
+    RG_CRITICAL(swapcontext(&self->ucp, &fib_self) == 0, "swapcontext() failed: %1", strerror(errno));
 }
 
 #endif
