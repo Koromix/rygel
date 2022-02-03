@@ -42,6 +42,7 @@ vendor/sqlite3
 vendor/sqlite3mc
 vendor/tweetnacl-js
 web/goupile.fr
+web/snippets
 web/sites/goupile.fr
 .gitignore
 bootstrap.bat
