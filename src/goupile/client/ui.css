@@ -264,7 +264,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     background-size: 22px 638px;
     background-position: center calc(-52px + 1.2em);
 }
-.ui_pin.active {
+.ui_pin:hover, .ui_pin.active {
     background-color: var(--anchor_color);
     background-position-y: calc(-624px + 1.2em);
 }
