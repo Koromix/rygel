@@ -59,8 +59,8 @@ const ui = new function() {
 
         if (self.allowTwoPanels()) {
             if (primary_panel != null && dual_panel == null) {
-                let dual_key = dual_cache.get(primary_panel);
-                dual_panel = panels.get(dual_key);
+                let key = dual_cache.get(primary_panel);
+                dual_panel = panels.get(key) || null;
             }
         } else {
             dual_panel = null;
@@ -141,26 +141,29 @@ const ui = new function() {
             return;
 
         if (active) {
-            if (self.allowTwoPanels()) {
-                if (dual && primary_panel != null && primary_panel.secondaries.includes(key)) {
-                    dual_panel = panel;
-                    dual_cache.set(primary_panel, panel.key);
+            dual &= self.allowTwoPanels() && primary_panel != null &&
+                                             primary_panel.secondaries.includes(key);
 
-                    return;
+            if (dual) {
+                dual_panel = panel;
+                dual_cache.set(primary_panel, panel.key);
+            } else {
+                primary_panel = panel;
+
+                if (self.allowTwoPanels()) {
+                    let key = dual_cache.get(panel);
+                    dual_panel = panels.get(key) || null;
+                } else {
+                    dual_panel = null;
                 }
             }
-
-            primary_panel = panel;
-
-            let dual_key = dual_cache.get(panel);
-            dual_panel = panels.get(dual_key);
         } else {
             if (panel === dual_panel) {
-                if (primary_panel != null)
-                    dual_cache.delete(primary_panel, dual_panel.key);
+                dual_cache.delete(primary_panel);
             } else if (dual_panel != null) {
                 primary_panel = dual_panel;
             }
+
             dual_panel = null;
         }
     };
@@ -199,7 +202,7 @@ const ui = new function() {
                 return;
 
             dual_cache.set(primary_panel, panel.key);
-            dual_panel = panel;
+            dual_panel = self.allowTwoPanels() ? panel : null;
         }
     };
 
