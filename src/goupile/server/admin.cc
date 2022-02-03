@@ -622,6 +622,7 @@ retry_pwd:
     if (decrypt_key[0]) {
         LogInfo();
         LogInfo("Backup decryption key: %!..+%1%!0", decrypt_key);
+        LogInfo("           Public key: %!..+%1%!0", archive_key);
         LogInfo();
         LogInfo("You need this key to restore Goupile archives, %!..+you must not lose it!%!0");
         LogInfo("There is no way to get it back, without it the archives are lost.");
