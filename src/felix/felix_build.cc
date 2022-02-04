@@ -65,10 +65,30 @@ static int RunTarget(const char *target_filename, Span<const char *const> argume
     }
     cmd.Append(0);
 
-    int code;
-    if (!ExecuteCommandLine(cmd.ptr, &code))
+    wchar_t target_filename_w[4096];
+    HeapArray<wchar_t> cmd_w;
+    cmd_w.AppendDefault(cmd.len + 1);
+    if (ConvertUtf8ToWin32Wide(target_filename, target_filename_w) < 0)
         return 127;
-    return code;
+    if (ConvertUtf8ToWin32Wide(cmd, cmd_w) < 0)
+        return 127;
+
+    // We could use ExecuteCommandLine, but for various reasons (detailed in its Win32
+    // implementation) it does not handle Ctrl+C gently.
+    STARTUPINFOW startup_info = {};
+    PROCESS_INFORMATION process_info;
+    if (!CreateProcessW(target_filename_w, cmd_w.ptr, nullptr, nullptr, FALSE, 0,
+                        nullptr, nullptr, &startup_info, &process_info)) {
+        LogError("Failed to start process: %1", GetWin32ErrorString());
+        return 127;
+    }
+
+    DWORD exit_code = 0;
+    bool success = (WaitForSingleObject(process_info.hProcess, INFINITE) == WAIT_OBJECT_0) &&
+                   GetExitCodeProcess(process_info.hProcess, &exit_code);
+    RG_ASSERT(success);
+
+    return (int)exit_code;
 #else
     HeapArray<const char *> argv;
 
