@@ -3917,7 +3917,9 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 
         // Try to write
         if (in_revents & POLLERR) {
-            LogError("Failed to poll process input");
+            if (!term_revents) {
+                LogError("Failed to poll process input");
+            }
             CloseDescriptorSafe(&in_pfd[1]);
         } else if (in_revents & POLLOUT) {
             RG_ASSERT(in_func.IsValid());
