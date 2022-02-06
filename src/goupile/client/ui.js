@@ -550,6 +550,12 @@ const ui = new function() {
                     <div class="ui_log_spin"></div>
                     ${msg}
                 </div>`;
+            } else if (entry.type === 'error') {
+                return html`<div class="error" @click=${e => entry.close()}>
+                    <button class="ui_log_close">X</button>
+                    <b>Une erreur est survenue</b><br/>
+                    ${msg}
+                </div>`;
             } else {
                 return html`<div class=${entry.type} @click=${e => entry.close()}>
                     <button class="ui_log_close">X</button>

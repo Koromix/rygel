@@ -242,7 +242,7 @@ function AdminController() {
 
                 self.go();
             } else {
-                let err = (await response.text()).trim();
+                let err = await net.readError(response);
                 throw new Error(err);
             }
         } catch (err) {
@@ -273,7 +273,7 @@ function AdminController() {
 
                         self.go();
                     } else {
-                        let err = (await response.text()).trim();
+                        let err = await net.readError(response);
                         throw new Error(err);
                     }
                 } catch (err) {
@@ -315,7 +315,7 @@ function AdminController() {
 
                         self.go();
                     } else {
-                        let err = (await response.text()).trim();
+                        let err = await net.readError(response);
                         throw new Error(err);
                     }
                 } catch (err) {
@@ -346,7 +346,7 @@ function AdminController() {
 
                 self.go();
             } else {
-                let err = (await response.text()).trim();
+                let err = await net.readError(response);
                 throw new Error(err);
             }
         });
@@ -469,7 +469,7 @@ function AdminController() {
                     let url = util.pasteURL('/admin/', { select: key.value });
                     self.go(null, url);
                 } else {
-                    let err = (await response.text()).trim();
+                    let err = await net.readError(response);
 
                     log.error(err);
                     d.refresh();
@@ -537,7 +537,7 @@ function AdminController() {
 
                                 self.go();
                             } else {
-                                let err = (await response.text()).trim();
+                                let err = await net.readError(response);
 
                                 log.error(err);
                                 d.refresh();
@@ -569,7 +569,7 @@ function AdminController() {
 
                                 self.go();
                             } else {
-                                let err = (await response.text()).trim();
+                                let err = await net.readError(response);
 
                                 log.error(err);
                                 d.refresh();
@@ -600,7 +600,7 @@ function AdminController() {
 
                             self.go();
                         } else {
-                            let err = (await response.text()).trim();
+                            let err = await net.readError(response);
 
                             log.error(err);
                             d.refresh();
@@ -648,7 +648,7 @@ function AdminController() {
                     let url = util.pasteURL('/admin/', { select: full_key });
                     self.go(null, url);
                 } else {
-                    let err = (await response.text()).trim();
+                    let err = await net.readError(response);
 
                     log.error(err);
                     d.refresh();
@@ -716,7 +716,7 @@ function AdminController() {
 
                     self.go();
                 } else {
-                    let err = (await response.text()).trim();
+                    let err = await net.readError(response);
 
                     log.error(err);
                     d.refresh();
@@ -768,7 +768,7 @@ function AdminController() {
 
                     self.go();
                 } else {
-                    let err = (await response.text()).trim();
+                    let err = await net.readError(response);
 
                     log.error(err);
                     d.refresh();
@@ -857,7 +857,7 @@ function AdminController() {
 
                             self.go();
                         } else {
-                            let err = (await response.text()).trim();
+                            let err = await net.readError(response);
 
                             log.error(err);
                             d.refresh();
@@ -885,7 +885,7 @@ function AdminController() {
 
                             self.go();
                         } else {
-                            let err = (await response.text()).trim();
+                            let err = await net.readError(response);
                             throw new Error(err);
                         }
                     });

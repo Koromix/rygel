@@ -36,7 +36,7 @@ const data = new function() {
         if (!resource) {
             let response = await net.fetch(url);
             if (!response.ok) {
-                let err = (await response.text()).trim();
+                let err = await net.readError(response);
                 throw new Error(err);
             }
 

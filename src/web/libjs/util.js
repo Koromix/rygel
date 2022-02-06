@@ -725,7 +725,7 @@ const net = new function() {
         let response = await self.fetch(request, options);
 
         if (!response.ok) {
-            let err = (await response.text()).trim();
+            let err = await net.readError(response);
             throw new Error(err);
         }
 
@@ -758,6 +758,18 @@ const net = new function() {
         }
     };
     this.isOnline = function() { return online; };
+
+    this.readError = async function(response, nice = true) {
+        let text = (await response.text()).trim();
+
+        if (nice && text.match(/^Error [0-9]+:/)) {
+            let idx = text.indexOf('\n');
+            if (idx >= 0)
+                text = text.substr(idx + 1).trim();
+        }
+
+        return text;
+    };
 };
 
 // ------------------------------------------------------------------------

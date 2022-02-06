@@ -231,7 +231,7 @@ function InstancePublisher(instance, db) {
                                     timeout: null
                                 });
                                 if (!response.ok && response.status !== 409) {
-                                    let err = (await response.text()).trim();
+                                    let err = await net.readError(response);
                                     throw new Error(err);
                                 }
 
@@ -260,7 +260,7 @@ function InstancePublisher(instance, db) {
                 ENV.urls.files = `${ENV.urls.base}files/${json.version}/`;
                 ENV.version = json.version;
             } else {
-                let err = (await response.text()).trim();
+                let err = await net.readError(response);
                 throw new Error(err);
             }
 

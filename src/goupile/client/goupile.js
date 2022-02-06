@@ -329,7 +329,7 @@ const goupile = new function() {
                     errors++;
                     d.refresh();
 
-                    let err = (await response.text()).trim();
+                    let err = await net.readError(response);
                     throw new Error(err);
                 }
             });
@@ -352,7 +352,7 @@ const goupile = new function() {
             });
 
             if (!response.ok) {
-                let err = (await response.text()).trim();
+                let err = await net.readError(response);
                 throw new Error(err);
             }
         } else if (profile.userid > 0) {
@@ -395,7 +395,7 @@ const goupile = new function() {
                         resolve();
                         progress.success('Mot de passe modifié');
                     } else {
-                        let err = (await response.text()).trim();
+                        let err = await net.readError(response);
                         throw new Error(err);
                     }
                 } catch (err) {
@@ -454,7 +454,7 @@ const goupile = new function() {
                         resolve();
                         progress.success('Codes TOTP modifiés');
                     } else {
-                        let err = (await response.text()).trim();
+                        let err = await net.readError(response);
                         throw new Error(err);
                     }
                 } catch (err) {
@@ -630,7 +630,7 @@ const goupile = new function() {
                 await db.delete('usr_profiles', username);
             }
 
-            let err = (await response.text()).trim();
+            let err = await net.readError(response);
             throw new Error(err);
         }
     }
@@ -766,7 +766,7 @@ const goupile = new function() {
                 window.onbeforeunload = null;
                 document.location.href = reload;
             } else {
-                let err = (await response.text()).trim();
+                let err = await net.readError(response);
                 throw new Error(err);
             }
         } catch (err) {
