@@ -633,11 +633,16 @@ bool Builder::Build(int jobs, bool verbose)
 
     if (async.Sync()) {
         if (busy) {
-            double time = (double)(GetMonotonicTime() - now) / 1000.0;
-            LogInfo("Done (%1s)%!D..%2%!0", FmtDouble(time, 1), build.fake ? " [dry run]" : "");
+            if (!build.fake) {
+                double time = (double)(GetMonotonicTime() - now) / 1000.0;
+                LogInfo("Done (%1s)", FmtDouble(time, 1));
+            } else {
+                LogInfo("Done %!D..[dry run]%!0");
+            }
         } else {
             LogInfo("Nothing to do!%!D..%1%!0", build.fake ? " [dry run]" : "");
         }
+
         return true;
     } else if (WaitForInterrupt(0) == WaitForResult::Interrupt) {
         LogError("Build was interrupted");
