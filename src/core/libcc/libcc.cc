@@ -20,7 +20,11 @@
     #include "../../../vendor/brotli/c/include/brotli/decode.h"
     #include "../../../vendor/brotli/c/include/brotli/encode.h"
 #endif
-#include "../../../vendor/dragonbox/include/dragonbox/dragonbox.h"
+#if __has_include("../../../vendor/dragonbox/include/dragonbox/dragonbox.h")
+    #include "../../../vendor/dragonbox/include/dragonbox/dragonbox.h"
+#else
+    #include "dragonbox.h"
+#endif
 
 #ifdef _WIN32
     #ifndef NOMINMAX
