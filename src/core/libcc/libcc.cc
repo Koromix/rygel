@@ -5129,7 +5129,10 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
         max_len = (max_len >= 0) ? std::min(max_len, memory_max) : memory_max;
     }
 
-    if (compression.type == CompressionType::None && ComputeStreamLen() >= 0) {
+    // For some files (such as in /proc), the file size is reported as 0 even though there
+    // is content inside, because these files are generated on demand. So we need to take
+    // the slow path for apparently empty files.
+    if (compression.type == CompressionType::None && ComputeRawLen() > 0) {
         if (raw_len > max_len) {
             LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
             return -1;
@@ -5150,7 +5153,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
         Size total_len = 0;
 
         while (!eof) {
-            Size grow = std::min(Megabytes(1), RG_SIZE_MAX - out_buf->len);
+            Size grow = std::min(total_len ? Megabytes(1) : Kibibytes(64), RG_SIZE_MAX - out_buf->len);
             out_buf->Grow(grow);
 
             Size read_len = Read(out_buf->Available(), out_buf->end());
@@ -5171,7 +5174,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     }
 }
 
-int64_t StreamReader::ComputeStreamLen()
+int64_t StreamReader::ComputeRawLen()
 {
     if (RG_UNLIKELY(error))
         return -1;
@@ -5185,17 +5188,17 @@ int64_t StreamReader::ComputeStreamLen()
 
         case SourceType::File: {
 #ifdef _WIN32
-            int64_t pos = _ftelli64(source.u.file.fp);
-            RG_DEFER { _fseeki64(source.u.file.fp, pos, SEEK_SET); };
-            if (_fseeki64(source.u.file.fp, 0, SEEK_END) < 0)
+            int fd = _fileno(source.u.file.fp);
+            struct __stat64 sb;
+            if (_fstat64(fd, &sb) < 0)
                 return -1;
-            raw_len = (int64_t)_ftelli64(source.u.file.fp);
+            raw_len = (int64_t)sb.st_size;
 #else
-            off64_t pos = ftello64(source.u.file.fp);
-            RG_DEFER { fseeko64(source.u.file.fp, pos, SEEK_SET); };
-            if (fseeko64(source.u.file.fp, 0, SEEK_END) < 0)
+            int fd = fileno(source.u.file.fp);
+            struct stat sb;
+            if (fstat(fd, &sb) < 0 || S_ISFIFO(sb.st_mode) | S_ISSOCK(sb.st_mode))
                 return -1;
-            raw_len = (int64_t)ftello64(source.u.file.fp);
+            raw_len = (int64_t)sb.st_size;
 #endif
         } break;
 
@@ -5463,7 +5466,7 @@ Size StreamReader::ReadBrotli(Size max_len, void *out_buf)
 
 Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 {
-    ComputeStreamLen();
+    ComputeRawLen();
 
     Size read_len = 0;
     switch (source.type) {

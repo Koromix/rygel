@@ -2698,7 +2698,7 @@ public:
     Size ReadAll(Size max_len, HeapArray<char> *out_buf)
         { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
 
-    int64_t ComputeStreamLen();
+    int64_t ComputeRawLen();
 
 private:
     bool Close(bool implicit);
