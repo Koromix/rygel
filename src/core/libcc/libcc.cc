@@ -5149,7 +5149,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     } else {
         Size total_len = 0;
 
-        for (;;) {
+        while (!eof) {
             Size grow = std::min(Megabytes(1), RG_SIZE_MAX - out_buf->len);
             out_buf->Grow(grow);
 
