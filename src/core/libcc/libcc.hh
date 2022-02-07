@@ -3696,7 +3696,7 @@ static inline Size EncodeUtf8(int32_t c, char out_buf[4])
 static inline int CountUtf8Bytes(char c)
 {
     int ones = CountLeadingZeros((uint32_t)~c << 24);
-    return std::clamp(ones, 1, 4);
+    return std::min(std::max(ones, 1), 4);
 }
 
 static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
