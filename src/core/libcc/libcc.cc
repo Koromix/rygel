@@ -4032,7 +4032,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size m
 
         if (RG_UNLIKELY(memory_max <= 0)) {
             LogError("Exhausted memory limit");
-            return -1;
+            return false;
         }
 
         RG_ASSERT(max_len);
