@@ -27,6 +27,6 @@
 namespace RG {
 
 CURL *InitCurl();
-int PerformCurl(CURL *curl);
+int PerformCurl(CURL *curl, const char *reason);
 
 }

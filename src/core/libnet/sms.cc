@@ -113,7 +113,7 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
         }
     }
 
-    int status = PerformCurl(curl);
+    int status = PerformCurl(curl, "SMS");
     if (status < 0)
         return false;
     if (status != 200 && status != 201) {

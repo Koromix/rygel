@@ -50,11 +50,11 @@ CURL *InitCurl()
     return curl;
 }
 
-int PerformCurl(CURL *curl)
+int PerformCurl(CURL *curl, const char *reason)
 {
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
-        LogError("Failed to perform SMS call: %1", curl_easy_strerror(res));
+        LogError("Failed to perform %1 call: %2", reason, curl_easy_strerror(res));
         return -1;
     }
 

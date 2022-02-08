@@ -210,7 +210,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         }
     }
 
-    int status = PerformCurl(curl);
+    int status = PerformCurl(curl, "SMTP");
     if (status < 0)
         return false;
     if (status != 250) {
