@@ -731,7 +731,7 @@ function AdminController() {
                 let props = ENV.permissions.filter(perm => perm.startsWith('admin_')).map(makePermissionProp);
                 let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('admin_')) : null;
 
-                d.multiCheck('admin_permissions', '', props, {
+                d.multiCheck('admin_permissions', null, props, {
                     value: value,
                     disabled: instance.master != null
                 });
@@ -740,7 +740,7 @@ function AdminController() {
                 let props = ENV.permissions.filter(perm => perm.startsWith('data_')).map(makePermissionProp);
                 let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('data_')) : null;
 
-                d.multiCheck('data_permissions', '', props, {
+                d.multiCheck('data_permissions', null, props, {
                     value: value,
                     disabled: instance.slaves > 0
                 });
