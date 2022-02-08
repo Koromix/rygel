@@ -1579,7 +1579,7 @@ instead of:
         let style = '';
 
         if (options.color != null)
-            style += `background-color: ${options.color};`;
+            style += `background: ${options.color};`;
 
         return style;
     }
