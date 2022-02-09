@@ -1,4 +1,4 @@
-% Copyright 2020 Junekey Jeon
+% Copyright 2020-2021 Junekey Jeon
 %
 % The contents of this file may be used under the terms of
 % the Apache License v2.0 with LLVM Exceptions.
@@ -72,7 +72,7 @@ h.YGrid = 'on';
 set(gca,'TickLabelInterpreter', 'latex');
 set(gcf, 'Position', [100 100 1200 500]);
 orient(fig,'landscape');
-print(fig, output_filename,'-dpdf');
+exportgraphics(fig, output_filename, 'BackgroundColor', 'none');
 hold off
 
 end

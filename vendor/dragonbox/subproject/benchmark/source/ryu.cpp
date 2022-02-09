@@ -19,15 +19,9 @@
 #include "ryu/ryu.h"
 
 namespace {
-	auto dummy = []() -> register_function_for_benchmark {
-		if constexpr (benchmark_kind == benchmark_no_trailing_zero) {
-			return { "Ryu",
-				f2s_buffered,
-				d2s_buffered
-			};
-		}
-		else {
-			return {};
-		}
-	}();
+#if 1
+    auto dummy = []() -> register_function_for_benchmark {
+        return {"Ryu", f2s_buffered, d2s_buffered};
+    }();
+#endif
 }

@@ -20,22 +20,12 @@
 #include "schubfach_64.h"
 
 namespace {
-	void schubfach_32(float x, char* buf) {
-		schubfach::Ftoa(buf, x);
-	}
-	void schubfach_64(double x, char* buf) {
-		schubfach::Dtoa(buf, x);
-	}
+    void schubfach_32(float x, char* buf) { *schubfach::Ftoa(buf, x) = '\0'; }
+    void schubfach_64(double x, char* buf) { *schubfach::Dtoa(buf, x) = '\0'; }
 
-	auto dummy = []() -> register_function_for_benchmark {
-		if constexpr (benchmark_kind == benchmark_no_trailing_zero) {
-			return {};
-		}
-		else {
-			return { "Schubfach",
-				schubfach_32,
-				schubfach_64
-			};
-		}
-	}();
+#if 1
+    auto dummy = []() -> register_function_for_benchmark {
+        return {"Schubfach", schubfach_32, schubfach_64};
+    }();
+#endif
 }
