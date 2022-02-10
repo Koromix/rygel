@@ -86,6 +86,9 @@ nginx_domains:
           default_type text/html;
           alias /srv/dreval_t2.html;
       }
+      location = /r/dreval/t2plus {
+          return 302 https://inter.goupile.fr/dreval/main/intro2?id=x${request_id};
+      }
       location = /r/dreval/participation {
           return 302 https://inter.goupile.fr/dreva1/files/participation.html;
       }
