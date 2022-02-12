@@ -195,7 +195,7 @@ bool http_IO::OpenForWriteWS(CompressionType encoding, StreamWriter *out_st)
 
 Size http_IO::ReadWS(Span<uint8_t> out_buf)
 {
-#ifndef NDEBUG
+#ifdef RG_DEBUG
     {
         std::unique_lock<std::mutex> lock(mutex);
         RG_ASSERT(state == State::WebSocket || state == State::Zombie);
@@ -367,7 +367,7 @@ pump:
 
 bool http_IO::WriteWS(Span<const uint8_t> buf)
 {
-#ifndef NDEBUG
+#ifdef RG_DEBUG
     {
         std::unique_lock<std::mutex> lock(mutex);
         RG_ASSERT(state == State::WebSocket || state == State::Zombie);

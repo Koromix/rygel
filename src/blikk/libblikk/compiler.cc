@@ -569,7 +569,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
             func->overload_prev = head->overload_prev;
             head->overload_prev = func;
 
-#ifndef NDEBUG
+#ifdef RG_DEBUG
             do {
                 RG_ASSERT(!TestOverload(*head->type, func->type->params));
                 head = head->overload_next;

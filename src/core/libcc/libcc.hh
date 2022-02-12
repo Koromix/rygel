@@ -59,6 +59,10 @@ namespace RG {
 // Config
 // ------------------------------------------------------------------------
 
+#ifndef NDEBUG
+    #define RG_DEBUG
+#endif
+
 #define RG_DEFAULT_ALLOCATOR MallocAllocator
 #define RG_BLOCK_ALLOCATOR_DEFAULT_SIZE Kibibytes(4)
 
@@ -200,7 +204,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
             abort(); \
         } \
     } while (false)
-#ifndef NDEBUG
+#ifdef RG_DEBUG
     #define RG_ASSERT(Cond) \
         do { \
             if (RG_UNLIKELY(!(Cond))) { \
@@ -218,7 +222,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
 #define RG_STATIC_ASSERT(Cond) \
     static_assert((Cond), RG_STRINGIFY(Cond))
 
-#if !defined(NDEBUG)
+#if defined(RG_DEBUG)
     #define RG_UNREACHABLE() \
         do { \
             RG::AssertMessage(__FILE__, __LINE__, "Reached code marked as UNREACHABLE"); \
@@ -3196,7 +3200,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
 }
 
 // Shortcut log functions
-#ifndef NDEBUG
+#ifdef RG_DEBUG
 template <typename... Args>
 static inline void LogDebug(Args... args) { Log(LogLevel::Debug, "Debug", args...); }
 #else

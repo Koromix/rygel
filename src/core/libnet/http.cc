@@ -129,7 +129,7 @@ bool http_Daemon::Start(const http_Config &config,
     // MHD flags
     int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME |
                 MHD_ALLOW_UPGRADE | MHD_USE_ERROR_LOG;
-#ifndef NDEBUG
+#ifdef RG_DEBUG
     flags |= MHD_USE_DEBUG;
 #endif
 
@@ -599,7 +599,7 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
 {
     RG_ASSERT(max_age >= 0);
 
-#ifndef NDEBUG
+#ifdef RG_DEBUG
     max_age = 0;
 #endif
 
