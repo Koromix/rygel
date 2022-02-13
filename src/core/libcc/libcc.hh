@@ -121,7 +121,7 @@ extern "C" const char *FelixCompiler;
 #define RG_STRINGIFY(a) RG_STRINGIFY_(a)
 #define RG_CONCAT_(a, b) a ## b
 #define RG_CONCAT(a, b) RG_CONCAT_(a, b)
-#define RG_UNIQUE_ID(prefix) RG_CONCAT(prefix, __LINE__)
+#define RG_UNIQUE_NAME(prefix) RG_CONCAT(prefix, __COUNTER__)
 #define RG_FORCE_EXPAND(x) x
 #define RG_IGNORE (void)!
 
@@ -498,11 +498,11 @@ DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
 // can use DEFER_N(Name) if you need to disable the guard for some reason, and
 // DEFER_NC(Name, Captures) if you need to capture values.
 #define RG_DEFER \
-    auto RG_UNIQUE_ID(defer) = RG::DeferGuardHelper() + [&]()
+    auto RG_UNIQUE_NAME(defer) = RG::DeferGuardHelper() + [&]()
 #define RG_DEFER_N(Name) \
     auto Name = RG::DeferGuardHelper() + [&]()
 #define RG_DEFER_C(...) \
-    auto RG_UNIQUE_ID(defer) = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
+    auto RG_UNIQUE_NAME(defer) = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
 #define RG_DEFER_NC(Name, ...) \
     auto Name = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
 
@@ -535,21 +535,23 @@ public:
     bool IsValid() const { return callback; }
 };
 
-#define RG_INIT(Name) \
-    class RG_UNIQUE_ID(InitHelper) { \
+#define RG_INIT_(ClassName) \
+    class ClassName { \
     public: \
-        RG_UNIQUE_ID(InitHelper)(); \
+        ClassName(); \
     }; \
-    static RG_UNIQUE_ID(InitHelper) RG_UNIQUE_ID(init); \
-    RG_UNIQUE_ID(InitHelper)::RG_UNIQUE_ID(InitHelper)()
+    static ClassName RG_UNIQUE_NAME(init); \
+    ClassName::ClassName()
+#define RG_INIT(Name) RG_INIT_(RG_UNIQUE_NAME(InitHelper))
 
-#define RG_EXIT(Name) \
-    class RG_UNIQUE_ID(ExitHelper) { \
+#define RG_EXIT_(ClassName) \
+    class ClassName { \
     public: \
-        ~RG_UNIQUE_ID(ExitHelper)(); \
+        ~ClassName(); \
     }; \
-    static RG_UNIQUE_ID(ExitHelper) RG_UNIQUE_ID(exit); \
-    RG_UNIQUE_ID(ExitHelper)::~RG_UNIQUE_ID(ExitHelper)()
+    static ClassName RG_UNIQUE_NAME(exit); \
+    ClassName::~ClassName()
+#define RG_EXIT(Name) RG_EXIT_(RG_UNIQUE_NAME(ExitHelper))
 
 template <typename T>
 T MultiCmp()

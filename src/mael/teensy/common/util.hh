@@ -23,7 +23,7 @@
 #define STRINGIFY(A) STRINGIFY_(A)
 #define CONCAT_(A, B) A ## B
 #define CONCAT(A, B) CONCAT_(A, B)
-#define UNIQUE_ID(Prefix) CONCAT(Prefix, __LINE__)
+#define UNIQUE_NAME(Prefix) CONCAT(Prefix, __COUNTER__)
 
 #define STATIC_ASSERT(Cond) \
     static_assert((Cond), STRINGIFY(Cond))
@@ -52,10 +52,11 @@ public:
     };
 };
 
-#define PROCESS_EVERY(DelayUs) \
-    static WaitFor UNIQUE_ID(wf_)(DelayUs); \
-    if (!UNIQUE_ID(wf_).Test()) \
+#define PROCESS_EVERY_(VarName, DelayUs) \
+    static WaitFor VarName(DelayUs); \
+    if (!VarName.Test()) \
         return;
+#define PROCESS_EVERY(DelayUs) PROCESS_EVERY_(UNIQUE_NAME(wf_), (Delayus))
 
 template <typename Fun>
 class DeferGuard {
@@ -97,10 +98,10 @@ DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
 // can use DEFER_N(Name) if you need to disable the guard for some reason, and
 // DEFER_NC(Name, Captures) if you need to capture values.
 #define DEFER \
-    auto UNIQUE_ID(defer) = DeferGuardHelper() + [&]()
+    auto UNIQUE_NAME(defer) = DeferGuardHelper() + [&]()
 #define DEFER_N(Name) \
     auto Name = DeferGuardHelper() + [&]()
 #define DEFER_C(...) \
-    auto UNIQUE_ID(defer) = DeferGuardHelper() + [&, __VA_ARGS__]()
+    auto UNIQUE_NAME(defer) = DeferGuardHelper() + [&, __VA_ARGS__]()
 #define DEFER_NC(Name, ...) \
     auto Name = DeferGuardHelper() + [&, __VA_ARGS__]()
