@@ -22,8 +22,6 @@
 #endif
 #if __has_include("../../../vendor/dragonbox/include/dragonbox/dragonbox.h")
     #include "../../../vendor/dragonbox/include/dragonbox/dragonbox.h"
-#else
-    #include "dragonbox.h"
 #endif
 
 #ifdef _WIN32
@@ -833,6 +831,7 @@ static Span<char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
     return MakeSpan(out_buf, msb);
 }
 
+#ifdef JKJ_HEADER_DRAGONBOX
 static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec, int *out_K)
 {
     RG_ASSERT(min_prec >= 0);
@@ -958,11 +957,13 @@ static Span<char> ExponentiateFloat(Span<char> buf, int K, int min_prec, int max
 
     return buf;
 }
+#endif
 
 // NaN and Inf are handled by caller
 template <typename T>
 Span<const char> FormatFloatingPoint(T value, int min_prec, int max_prec, char out_buf[128])
 {
+#ifdef JKJ_HEADER_DRAGONBOX
     auto v = jkj::dragonbox::to_decimal(value, jkj::dragonbox::policy::sign::ignore);
 
     Span<char> buf = FormatUnsignedToDecimal(v.significand, out_buf);
@@ -985,6 +986,16 @@ Span<const char> FormatFloatingPoint(T value, int min_prec, int max_prec, char o
     } else {
         return ExponentiateFloat(buf, v.exponent, min_prec, max_prec);
     }
+#else
+    #ifdef _MSC_VER
+        #pragma message("Cannot format floating point values correctly without Dragonbox")
+    #else
+        #warning Cannot format floating point values correctly without Dragonbox
+    #endif
+
+    int ret = snprintf(out_buf, 128, "%g", value);
+    return MakeSpan(out_buf, std::min(ret, 128));
+#endif
 }
 
 template <typename AppendFunc>
