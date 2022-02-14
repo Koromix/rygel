@@ -2806,12 +2806,12 @@ int OpenDescriptor(const char *filename, unsigned int flags)
 
             oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { 
+        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: {
             access = GENERIC_READ | GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
             creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
 
-            oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT; 
+            oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
         case (int)OpenFileFlag::Append: {
             access = GENERIC_WRITE;
