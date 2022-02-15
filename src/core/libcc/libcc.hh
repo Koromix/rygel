@@ -1029,10 +1029,10 @@ static inline constexpr Strider<T> MakeStrider(T (&arr)[N])
     return Strider<T>(arr, RG_SIZE(T));
 }
 
-template <typename T, Size N>
+template <typename T, Size N, Size AlignAs = alignof(T)>
 class LocalArray {
 public:
-    T data[N];
+    alignas(AlignAs) T data[N];
     Size len = 0;
 
     typedef T value_type;
