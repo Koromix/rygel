@@ -131,7 +131,6 @@ struct Command {
     Span<const char> cmd_line; // Must be C safe (NULL termination)
     Size cache_len;
     Size rsp_offset;
-    bool skip_success;
     int skip_lines;
     DependencyMode deps_mode;
     const char *deps_filename; // Used by MakeLike mode

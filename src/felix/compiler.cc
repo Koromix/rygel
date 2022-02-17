@@ -358,13 +358,8 @@ public:
         switch (host) {
             case HostPlatform::Windows: {
                 Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
-                          " -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE"
-                          " -D_MT -Xclang --dependent-lib=oldnames"
+                          " -D_MT -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -D_VC_NODEFAULTLIB"
                           " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
-
-                if (src_type == SourceType::CXX) {
-                    Fmt(&buf, " -Xclang -flto-visibility-public-std -D_SILENCE_CLANG_CONCEPTS_MESSAGE");
-                }
             } break;
 
             case HostPlatform::macOS: {
@@ -391,9 +386,11 @@ public:
         }
         if (host == HostPlatform::Windows) {
             if (features & (int)CompileFeature::StaticLink) {
-                Fmt(&buf, " -Xclang --dependent-lib=libcmt");
+                if (src_type == SourceType::CXX) {
+                    Fmt(&buf, " -Xclang -flto-visibility-public-std -D_SILENCE_CLANG_CONCEPTS_MESSAGE");
+                }
             } else {
-                Fmt(&buf, " -Xclang --dependent-lib=msvcrt");
+                Fmt(&buf, " -D_DLL");
             }
         }
         if (features & (int)CompileFeature::ASan) {
@@ -517,7 +514,16 @@ public:
         // Platform flags
         switch (host) {
             case HostPlatform::Windows: {
-                Fmt(&buf, " --rtlib=compiler-rt -Wl,setargv.obj");
+                const char *suffix = (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) ? "" : "d";
+
+                Fmt(&buf, " -Wl,/NODEFAULTLIB:libcmt -Wl,/NODEFAULTLIB:msvcrt -Wl,setargv.obj -Wl,oldnames.lib");
+
+                if (features & (int)CompileFeature::StaticLink) {
+                    Fmt(&buf, " -Wl,libcmt%1.lib", suffix);
+                } else {
+                    Fmt(&buf, " -Wl,msvcrt%1.lib", suffix);
+                }
+
                 if (features & (int)CompileFeature::DebugInfo) {
                     Fmt(&buf, " -g");
                 }
@@ -546,6 +552,9 @@ public:
         // Features
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
+            if (host == HostPlatform::Windows && !(features & (int)CompileFeature::StaticLink)) {
+                Fmt(&buf, " -shared-libasan");
+            }
         }
         if (features & (int)CompileFeature::TSan) {
             Fmt(&buf, " -fsanitize=thread");
@@ -1220,7 +1229,7 @@ public:
 
         out_cmd->cache_len = buf.len;
         out_cmd->cmd_line = buf.TrimAndLeak(1);
-        out_cmd->skip_success = true;
+        out_cmd->skip_lines = 1;
     }
 
     void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
@@ -1920,6 +1929,13 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
                 }
 
                 spec.ld = "bfd";
+#ifdef _WIN32
+            } else if (TestStr(spec.ld, "link")) {
+                if (!FindExecutableInPath("link")) {
+                    LogError("Cannot find linker 'link.exe' in PATH");
+                    return nullptr;
+                }
+#endif
             } else {
                 char buf[512];
                 Fmt(buf, "ld.%1", spec.ld);

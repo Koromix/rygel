@@ -1051,7 +1051,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
             worker->entries.Append(entry);
         }
 
-        if (output.len && !cmd.skip_success) {
+        if (output.len) {
             std::lock_guard<std::mutex> out_lock(out_mutex);
             stdout_st.Write(output);
         }
