@@ -972,7 +972,7 @@ class MsCompiler final: public Compiler {
 public:
     MsCompiler() : Compiler(HostPlatform::Windows, "MSVC") {}
 
-    static std::unique_ptr<const Compiler> Create(const char *cl, const char *link)
+    static std::unique_ptr<const Compiler> Create(const char *cl)
     {
         std::unique_ptr<MsCompiler> compiler = std::make_unique<MsCompiler>();
 
@@ -986,8 +986,7 @@ public:
 
             compiler->cl = DuplicateString(cl, &compiler->str_alloc).ptr;
             compiler->rc = Fmt(&compiler->str_alloc, "%1rc%2", prefix, version).ptr;
-            compiler->link = link ? DuplicateString(link, &compiler->str_alloc).ptr
-                                  : Fmt(&compiler->str_alloc, "%1link%2", prefix, version).ptr;
+            compiler->link = Fmt(&compiler->str_alloc, "%1link%2", prefix, version).ptr;
         }
 
         return compiler;
@@ -1953,7 +1952,12 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             return GnuCompiler::Create(spec.host, spec.cc, spec.ld);
 #ifdef _WIN32
         } else if (IdentifyCompiler(spec.cc, "cl")) {
-            return MsCompiler::Create(spec.cc, spec.ld);
+            if (spec.ld) {
+                LogError("Cannot use custom linker with MSVC compiler");
+                return nullptr;
+            }
+
+            return MsCompiler::Create(spec.cc);
 #endif
         } else {
             LogError("Cannot find driver for compiler '%1'", spec.cc);
