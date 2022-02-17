@@ -354,7 +354,7 @@ void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
         }
 
         // Create session
-        RetainPtr<const User> udata(user, [](const User *) {});
+        RetainPtr<const User> udata((User *)user, [](User *) {});
         sessions.Open(request, io, udata);
 
         io->AttachText(200, "{}", "application/json");
