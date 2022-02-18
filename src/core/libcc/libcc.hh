@@ -94,12 +94,8 @@ extern "C" const char *FelixCompiler;
     typedef int64_t Size;
     #define RG_SIZE_MAX INT64_MAX
 #elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
-    #ifdef LIBCC_ACCEPT_DESKTOP32
-        typedef int32_t Size;
-        #define RG_SIZE_MAX INT32_MAX
-    #else
-        #error Support for 32-bit desktop operating systems is explicitly disabled
-    #endif
+    typedef int32_t Size;
+    #define RG_SIZE_MAX INT32_MAX
 #elif defined(__thumb__) || defined(__arm__) || defined(__EMSCRIPTEN__)
     typedef int32_t Size;
     #define RG_SIZE_MAX INT32_MAX
@@ -2949,7 +2945,6 @@ public:
             int max_prec;
         } d;
         const void *ptr;
-        Size size;
         Date date;
         TimeSpec time;
         Size random_len;
@@ -3038,18 +3033,18 @@ static inline FmtArg FmtDouble(double d, int min_prec, int max_prec)
 static inline FmtArg FmtDouble(double d, int prec) { return FmtDouble(d, prec, prec); }
 static inline FmtArg FmtDouble(double d) { return FmtDouble(d, 0, INT_MAX); }
 
-static inline FmtArg FmtMemSize(Size size)
+static inline FmtArg FmtMemSize(int64_t size)
 {
     FmtArg arg;
     arg.type = FmtType::MemorySize;
-    arg.u.size = size;
+    arg.u.i = size;
     return arg;
 }
-static inline FmtArg FmtDiskSize(Size size)
+static inline FmtArg FmtDiskSize(int64_t size)
 {
     FmtArg arg;
     arg.type = FmtType::DiskSize;
-    arg.u.size = size;
+    arg.u.i = size;
     return arg;
 }
 
@@ -4004,7 +3999,7 @@ private:
 #if defined(_WIN64)
     static void FiberCallback(void *udata);
 #elif defined(_WIN32)
-    static __stdcall void FiberCallback(void *udata);
+    static void __stdcall FiberCallback(void *udata);
 #else
     static void FiberCallback(unsigned int high, unsigned int low);
 #endif

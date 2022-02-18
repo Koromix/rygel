@@ -1110,15 +1110,15 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 
             case FmtType::MemorySize: {
                 double size;
-                if (arg.u.size < 0) {
-                    size = (double)-arg.u.size;
+                if (arg.u.i < 0) {
+                    size = (double)-arg.u.i;
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
                     } else {
                         out_buf.Append('-');
                     }
                 } else {
-                    size = (double)arg.u.size;
+                    size = (double)arg.u.i;
                 }
 
                 if (size >= 1073688137.0) {
@@ -1148,15 +1148,15 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
             case FmtType::DiskSize: {
                 double size;
-                if (arg.u.size < 0) {
-                    size = (double)-arg.u.size;
+                if (arg.u.i < 0) {
+                    size = (double)-arg.u.i;
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
                     } else {
                         out_buf.Append('-');
                     }
                 } else {
-                    size = (double)arg.u.size;
+                    size = (double)arg.u.i;
                 }
 
                 if (size >= 999950000.0) {
@@ -1326,8 +1326,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                             arg2.u.d.min_prec = 0;
                             arg2.u.d.max_prec = INT_MAX;
                         } break;
-                        case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
-                        case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;
+                        case FmtType::MemorySize:
+                        case FmtType::DiskSize: { arg2.u.i = *(const int64_t *)ptr; } break;
                         case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
                         case FmtType::TimeISO:
                         case FmtType::TimeNice: { arg2.u.time = *(const TimeSpec *)ptr; } break;
@@ -5157,7 +5157,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
         // who need/want to append a NUL character.
         out_buf->Grow((Size)raw_len + 1);
 
-        Size read_len = Read(raw_len, out_buf->end());
+        Size read_len = Read((Size)raw_len, out_buf->end());
         if (read_len < 0)
             return -1;
         out_buf->len += read_len;
