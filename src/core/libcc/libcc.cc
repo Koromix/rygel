@@ -4851,6 +4851,15 @@ void Fiber::FiberCallback(unsigned int high, unsigned int low)
 // Streams
 // ------------------------------------------------------------------------
 
+#ifdef _WIN32
+RG_INIT(BinaryStdIO)
+{
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+    _setmode(_fileno(stderr), _O_BINARY);
+}
+#endif
+
 StreamReader stdin_st(stdin, "<stdin>");
 StreamWriter stdout_st(stdout, "<stdout>");
 StreamWriter stderr_st(stderr, "<stderr>");
