@@ -2953,6 +2953,7 @@ bool FileIsVt100(FILE *fp)
                 }
 
                 if (emulation && win32_utf8) {
+                    SetConsoleCP(CP_UTF8); // Does not work yet, but it might some day
                     SetConsoleOutputCP(CP_UTF8);
                 }
 
