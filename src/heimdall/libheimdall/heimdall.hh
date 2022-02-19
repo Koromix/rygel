@@ -13,10 +13,10 @@
 
 #pragma once
 
-#include "../../core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "data.hh"
 #include "animation.hh"
-#include "../../core/libgui/libgui.hh"
+#include "src/core/libgui/libgui.hh"
 
 namespace RG {
 

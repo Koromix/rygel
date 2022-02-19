@@ -13,9 +13,9 @@
 
 #pragma once
 
-#include "../../core/libcc/libcc.hh"
-#include "../../drd/libdrd/libdrd.hh"
-#include "../../core/libnet/libnet.hh"
+#include "src/core/libcc/libcc.hh"
+#include "src/drd/libdrd/libdrd.hh"
+#include "src/core/libnet/libnet.hh"
 
 namespace RG {
 

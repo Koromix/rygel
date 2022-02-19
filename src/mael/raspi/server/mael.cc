@@ -11,13 +11,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "../../../core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "config.hh"
-#include "../../../core/libnet/libnet.hh"
+#include "src/core/libnet/libnet.hh"
 #include "../../teensy/common/protocol.hh"
-#include "../../../../vendor/libhs/libhs.h"
+#include "vendor/libhs/libhs.h"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-#include "../../../../vendor/miniz/miniz.h"
+#include "vendor/miniz/miniz.h"
 #ifdef _WIN32
     #ifndef NOMINMAX
         #define NOMINMAX

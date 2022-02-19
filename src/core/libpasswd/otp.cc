@@ -11,13 +11,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "../libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "otp.hh"
-#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
-#include "../../../vendor/mbedtls/include/mbedtls/sha1.h"
-#include "../../../vendor/qrcodegen/qrcodegen.hpp"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/mbedtls/include/mbedtls/sha1.h"
+#include "vendor/qrcodegen/qrcodegen.hpp"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-#include "../../../vendor/miniz/miniz.h"
+#include "vendor/miniz/miniz.h"
 
 namespace RG {
 

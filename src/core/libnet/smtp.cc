@@ -11,10 +11,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "../../core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "curl.hh"
-#include "../../../vendor/mbedtls/include/mbedtls/ssl.h"
-#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/mbedtls/include/mbedtls/ssl.h"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "smtp.hh"
 
 namespace RG {

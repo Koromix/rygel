@@ -13,9 +13,9 @@
 
 #ifdef _WIN32
 
-#include "../libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "window.hh"
-#include "../libwrap/opengl.hh"
+#include "src/core/libwrap/opengl.hh"
 
 #ifndef NOMINMAX
     #define NOMINMAX

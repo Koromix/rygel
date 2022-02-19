@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "../core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "compiler.hh"
 #ifdef _WIN32
     #ifndef NOMINMAX
@@ -334,7 +334,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing");
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
@@ -746,7 +746,7 @@ public:
                 case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
             }
         }
-        Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
+        Fmt(&buf, " -I. -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
         out_cmd->rsp_offset = buf.len;
 
         // Build options
@@ -1095,7 +1095,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " /EHsc");
+        Fmt(&buf, " /I. /EHsc");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " /O2 /DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
@@ -1412,7 +1412,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing");
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
@@ -1715,7 +1715,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing");
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O1 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {

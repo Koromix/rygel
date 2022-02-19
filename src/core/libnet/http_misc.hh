@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include "../../core/libcc/libcc.hh"
-#include "../../core/libwrap/json.hh"
+#include "src/core/libcc/libcc.hh"
+#include "src/core/libwrap/json.hh"
 
 namespace RG {
 

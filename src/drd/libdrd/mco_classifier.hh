@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "../../core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "mco_authorization.hh"
 #include "mco_stay.hh"
 #include "mco_tables.hh"

@@ -11,11 +11,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "../../core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "error.hh"
 #include "lexer.hh"
 #include "lexer_xid.inc"
-#include "../../../vendor/fast_float/fast_float.h"
+#include "vendor/fast_float/fast_float.h"
 
 namespace RG {
 

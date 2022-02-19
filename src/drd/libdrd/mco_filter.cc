@@ -11,11 +11,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "../../core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "mco_filter.hh"
 #include "mco_pricing.hh"
 
-#include "../../../vendor/wren/src/include/wren.hpp"
+#include "vendor/wren/src/include/wren.hpp"
 
 namespace RG {
 

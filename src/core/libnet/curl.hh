@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "../../core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #ifdef _WIN32
     #ifndef NOMINMAX
         #define NOMINMAX
@@ -22,7 +22,7 @@
         #define WIN32_LEAN_AND_MEAN
     #endif
 #endif
-#include "../../../vendor/curl/include/curl/curl.h"
+#include "vendor/curl/include/curl/curl.h"
 
 namespace RG {
 

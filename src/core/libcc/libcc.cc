@@ -12,16 +12,16 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "libcc.hh"
-#if !defined(LIBCC_NO_MINIZ) && __has_include("../../../vendor/miniz/miniz.h")
+#if !defined(LIBCC_NO_MINIZ) && __has_include("vendor/miniz/miniz.h")
     #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-    #include "../../../vendor/miniz/miniz.h"
+    #include "vendor/miniz/miniz.h"
 #endif
-#if !defined(LIBCC_NO_BROTLI) && __has_include("../../../vendor/brotli/c/include/brotli/decode.h")
-    #include "../../../vendor/brotli/c/include/brotli/decode.h"
-    #include "../../../vendor/brotli/c/include/brotli/encode.h"
+#if !defined(LIBCC_NO_BROTLI) && __has_include("vendor/brotli/c/include/brotli/decode.h")
+    #include "vendor/brotli/c/include/brotli/decode.h"
+    #include "vendor/brotli/c/include/brotli/encode.h"
 #endif
-#if __has_include("../../../vendor/dragonbox/include/dragonbox/dragonbox.h")
-    #include "../../../vendor/dragonbox/include/dragonbox/dragonbox.h"
+#if __has_include("vendor/dragonbox/include/dragonbox/dragonbox.h")
+    #include "vendor/dragonbox/include/dragonbox/dragonbox.h"
 #endif
 
 #ifdef _WIN32

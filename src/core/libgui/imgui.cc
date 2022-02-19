@@ -11,13 +11,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "../libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "window.hh"
-#include "../libwrap/opengl.hh"
+#include "src/core/libwrap/opengl.hh"
 RG_PUSH_NO_WARNINGS
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-#include "../../../vendor/imgui/imgui.h"
-#include "../../../vendor/imgui/imgui_internal.h"
+#include "vendor/imgui/imgui.h"
+#include "vendor/imgui/imgui_internal.h"
 RG_POP_NO_WARNINGS
 
 namespace RG {

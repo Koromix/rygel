@@ -13,9 +13,9 @@
 
 #pragma once
 
-#include "../../core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "http.hh"
-#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 

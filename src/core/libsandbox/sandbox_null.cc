@@ -13,7 +13,7 @@
 
 #ifndef __linux__
 
-#include "../libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "sandbox.hh"
 
 namespace RG {

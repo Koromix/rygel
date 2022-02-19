@@ -13,9 +13,9 @@
 
 #ifndef _WIN32
 
-#include "../libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "window.hh"
-#include "../../../vendor/glfw/include/GLFW/glfw3.h"
+#include "vendor/glfw/include/GLFW/glfw3.h"
 
 namespace RG {
 

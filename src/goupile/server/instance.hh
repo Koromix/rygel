@@ -13,9 +13,9 @@
 
 #pragma once
 
-#include "../../core/libcc/libcc.hh"
-#include "../../core/libnet/libnet.hh"
-#include "../../core/libsqlite/libsqlite.hh"
+#include "src/core/libcc/libcc.hh"
+#include "src/core/libnet/libnet.hh"
+#include "src/core/libsqlite/libsqlite.hh"
 #include "user.hh"
 
 namespace RG {

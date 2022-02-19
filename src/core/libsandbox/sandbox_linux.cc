@@ -13,12 +13,12 @@
 
 #ifdef __linux__
 
-#include "../libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "sandbox.hh"
 
 #include <fcntl.h>
 #include <sched.h>
-#include "../../../vendor/libseccomp/include/seccomp.h"
+#include "vendor/libseccomp/include/seccomp.h"
 #include <sys/eventfd.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
