@@ -54,6 +54,9 @@
         // Some MinGW distributions set it to 0 by default
         int _CRT_glob = 1;
     #endif
+
+    #define RtlGenRandom SystemFunction036
+    extern "C" BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
 #else
     #include <dlfcn.h>
     #include <dirent.h>
@@ -4072,6 +4075,22 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size m
 
     out_guard.Disable();
     return true;
+}
+
+void FillRandom(void *buf, Size len)
+{
+    RG_ASSERT(len < UINT32_MAX);
+
+#ifdef _WIN32
+    BOOLEAN success = RtlGenRandom(buf, (ULONG)len);
+    RG_ASSERT(success);
+#else
+    for (Size i = 0; i < len; i += 256) {
+        Size call_len = std::min((Size)256, len - i);
+        int ret = getentropy(buf + i, (size_t)call_len);
+        RG_ASSERT(!ret);
+    }
+#endif
 }
 
 #ifdef _WIN32

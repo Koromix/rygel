@@ -17,7 +17,6 @@
 #include "instance.hh"
 #include "goupile.hh"
 #include "user.hh"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -212,7 +211,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                 char boundary[17];
                 {
                     uint64_t buf;
-                    randombytes_buf(&buf, RG_SIZE(buf));
+                    FillRandom(&buf, RG_SIZE(buf));
                     Fmt(boundary, "%1", FmtHex(buf).Pad0(-16));
                 }
 

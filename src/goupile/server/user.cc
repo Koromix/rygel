@@ -23,6 +23,8 @@
 
 namespace RG {
 
+RG_STATIC_ASSERT(PasswordHashBytes == crypto_pwhash_STRBYTES);
+
 static const int BanThreshold = 6;
 static const int64_t BanTime = 1800 * 1000;
 static const int64_t TotpPeriod = 30000;
@@ -314,7 +316,7 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
         char local_key[45];
         {
             uint8_t buf[32];
-            randombytes_buf(&buf, RG_SIZE(buf));
+            FillRandom(buf);
             sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
@@ -356,7 +358,7 @@ void PruneSessions()
     }
 }
 
-bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES])
+bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
 {
     if (crypto_pwhash_str(out_hash, password.ptr, password.len,
                           crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
@@ -574,7 +576,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
                 // Create random local key
                 {
                     uint8_t buf[32];
-                    randombytes_buf(&buf, RG_SIZE(buf));
+                    FillRandom(buf);
                     sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                 }
 
@@ -1092,7 +1094,7 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
         }
 
         // Hash password
-        char new_hash[crypto_pwhash_STRBYTES];
+        char new_hash[PasswordHashBytes];
         if (!HashPassword(new_password, new_hash))
             return;
 
@@ -1289,7 +1291,7 @@ RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, Insta
     char local_key[45];
     {
         uint8_t buf[32];
-        randombytes_buf(&buf, RG_SIZE(buf));
+        FillRandom(buf);
         sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 

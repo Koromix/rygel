@@ -109,7 +109,7 @@ static void InitAssets()
     // Update ETag
     {
         uint64_t buf;
-        randombytes_buf(&buf, RG_SIZE(buf));
+        FillRandom(&buf, RG_SIZE(buf));
         Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
     }
 

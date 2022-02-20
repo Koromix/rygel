@@ -14,7 +14,6 @@
 #include "src/core/libcc/libcc.hh"
 #include "curl.hh"
 #include "vendor/mbedtls/include/mbedtls/ssl.h"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "smtp.hh"
 
 namespace RG {
@@ -131,7 +130,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         const char *domain;
         {
             uint64_t buf2[2];
-            randombytes_buf(&buf2, RG_SIZE(buf2));
+            FillRandom(&buf2, RG_SIZE(buf2));
             Fmt(id, "%1%2", FmtHex(buf2[0]).Pad0(-16), FmtHex(buf2[1]).Pad0(-16));
 
             SplitStr(config.from, '@', &domain);
@@ -149,7 +148,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
             char boundary[17];
             {
                 uint64_t buf2;
-                randombytes_buf(&buf2, RG_SIZE(buf2));
+                FillRandom(&buf2, RG_SIZE(buf2));
                 Fmt(boundary, "%1", FmtHex(buf2).Pad0(-16));
             }
 

@@ -329,7 +329,7 @@ static void InitRoutes()
     // We can use a global ETag because everything is in the binary
     {
         uint64_t buf[2];
-        randombytes_buf(&buf, RG_SIZE(buf));
+        FillRandom(&buf, RG_SIZE(buf));
         Fmt(thop_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 }

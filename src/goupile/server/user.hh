@@ -45,6 +45,8 @@ static const char *const UserPermissionNames[] = {
 static const uint32_t UserPermissionMasterMask = 0b000001111u;
 static const uint32_t UserPermissionSlaveMask =  0b111110000u;
 
+static const int PasswordHashBytes = 128;
+
 enum class SessionType {
     Login,
     Token,
@@ -100,7 +102,7 @@ void InvalidateUserStamps(int64_t userid);
 RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void PruneSessions();
 
-bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES]);
+bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes]);
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);

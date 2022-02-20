@@ -15,7 +15,6 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "http.hh"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -182,7 +181,7 @@ private:
 
             {
                 uint64_t buf[4];
-                randombytes_buf(buf, RG_SIZE(buf));
+                FillRandom(buf, RG_SIZE(buf));
                 Fmt(handle->session_key, "%1%2%3%4",
                     FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
                     FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16));
@@ -200,7 +199,7 @@ private:
             RG_STATIC_ASSERT(RG_SIZE(handle->session_rnd) == 33);
 
             uint64_t buf[2];
-            randombytes_buf(&buf, RG_SIZE(buf));
+            FillRandom(&buf, RG_SIZE(buf));
             Fmt(handle->session_rnd, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
         }
 

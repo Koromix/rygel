@@ -592,7 +592,7 @@ retry_pwd:
 
     // Create default admin user
     {
-        char hash[crypto_pwhash_STRBYTES];
+        char hash[PasswordHashBytes];
         if (!HashPassword(password, hash))
             return 1;
 
@@ -600,7 +600,7 @@ retry_pwd:
         char local_key[45];
         {
             uint8_t buf[32];
-            randombytes_buf(&buf, RG_SIZE(buf));
+            FillRandom(buf);
             sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
@@ -2409,7 +2409,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         }
 
         // Hash password
-        char hash[crypto_pwhash_STRBYTES];
+        char hash[PasswordHashBytes];
         if (!HashPassword(password, hash))
             return;
 
@@ -2417,7 +2417,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         char local_key[45];
         {
             uint8_t buf[32];
-            randombytes_buf(&buf, RG_SIZE(buf));
+            FillRandom(buf);
             sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
@@ -2572,7 +2572,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         }
 
         // Hash password
-        char hash[crypto_pwhash_STRBYTES];
+        char hash[PasswordHashBytes];
         if (password && !HashPassword(password, hash))
             return;
 
