@@ -964,17 +964,24 @@ static Span<char> ExponentiateFloat(Span<char> buf, int K, int min_prec, int max
 
 // NaN and Inf are handled by caller
 template <typename T>
-Span<const char> FormatFloatingPoint(T value, int min_prec, int max_prec, char out_buf[128])
+Span<const char> FormatFloatingPoint(T value, bool non_zero, int min_prec, int max_prec, char out_buf[128])
 {
 #ifdef JKJ_HEADER_DRAGONBOX
-    auto v = jkj::dragonbox::to_decimal(value, jkj::dragonbox::policy::sign::ignore);
+    if (non_zero) {
+        auto v = jkj::dragonbox::to_decimal(value, jkj::dragonbox::policy::sign::ignore);
 
-    Span<char> buf = FormatUnsignedToDecimal(v.significand, out_buf);
-    int KK = (int)buf.len + v.exponent;
+        Span<char> buf = FormatUnsignedToDecimal(v.significand, out_buf);
+        int KK = (int)buf.len + v.exponent;
 
-    if (!v.significand) {
-        buf.ptr[0] = '0';
+        if (KK > -6 && KK <= 21) {
+            return PrettifyFloat(buf, v.exponent, min_prec, max_prec);
+        } else {
+            return ExponentiateFloat(buf, v.exponent, min_prec, max_prec);
+        }
+    } else {
+        Span<char> buf = MakeSpan(out_buf, 128);
 
+        buf[0] = '0';
         if (min_prec) {
             buf.ptr[1] = '.';
             memset_safe(buf.ptr + 2, '0', min_prec);
@@ -984,10 +991,6 @@ Span<const char> FormatFloatingPoint(T value, int min_prec, int max_prec, char o
         }
 
         return buf;
-    } else if (KK > -6 && KK <= 21) {
-        return PrettifyFloat(buf, v.exponent, min_prec, max_prec);
-    } else {
-        return ExponentiateFloat(buf, v.exponent, min_prec, max_prec);
     }
 #else
     #ifdef _MSC_VER
@@ -1066,10 +1069,10 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                             out_buf.Append('-');
                         }
 
-                        out_buf.Append(FormatFloatingPoint(-u.f, arg.u.f.min_prec, arg.u.f.max_prec, num_buf));
+                        out_buf.Append(FormatFloatingPoint(-u.f, true, arg.u.f.min_prec, arg.u.f.max_prec, num_buf));
                         out = out_buf;
                     } else {
-                        out = FormatFloatingPoint(u.f, arg.u.f.min_prec, arg.u.f.max_prec, num_buf);
+                        out = FormatFloatingPoint(u.f, u.u32, arg.u.f.min_prec, arg.u.f.max_prec, num_buf);
                     }
                 }
             } break;
@@ -1097,10 +1100,10 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                             out_buf.Append('-');
                         }
 
-                        out_buf.Append(FormatFloatingPoint(-u.d, arg.u.d.min_prec, arg.u.d.max_prec, num_buf));
+                        out_buf.Append(FormatFloatingPoint(-u.d, true, arg.u.d.min_prec, arg.u.d.max_prec, num_buf));
                         out = out_buf;
                     } else {
-                        out = FormatFloatingPoint(u.d, arg.u.d.min_prec, arg.u.d.max_prec, num_buf);
+                        out = FormatFloatingPoint(u.d, u.u64, arg.u.d.min_prec, arg.u.d.max_prec, num_buf);
                     }
                 }
             } break;
@@ -1128,22 +1131,22 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     size /= 1073741824.0;
 
                     int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
                     out_buf.Append(" GiB");
                 } else if (size >= 1048524.0) {
                     size /= 1048576.0;
 
                     int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
                     out_buf.Append(" MiB");
                 } else if (size >= 1023.95) {
                     size /= 1024.0;
 
                     int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
                     out_buf.Append(" kiB");
                 } else {
-                    out_buf.Append(FormatFloatingPoint(size, 0, 0, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, arg.u.i, 0, 0, num_buf));
                     out_buf.Append(" B");
                 }
 
@@ -1166,22 +1169,22 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     size /= 1000000000.0;
 
                     int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
                     out_buf.Append(" GB");
                 } else if (size >= 999950.0) {
                     size /= 1000000.0;
 
                     int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
                     out_buf.Append(" MB");
                 } else if (size >= 999.95) {
                     size /= 1000.0;
 
                     int prec = 1 + (size < 9.9995) + (size < 99.995);
-                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, true, prec, prec, num_buf));
                     out_buf.Append(" kB");
                 } else {
-                    out_buf.Append(FormatFloatingPoint(size, 0, 0, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, arg.u.i, 0, 0, num_buf));
                     out_buf.Append(" B");
                 }
 
