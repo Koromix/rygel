@@ -1253,11 +1253,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 for (Size j = 0; j < arg.u.random_len; j++) {
                     static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 
-                    // We don't want to depend on libsodium here, so use C++ crap instead
-                    static std::default_random_engine rnd_generator((int)GetUnixTime());
-                    static std::uniform_int_distribution<int> rnd_distribution(0, (int)strlen(chars) - 1);
-
-                    out_buf.Append(chars[rnd_distribution(rnd_generator)]);
+                    int rnd = GetRandomInt(strlen(chars));
+                    out_buf.Append(chars[rnd]);
                 }
 
                 out = out_buf;
@@ -4403,6 +4400,21 @@ void FillRandom(void *out_buf, Size len)
     }
 
     rnd_remain -= len;
+}
+
+int GetRandomInt(int max)
+{
+    RG_ASSERT(max >= 2);
+
+    unsigned int treshold = (UINT_MAX - UINT_MAX % max);
+
+    unsigned int x;
+    do {
+        FillRandom(&x, RG_SIZE(x));
+    } while (x >= treshold);
+    x %= max;
+
+    return (int)x;
 }
 
 // ------------------------------------------------------------------------
