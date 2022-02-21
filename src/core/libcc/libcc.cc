@@ -4077,22 +4077,6 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size m
     return true;
 }
 
-void FillRandom(void *buf, Size len)
-{
-    RG_ASSERT(len < UINT32_MAX);
-
-#ifdef _WIN32
-    BOOLEAN success = RtlGenRandom(buf, (ULONG)len);
-    RG_ASSERT(success);
-#else
-    for (Size i = 0; i < len; i += 256) {
-        Size call_len = std::min((Size)256, len - i);
-        int ret = getentropy(buf + i, (size_t)call_len);
-        RG_ASSERT(!ret);
-    }
-#endif
-}
-
 #ifdef _WIN32
 
 static HANDLE wait_msg_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -4295,6 +4279,131 @@ bool NotifySystemd()
     return true;
 }
 #endif
+
+// ------------------------------------------------------------------------
+// Random
+// ------------------------------------------------------------------------
+
+static RG_THREAD_LOCAL Size rnd_remain;
+static RG_THREAD_LOCAL int64_t rnd_time;
+#ifndef _WIN32
+static RG_THREAD_LOCAL pid_t rnd_pid;
+#endif
+static RG_THREAD_LOCAL uint32_t rnd_state[16];
+
+static void InitChaCha20(uint32_t state[16], uint32_t key[8], uint32_t iv[2])
+{
+    static const char magic[] = "expand 32-byte k";
+
+    // Sensitive to endianness
+    memcpy(state, magic, 16);
+    memcpy(state + 4, key, 32);
+    state[12] = 0;
+    state[13] = 0;
+    memcpy(state + 14, iv, 8);
+}
+
+static inline uint32_t ROTL32(uint32_t v, uint8_t n)
+{
+    return (v << n) | (v >> (32 - n));
+}
+
+static void RunChaCha20(uint32_t state[16], uint32_t out_buf[16])
+{
+    uint32_t x[16];
+    memcpy(x, state, RG_SIZE(x));
+
+    for (Size i = 0; i < 20; i += 2) {
+        x[0] += x[4];   x[12] = ROTL32(x[12] ^ x[0], 16);
+        x[1] += x[5];   x[13] = ROTL32(x[13] ^ x[1], 16);
+        x[2] += x[6];   x[14] = ROTL32(x[14] ^ x[2], 16);
+        x[3] += x[7];   x[15] = ROTL32(x[15] ^ x[3], 16);
+
+        x[8]  += x[12]; x[4]  = ROTL32(x[4] ^ x[8],  12);
+        x[9]  += x[13]; x[5]  = ROTL32(x[5] ^ x[9],  12);
+        x[10] += x[14]; x[6]  = ROTL32(x[6] ^ x[10], 12);
+        x[11] += x[15]; x[7]  = ROTL32(x[7] ^ x[11], 12);
+
+        x[0] += x[4];   x[12] = ROTL32(x[12] ^ x[0], 8);
+        x[1] += x[5];   x[13] = ROTL32(x[13] ^ x[1], 8);
+        x[2] += x[6];   x[14] = ROTL32(x[14] ^ x[2], 8);
+        x[3] += x[7];   x[15] = ROTL32(x[15] ^ x[3], 8);
+
+        x[8]  += x[12]; x[4]  = ROTL32(x[4] ^ x[8],  7);
+        x[9]  += x[13]; x[5]  = ROTL32(x[5] ^ x[9],  7);
+        x[10] += x[14]; x[6]  = ROTL32(x[6] ^ x[10], 7);
+        x[11] += x[15]; x[7]  = ROTL32(x[7] ^ x[11], 7);
+
+        x[0] += x[5];   x[15] = ROTL32(x[15] ^ x[0], 16);
+        x[1] += x[6];   x[12] = ROTL32(x[12] ^ x[1], 16);
+        x[2] += x[7];   x[13] = ROTL32(x[13] ^ x[2], 16);
+        x[3] += x[4];   x[14] = ROTL32(x[14] ^ x[3], 16);
+
+        x[10] += x[15]; x[5]  = ROTL32(x[5] ^ x[10], 12);
+        x[11] += x[12]; x[6]  = ROTL32(x[6] ^ x[11], 12);
+        x[8]  += x[13]; x[7]  = ROTL32(x[7] ^ x[8],  12);
+        x[9]  += x[14]; x[4]  = ROTL32(x[4] ^ x[9],  12);
+
+        x[0] += x[5];   x[15] = ROTL32(x[15] ^ x[0], 8);
+        x[1] += x[6];   x[12] = ROTL32(x[12] ^ x[1], 8);
+        x[2] += x[7];   x[13] = ROTL32(x[13] ^ x[2], 8);
+        x[3] += x[4];   x[14] = ROTL32(x[14] ^ x[3], 8);
+
+        x[10] += x[15]; x[5]  = ROTL32(x[5] ^ x[10], 7);
+        x[11] += x[12]; x[6]  = ROTL32(x[6] ^ x[11], 7);
+        x[8]  += x[13]; x[7]  = ROTL32(x[7] ^ x[8],  7);
+        x[9]  += x[14]; x[4]  = ROTL32(x[4] ^ x[9],  7);
+    }
+
+    for (Size i = 0; i < RG_LEN(x); i++) {
+        out_buf[i] = LittleEndian(x[i] + state[i]);
+    }
+
+    state[12]++;
+    state[13] += !state[12];
+}
+
+void FillRandom(void *out_buf, Size len)
+{
+    bool reseed = false;
+
+    // Reseed every 4 megabytes, or every hour, or after a fork
+    reseed |= (rnd_remain <= 0);
+    reseed |= (GetMonotonicTime() - rnd_time > 3600 * 1000);
+#ifndef _WIN32
+    reseed |= (getpid() != rnd_pid);
+#endif
+
+    if (reseed) {
+        struct { uint32_t key[8]; uint32_t iv[2]; } buf;
+
+#ifdef _WIN32
+        BOOLEAN success = RtlGenRandom(&buf, RG_SIZE(buf));
+        RG_ASSERT(success);
+#else
+        int ret = getentropy(&buf, RG_SIZE(buf));
+        RG_ASSERT(!ret);
+#endif
+
+        InitChaCha20(rnd_state, buf.key, buf.iv);
+
+        rnd_remain = Mebibytes(4);
+        rnd_time = GetMonotonicTime();
+#ifndef _WIN32
+        rnd_pid = getpid();
+#endif
+    }
+
+    for (Size i = 0; i < len; i += 64) {
+        uint32_t buf[16];
+        RunChaCha20(rnd_state, buf);
+
+        Size copy_len = std::min(RG_SIZE(buf), len - i);
+        memcpy((uint8_t *)out_buf + i, buf, copy_len);
+    }
+
+    rnd_remain -= len;
+}
 
 // ------------------------------------------------------------------------
 // Sockets
