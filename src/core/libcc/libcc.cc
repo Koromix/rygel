@@ -4351,6 +4351,16 @@ static void RunChaCha20(uint32_t state[16], uint32_t out_buf[16])
     state[13] += !state[12];
 }
 
+void ZeroMemorySafe(void *ptr, Size len)
+{
+#ifdef _WIN32
+    SecureZeroMemory(ptr, (SIZE_T)len);
+#else
+    memset_safe(ptr, 0, (size_t)len);
+    __asm__ __volatile__("" : : "r"(ptr) : "memory");
+#endif
+}
+
 void FillRandom(void *out_buf, Size len)
 {
     bool reseed = false;
@@ -4373,6 +4383,7 @@ void FillRandom(void *out_buf, Size len)
 #endif
 
         InitChaCha20(rnd_state, buf.key, buf.iv);
+        ZeroMemorySafe(&buf, RG_SIZE(buf));
 
         rnd_remain = Mebibytes(4);
         rnd_time = GetMonotonicTime();
