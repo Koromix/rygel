@@ -600,7 +600,7 @@ retry_pwd:
         char local_key[45];
         {
             uint8_t buf[32];
-            FillRandom(buf);
+            FillRandomSafe(buf);
             sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
@@ -2417,7 +2417,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         char local_key[45];
         {
             uint8_t buf[32];
-            FillRandom(buf);
+            FillRandomSafe(buf);
             sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 

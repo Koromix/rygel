@@ -211,7 +211,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                 char boundary[17];
                 {
                     uint64_t buf;
-                    FillRandom(&buf, RG_SIZE(buf));
+                    FillRandomSafe(&buf, RG_SIZE(buf));
                     Fmt(boundary, "%1", FmtHex(buf).Pad0(-16));
                 }
 

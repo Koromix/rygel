@@ -198,7 +198,7 @@ TEST_FUNCTION("libcc/TestMatchPathName")
 #undef CHECK_PATH_SPEC
 }
 
-TEST_FUNCTION("libcc/TestGetRandomInt")
+TEST_FUNCTION("libcc/TestGetRandomIntSafe")
 {
     static const int iterations = 100;
     static const int upper = 2000;
@@ -207,7 +207,7 @@ TEST_FUNCTION("libcc/TestGetRandomInt")
     bool varied = true;
 
     for (int i = 0; i < iterations; i++) {
-        int max = GetRandomInt(100, upper);
+        int max = GetRandomIntSafe(100, upper);
 
         TEST(max >= 100);
         TEST(max < upper);
@@ -216,7 +216,7 @@ TEST_FUNCTION("libcc/TestGetRandomInt")
         bool memory[upper] = {};
 
         for (int j = 0; j < loop; j++) {
-            int rnd = GetRandomInt(0, max);
+            int rnd = GetRandomIntSafe(0, max);
 
             TEST(rnd >= 0);
             TEST(rnd < max);
@@ -228,7 +228,7 @@ TEST_FUNCTION("libcc/TestGetRandomInt")
         varied &= (distrib > 95 * max / 100);
     }
 
-    TEST_EX(varied, "GetRandomInt() values look well distributed");
+    TEST_EX(varied, "GetRandomIntSafe() values look well distributed");
 }
 
 TEST_FUNCTION("libcc/TestOptionParser")

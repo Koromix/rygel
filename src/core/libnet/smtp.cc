@@ -130,7 +130,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         const char *domain;
         {
             uint64_t buf2[2];
-            FillRandom(&buf2, RG_SIZE(buf2));
+            FillRandomSafe(&buf2, RG_SIZE(buf2));
             Fmt(id, "%1%2", FmtHex(buf2[0]).Pad0(-16), FmtHex(buf2[1]).Pad0(-16));
 
             SplitStr(config.from, '@', &domain);
@@ -148,7 +148,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
             char boundary[17];
             {
                 uint64_t buf2;
-                FillRandom(&buf2, RG_SIZE(buf2));
+                FillRandomSafe(&buf2, RG_SIZE(buf2));
                 Fmt(boundary, "%1", FmtHex(buf2).Pad0(-16));
             }
 

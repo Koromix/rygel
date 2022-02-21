@@ -945,7 +945,7 @@ bool MigrateInstance(sq_Database *db)
                 char shared_key[45];
                 {
                     uint8_t buf[32];
-                    FillRandom(buf);
+                    FillRandomSafe(buf);
                     sodium_bin2base64(shared_key, RG_SIZE(shared_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                 }
 
@@ -1075,7 +1075,7 @@ bool MigrateInstance(sq_Database *db)
                 char token_key[45];
                 {
                     uint8_t buf[32];
-                    FillRandom(buf);
+                    FillRandomSafe(buf);
                     sodium_bin2base64(token_key, RG_SIZE(token_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                 }
 

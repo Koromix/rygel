@@ -316,7 +316,7 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
         char local_key[45];
         {
             uint8_t buf[32];
-            FillRandom(buf);
+            FillRandomSafe(buf);
             sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
@@ -576,7 +576,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
                 // Create random local key
                 {
                     uint8_t buf[32];
-                    FillRandom(buf);
+                    FillRandomSafe(buf);
                     sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                 }
 
@@ -1291,7 +1291,7 @@ RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, Insta
     char local_key[45];
     {
         uint8_t buf[32];
-        FillRandom(buf);
+        FillRandomSafe(buf);
         sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
     }
 

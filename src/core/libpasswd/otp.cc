@@ -109,7 +109,7 @@ void pwd_GenerateSecret(Span<char> out_buf)
 
     static const char *chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-    FillRandom(out_buf.ptr, out_buf.len);
+    FillRandomSafe(out_buf.ptr, out_buf.len);
     for (Size i = 0; i < out_buf.len - 1; i++) {
         out_buf[i] = chars[(uint8_t)out_buf[i] % 32];
     }

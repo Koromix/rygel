@@ -3925,12 +3925,12 @@ bool NotifySystemd();
 // Random
 // ------------------------------------------------------------------------
 
-void ZeroMemorySafe(void *dest, Size len);
+void ZeroMemorySafe(void *ptr, Size len);
 
-void FillRandom(void *buf, Size len);
-static inline void FillRandom(Span<uint8_t> buf) { FillRandom(buf.ptr, buf.len); }
+void FillRandomSafe(void *buf, Size len);
+static inline void FillRandomSafe(Span<uint8_t> buf) { FillRandomSafe(buf.ptr, buf.len); }
 
-int GetRandomInt(int min, int max);
+int GetRandomIntSafe(int min, int max);
 
 // ------------------------------------------------------------------------
 // Sockets

@@ -181,7 +181,7 @@ private:
 
             {
                 uint64_t buf[4];
-                FillRandom(buf, RG_SIZE(buf));
+                FillRandomSafe(buf, RG_SIZE(buf));
                 Fmt(handle->session_key, "%1%2%3%4",
                     FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
                     FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16));
@@ -199,7 +199,7 @@ private:
             RG_STATIC_ASSERT(RG_SIZE(handle->session_rnd) == 33);
 
             uint64_t buf[2];
-            FillRandom(&buf, RG_SIZE(buf));
+            FillRandomSafe(&buf, RG_SIZE(buf));
             Fmt(handle->session_rnd, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
         }
 
