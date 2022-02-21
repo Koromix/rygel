@@ -1244,7 +1244,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 for (Size j = 0; j < arg.u.random_len; j++) {
                     static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 
-                    int rnd = GetRandomInt(strlen(chars));
+                    int rnd = GetRandomInt(0, strlen(chars));
                     out_buf.Append(chars[rnd]);
                 }
 
@@ -4392,19 +4392,20 @@ void FillRandom(void *out_buf, Size len)
     rnd_remain -= len;
 }
 
-int GetRandomInt(int max)
+int GetRandomInt(int min, int max)
 {
-    RG_ASSERT(max >= 2);
+    int range = max - min;
+    RG_ASSERT(range >= 2);
 
-    unsigned int treshold = (UINT_MAX - UINT_MAX % max);
+    unsigned int treshold = (UINT_MAX - UINT_MAX % range);
 
     unsigned int x;
     do {
         FillRandom(&x, RG_SIZE(x));
     } while (x >= treshold);
-    x %= max;
+    x %= range;
 
-    return (int)x;
+    return min + (int)x;
 }
 
 // ------------------------------------------------------------------------

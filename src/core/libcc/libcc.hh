@@ -3928,7 +3928,7 @@ bool NotifySystemd();
 void FillRandom(void *buf, Size len);
 static inline void FillRandom(Span<uint8_t> buf) { FillRandom(buf.ptr, buf.len); }
 
-int GetRandomInt(int max);
+int GetRandomInt(int min, int max);
 
 // ------------------------------------------------------------------------
 // Sockets

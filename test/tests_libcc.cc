@@ -207,16 +207,16 @@ TEST_FUNCTION("libcc/TestGetRandomInt")
     bool varied = true;
 
     for (int i = 0; i < iterations; i++) {
-        int max = 100 + GetRandomInt(upper - 100);
+        int max = GetRandomInt(100, upper);
 
-        TEST(max >= 0);
+        TEST(max >= 100);
         TEST(max < upper);
 
         int distrib = 0;
         bool memory[upper] = {};
 
         for (int j = 0; j < loop; j++) {
-            int rnd = GetRandomInt(max);
+            int rnd = GetRandomInt(0, max);
 
             TEST(rnd >= 0);
             TEST(rnd < max);
