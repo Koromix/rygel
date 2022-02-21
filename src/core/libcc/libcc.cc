@@ -590,19 +590,13 @@ int64_t GetUnixTime()
     return (int64_t)emscripten_get_now();
 #elif defined(__linux__)
     struct timespec ts;
-    if (clock_gettime(CLOCK_REALTIME_COARSE, &ts) < 0) {
-        LogError("clock_gettime(CLOCK_REALTIME_COARSE) failed: %1", strerror(errno));
-        abort();
-    }
+    RG_CRITICAL(clock_gettime(CLOCK_REALTIME_COARSE, &ts) == 0, "clock_gettime(CLOCK_REALTIME_COARSE) failed: %1", strerror(errno));
 
     int64_t time = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
     return time;
 #else
     struct timespec ts;
-    if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
-        LogError("clock_gettime(CLOCK_REALTIME) failed: %1", strerror(errno));
-        abort();
-    }
+    RG_CRITICAL(clock_gettime(CLOCK_REALTIME, &ts) == 0, "clock_gettime(CLOCK_REALTIME) failed: %1", strerror(errno));
 
     int64_t time = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
     return time;
@@ -617,18 +611,12 @@ int64_t GetMonotonicTime()
     return (int64_t)emscripten_get_now();
 #elif defined(__linux__)
     struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) < 0) {
-        LogError("clock_gettime(CLOCK_MONOTONIC_COARSE) failed: %1", strerror(errno));
-        abort();
-    }
+    RG_CRITICAL(clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC_COARSE) failed: %1", strerror(errno));
 
     return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
 #else
     struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
-        LogError("clock_gettime(CLOCK_MONOTONIC) failed: %1", strerror(errno));
-        abort();
-    }
+    RG_CRITICAL(clock_gettime(CLOCK_MONOTONIC, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC) failed: %1", strerror(errno));
 
     return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
 #endif
@@ -4377,12 +4365,11 @@ void FillRandom(void *out_buf, Size len)
     if (reseed) {
         struct { uint32_t key[8]; uint32_t iv[2]; } buf;
 
+        memset(rnd_state, 0, RG_SIZE(rnd_state));
 #ifdef _WIN32
-        BOOLEAN success = RtlGenRandom(&buf, RG_SIZE(buf));
-        RG_ASSERT(success);
+        RG_CRITICAL(RtlGenRandom(&buf, RG_SIZE(buf)), "RtlGenRandom() failed: %s", GetWin32ErrorString());
 #else
-        int ret = getentropy(&buf, RG_SIZE(buf));
-        RG_ASSERT(!ret);
+        RG_CRITICAL(getentropy(&buf, RG_SIZE(buf)) == 0, "getentropy() failed: %s", strerror(errno));
 #endif
 
         InitChaCha20(rnd_state, buf.key, buf.iv);
