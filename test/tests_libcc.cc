@@ -198,6 +198,35 @@ TEST_FUNCTION("libcc/TestMatchPathName")
 #undef CHECK_PATH_SPEC
 }
 
+TEST_FUNCTION("libcc/TestFastRandom")
+{
+    for (int i = 0; i < 2; i++) {
+        FastRandom rng(42);
+
+        TEST(rng.GetInt(1, 24097) == 18776);
+        TEST(rng.GetInt(1, 24097) == 20580);
+        TEST(rng.GetInt(1, 24097) == 12480);
+        TEST(rng.GetInt(1, 24097) == 13705);
+        TEST(rng.GetInt(1, 24097) == 23606);
+        TEST(rng.GetInt(1, 24097) == 18997);
+        TEST(rng.GetInt(1, 24097) == 3751);
+        TEST(rng.GetInt(1, 24097) == 2556);
+        TEST(rng.GetInt(1, 24097) == 20979);
+        TEST(rng.GetInt(1, 24097) == 9832);
+        TEST(rng.GetInt(1, 24097) == 5825);
+        TEST(rng.GetInt(1, 24097) == 1645);
+        TEST(rng.GetInt(1, 24097) == 3272);
+        TEST(rng.GetInt(1, 24097) == 3614);
+        TEST(rng.GetInt(1, 24097) == 21157);
+        TEST(rng.GetInt(1, 24097) == 19320);
+        TEST(rng.GetInt(1, 24097) == 6459);
+        TEST(rng.GetInt(1, 24097) == 12383);
+        TEST(rng.GetInt(1, 24097) == 2714);
+        TEST(rng.GetInt(1, 24097) == 791);
+        TEST(rng.GetInt(1, 24097) == 3227);
+    }
+}
+
 TEST_FUNCTION("libcc/TestGetRandomIntSafe")
 {
     static const int iterations = 100;

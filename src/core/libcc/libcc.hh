@@ -3925,11 +3925,25 @@ bool NotifySystemd();
 // Random
 // ------------------------------------------------------------------------
 
-void ZeroMemorySafe(void *ptr, Size len);
+class FastRandom {
+    uint64_t state[4];
 
+public:
+    FastRandom();
+    FastRandom(uint64_t seed);
+
+    void Fill(void *buf, Size len);
+    void Fill(Span<uint8_t> buf) { Fill(buf.ptr, buf.len); }
+
+    int GetInt(int min, int max);
+
+private:
+    uint64_t Next();
+};
+
+void ZeroMemorySafe(void *ptr, Size len);
 void FillRandomSafe(void *buf, Size len);
 static inline void FillRandomSafe(Span<uint8_t> buf) { FillRandomSafe(buf.ptr, buf.len); }
-
 int GetRandomIntSafe(int min, int max);
 
 // ------------------------------------------------------------------------
