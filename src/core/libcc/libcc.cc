@@ -1244,7 +1244,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 for (Size j = 0; j < arg.u.random_len; j++) {
                     static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 
-                    int rnd = GetRandomInt(0, strlen(chars));
+                    int rnd = GetRandomInt(0, (int)strlen(chars));
                     out_buf.Append(chars[rnd]);
                 }
 
