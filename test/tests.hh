@@ -31,12 +31,13 @@ struct BenchmarkInfo {
     BenchmarkInfo(const char *path, void (*func)());
 };
 
-#define TEST_FUNCTION(Path) \
-    static void RG_UNIQUE_ID(func_)(Size *out_total, Size *out_failures); \
+#define TEST_FUNCTION_(FuncName, VarName, Path) \
+    static void FuncName(Size *out_total, Size *out_failures); \
      \
-    static const TestInfo RG_UNIQUE_ID(test_)((Path), RG_UNIQUE_ID(func_)); \
+    static const TestInfo VarName((Path), FuncName); \
      \
-    static void RG_UNIQUE_ID(func_)(Size *out_total, Size *out_failures)
+    static void FuncName(Size *out_total, Size *out_failures)
+#define TEST_FUNCTION(Path) TEST_FUNCTION_(RG_UNIQUE_NAME(func_), RG_UNIQUE_NAME(test_), (Path))
 
 #define TEST_EX(Condition, ...) \
     do { \
@@ -49,7 +50,7 @@ struct BenchmarkInfo {
     } while (false)
 
 #define TEST(Condition) \
-    TEST_EX((Condition),  "%1", RG_STRINGIFY(Condition))
+    TEST_EX((Condition), "%1", RG_STRINGIFY(Condition))
 #define TEST_EQ(Value1, Value2) \
     do { \
         auto value1 = (Value1); \
@@ -72,12 +73,13 @@ struct BenchmarkInfo {
         TEST_EX(str1 == str2, "%1: '%2' == '%3'", RG_STRINGIFY(Str1), str1, str2); \
     } while (false)
 
-#define BENCHMARK_FUNCTION(Path) \
-    static void RG_UNIQUE_ID(func_)(); \
+#define BENCHMARK_FUNCTION_(FuncName, VarName, Path) \
+    static void FuncName(); \
      \
-    static const BenchmarkInfo RG_UNIQUE_ID(bench_)((Path), RG_UNIQUE_ID(func_)); \
+    static const BenchmarkInfo VarName((Path), FuncName); \
      \
-    static void RG_UNIQUE_ID(func_)()
+    static void FuncName()
+#define BENCHMARK_FUNCTION(Path) BENCHMARK_FUNCTION_(RG_UNIQUE_NAME(func_), RG_UNIQUE_NAME(bench_), (Path))
 
 static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<void()> func)
 {
