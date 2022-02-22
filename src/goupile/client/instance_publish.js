@@ -221,7 +221,7 @@ function InstancePublisher(instance, db) {
                     switch (action.type) {
                         case 'push': {
                             if (action.local_sha256 != null) {
-                                let url = util.pasteURL(`${ENV.urls.base}api/files/objects/${action.local_sha256}`, { filename: action.filename });
+                                let url = util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.local_sha256 });
                                 let key = `${profile.userid}:${action.filename}`;
                                 let file = await db.load('fs_files', key);
 

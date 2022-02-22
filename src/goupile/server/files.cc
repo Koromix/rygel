@@ -34,6 +34,16 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
             io->AttachError(422);
             return;
         }
+
+        if (fs_version == 0) {
+            RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+
+            if (!session || !session->HasPermission(instance, UserPermission::AdminCode)) {
+                LogError("You cannot access pages in development");
+                io->AttachError(403);
+                return;
+            }
+        }
     } else {
         fs_version = instance->fs_version.load(std::memory_order_relaxed);
     }
@@ -108,6 +118,16 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         Span<const char> remain;
 
         if (ParseInt(filename, &fs_version, 0, &remain) && remain.ptr[0] == '/') {
+            if (fs_version == 0) {
+                RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+
+                if (!session || !session->HasPermission(instance, UserPermission::AdminCode)) {
+                    LogError("You cannot access pages in development");
+                    io->AttachError(403);
+                    return true;
+                }
+            }
+
             filename = remain.Take(1, remain.len - 1);
             explicit_version = true;
         } else {
@@ -144,7 +164,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             return true;
         }
 
-        io->AddCachingHeaders(explicit_version ? (365 * 86400) : 0, sha256);
+        io->AddCachingHeaders(explicit_version && fs_version > 0 ? (365 * 86400) : 0, sha256);
     }
 
     // Negociate content encoding
@@ -388,19 +408,24 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::AdminPublish)) {
+    if (!session->HasPermission(instance, UserPermission::AdminCode)) {
         LogError("User is not allowed to upload files");
         io->AttachError(403);
         return;
     }
 
     const char *url = request.url + 1 + instance->key.len;
-    const char *client_sha256 = url + 19;
-    const char *filename = request.GetQueryValue("filename");
+    const char *filename = url + 7;
+    const char *client_sha256 = request.GetQueryValue("sha256");
 
-    if (!StartsWith(url, "/api/files/objects/")) {
-        LogError("Cannot write to file outside '/api/files/objects/'");
+    if (!StartsWith(url, "/files/")) {
+        LogError("Cannot write to file outside '/files/'");
         io->AttachError(403);
+        return;
+    }
+    if (!filename[0]) {
+        LogError("Empty filename");
+        io->AttachError(422);
         return;
     }
     if (!CheckSha256(client_sha256)) {
@@ -416,8 +441,14 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         sqlite3_bind_text(stmt, 1, client_sha256, -1, SQLITE_STATIC);
 
         if (stmt.Step()) {
-            LogError("This object already exists");
-            io->AttachError(409);
+            if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                      VALUES (0, ?1, ?2)
+                                      ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
+                                   filename, client_sha256))
+                return;
+
+            io->AttachText(200, "Done!");
+            return;
         } else if (!stmt.IsValid()) {
             return;
         }
@@ -435,8 +466,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             UnlinkFile(tmp_filename);
         };
 
-        CompressionType compression_type = filename && ShouldCompressFile(filename) ? CompressionType::Gzip
-                                                                                    : CompressionType::None;
+        CompressionType compression_type = ShouldCompressFile(filename) ? CompressionType::Gzip
+                                                                        : CompressionType::None;
 
         // Read and compress request body
         Size total_len = 0;
@@ -527,9 +558,79 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                 return false;
             }
 
+            if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                      VALUES (0, ?1, ?2)
+                                      ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
+                                   filename, sha256))
+                return false;
+
             io->AttachText(200, "Done!");
             return true;
         });
+    });
+}
+
+void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::AdminCode)) {
+        LogError("User is not allowed to delete files");
+        io->AttachError(403);
+        return;
+    }
+
+    const char *url = request.url + 1 + instance->key.len;
+    const char *filename = url + 7;
+    const char *client_sha256 = request.GetQueryValue("sha256");
+
+    if (!StartsWith(url, "/files/")) {
+        LogError("Cannot write to file outside '/files/'");
+        io->AttachError(403);
+        return;
+    }
+    if (!filename[0]) {
+        LogError("Empty filename");
+        io->AttachError(422);
+        return;
+    }
+    if (client_sha256 && !CheckSha256(client_sha256)) {
+        io->AttachError(422);
+        return;
+    }
+
+    instance->db->Transaction([&]() {
+        sq_Statement stmt;
+        if (!instance->db->Prepare(R"(DELETE FROM fs_index
+                                      WHERE version = 0 AND filename = ?1
+                                      RETURNING sha256)", &stmt))
+            return false;
+        sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
+
+        if (stmt.Step()) {
+            if (client_sha256) {
+                const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
+
+                if (!TestStr(sha256, client_sha256)) {
+                    LogError("Deletion refused because of sha256 mismatch");
+                    io->AttachError(403);
+                    return false;
+                }
+            }
+
+            io->AttachText(200, "Done!");
+            return true;
+        } else if (stmt.IsValid()) {
+            io->AttachError(404);
+            return false;
+        } else {
+            return false;
+        }
     });
 }
 
@@ -566,6 +667,11 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
             int64_t version = sqlite3_last_insert_rowid(*instance->db);
 
             for (const auto &file: files.table) {
+                if (!file.key[0]) {
+                    LogError("Empty filenames are not allowed");
+                    io->AttachError(403);
+                    return false;
+                }
                 if (PathContainsDotDot(file.key)) {
                     LogError("File name must not contain any '..' component");
                     io->AttachError(403);
@@ -587,6 +693,17 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
                     return false;
                 }
             }
+
+            // Copy to test version
+            if (!instance->db->Run(R"(UPDATE fs_versions SET mtime = ?1, userid = ?2, username = ?3
+                                      WHERE version = 0)",
+                                   mtime, session->userid, session->username))
+                return false;
+            if (!instance->db->Run(R"(DELETE FROM fs_index WHERE version = 0)"))
+                return false;
+            if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                          SELECT 0, filename, sha256 FROM fs_index WHERE version = ?1)", version))
+                return false;
 
             if (!instance->db->Run("UPDATE fs_settings SET value = ?1 WHERE key = 'FsVersion'", version))
                 return false;

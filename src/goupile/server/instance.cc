@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 48;
+const int InstanceVersion = 49;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -1444,9 +1444,33 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 48: {
+                sq_Statement stmt;
+                if (!db->Prepare("SELECT value FROM fs_settings WHERE key = 'FsVersion'", &stmt))
+                    return false;
+
+                if (!stmt.Step()) {
+                    if (stmt.IsValid()) {
+                        LogError("Missing 'FsVersion' setting");
+                    }
+                    return false;
+                }
+
+                int64_t version = sqlite3_column_int64(stmt, 0);
+
+                if (!db->Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
+                                    SELECT 0, v.mtime, v.userid, v.username, 0 FROM fs_versions v
+                                    WHERE v.version = ?1)", version))
+                    return false;
+                if (!db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                    SELECT 0, i.filename, i.sha256 FROM fs_index i
+                                    WHERE i.version = ?1)", version))
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 48);
+            RG_STATIC_ASSERT(InstanceVersion == 49);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
