@@ -42,7 +42,6 @@ function InstanceController() {
     let editor_filename;
     let code_buffers = new LruMap(32);
 
-    let develop = false;
     let error_entries = {};
 
     let ignore_editor_change = false;
@@ -116,7 +115,7 @@ function InstanceController() {
                 throw new Error('Main script does not define any page');
 
             new_app.home = new_app.pages.values().next().value;
-            app = util.deepFreeze(new_app);
+            app = Object.freeze(new_app);
         } catch (err) {
             if (app == null) {
                 let new_app = new ApplicationInfo;
@@ -126,7 +125,7 @@ function InstanceController() {
                 builder.form("default", "Défaut", "Page par défaut");
 
                 new_app.home = new_app.pages.values().next().value;
-                app = util.deepFreeze(new_app);
+                app = Object.freeze(new_app);
             }
         }
 
@@ -233,6 +232,13 @@ function InstanceController() {
                             <hr/>
                         ` : ''}
                         ${profile.type === 'login' ? html`
+                            ${goupile.hasPermission('admin_code') ? html`
+                                <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>
+                                    ${profile.develop ? html`<div style="float: right">&nbsp;✓\uFE0E</div>` : ''}
+                                    Mode conception
+                                </button>
+                                <hr/>
+                            ` : ''}
                             <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
                             <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
                             <hr/>
@@ -250,6 +256,34 @@ function InstanceController() {
                 html`<button class="icon" @click=${ui.wrapAction(goupile.goToLogin)}
                              style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
         `;
+    }
+
+    async function changeDevelopMode(enable) {
+        if (enable == profile.develop)
+            return;
+
+        await mutex.run(async () => {
+            let query = new URLSearchParams;
+            query.set('develop', 0 + enable);
+
+            let response = await net.fetch(`${ENV.urls.instance}api/change/mode`, {
+                method: 'POST',
+                body: query
+            });
+
+            if (response.ok) {
+                profile.develop = enable;
+                app.panels.editor = enable;
+                ui.setPanelState('editor', enable);
+
+                code_buffers.clear();
+
+                await mutex.chain(self.run);
+            } else {
+                let err = await net.readError(response);
+                throw new Error(err);
+            }
+        });
     }
 
     function renderFormDrop(form) {
@@ -325,7 +359,7 @@ function InstanceController() {
                 }
 
                 return html`
-                    <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}>
+                    <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}">
                         <div style="flex: 1;">${title}</div>
                         ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                    </button>
@@ -806,7 +840,7 @@ function InstanceController() {
                 </div>
                 <div style="flex: 1;"></div>
 
-                ${develop ? html`
+                ${profile.develop ? html`
                     <div id="ins_notice">
                         Formulaires en développement<br/>
                         Publiez les avant d'enregistrer des données
@@ -990,7 +1024,7 @@ function InstanceController() {
 
     async function saveRecord(record, hid, values, page) {
         await mutex.run(async () => {
-            if (develop)
+            if (profile.develop)
                 throw new Error('Enregistrement refusé : formulaire non publié');
 
             let progress = log.progress('Enregistrement en cours');
@@ -1734,11 +1768,11 @@ function InstanceController() {
 
     this.run = async function(push_history = true) {
         // Is the user developing?
-        {
-            let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
-            let count = await db.count('fs_files', range);
-
-            develop = !!count;
+        if (profile.develop) {
+            ENV.urls.files = `${ENV.urls.base}files/0/`;
+            // XXX: ENV.version = json.version;
+        } else {
+            ENV.urls.files = `${ENV.urls.base}files/${ENV.version}/`;
         }
 
         // Fetch and cache page code for page panel
@@ -1775,8 +1809,8 @@ function InstanceController() {
         {
             let url = contextualizeURL(route.page.url, form_record);
 
-            let panels;
-            if (app.panels.editor + app.panels.data + app.panels.view < 2) {
+            let panels; // XXX: WTF
+            if (app.panels.data + app.panels.view < 2) {
                 panels = null;
             } else if (url.match(/\/[A-Z0-9]{26}(@[0-9]+)?$/)) {
                 panels = ui.savePanels().join('|');
@@ -1889,24 +1923,26 @@ function InstanceController() {
     async function fetchCode(filename) {
         let code = null;
 
-        // Anything in cache or in the editor?
-        {
-            let buffer = code_buffers.get(filename);
+        if (profile.develop) {
+            // Anything in cache or in the editor?
+            {
+                let buffer = code_buffers.get(filename);
 
-            if (buffer != null && buffer.version === ENV.version)
-                return buffer.code;
-        }
+                if (buffer != null && buffer.version === ENV.version)
+                    return buffer.code;
+            }
 
-        // Try locally saved files
-        if (code == null) {
-            let key = `${profile.userid}:${filename}`;
-            let file = await db.load('fs_files', key);
+            // Try locally saved files
+            if (code == null) {
+                let key = `${profile.userid}:${filename}`;
+                let file = await db.load('fs_files', key);
 
-            if (file != null) {
-                if (file.blob != null) {
-                    code = await file.blob.text();
-                } else {
-                    code = '';
+                if (file != null) {
+                    if (file.blob != null) {
+                        code = await file.blob.text();
+                    } else {
+                        code = '';
+                    }
                 }
             }
         }
@@ -1934,7 +1970,7 @@ function InstanceController() {
                     version: ENV.version,
                     sha256: sha256,
                     orig_sha256: sha256,
-                    session:null
+                    session: null
                 };
                 code_buffers.set(filename, buffer);
             } else {

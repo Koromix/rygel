@@ -656,6 +656,8 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleChangeQRcode(request, io);
     } else if (TestStr(instance_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
         HandleChangeTOTP(request, io);
+    } else if (TestStr(instance_url, "/api/change/mode") && request.method == http_RequestMethod::Post) {
+        HandleChangeMode(instance, request, io);
     } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
          HandleFileStatic(request, io);
     } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {

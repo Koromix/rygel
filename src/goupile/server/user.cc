@@ -77,7 +77,7 @@ bool SessionInfo::HasPermission(const InstanceHolder *instance, UserPermission p
     return stamp && stamp->HasPermission(perm);
 }
 
-const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
+SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 {
     if (confirm != SessionConfirm::None)
         return nullptr;
@@ -270,6 +270,12 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                     json.Key(key.ptr, (size_t)key.len); json.Bool(stamp->permissions & (1 << i));
                 }
                 json.EndObject();
+
+                if (stamp->HasPermission(UserPermission::AdminCode)) {
+                    json.Key("develop"); json.Bool(stamp->develop.load(std::memory_order_relaxed));
+                } else {
+                    RG_ASSERT(!stamp->develop.load());
+                }
 
                 json.Key("admin"); json.Bool(session->admin_until != 0);
             } else {
@@ -1267,6 +1273,50 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
         });
         if (!success)
             return;
+
+        io->AttachText(200, "Done!");
+    });
+}
+
+void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = sessions.Find(request, io);
+    SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (session->type != SessionType::Login) {
+        LogError("This account does not have a profile");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            io->AttachError(422);
+            return;
+        }
+
+        bool develop = stamp->develop;
+
+        if (const char *str = values.FindValue("develop", nullptr); str) {
+            if (!ParseBool(str, &develop)) {
+                io->AttachError(422);
+                return;
+            }
+
+            if (develop && !stamp->HasPermission(UserPermission::AdminCode)) {
+                LogError("User is not allowed to code");
+                io->AttachError(403);
+                return;
+            }
+        }
+
+        stamp->develop = develop;
 
         io->AttachText(200, "Done!");
     });

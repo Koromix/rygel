@@ -17,7 +17,7 @@ function ApplicationInfo() {
     this.pages = new Map;
     this.home = null;
     this.panels = {
-        editor: goupile.hasPermission('admin_code'),
+        editor: profile.develop,
         data: !goupile.isLocked(),
         view: true
     };

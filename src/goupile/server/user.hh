@@ -58,6 +58,7 @@ struct SessionStamp {
     int64_t unique;
 
     bool authorized;
+    std::atomic_bool develop;
     uint32_t permissions;
 
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
@@ -91,7 +92,7 @@ public:
     bool IsAdmin() const;
     bool HasPermission(const InstanceHolder *instance, UserPermission perm) const;
 
-    const SessionStamp *GetStamp(const InstanceHolder *instance) const;
+    SessionStamp *GetStamp(const InstanceHolder *instance) const;
     void InvalidateStamps();
 
     void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions);
@@ -114,8 +115,10 @@ void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &requ
 void HandleChangePassword(const http_RequestInfo &request, http_IO *io);
 void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io);
 void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io);
+void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, InstanceHolder *instance,
                                                  const http_RequestInfo &request, http_IO *io);
+
 
 }
