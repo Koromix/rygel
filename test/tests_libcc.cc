@@ -586,4 +586,18 @@ BENCHMARK_FUNCTION("libcc/BenchMatchPathName")
     });
 }
 
+BENCHMARK_FUNCTION("libcc/BenchRandom")
+{
+    static const int iterations = 100000000;
+
+    FastRandom rng(42);
+    RunBenchmark("FastRandom::GetInt", iterations, [&]() {
+        rng.GetInt(1, 24097);
+    });
+
+    RunBenchmark("GetRandomIntSafe", iterations, [&]() {
+        GetRandomIntSafe(1, 24097);
+    });
+}
+
 }
