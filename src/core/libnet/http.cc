@@ -14,7 +14,6 @@
 #include "src/core/libcc/libcc.hh"
 #include "http.hh"
 #include "http_misc.hh"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 #ifdef _WIN32
     #include <io.h>

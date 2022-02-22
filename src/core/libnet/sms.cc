@@ -13,8 +13,6 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "curl.hh"
-#include "vendor/mbedtls/include/mbedtls/ssl.h"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "sms.hh"
 #include "http_misc.hh"
 

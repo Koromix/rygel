@@ -13,7 +13,6 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "curl.hh"
-#include "vendor/mbedtls/include/mbedtls/ssl.h"
 #include "smtp.hh"
 
 namespace RG {
