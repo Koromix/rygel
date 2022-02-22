@@ -4468,10 +4468,10 @@ void FillRandomSafe(void *out_buf, Size len)
 
     Size copy_len = std::min(RG_SIZE(rnd_buf) - rnd_offset, len);
     memcpy_safe(out_buf, rnd_buf + rnd_offset, (size_t)copy_len);
-    ZeroMemorySafe(rnd_buf, copy_len);
+    ZeroMemorySafe(rnd_buf + rnd_offset, copy_len);
     rnd_offset += copy_len;
 
-    for (Size i = copy_len; i < len; i += 64) {
+    for (Size i = copy_len; i < len; i += RG_SIZE(rnd_buf)) {
         RunChaCha20(rnd_state, rnd_buf);
 
         Size copy_len = std::min(RG_SIZE(rnd_buf), len - i);
