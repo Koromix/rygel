@@ -1,6 +1,6 @@
 {
   "name": "koffi",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "Fast and simple FFI (foreign function interface) for Node.js",
   "repository": {
     "type": "git",
@@ -9,7 +9,7 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "build/Release/koffi.node",
   "scripts": {
-    "prepare": "cmake-js"
+    "install": "cmake-js"
   },
   "license": "AGPL-3.0",
   "devDependencies": {
