@@ -343,7 +343,7 @@ const ui = new function() {
         });
         func(builder, dialog.resolve, dialog.reject);
         if (dialog.closeable)
-            builder.action('Annuler', {}, () => dialog.reject(null));
+            builder.action(model.actions.length ? 'Annuler' : 'Fermer', {}, () => dialog.reject(null));
 
         render(html`
             <div>
