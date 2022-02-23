@@ -51,6 +51,10 @@ html.instance {
 
 html.mobile #ins_page { padding-top: 0; }
 
+/* -------------------- Main menu -------------------- */
+
+#ui_top.locked { filter: invert(100%); }
+
 /* -------------------- Left menu -------------------- */
 
 #ins_menu {
@@ -119,11 +123,6 @@ html.mobile #ins_page { padding-top: 0; }
 }
 #ins_actions > button { width: 100%; }
 #ins_actions > button + button { margin-top: 6px; }
-#ins_actions > .historical {
-    margin-top: 6px;
-    font-size: 0.9em;
-    color: red;
-}
 
 html:not(.small) #ui_panels > div:only-child #ins_menu { display: block; }
 html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
@@ -160,12 +159,21 @@ html.mobile #ui_top .ins_hid { display: none; }
     background: #db0a0a;
 }
 
-#ins_notice {
+.ins_note {
+    padding: 0px 2px;
+    border-radius: 2px;
+    font-size: 0.6em;
+    background: red;
+    color: white;
+}
+
+#ins_develop {
+    display: block;
     position: sticky;
     left: calc(50% - 160px);
-    bottom: 0;
+    bottom: 18px;
     width: 320px;
-    padding: 3px 6px;
+    padding: 6px 9px;
     background: #db0a0a;
     color: white;
     text-align: center;
@@ -175,12 +183,12 @@ html.mobile #ui_top .ins_hid { display: none; }
     -webkit-user-select: none;
     -ms-user-select: none;
 }
-#ins_notice::before {
+#ins_develop::before {
     content: '⚠\FE0E';
     padding-right: 3px;
 }
 @media (hover: hover) {
-    #ins_notice:hover { filter: opacity(20%); }
+    #ins_develop:hover { filter: opacity(20%); }
 }
 
 #ins_data td:not(.active).saved a { color: #21936e; }
@@ -233,5 +241,5 @@ html.mobile #ui_top .ins_hid { display: none; }
 @media print {
     #ins_menu { display: none !important; }
     #ins_actions { display: none !important; }
-    #ins_notice { display: none !important; }
+    #ins_develop { display: none !important; }
 }

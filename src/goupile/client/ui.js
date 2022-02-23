@@ -94,9 +94,7 @@ const ui = new function() {
             new_expanded = {};
 
             render(html`
-                ${menu_render != null ? html`<nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'}
-                                                  id="ui_top" style="z-index: 999999;">${menu_render()}</nav>` : ''}
-
+                ${menu_render != null ? menu_render() : ''}
                 <main id="ui_panels">
                     ${primary_panel != null ? primary_panel.render() : ''}
                     ${dual_panel != null ? dual_panel.render() : ''}
@@ -210,6 +208,8 @@ const ui = new function() {
         let allow = window.innerWidth >= mobile_threshold;
         return allow;
     };
+
+    this.hasTwoPanels = function() { return !!dual_panel; };
 
     this.runDialog = function(e, title, options, func) {
         if (e != null) {

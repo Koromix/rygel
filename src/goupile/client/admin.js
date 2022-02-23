@@ -39,27 +39,29 @@ function AdminController() {
 
     function renderMenu() {
         return html`
-            <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                    @click=${e => self.go(e, '/admin/')}>Admin</button>
-            <button class=${'icon' + (ui.isPanelActive('instances') ? ' active' : '')}
-                    style="background-position-y: calc(-362px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Projets</button>
-            <button class=${'icon' + (ui.isPanelActive('users') ? ' active' : '')}
-                    style="background-position-y: calc(-406px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
-            <button class=${'icon' + (ui.isPanelActive('archives') ? ' active' : '')}
-                    style="background-position-y: calc(-142px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel(e, 'archives'))}>Archives</button>
-            <div style="flex: 1;"></div>
-            <div class="drop right" @click=${ui.deployMenu}>
-                <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
-                <div>
-                    <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
-                    <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
-                    <hr/>
-                    <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+            <nav class="ui_toolbar" id="ui_top" style="z-index: 999999;">
+                <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                        @click=${e => self.go(e, '/admin/')}>Admin</button>
+                <button class=${'icon' + (ui.isPanelActive('instances') ? ' active' : '')}
+                        style="background-position-y: calc(-362px + 1.2em);"
+                        @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Projets</button>
+                <button class=${'icon' + (ui.isPanelActive('users') ? ' active' : '')}
+                        style="background-position-y: calc(-406px + 1.2em);"
+                        @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
+                <button class=${'icon' + (ui.isPanelActive('archives') ? ' active' : '')}
+                        style="background-position-y: calc(-142px + 1.2em);"
+                        @click=${ui.wrapAction(e => togglePanel(e, 'archives'))}>Archives</button>
+                <div style="flex: 1;"></div>
+                <div class="drop right" @click=${ui.deployMenu}>
+                    <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
+                    <div>
+                        <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
+                        <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
+                        <hr/>
+                        <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+                    </div>
                 </div>
-            </div>
+            </nav>
         `;
     }
 

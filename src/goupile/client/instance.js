@@ -56,6 +56,9 @@ function InstanceController() {
     let prev_anchor;
 
     this.init = async function() {
+        if (profile.develop)
+            ENV.urls.files = `${ENV.urls.base}files/0/`;
+
         await openInstanceDB();
         await initApp();
         initUI();
@@ -115,7 +118,7 @@ function InstanceController() {
                 throw new Error('Main script does not define any page');
 
             new_app.home = new_app.pages.values().next().value;
-            app = Object.freeze(new_app);
+            app = util.deepFreeze(new_app);
         } catch (err) {
             if (app == null) {
                 let new_app = new ApplicationInfo;
@@ -125,7 +128,7 @@ function InstanceController() {
                 builder.form("default", "Défaut", "Page par défaut");
 
                 new_app.home = new_app.pages.values().next().value;
-                app = Object.freeze(new_app);
+                app = util.deepFreeze(new_app);
             }
         }
 
@@ -174,87 +177,96 @@ function InstanceController() {
         let menu = (route.form.menu.length > 1 || route.form.chain.length > 1);
         let history = (!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null);
 
+        let user_icon;
+        if (profile.develop)  {
+            user_icon = goupile.isLoggedOnline() ? 670 : 714;
+        } else {
+            user_icon = goupile.isLoggedOnline() ? 450 : 494;
+        }
+
         return html`
-            ${app.panels.editor ? html`
-                <button class=${'icon' + (ui.isPanelActive('editor') ? ' active' : '')}
-                        style="background-position-y: calc(-230px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
-            ` : ''}
-            ${app.panels.data ? html`
-                <button class=${'icon' + (ui.isPanelActive('data') ? ' active' : '')}
-                        style="background-position-y: calc(-274px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
-            ` : ''}
-            ${profile.lock != null && profile.lock.unlockable ? html`
-                <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
-                        @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
-            ` : ''}
-            <div style="flex: 1; min-width: 15px;"></div>
+            <nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'} id="ui_top" style="z-index: 999999;">
+                ${app.panels.editor ? html`
+                    <button class=${'icon' + (ui.isPanelActive('editor') ? ' active' : '')}
+                            style="background-position-y: calc(-230px + 1.2em);"
+                            @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
+                ` : ''}
+                ${app.panels.data ? html`
+                    <button class=${'icon' + (ui.isPanelActive('data') ? ' active' : '')}
+                            style="background-position-y: calc(-274px + 1.2em);"
+                            @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
+                ` : ''}
+                ${profile.lock != null && profile.lock.unlockable ? html`
+                    <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
+                            @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
+                ` : ''}
+                <div style="flex: 1; min-width: 15px;"></div>
 
-            ${history ? html`
-                <button class="ins_hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
-                    ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
-                    ${form_record.historical ? html`<br/><span class="historical">${form_record.ctime.toLocaleString()}</span>` : ''}
-                </button>
-            ` : ''}
-            ${menu ? html`
-                <div class="drop">
-                    <button @click=${ui.deployMenu}>${route.page.title}</button>
-                    <div>${route.form.chain.map(renderFormDrop)}</div>
-                </div>
-            ` : ''}
-            <div style="flex: 1; min-width: 15px;"></div>
-
-            ${!goupile.isLocked() && profile.instances == null ?
-                html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                             @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
-            ${!goupile.isLocked() && profile.instances != null ? html`
-                <div class="drop right" @click=${ui.deployMenu}>
-                    <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                            @click=${ui.deployMenu}>${ENV.title}</button>
-                    <div>
-                        ${profile.instances.map(instance =>
-                            html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
-                                         @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
+                ${history ? html`
+                    <button class="ins_hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
+                        ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
+                        ${form_record.historical ? html`<br/><span class="ins_note">${form_record.ctime.toLocaleString()}</span>` : ''}
+                    </button>
+                ` : ''}
+                ${menu ? html`
+                    <div class="drop">
+                        <button title=${route.page.title} @click=${ui.deployMenu}>${route.page.title}</button>
+                        <div>${route.form.chain.map(renderFormDrop)}</div>
                     </div>
-                </div>
-            ` : ''}
-            ${profile.lock == null ? html`
-                <div class="drop right">
-                    <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}
-                            @click=${ui.deployMenu}>${profile.type !== 'auto' ? profile.username : ''}</button>
-                    <div>
-                        ${profile.type === 'auto' && profile.userid ? html`
-                            <button style="text-align: center;">
-                                ${profile.username}<br/>
-                                <span style="font-size: 0.8em; font-style: italic; color: #555;">Identifiant temporaire</span>
-                            </button>
-                            <hr/>
-                        ` : ''}
-                        ${profile.type === 'login' ? html`
-                            ${goupile.hasPermission('admin_code') ? html`
-                                <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>
-                                    ${profile.develop ? html`<div style="float: right">&nbsp;✓\uFE0E</div>` : ''}
-                                    Mode conception
+                ` : ''}
+                <div style="flex: 1; min-width: 15px;"></div>
+
+                ${!goupile.isLocked() && profile.instances == null ?
+                    html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                                 @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
+                ${!goupile.isLocked() && profile.instances != null ? html`
+                    <div class="drop right" @click=${ui.deployMenu}>
+                        <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                                @click=${ui.deployMenu}>${ENV.title}</button>
+                        <div>
+                            ${profile.instances.map(instance =>
+                                html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
+                                             @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
+                        </div>
+                    </div>
+                ` : ''}
+                ${profile.lock == null ? html`
+                    <div class="drop right">
+                        <button class="icon" style=${'background-position-y: calc(-' + user_icon + 'px + 1.2em);'}
+                                @click=${ui.deployMenu}>${profile.type !== 'auto' ? profile.username : ''}</button>
+                        <div>
+                            ${profile.type === 'auto' && profile.userid ? html`
+                                <button style="text-align: center;">
+                                    ${profile.username}<br/>
+                                    <span style="font-size: 0.8em; font-style: italic; color: #555;">Identifiant temporaire</span>
                                 </button>
                                 <hr/>
                             ` : ''}
-                            <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
-                            <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
-                            <hr/>
-                            ${app.lockable ? html`<button @click=${ui.wrapAction(e => goupile.runLockDialog(e, form_record.chain[0].ulid))}>Verrouiller</button>` : ''}
-                        ` : ''}
-                        ${profile.admin ? html`
-                            <button @click=${e => window.open('/admin/')}>Administration</button>
-                            <hr/>
-                        ` : ''}
-                        <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+                            ${profile.type === 'login' ? html`
+                                ${goupile.hasPermission('admin_code') ? html`
+                                    <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>
+                                        ${profile.develop ? html`<div style="float: right">&nbsp;✓\uFE0E</div>` : ''}
+                                        Mode conception
+                                    </button>
+                                    <hr/>
+                                ` : ''}
+                                <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
+                                <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
+                                <hr/>
+                                ${app.lockable ? html`<button @click=${ui.wrapAction(e => goupile.runLockDialog(e, form_record.chain[0].ulid))}>Verrouiller</button>` : ''}
+                            ` : ''}
+                            ${profile.admin ? html`
+                                <button @click=${e => window.open('/admin/')}>Administration</button>
+                                <hr/>
+                            ` : ''}
+                            <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+                        </div>
                     </div>
-                </div>
-            ` : ''}
-            ${profile.lock != null ?
-                html`<button class="icon" @click=${ui.wrapAction(goupile.goToLogin)}
-                             style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
+                ` : ''}
+                ${profile.lock != null ?
+                    html`<button class="icon" @click=${ui.wrapAction(goupile.goToLogin)}
+                                 style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
+            </nav>
         `;
     }
 
@@ -272,13 +284,7 @@ function InstanceController() {
             });
 
             if (response.ok) {
-                profile.develop = enable;
-                app.panels.editor = enable;
-                ui.setPanelState('editor', enable);
-
-                code_buffers.clear();
-
-                await mutex.chain(self.run);
+                await applyMainScript();
             } else {
                 let err = await net.readError(response);
                 throw new Error(err);
@@ -288,30 +294,6 @@ function InstanceController() {
 
     function renderFormDrop(form) {
         let meta = form_record.map[form.key];
-
-        let items = [];
-        let active_item;
-        for (let item of form.menu) {
-            if (item.type === 'page') {
-                if (!isPageEnabled(item.page, form_record))
-                    continue;
-
-                if (item.page === route.page)
-                    active_item = item;
-
-                items.push(item);
-            } else if (item.type === 'form') {
-                if (!isFormEnabled(item.form, form_record))
-                    continue;
-
-                if (route.form.chain.some(parent => item.form === parent))
-                    active_item = item;
-
-                items.push(item);
-            } else {
-                throw new Error(`Unknown item type '${item.type}'`);
-            }
-        }
 
         let show = (form !== route.form || form.menu.length > 1 || route.form.chain.length === 1);
         let active = (form === route.form.chain[route.form.chain.length - 1 - !show]);
@@ -840,10 +822,10 @@ function InstanceController() {
                 </div>
                 <div style="flex: 1;"></div>
 
-                ${profile.develop ? html`
-                    <div id="ins_notice">
-                        Formulaires en développement<br/>
-                        Publiez les avant d'enregistrer des données
+                ${!isPageEnabled(route.page, form_record, true) ? html`
+                    <div id="ins_develop">
+                        Cette page n'est théoriquement pas activée<br/>
+                        Le mode de conception vous permet d'y accéder.
                     </div>
                 ` : ''}
 
@@ -906,13 +888,14 @@ function InstanceController() {
                             let page = item.page;
 
                             let cls = '';
-                            if (!isPageEnabled(page, form_record)) {
-                                if (goupile.isLocked())
+                            if (page === route.page)
+                                cls += ' active';
+                            if (!isPageEnabled(page, form_record, true)) {
+                                if (profile.develop) {
+                                    cls += ' disabled';
+                                } else {
                                     return '';
-
-                                cls = 'disabled';
-                            } else if (page === route.page) {
-                                cls = 'active';
+                                }
                             }
 
                             return html`
@@ -925,13 +908,14 @@ function InstanceController() {
                             let form = item.form;
 
                             let cls = '';
-                            if (!isFormEnabled(form, form_record)) {
-                                if (goupile.isLocked())
+                            if (route.form.chain.some(parent => form === parent))
+                                cls += ' active';
+                            if (!isFormEnabled(form, form_record, true)) {
+                                if (profile.develop) {
+                                    cls += ' disabled';
+                                } else {
                                     return '';
-
-                                cls = 'disabled';
-                            } else if (route.form.chain.some(parent => form === parent)) {
-                                cls = 'active';
+                                }
                             }
 
                             return html`
@@ -1030,9 +1014,6 @@ function InstanceController() {
 
     async function saveRecord(record, hid, values, page) {
         await mutex.run(async () => {
-            if (profile.develop)
-                throw new Error('Enregistrement refusé : formulaire non publié');
-
             let progress = log.progress('Enregistrement en cours');
 
             try {
@@ -1749,20 +1730,23 @@ function InstanceController() {
         return null;
     }
 
-    function isFormEnabled(form, record) {
+    function isFormEnabled(form, record, reality = false) {
         for (let page of form.pages.values()) {
-            if (isPageEnabled(page, record))
+            if (isPageEnabled(page, record, reality))
                 return true;
         }
         for (let child of form.forms.values()) {
-            if (isFormEnabled(child, record))
+            if (isFormEnabled(child, record, reality))
                 return true;
         }
 
         return false;
     }
 
-    function isPageEnabled(page, record) {
+    function isPageEnabled(page, record, reality = false) {
+        if (!reality && profile.develop)
+            return true;
+
         let lockable = page.getOption('lockable', record, false);
         let enabled = page.getOption('enabled', record, true);
 
@@ -1773,14 +1757,6 @@ function InstanceController() {
     }
 
     this.run = async function(push_history = true) {
-        // Is the user developing?
-        if (profile.develop) {
-            ENV.urls.files = `${ENV.urls.base}files/0/`;
-            // XXX: ENV.version = json.version;
-        } else {
-            ENV.urls.files = `${ENV.urls.base}files/${ENV.version}/`;
-        }
-
         // Fetch and cache page code for page panel
         // Again to make sure we are up to date (e.g. publication)
         let filename = route.page.getOption('filename', form_record);
