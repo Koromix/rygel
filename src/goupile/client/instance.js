@@ -1637,16 +1637,35 @@ function InstanceController() {
                         continue;
                     } else {
                         try {
-                            await ui.runConfirm(e, html`Si vous continuez, vos <b>modifications seront enregistrées</b>. Voulez-vous enregistrer ?`,
-                                                   "Enregistrer", async () => {
-                                form_builder.triggerErrors();
+                            await ui.runDialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
+                                d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
 
-                                await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
-                                new_route.version = null;
+                                let save = d.enumRadio('action', 'Que souhaitez-vous faire avant de continuer ?', [
+                                    [true, "Enregistrer mes modifications"],
+                                    [false, "Oublier mes modifications"]
+                                ], { value: true, untoggle: false });
+
+                                if (save.value) {
+                                    d.action('Enregistrer', {}, async e => {
+                                        try {
+                                            form_builder.triggerErrors();
+                                            await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
+                                        } catch (err) {
+                                            reject(err);
+                                        }
+
+                                        new_route.version = null;
+                                        options.reload = true;
+
+                                        resolve();
+                                    });
+                                } else {
+                                    d.action('Oublier', {}, resolve);
+                                }
                             });
 
-                            options.reload = true;
-                            continue;
+                            if (options.reload)
+                                continue;
                         } catch (err) {
                             if (err != null)
                                 log.error(err);
