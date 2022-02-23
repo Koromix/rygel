@@ -1438,6 +1438,10 @@ instead of:
     this.action = function(label, options = {}, func = null) {
         options = expandOptions(options);
 
+        if (typeof label === 'string' && label.startsWith('+')) {
+            options.always = true;
+            label = label.substr(1);
+        }
         if (func == null)
             func = e => handleActionClick(e, label);
 
@@ -1447,6 +1451,7 @@ instead of:
         let render;
         if (typeof label === 'string' && label.match(/^\-+$/)) {
             render = intf => html`<hr/>`;
+            options.always = true;
         } else {
             let type = model.actions.length ? 'button' : 'submit';
 
@@ -1455,6 +1460,9 @@ instead of:
                                           style=${options.color ? `--color: ${options.color};` : ''}
                                           title=${options.tooltip || ''}
                                           @click=${ui.wrapAction(func)}>${label}</button>`;
+
+            if (options.always == null)
+                options.always = !model.actions.length;
         }
 
         let intf = makeWidget('action', label, render, options);

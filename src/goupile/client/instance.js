@@ -756,8 +756,8 @@ function InstanceController() {
                 let prev_actions = model.actions;
                 model.actions = [];
 
-                form_builder.action('Enregistrer', {disabled: !form_state.hasChanged(),
-                                                    color: '#2d8261'}, async () => {
+                form_builder.action('+Enregistrer', {disabled: !form_state.hasChanged(),
+                                                     color: '#2d8261'}, async () => {
                     form_builder.triggerErrors();
 
                     await saveRecord(form_record, new_hid, form_values, route.page);
@@ -780,7 +780,7 @@ function InstanceController() {
                     if (form_state.hasChanged()) {
                         form_builder.action('-');
 
-                        form_builder.action('Oublier les modifications', {color: '#db0a0a'}, async e => {
+                        form_builder.action('+Oublier', {color: '#db0a0a'}, async e => {
                             await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                                    'Oublier', () => {});
 
@@ -852,23 +852,29 @@ function InstanceController() {
                         <button class="ins_hid" style=${form_record.historical ? 'color: #00ffff;' : ''}
                                 @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
                             ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
-                            ${form_record.historical ? ' (historique)' : ''}
+                            ${form_record.historical ? html`<br/><span style="font-size: 0.5em;">(historique)</span>` : ''}
                         </button>
                     ` : ''}
                     <div style="flex: 1;"></div>
-                    ${model.actions.length > 1 ? html`
+                    ${model.actions.some(action => !action.options.always) ? html`
                         <div class="drop up right">
-                            <button @click=${ui.deployMenu}>Autres</button>
+                            <button @click=${ui.deployMenu}>Actions</button>
                             <div>
-                                ${util.mapRange(1, model.actions.length, idx => {
-                                    let action = model.actions[idx];
-                                    return action.render();
-                                })}
+                                ${model.actions.map(action => action.render())}
                             </div>
                         </div>
                         <hr/>
                     ` : ''}
-                    ${model.actions.length ? model.actions[0].render() : ''}
+                    ${util.mapRange(0, model.actions.length, idx => {
+                        let action = model.actions[model.actions.length - idx - 1];
+
+                        if (action.label.match(/^\-+$/))
+                            return '';
+                        if (!action.options.always)
+                            return '';
+
+                        return action.render();
+                    })}
                 </nav>
             </div>
         `;
