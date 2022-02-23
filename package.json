@@ -2,6 +2,7 @@
   "name": "koffi",
   "version": "0.9.4",
   "description": "Fast and simple FFI (foreign function interface) for Node.js",
+  "keywords": ["foreign", "function", "interface", "ffi", "binding", "c", "napi"],
   "repository": {
     "type": "git",
     "url": "https://github.com/Koromix/luigi.git"
