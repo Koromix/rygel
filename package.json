@@ -1,6 +1,6 @@
 {
   "name": "koffi",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Fast and simple FFI (foreign function interface) for Node.js",
   "repository": {
     "type": "git",
@@ -12,7 +12,7 @@
     "install": "cmake-js"
   },
   "license": "AGPL-3.0",
-  "devDependencies": {
+  "dependencies": {
     "cmake-js": "^6.3.0"
   }
 }
