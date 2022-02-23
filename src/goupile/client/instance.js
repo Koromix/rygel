@@ -209,7 +209,7 @@ function InstanceController() {
                     </button>
                 ` : ''}
                 ${menu ? html`
-                    <div class="drop">
+                    <div id="ins_drop" class="drop">
                         <button title=${route.page.title} @click=${ui.deployMenu}>${route.page.title}</button>
                         <div>${route.form.chain.map(renderFormDrop)}</div>
                     </div>

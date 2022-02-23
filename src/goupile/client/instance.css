@@ -55,6 +55,9 @@ html.mobile #ins_page { padding-top: 0; }
 
 #ui_top.locked { filter: invert(100%); }
 
+html.small #ins_drop > button { max-width: 300px; }
+html.mobile #ins_drop > button { max-width: 200px; }
+
 /* -------------------- Left menu -------------------- */
 
 #ins_menu {
