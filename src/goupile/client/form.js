@@ -135,7 +135,8 @@ function FormBuilder(state, model, readonly = false) {
     let variables_map = {};
     let options_stack = [{
         deploy: true,
-        untoggle: true
+        untoggle: true,
+        wrap: true
     }];
     let widgets_ref = model.widgets0;
 
@@ -1089,11 +1090,17 @@ function FormBuilder(state, model, readonly = false) {
 
         // This helps avoid garbage output when the user types 'page.output(html);'
         if (content != null && content !== html && content !== svg) {
-            let render = intf => html`
-                <div class="fm_wrap" data-line=${intf.line}>
-                    ${content}
-                </div>
-            `;
+            let render = intf => {
+                if (intf.options.wrap) {
+                    return html`
+                        <div class="fm_wrap" data-line=${intf.line}>
+                            ${content}
+                        </div>
+                    `;
+                } else {
+                    return content;
+                }
+            };
 
             let intf = makeWidget('output', null, render, options);
             addWidget(intf);
