@@ -1,0 +1,14 @@
+{
+  "name": "koffi",
+  "version": "0.9.0",
+  "description": "",
+  "main": "build/Release/koffi.node",
+  "scripts": {
+    "prepare": "cmake-js"
+  },
+  "author": "",
+  "license": "AGPL-3.0",
+  "devDependencies": {
+    "cmake-js": "^6.3.0"
+  }
+}
