@@ -24,7 +24,7 @@ First, make sure the following dependencies are met:
 Once this is done, run this command from the project root:
 
 ```sh
-npm install
+npm install koffi
 ```
 
 ## Other platforms (Linux, macOS, etc.)
@@ -38,7 +38,7 @@ Make sure the following dependencies are met:
 Once these dependencies are met, simply run the follow command:
 
 ```sh
-npm install
+npm install koffi
 ```
 
 # How to use
