@@ -2,14 +2,24 @@
 
 koffi is a fast and easy-to-use FFI module for Node.js, with support for complex data types such as structs.
 
-The following platforms are supported at the moment:
+The following platforms __are supported__ at the moment:
+
 * Windows x86 *(cdecl, stdcall)*
 * Windows x86_64
 * Linux x86
 * Linux x86_64
-* Linux AArch64 *(Raspberry Pi OS 64-bit)*
+* Linux ARM64 *(Raspberry Pi OS 64-bit)*
 
-This is still in development, more platforms and more tests will come in the near future.
+The following platforms are __not yet supported__ but will be soon:
+
+* macOS x86_64
+* macOS ARM64
+* FreeBSD/NetBSD/OpenBSD x86_64
+* FreeBSD/NetBSD/OpenBSD ARM64
+
+Support for ARM32 is not planned, though I don't mind working on it if there is enough demand.
+
+This is still in development, more tests will come in the near future.
 
 # Installation
 
