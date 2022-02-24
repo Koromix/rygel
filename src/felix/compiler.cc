@@ -82,18 +82,23 @@ static void MakePackCommand(Span<const char *const> pack_filenames, bool optimiz
     out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
-static int ParseMajorVersion(const char *cmd, const char *marker)
+static bool ReadCommandOutput(const char *cmd_line, Size max_len, HeapArray<char> *out_output)
 {
-    HeapArray<char> output;
     int exit_code;
-    if (!ExecuteCommandLine(cmd, {}, Kilobytes(4), &output, &exit_code))
-        return -1;
+    if (!ExecuteCommandLine(cmd_line, {}, Kilobytes(4), out_output, &exit_code))
+        return false;
     if (exit_code) {
-        LogDebug("Command '%1 failed (exit code: %2)", cmd, exit_code);
-        return -1;
+        LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);
+        return false;
     }
 
+    return true;
+}
+
+static int ParseMajorVersion(const char *cmd, Span<const char> output, const char *marker)
+{
     Span<const char> remain = output;
+
     while (remain.len) {
         Span<const char> token = SplitStr(remain, ' ', &remain);
 
@@ -112,7 +117,6 @@ static int ParseMajorVersion(const char *cmd, const char *marker)
         }
     }
 
-    // Fail graciously
     return -1;
 }
 
@@ -139,8 +143,8 @@ class ClangCompiler final: public Compiler {
     const char *rc;
     const char *ld;
 
-    bool clang11;
-    bool lld11;
+    bool clang11 = false;
+    bool lld11 = false;
 
     BlockAllocator str_alloc;
 
@@ -177,7 +181,11 @@ public:
             char cmd[2048];
             Fmt(cmd, "\"%1\" --version", compiler->cc);
 
-            compiler->clang11 = ParseMajorVersion(cmd, "version") >= 11;
+            HeapArray<char> output;
+            if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
+                compiler->clang11 = ParseMajorVersion(cmd, output, "version") >= 11;
+            }
+
             return true;
         });
 
@@ -195,7 +203,11 @@ public:
 #endif
                 }
 
-                compiler->lld11 = ParseMajorVersion(cmd, "LLD") >= 11;
+                HeapArray<char> output;
+                if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
+                    compiler->lld11 = ParseMajorVersion(cmd, output, "LLD") >= 11;
+                }
+
                 return true;
             });
         }
@@ -598,7 +610,8 @@ class GnuCompiler final: public Compiler {
     const char *windres;
     const char *ld;
 
-    bool gcc12;
+    bool gcc12 = false;
+    bool i686 = false;
 
     BlockAllocator str_alloc;
 
@@ -628,7 +641,12 @@ public:
             char cmd[2048];
             Fmt(cmd, "\"%1\" -v", compiler->cc);
 
-            compiler->gcc12 = ParseMajorVersion(cmd, "version") >= 12;
+            HeapArray<char> output;
+            if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
+                compiler->gcc12 = ParseMajorVersion(cmd, output, "version") >= 12;
+                compiler->i686 = FindStr(output, "i686") >= 0;
+            }
+
         };
 
         return compiler;
@@ -905,7 +923,10 @@ public:
         // Platform flags and libraries
         switch (host) {
             case HostPlatform::Windows: {
-                Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
+                Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat");
+                if (!i686) {
+                    Fmt(&buf, " -Wl,--high-entropy-va");
+                }
             } break;
 
             case HostPlatform::macOS: {
