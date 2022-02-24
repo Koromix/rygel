@@ -3400,6 +3400,28 @@ static inline bool EndsWith(Span<const char> str, const char *suffix)
     return j < 0;
 }
 
+static inline Size FindStr(Span<const char> str, Span<const char> needle)
+{
+    if (!needle.len)
+        return 0;
+    if (needle.len > str.len)
+        return -1;
+
+    Size end = str.len - needle.len;
+
+    for (Size i = 0; i <= end; i++) {
+        if (!memcmp(str.ptr + i, needle.ptr, (size_t)needle.len))
+            return i; 
+    }
+
+    return -1;
+}
+static inline Size FindStr(const char *str, const char *needle)
+{
+    const char *ret = strstr(str, needle);
+    return ret ? ret - str : -1;
+}
+
 static inline Span<char> SplitStr(Span<char> str, char split_char, Span<char> *out_remainder = nullptr)
 {
     Size part_len = 0;
