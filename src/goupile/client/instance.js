@@ -41,6 +41,7 @@ function InstanceController() {
     let editor_ace;
     let editor_filename;
     let code_buffers = new LruMap(32);
+    let code_timer;
 
     let error_entries = {};
 
@@ -56,17 +57,22 @@ function InstanceController() {
     let prev_anchor;
 
     this.init = async function() {
-        if (profile.develop)
+        if (profile.develop) {
             ENV.urls.files = `${ENV.urls.base}files/0/`;
+            ENV.version = 0;
+        }
 
         await openInstanceDB();
         await initApp();
         initUI();
+
+        if (profile.develop)
+            code_timer = setTimeout(uploadFsChanges, 1000);
     };
 
     async function openInstanceDB() {
         let db_name = `goupile:${ENV.urls.instance}`;
-        db = await indexeddb.open(db_name, 9, (db, old_version) => {
+        db = await indexeddb.open(db_name, 10, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('usr_profiles');
@@ -99,6 +105,10 @@ function InstanceController() {
                 } // fallthrough
                 case 8: {
                     db.deleteStore('usr_profiles');
+                } // fallthrough
+                case 9: {
+                    db.deleteStore('fs_files');
+                    db.createStore('fs_changes');
                 } // fallthrough
             }
         });
@@ -406,16 +416,6 @@ function InstanceController() {
                 ${editor_el}
             </div>
         `;
-    }
-
-    function fileHasChanged(filename) {
-        let buffer = code_buffers.get(filename);
-
-        if (buffer != null) {
-            return buffer.sha256 !== buffer.orig_sha256;
-        } else {
-            return false;
-        }
     }
 
     async function applyMainScript() {
@@ -1029,6 +1029,7 @@ function InstanceController() {
                                 type: 'save',
                                 user: profile.username,
                                 mtime: new Date,
+                                fs: ENV.version,
                                 page: page_key,
                                 values: ptr
                             };
@@ -1144,7 +1145,8 @@ function InstanceController() {
                     let fragment = {
                         type: 'delete',
                         user: profile.username,
-                        mtime: new Date
+                        mtime: new Date,
+                        fs: ENV.version
                     };
                     entry.fragments.push(fragment);
 
@@ -1285,7 +1287,7 @@ function InstanceController() {
             let blob = new Blob([code]);
             let sha256 = await goupile.computeSha256(blob);
 
-            await db.saveWithKey('fs_files', key, {
+            await db.saveWithKey('fs_changes', key, {
                 filename: filename,
                 size: blob.size,
                 sha256: sha256,
@@ -1294,9 +1296,46 @@ function InstanceController() {
 
             buffer.code = code;
             buffer.sha256 = sha256;
+
+            if (code_timer != null)
+                clearTimeout(code_timer);
+            code_timer = setTimeout(uploadFsChanges, 3000);
         }
 
         self.run();
+    }
+
+    async function uploadFsChanges() {
+        let progress = log.progress('Envoi des modifications');
+
+        try {
+            let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
+            let changes = await db.loadAll('fs_changes', range);
+
+            for (let file of changes) {
+                let url = util.pasteURL(`${ENV.urls.base}files/${file.filename}`, { sha256: file.sha256 });
+
+                let response = await net.fetch(url, {
+                    method: 'PUT',
+                    body: file.blob,
+                    timeout: null
+                });
+                if (!response.ok && response.status !== 409) {
+                    let err = await net.readError(response);
+                    throw new Error(err)
+                }
+
+                let key = `${profile.userid}:${file.filename}`;
+                await db.delete('fs_changes', key);
+            }
+
+            progress.close();
+        } catch (err) {
+            progress.close();
+            log.error(err);
+        }
+
+        code_timer = null;
     }
 
     function syncFormScroll() {
@@ -1810,7 +1849,7 @@ function InstanceController() {
         {
             let url = contextualizeURL(route.page.url, form_record);
 
-            let panels; // XXX: WTF
+            let panels;
             if (app.panels.data + app.panels.view < 2) {
                 panels = null;
             } else if (url.match(/\/[A-Z0-9]{26}(@[0-9]+)?$/)) {
@@ -1929,14 +1968,14 @@ function InstanceController() {
             {
                 let buffer = code_buffers.get(filename);
 
-                if (buffer != null && buffer.version === ENV.version)
+                if (buffer != null)
                     return buffer.code;
             }
 
             // Try locally saved files
             if (code == null) {
                 let key = `${profile.userid}:${filename}`;
-                let file = await db.load('fs_files', key);
+                let file = await db.load('fs_changes', key);
 
                 if (file != null) {
                     if (file.blob != null) {
@@ -1968,7 +2007,6 @@ function InstanceController() {
 
                 buffer = {
                     code: code,
-                    version: ENV.version,
                     sha256: sha256,
                     orig_sha256: sha256,
                     session: null
@@ -1984,12 +2022,22 @@ function InstanceController() {
                 }
 
                 buffer.code = code;
-                buffer.version = ENV.version;
                 buffer.sha256 = sha256;
             }
         }
 
         return code;
+    }
+
+    function fileHasChanged(filename) {
+        let buffer = code_buffers.get(filename);
+
+        if (buffer != null) {
+            let changed = (buffer.sha256 !== buffer.orig_sha256);
+            return changed;
+        } else {
+            return false;
+        }
     }
 
     async function createRecord(form, ulid = null, parent_record = null) {
@@ -2370,6 +2418,8 @@ function InstanceController() {
                                 fragments: record.fragments.map((fragment, idx) => ({
                                     type: fragment.type,
                                     mtime: fragment.mtime.toISOString(),
+                                    fs: (fragment.fs != null) ? fragment.fs : ENV.version, // Use ENV.version for transition,
+                                                                                           // will be removed eventually
                                     page: fragment.page,
                                     json: JSON.stringify(fragment.values)
                                 }))
@@ -2484,6 +2534,7 @@ function InstanceController() {
                                     type: fragment.type,
                                     user: fragment.username,
                                     mtime: new Date(fragment.mtime),
+                                    fs: fragment.fs,
                                     page: fragment.page,
                                     values: fragment.values
                                 };

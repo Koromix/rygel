@@ -13,11 +13,12 @@
 
 function InstancePublisher(instance, db) {
     let actions;
-    let modifications;
     let dialog;
 
     this.runDialog = async function(e) {
         await computeActions();
+
+        let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
 
         return ui.runDialog(e, 'Publication', {}, (d, resolve, reject) => {
             dialog = d;
@@ -43,37 +44,37 @@ function InstancePublisher(instance, db) {
                         ${actions.map(action => {
                             let local_cls = 'path';
                             if (action.type === 'pull') {
-                                local_cls += action.remote_sha256 ? ' overwrite' : ' overwrite delete';
-                            } else if (action.local_sha256 == null) {
+                                local_cls += action.from_sha256 ? ' overwrite' : ' overwrite delete';
+                            } else if (action.to_sha256 == null) {
                                 local_cls += ' virtual';
                             }
 
                             let remote_cls = 'path';
                             if (action.type === 'push') {
-                                remote_cls += action.local_sha256 ? ' overwrite' : ' overwrite delete';
-                            } else if (action.remote_sha256 == null) {
+                                remote_cls += action.to_sha256 ? ' overwrite' : ' overwrite delete';
+                            } else if (action.from_sha256 == null) {
                                 remote_cls += ' virtual';
                             }
 
                             return html`
                                 <tr class=${action.type === 'conflict' ? 'conflict' : ''}>
                                     <td>
-                                        <a @click=${ui.wrapAction(e => runDeleteFileDialog(e, action.filename))}>x</a>
+                                        <a @click=${ui.wrapAction(e => runDeleteFileDialog(e, action))}>x</a>
                                     </td>
                                     <td class=${local_cls}>${action.filename}</td>
-                                    <td class="size">${action.local_sha256 ? util.formatDiskSize(action.local_size) : ''}</td>
+                                    <td class="size">${action.to_sha256 ? util.formatDiskSize(action.to_size) : ''}</td>
 
                                     <td class="actions">
-                                        <a class=${action.type === 'pull' ? 'active' : (action.local_sha256 == null || action.local_sha256 === action.remote_sha256 ? 'disabled' : '')}
+                                        <a class=${action.type === 'pull' ? 'active' : (action.to_sha256 == null || action.to_sha256 === action.from_sha256 ? 'disabled' : '')}
                                            @click=${e => { action.type = 'pull'; d.restart(); }}>&lt;</a>
-                                        <a class=${action.type === 'push' ? 'active' : (action.local_sha256 == null || action.local_sha256 === action.remote_sha256 ? 'disabled' : '')}
+                                        <a class=${action.type === 'push' ? 'active' : (action.to_sha256 == null || action.to_sha256 === action.from_sha256 ? 'disabled' : '')}
                                            @click=${e => { action.type = 'push'; d.restart(); }}>&gt;</a>
                                     </td>
 
                                     <td class=${remote_cls}>${action.filename}</td>
                                     <td class="size">
                                         ${action.type === 'conflict' ? html`<span class="conflict" title="Modifications en conflit">⚠\uFE0E</span>&nbsp;` : ''}
-                                        ${action.remote_sha256 ? util.formatDiskSize(action.remote_size) : ''}
+                                        ${action.from_sha256 ? util.formatDiskSize(action.from_size) : ''}
                                     </td>
                                 </tr>
                             `;
@@ -99,56 +100,17 @@ function InstancePublisher(instance, db) {
         dialog.refresh();
     }
 
+     // XXX: What about conflicts?
     async function computeActions() {
-        let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
-        let [local_files, remote_files] = await Promise.all([
-            db.loadAll('fs_files', range),
-            net.fetchJson(`${ENV.urls.base}api/files/list`).then(list => list.files)
-        ]);
+        actions = await net.fetchJson(`${ENV.urls.base}api/files/delta`);
 
-        let local_map = util.arrayToObject(local_files, file => file.filename);
-        let remote_map = util.arrayToObject(remote_files, file => file.filename);
-
-        actions = [];
-
-        // Handle local files
-        for (let local_file of local_files) {
-            let remote_file = remote_map[local_file.filename];
-
-            if (remote_file == null) {
-                actions.push(makeAction(local_file.filename, local_file, null, 'push'));
-            } else if (local_file.sha256 !== remote_file.sha256) {
-                actions.push(makeAction(local_file.filename, local_file, remote_file, 'push'));
+        for (let action of actions) {
+            if (action.to_sha256 === action.from_sha256) {
+                action.type = 'noop';
             } else {
-                actions.push(makeAction(local_file.filename, local_file, remote_file, 'noop'));
+                action.type = 'push';
             }
         }
-
-        // Pull remote-only files
-        for (let remote_file of remote_files) {
-            if (local_map[remote_file.filename] == null)
-                actions.push(makeAction(remote_file.filename, null, remote_file, 'noop'));
-        }
-
-        modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop' || action.local_sha256 != null), 0);
-    }
-
-    function makeAction(filename, local, remote, type) {
-        let action = {
-            filename: filename,
-            type: type
-        };
-
-        if (local != null) {
-            action.local_size = local.size;
-            action.local_sha256 = local.sha256;
-        }
-        if (remote != null) {
-            action.remote_size = remote.size;
-            action.remote_sha256 = remote.sha256;
-        }
-
-        return action;
     }
 
     function runAddFileDialog(e) {
@@ -168,15 +130,18 @@ function InstancePublisher(instance, db) {
 
                 progress.progress('Enregistrement du fichier');
                 try {
-                    let key = `${profile.userid}:${filename.value}`;
                     let sha256 = await goupile.computeSha256(file.value);
+                    let url = util.pasteURL(`${ENV.urls.base}files/${filename.value}`, { sha256: sha256 });
 
-                    await db.saveWithKey('fs_files', key, {
-                        filename: filename.value,
-                        size: file.value.size,
-                        sha256: sha256,
-                        blob: file.value
+                    let response = await net.fetch(url, {
+                        method: 'PUT',
+                        body: file.value,
+                        timeout: null
                     });
+                    if (!response.ok) {
+                        let err = await net.readError(response);
+                        throw new Error(err)
+                    }
 
                     progress.success('Fichier enregistré');
                     resolve();
@@ -192,17 +157,16 @@ function InstancePublisher(instance, db) {
         });
     }
 
-    function runDeleteFileDialog(e, filename) {
-        return ui.runConfirm(e, `Voulez-vous vraiment supprimer le fichier '${filename}' ?`,
+    function runDeleteFileDialog(e, action) {
+        return ui.runConfirm(e, `Voulez-vous vraiment supprimer le fichier '${action.filename}' ?`,
                                 'Supprimer', async () => {
-            let key = `${profile.userid}:${filename}`;
+            let url = util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.to_sha256 });
 
-            await db.saveWithKey('fs_files', key, {
-                filename: filename,
-                size: null,
-                sha256: null,
-                blob: null
-            });
+            let response = await net.fetch(url, { method: 'DELETE' });
+            if (!response.ok && response.status !== 404) {
+                let err = await net.readError(response);
+                throw new Error(err)
+            }
 
             refresh();
         });
@@ -220,29 +184,14 @@ function InstancePublisher(instance, db) {
                 let p = actions.slice(i, i + 10).map(async action => {
                     switch (action.type) {
                         case 'push': {
-                            if (action.local_sha256 != null) {
-                                let url = util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.local_sha256 });
-                                let key = `${profile.userid}:${action.filename}`;
-                                let file = await db.load('fs_files', key);
-
-                                let response = await net.fetch(url, {
-                                    method: 'PUT',
-                                    body: file.blob,
-                                    timeout: null
-                                });
-                                if (!response.ok && response.status !== 409) {
-                                    let err = await net.readError(response);
-                                    throw new Error(err);
-                                }
-
-                                query.set(action.filename, action.local_sha256);
-                            }
+                            if (action.to_sha256 != null)
+                                query.set(action.filename, action.to_sha256);
                         } break;
 
                         case 'noop':
                         case 'pull': {
-                            if (action.remote_sha256 != null)
-                                query.set(action.filename, action.remote_sha256);
+                            if (action.from_sha256 != null)
+                                query.set(action.filename, action.from_sha256);
                         } break;
                     }
                 });
@@ -250,25 +199,10 @@ function InstancePublisher(instance, db) {
             }
 
             // Publish!
-            let response = await net.fetch(`${ENV.urls.base}api/files/publish`, {
+            await net.fetchJson(`${ENV.urls.base}api/files/publish`, {
                 method: 'POST',
                 body: query
             });
-            if (response.ok) {
-                let json = await response.json();
-
-                ENV.urls.files = `${ENV.urls.base}files/${json.version}/`;
-                ENV.version = json.version;
-            } else {
-                let err = await net.readError(response);
-                throw new Error(err);
-            }
-
-            // Clear local copies
-            {
-                let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
-                await db.deleteAll('fs_files', range);
-            }
 
             progress.success('Publication effectuée');
         } catch (err) {

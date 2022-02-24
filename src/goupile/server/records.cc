@@ -65,7 +65,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
 
         sql.len += Fmt(sql.TakeAvailable(), R"(SELECT e.rowid, e.ulid, e.hid, e.form, e.anchor,
                                                       e.parent_ulid, e.parent_version, f.anchor, f.version,
-                                                      f.type, f.username, f.mtime, f.page, f.json FROM rec_entries e
+                                                      f.type, f.username, f.mtime, f.fs, f.page, f.json FROM rec_entries e
                                                LEFT JOIN rec_fragments f ON (f.ulid = e.ulid)
                                                WHERE e.anchor >= ?1)").len;
         if (!stamp->HasPermission(UserPermission::DataLoad)) {
@@ -121,9 +121,10 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
                     json.Key("type"); json.String(type);
                     json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 10));
                     json.Key("mtime"); json.String((const char *)sqlite3_column_text(stmt, 11));
+                    json.Key("fs"); json.Int64(sqlite3_column_int64(stmt, 12));
                     if (TestStr(type, "save")) {
-                        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 12));
-                        json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 13));
+                        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 13));
+                        json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 14));
                     }
 
                     json.EndObject();
@@ -147,6 +148,7 @@ struct SaveRecord {
     struct Fragment {
         const char *type = nullptr;
         const char *mtime = nullptr;
+        int64_t fs = -1;
         const char *page = nullptr;
         Span<const char> json = {};
     };
@@ -277,6 +279,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                     parser.ParseString(&fragment->type);
                                 } else if (key2 == "mtime") {
                                     parser.ParseString(&fragment->mtime);
+                                } else if (key2 == "fs") {
+                                    parser.ParseInt(&fragment->fs);
                                 } else if (key2 == "page") {
                                     if (parser.PeekToken() == json_TokenType::Null) {
                                         parser.ParseNull();
@@ -293,8 +297,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                 }
                             }
 
-                            if (RG_UNLIKELY(!fragment->type || !fragment->mtime)) {
-                                LogError("Missing type or mtime in fragment object");
+                            if (RG_UNLIKELY(!fragment->type || !fragment->mtime || fragment->fs < 0)) {
+                                LogError("Missing type, mtime or FS in fragment object");
                                 io->AttachError(422);
                                 return;
                             }
@@ -387,12 +391,12 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     for (Size i = 0; i < record.fragments.len; i++) {
                         const SaveRecord::Fragment &fragment = record.fragments[i];
 
-                        if (!instance->db->Run(R"(INSERT INTO rec_fragments (ulid, version, type, userid, username,
-                                                                             mtime, page, json)
-                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                        if (!instance->db->Run(R"(INSERT INTO rec_fragments (ulid, version, type, userid,
+                                                                             username, mtime, fs, page, json)
+                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
                                                   ON CONFLICT DO NOTHING)",
                                               record.ulid, i + 1, fragment.type, session->userid, session->username,
-                                              fragment.mtime, fragment.page, fragment.json))
+                                              fragment.mtime, fragment.fs, fragment.page, fragment.json))
                             return false;
 
                         if (sqlite3_changes(*instance->db)) {

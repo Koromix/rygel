@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 49;
+const int InstanceVersion = 50;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -1468,9 +1468,40 @@ bool MigrateInstance(sq_Database *db)
                                     SELECT 0, i.filename, i.sha256 FROM fs_index i
                                     WHERE i.version = ?1)", version))
                     return false;
+            } [[fallthrough]];
+
+            case 49: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_fragments_uv;
+
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ulid TEXT NOT NULL REFERENCES rec_entries (ulid) DEFERRABLE INITIALLY DEFERRED,
+                        version INTEGER NOT NULL,
+                        type TEXT NOT NULL,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime TEXT NOT NULL,
+                        fs INTEGER NOT NULL,
+                        page TEXT,
+                        json BLOB
+                    );
+                    CREATE UNIQUE INDEX rec_fragments_uv ON rec_fragments (ulid, version);
+
+                    INSERT INTO rec_fragments (anchor, ulid, version, type, userid, username, mtime, fs, page, json)
+                        SELECT f.anchor, f.ulid, f.version, f.type, f.userid,
+                               f.username, f.mtime, s.value, f.page, f.json FROM rec_fragments_BAK f
+                        INNER JOIN fs_settings s ON (s.key = 'FsVersion');
+
+                    DROP TABLE rec_fragments_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 49);
+            RG_STATIC_ASSERT(InstanceVersion == 50);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

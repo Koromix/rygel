@@ -504,7 +504,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         // Don't lie to me :)
         if (!TestStr(sha256, client_sha256)) {
             LogError("Upload refused because of sha256 mismatch");
-            io->AttachError(403);
+            io->AttachError(409);
             return;
         }
 
@@ -618,7 +618,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
 
                 if (!TestStr(sha256, client_sha256)) {
                     LogError("Deletion refused because of sha256 mismatch");
-                    io->AttachError(403);
+                    io->AttachError(409);
                     return false;
                 }
             }
@@ -632,6 +632,121 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
             return false;
         }
     });
+}
+
+void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::AdminCode)) {
+        LogError("User is not allowed to publish a new version");
+        io->AttachError(403);
+        return;
+    }
+
+    int from_version;
+    int to_version;
+    if (request.GetQueryValue("from") || request.GetQueryValue("to")) {
+        bool valid = true;
+
+        if (const char *str = request.GetQueryValue("from"); str) {
+            valid &= ParseInt(str, &from_version);
+        } else {
+            LogError("Missing 'from' parameter");
+            valid = false;
+        }
+
+        if (const char *str = request.GetQueryValue("to"); str) {
+            valid &= ParseInt(str, &to_version);
+        } else {
+            LogError("Missing 'to' parameter");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->AttachError(422);
+            return;
+        }
+    } else {
+        from_version = instance->fs_version.load();
+        to_version = 0;
+    }
+
+    sq_Statement stmt1;
+    sq_Statement stmt2;
+    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256 FROM fs_index i
+                                  INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
+                                  WHERE i.version = ?1 ORDER BY i.filename)", &stmt1))
+        return;
+    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256 FROM fs_index i
+                                  INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
+                                  WHERE i.version = ?1 ORDER BY i.filename)", &stmt2))
+        return;
+    sqlite3_bind_int64(stmt1, 1, from_version);
+    sqlite3_bind_int64(stmt2, 1, to_version);
+    if (!stmt1.Run())
+        return;
+    if (!stmt2.Run())
+        return;
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartArray();
+    while (stmt1.IsRow() || stmt2.IsRow()) {
+        const char *from = stmt1.IsRow() ? (const char *)sqlite3_column_text(stmt1, 0) : nullptr;
+        const char *to = stmt2.IsRow() ? (const char *)sqlite3_column_text(stmt2, 0) : nullptr;
+
+        json.StartObject();
+        if (!from) {
+            json.Key("filename"); json.String(to);
+            json.Key("to_size"); json.Int64(sqlite3_column_int64(stmt2, 1));
+            json.Key("to_sha256"); json.String((const char *)sqlite3_column_text(stmt2, 2));
+
+            stmt2.Run();
+        } else if (!to) {
+            json.Key("filename"); json.String(from);
+            json.Key("from_size"); json.Int64(sqlite3_column_int64(stmt1, 1));
+            json.Key("from_sha256"); json.String((const char *)sqlite3_column_text(stmt1, 2));
+
+            stmt1.Run();
+        } else {
+            int cmp = CmpStr(from, to);
+
+            if (cmp < 0) {
+                json.Key("filename"); json.String(from);
+                json.Key("from_size"); json.Int64(sqlite3_column_int64(stmt1, 1));
+                json.Key("from_sha256"); json.String((const char *)sqlite3_column_text(stmt1, 2));
+
+                stmt1.Run();
+            } else if (cmp > 0) {
+                json.Key("filename"); json.String(to);
+                json.Key("to_size"); json.Int64(sqlite3_column_int64(stmt2, 1));
+                json.Key("to_sha256"); json.String((const char *)sqlite3_column_text(stmt2, 2));
+
+                stmt2.Run();
+            } else {
+                json.Key("filename"); json.String(from);
+                json.Key("from_size"); json.Int64(sqlite3_column_int64(stmt1, 1));
+                json.Key("from_sha256"); json.String((const char *)sqlite3_column_text(stmt1, 2));
+                json.Key("to_size"); json.Int64(sqlite3_column_int64(stmt2, 1));
+                json.Key("to_sha256"); json.String((const char *)sqlite3_column_text(stmt2, 2));
+
+                stmt1.Run();
+                stmt2.Run();
+            }
+        }
+        json.EndObject();
+    }
+    json.EndArray();
+
+    json.Finish();
 }
 
 void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
