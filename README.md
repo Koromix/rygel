@@ -7,7 +7,7 @@ The following platforms are supported at the moment:
 * Windows x86_64
 * Linux x86
 * Linux x86_64
-* Linux AArch64
+* Linux AArch64 *(Raspberry Pi OS 64-bit)*
 
 This is still in development, more platforms and more tests will come in the near future.
 
