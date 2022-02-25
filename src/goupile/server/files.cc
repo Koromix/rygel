@@ -428,13 +428,13 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         io->AttachError(422);
         return;
     }
-    if (!CheckSha256(client_sha256)) {
+    if (client_sha256 && !CheckSha256(client_sha256)) {
         io->AttachError(422);
         return;
     }
 
     // See if this object is already on the server
-    {
+    if (client_sha256) {
         sq_Statement stmt;
         if (!instance->db->Prepare("SELECT rowid FROM fs_objects WHERE sha256 = ?1", &stmt))
             return;
@@ -502,7 +502,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         }
 
         // Don't lie to me :)
-        if (!TestStr(sha256, client_sha256)) {
+        if (client_sha256 && !TestStr(sha256, client_sha256)) {
             LogError("Upload refused because of sha256 mismatch");
             io->AttachError(409);
             return;
