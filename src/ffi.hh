@@ -97,6 +97,7 @@ struct ParameterInfo {
     int8_t xmm_count;
     bool gpr_first;
 #elif defined(__aarch64__)
+    bool use_memory;
     int8_t gpr_count;
     int8_t vec_count;
 #elif defined(__i386__) || defined(_M_IX86)

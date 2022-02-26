@@ -66,6 +66,8 @@ bool AnalyseFunction(FunctionInfo *func)
         func->ret.vec_count = func->ret.type->members.len;
     } else if (func->ret.type->size <= 16) {
         func->ret.gpr_count = (func->ret.type->size + 7) / 8;
+    } else {
+        func->ret.use_memory = true;
     }
 
     int gpr_avail = 8;
@@ -104,17 +106,28 @@ bool AnalyseFunction(FunctionInfo *func)
                 if (IsHFA(param.type)) {
                     int vec_count = (int)param.type->members.len;
 
-                    param.vec_count = std::min(vec_avail, vec_count);
-                    vec_avail -= vec_count;
+                    if (vec_count <= vec_avail) {
+                        param.vec_count = vec_count;
+                        vec_avail -= vec_count;
+                    } else {
+                        vec_avail = 0;
+                    }
                 } else if (param.type->size <= 16) {
                     int gpr_count = (param.type->size + 7) / 8;
 
-                    param.gpr_count = std::min(gpr_avail, gpr_count);
-                    gpr_avail -= gpr_count;
+                    if (gpr_count <= gpr_avail) {
+                        param.gpr_count = gpr_count;
+                        gpr_avail -= gpr_count;
+                    } else {
+                        gpr_avail = 0;
+                    }
                 } else if (gpr_avail) {
                     // Big types (more than 16 bytes) are replaced by a pointer
-                    param.gpr_count = 1;
-                    gpr_avail -= 1;
+                    if (gpr_avail) {
+                        param.gpr_count = 1;
+                        gpr_avail -= 1;
+                    }
+                    param.use_memory = true;
                 }
             } break;
         }
@@ -209,11 +222,11 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
     uint8_t *sp_ptr = nullptr;
 
     // Return through registers unless it's too big
-    if (!func->ret.type->size || func->ret.vec_count || func->ret.gpr_count) {
+    if (!func->ret.use_memory) {
         args_ptr = scratch_ptr - AlignLen(8 * func->parameters.len, 16);
         vec_ptr = (uint64_t *)args_ptr - 8;
         gpr_ptr = vec_ptr - 9;
-        sp_ptr = (uint8_t *)(gpr_ptr - 7);
+        sp_ptr = (uint8_t *)gpr_ptr;
 
 #ifdef RG_DEBUG
         memset(sp_ptr, 0, top_ptr - sp_ptr);
@@ -224,7 +237,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         args_ptr = return_ptr - AlignLen(8 * func->parameters.len, 16);
         vec_ptr = (uint64_t *)args_ptr - 8;
         gpr_ptr = vec_ptr - 9;
-        sp_ptr = (uint8_t *)(gpr_ptr - 7);
+        sp_ptr = (uint8_t *)gpr_ptr;
 
 #ifdef RG_DEBUG
         memset(sp_ptr, 0, top_ptr - sp_ptr);
@@ -235,7 +248,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
     RG_ASSERT(AlignUp(lib->stack.ptr, 16) == lib->stack.ptr);
     RG_ASSERT(AlignUp(lib->stack.end(), 16) == lib->stack.end());
-    RG_ASSERT(AlignUp(sp_ptr, 16) == sp_ptr);
+    RG_ASSERT(AlignUp(sp_ptr - 8, 16) == sp_ptr);
 
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
@@ -359,7 +372,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     if (!PushHFA(obj, param.type, (uint8_t *)vec_ptr))
                         return env.Null();
                     vec_ptr += param.vec_count;
-                } else if (param.type->size <= 16) {
+                } else if (!param.use_memory) {
                     if (param.gpr_count) {
                         RG_ASSERT(param.type->align <= 8);
 

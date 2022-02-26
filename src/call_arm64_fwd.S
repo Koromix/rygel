@@ -11,8 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-// These five are the same, but they differ (in the C side) by their return type.
-// Unlike the five next functions, these ones don't forward XMM argument registers.
+// These three are the same, but they differ (in the C side) by their return type.
+// Unlike the three next functions, these ones don't forward XMM argument registers.
 .global ForwardCallGG
 .global ForwardCallF
 .global ForwardCallDDDD
@@ -23,20 +23,17 @@
 .global ForwardCallXDDDD
 
 // Copy function pointer to r9, in order to save it through argument forwarding.
-// Save RSP in r19 (non-volatile), and use carefully assembled stack provided by caller.
+// Save RSP in r29 (non-volatile), and use carefully assembled stack provided by caller.
 .macro prologue
     .cfi_startproc
     stp x29, x30, [sp, -16]!
     .cfi_def_cfa sp, 16
     .cfi_offset 29, 16
     .cfi_offset 30, 8
-    str x19, [sp, -16]!
-    .cfi_def_cfa sp, 32
+    mov x29, sp
+    .cfi_def_cfa x29, 16
     mov x9, x0
-    mov x19, sp
-    .cfi_def_cfa x19, 32
-    mov sp, x1
-    add sp, sp, #192
+    add sp, x1, #136
 .endm
 
 // Call native function.
@@ -44,9 +41,7 @@
 // The return value is passed untouched through r0, r1, v0 and/or v1.
 .macro epilogue
     blr x9
-    mov sp, x19
-    .cfi_def_cfa sp, 32
-    ldr x19, [sp], 16
+    mov sp, x29
     .cfi_def_cfa sp, 16
     ldp x29, x30, [sp], 16
     .cfi_def_cfa sp, 0
@@ -58,27 +53,27 @@
 
 // Prepare general purpose argument registers from array passed by caller.
 .macro forward_int
-    ldr x8, [x1, 120]
-    ldr x7, [x1, 112]
-    ldr x6, [x1, 104]
-    ldr x5, [x1, 96]
-    ldr x4, [x1, 88]
-    ldr x3, [x1, 80]
-    ldr x2, [x1, 72]
-    ldr x0, [x1, 56]
-    ldr x1, [x1, 64]
+    ldr x8, [x1, 64]
+    ldr x7, [x1, 56]
+    ldr x6, [x1, 48]
+    ldr x5, [x1, 40]
+    ldr x4, [x1, 32]
+    ldr x3, [x1, 24]
+    ldr x2, [x1, 16]
+    ldr x0, [x1, 0]
+    ldr x1, [x1, 8]
 .endm
 
 // Prepare vector argument registers from array passed by caller.
 .macro forward_vec
-    ldr d7, [x1, 184]
-    ldr d6, [x1, 176]
-    ldr d5, [x1, 168]
-    ldr d4, [x1, 160]
-    ldr d3, [x1, 152]
-    ldr d2, [x1, 144]
-    ldr d1, [x1, 136]
-    ldr d0, [x1, 128]
+    ldr d7, [x1, 128]
+    ldr d6, [x1, 120]
+    ldr d5, [x1, 112]
+    ldr d4, [x1, 104]
+    ldr d3, [x1, 96]
+    ldr d2, [x1, 88]
+    ldr d1, [x1, 80]
+    ldr d0, [x1, 72]
 .endm
 
 ForwardCallGG:
