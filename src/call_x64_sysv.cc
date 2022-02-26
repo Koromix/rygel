@@ -228,7 +228,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
     RG_ASSERT(AlignUp(lib->stack.ptr, 16) == lib->stack.ptr);
     RG_ASSERT(AlignUp(lib->stack.end(), 16) == lib->stack.end());
-    RG_ASSERT(AlignUp(args_ptr, 16) == args_ptr);
+    RG_ASSERT(AlignUp(sp_ptr, 16) == sp_ptr);
 
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
