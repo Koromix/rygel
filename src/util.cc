@@ -284,9 +284,10 @@ void DumpStack(const FunctionInfo *func, Span<const uint8_t> sp)
 
     PrintLn(stderr, "Stack (%1 bytes) at 0x%2:", sp.len, sp.ptr);
     for (const uint8_t *ptr = sp.begin(); ptr < sp.end();) {
-        Print(stderr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16), FmtArg((ptr - sp.begin()) / 8).Pad(-4),
-                                                                 FmtArg(ptr - sp.begin()).Pad(-4));
-        for (int i = 0; ptr < sp.end() && i < 8; i++, ptr++) {
+        Print(stderr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16),
+                                          FmtArg((ptr - sp.begin()) / sizeof(void *)).Pad(-4),
+                                          FmtArg(ptr - sp.begin()).Pad(-4));
+        for (int i = 0; ptr < sp.end() && i < sizeof(void *); i++, ptr++) {
             Print(stderr, " %1", FmtHex(*ptr).Pad0(-2));
         }
         PrintLn(stderr);

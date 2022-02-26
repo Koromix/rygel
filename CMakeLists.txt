@@ -20,6 +20,7 @@ if(MSVC)
 endif()
 
 set(KOFFI_SRC
+    src/call_arm32.cc
     src/call_arm64.cc
     src/call_x64_sysv.cc
     src/call_x64_win.cc
@@ -41,6 +42,8 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
         list(APPEND KOFFI_SRC src/call_x86_fwd.asm)
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i[3456]86|x86|AMD64")
         list(APPEND KOFFI_SRC src/call_x86_fwd.S)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "armv[678]l")
+        list(APPEND KOFFI_SRC src/call_arm32_fwd.S)
     endif()
 endif()
 

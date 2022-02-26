@@ -8,7 +8,8 @@ The following platforms __are supported__ at the moment:
 * Windows x86_64
 * Linux x86
 * Linux x86_64
-* Linux ARM64 *(Raspberry Pi OS 64-bit)*
+* Linux ARM32+VFP Little Endian *(Raspberry Pi OS 32-bit)*
+* Linux ARM64 Little Endian *(Raspberry Pi OS 64-bit)*
 
 The following platforms are __not yet supported__ but will be soon:
 
@@ -17,9 +18,7 @@ The following platforms are __not yet supported__ but will be soon:
 * FreeBSD/NetBSD/OpenBSD x86_64
 * FreeBSD/NetBSD/OpenBSD ARM64
 
-Support for ARM32 is not planned, though I don't mind working on it if there is enough demand.
-
-This is still in development, more tests will come in the near future.
+This is still in development, bugs are to expected. More tests will come in the near future.
 
 # Installation
 

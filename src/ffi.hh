@@ -96,7 +96,7 @@ struct ParameterInfo {
     int8_t gpr_count;
     int8_t xmm_count;
     bool gpr_first;
-#elif defined(__aarch64__)
+#elif defined(__arm__) || defined(__aarch64__)
     bool use_memory;
     int8_t gpr_count;
     int8_t vec_count;
@@ -119,7 +119,7 @@ struct FunctionInfo {
 
     // ABI-specific part
 
-#if defined(__aarch64__) || defined(__x86_64__) || defined(_WIN64)
+#if defined(__arm__) || defined(__aarch64__) || defined(__x86_64__) || defined(_WIN64)
     bool forward_fp;
 #endif
 };
