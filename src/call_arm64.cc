@@ -380,7 +380,9 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                             return env.Null();
                         gpr_ptr += param.gpr_count;
                     } else if (param.type->size) {
-                        args_ptr = AlignUp(args_ptr, param.type->align);
+                        int16_t align = (param.type->align <= 4) ? 4 : 8;
+
+                        args_ptr = AlignUp(args_ptr, align);
                         if (!PushObject(obj, param.type, &lib->tmp_alloc, args_ptr))
                             return env.Null();
                         args_ptr += AlignLen(param.type->size, 8);
