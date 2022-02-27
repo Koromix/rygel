@@ -442,7 +442,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 RG_ASSERT(return_ptr);
 
                 X0X1Ret ret = PERFORM_CALL(GG);
-                RG_ASSERT(ret.x0 = (uint64_t)return_ptr);
+                RG_ASSERT(ret.x0 == (uint64_t)return_ptr);
 
                 Napi::Object obj = PopObject(env, return_ptr, func->ret.type);
                 return obj;
