@@ -392,6 +392,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
                         json.String(str.ptr, (size_t)str.len);
                     }
                     json.EndArray();
+                    json.Key("retention"); json.Int(gp_domain.config.archive_retention);
                     json.EndObject();
                 } else if (TestStr(key, "HEAD_TAGS")) {
                     // Nothing to add
@@ -753,11 +754,13 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-static bool PruneOldFiles(const char *dirname, const char *filter, bool recursive, int64_t max_age)
+static bool PruneOldFiles(const char *dirname, const char *filter, bool recursive, int64_t max_age,
+                          int64_t *out_max_mtime = nullptr)
 {
     BlockAllocator temp_alloc;
 
     int64_t threshold = GetUnixTime() - max_age;
+    int64_t max_mtime = 0;
     bool complete = true;
 
     EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
@@ -770,7 +773,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
         switch (file_info.type) {
             case FileType::Directory: {
                 if (recursive) {
-                    if (PruneOldFiles(filename, filter, true, max_age)) {
+                    if (PruneOldFiles(filename, filter, true, max_age, &max_mtime)) {
                         LogInfo("Prune old directory '%1'", filename);
                         complete &= UnlinkDirectory(filename);
                     } else {
@@ -786,6 +789,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
                         LogInfo("Prune old file '%1'", filename);
                         complete &= UnlinkFile(filename);
                     } else {
+                        max_mtime = std::max(max_mtime, file_info.mtime);
                         complete = false;
                     }
                 } else {
@@ -804,6 +808,9 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
         return true;
     });
 
+    if (out_max_mtime) {
+        *out_max_mtime = max_mtime;
+    }
     return complete;
 }
 
@@ -976,6 +983,27 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
             LogDebug("Prune old snapshot files");
             PruneOldFiles(gp_domain.config.snapshot_directory, nullptr, true, 3 * 86400 * 1000);
+
+            LogDebug("Prune old archives");
+            {
+                int64_t time = GetUnixTime();
+                int64_t snapshot = 0;
+
+                PruneOldFiles(gp_domain.config.archive_directory, "*.goupilearchive", false,
+                              gp_domain.config.archive_retention * 86400 * 1000, &snapshot);
+
+                TimeSpec spec = DecomposeTime(time, gp_domain.config.archive_zone);
+
+                if (spec.hour == gp_domain.config.archive_hour && time - snapshot > 2 * 3600 * 1000) {
+                    LogInfo("Creating daily snapshot");
+                    if (!ArchiveDomain())
+                        return 1;
+                } else if (time - snapshot > 25 * 3600 * 1000) {
+                    LogInfo("Creating forced snapshot (previous one is old)");
+                    if (!ArchiveDomain())
+                        return 1;
+                }
+            }
 
             // Make sure data loss (if it happens) is very limited in time.
             // If it fails, exit; something is really wrong and we don't fake to it.

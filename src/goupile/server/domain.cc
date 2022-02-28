@@ -108,7 +108,18 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         config.archive_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "SnapshotDirectory") {
                         config.snapshot_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "ArchiveKey" || prop.key == "BackupKey") {
+                    } else if (prop.key == "SynchronousFull") {
+                        valid &= ParseBool(prop.value, &config.sync_full);
+                    } else if (prop.key == "AutoMigrate") {
+                        valid &= ParseBool(prop.value, &config.auto_migrate);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Archives") {
+                do {
+                    if (prop.key == "PublicKey") {
                         RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                         size_t key_len;
@@ -118,13 +129,32 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         if (!ret && key_len == 32) {
                             config.enable_archives = true;
                         } else {
-                            LogError("Malformed BackupKey value");
+                            LogError("Malformed archive PublicKey value");
                             valid = false;
                         }
-                    } else if (prop.key == "SynchronousFull") {
-                        valid &= ParseBool(prop.value, &config.sync_full);
-                    } else if (prop.key == "AutoMigrate") {
-                        valid &= ParseBool(prop.value, &config.auto_migrate);
+                    } else if (prop.key == "AutoHour") {
+                        if (ParseInt(prop.value, &config.archive_hour)) {
+                            if (config.archive_hour < 0 || config.archive_hour > 23) {
+                                LogError("SnapshotHour is outside of 0-23 (inclusive) range");
+                                valid = false;
+                            }
+                        } else {
+                            valid = false;
+                        }
+                    } else if (prop.key == "AutoZone") {
+                        if (!OptionToEnum(TimeModeNames, prop.value, &config.archive_zone)) {
+                            LogError("Unknown time mode '%1'", prop.value);
+                            valid = false;
+                        }
+                    } else if (prop.key == "RetentionDays") {
+                        if (ParseInt(prop.value, &config.archive_retention)) {
+                            if (config.archive_retention < 1 || config.archive_retention > 365) {
+                                LogError("RetentionDays is outside of 1-365 (inclusive) range");
+                                valid = false;
+                            }
+                        } else {
+                            valid = false;
+                        }
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

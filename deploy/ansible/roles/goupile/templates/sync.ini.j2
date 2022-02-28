@@ -14,6 +14,7 @@
 [Goupile]
 BinaryFile = {{ goupile_root_path }}/goupile
 DomainDirectory = {{ goupile_root_path }}/domains
+ArchiveDirectory = {{ goupile_archive_path }}
 SnapshotDirectory = {{ goupile_snapshot_path }}
 
 RunUser = {{ goupile_run_user }}
@@ -21,6 +22,15 @@ RunGroup = {{ goupile_run_group }}
 
 DefaultAdmin = {{ goupile_default_username }}
 DefaultPassword = {{ goupile_default_password }}
+
+{% if goupile_archive_hour is defined -%}
+
+[Archives]
+Hour = {{ goupile_archive_hour }}
+HourZone = {{ goupile_archive_zone }}
+Retention = {{ goupile_archive_retention }}
+
+{%- endif %}
 
 {% if goupile_smtp is defined -%}
 

@@ -40,6 +40,7 @@
     - '{{ goupile_root_path }}'
     - '{{ goupile_root_path }}/domains'
     - '{{ goupile_root_path }}/sync'
+    - '{{ goupile_archive_path }}'
     - '{{ goupile_snapshot_path }}'
   become: yes
 

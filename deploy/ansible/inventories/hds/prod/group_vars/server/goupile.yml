@@ -61,9 +61,6 @@ goupile_sms:
     6131643766653034360a636365393063353932616561323438373337623430303535353635376334
     3031
 
-goupile_snapshot_hour: 0
-goupile_snapshot_zone: UTC
-
 goupile_domains:
   - name: inter.goupile.fr
     archive_key: !vault |

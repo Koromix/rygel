@@ -192,6 +192,15 @@ function AdminController() {
     function renderArchives() {
         return html`
             <div class="padded">
+                <div style="margin-bottom: 2em;">
+                    <p>Les archives créées manuellement ou automatiquement (chaque jour) sont gardées localement
+                    pour une <span style="color: red; font-weight: bold;">période de ${ENV.retention} jours</span>.
+                    Vous pouvez les télécharger et les enregistrer sur vos propres supports de stockage.</p>
+
+                    <p>N'oubliez pas que <b>sans la clé de déchiffrement</b> qui vous a été confiée lors de l'ouverture
+                    du domaine, le contenu de ces archives ne peut pas être restauré.</p>
+                </div>
+
                 <div class="ui_quick">
                     <a @click=${ui.wrapAction(createBackup)}>Créer une archive</a>
                     <div style="flex: 1;"></div>

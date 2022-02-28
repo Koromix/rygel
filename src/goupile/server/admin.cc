@@ -48,9 +48,14 @@ Title = %1
 # DatabaseFile = goupile.db
 # ArchiveDirectory = archives
 # SnapshotDirectory = snapshots
-ArchiveKey = %2
 # SynchronousFull = Off
 # AutoMigrate = On
+
+[Archives]
+PublicKey = %2
+# AutoHour = Off
+# AutoZone = Local
+# RetentionDays = 14
 
 [SMS]
 # Provider = Twilio
@@ -1177,6 +1182,12 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
     return true;
 }
 
+bool ArchiveDomain()
+{
+    bool conflict = false;
+    return BackupInstances(nullptr, &conflict) || conflict;
+}
+
 void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
@@ -1855,6 +1866,7 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
             json.StartObject();
             json.Key("filename"); json.String(basename);
             json.Key("size"); json.Int64(file_info.size);
+            json.Key("mtime"); json.Int64(file_info.mtime);
             json.EndObject();
         }
 

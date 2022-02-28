@@ -29,6 +29,8 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io);
 void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io);
 void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io);
 
+bool ArchiveDomain();
+
 void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io);
 void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io);
 void HandleArchiveList(const http_RequestInfo &request, http_IO *io);

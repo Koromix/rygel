@@ -29,6 +29,7 @@ from dataclasses import dataclass
 @dataclass
 class DomainConfig:
     main_directory = None
+    archive_directory = None
     snapshot_directory = None
     socket = None
     mismatch = False
@@ -87,12 +88,13 @@ def commit_file(filename, data):
     else:
         return False
 
-def list_domains(root_dir, snapshot_dir, names):
+def list_domains(root_dir, archive_dir, snapshot_dir, names):
     domains = {}
 
     for domain in names:
         info = DomainConfig()
         info.main_directory = os.path.join(root_dir, domain)
+        info.archive_directory = os.path.join(archive_dir, domain)
         info.snapshot_directory = os.path.join(snapshot_dir, domain)
         info.socket = f'/run/goupile/{domain}.sock'
 
@@ -145,7 +147,7 @@ def run_service_command(domain, cmd):
     print(f'  + {cmd.capitalize()} {service}', file = sys.stderr)
     execute_command(['systemctl', cmd, '--quiet', service])
 
-def update_domain_config(domain, info, archive_key, smtp, sms):
+def update_domain_config(domain, info, archive_key, auto, smtp, sms):
     filename = os.path.join(info.main_directory, 'goupile.ini')
 
     ini = configparser.ConfigParser()
@@ -156,7 +158,12 @@ def update_domain_config(domain, info, archive_key, smtp, sms):
 
     ini.add_section('Data')
     ini.set('Data', 'SnapshotDirectory', info.snapshot_directory)
-    ini.set('Data', 'ArchiveKey', archive_key)
+
+    ini.add_section('Archives')
+    ini.set('Archives', 'PublicKey', archive_key)
+    if auto is not None:
+        for key, value in auto.items():
+            ini.set('Archives', key, value)
 
     ini.add_section('HTTP')
     ini.set('HTTP', 'SocketType', 'Unix')
@@ -190,7 +197,8 @@ def run_sync(config):
                           config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
 
     # List existing domains and services
-    domains = list_domains(config['Goupile.DomainDirectory'], config['Goupile.SnapshotDirectory'], config['Domains'].keys())
+    domains = list_domains(config['Goupile.DomainDirectory'], config['Goupile.ArchiveDirectory'],
+                           config['Goupile.SnapshotDirectory'], config['Domains'].keys())
     services = list_services()
 
     # Detect binary mismatches
@@ -219,9 +227,10 @@ def run_sync(config):
     print('>>> Update Goupile configuration files', file = sys.stderr)
     for domain, info in domains.items():
         archive_key = config['Domains'][domain]
+        auto = config.get('Archives')
         smtp = config.get('SMTP')
         sms = config.get('SMS')
-        if update_domain_config(domain, info, archive_key, smtp, sms):
+        if update_domain_config(domain, info, archive_key, auto, smtp, sms):
             info.mismatch = True
             changed = True
 
@@ -256,6 +265,7 @@ if __name__ == '__main__':
     config = load_config('sync.ini')
     config['Goupile.BinaryFile'] = os.path.abspath(config['Goupile.BinaryFile'])
     config['Goupile.DomainDirectory'] = os.path.abspath(config['Goupile.DomainDirectory'])
+    config['Goupile.ArchiveDirectory'] = os.path.abspath(config['Goupile.ArchiveDirectory'])
     config['Goupile.SnapshotDirectory'] = os.path.abspath(config['Goupile.SnapshotDirectory'])
 
     run_sync(config)
