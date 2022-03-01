@@ -461,9 +461,9 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
         HandleArchiveDelete(request, io);
     } else if (TestStr(admin_url, "/api/archives/list") && request.method == http_RequestMethod::Get) {
         HandleArchiveList(request, io);
-    } else if (TestStr(admin_url, "/api/archives/download") && request.method == http_RequestMethod::Get) {
+    } else if (StartsWith(admin_url, "/api/archives/files") && request.method == http_RequestMethod::Get) {
         HandleArchiveDownload(request, io);
-    } else if (TestStr(admin_url, "/api/archives/upload") && request.method == http_RequestMethod::Put) {
+    } else if (StartsWith(admin_url, "/api/archives/files") && request.method == http_RequestMethod::Put) {
         HandleArchiveUpload(request, io);
     } else if (TestStr(admin_url, "/api/archives/restore") && request.method == http_RequestMethod::Post) {
         HandleArchiveRestore(request, io);
@@ -990,6 +990,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 int64_t snapshot = 0;
 
                 PruneOldFiles(gp_domain.config.archive_directory, "*.goupilearchive", false,
+                              gp_domain.config.archive_retention * 86400 * 1000);
+                PruneOldFiles(gp_domain.config.archive_directory, "*.goarch", false,
                               gp_domain.config.archive_retention * 86400 * 1000, &snapshot);
 
                 TimeSpec spec = DecomposeTime(time, gp_domain.config.archive_zone);

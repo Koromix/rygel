@@ -219,7 +219,7 @@ function AdminController() {
                         ${!archives.length ? html`<tr><td colspan="4">Aucune archive</td></tr>` : ''}
                         ${archives.map(archive => html`
                             <tr>
-                                <td style="text-align: left;"><a href=${util.pasteURL('/admin/api/archives/download', {filename: archive.filename})}
+                                <td style="text-align: left;"><a href=${'/admin/api/archives/files/' + archive.filename}
                                                                  download>${archive.filename}</a></td>
                                 <td>${util.formatDiskSize(archive.size)}</td>
                                 <td><a @click=${ui.wrapAction(e => runRestoreBackupDialog(e, archive.filename))}>Restaurer</a></td>
@@ -270,7 +270,8 @@ function AdminController() {
                 let progress = log.progress('Envoi en cours');
 
                 try {
-                    let response = await net.fetch('/admin/api/archives/upload', {
+                    let url = '/admin/api/archives/files/' + archive.value.name;
+                    let response = await net.fetch(url, {
                         method: 'PUT',
                         body: archive.value,
                         timeout: null

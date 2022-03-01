@@ -973,7 +973,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = nullptr)
+static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = nullptr)
 {
     BlockAllocator temp_alloc;
 
@@ -1033,9 +1033,10 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
             Span<const char> basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
             SplitStrReverse(basename, '.', &basename);
 
-            Fmt(&buf, "_%1", basename);
+            Fmt(&buf, "+%1.goarch", basename);
+        } else {
+            Fmt(&buf, ".goarch");
         }
-        Fmt(&buf, ".goupilearchive");
 
         archive_filename = buf.Leak().ptr;
     }
@@ -1185,7 +1186,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
 bool ArchiveDomain()
 {
     bool conflict = false;
-    return BackupInstances(nullptr, &conflict) || conflict;
+    return ArchiveInstances(nullptr, &conflict) || conflict;
 }
 
 void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
@@ -1231,7 +1232,7 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
         RG_DEFER_N(ref_guard) { instance->Unref(); };
 
         bool conflict;
-        if (!BackupInstances(instance, &conflict)) {
+        if (!ArchiveInstances(instance, &conflict)) {
             if (conflict) {
                 io->AttachError(409, "Archive already exists");
             }
@@ -1753,7 +1754,7 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 
     io->RunAsync([=]() {
         bool conflict;
-        if (!BackupInstances(nullptr, &conflict)) {
+        if (!ArchiveInstances(nullptr, &conflict)) {
             if (conflict) {
                 io->AttachError(409, "Archive already exists");
             }
@@ -1851,23 +1852,27 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
     HeapArray<char> buf;
 
     json.StartArray();
-    EnumStatus status = EnumerateDirectory(gp_domain.config.archive_directory, "*.goupilearchive", -1,
+    EnumStatus status = EnumerateDirectory(gp_domain.config.archive_directory, nullptr, -1,
                                            [&](const char *basename, FileType) {
-        buf.RemoveFrom(0);
+        Span<const char> extension = GetPathExtension(basename);
 
-        const char *filename = Fmt(&buf, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+        if (extension == ".goarch" || extension == ".goupilearchive") {
+            buf.RemoveFrom(0);
 
-        FileInfo file_info;
-        if (!StatFile(filename, &file_info))
-            return false;
+            const char *filename = Fmt(&buf, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
-        // Don't list archives currently in creation
-        if (file_info.size) {
-            json.StartObject();
-            json.Key("filename"); json.String(basename);
-            json.Key("size"); json.Int64(file_info.size);
-            json.Key("mtime"); json.Int64(file_info.mtime);
-            json.EndObject();
+            FileInfo file_info;
+            if (!StatFile(filename, &file_info))
+                return false;
+
+            // Don't list archives currently in creation
+            if (file_info.size) {
+                json.StartObject();
+                json.Key("filename"); json.String(basename);
+                json.Key("size"); json.Int64(file_info.size);
+                json.Key("mtime"); json.Int64(file_info.mtime);
+                json.EndObject();
+            }
         }
 
         return true;
@@ -1899,26 +1904,22 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    const char *basename = request.GetQueryValue("filename");
-    if (!basename) {
-        LogError("Missing 'filename' paramreter");
+    const char *basename = request.url + 26;
+
+    // Safety checks
+    if (!StartsWith(request.url, "/admin/api/archives/files/")) {
+        LogError("Malformed or missing filename");
         io->AttachError(422);
         return;
     }
-
-    // Safety checks
-    if (PathIsAbsolute(basename)) {
-        LogError("Path must not be absolute");
-        io->AttachError(403);
+    if (!basename[0] || strpbrk(basename, RG_PATH_SEPARATORS)) {
+        LogError("Filename cannot be empty or contain path separators");
+        io->AttachError(422);
         return;
     }
-    if (PathContainsDotDot(basename)) {
-        LogError("Path must not contain any '..' component");
-        io->AttachError(403);
-        return;
-    }
-    if (GetPathExtension(basename) != ".goupilearchive") {
-        LogError("Path must end with '.goupilearchive' extension");
+    if (GetPathExtension(basename) != ".goarch" &&
+            GetPathExtension(basename) != ".goupilearchive") {
+        LogError("Path must end with '.goarch' or '.goupilearchive' extension");
         io->AttachError(403);
         return;
     }
@@ -1957,10 +1958,27 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
+    const char *basename = request.url + 26;
+
+    if (!StartsWith(request.url, "/admin/api/archives/files/")) {
+        LogError("Malformed or missing filename");
+        io->AttachError(422);
+        return;
+    }
+    if (!basename[0] || strpbrk(basename, RG_PATH_SEPARATORS)) {
+        LogError("Filename cannot be empty or contain path separators");
+        io->AttachError(422);
+        return;
+    }
+    if (GetPathExtension(basename) != ".goarch" &&
+            GetPathExtension(basename) != ".goupilearchive") {
+        LogError("Path must end with '.goarch' or '.goupilearchive' extension");
+        io->AttachError(403);
+        return;
+    }
+
     io->RunAsync([=]() {
-        int64_t time = GetUnixTime();
-        const char *filename = Fmt(&io->allocator, "%1%/upload_%2@%3.goupilearchive",
-                                   gp_domain.config.archive_directory, session->username, time).ptr;
+        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
         StreamWriter writer;
         if (!writer.Open(filename, (int)StreamWriterFlag::Exclusive |
@@ -2065,8 +2083,9 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             io->AttachError(403);
             return;
         }
-        if (GetPathExtension(basename) != ".goupilearchive") {
-            LogError("Path must end with '.goupilearchive' extension");
+        if (GetPathExtension(basename) != ".goarch" &&
+                GetPathExtension(basename) != ".goupilearchive") {
+            LogError("Path must end with '.goarch' or '.goupilearchive' extension");
             io->AttachError(403);
             return;
         }
@@ -2199,7 +2218,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         // Save current instances
         {
             bool conflict;
-            if (!BackupInstances(nullptr, &conflict)) {
+            if (!ArchiveInstances(nullptr, &conflict)) {
                 if (conflict) {
                     io->AttachError(409, "Archive already exists");
                 }
