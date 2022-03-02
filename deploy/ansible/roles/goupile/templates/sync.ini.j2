@@ -26,9 +26,9 @@ DefaultPassword = {{ goupile_default_password }}
 {% if goupile_archive_hour is defined -%}
 
 [Archives]
-Hour = {{ goupile_archive_hour }}
-HourZone = {{ goupile_archive_zone }}
-Retention = {{ goupile_archive_retention }}
+AutoHour = {{ goupile_archive_hour }}
+AutoZone = {{ goupile_archive_zone }}
+RetentionDays = {{ goupile_archive_retention }}
 
 {%- endif %}
 
