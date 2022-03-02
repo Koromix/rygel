@@ -770,8 +770,10 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
         const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
 
         FileInfo file_info;
-        if (!StatFile(filename, &file_info))
+        if (!StatFile(filename, &file_info)) {
+            complete = false;
             return true;
+        }
 
         switch (file_info.type) {
             case FileType::Directory: {
@@ -803,7 +805,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
             case FileType::Link:
             case FileType::Unknown: {
                 // Should not happen, don't touch this crap
-                LogError("Unexpected non-regular file '%1'", filename);
+                LogDebug("Unexpected non-regular file '%1'", filename);
                 complete = false;
             } break;
         }
