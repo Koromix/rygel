@@ -405,6 +405,7 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(instance, "float", PrimitiveKind::Float32, 4);
     RegisterPrimitiveType(instance, "double", PrimitiveKind::Float64, 8);
     RegisterPrimitiveType(instance, "string", PrimitiveKind::String, sizeof(void *));
+    RegisterPrimitiveType(instance, "str", PrimitiveKind::String, sizeof(void *));
 
     Napi::Object types = Napi::Object::New(env);
     for (TypeInfo &type: instance->types) {
