@@ -657,7 +657,7 @@ class LinkedAllocator final: public Allocator {
     struct Bucket {
          // Keep head first or stuff will break
         Node head;
-        alignas(8) uint8_t data[];
+        alignas(16) uint8_t data[];
     };
 
     Allocator *allocator;
