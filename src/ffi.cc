@@ -183,30 +183,27 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    std::shared_ptr<LibraryData> lib = std::make_shared<LibraryData>();
-
-    Napi::Object obj = Napi::Object::New(env);
-
     // Load shared library
+    void *module = nullptr;
 #ifdef _WIN32
     if (info[0].IsString()) {
         std::u16string filename = info[0].As<Napi::String>();
-        lib->module = LoadLibraryW((LPCWSTR)filename.c_str());
+        module = LoadLibraryW((LPCWSTR)filename.c_str());
 
-        if (!lib->module) {
+        if (!module) {
             ThrowError<Napi::Error>(env, "Failed to load shared library: %1", GetWin32ErrorString());
             return env.Null();
         }
     } else {
-        lib->module = GetModuleHandle(nullptr);
-        RG_ASSERT(lib->module);
+        module = GetModuleHandle(nullptr);
+        RG_ASSERT(module);
     }
 #else
     if (info[0].IsString()) {
         std::string filename = info[0].As<Napi::String>();
-        lib->module = dlopen(filename.c_str(), RTLD_NOW);
+        module = dlopen(filename.c_str(), RTLD_NOW);
 
-        if (!lib->module) {
+        if (!module) {
             const char *msg = dlerror();
 
             if (StartsWith(msg, filename.c_str())) {
@@ -220,13 +217,14 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
             return env.Null();
         }
     } else {
-        lib->module = RTLD_DEFAULT;
+        module = RTLD_DEFAULT;
     }
 #endif
 
+    std::shared_ptr<LibraryHolder> lib = std::make_shared<LibraryHolder>(module);
+    Napi::Object obj = Napi::Object::New(env);
     Napi::Object functions = info[1].As<Napi::Array>();
     Napi::Array keys = functions.GetPropertyNames();
-    Size extra_size = 0;
 
     for (uint32_t i = 0; i < keys.Length(); i++) {
         FunctionInfo *func = new FunctionInfo();
@@ -235,7 +233,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         std::string key = ((Napi::Value)keys[i]).As<Napi::String>();
         Napi::Array value = ((Napi::Value)functions[key]).As<Napi::Array>();
 
-        func->name = DuplicateString(key.c_str(), &lib->str_alloc).ptr;
+        func->name = DuplicateString(key.c_str(), &instance->str_alloc).ptr;
         func->decorated_name = func->name;
         func->lib = lib;
 
@@ -280,7 +278,6 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         func->ret.type = ResolveType(instance, value[0u]);
         if (!func->ret.type)
             return env.Null();
-        func->scratch_size = AlignLen(func->ret.type->size, 16);
 
         for (uint32_t j = 0; j < parameters.Length(); j++) {
             ParameterInfo param = {};
@@ -293,22 +290,15 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
                 return env.Null();
             }
             func->parameters.Append(param);
-
-            func->scratch_size += AlignLen(param.type->size, 16);
         }
 
-        // That's enough extra space for pretty much every ABI supported, with 16 bytes of
-        // bonus for each parameter in case we need to put pointers and exta-align them.
-        extra_size = std::max(extra_size, func->scratch_size +
-                                          AlignLen(8 * (func->parameters.len + 1), 16));
-
-        if (!AnalyseFunction(func))
+        if (!AnalyseFunction(instance, func))
             return env.Null();
 
 #ifdef _WIN32
-        func->func = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
+        func->func = (void *)GetProcAddress((HMODULE)module, func->decorated_name);
 #else
-        func->func = dlsym(lib->module, func->decorated_name);
+        func->func = dlsym(module, func->decorated_name);
 #endif
         if (!func->func) {
             ThrowError<Napi::Error>(env, "Cannot find function '%1' in shared library", key.c_str());
@@ -322,12 +312,10 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         obj.Set(key, wrapper);
     }
 
-    lib->stack.AppendDefault(Mebibytes(1) + extra_size);
-
     return obj;
 }
 
-LibraryData::~LibraryData()
+LibraryHolder::~LibraryHolder()
 {
 #ifdef _WIN32
     if (module && module != GetModuleHandle(nullptr)) {
@@ -428,6 +416,15 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     return types;
 }
 
+InstanceData::InstanceData()
+{
+    stack_mem.len = Mebibytes(2);
+    stack_mem.ptr = (uint8_t *)Allocator::Allocate(&mem_alloc, stack_mem.len);
+
+    heap_mem.len = Mebibytes(4);
+    heap_mem.ptr = (uint8_t *)Allocator::Allocate(&mem_alloc, heap_mem.len);
+}
+
 }
 
 #if NODE_WANT_INTERNALS
@@ -463,6 +460,7 @@ static void InitInternal(v8::Local<v8::Object> target, v8::Local<v8::Value>,
     InstanceData *instance = new InstanceData();
     env_cxx.SetInstanceData(instance);
 
+    instance->debug = GetDebugFlag("DUMP_CALLS");
     FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
     SetValue(env, target, "struct", Napi::Function::New(env_napi, CreateStructType));
@@ -483,6 +481,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     InstanceData *instance = new InstanceData();
     env.SetInstanceData(instance);
 
+    instance->debug = GetDebugFlag("DUMP_CALLS");
     FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
     exports.Set("struct", Napi::Function::New(env, CreateStructType));

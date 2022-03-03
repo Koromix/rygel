@@ -26,19 +26,8 @@ extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallF(const void *func, uint8_t *sp);
 extern "C" double ForwardCallD(const void *func, uint8_t *sp);
 
-bool AnalyseFunction(FunctionInfo *func)
+bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
 {
-#ifdef _WIN32
-    if (func->convention == CallConvention::Stdcall) {
-        Size total = 0;
-        for (const ParameterInfo &param: func->parameters) {
-            total += param.type->size;
-        }
-
-        func->decorated_name = Fmt(&func->lib->str_alloc, "_%1@%2", func->name, total).ptr;
-    }
-#endif
-
     if (IsIntegral(func->ret.type->primitive)) {
         func->ret.trivial = true;
     } else if (func->ret.type->members.len == 1 && IsIntegral(func->ret.type->members[0].type->primitive)) {
@@ -50,6 +39,18 @@ bool AnalyseFunction(FunctionInfo *func)
 #endif
     }
 
+    Size params_size = 0;
+    for (const ParameterInfo &param: func->parameters) {
+        params_size += std::max((int16_t)4, param.type->size);
+    }
+    func->args_size = params_size + 4 * !func->ret.trivial;
+
+#ifdef _WIN32
+    if (func->convention == CallConvention::Stdcall) {
+        func->decorated_name = Fmt(&instance->str_alloc, "_%1@%2", func->name, params_size).ptr;
+    }
+#endif
+
     return true;
 }
 
@@ -57,11 +58,9 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-
     FunctionInfo *func = (FunctionInfo *)info.Data();
-    LibraryData *lib = func->lib.get();
 
-    RG_DEFER { lib->tmp_alloc.ReleaseAll(); };
+    CallData call(env, instance, func);
 
     // Sanity checks
     if (info.Length() < (uint32_t)func->parameters.len) {
@@ -69,28 +68,17 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    // Stack pointer and register
-    uint8_t *top_ptr = lib->stack.end();
     uint8_t *return_ptr = nullptr;
-    uint8_t *args_ptr = nullptr;
-    uint8_t *sp_ptr = nullptr;
+    uint32_t *args_ptr = nullptr;
 
-    // Reserve space for return value if needed
-    if (func->ret.trivial) {
-        args_ptr = top_ptr - func->scratch_size;
-        sp_ptr = args_ptr;
-    } else {
-        return_ptr = top_ptr - AlignLen(func->ret.type->size, 16);
-        args_ptr = return_ptr - func->scratch_size;
-        sp_ptr = args_ptr;
-
-        *(uint32_t *)args_ptr = (uint32_t)return_ptr;
-        args_ptr += 4;
+    // Pass return value in register or through memory
+    if (RG_UNLIKELY(!call.AllocStack(func->args_size, 16, &args_ptr)))
+        return env.Null();
+    if (!func->ret.trivial) {
+        if (RG_UNLIKELY(!call.AllocHeap(func->ret.type->size, 16, &return_ptr)))
+            return env.Null();
+        *(args_ptr++) = (uint32_t)return_ptr;
     }
-
-    RG_ASSERT(AlignUp(lib->stack.ptr, 16) == lib->stack.ptr);
-    RG_ASSERT(AlignUp(lib->stack.end(), 16) == lib->stack.end());
-    RG_ASSERT(AlignUp(sp_ptr, 16) == sp_ptr);
 
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
@@ -107,8 +95,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 }
 
                 bool b = value.As<Napi::Boolean>();
-                *(bool *)args_ptr = b;
-                args_ptr += 4;
+                *(bool *)(args_ptr++) = b;
             } break;
             case PrimitiveKind::Int8:
             case PrimitiveKind::UInt8:
@@ -121,9 +108,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                int32_t v = CopyNodeNumber<int32_t>(value);
-                *(uint32_t *)args_ptr = (uint32_t)v;
-                args_ptr += 4;
+                int32_t v = CopyNumber<int32_t>(value);
+                *(args_ptr++) = (uint32_t)v;
             } break;
             case PrimitiveKind::Int64:
             case PrimitiveKind::UInt64: {
@@ -132,9 +118,9 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                int64_t v = CopyNodeNumber<int64_t>(value);
+                int64_t v = CopyNumber<int64_t>(value);
                 *(uint64_t *)args_ptr = (uint64_t)v;
-                args_ptr += 8;
+                args_ptr += 2;
             } break;
             case PrimitiveKind::Float32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -142,9 +128,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                float f = CopyNodeNumber<float>(value);
-                *(float *)args_ptr = f;
-                args_ptr += 4;
+                float f = CopyNumber<float>(value);
+                *(float *)(args_ptr++) = f;
             } break;
             case PrimitiveKind::Float64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -152,9 +137,9 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                double d = CopyNodeNumber<double>(value);
+                double d = CopyNumber<double>(value);
                 *(double *)args_ptr = d;
-                args_ptr += 8;
+                args_ptr += 2;
             } break;
             case PrimitiveKind::String: {
                 if (RG_UNLIKELY(!value.IsString())) {
@@ -162,9 +147,10 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                const char *str = CopyNodeString(value, &lib->tmp_alloc);
-                *(const char **)args_ptr = str;
-                args_ptr += 4;
+                const char *str = call.CopyString(value);
+                if (RG_UNLIKELY(!str))
+                    return env.Null();
+                *(const char **)(args_ptr++) = str;
             } break;
             case PrimitiveKind::Pointer: {
                 if (RG_UNLIKELY(!CheckValueTag(instance, value, param.type))) {
@@ -173,8 +159,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 }
 
                 void *ptr = value.As<Napi::External<void>>();
-                *(void **)args_ptr = ptr;
-                args_ptr += 4;
+                *(void **)(args_ptr++) = ptr;
             } break;
 
             case PrimitiveKind::Record: {
@@ -185,26 +170,28 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
                 Napi::Object obj = value.As<Napi::Object>();
 
-                args_ptr = AlignUp(args_ptr, param.type->align);
-                if (!PushObject(obj, param.type, &lib->tmp_alloc, args_ptr))
+                uint8_t *ptr = (uint8_t *)AlignUp(args_ptr, param.type->align);
+                if (!call.PushObject(obj, param.type, ptr))
                     return env.Null();
-                args_ptr += param.type->size;
+                args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
             } break;
         }
     }
 
-    // DumpStack(func, MakeSpan(sp_ptr, top_ptr - sp_ptr));
+    if (instance->debug) {
+        call.DumpDebug();
+    }
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Float32: {
-            float f = ForwardCallF(func->func, sp_ptr);
+            float f = ForwardCallF(func->func, call.GetSP());
 
             return Napi::Number::New(env, (double)f);
         } break;
 
         case PrimitiveKind::Float64: {
-            double d = ForwardCallD(func->func, sp_ptr);
+            double d = ForwardCallD(func->func, call.GetSP());
 
             return Napi::Number::New(env, d);
         } break;
@@ -212,7 +199,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         default: {
             // We can't directly use the struct as a return value, because not all platforms
             // treat it the same: it is trivial only on Windows (see AnalyseFunction).
-            uint64_t raw = ForwardCallG(func->func, sp_ptr);
+            uint64_t raw = ForwardCallG(func->func, call.GetSP());
             struct {
                 uint32_t rax;
                 uint32_t rdx;

@@ -60,7 +60,7 @@ static bool IsHFA(const TypeInfo *type)
     return true;
 }
 
-bool AnalyseFunction(FunctionInfo *func)
+bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     if (IsHFA(func->ret.type)) {
         func->ret.vec_count = func->ret.type->members.len;
@@ -133,6 +133,7 @@ bool AnalyseFunction(FunctionInfo *func)
         }
     }
 
+    func->args_size = 16 * func->parameters.len;
     func->forward_fp = (vec_avail < 8);
 
     return true;
@@ -156,14 +157,14 @@ static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest
                 return false;
             }
 
-            *(float *)dest = CopyNodeNumber<float>(value);
+            *(float *)dest = CopyNumber<float>(value);
         } else if (member.type->primitive == PrimitiveKind::Float64) {
             if (!value.IsNumber() && !value.IsBigInt()) {
                 ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
                 return false;
             }
 
-            *(double *)dest = CopyNodeNumber<double>(value);
+            *(double *)dest = CopyNumber<double>(value);
         } else {
             RG_UNREACHABLE();
         }
@@ -201,11 +202,9 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-
     FunctionInfo *func = (FunctionInfo *)info.Data();
-    LibraryData *lib = func->lib.get();
 
-    RG_DEFER { lib->tmp_alloc.ReleaseAll(); };
+    CallData call(env, instance, func);
 
     // Sanity checks
     if (info.Length() < (uint32_t)func->parameters.len) {
@@ -213,42 +212,23 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    // Stack pointer and register
-    uint8_t *top_ptr = lib->stack.end();
-    uint8_t *scratch_ptr = top_ptr - func->scratch_size;
     uint8_t *return_ptr = nullptr;
     uint8_t *args_ptr = nullptr;
-    uint64_t *gpr_ptr = nullptr, *vec_ptr = nullptr;
-    uint8_t *sp_ptr = nullptr;
+    uint64_t *gpr_ptr = nullptr;
+    uint64_t *vec_ptr = nullptr;
 
     // Return through registers unless it's too big
-    if (!func->ret.use_memory) {
-        args_ptr = scratch_ptr - AlignLen(8 * func->parameters.len, 16);
-        vec_ptr = (uint64_t *)args_ptr - 8;
-        gpr_ptr = vec_ptr - 9;
-        sp_ptr = (uint8_t *)gpr_ptr;
-
-#ifdef RG_DEBUG
-        memset(sp_ptr, 0, top_ptr - sp_ptr);
-#endif
-    } else {
-        return_ptr = scratch_ptr - AlignLen(func->ret.type->size, 16);
-
-        args_ptr = return_ptr - AlignLen(8 * func->parameters.len, 16);
-        vec_ptr = (uint64_t *)args_ptr - 8;
-        gpr_ptr = vec_ptr - 9;
-        sp_ptr = (uint8_t *)gpr_ptr;
-
-#ifdef RG_DEBUG
-        memset(sp_ptr, 0, top_ptr - sp_ptr);
-#endif
-
+    if (RG_UNLIKELY(!call.AllocStack(func->args_size, 16, &args_ptr)))
+        return env.Null();
+    if (RG_UNLIKELY(!call.AllocStack(8 * 8, 8, &vec_ptr)))
+        return env.Null();
+    if (RG_UNLIKELY(!call.AllocStack(9 * 8, 8, &gpr_ptr)))
+        return env.Null();
+    if (func->ret.use_memory) {
+        if (RG_UNLIKELY(!call.AllocHeap(func->ret.type->size, 16, &return_ptr)))
+            return env.Null();
         gpr_ptr[8] = (uint64_t)return_ptr;
     }
-
-    RG_ASSERT(AlignUp(lib->stack.ptr, 16) == lib->stack.ptr);
-    RG_ASSERT(AlignUp(lib->stack.end(), 16) == lib->stack.end());
-    RG_ASSERT(AlignUp(sp_ptr - 8, 16) == sp_ptr);
 
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
@@ -285,7 +265,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                int64_t v = CopyNodeNumber<int64_t>(value);
+                int64_t v = CopyNumber<int64_t>(value);
 
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint64_t)v;
@@ -301,7 +281,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                float f = CopyNodeNumber<float>(value);
+                float f = CopyNumber<float>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
                     memcpy(vec_ptr++, &f, 4);
@@ -317,7 +297,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                double d = CopyNodeNumber<double>(value);
+                double d = CopyNumber<double>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
                     memcpy(vec_ptr++, &d, 8);
@@ -333,7 +313,9 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                const char *str = CopyNodeString(value, &lib->tmp_alloc);
+                const char *str = call.CopyString(value);
+                if (RG_UNLIKELY(!str))
+                    return env.Null();
 
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint64_t)str;
@@ -376,20 +358,21 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     if (param.gpr_count) {
                         RG_ASSERT(param.type->align <= 8);
 
-                        if (!PushObject(obj, param.type, &lib->tmp_alloc, (uint8_t *)gpr_ptr))
+                        if (!call.PushObject(obj, param.type, (uint8_t *)gpr_ptr))
                             return env.Null();
                         gpr_ptr += param.gpr_count;
                     } else if (param.type->size) {
                         int16_t align = (param.type->align <= 4) ? 4 : 8;
 
                         args_ptr = AlignUp(args_ptr, align);
-                        if (!PushObject(obj, param.type, &lib->tmp_alloc, args_ptr))
+                        if (!call.PushObject(obj, param.type, args_ptr))
                             return env.Null();
                         args_ptr += AlignLen(param.type->size, 8);
                     }
                 } else {
-                    uint8_t *ptr = scratch_ptr;
-                    scratch_ptr += AlignLen(param.type->size, 16);
+                    uint8_t *ptr;
+                    if (RG_UNLIKELY(!call.AllocHeap(param.type->size, 16, &ptr)))
+                        return env.Null();
 
                     if (param.gpr_count) {
                         RG_ASSERT(param.gpr_count == 1);
@@ -402,18 +385,20 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                         args_ptr += 8;
                     }
 
-                    if (!PushObject(obj, param.type, &lib->tmp_alloc, ptr))
+                    if (!call.PushObject(obj, param.type, ptr))
                         return env.Null();
                 }
             } break;
         }
     }
 
-    // DumpStack(func, MakeSpan(sp_ptr, top_ptr - sp_ptr));
+    if (instance->debug) {
+        call.DumpDebug();
+    }
 
 #define PERFORM_CALL(Suffix) \
-        (func->forward_fp ? ForwardCallX ## Suffix(func->func, sp_ptr) \
-                          : ForwardCall ## Suffix(func->func, sp_ptr))
+        (func->forward_fp ? ForwardCallX ## Suffix(func->func, call.GetSP()) \
+                          : ForwardCall ## Suffix(func->func, call.GetSP()))
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {

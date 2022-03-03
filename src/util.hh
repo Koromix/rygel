@@ -21,30 +21,33 @@ namespace RG {
 
 struct InstanceData;
 
+template <typename T, typename... Args>
+void ThrowError(Napi::Env env, const char *msg, Args... args)
+{
+    char buf[1024];
+    Fmt(buf, msg, args...);
+
+    T::New(env, buf).ThrowAsJavaScriptException();
+}
+
 static inline Size AlignLen(Size len, Size align)
 {
     Size aligned = (len + align - 1) / align * align;
     return aligned;
 }
 
-static inline uint8_t *AlignUp(uint8_t *ptr, Size align)
+template <typename T>
+static inline T *AlignUp(T *ptr, Size align)
 {
     uint8_t *aligned = (uint8_t *)(((uintptr_t)ptr + align - 1) / align * align);
-    return aligned;
-}
-static inline const uint8_t *AlignUp(const uint8_t *ptr, Size align)
-{
-    const uint8_t *aligned = (const uint8_t *)(((uintptr_t)ptr + align - 1) / align * align);
-    return aligned;
+    return (T *)aligned;
 }
 
-template <typename T, typename... Args>
-static void ThrowError(Napi::Env env, const char *msg, Args... args)
+template <typename T>
+static inline T *AlignDown(T *ptr, Size align)
 {
-    char buf[1024];
-    Fmt(buf, msg, args...);
-
-    T::New(env, buf).ThrowAsJavaScriptException();
+    uint8_t *aligned = (uint8_t *)((uintptr_t)ptr / align * align);
+    return (T *)aligned;
 }
 
 // Can be slow, only use for error messages
@@ -53,8 +56,94 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value);
 void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 
+class CallData {
+    Napi::Env env;
+    InstanceData *instance;
+    const FunctionInfo *func;
+
+    Span<uint8_t> old_stack_mem;
+    Span<uint8_t> old_heap_mem;
+
+    Span<uint8_t> *stack_mem;
+    Span<uint8_t> *heap_mem;
+
+public:
+    CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func);
+    ~CallData();
+
+    Span<uint8_t> GetStack() const
+    {
+        uint8_t *sp = stack_mem->end();
+        Size len = old_stack_mem.end() - sp;
+
+        return MakeSpan(sp, len);
+    }
+    uint8_t *GetSP() const { return stack_mem->end(); };
+
+    Span<uint8_t> GetHeap() const
+    {
+        uint8_t *ptr = heap_mem->ptr;
+        Size len = ptr - old_heap_mem.ptr;
+
+        return MakeSpan(ptr, len);
+    }
+
+    template <typename T>
+    bool AllocStack(Size size, Size align, T **out_ptr);
+    template <typename T>
+    bool AllocHeap(Size size, Size align, T **out_ptr);
+
+    const char *CopyString(const Napi::Value &value);
+    bool PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest);
+
+    void DumpDebug() const;
+};
+
 template <typename T>
-T CopyNodeNumber(const Napi::Value &value)
+bool CallData::AllocStack(Size size, Size align, T **out_ptr)
+{
+    uint8_t *ptr = AlignDown(stack_mem->end() - size, align);
+    Size delta = stack_mem->end() - ptr;
+
+    if (RG_UNLIKELY(stack_mem->len < delta)) {
+        ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
+        return false;
+    }
+
+    if (instance->debug) {
+        memset(ptr, 0, delta);
+    }
+
+    stack_mem->len -= delta;
+
+    *out_ptr = (T *)ptr;
+    return true;
+}
+
+template <typename T>
+bool CallData::AllocHeap(Size size, Size align, T **out_ptr)
+{
+    uint8_t *ptr = AlignUp(heap_mem->ptr, align);
+    Size delta = size + (ptr - heap_mem->ptr);
+
+    if (RG_UNLIKELY(delta > heap_mem->len)) {
+        ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
+        return false;
+    }
+
+    if (instance->debug) {
+        memset(heap_mem->ptr, 0, (size_t)delta);
+    }
+
+    heap_mem->ptr += delta;
+    heap_mem->len -= delta;
+
+    *out_ptr = (T *)ptr;
+    return true;
+}
+
+template <typename T>
+T CopyNumber(const Napi::Value &value)
 {
     RG_ASSERT(value.IsNumber() || value.IsBigInt());
 
@@ -70,11 +159,6 @@ T CopyNodeNumber(const Napi::Value &value)
     RG_UNREACHABLE();
 }
 
-const char *CopyNodeString(const Napi::Value &value, Allocator *alloc);
-
-bool PushObject(const Napi::Object &obj, const TypeInfo *type, Allocator *alloc, uint8_t *dest);
 Napi::Object PopObject(Napi::Env env, const uint8_t *ptr, const TypeInfo *type);
-
-void DumpStack(const FunctionInfo *func, Span<const uint8_t> sp);
 
 }

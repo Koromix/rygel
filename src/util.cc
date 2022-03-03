@@ -12,6 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "vendor/libcc/libcc.hh"
+#include "call.hh"
 #include "ffi.hh"
 #include "util.hh"
 
@@ -59,7 +60,22 @@ bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *
     return match;
 }
 
-const char *CopyNodeString(const Napi::Value &value, Allocator *alloc)
+CallData::CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func)
+    : env(env), instance(instance), func(func),
+      stack_mem(&instance->stack_mem), heap_mem(&instance->heap_mem),
+      old_stack_mem(instance->stack_mem), old_heap_mem(instance->heap_mem)
+{
+    RG_ASSERT(AlignUp(stack_mem->ptr, 16) == stack_mem->ptr);
+    RG_ASSERT(AlignUp(stack_mem->end(), 16) == stack_mem->end());
+}
+
+CallData::~CallData()
+{
+    instance->stack_mem = old_stack_mem;
+    instance->heap_mem = old_heap_mem;
+}
+
+const char *CallData::CopyString(const Napi::Value &value)
 {
     RG_ASSERT(value.IsString());
 
@@ -72,15 +88,18 @@ const char *CopyNodeString(const Napi::Value &value, Allocator *alloc)
 
     Span<char> buf;
     buf.len = (Size)len + 1;
-    buf.ptr = (char *)Allocator::Allocate(alloc, buf.len);
+    if (RG_UNLIKELY(!AllocHeap(buf.len, 1, &buf.ptr)))
+        return nullptr;
 
-    status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
-    RG_ASSERT(status == napi_ok);
+    if (RG_UNLIKELY(napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len) != napi_ok)) {
+        ThrowError<Napi::Error>(env, "Failed to convert string to UTF-8");
+        return nullptr;
+    }
 
     return buf.ptr;
 }
 
-bool PushObject(const Napi::Object &obj, const TypeInfo *type, Allocator *alloc, uint8_t *dest)
+bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest)
 {
     Napi::Env env = obj.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -126,7 +145,7 @@ bool PushObject(const Napi::Object &obj, const TypeInfo *type, Allocator *alloc,
                     return false;
                 }
 
-                int64_t v = CopyNodeNumber<int64_t>(value);
+                int64_t v = CopyNumber<int64_t>(value);
                 memcpy(dest, &v, member.type->size); // Little Endian
             } break;
             case PrimitiveKind::Float32: {
@@ -135,7 +154,7 @@ bool PushObject(const Napi::Object &obj, const TypeInfo *type, Allocator *alloc,
                     return false;
                 }
 
-                float f = CopyNodeNumber<float>(value);
+                float f = CopyNumber<float>(value);
                 memcpy(dest, &f, 4);
             } break;
             case PrimitiveKind::Float64: {
@@ -144,7 +163,7 @@ bool PushObject(const Napi::Object &obj, const TypeInfo *type, Allocator *alloc,
                     return false;
                 }
 
-                double d = CopyNodeNumber<double>(value);
+                double d = CopyNumber<double>(value);
                 memcpy(dest, &d, 8);
             } break;
             case PrimitiveKind::String: {
@@ -153,7 +172,9 @@ bool PushObject(const Napi::Object &obj, const TypeInfo *type, Allocator *alloc,
                     return false;
                 }
 
-                const char *str = CopyNodeString(value, alloc);
+                const char *str = CopyString(value);
+                if (RG_UNLIKELY(!str))
+                    return false;
                 *(const char **)dest = str;
             } break;
             case PrimitiveKind::Pointer: {
@@ -174,7 +195,7 @@ bool PushObject(const Napi::Object &obj, const TypeInfo *type, Allocator *alloc,
                 }
 
                 Napi::Object obj = value.As<Napi::Object>();
-                if (!PushObject(obj, member.type, alloc, dest))
+                if (!PushObject(obj, member.type, dest))
                     return false;
             } break;
         }
@@ -272,26 +293,38 @@ Napi::Object PopObject(Napi::Env env, const uint8_t *ptr, const TypeInfo *type)
     return obj;
 }
 
-void DumpStack(const FunctionInfo *func, Span<const uint8_t> sp)
+static void DumpMemory(const char *type, Span<const uint8_t> bytes)
+{
+    if (bytes.len) {
+        PrintLn(stderr, "%1 at 0x%2 (%3):", type, bytes.ptr, FmtMemSize(bytes.len));
+
+        for (const uint8_t *ptr = bytes.begin(); ptr < bytes.end();) {
+            Print(stderr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16),
+                                              FmtArg((ptr - bytes.begin()) / sizeof(void *)).Pad(-4),
+                                              FmtArg(ptr - bytes.begin()).Pad(-4));
+            for (int i = 0; ptr < bytes.end() && i < sizeof(void *); i++, ptr++) {
+                Print(stderr, " %1", FmtHex(*ptr).Pad0(-2));
+            }
+            PrintLn(stderr);
+        }
+    }
+}
+
+void CallData::DumpDebug() const
 {
     PrintLn(stderr, "%!..+---- %1 ----%!0", func->name);
 
-    PrintLn(stderr, "Parameters:");
-    for (Size i = 0; i < func->parameters.len; i++) {
-        const ParameterInfo &param = func->parameters[i];
-        PrintLn(stderr, "  %1 = %2", i, param.type->name);
-    }
-
-    PrintLn(stderr, "Stack (%1 bytes) at 0x%2:", sp.len, sp.ptr);
-    for (const uint8_t *ptr = sp.begin(); ptr < sp.end();) {
-        Print(stderr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16),
-                                          FmtArg((ptr - sp.begin()) / sizeof(void *)).Pad(-4),
-                                          FmtArg(ptr - sp.begin()).Pad(-4));
-        for (int i = 0; ptr < sp.end() && i < sizeof(void *); i++, ptr++) {
-            Print(stderr, " %1", FmtHex(*ptr).Pad0(-2));
+    if (func->parameters.len) {
+        PrintLn(stderr, "Parameters:");
+        for (Size i = 0; i < func->parameters.len; i++) {
+            const ParameterInfo &param = func->parameters[i];
+            PrintLn(stderr, "  %1 = %2 (%3)", i, param.type->name, FmtMemSize(param.type->size));
         }
-        PrintLn(stderr);
     }
+    PrintLn(stderr, "Return: %1 (%2)", func->ret.type->name, FmtMemSize(func->ret.type->size));
+
+    DumpMemory("Stack", GetStack());
+    DumpMemory("Heap", GetHeap());
 }
 
 }

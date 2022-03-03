@@ -35,7 +35,7 @@ static inline bool IsRegular(Size size)
     return regular;
 }
 
-bool AnalyseFunction(FunctionInfo *func)
+bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     func->ret.regular = IsRegular(func->ret.type->size);
 
@@ -46,6 +46,8 @@ bool AnalyseFunction(FunctionInfo *func)
                              param.type->primitive == PrimitiveKind::Float64);
     }
 
+    func->args_size = AlignLen(8 * std::max((Size)4, func->parameters.len + !func->ret.regular), 16);
+
     return true;
 }
 
@@ -53,11 +55,9 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-
     FunctionInfo *func = (FunctionInfo *)info.Data();
-    LibraryData *lib = func->lib.get();
 
-    RG_DEFER { lib->tmp_alloc.ReleaseAll(); };
+    CallData call(env, instance, func);
 
     // Sanity checks
     if (info.Length() < (uint32_t)func->parameters.len) {
@@ -65,28 +65,20 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    // Stack pointer and register
-    uint8_t *top_ptr = lib->stack.end();
-    uint8_t *scratch_ptr = top_ptr - func->scratch_size;
     uint8_t *return_ptr = nullptr;
-    uint8_t *args_ptr = nullptr;
+    uint64_t *args_ptr = nullptr;
 
-    // Reserve space for return value if needed
-    if (func->ret.regular) {
-        args_ptr = scratch_ptr - AlignLen(8 * std::max((Size)4, func->parameters.len), 16);
-    } else {
-        return_ptr = scratch_ptr - AlignLen(func->ret.type->size, 16);
-
-        args_ptr = return_ptr - AlignLen(8 * std::max((Size)4, func->parameters.len + 1), 16);
-        *(uint64_t *)args_ptr = (uint64_t)return_ptr;
+    // Pass return value in register or through memory
+    if (RG_UNLIKELY(!call.AllocStack(func->args_size, 16, &args_ptr)))
+        return env.Null();
+    if (!func->ret.regular) {
+        if (RG_UNLIKELY(!call.AllocHeap(func->ret.type->size, 16, &return_ptr)))
+            return env.Null();
+        *(uint8_t **)(args_ptr++) = return_ptr;
     }
 
-    RG_ASSERT(AlignUp(lib->stack.ptr, 16) == lib->stack.ptr);
-    RG_ASSERT(AlignUp(lib->stack.end(), 16) == lib->stack.end());
-    RG_ASSERT(AlignUp(args_ptr, 16) == args_ptr);
-
     // Push arguments
-    for (Size i = 0, j = return_ptr ? 8 : 0; i < func->parameters.len; i++, j += 8) {
+    for (Size i = 0; i < func->parameters.len; i++) {
         const ParameterInfo &param = func->parameters[i];
         Napi::Value value = info[i];
 
@@ -100,7 +92,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 }
 
                 bool b = value.As<Napi::Boolean>();
-                *(bool *)(args_ptr + j) = b;
+
+                *(bool *)(args_ptr++) = b;
             } break;
             case PrimitiveKind::Int8:
             case PrimitiveKind::UInt8:
@@ -115,8 +108,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                int64_t v = CopyNodeNumber<int64_t>(value);
-                *(uint64_t *)(args_ptr + j) = (uint64_t)v;
+                int64_t v = CopyNumber<int64_t>(value);
+                *(args_ptr++) = (uint64_t)v;
             } break;
             case PrimitiveKind::Float32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -124,8 +117,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                float f = CopyNodeNumber<float>(value);
-                *(float *)(args_ptr + j) = f;
+                float f = CopyNumber<float>(value);
+                *(float *)(args_ptr++) = f;
             } break;
             case PrimitiveKind::Float64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -133,8 +126,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                double d = CopyNodeNumber<double>(value);
-                *(double *)(args_ptr + j) = d;
+                double d = CopyNumber<double>(value);
+                *(double *)(args_ptr++) = d;
             } break;
             case PrimitiveKind::String: {
                 if (RG_UNLIKELY(!value.IsString())) {
@@ -142,9 +135,12 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                const char *str = CopyNodeString(value, &lib->tmp_alloc);
-                *(const char **)(args_ptr + j) = str;
+                const char *str = call.CopyString(value);
+                if (RG_UNLIKELY(!str))
+                    return env.Null();
+                *(const char **)(args_ptr++) = str;
             } break;
+
             case PrimitiveKind::Pointer: {
                 if (RG_UNLIKELY(!CheckValueTag(instance, value, param.type))) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), i + 1, param.type->name);
@@ -152,7 +148,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 }
 
                 void *ptr = value.As<Napi::External<void>>();
-                *(void **)(args_ptr + j) = ptr;
+                *(void **)(args_ptr++) = ptr;
             } break;
 
             case PrimitiveKind::Record: {
@@ -163,26 +159,27 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
                 uint8_t *ptr;
                 if (param.regular) {
-                    ptr = (uint8_t *)(args_ptr + j);
+                    ptr = (uint8_t *)(args_ptr++);
                 } else {
-                    ptr = scratch_ptr;
-                    *(uint8_t **)(args_ptr + j) = ptr;
-
-                    scratch_ptr = AlignUp(scratch_ptr + param.type->size, 16);
+                    if (RG_UNLIKELY(!call.AllocHeap(param.type->size, 16, &ptr)))
+                        return env.Null();
+                    *(uint8_t **)(args_ptr++) = ptr;
                 }
 
                 Napi::Object obj = value.As<Napi::Object>();
-                if (!PushObject(obj, param.type, &lib->tmp_alloc, ptr))
+                if (!call.PushObject(obj, param.type, ptr))
                     return env.Null();
             } break;
         }
     }
 
-    // DumpStack(func, MakeSpan(args_ptr, top_ptr - args_ptr));
+    if (instance->debug) {
+        call.DumpDebug();
+    }
 
 #define PERFORM_CALL(Suffix) \
-        (func->forward_fp ? ForwardCallX ## Suffix(func->func, args_ptr) \
-                          : ForwardCall ## Suffix(func->func, args_ptr))
+        (func->forward_fp ? ForwardCallX ## Suffix(func->func, call.GetSP()) \
+                          : ForwardCall ## Suffix(func->func, call.GetSP()))
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {

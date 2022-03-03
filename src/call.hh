@@ -19,9 +19,10 @@
 
 namespace RG {
 
+struct InstanceData;
 struct FunctionInfo;
 
-bool AnalyseFunction(FunctionInfo *func);
+bool AnalyseFunction(InstanceData *instance, FunctionInfo *func);
 Napi::Value TranslateCall(const Napi::CallbackInfo &info);
 
 }

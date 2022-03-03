@@ -34,6 +34,7 @@ enum class PrimitiveKind {
     Float32,
     Float64,
     String,
+
     Pointer,
 
     Record
@@ -67,16 +68,12 @@ struct RecordMember {
     const TypeInfo *type;
 };
 
-class LibraryData {
-public:
-    ~LibraryData();
-
+class LibraryHolder {
     void *module = nullptr; // HMODULE on Windows
 
-    BlockAllocator tmp_alloc;
-    HeapArray<uint8_t> stack;
-
-    BlockAllocator str_alloc;
+public:
+    LibraryHolder(void *module) : module(module) {}
+    ~LibraryHolder();
 };
 
 enum class CallConvention {
@@ -97,7 +94,7 @@ struct ParameterInfo {
     int8_t xmm_count;
     bool gpr_first;
 #elif defined(__arm__) || defined(__aarch64__)
-    bool use_memory;
+    bool use_memory; // Only used for return value on ARM32
     int8_t gpr_count;
     int8_t vec_count;
 #elif defined(__i386__) || defined(_M_IX86)
@@ -108,29 +105,38 @@ struct ParameterInfo {
 struct FunctionInfo {
     const char *name;
     const char *decorated_name;
-    std::shared_ptr<LibraryData> lib;
+
+    std::shared_ptr<LibraryHolder> lib;
 
     void *func;
     CallConvention convention;
 
     ParameterInfo ret;
     HeapArray<ParameterInfo> parameters;
-    Size scratch_size; // Total size needed if all arguments were copied together (with align = 16)
 
     // ABI-specific part
 
+    Size args_size;
 #if defined(__arm__) || defined(__aarch64__) || defined(__x86_64__) || defined(_WIN64)
     bool forward_fp;
 #endif
 };
 
 struct InstanceData {
+    InstanceData();
+
     BucketArray<TypeInfo> types;
     HashTable<const char *, TypeInfo *> types_map;
 
+    bool debug;
     uint64_t tag_lower;
 
     BlockAllocator str_alloc;
+
+    Span<uint8_t> stack_mem;
+    Span<uint8_t> heap_mem;
+
+    LinkedAllocator mem_alloc;
 };
 
 }
