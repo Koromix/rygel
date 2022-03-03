@@ -106,9 +106,13 @@ namespace RG {
 // ------------------------------------------------------------------------
 
 #ifndef FELIX
-const char *FelixTarget = "????";
-const char *FelixVersion = "(unknown version)";
-const char *FelixCompiler = "????";
+    #ifdef FELIX_TARGET
+        const char *FelixTarget = RG_STRINGIFY(FELIX_TARGET);
+    #else
+        const char *FelixTarget = "????";
+    #endif
+    const char *FelixVersion = "(unknown version)";
+    const char *FelixCompiler = "????";
 #endif
 
 extern "C" void AssertMessage(const char *filename, int line, const char *cond)
@@ -1658,11 +1662,13 @@ const char *GetQualifiedEnv(const char *name)
     RG_ASSERT(strlen(name) < 256);
 
     LocalArray<char, 1024> buf;
+#if defined(FELIX) || defined(FELIX_TARGET)
     while (FelixTarget[buf.len]) {
         int c = UpperAscii(FelixTarget[buf.len]);
         buf.Append((char)c);
     }
     buf.Append('_');
+#endif
     buf.Append(name);
     buf.Append(0);
 
