@@ -106,9 +106,13 @@ namespace RG {
 // ------------------------------------------------------------------------
 
 #ifndef FELIX
-const char *FelixTarget = "????";
-const char *FelixVersion = "(unknown version)";
-const char *FelixCompiler = "????";
+    #ifdef FELIX_TARGET
+        const char *FelixTarget = RG_STRINGIFY(FELIX_TARGET);
+    #else
+        const char *FelixTarget = "????";
+    #endif
+    const char *FelixVersion = "(unknown version)";
+    const char *FelixCompiler = "????";
 #endif
 
 extern "C" void AssertMessage(const char *filename, int line, const char *cond)
@@ -1658,11 +1662,13 @@ const char *GetQualifiedEnv(const char *name)
     RG_ASSERT(strlen(name) < 256);
 
     LocalArray<char, 1024> buf;
+#if defined(FELIX) || defined(FELIX_TARGET)
     while (FelixTarget[buf.len]) {
         int c = UpperAscii(FelixTarget[buf.len]);
         buf.Append((char)c);
     }
     buf.Append('_');
+#endif
     buf.Append(name);
     buf.Append(0);
 
@@ -4351,6 +4357,8 @@ static RG_THREAD_LOCAL int64_t rnd_time;
 static RG_THREAD_LOCAL pid_t rnd_pid;
 #endif
 static RG_THREAD_LOCAL uint32_t rnd_state[16];
+static RG_THREAD_LOCAL uint8_t rnd_buf[64];
+static RG_THREAD_LOCAL Size rnd_offset;
 
 static void InitChaCha20(uint32_t state[16], uint32_t key[8], uint32_t iv[2])
 {
@@ -4364,8 +4372,10 @@ static void InitChaCha20(uint32_t state[16], uint32_t key[8], uint32_t iv[2])
     memcpy(state + 14, iv, 8);
 }
 
-static void RunChaCha20(uint32_t state[16], uint32_t out_buf[16])
+static void RunChaCha20(uint32_t state[16], uint8_t out_buf[64])
 {
+    uint32_t *out_buf32 = (uint32_t *)out_buf;
+
     uint32_t x[16];
     memcpy(x, state, RG_SIZE(x));
 
@@ -4412,7 +4422,7 @@ static void RunChaCha20(uint32_t state[16], uint32_t out_buf[16])
     }
 
     for (Size i = 0; i < RG_LEN(x); i++) {
-        out_buf[i] = LittleEndian(x[i] + state[i]);
+        out_buf32[i] = LittleEndian(x[i] + state[i]);
     }
 
     state[12]++;
@@ -4458,14 +4468,22 @@ void FillRandomSafe(void *out_buf, Size len)
 #ifndef _WIN32
         rnd_pid = getpid();
 #endif
+
+        rnd_offset = RG_SIZE(rnd_buf);
     }
 
-    for (Size i = 0; i < len; i += 64) {
-        uint32_t buf[16];
-        RunChaCha20(rnd_state, buf);
+    Size copy_len = std::min(RG_SIZE(rnd_buf) - rnd_offset, len);
+    memcpy_safe(out_buf, rnd_buf + rnd_offset, (size_t)copy_len);
+    ZeroMemorySafe(rnd_buf + rnd_offset, copy_len);
+    rnd_offset += copy_len;
 
-        Size copy_len = std::min(RG_SIZE(buf), len - i);
-        memcpy((uint8_t *)out_buf + i, buf, copy_len);
+    for (Size i = copy_len; i < len; i += RG_SIZE(rnd_buf)) {
+        RunChaCha20(rnd_state, rnd_buf);
+
+        Size copy_len = std::min(RG_SIZE(rnd_buf), len - i);
+        memcpy_safe((uint8_t *)out_buf + i, rnd_buf, (size_t)copy_len);
+        ZeroMemorySafe(rnd_buf, copy_len);
+        rnd_offset = copy_len;
     }
 
     rnd_remain -= len;

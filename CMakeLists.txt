@@ -52,6 +52,7 @@ set_target_properties(koffi PROPERTIES PREFIX "" SUFFIX ".node")
 target_include_directories(koffi PRIVATE . ${CMAKE_JS_INC} vendor/node-addon-api)
 target_link_libraries(koffi PRIVATE ${CMAKE_JS_LIB})
 
+target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi)
 if(WIN32)
     target_compile_definitions(koffi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
     target_link_libraries(koffi PRIVATE ws2_32)
