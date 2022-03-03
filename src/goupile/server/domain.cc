@@ -108,6 +108,21 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         config.archive_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "SnapshotDirectory") {
                         config.snapshot_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    } else if (prop.key == "ArchiveKey" || prop.key == "BackupKey") {
+                        RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
+
+                        LogError("Setting Data.ArchiveKey should be moved to Archives.PublicKey");
+
+                        size_t key_len;
+                        int ret = sodium_base642bin(config.archive_key, RG_SIZE(config.archive_key),
+                                                    prop.value.ptr, (size_t)prop.value.len, nullptr, &key_len,
+                                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
+                        if (!ret && key_len == 32) {
+                            config.enable_archives = true;
+                        } else {
+                            LogError("Malformed ArchiveKey value");
+                            valid = false;
+                        }
                     } else if (prop.key == "SynchronousFull") {
                         valid &= ParseBool(prop.value, &config.sync_full);
                     } else if (prop.key == "AutoMigrate") {
