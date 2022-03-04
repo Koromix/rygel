@@ -15,4 +15,9 @@ static_deploys:
   - name: goupile.fr
     repo: https://github.com/Koromix/rygel.git
     path: web/goupile.fr
-  - name: files
+  - name: files/goupile.fr
+
+  - name: koromix.dev
+    repo: https://github.com/Koromix/rygel.git
+    path: web/koromix.dev
+  - name: files/koromix.dev

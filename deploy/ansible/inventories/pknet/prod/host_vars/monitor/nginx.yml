@@ -49,7 +49,7 @@ nginx_domains:
           root /opt/static/live/goupile.fr;
       }
       location /files/ {
-          alias /opt/static/live/files/;
+          alias /opt/static/live/files/goupile.fr/;
       }
 
       location /pknet {
@@ -110,6 +110,7 @@ nginx_domains:
       location / {
           return 301 https://goupile.fr$request_uri;
       }
+
   - name: volpil.fr
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |
@@ -121,4 +122,44 @@ nginx_domains:
     config: |
       location / {
           return 301 https://goupile.fr$request_uri;
+      }
+
+  - name: koromix.dev
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          index index.html;
+
+          rewrite ^/en/$ /en/index.html;
+          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)$ $1.html;
+          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)/$ $1 permanent;
+          try_files $uri $uri/ =404;
+
+          root /opt/static/live/koromix.dev;
+      }
+      location /files/ {
+          alias /opt/static/live/files/koromix.dev/;
+
+          location ~ ^/files/[a-zA-Z0-9_]+/ {
+              autoindex on;
+          }
+      }
+
+      location /thop/ {
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+          proxy_pass https://51.210.176.2;
+      }
+      location /procemot/ {
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+          proxy_pass https://51.210.176.2;
+      }
+  - name: www.koromix.dev
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          return 301 https://koromix.dev$request_uri;
       }
