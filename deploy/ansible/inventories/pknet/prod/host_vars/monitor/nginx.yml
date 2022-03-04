@@ -32,6 +32,7 @@ nginx_domains:
           proxy_pass http://127.0.0.1:{{ prometheus_packages[exporter].port }}/metrics;
       }
       {% endfor %}
+
   - name: goupile.fr
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |
@@ -46,10 +47,14 @@ nginx_domains:
           rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)/$ $1 permanent;
           try_files $uri $uri/ =404;
 
-          root /opt/static/live/goupile.fr;
+          root /opt/static/live/goupile.fr/www;
       }
       location /files/ {
-          alias /opt/static/live/files/goupile.fr/;
+          alias /opt/static/live/goupile.fr/files/;
+
+          location ~ ^/files/[a-zA-Z0-9_]+/ {
+              autoindex on;
+          }
       }
 
       location /pknet {
@@ -98,6 +103,7 @@ nginx_domains:
       location / {
           return 301 https://goupile.fr$request_uri;
       }
+
   - name: goupile.org
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |
@@ -122,14 +128,17 @@ nginx_domains:
           rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)/$ $1 permanent;
           try_files $uri $uri/ =404;
 
-          root /opt/static/live/koromix.dev;
+          root /opt/static/live/koromix.dev/www;
       }
       location /files/ {
-          alias /opt/static/live/files/koromix.dev/;
+          alias /opt/static/live/koromix.dev/files/;
 
           location ~ ^/files/[a-zA-Z0-9_]+/ {
               autoindex on;
           }
+      }
+      location /test/ {
+          alias /opt/static/live/koromix.dev/test/;
       }
 
       location /thop/ {
