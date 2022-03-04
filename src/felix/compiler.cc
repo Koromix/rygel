@@ -120,16 +120,16 @@ static int ParseMajorVersion(const char *cmd, Span<const char> output, const cha
     return -1;
 }
 
-static bool IdentifyCompiler(const char *cc, const char *needle)
+static bool IdentifyCompiler(const char *bin, const char *needle)
 {
-    cc = SplitStrReverseAny(cc, RG_PATH_SEPARATORS).ptr;
+    bin = SplitStrReverseAny(bin, RG_PATH_SEPARATORS).ptr;
 
-    const char *ptr = strstr(cc, needle);
+    const char *ptr = strstr(bin, needle);
     Size len = (Size)strlen(needle);
 
     if (!ptr)
         return false;
-    if (ptr != cc && !strchr("_-.", ptr[-1]))
+    if (ptr != bin && !strchr("_-.", ptr[-1]))
         return false;
     if (ptr[len] && !strchr("_-.", ptr[len]))
         return false;
@@ -190,8 +190,8 @@ public:
         });
 
         // Determine LLD version
-        if (IdentifyCompiler(compiler->ld, "lld")) {
-            async.Run([&]() {
+        async.Run([&]() {
+            if (compiler->ld && IdentifyCompiler(compiler->ld, "lld")) {
                 char cmd[4096];
                 if (PathIsAbsolute(compiler->ld)) {
                     Fmt(cmd, "\"%1\" --version", compiler->ld);
@@ -207,10 +207,10 @@ public:
                 if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
                     compiler->lld11 = ParseMajorVersion(cmd, output, "LLD") >= 11;
                 }
+            }
 
-                return true;
-            });
-        }
+            return true;
+        });
 
         async.Sync();
 
