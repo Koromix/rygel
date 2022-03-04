@@ -157,6 +157,7 @@ def update_domain_config(domain, info, archive_key, auto, smtp, sms):
     ini.set('Domain', 'Title', domain)
 
     ini.add_section('Data')
+    ini.set('Data', 'ArchiveDirectory', info.archive_directory)
     ini.set('Data', 'SnapshotDirectory', info.snapshot_directory)
 
     ini.add_section('Archives')
@@ -212,8 +213,15 @@ def run_sync(config):
 
     changed = False
 
-    # Create missing snapshot directories
+    # Create missing archive and snapshot directories
     for info in domains.values():
+        if not os.path.exists(info.archive_directory):
+            os.mkdir(info.archive_directory, mode = 0o700)
+            shutil.chown(info.archive_directory, config['Goupile.RunUser'], config['Goupile.RunGroup'])
+
+            info.mismatch = True
+            changed = True
+
         if not os.path.exists(info.snapshot_directory):
             os.mkdir(info.snapshot_directory, mode = 0o700)
             shutil.chown(info.snapshot_directory, config['Goupile.RunUser'], config['Goupile.RunGroup'])
