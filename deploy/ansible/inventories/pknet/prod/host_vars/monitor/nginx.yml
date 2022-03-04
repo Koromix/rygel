@@ -142,10 +142,7 @@ nginx_domains:
       }
 
       location /thop/ {
-          proxy_set_header Host $host;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-          proxy_pass https://51.210.176.2;
+          rewrite ^/thop/(.*)$ https://thop.koromix.dev/$1 permanent;
       }
       location /procemot/ {
           proxy_set_header Host $host;

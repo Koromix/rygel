@@ -11,35 +11,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: pknet
+[Resources]
+ProfileDirectory = .
+TableDirectory = tables
 
-  hosts: all
-
-  roles:
-    - name: base
-      tags:
-        - base
-    - name: nginx
-      when: 'nginx_domains is defined'
-      tags:
-        - nginx
-    - name: goupile
-      when: 'goupile_domains is defined'
-      tags:
-        - goupile
-    - name: prometheus
-      when: 'prometheus_exporters is defined or grafana_url is defined'
-      tags:
-        - prometheus
-    - name: static
-      when: 'static_deploys is defined'
-      tags:
-        - static
-    - name: borg
-      when: 'borg_directories is defined or borg_server'
-      tags:
-        - borg
-    - name: thop
-      when: 'thop_tables is defined'
-      tags:
-        - thop
+[HTTP]
+SocketType = Unix
+UnixPath = /run/thop/thop.sock
+ClientAddress = X-Forwarded-For
