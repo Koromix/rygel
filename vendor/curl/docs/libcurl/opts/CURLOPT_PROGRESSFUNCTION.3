@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_PROGRESSFUNCTION 3 "November 26, 2021" "libcurl 7.81.0" "curl_easy_setopt options"
+.TH CURLOPT_PROGRESSFUNCTION 3 "February 23, 2022" "libcurl 7.82.0" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_PROGRESSFUNCTION \- progress meter callback
@@ -94,7 +94,7 @@ All
                                  double ultotal,
                                  double ulnow)
  {
-   struct memory *progress = (struct progress *)userp;
+   struct progress *memory = (struct progress *)userp;
 
    /* use the values */
 

@@ -2700,7 +2700,6 @@
     <ClCompile Include="..\..\..\..\src\tool_cb_see.c" />
     <ClCompile Include="..\..\..\..\src\tool_cb_wrt.c" />
     <ClCompile Include="..\..\..\..\src\tool_cfgable.c" />
-    <ClCompile Include="..\..\..\..\src\tool_convert.c" />
     <ClCompile Include="..\..\..\..\src\tool_dirhie.c" />
     <ClCompile Include="..\..\..\..\src\tool_doswin.c" />
     <ClCompile Include="..\..\..\..\src\tool_easysrc.c" />
@@ -2752,7 +2751,6 @@
     <ClInclude Include="..\..\..\..\src\tool_cb_see.h" />
     <ClInclude Include="..\..\..\..\src\tool_cb_wrt.h" />
     <ClInclude Include="..\..\..\..\src\tool_cfgable.h" />
-    <ClInclude Include="..\..\..\..\src\tool_convert.h" />
     <ClInclude Include="..\..\..\..\src\tool_dirhie.h" />
     <ClInclude Include="..\..\..\..\src\tool_doswin.h" />
     <ClInclude Include="..\..\..\..\src\tool_easysrc.h" />

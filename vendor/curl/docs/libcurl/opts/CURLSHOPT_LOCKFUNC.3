@@ -19,7 +19,7 @@
 .\" * KIND, either express or implied.
 .\" *
 .\" **************************************************************************
-.TH CURLSHOPT_LOCKFUNC 3 "November 12, 2021" "libcurl 7.81.0" "libcurl Manual"
+.TH CURLSHOPT_LOCKFUNC 3 "January 31, 2022" "libcurl 7.82.0" "libcurl Manual"
 
 .SH NAME
 CURLSHOPT_LOCKFUNC - mutex lock callback
@@ -35,7 +35,7 @@ CURLSHcode curl_share_setopt(CURLSH *share, CURLSHOPT_LOCKFUNC, lockcb);
 .SH DESCRIPTION
 Set a mutex lock callback for the share object, to allow it to get used by
 multiple threads concurrently. There's a corresponding
-\fICURLSHOPT_UNLOCKFUNC(3)\fP callback called when the mutex is again relased.
+\fICURLSHOPT_UNLOCKFUNC(3)\fP callback called when the mutex is again released.
 
 The \fIlockcb\fP argument must be a pointer to a function matching the
 prototype shown above. The arguments to the callback are:

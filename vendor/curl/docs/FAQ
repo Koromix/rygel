@@ -14,11 +14,11 @@ FAQ
   1.5 Who makes curl?
   1.6 What do you get for making curl?
   1.7 What about CURL from curl.com?
-  1.8 I have a problem who do I mail?
+  1.8 I have a problem, who do I mail?
   1.9 Where do I buy commercial support for curl?
   1.10 How many are using curl?
   1.11 Why do you not update ca-bundle.crt
-  1.12 I have a problem who can I chat with?
+  1.12 I have a problem, who can I chat with?
   1.13 curl's ECCN number?
   1.14 How do I submit my patch?
   1.15 How do I port libcurl to my OS?
@@ -144,9 +144,9 @@ FAQ
 
     libcurl is highly portable, it builds and works identically on numerous
     platforms, including Solaris, NetBSD, FreeBSD, OpenBSD, Darwin, HP-UX,
-    IRIX, AIX, Tru64, Linux, UnixWare, HURD, Windows, Amiga, OS/2, BeOS, Mac
-    OS X, Ultrix, QNX, OpenVMS, RISC OS, Novell NetWare, DOS, Symbian, OSF,
-    Android, Minix, IBM TPF and more...
+    IRIX, AIX, Tru64, Linux, UnixWare, HURD, Windows, Amiga, OS/2, macOS,
+    Ultrix, QNX, OpenVMS, RISC OS, Novell NetWare, DOS, Symbian, OSF, Android,
+    Minix, IBM TPF and more...
 
     libcurl is free, thread-safe, IPv6 compatible, feature rich, well
     supported and fast.
@@ -200,8 +200,8 @@ FAQ
 
   curl is not a program for a single operating system. curl exists, compiles,
   builds and runs under a wide range of operating systems, including all
-  modern Unixes (and a bunch of older ones too), Windows, Amiga, BeOS, OS/2,
-  OS X, QNX etc.
+  modern Unixes (and a bunch of older ones too), Windows, Amiga, OS/2, macOS,
+  QNX etc.
 
   1.4 When will you make curl do XXXX ?
 
@@ -275,7 +275,7 @@ FAQ
   We recognize that we will be living in parallel with curl.com and wish them
   every success.
 
-  1.8 I have a problem whom do I mail?
+  1.8 I have a problem, who do I mail?
 
   Please do not mail any single individual unless you really need to. Keep
   curl-related questions on a suitable mailing list. All available mailing
@@ -294,7 +294,7 @@ FAQ
   issue private while we investigate, confirm it, work and validate a fix and
   agree on a time schedule for publication etc. That way we produce a fix in a
   timely manner before the flaw is announced to the world, reducing the impact
-  the problem risk having on existing users.
+  the problem risks having on existing users.
 
   Security issues can also be taking to the curl security team by emailing
   security at curl.se (closed list of receivers, mails are not disclosed).
@@ -339,7 +339,7 @@ FAQ
   Firefox (by running 'make ca-bundle), or by using our online service setup
   for this purpose: https://curl.se/docs/caextract.html
 
-  1.12 I have a problem who can I chat with?
+  1.12 I have a problem who, can I chat with?
 
   There's a bunch of friendly people hanging out in the #curl channel on the
   IRC network libera.chat. If you are polite and nice, chances are good that
@@ -421,7 +421,7 @@ FAQ
   backends.
 
   curl can be built to use one of the following SSL alternatives: OpenSSL,
-  libressl, BoringSSL, GnuTLS, wolfSSL, NSS, mbedTLS, MesaLink, Secure
+  libressl, BoringSSL, GnuTLS, wolfSSL, NSS, mbedTLS, Secure
   Transport (native iOS/OS X), Schannel (native Windows), GSKit (native IBM
   i), BearSSL, or Rustls. They all have their pros and cons, and we try to
   maintain a comparison of them here: https://curl.se/docs/ssl-compared.html
@@ -603,7 +603,7 @@ FAQ
   have no built-in support for that, so it will be treated just like any other
   contents.
 
-  .pac files are a netscape invention and are sometimes used by organizations
+  .pac files are a Netscape invention and are sometimes used by organizations
   to allow them to differentiate which proxies to use. The .pac contents is
   just a Javascript program that gets invoked by the browser and that returns
   the name of the proxy to connect to. Since curl does not support Javascript,
@@ -829,7 +829,7 @@ FAQ
     4.5.4 "404 Not Found"
 
     The server has not found anything matching the Request-URI. No indication
-    is given of whether the condition is temporary or permanent.
+    is given as to whether the condition is temporary or permanent.
 
     4.5.5 "405 Method Not Allowed"
 
@@ -925,7 +925,7 @@ FAQ
 
   To completely disable the certificate verification, use -k. This does
   however enable man-in-the-middle attacks and makes the transfer INSECURE.
-  We strongly advice against doing this for more than experiments.
+  We strongly advise against doing this for more than experiments.
 
   If you get this failure with a CA cert bundle installed and used, the
   server's certificate might not be signed by one of the CA's in your CA
@@ -1196,7 +1196,7 @@ FAQ
   dynamic import symbols. If you are using Visual Studio, you need to instead
   add CURL_STATICLIB in the "Preprocessor Definitions" section.
 
-  If you get linker error like "unknown symbol __imp__curl_easy_init ..." you
+  If you get a linker error like "unknown symbol __imp__curl_easy_init ..." you
   have linked against the wrong (static) library. If you want to use the
   libcurl.dll and import lib, you do not need any extra CFLAGS, but use one of
   the import libraries below. These are the libraries produced by the various

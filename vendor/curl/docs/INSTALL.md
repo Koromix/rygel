@@ -111,13 +111,12 @@ want to alter it, you can select how to deal with each individual library.
 
 ## Select TLS backend
 
-These options are provided to select TLS backend to use.
+These options are provided to select the TLS backend to use.
 
  - AmiSSL: `--with-amissl`
  - BearSSL: `--with-bearssl`
  - GnuTLS: `--with-gnutls`.
  - mbedTLS: `--with-mbedtls`
- - MesaLink: `--with-mesalink`
  - NSS: `--with-nss`
  - OpenSSL: `--with-openssl` (also for BoringSSL and libressl)
  - rustls: `--with-rustls`
@@ -218,25 +217,23 @@ If you want to set any of these defines you have the following options:
  - Modify the "Preprocessor Definitions" in the libcurl project
 
 Note: The pre-processor settings can be found using the Visual Studio IDE
-under "Project -> Settings -> C/C++ -> General" in VC6 and "Project ->
-Properties -> Configuration Properties -> C/C++ -> Preprocessor" in later
-versions.
+under "Project -> Properties -> Configuration Properties -> C/C++ ->
+Preprocessor".
 
 ## Using BSD-style lwIP instead of Winsock TCP/IP stack in Win32 builds
 
 In order to compile libcurl and curl using BSD-style lwIP TCP/IP stack it is
-necessary to make definition of preprocessor symbol `USE_LWIPSOCK` visible to
-libcurl and curl compilation processes. To set this definition you have the
-following alternatives:
+necessary to make the definition of the preprocessor symbol `USE_LWIPSOCK`
+visible to libcurl and curl compilation processes. To set this definition you
+have the following alternatives:
 
  - Modify `lib/config-win32.h` and `src/config-win32.h`
  - Modify `winbuild/Makefile.vc`
  - Modify the "Preprocessor Definitions" in the libcurl project
 
 Note: The pre-processor settings can be found using the Visual Studio IDE
-under "Project -> Settings -> C/C++ -> General" in VC6 and "Project ->
-Properties -> Configuration Properties -> C/C++ -> Preprocessor" in later
-versions.
+under "Project -> Properties -> Configuration Properties -> C/C++ ->
+Preprocessor".
 
 Once that libcurl has been built with BSD-style lwIP TCP/IP stack support, in
 order to use it with your program it is mandatory that your program includes
@@ -324,7 +321,8 @@ make -j8
 make install
 ```
 
-In all above, the built libraries and executables can be found in `artifacts` folder.
+In all above, the built libraries and executables can be found in the
+`artifacts` folder.
 
 # Android
 

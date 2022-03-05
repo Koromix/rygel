@@ -5,7 +5,7 @@
 #                            | (__| |_| |  _ <| |___
 #                             \___|\___/|_| \_\_____|
 #
-# Copyright (C) 1998 - 2021, Daniel Stenberg, <daniel@haxx.se>, et al.
+# Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
@@ -20,10 +20,9 @@
 #
 ###########################################################################
 # ./src/Makefile.inc
-# Using the backslash as line continuation character might be problematic
-# with some make flavours, as Watcom's wmake showed us already. If we
-# ever want to change this in a portable manner then we should consider
-# this idea (posted to the libcurl list by Adam Kellas):
+# Using the backslash as line continuation character might be problematic with
+# some make flavours. If we ever want to change this in a portable manner then
+# we should consider this idea :
 # CSRC1 = file1.c file2.c file3.c
 # CSRC2 = file4.c file5.c file6.c
 # CSOURCES = $(CSRC1) $(CSRC2)
@@ -60,7 +59,6 @@ CURL_CFILES = \
   tool_cb_see.c \
   tool_cb_wrt.c \
   tool_cfgable.c \
-  tool_convert.c \
   tool_dirhie.c \
   tool_doswin.c \
   tool_easysrc.c \
@@ -103,7 +101,6 @@ CURL_HFILES = \
   tool_cb_see.h \
   tool_cb_wrt.h \
   tool_cfgable.h \
-  tool_convert.h \
   tool_dirhie.h \
   tool_doswin.h \
   tool_easysrc.h \
