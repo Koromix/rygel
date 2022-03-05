@@ -6387,7 +6387,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             // Ignore this line (empty or comment)
         } else if (line[0] == '[') {
             if (line.len < 2 || line[line.len - 1] != ']') {
-                LogError("Malformed section line");
+                LogError("Malformed [section] line");
                 return LineType::Exit;
             }
 
@@ -6406,7 +6406,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             Span<char> value;
             Span<const char> key = TrimStr(SplitStr(line, '=', &value));
             if (!key.len || key.end() == line.end()) {
-                LogError("Malformed key=value pair");
+                LogError("Expected [section] or <key> = <value> pair");
                 return LineType::Exit;
             }
             if (!CheckIniKey(key))
