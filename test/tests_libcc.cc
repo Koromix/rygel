@@ -588,7 +588,7 @@ BENCHMARK_FUNCTION("libcc/BenchMatchPathName")
 
 BENCHMARK_FUNCTION("libcc/BenchRandom")
 {
-    static const int iterations = 100000000;
+    static const int iterations = 10000000;
 
     FastRandom rng(42);
     RunBenchmark("FastRandom::GetInt", iterations, [&]() {
