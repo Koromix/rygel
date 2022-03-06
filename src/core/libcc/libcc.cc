@@ -4683,11 +4683,6 @@ Async::Async(int threads, bool stop_after_error)
     RG_ASSERT(threads);
 
     if (threads > 0) {
-        if (threads > RG_ASYNC_MAX_THREADS) {
-            LogError("Async cannot use more than %1 threads", RG_ASYNC_MAX_THREADS);
-            threads = RG_ASYNC_MAX_THREADS;
-        }
-
         pool = new AsyncPool(threads, false);
     } else if (async_running_pool) {
         pool = async_running_pool;
@@ -4697,7 +4692,7 @@ Async::Async(int threads, bool stop_after_error)
             // for the first time. That's only one leak in most cases, when the main thread
             // is the only non-worker thread using Async, but still. Something to keep in mind.
 
-            threads = std::min(GetCoreCount(), RG_ASYNC_MAX_THREADS);
+            threads = GetCoreCount();
             async_default_pool = new AsyncPool(threads, true);
         }
 
@@ -4736,6 +4731,11 @@ int Async::GetWorkerIdx()
 
 AsyncPool::AsyncPool(int threads, bool leak)
 {
+    if (threads > RG_ASYNC_MAX_THREADS) {
+        LogError("Async cannot use more than %1 threads", RG_ASYNC_MAX_THREADS);
+        threads = RG_ASYNC_MAX_THREADS;
+    }
+
     // The first queue is for the main thread, whereas workers_state[0] is
     // not used but it's easier to index it the same way.
     workers_state.AppendDefault(threads);
