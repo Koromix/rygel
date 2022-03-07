@@ -243,7 +243,7 @@ function AdminController() {
         try {
             let response = await net.fetch('/admin/api/archives/create', {
                 method: 'POST',
-                timeout: 120000
+                timeout: 180000
             });
 
             if (response.ok) {
@@ -600,7 +600,7 @@ function AdminController() {
                         let response = await net.fetch('/admin/api/instances/delete', {
                             method: 'POST',
                             body: query,
-                            timeout: 30000
+                            timeout: 180000
                         });
 
                         if (response.ok) {
