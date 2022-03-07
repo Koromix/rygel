@@ -1335,6 +1335,8 @@ function InstanceController() {
             log.error(err);
         }
 
+        if (code_timer != null)
+            clearTimeout(code_timer);
         code_timer = null;
     }
 
@@ -1512,6 +1514,8 @@ function InstanceController() {
     }
 
     async function runPublishDialog(e) {
+        await uploadFsChanges();
+
         let publisher = new InstancePublisher(self, db);
         await publisher.runDialog(e);
 
