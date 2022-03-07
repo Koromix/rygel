@@ -27,7 +27,7 @@ goupile_default_password: rygel!16/default_pwd
 
 goupile_archive_hour: 1
 goupile_archive_zone: Local
-goupile_archive_retention: 14 # days
+goupile_archive_retention: 7 # days
 
 # Set these to enable SMTP support
 # goupile_smtp:

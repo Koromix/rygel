@@ -38,9 +38,9 @@ struct DomainConfig {
     bool sync_full = false;
     bool auto_migrate = true;
 
-    int archive_hour = -1;
+    int archive_hour = 0;
     TimeMode archive_zone = TimeMode::Local;
-    int archive_retention = 14;
+    int archive_retention = 7;
 
     http_Config http = {.port = 8889};
     const char *require_host = nullptr;

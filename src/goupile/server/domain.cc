@@ -148,13 +148,20 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                             valid = false;
                         }
                     } else if (prop.key == "AutoHour") {
-                        if (ParseInt(prop.value, &config.archive_hour)) {
+                        if (ParseInt(prop.value, &config.archive_hour, (int)ParseFlag::End)) {
                             if (config.archive_hour < 0 || config.archive_hour > 23) {
-                                LogError("SnapshotHour is outside of 0-23 (inclusive) range");
+                                LogError("AutoHour is outside of 0-23 (inclusive) range");
                                 valid = false;
                             }
                         } else {
-                            valid = false;
+                            bool enable = false;
+
+                            if (ParseBool(prop.value, &enable, (int)ParseFlag::End) && !enable) {
+                                config.archive_hour = -1;
+                            } else {
+                                LogError("AutoHour must be an integer or 'Off'");
+                                valid = false;
+                            }
                         }
                     } else if (prop.key == "AutoZone") {
                         if (!OptionToEnum(TimeModeNames, prop.value, &config.archive_zone)) {
@@ -162,7 +169,9 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                             valid = false;
                         }
                     } else if (prop.key == "RetentionDays") {
-                        if (ParseInt(prop.value, &config.archive_retention)) {
+                        if (prop.value == "Forever") {
+                            config.archive_hour = -1;
+                        } else if (ParseInt(prop.value, &config.archive_retention)) {
                             if (config.archive_retention < 1 || config.archive_retention > 365) {
                                 LogError("RetentionDays is outside of 1-365 (inclusive) range");
                                 valid = false;

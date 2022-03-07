@@ -994,21 +994,25 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 int64_t time = GetUnixTime();
                 int64_t snapshot = 0;
 
-                PruneOldFiles(gp_domain.config.archive_directory, "*.goupilearchive", false,
-                              gp_domain.config.archive_retention * 86400 * 1000);
-                PruneOldFiles(gp_domain.config.archive_directory, "*.goarch", false,
-                              gp_domain.config.archive_retention * 86400 * 1000, &snapshot);
+                if (gp_domain.config.archive_retention > 0) {
+                    PruneOldFiles(gp_domain.config.archive_directory, "*.goupilearchive", false,
+                                  gp_domain.config.archive_retention * 86400 * 1000);
+                    PruneOldFiles(gp_domain.config.archive_directory, "*.goarch", false,
+                                  gp_domain.config.archive_retention * 86400 * 1000, &snapshot);
+                }
 
-                TimeSpec spec = DecomposeTime(time, gp_domain.config.archive_zone);
+                if (gp_domain.config.archive_hour >= 0) {
+                    TimeSpec spec = DecomposeTime(time, gp_domain.config.archive_zone);
 
-                if (spec.hour == gp_domain.config.archive_hour && time - snapshot > 2 * 3600 * 1000) {
-                    LogInfo("Creating daily snapshot");
-                    if (!ArchiveDomain())
-                        return 1;
-                } else if (time - snapshot > 25 * 3600 * 1000) {
-                    LogInfo("Creating forced snapshot (previous one is old)");
-                    if (!ArchiveDomain())
-                        return 1;
+                    if (spec.hour == gp_domain.config.archive_hour && time - snapshot > 2 * 3600 * 1000) {
+                        LogInfo("Creating daily snapshot");
+                        if (!ArchiveDomain())
+                            return 1;
+                    } else if (time - snapshot > 25 * 3600 * 1000) {
+                        LogInfo("Creating forced snapshot (previous one is old)");
+                        if (!ArchiveDomain())
+                            return 1;
+                    }
                 }
             }
 

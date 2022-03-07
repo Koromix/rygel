@@ -53,9 +53,9 @@ Title = %1
 
 [Archives]
 PublicKey = %2
-# AutoHour = Off
+# AutoHour = 0
 # AutoZone = Local
-# RetentionDays = 14
+# RetentionDays = 7
 
 [SMS]
 # Provider = Twilio
