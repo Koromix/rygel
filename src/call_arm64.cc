@@ -313,7 +313,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                const char *str = call.CopyString(value);
+                const char *str = call.PushString(value);
                 if (RG_UNLIKELY(!str))
                     return env.Null();
 

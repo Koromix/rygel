@@ -75,7 +75,7 @@ CallData::~CallData()
     instance->heap_mem = old_heap_mem;
 }
 
-const char *CallData::CopyString(const Napi::Value &value)
+const char *CallData::PushString(const Napi::Value &value)
 {
     RG_ASSERT(value.IsString());
 
@@ -172,7 +172,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                     return false;
                 }
 
-                const char *str = CopyString(value);
+                const char *str = PushString(value);
                 if (RG_UNLIKELY(!str))
                     return false;
                 *(const char **)dest = str;

@@ -93,7 +93,7 @@ public:
     template <typename T>
     bool AllocHeap(Size size, Size align, T **out_ptr);
 
-    const char *CopyString(const Napi::Value &value);
+    const char *PushString(const Napi::Value &value);
     bool PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest);
 
     void DumpDebug() const;
