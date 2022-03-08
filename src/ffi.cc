@@ -157,6 +157,8 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         type->size = sizeof(void *);
         type->align = sizeof(void *);
         type->ref = ref;
+
+        instance->types_map.Set(type);
     }
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
