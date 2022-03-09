@@ -1,0 +1,19 @@
+{
+  "name": "cnoke",
+  "version": "0.9.6",
+  "description": "Simple alternative to cmake.js",
+  "keywords": [
+    "native",
+    "addon",
+    "cmake",
+    "c",
+    "c++"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Koromix/luigi.git"
+  },
+  "author": "Niels Martignène <niels.martignene@protonmail.com>",
+  "bin": "cnoke.js",
+  "license": "AGPL-3.0"
+}
