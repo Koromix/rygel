@@ -49,10 +49,10 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     endif()
 endif()
 
-add_library(koffi SHARED ${KOFFI_SRC} ${CMAKE_JS_SRC})
+add_library(koffi SHARED ${KOFFI_SRC} ${NODE_JS_SRC})
 set_target_properties(koffi PROPERTIES PREFIX "" SUFFIX ".node")
-target_include_directories(koffi PRIVATE . ${CMAKE_JS_INC} vendor/node-addon-api)
-target_link_libraries(koffi PRIVATE ${CMAKE_JS_LIB})
+target_include_directories(koffi PRIVATE . ${NODE_JS_INC} vendor/node-addon-api)
+target_link_libraries(koffi PRIVATE ${NODE_JS_LIB})
 
 target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS)
 if(WIN32)
