@@ -26,8 +26,18 @@ async function main() {
     let root_dir = fs.realpathSync(path.dirname(__filename));
     process.chdir(root_dir);
 
-    let machines = [];
+    // Load machine registry
+    let machines;
+    {
+        let json = fs.readFileSync('machines.json', { encoding: 'utf-8' });
+
+        machines = JSON.parse(json);
+        for (let key in machines)
+            machines[key].key = key;
+    }
+
     let display = false;
+    let run = [];
     let ignore = new Set;
 
     for (let i = 2; i < process.argv.length; i++) {
@@ -44,50 +54,46 @@ async function main() {
                 }
             }
         } else {
-            let filename = `qemu/${arg}/run.json`;
-
-            if (arg.match(/[\\/\.]/) || !fs.existsSync(filename)) {
+            if (arg.startsWith('__') || arg.match(/[\\/\.]/) || machines[arg] == null) {
                 console.error(`Machine '${arg} does not exist`);
                 process.exit(1);
             }
 
-            machines.push(arg);
+            run.push(machines[arg]);
         }
     }
-    if (!machines.length) {
-        machines = fs.readdirSync('qemu/').filter(dir => {
-            let filename = `qemu/${dir}/run.json`;
-            return fs.existsSync(filename);
-        });
+    if (!run.length) {
+        for (let name in machines)
+            run.push(machines[name]);
 
-        if (!machines.length) {
+        if (!run.length) {
             console.error('Could not detect any machine');
             process.exit(1);
         }
     }
 
     console.log('>> Starting up machines...');
-    machines = await Promise.all(machines.map(async name => {
-        let dirname = `qemu/${name}`;
+    await Promise.all(run.map(async machine => {
+        let dirname = `qemu/${machine.key}`;
 
-        let json = fs.readFileSync(dirname + '/run.json', { encoding: 'utf-8' });
-        let machine = JSON.parse(json);
+        if (fs.existsSync(dirname)) {
+            try {
+                let [p, ssh] = await boot(machine, dirname, display);
 
-        try {
-            let [p, ssh] = await boot(machine, dirname, display);
-
-            machine.p = p;
-            machine.ssh = ssh;
-        } catch (err) {
+                machine.p = p;
+                machine.ssh = ssh;
+            } catch (err) {
+                ignore.add(machine);
+                console.error(err);
+            }
+        } else {
+            console.log(`     [${machine.name}] Missing files ☓`);
             ignore.add(machine);
-            console.error(err);
         }
-
-        return machine;
     }));
 
     console.log('>> Copy source code...');
-    await Promise.all(machines.map(async machine => {
+    await Promise.all(run.map(async machine => {
         if (ignore.has(machine)) {
             console.error(`     [${machine.name}] Ignored`);
             return;
@@ -128,7 +134,7 @@ async function main() {
     let success = true;
 
     console.log('>> Run test commands...');
-    await Promise.all(machines.map(async machine => {
+    await Promise.all(run.map(async machine => {
         if (ignore.has(machine)) {
             console.error(`     [${machine.name}] Ignored`);
             return;
@@ -153,7 +159,7 @@ async function main() {
 
     if (!display) {
         console.log('>> Cleaning up code...');
-        await Promise.all(machines.map(async machine => {
+        await Promise.all(run.map(async machine => {
             let remote_dir = machine.info.home + '/luigi';
 
             try {
@@ -166,9 +172,9 @@ async function main() {
         }));
 
         console.log('>> Sending shutdown commands...');
-        for (let machine of machines)
+        for (let machine of run)
             execCommand(machine, machine.info.shutdown);
-        await Promise.all(machines.map(machine => machine.p));
+        await Promise.all(run.map(machine => machine.p));
     }
 
     process.exit(!success);

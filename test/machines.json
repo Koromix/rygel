@@ -1,0 +1,107 @@
+{
+    "debian_arm32": {
+        "name": "Debian ARM32",
+        "qemu": "qemu-system-arm -M virt -cpu cortex-a15 -m 2G -smp 2 -kernel vmlinuz-5.10.0-11-armmp-lpae -initrd initrd.img-5.10.0-11-armmp-lpae -append \"root=/dev/vda2 apparmor=0\" -drive if=none,file=disk.qcow2,format=qcow2,id=hd -device virtio-blk-device,drive=hd -netdev user,id=mynet,hostfwd=tcp::22201-:22 -device virtio-net-device,netdev=mynet",
+
+        "info": {
+            "windows": false,
+
+            "port": 22201,
+            "username": "debian",
+            "password": "debian",
+            "home": "/home/debian",
+
+            "shutdown": "sudo poweroff"
+        },
+
+        "commands": {
+            "Build": "npm install --omit dev"
+        }
+    },
+
+    "debian_arm64": {
+        "name": "Debian ARM64",
+        "qemu": "qemu-system-aarch64 -M virt -cpu cortex-a53 -m 2G -smp 2 -kernel vmlinuz-5.10.0-11-arm64 -initrd initrd.img-5.10.0-11-arm64 -append \"root=/dev/vda2 apparmor=0\" -drive if=none,file=disk.qcow2,format=qcow2,id=hd -device virtio-blk-device,drive=hd -netdev user,id=mynet,hostfwd=tcp::22202-:22 -device virtio-net-device,netdev=mynet",
+
+        "info": {
+            "windows": false,
+
+            "port": 22202,
+            "username": "debian",
+            "password": "debian",
+            "home": "/home/debian",
+
+            "shutdown": "sudo poweroff"
+        },
+
+        "commands": {
+            "Build": "npm install --omit dev"
+        }
+    },
+
+    "debian_i386": {
+        "name": "Debian i386",
+        "qemu": "qemu-system-i386 -accel kvm -cpu max -m 2G -smp 2 -kernel vmlinuz-5.10.0-11-686-pae -initrd initrd.img-5.10.0-11-686-pae -append \"root=/dev/sda1 apparmor=0\" -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22203-:22 -device e1000,netdev=mynet",
+
+        "info": {
+            "windows": false,
+
+            "port": 22203,
+            "username": "debian",
+            "password": "debian",
+            "home": "/home/debian",
+
+            "shutdown": "sudo poweroff"
+        },
+
+        "commands": {
+            "Build": "npm install --omit dev"
+        }
+    },
+
+    "debian_x64": {
+        "name": "Debian x64",
+        "qemu": "qemu-system-x86_64 -accel kvm -m 2G -smp 2 -kernel vmlinuz-5.10.0-11-amd64 -initrd initrd.img-5.10.0-11-amd64 -append \"root=/dev/sda1 apparmor=0\" -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22204-:22 -device e1000,netdev=mynet",
+
+        "info": {
+            "windows": false,
+
+            "port": 22204,
+            "username": "debian",
+            "password": "debian",
+            "home": "/home/debian",
+
+            "shutdown": "sudo poweroff"
+        },
+
+        "commands": {
+            "Build": "npm install --omit dev"
+        }
+    },
+
+    "windows": {
+        "name": "Windows",
+        "qemu": "qemu-system-x86_64 -accel kvm -m 3G -rtc clock=host,base=localtime -drive if=pflash,format=raw,readonly=on,file=edk2-x86_64-code.fd -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22205-:22 -device e1000,netdev=mynet -vga std",
+
+        "info": {
+            "windows": true,
+
+            "port": 22205,
+            "username": "windows",
+            "password": "windows",
+            "home": "C:/Users/windows/Desktop",
+
+            "shutdown": "shutdown -s -t 0"
+        },
+
+        "upload": {
+            "node32.cmd": "C:/Users/windows/Desktop/node32.cmd",
+            "node64.cmd": "C:/Users/windows/Desktop/node64.cmd"
+        },
+
+        "commands": {
+            "Build 32 bit": "rm -rf node_modules build && C:\\Users\\windows\\Desktop\\node32.cmd npm install --omit dev",
+            "Build 64 bit": "rm -rf node_modules build && C:\\Users\\windows\\Desktop\\node64.cmd npm install --omit dev"
+        }
+    }
+}
