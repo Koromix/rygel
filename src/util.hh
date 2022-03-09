@@ -61,11 +61,11 @@ class CallData {
     InstanceData *instance;
     const FunctionInfo *func;
 
-    Span<uint8_t> old_stack_mem;
-    Span<uint8_t> old_heap_mem;
-
     Span<uint8_t> *stack_mem;
     Span<uint8_t> *heap_mem;
+
+    Span<uint8_t> old_stack_mem;
+    Span<uint8_t> old_heap_mem;
 
 public:
     CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func);

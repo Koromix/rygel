@@ -302,7 +302,7 @@ static void DumpMemory(const char *type, Span<const uint8_t> bytes)
             Print(stderr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16),
                                               FmtArg((ptr - bytes.begin()) / sizeof(void *)).Pad(-4),
                                               FmtArg(ptr - bytes.begin()).Pad(-4));
-            for (int i = 0; ptr < bytes.end() && i < sizeof(void *); i++, ptr++) {
+            for (int i = 0; ptr < bytes.end() && i < (int)sizeof(void *); i++, ptr++) {
                 Print(stderr, " %1", FmtHex(*ptr).Pad0(-2));
             }
             PrintLn(stderr);
