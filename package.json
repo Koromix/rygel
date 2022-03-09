@@ -18,7 +18,7 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "build/koffi.node",
   "scripts": {
-    "install": "node ../jscmk/jscmk.js",
+    "install": "node ../cnoke/cnoke.js",
     "test": "node test/test.js"
   },
   "license": "AGPL-3.0",
