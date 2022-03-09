@@ -57,7 +57,7 @@ This section assumes you know how to build C shared libraries.
 This examples illustrates how to use koffi with a Raylib shared library:
 
 ```js
-const koffi = require('koffi/build/koffi.node');
+const koffi = require('build/koffi.node');
 
 const Color = koffi.struct('Color', {
     r: 'uchar',
