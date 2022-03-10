@@ -31,12 +31,7 @@ let ignore = new Set;
 
 // Main
 
-try {
-    main();
-} catch (err) {
-    console.error(err);
-    process.exit(1);
-}
+main();
 
 async function main() {
     let root_dir = fs.realpathSync(path.dirname(__filename));
@@ -133,8 +128,13 @@ async function main() {
         return machine;
     });
 
-    let success = await command();
-    process.exit(!success);
+    try {
+        let success = await command();
+        process.exit(!success);
+    } catch (err) {
+        console.error(err);
+        process.exit(1);
+    }
 }
 
 function print_usage() {
