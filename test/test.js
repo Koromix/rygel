@@ -299,16 +299,19 @@ async function stop() {
             }
         }
 
-        execRemote(machine, machine.info.shutdown);
-        await new Promise(async resolve => {
-            for (let i = 0; i < 50; i++) {
-                if (!machine.ssh.isConnected())
-                    resolve();
+        try {
+            await new Promise(async (resolve, reject) => {
+                machine.ssh.connection.on('close', resolve);
+                machine.ssh.connection.on('end', resolve);
+                wait(10000).then(reject);
 
-                await wait(100);
-            }
-        });
-        console.log(`     [${machine.name}] Stop ${machine.ssh.isConnected() ? '☓' : '✓'}`);
+                execRemote(machine, machine.info.shutdown);
+            });
+
+            console.log(`     [${machine.name}] Stop ✓`);
+        } catch (err) {
+            console.log(`     [${machine.name}] Stop ☓`);
+        }
     }));
 }
 
