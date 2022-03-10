@@ -365,9 +365,9 @@ async function boot(machine, dirname, detach, display) {
         started = false;
     }
 
-    if (machine.upload != null) {
-        for (let src in machine.upload) {
-            let dest = machine.upload[src];
+    if (machine.uploads != null) {
+        for (let src in machine.uploads) {
+            let dest = machine.uploads[src];
 
             await machine.ssh.putFile(dirname + '/' + src, dest);
         }

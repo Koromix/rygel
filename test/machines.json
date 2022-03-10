@@ -94,7 +94,7 @@
             "shutdown": "shutdown -s -t 0"
         },
 
-        "upload": {
+        "uploads": {
             "node32.cmd": "C:/Users/windows/Desktop/node32.cmd",
             "node64.cmd": "C:/Users/windows/Desktop/node64.cmd"
         },
