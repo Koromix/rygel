@@ -215,10 +215,12 @@ async function test() {
             let cmd = machine.commands[name];
             let cwd = machine.info.home + '/luigi/koffi';
 
+            let start = process.hrtime.bigint();
             let ret = await execRemote(machine, cmd, cwd);
+            let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
             if (ret.code == 0) {
-                console.log(`     [${machine.name}] ${name} ✓`);
+                console.log(`     [${machine.name}] ${name} ✓ (${(time / 1000).toFixed(2)}s)`);
             } else {
                 console.error(`     [${machine.name}] ${name} ☓`);
                 console.error(ret.stderr);
