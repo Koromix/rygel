@@ -240,7 +240,11 @@ async function configure(retry = true) {
     let proc = spawnSync('cmake', args, { cwd: build_dir, stdio: 'inherit' });
     if (proc.status != 0) {
         if (retry && fs.existsSync(build_dir + '/CMakeCache.txt')) {
-            fs.rmSync(build_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+            if (fs.rmSync != null) {
+                fs.rmSync(build_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+            } else {
+                fs.rmdirSync(build_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+            }
             return configure(false);
         }
 
@@ -269,7 +273,11 @@ async function build() {
 
 async function clean() {
     try {
-        fs.rmSync(bin_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+        if (fs.rmSync != null) {
+            fs.rmSync(bin_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+        } else {
+            fs.rmdirSync(bin_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+        }
     } catch (err) {
         if (err.code !== 'ENOENT')
             throw err;
