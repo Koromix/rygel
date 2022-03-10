@@ -56,9 +56,9 @@ Global options:
 
 Configure options:
     -v, --version <VERSION>      Change node version
-                                 (default: v16.14.0)
+                                 (default: process.version)
     -a, --arch <ARCH>            Change architecture
-                                 (default: x64)
+                                 (default: process.arch)
 
         --debug                  Build in debug mode
 ```
