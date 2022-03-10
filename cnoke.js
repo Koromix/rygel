@@ -164,8 +164,8 @@ async function configure() {
 
     // Check for CMake
     {
-        let ret = spawnSync('cmake', ['--version']);
-        if (ret.status != 0)
+        let proc = spawnSync('cmake', ['--version']);
+        if (proc.status != 0)
             throw new Error('CMake does not seem to be available');
     }
 
@@ -223,8 +223,8 @@ async function configure() {
     args.push(`-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${bin_dir}`);
     args.push('--no-warn-unused-cli');
 
-    let ret = spawnSync('cmake', args, { cwd: build_dir, stdio: 'inherit' });
-    if (ret.status != 0)
+    let proc = spawnSync('cmake', args, { cwd: build_dir, stdio: 'inherit' });
+    if (proc.status != 0)
         throw new Error('Failed to run configure step');
 }
 
@@ -241,8 +241,8 @@ async function build() {
         '--config', debug ? 'Debug' : 'Release'
     ];
 
-    let ret = spawnSync('cmake', args, { stdio: 'inherit' });
-    if (ret.status != 0)
+    let proc = spawnSync('cmake', args, { stdio: 'inherit' });
+    if (proc.status != 0)
         throw new Error('Failed to run build step');
 }
 
