@@ -1,7 +1,7 @@
 {
   "name": "cnoke",
-  "version": "0.9.6",
-  "description": "Simple alternative to cmake.js",
+  "version": "0.9.7",
+  "description": "Simple alternative to CMake.js",
   "keywords": [
     "native",
     "addon",
