@@ -218,8 +218,10 @@ async function configure() {
     }
 
     args.push(`-DCMAKE_BUILD_TYPE=${debug ? 'Debug' : 'Release'}`);
-    args.push(`-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${bin_dir}`);
-    args.push(`-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${bin_dir}`);
+    for (let type of ['RUNTIME', 'LIBRARY']) {
+        for (let suffix of ['', '_DEBUG', '_RELEASE'])
+            args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${bin_dir}`);
+    }
     args.push('--no-warn-unused-cli');
 
     let proc = spawnSync('cmake', args, { cwd: build_dir, stdio: 'inherit' });
