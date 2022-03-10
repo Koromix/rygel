@@ -4,7 +4,7 @@
 - [Installation](#installation)
   * [Windows](#windows)
   * [Other platforms](#other-platforms)
-- [How to use](#how-to-use)
+- [Get started](#get-started)
 - [Tests](#tests)
 
 # Introduction
@@ -59,7 +59,7 @@ Once these dependencies are met, simply run the follow command:
 npm install koffi
 ```
 
-# How to use
+# Get started
 
 This section assumes you know how to build C shared libraries.
 
