@@ -96,7 +96,7 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 project_dir = fs.realpathSync(value);
-            } else if (arg == '-d' || arg == '--debug') {
+            } else if (arg == '--debug') {
                 debug = true;
             } else {
                 if (arg[0] == '-') {
