@@ -1,8 +1,8 @@
 # Table of contents
 
 - [Introduction](#introduction)
-- [How to use](#how-to-use)
-- [Usage](#usage)
+- [Get started](#get-started)
+- [Command usage](#command-usage)
 
 # Introduction
 
@@ -20,7 +20,7 @@ It obviously requires [CMake](http://www.cmake.org/download/) and a proper C/C++
 * Windows: Visual C++ Build Tools or a recent version of Visual C++ will do (the free Community version works well)
 * POSIX (Linux, macOS, etc.): Clang or GCC, and Make (Ninja is preferred if available)
 
-# How to use
+# Get started
 
 In order to build a ntive Node.js addon with CNoke, you can use the following CMakeLists.txt
 template to get started:
@@ -44,7 +44,7 @@ your dependency), add the following script to package.json:
 }
 ```
 
-# Usage
+# Command usage
 
 You can find the same help text by running `cnoke --help`:
 
