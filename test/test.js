@@ -19,7 +19,7 @@ const process = require('process');
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const { NodeSSH } = require('node-ssh');
 
 // Globals
@@ -96,6 +96,7 @@ async function main() {
             case 'test': { command = test; } break;
             case 'start': { command = start; } break;
             case 'stop': { command = stop; } break;
+            case 'ssh': { command = ssh; } break;
 
             default: {
                 throw new Error(`Unknown command '${command}'`);
@@ -144,6 +145,7 @@ Commands:
     test                         Run the machines and perform the tests (default)
     start                        Start the machines but don't run anythingh
     stop                         Stop running machines
+    ssh                          Start SSH session with specific machine
 
 Options:
     -d, --display                Show the QEMU display during the procedure
@@ -303,6 +305,22 @@ async function stop() {
         });
         console.log(`     [${machine.name}] Stop ${machine.ssh.isConnected() ? '☓' : '✓'}`);
     }));
+}
+
+async function ssh() {
+    if (machines.length != 1)
+        throw new Error('The ssh command can only be used with one machine');
+
+    let machine = machines[0];
+
+    let args = [
+        '-p' + machine.info.password,
+        'ssh', '-p', machine.info.port, machine.info.username + '@127.0.0.1'
+    ];
+
+    let proc = spawnSync('sshpass', args, { stdio: 'inherit' });
+    if (proc.status != 0)
+        throw new Error('Connection failed');
 }
 
 // Utility
