@@ -160,3 +160,27 @@ while (!raylib.WindowShouldClose()) {
 }
 
 ```
+
+# Tests
+
+koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as `qemu-system` (or even `qemu-system-gui`) on Ubuntu.
+
+These machines are not included directly in this repository (for license and size reasons), but they are available here: https://koromix.dev/files/koffi/
+
+For example, if you want to run the tests on Debian ARM64, run the following commands:
+
+```sh
+cd luigi/koffi/test/
+wget https://koromix.dev/files/koffi/qemu_debian_arm64.tar.zst
+tar -I zstd -xvf qemu_debian_arm64.tar.zst
+```
+
+You can check the file against the checksums provided in sha256sums.txt kept in the repository in `registry/sha256sums.txt`.
+
+And now you can run the tests with:
+
+```sh
+node test.js # Several options are available, use --help
+```
+
+And be patient, this can be pretty slow for emulated machines.

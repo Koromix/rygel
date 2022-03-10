@@ -107,7 +107,7 @@ async function main() {
     // Load machine registry
     let machines_map;
     {
-        let json = fs.readFileSync('machines.json', { encoding: 'utf-8' });
+        let json = fs.readFileSync('registry/machines.json', { encoding: 'utf-8' });
 
         machines_map = JSON.parse(json);
         for (let key in machines_map)
