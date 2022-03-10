@@ -217,9 +217,17 @@ async function configure(retry = true) {
         } break;
     }
 
-    // Prefer Ninja if available
-    if (process.platform != 'win32' && spawnSync('ninja', ['--version']).status == 0) {
-        args.push('-G'); args.push('Ninja');
+    if (process.platform != 'win32') {
+        // Prefer Ninja if available
+        if (spawnSync('ninja', ['--version']).status == 0) {
+            args.push('-G'); args.push('Ninja');
+        }
+
+        // Use CCache if available
+        if (spawnSync('ccache', ['--version']).status == 0) {
+            args.push('-DCMAKE_C_COMPILER_LAUNCHER=ccache');
+            args.push('-DCMAKE_CXX_COMPILER_LAUNCHER=ccache');
+        }
     }
 
     args.push(`-DCMAKE_BUILD_TYPE=${debug ? 'Debug' : 'Release'}`);
