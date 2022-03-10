@@ -1,3 +1,12 @@
+# Table of contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+  * [Windows](#windows)
+  * [Other platforms](#other-platforms)
+- [How to use](#how-to-use)
+- [Tests](#tests)
+
 # Introduction
 
 koffi is a fast and easy-to-use FFI module for Node.js, with support for complex data types such as structs.
@@ -36,7 +45,7 @@ Once this is done, run this command from the project root:
 npm install koffi
 ```
 
-## Other platforms (Linux, macOS, etc.)
+## Other platforms
 
 Make sure the following dependencies are met:
 
