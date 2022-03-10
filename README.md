@@ -12,7 +12,7 @@ npm install cnoke
 It obviously requires [CMake](http://www.cmake.org/download/) and a proper C/C++ toolchain:
 
 * Windows: Visual C++ Build Tools or a recent version of Visual C++ will do (the free Community version works well)
-* POSIX (Linux, macOS, etc.): Clang or GCC, and Make
+* POSIX (Linux, macOS, etc.): Clang or GCC, and Make (Ninja is preferred if available)
 
 # How to use
 

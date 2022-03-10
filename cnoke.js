@@ -217,6 +217,11 @@ async function configure() {
         } break;
     }
 
+    // Prefer Ninja if available
+    if (process.platform != 'win32' && spawnSync('ninja', ['--version']).status == 0) {
+        args.push('-G'); args.push('Ninja');
+    }
+
     args.push(`-DCMAKE_BUILD_TYPE=${debug ? 'Debug' : 'Release'}`);
     for (let type of ['RUNTIME', 'LIBRARY']) {
         for (let suffix of ['', '_DEBUG', '_RELEASE'])
