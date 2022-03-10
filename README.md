@@ -1,3 +1,9 @@
+# Table of contents
+
+- [Introduction](#introduction)
+- [How to use](#how-to-use)
+- [Usage](#usage)
+
 # Introduction
 
 CNoke is a simpler alternative to CMake.js, without any dependency, designed to build
