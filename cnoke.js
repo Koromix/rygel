@@ -158,7 +158,7 @@ Configure options:
 
 // Commands
 
-async function configure() {
+async function configure(retry = true) {
     let args = [project_dir];
 
     // Check for CMake
@@ -230,8 +230,15 @@ async function configure() {
     args.push('--no-warn-unused-cli');
 
     let proc = spawnSync('cmake', args, { cwd: build_dir, stdio: 'inherit' });
-    if (proc.status != 0)
-        throw new Error('Failed to run configure step');
+    if (proc.status != 0) {
+        if (retry && fs.existsSync(build_dir + '/CMakeCache.txt')) {
+            fs.rmSync(build_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+            return configure(false);
+        }
+
+        if (proc.status != 0)
+            throw new Error('Failed to run configure step');
+    }
 }
 
 async function build() {
