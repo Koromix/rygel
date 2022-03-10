@@ -158,6 +158,7 @@ Options:
 
 async function start(detach = true) {
     let success = true;
+    let missing = 0;
 
     console.log('>> Starting up machines...');
     await Promise.all(machines.map(async machine => {
@@ -165,7 +166,10 @@ async function start(detach = true) {
 
         if (!fs.existsSync(dirname)) {
             console.log(`     [${machine.name}] Missing files ☓`);
+
             ignore.add(machine);
+            missing++;
+
             return;
         }
 
@@ -178,6 +182,9 @@ async function start(detach = true) {
             success = false;
         }
     }));
+
+    if (success && missing == machines.length)
+        throw new Error('No machine available');
 
     return success;
 }
