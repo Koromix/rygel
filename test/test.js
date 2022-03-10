@@ -125,8 +125,11 @@ async function main() {
     }
     machines = machines.map(name => {
         let machine = machines_map[name];
-        if (machine == null)
-            throw new Error(`Could not find machine ${name}`);
+        if (machine == null) {
+            machine = Object.values(machines_map).find(machine => machine.name == name);
+            if (machine == null)
+                throw new Error(`Could not find machine ${name}`);
+        }
         return machine;
     });
 
