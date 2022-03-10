@@ -82,11 +82,11 @@ async function main() {
                 display = true;
             } else if (arg == '-l' || arg == '--leave') {
                 shutdown = false;
-            } else if (arg[0] != '-') {
-                if (arg.startsWith('__') || arg.match(/[\\/\.]/)) {
-                    console.error(`Machine name '${arg} is not valid`);
-                    process.exit(1);
-                }
+            } else if (arg[0] == '-') {
+                throw new Error(`Unexpected argument '${arg}'`);
+            } else {
+                if (arg.startsWith('__') || arg.match(/[\\/\.]/))
+                    throw new Error(`Machine name '${arg} is not valid`);
 
                 machines.push(arg);
             }
