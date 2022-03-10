@@ -1,0 +1,64 @@
+# Introduction
+
+CNoke is a simpler alternative to CMake.js, without any dependency, designed to build
+native Node addons based on CMake.
+
+Install it like this:
+
+```sh
+npm install cnoke
+```
+
+It obviously requires [CMake](http://www.cmake.org/download/) and a proper C/C++ toolchain:
+
+* Windows: Visual C++ Build Tools or a recent version of Visual C++ will do (the free Community version works well)
+* POSIX (Linux, macOS, etc.): Clang or GCC, and Make
+
+# How to use
+
+In order to build a ntive Node.js addon with CNoke, you can use the following CMakeLists.txt
+template to get started:
+
+```cmake
+cmake_minimum_required(VERSION 3.11)
+project(hello C CXX)
+
+add_library(hello SHARED hello.cc ${CMAKE_JS_SRC})
+set_target_properties(hello PROPERTIES PREFIX "" SUFFIX ".node")
+target_include_directories(hello PRIVATE ${NODE_JS_INC})
+target_link_libraries(hello PRIVATE ${NODE_JS_LIB})
+```
+
+In order for this to run when `npm install` runs (directly or when someone else installs
+your dependency), add the following script to package.json:
+
+```json
+"scripts": {
+    "install": "cnoke"
+}
+```
+
+# Usage
+
+You can find the same help text by running `cnoke --help`:
+
+```
+Usage: cnoke [command] [options...]
+
+Commands:
+    configure                    Configure CMake build
+    build                        Build project (configure if needed)
+    clean                        Clean build files
+
+Global options:
+    -C, --directory <DIR>        Change project directory
+                                 (default: current working directory)
+
+Configure options:
+    -v, --version <VERSION>      Change node version
+                                 (default: v16.14.0)
+    -a, --arch <ARCH>            Change architecture
+                                 (default: x64)
+
+        --debug                  Build in debug mode
+```
