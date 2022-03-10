@@ -165,10 +165,8 @@ async function test() {
 
     console.log('>> Copy source code...');
     await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine)) {
-            console.error(`     [${machine.name}] Ignored`);
+        if (ignore.has(machine))
             return;
-        }
 
         let local_dir = '../..';
         let remote_dir = machine.info.home + '/luigi';
@@ -206,10 +204,8 @@ async function test() {
 
     console.log('>> Run test commands...');
     await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine)) {
-            console.error(`     [${machine.name}] Ignored`);
+        if (ignore.has(machine))
             return;
-        }
 
         for (let name in machine.commands) {
             let cmd = machine.commands[name];
@@ -232,10 +228,8 @@ async function test() {
 
     console.log('>> Cleaning up code...');
     await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine)) {
-            console.error(`     [${machine.name}] Ignored`);
+        if (ignore.has(machine))
             return;
-        }
 
         let remote_dir = machine.info.home + '/luigi';
 
@@ -285,10 +279,8 @@ async function start(detach = true) {
 async function stop() {
     console.log('>> Sending shutdown commands...');
     await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine)) {
-            console.error(`     [${machine.name}] Ignored`);
+        if (ignore.has(machine))
             return;
-        }
 
         if (machine.ssh == null) {
             try {
