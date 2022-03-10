@@ -81,7 +81,7 @@
 
     "windows": {
         "name": "Windows",
-        "qemu": "qemu-system-x86_64 -accel kvm -m 3G -rtc clock=host,base=localtime -drive if=pflash,format=raw,readonly=on,file=edk2-x86_64-code.fd -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22205-:22 -device e1000,netdev=mynet -vga std",
+        "qemu": "qemu-system-x86_64 -accel kvm -m 3G -smp 2 -rtc clock=host,base=localtime -drive if=pflash,format=raw,readonly=on,file=edk2-x86_64-code.fd -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22205-:22 -device e1000,netdev=mynet -vga std",
 
         "info": {
             "windows": true,
