@@ -293,6 +293,11 @@ async function stop() {
 
         try {
             await new Promise(async (resolve, reject) => {
+                if (machine.ssh.connection == null) {
+                    resolve();
+                    return;
+                }
+
                 machine.ssh.connection.on('close', resolve);
                 machine.ssh.connection.on('end', resolve);
                 wait(10000).then(reject);
