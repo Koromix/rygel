@@ -186,10 +186,11 @@ async function test() {
                     let basename = path.basename(filename);
 
                     return basename !== '.git' &&
-                           basename !== 'qemu' &&
+                           basename !== 'qemu' && !basename.startsWith('qemu_') &&
                            basename !== 'node_modules' &&
                            basename !== 'node' &&
-                           basename !== 'build';
+                           basename !== 'build' &&
+                           basename !== 'luigi';
                 }
             });
 
