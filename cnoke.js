@@ -248,8 +248,7 @@ async function configure(retry = true) {
             return configure(false);
         }
 
-        if (proc.status != 0)
-            throw new Error('Failed to run configure step');
+        throw new Error('Failed to run configure step');
     }
 }
 
