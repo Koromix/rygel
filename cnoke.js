@@ -21,7 +21,6 @@ const os = require('os');
 const path = require('path');
 const process = require('process');
 const zlib = require('zlib');
-const { pipeline } = require('stream');
 const { spawnSync } = require('child_process');
 
 // Globals
