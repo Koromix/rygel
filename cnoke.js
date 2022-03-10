@@ -59,23 +59,22 @@ async function main() {
             let arg = process.argv[i];
             let value = null;
 
-            if (arg[0] != '-')
-                throw new Error(`Unexpected command-line value '${arg}'`);
+            if (arg[0] == '-') {
+                if (arg.length > 2 && arg[1] != '-') {
+                    value = arg.substr(2);
+                    arg = arg.substr(0, 2);
+                } else if (arg[1] == '-') {
+                    let offset = arg.indexOf('=');
 
-            if (arg.length > 2 && arg[1] != '-') {
-                value = arg.substr(2);
-                arg = arg.substr(0, 2);
-            } else if (arg[1] == '-') {
-                let offset = arg.indexOf('=');
-
-                if (offset > 2 && arg.length > offset + 1) {
-                    value = arg.substr(offset + 1);
-                    arg = arg.substr(0, offset);
+                    if (offset > 2 && arg.length > offset + 1) {
+                        value = arg.substr(offset + 1);
+                        arg = arg.substr(0, offset);
+                    }
                 }
-            }
-            if (value == null && process.argv[i + 1] != null && process.argv[i + 1][0] != '-') {
-                value = process.argv[i + 1];
-                i++; // Skip this value next iteration
+                if (value == null && process.argv[i + 1] != null && process.argv[i + 1][0] != '-') {
+                    value = process.argv[i + 1];
+                    i++; // Skip this value next iteration
+                }
             }
 
             if (arg == '--help') {
@@ -101,7 +100,11 @@ async function main() {
             } else if (arg == '-d' || arg == '--debug') {
                 debug = true;
             } else {
-                throw new Error('Unkn')
+                if (arg[0] == '-') {
+                    throw new Error(`Unexpected argument '${arg}'`);
+                } else {
+                    throw new Error(`Unexpected value '${arg}'`);
+                }
             }
         }
 
