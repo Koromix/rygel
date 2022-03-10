@@ -133,12 +133,8 @@ async function main() {
         return machine;
     });
 
-    await command();
-
-    for (let machine of machines) {
-        if (machine.ssh != null)
-            machine.ssh.dispose();
-    }
+    let success = await command();
+    process.exit(!success);
 }
 
 function print_usage() {
@@ -160,8 +156,36 @@ Options:
 
 // Commands
 
+async function start(detach = true) {
+    let success = true;
+
+    console.log('>> Starting up machines...');
+    await Promise.all(machines.map(async machine => {
+        let dirname = `qemu/${machine.key}`;
+
+        if (!fs.existsSync(dirname)) {
+            console.log(`     [${machine.name}] Missing files ☓`);
+            ignore.add(machine);
+            return;
+        }
+
+        try {
+           await boot(machine, dirname, detach, display);
+        } catch (err) {
+            console.error(err);
+
+            ignore.add(machine);
+            success = false;
+        }
+    }));
+
+    return success;
+}
+
 async function test() {
-    await start(!shutdown);
+    let success = true;
+
+    success &= await start(!shutdown);
 
     console.log('>> Copy source code...');
     await Promise.all(machines.map(async machine => {
@@ -197,11 +221,11 @@ async function test() {
             console.log(`     [${machine.name}] Copy ✓`);
         } catch (err) {
             console.log(`     [${machine.name}] Copy ☓`);
+
             ignore.add(machine);
+            success = false;
         }
     }));
-
-    let success = true;
 
     console.log('>> Run test commands...');
     await Promise.all(machines.map(async machine => {
@@ -220,7 +244,8 @@ async function test() {
                 console.log(`     [${machine.name}] ${name} ✓ (${(time / 1000).toFixed(2)}s)`);
             } else {
                 console.error(`     [${machine.name}] ${name} ☓`);
-                console.error(ret.stderr);
+                if (ret.stderr)
+                    console.error(ret.stderr);
 
                 success = false;
             }
@@ -236,48 +261,33 @@ async function test() {
 
         try {
             await machine.ssh.exec('rm', ['-rf', remote_dir]);
+            console.log(`     [${machine.name}] Delete ✓`);
         } catch (err) {
             if (process.platform == 'win32') {
                 await wait(1000);
 
                 try {
                     await machine.ssh.exec('rm', ['-rf', remote_dir]);
+                    console.log(`     [${machine.name}] Delete ✓`);
                 } catch (err) {
-                    // Fails often on Windows (busy directory or whatever), but rarely a problem
+                    console.log(`     [${machine.name}] Delete ☓`);
                 }
+            } else {
+                console.log(`     [${machine.name}] Delete ☓`);
             }
         }
 
-        console.log(`     [${machine.name}] Delete ✓`);
     }));
 
     if (shutdown)
-        await stop();
+        success &= await stop();
 
     return success;
 }
 
-async function start(detach = true) {
-    console.log('>> Starting up machines...');
-    await Promise.all(machines.map(async machine => {
-        let dirname = `qemu/${machine.key}`;
-
-        if (!fs.existsSync(dirname)) {
-            console.log(`     [${machine.name}] Missing files ☓`);
-            ignore.add(machine);
-            return;
-        }
-
-        try {
-           await boot(machine, dirname, detach, display);
-        } catch (err) {
-            ignore.add(machine);
-            console.error(err);
-        }
-    }));
-}
-
 async function stop() {
+    let success = true;
+
     console.log('>> Sending shutdown commands...');
     await Promise.all(machines.map(async machine => {
         if (ignore.has(machine))
@@ -295,7 +305,7 @@ async function stop() {
         try {
             await new Promise(async (resolve, reject) => {
                 if (machine.ssh.connection == null) {
-                    resolve();
+                    reject();
                     return;
                 }
 
@@ -309,13 +319,18 @@ async function stop() {
             console.log(`     [${machine.name}] Stop ✓`);
         } catch (err) {
             console.log(`     [${machine.name}] Stop ☓`);
+            success = false;
         }
     }));
+
+    return success;
 }
 
 async function ssh() {
-    if (machines.length != 1)
-        throw new Error('The ssh command can only be used with one machine');
+    if (machines.length != 1) {
+        console.error('The ssh command can only be used with one machine');
+        return false;
+    }
 
     let machine = machines[0];
 
@@ -325,8 +340,12 @@ async function ssh() {
     ];
 
     let proc = spawnSync('sshpass', args, { stdio: 'inherit' });
-    if (proc.status != 0)
-        throw new Error('Connection failed');
+    if (proc.status != 0) {
+        console.error('Connection failed');
+        return false;
+    }
+
+    return true;
 }
 
 // Utility
