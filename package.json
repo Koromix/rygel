@@ -18,13 +18,10 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "build/koffi.node",
   "scripts": {
-    "install": "cnoke",
+    "install": "node ../cnoke/cnoke.js",
     "test": "node test/test.js"
   },
   "license": "AGPL-3.0",
-  "dependencies": {
-    "cnoke": "*"
-  },
   "devDependencies": {
     "node-ssh": "^12.0.3"
   }
