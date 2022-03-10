@@ -35,12 +35,7 @@ let build_dir = null;
 
 // Main
 
-try {
-    main();
-} catch (err) {
-    console.error(err);
-    process.exit(1);
-}
+main();
 
 async function main() {
     let command = 'build';
@@ -129,7 +124,12 @@ async function main() {
     bin_dir = project_dir + '/build';
     build_dir = bin_dir + `/${version}_${arch}`;
 
-    await command();
+    try {
+        await command();
+    } catch (err) {
+        console.error(err);
+        process.exit(1);
+    }
 }
 
 function print_usage() {
