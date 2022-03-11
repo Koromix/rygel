@@ -112,7 +112,7 @@ TEST_FUNCTION("libcc/TestFormatSize")
 TEST_FUNCTION("libcc/TestMatchPathName")
 {
 #define CHECK_PATH_SPEC(Pattern, Path, Expected) \
-        TEST(MatchPathName(Path, Pattern) == Expected)
+        TEST_EQ(MatchPathName((Path), (Pattern)), (Expected))
 
     // Stolen from FreeBSD
     CHECK_PATH_SPEC("", "", true);
@@ -203,27 +203,27 @@ TEST_FUNCTION("libcc/TestFastRandom")
     for (int i = 0; i < 2; i++) {
         FastRandom rng(42);
 
-        TEST(rng.GetInt(1, 24097) == 18776);
-        TEST(rng.GetInt(1, 24097) == 20580);
-        TEST(rng.GetInt(1, 24097) == 12480);
-        TEST(rng.GetInt(1, 24097) == 13705);
-        TEST(rng.GetInt(1, 24097) == 23606);
-        TEST(rng.GetInt(1, 24097) == 18997);
-        TEST(rng.GetInt(1, 24097) == 3751);
-        TEST(rng.GetInt(1, 24097) == 2556);
-        TEST(rng.GetInt(1, 24097) == 20979);
-        TEST(rng.GetInt(1, 24097) == 9832);
-        TEST(rng.GetInt(1, 24097) == 5825);
-        TEST(rng.GetInt(1, 24097) == 1645);
-        TEST(rng.GetInt(1, 24097) == 3272);
-        TEST(rng.GetInt(1, 24097) == 3614);
-        TEST(rng.GetInt(1, 24097) == 21157);
-        TEST(rng.GetInt(1, 24097) == 19320);
-        TEST(rng.GetInt(1, 24097) == 6459);
-        TEST(rng.GetInt(1, 24097) == 12383);
-        TEST(rng.GetInt(1, 24097) == 2714);
-        TEST(rng.GetInt(1, 24097) == 791);
-        TEST(rng.GetInt(1, 24097) == 3227);
+        TEST_EQ(rng.GetInt(1, 24097), 18776);
+        TEST_EQ(rng.GetInt(1, 24097), 20580);
+        TEST_EQ(rng.GetInt(1, 24097), 12480);
+        TEST_EQ(rng.GetInt(1, 24097), 13705);
+        TEST_EQ(rng.GetInt(1, 24097), 23606);
+        TEST_EQ(rng.GetInt(1, 24097), 18997);
+        TEST_EQ(rng.GetInt(1, 24097), 3751);
+        TEST_EQ(rng.GetInt(1, 24097), 2556);
+        TEST_EQ(rng.GetInt(1, 24097), 20979);
+        TEST_EQ(rng.GetInt(1, 24097), 9832);
+        TEST_EQ(rng.GetInt(1, 24097), 5825);
+        TEST_EQ(rng.GetInt(1, 24097), 1645);
+        TEST_EQ(rng.GetInt(1, 24097), 3272);
+        TEST_EQ(rng.GetInt(1, 24097), 3614);
+        TEST_EQ(rng.GetInt(1, 24097), 21157);
+        TEST_EQ(rng.GetInt(1, 24097), 19320);
+        TEST_EQ(rng.GetInt(1, 24097), 6459);
+        TEST_EQ(rng.GetInt(1, 24097), 12383);
+        TEST_EQ(rng.GetInt(1, 24097), 2714);
+        TEST_EQ(rng.GetInt(1, 24097), 791);
+        TEST_EQ(rng.GetInt(1, 24097), 3227);
     }
 }
 
@@ -267,8 +267,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
     {
         OptionParser opt({});
 
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     // Short options
@@ -278,8 +278,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
         OptionParser opt(args);
 
         TEST_STR(opt.Next(), "-f");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -290,8 +290,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
         TEST_STR(opt.Next(), "-o");
         TEST_STR(opt.Next(), "-o");
         TEST_STR(opt.Next(), "-b");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     // Long options
@@ -301,8 +301,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
         OptionParser opt(args);
 
         TEST_STR(opt.Next(), "--foobar");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -311,8 +311,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
 
         TEST_STR(opt.Next(), "--foo");
         TEST_STR(opt.Next(), "--bar");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     // Mixed tests
@@ -325,8 +325,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
         TEST_STR(opt.Next(), "-b");
         TEST_STR(opt.Next(), "-a");
         TEST_STR(opt.Next(), "-r");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -340,8 +340,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
         TEST_STR(opt.Next(), "-F");
         TEST_STR(opt.Next(), "-O");
         TEST_STR(opt.Next(), "-O");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     // Values
@@ -352,8 +352,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
 
         TEST_STR(opt.Next(), "-f");
         TEST_STR(opt.ConsumeValue(), "bar");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -362,8 +362,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
 
         TEST_STR(opt.Next(), "-f");
         TEST_STR(opt.ConsumeValue(), "bar");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -372,8 +372,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
 
         TEST_STR(opt.Next(), "--foo");
         TEST_STR(opt.ConsumeValue(), "bar");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -382,8 +382,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
 
         TEST_STR(opt.Next(), "--foo");
         TEST_STR(opt.ConsumeValue(), "bar");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -391,10 +391,10 @@ TEST_FUNCTION("libcc/TestOptionParser")
         OptionParser opt(args);
 
         TEST_STR(opt.Next(), "--foo");
-        TEST(!opt.ConsumeValue());
-        TEST(!opt.Next());
+        TEST_EQ(opt.ConsumeValue(), nullptr);
+        TEST_EQ(opt.Next(), nullptr);
         TEST_STR(opt.ConsumeNonOption(), "bar");
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     // Positional tests
@@ -405,8 +405,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
 
         TEST_STR(opt.ConsumeNonOption(), "foo");
         TEST_STR(opt.ConsumeNonOption(), "bar");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -417,8 +417,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
         opt.Next();
         TEST_STR(opt.ConsumeNonOption(), "foo");
         TEST_STR(opt.ConsumeNonOption(), "bar");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -429,8 +429,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
         TEST_STR(opt.ConsumeNonOption(), "foobar");
         TEST_STR(opt.ConsumeNonOption(), "foo");
         TEST_STR(opt.ConsumeNonOption(), "--bar");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     {
@@ -445,8 +445,8 @@ TEST_FUNCTION("libcc/TestOptionParser")
         TEST_STR(opt.ConsumeNonOption(), "BAR");
         TEST_STR(opt.ConsumeNonOption(), "barfoo");
         TEST_STR(opt.ConsumeNonOption(), "BARFOO");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 
     // ConsumeNonOption
@@ -458,7 +458,7 @@ TEST_FUNCTION("libcc/TestOptionParser")
         TEST_STR(opt.ConsumeNonOption(), "foo");
         TEST_STR(opt.Next(), "-f");
         TEST_STR(opt.ConsumeNonOption(), "bar");
-        TEST(!opt.Next());
+        TEST_EQ(opt.Next(), nullptr);
     }
 
     {
@@ -470,7 +470,7 @@ TEST_FUNCTION("libcc/TestOptionParser")
         TEST_STR(opt.Next(), "-o");
         TEST_STR(opt.Next(), "-o");
         TEST_STR(opt.ConsumeNonOption(), "bar2");
-        TEST(!opt.Next());
+        TEST_EQ(opt.Next(), nullptr);
     }
 
     // Complex tests
@@ -484,21 +484,21 @@ TEST_FUNCTION("libcc/TestOptionParser")
         TEST_STR(opt.ConsumeValue(), "bar");
         TEST_STR(opt.Next(), "-f");
         TEST_STR(opt.Next(), "-o");
-        TEST(!opt.ConsumeValue());
+        TEST_EQ(opt.ConsumeValue(), nullptr);
         TEST_STR(opt.Next(), "-o");
         TEST_STR(opt.Next(), "-2");
         TEST_STR(opt.Next(), "--foo3");
         TEST_STR(opt.ConsumeValue(), "BAR");
         TEST_STR(opt.Next(), "-f");
         TEST_STR(opt.ConsumeValue(), "bar");
-        TEST(!opt.Next());
+        TEST_EQ(opt.Next(), nullptr);
         TEST_STR(opt.ConsumeNonOption(), "fooBAR");
         TEST_STR(opt.ConsumeNonOption(), "FOOBAR");
         TEST_STR(opt.ConsumeNonOption(), "--");
-        TEST(!opt.Next());
+        TEST_EQ(opt.Next(), nullptr);
         TEST_STR(opt.ConsumeNonOption(), "--FOOBAR");
-        TEST(!opt.Next());
-        TEST(!opt.ConsumeNonOption());
+        TEST_EQ(opt.Next(), nullptr);
+        TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
 }
 
