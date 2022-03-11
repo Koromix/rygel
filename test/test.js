@@ -369,6 +369,10 @@ async function ssh() {
 
 async function boot(machine, dirname, detach, display) {
     let qemu = machine.qemu;
+
+    if (process.platform == 'linux' && process.arch == 'x64' && (machine.info.arch == 'x64' ||
+                                                                 machine.info.arch == 'ia32'))
+        qemu += ' -accel kvm';
     if (!display)
         qemu += ' -display none';
 
@@ -441,7 +445,7 @@ function wait(ms) {
 
 async function execRemote(machine, cmd, cwd = null) {
     try {
-        if (machine.info.windows) {
+        if (machine.info.platform == 'win32') {
             if (cwd != null) {
                 cwd = cwd.replaceAll('/', '\\');
                 cmd = `cd "${cwd}" && ${cmd}`;
