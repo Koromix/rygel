@@ -251,8 +251,18 @@ async function test() {
                 console.log(`     [${machine.name}] ${name} ✓ (${(time / 1000).toFixed(2)}s)`);
             } else {
                 console.error(`     [${machine.name}] ${name} ☓`);
-                if (ret.stderr)
-                    console.error(ret.stderr);
+
+                let align = machine.name.length + 8;
+                if (ret.stdout) {
+                    let str = ' '.repeat(align) + 'Standard output:\n' +
+                              ret.stdout.replace(/^/gm, ' '.repeat(align + 4)) + '\n';
+                    console.error(str);
+                }
+                if (ret.stderr) {
+                    let str = ' '.repeat(machine.name.length + 8) + 'Standard error:\n' +
+                              ret.stderr.replace(/^/gm, ' '.repeat(align + 4)) + '\n';
+                    console.error(str);
+                }
 
                 success = false;
             }
