@@ -30,8 +30,9 @@ let arch = null;
 let debug = false;
 
 let project_dir = null;
-let bin_dir = null;
 let build_dir = null;
+let download_dir = null;
+let work_dir = null;
 
 // Main
 
@@ -121,8 +122,9 @@ async function main() {
     if (project_dir == null)
         project_dir = process.cwd();
     project_dir = project_dir.replace(/\\/g, '/');
-    bin_dir = project_dir + '/build';
-    build_dir = bin_dir + `/${version}_${arch}`;
+    build_dir = project_dir + '/build';
+    download_dir = build_dir + `/downloads`;
+    work_dir = build_dir + `/cmake/${version}_${arch}`;
 
     try {
         await command();
@@ -169,14 +171,19 @@ async function configure(retry = true) {
     }
 
     // Prepare build directory
-    fs.mkdirSync(bin_dir, { recursive: true, mode: 0o755 });
     fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
+    fs.mkdirSync(download_dir, { recursive: true, mode: 0o755 });
+    fs.mkdirSync(work_dir, { recursive: true, mode: 0o755 });
 
     // Download Node headers
     {
-        let url = `https://nodejs.org/dist/${version}/node-${version}-headers.tar.gz`;
-        await download(url, build_dir + '/headers.tar.gz');
-        await extract_targz(build_dir + '/headers.tar.gz', build_dir + '/headers', 1);
+        let basename = `node-${version}-headers.tar.gz`;
+        let url = `https://nodejs.org/dist/${version}/${basename}`;
+        let destname = `${download_dir}/${basename}`;
+
+        if (!fs.existsSync(destname))
+            await download(url, destname);
+        await extract_targz(destname, work_dir + '/headers', 1);
     }
 
     // Download Node import library (Windows)
@@ -192,17 +199,17 @@ async function configure(retry = true) {
         }
 
         let url = `https://nodejs.org/dist/${version}/${dirname}/node.lib`;
-        await download(url, build_dir + `/node.lib`);
+        await download(url, work_dir + `/node.lib`);
     }
 
-    args.push(`-DNODE_JS_INC=${build_dir}/headers/include/node`);
+    args.push(`-DNODE_JS_INC=${work_dir}/headers/include/node`);
 
     switch (process.platform) {
         case 'win32': {
-            write_delay_hook_c(`${build_dir}/win_delay_hook.c`);
+            write_delay_hook_c(`${work_dir}/win_delay_hook.c`);
 
-            args.push(`-DNODE_JS_SRC=${build_dir}/win_delay_hook.c`);
-            args.push(`-DNODE_JS_LIB=${build_dir}/node.lib`);
+            args.push(`-DNODE_JS_SRC=${work_dir}/win_delay_hook.c`);
+            args.push(`-DNODE_JS_LIB=${work_dir}/node.lib`);
 
             if (arch === 'ia32') {
                 args.push('-DCMAKE_SHARED_LINKER_FLAGS=/DELAYLOAD:node.exe /SAFESEH:NO');
@@ -232,18 +239,14 @@ async function configure(retry = true) {
     args.push(`-DCMAKE_BUILD_TYPE=${debug ? 'Debug' : 'Release'}`);
     for (let type of ['RUNTIME', 'LIBRARY']) {
         for (let suffix of ['', '_DEBUG', '_RELEASE'])
-            args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${bin_dir}`);
+            args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${build_dir}`);
     }
     args.push('--no-warn-unused-cli');
 
-    let proc = spawnSync('cmake', args, { cwd: build_dir, stdio: 'inherit' });
+    let proc = spawnSync('cmake', args, { cwd: work_dir, stdio: 'inherit' });
     if (proc.status != 0) {
-        if (retry && fs.existsSync(build_dir + '/CMakeCache.txt')) {
-            if (fs.rmSync != null) {
-                fs.rmSync(build_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
-            } else {
-                fs.rmdirSync(build_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
-            }
+        if (retry && fs.existsSync(work_dir + '/CMakeCache.txt')) {
+            unlink_recursive(work_dir);
             return configure(false);
         }
 
@@ -252,7 +255,7 @@ async function configure(retry = true) {
 }
 
 async function build() {
-    if (!fs.existsSync(build_dir + '/CMakeCache.txt'))
+    if (!fs.existsSync(work_dir + '/CMakeCache.txt'))
         await configure();
 
     // In case Make gets used
@@ -260,7 +263,7 @@ async function build() {
         process.env.MAKEFLAGS = '-j' + os.cpus().length;
 
     let args = [
-        '--build', build_dir,
+        '--build', work_dir,
         '--config', debug ? 'Debug' : 'Release'
     ];
 
@@ -270,19 +273,31 @@ async function build() {
 }
 
 async function clean() {
+    let entries = fs.readdirSync(build_dir);
+
+    for (let basename of entries) {
+        if (basename == 'downloads')
+            continue;
+
+        let filename = build_dir + '/' + basename;
+        unlink_recursive(filename);
+    }
+}
+
+// Utility
+
+function unlink_recursive(path) {
     try {
         if (fs.rmSync != null) {
-            fs.rmSync(bin_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+            fs.rmSync(path, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
         } else {
-            fs.rmdirSync(bin_dir, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+            fs.rmdirSync(path, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
         }
     } catch (err) {
         if (err.code !== 'ENOENT')
             throw err;
     }
 }
-
-// Utility
 
 function download(url, dest) {
     return new Promise((resolve, reject) => {
