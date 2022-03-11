@@ -106,8 +106,13 @@ async function main() {
         let json = fs.readFileSync('registry/machines.json', { encoding: 'utf-8' });
 
         machines_map = JSON.parse(json);
-        for (let key in machines_map)
-            machines_map[key].key = key;
+        for (let key in machines_map) {
+            let machine = machines_map[key];
+
+            machine.key = key;
+            machine.kvm = process.platform == 'linux' && process.arch == 'x64' &&
+                          (machine.info.arch == 'x64' || machine.info.arch == 'ia32');
+        }
     }
 
     if (!machines.length) {
@@ -382,8 +387,7 @@ async function ssh() {
 async function boot(machine, dirname, detach, display) {
     let qemu = machine.qemu;
 
-    if (process.platform == 'linux' && process.arch == 'x64' && (machine.info.arch == 'x64' ||
-                                                                 machine.info.arch == 'ia32'))
+    if (machine.kvm)
         qemu += ' -accel kvm';
     if (!display)
         qemu += ' -display none';
@@ -423,7 +427,8 @@ async function boot(machine, dirname, detach, display) {
         }
     }
 
-    log(machine, (started ? 'Start' : 'Join'), chalk.bold.green('[ok]'));
+    let action = (started ? 'Start' : 'Join') + (machine.kvm ? ' (KVM)' : '');
+    log(machine, action, chalk.bold.green('[ok]'));
 }
 
 async function join(machine, tries) {
