@@ -180,11 +180,11 @@ For example, if you want to run the tests on Debian ARM64, run the following com
 
 ```sh
 cd luigi/koffi/test/
-wget https://koromix.dev/files/koffi/qemu_debian_arm64.tar.zst
-tar -I zstd -xvf qemu_debian_arm64.tar.zst
+wget -q -O- https://koromix.dev/files/koffi/qemu_debian_arm64.tar.zst | zstd -d | tar xv
+sha256sum -c --ignore-missing registry/sha256sum.txt
 ```
 
-You can check the file against the checksums provided in sha256sums.txt kept in the repository in `registry/sha256sums.txt`.
+Note that the machine disk content may change each time the machine runs, so the checksum test will fail once a machine has been used at least once.
 
 And now you can run the tests with:
 
