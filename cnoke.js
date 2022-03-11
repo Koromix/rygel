@@ -206,7 +206,7 @@ async function configure(retry = true) {
 
             if (arch === 'ia32') {
                 args.push('-DCMAKE_SHARED_LINKER_FLAGS=/DELAYLOAD:node.exe /SAFESEH:NO');
-                args.push('-A'); args.push('Win32');
+                args.push('-A', 'Win32');
             } else {
                 args.push('-DCMAKE_SHARED_LINKER_FLAGS=/DELAYLOAD:node.exe');
             }
@@ -219,9 +219,8 @@ async function configure(retry = true) {
 
     if (process.platform != 'win32') {
         // Prefer Ninja if available
-        if (spawnSync('ninja', ['--version']).status == 0) {
-            args.push('-G'); args.push('Ninja');
-        }
+        if (spawnSync('ninja', ['--version']).status == 0)
+            args.push('-G', 'Ninja');
 
         // Use CCache if available
         if (spawnSync('ccache', ['--version']).status == 0) {
