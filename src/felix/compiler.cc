@@ -137,6 +137,23 @@ static bool IdentifyCompiler(const char *bin, const char *needle)
     return true;
 }
 
+static bool DetectCcache() {
+    static bool detected = false;
+    static bool init = false;
+
+    if (!init) {
+        detected = FindExecutableInPath("ccache");
+
+        if (detected) {
+            static char sloppiness[] = "CCACHE_SLOPPINESS=pch_defines,time_macros,"
+                                       "include_file_ctime,include_file_mtime";
+            putenv(sloppiness);
+        }
+    }
+
+    return detected;
+}
+
 class ClangCompiler final: public Compiler {
     const char *cc;
     const char *cxx;
@@ -223,6 +240,9 @@ public:
 
         supported |= (int)CompileFeature::OptimizeSpeed;
         supported |= (int)CompileFeature::OptimizeSize;
+        if (DetectCcache()) {
+            supported |= (int)CompileFeature::Ccache;
+        }
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::DebugInfo;
@@ -325,6 +345,10 @@ public:
         RG_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
+
+        if (features & (int)CompileFeature::Ccache) {
+            Fmt(&buf, "ccache ");
+        }
 
         // Compiler
         switch (src_type) {
@@ -658,6 +682,9 @@ public:
 
         supported |= (int)CompileFeature::OptimizeSpeed;
         supported |= (int)CompileFeature::OptimizeSize;
+        if (DetectCcache()) {
+            supported |= (int)CompileFeature::Ccache;
+        }
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
@@ -747,6 +774,10 @@ public:
         RG_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
+
+        if (features & (int)CompileFeature::Ccache) {
+            Fmt(&buf, "ccache ");
+        }
 
         // Compiler
         switch (src_type) {

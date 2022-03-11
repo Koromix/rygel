@@ -12,19 +12,19 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 [Debug]
-Features = ?PCH, DebugInfo, HotAssets
+Features = ?PCH, ?Ccache, DebugInfo, HotAssets
 
 [ASan]
-Features = ?PCH, DebugInfo, HotAssets, ASan
+Features = ?PCH, ?Ccache, DebugInfo, HotAssets, ASan
 
 [TSan]
-Features = ?PCH, DebugInfo, HotAssets, TSan
+Features = ?PCH, ?Ccache, DebugInfo, HotAssets, TSan
 
 [UBSan]
-Features = ?PCH, DebugInfo, HotAssets, UBSan
+Features = ?PCH, ?Ccache, DebugInfo, HotAssets, UBSan
 
 [Fast]
-Features = ?PCH, DebugInfo, OptimizeSpeed
+Features = ?PCH, ?Ccache, DebugInfo, OptimizeSpeed
 
 [LTO]
 Features = DebugInfo, OptimizeSpeed, LTO
