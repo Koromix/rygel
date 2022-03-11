@@ -502,6 +502,46 @@ TEST_FUNCTION("libcc/TestOptionParser")
     }
 }
 
+TEST_FUNCTION("libcc/TestPathCheck")
+{
+    TEST_EQ(PathIsAbsolute("foo"), false);
+    TEST_EQ(PathIsAbsolute(""), false);
+    TEST_EQ(PathIsAbsolute("/foo"), true);
+    TEST_EQ(PathIsAbsolute("/"), true);
+#ifdef _WIN32
+    TEST_EQ(PathIsAbsolute("\\foo"), true);
+    TEST_EQ(PathIsAbsolute("\\"), true);
+    TEST_EQ(PathIsAbsolute("C:foo"), true); // Technically not absolute but it seems safer to deal with it this way
+    TEST_EQ(PathIsAbsolute("C:/foo"), true);
+    TEST_EQ(PathIsAbsolute("C:/"), true);
+    TEST_EQ(PathIsAbsolute("C:\\foo"), true);
+    TEST_EQ(PathIsAbsolute("C:\\"), true);
+#endif
+
+    TEST_EQ(PathContainsDotDot(".."), true);
+    TEST_EQ(PathContainsDotDot("/.."), true);
+    TEST_EQ(PathContainsDotDot("/../"), true);
+    TEST_EQ(PathContainsDotDot("a.."), false);
+    TEST_EQ(PathContainsDotDot("..b"), false);
+    TEST_EQ(PathContainsDotDot("..b"), false);
+    TEST_EQ(PathContainsDotDot("foo/bar/.."), true);
+    TEST_EQ(PathContainsDotDot("foo/../bar"), true);
+    TEST_EQ(PathContainsDotDot("foo../bar"), false);
+    TEST_EQ(PathContainsDotDot("foo/./bar"), false);
+#ifdef _WIN32
+    TEST_EQ(PathContainsDotDot(".."), true);
+    TEST_EQ(PathContainsDotDot("\\.."), true);
+    TEST_EQ(PathContainsDotDot("\\..\\"), true);
+    TEST_EQ(PathContainsDotDot("a.."), false);
+    TEST_EQ(PathContainsDotDot("..b"), false);
+    TEST_EQ(PathContainsDotDot("..b"), false);
+    TEST_EQ(PathContainsDotDot("foo\\bar\\.."), true);
+    TEST_EQ(PathContainsDotDot("foo\\..\\bar"), true);
+    TEST_EQ(PathContainsDotDot("foo..\\bar"), false);
+    TEST_EQ(PathContainsDotDot("foo\\.\\bar"), false);
+#endif
+}
+
 BENCHMARK_FUNCTION("libcc/BenchFmt")
 {
     static const int iterations = 1600000;
