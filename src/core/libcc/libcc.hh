@@ -3774,6 +3774,16 @@ static inline void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
     #define RG_SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
+#ifdef _WIN32
+bool IsWin32Utf8();
+Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w);
+Size ConvertWin32WideToUtf8(const wchar_t *str_w, Span<char> out_str);
+char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
+#endif
+
+void SetEnvironmentVar(const char *name, const char *value);
+void DeleteEnvironmentVar(const char *name);
+
 static inline bool IsPathSeparator(char c)
 {
 #ifdef _WIN32
@@ -3782,13 +3792,6 @@ static inline bool IsPathSeparator(char c)
     return c == '/';
 #endif
 }
-
-#ifdef _WIN32
-bool IsWin32Utf8();
-Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w);
-Size ConvertWin32WideToUtf8(const wchar_t *str_w, Span<char> out_str);
-char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
-#endif
 
 Span<const char> GetPathDirectory(Span<const char> filename);
 Span<const char> GetPathExtension(Span<const char> filename,

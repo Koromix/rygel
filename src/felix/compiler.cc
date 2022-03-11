@@ -145,11 +145,8 @@ static bool DetectCcache() {
         detected = FindExecutableInPath("ccache");
 
         if (detected) {
-            static char depend[] = "CCACHE_DEPEND=1";
-            static char sloppiness[] = "CCACHE_SLOPPINESS=pch_defines,time_macros,"
-                                       "include_file_ctime,include_file_mtime";
-            putenv(depend);
-            putenv(sloppiness);
+            SetEnvironmentVar("CCACHE_DEPEND", "1");
+            SetEnvironmentVar("CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime");
         }
     }
 
