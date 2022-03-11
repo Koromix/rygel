@@ -21,6 +21,7 @@ const path = require('path');
 const util = require('util');
 const { spawn, spawnSync } = require('child_process');
 const { NodeSSH } = require('node-ssh');
+const chalk = require('chalk');
 
 // Globals
 
@@ -165,7 +166,7 @@ async function start(detach = true) {
         let dirname = `qemu/${machine.key}`;
 
         if (!fs.existsSync(dirname)) {
-            console.log(`     [${machine.name}] Missing files ☓`);
+            log(machine, 'Missing files', chalk.bold.gray('[ignore]'));
 
             ignore.add(machine);
             missing++;
@@ -225,9 +226,9 @@ async function test() {
                 }
             });
 
-            console.log(`     [${machine.name}] Copy ✓`);
+            log(machine, 'Copy', chalk.bold.green('[ok]'));
         } catch (err) {
-            console.log(`     [${machine.name}] Copy ☓`);
+            log(machine, 'Copy', chalk.bold.red('[error]'));
 
             ignore.add(machine);
             success = false;
@@ -248,19 +249,22 @@ async function test() {
             let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
             if (ret.code == 0) {
-                console.log(`     [${machine.name}] ${name} ✓ (${(time / 1000).toFixed(2)}s)`);
+                log(machine, name, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
             } else {
-                console.error(`     [${machine.name}] ${name} ☓`);
+                log(machine, name, chalk.bold.red('[error]'));
 
-                let align = machine.name.length + 8;
+                if (ret.stdout || ret.stderr)
+                    console.error('');
+
+                let align = log.align + 9;
                 if (ret.stdout) {
                     let str = ' '.repeat(align) + 'Standard output:\n' +
-                              ret.stdout.replace(/^/gm, ' '.repeat(align + 4)) + '\n';
+                              chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
                     console.error(str);
                 }
                 if (ret.stderr) {
-                    let str = ' '.repeat(machine.name.length + 8) + 'Standard error:\n' +
-                              ret.stderr.replace(/^/gm, ' '.repeat(align + 4)) + '\n';
+                    let str = ' '.repeat(align) + 'Standard error:\n' +
+                              chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
                     console.error(str);
                 }
 
@@ -278,26 +282,34 @@ async function test() {
 
         try {
             await machine.ssh.exec('rm', ['-rf', remote_dir]);
-            console.log(`     [${machine.name}] Delete ✓`);
+            log(machine, 'Delete', chalk.bold.green('[ok]'));
         } catch (err) {
             if (process.platform == 'win32') {
                 await wait(1000);
 
                 try {
                     await machine.ssh.exec('rm', ['-rf', remote_dir]);
-                    console.log(`     [${machine.name}] Delete ✓`);
+                    log(machine, 'Delete', chalk.bold.green('[ok]'));
                 } catch (err) {
-                    console.log(`     [${machine.name}] Delete ☓`);
+                    log(machine, 'Delete', chalk.bold.red('[error]'));
                 }
             } else {
-                console.log(`     [${machine.name}] Delete ☓`);
+                log(machine, 'Delete', chalk.bold.red('[error]'));
             }
         }
-
     }));
 
     if (shutdown)
         success &= await stop();
+
+    console.log('');
+    if (success) {
+        console.log('>> Status: ' + chalk.bold.green('SUCCESS'));
+        if (ignore.size)
+            console.log('   (but some machines could not be tested)');
+    } else {
+        console.log('>> Status: ' + chalk.bold.red('FAILED'));
+    }
 
     return success;
 }
@@ -314,7 +326,7 @@ async function stop() {
             try {
                 await join(machine, 2);
             } catch (err) {
-                console.log(`     [${machine.name}] Already down ✓`);
+                log(machine, 'Already down', chalk.bold.green('[ok]'));
                 return;
             }
         }
@@ -333,9 +345,9 @@ async function stop() {
                 execRemote(machine, machine.info.shutdown);
             });
 
-            console.log(`     [${machine.name}] Stop ✓`);
+            log(machine, 'Stop', chalk.bold.green('[ok]'));
         } catch (err) {
-            console.log(`     [${machine.name}] Stop ☓`);
+            log(machine, 'Stop', chalk.bold.red('[error]'));
             success = false;
         }
     }));
@@ -411,7 +423,7 @@ async function boot(machine, dirname, detach, display) {
         }
     }
 
-    console.log(`     [${machine.name}] ${started ? 'Start' : 'Join'} ✓`);
+    log(machine, (started ? 'Start' : 'Join'), chalk.bold.green('[ok]'));
 }
 
 async function join(machine, tries) {
@@ -441,6 +453,18 @@ async function join(machine, tries) {
 
 function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function log(machine, action, status) {
+    if (log.align == null) {
+        let lengths = machines.map(machine => machine.name.length);
+        log.align = Math.max(...lengths);
+    }
+
+    let align1 = log.align - machine.name.length;
+    let align2 = 22 - action.length;
+
+    console.log(`     [${machine.name}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
 }
 
 async function execRemote(machine, cmd, cwd = null) {

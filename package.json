@@ -23,6 +23,7 @@
   },
   "license": "AGPL-3.0",
   "devDependencies": {
+    "chalk": "^4.1.2",
     "node-ssh": "^12.0.3"
   }
 }
