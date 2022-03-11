@@ -2971,6 +2971,7 @@ public:
     char pad_char;
 
     FmtArg() = default;
+    FmtArg(std::nullptr_t) : type(FmtType::Str1) { u.str1 = "(null)"; }
     FmtArg(const char *str) : type(FmtType::Str1) { u.str1 = str ? str : "(null)"; }
     FmtArg(Span<const char> str) : type(FmtType::Str2) { u.str2 = str; }
     FmtArg(char c) : type(FmtType::Char) { u.ch = c; }
