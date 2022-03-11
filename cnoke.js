@@ -313,21 +313,30 @@ function extract_targz(filename, dest_dir, strip = 0) {
                     if (buf == null)
                         break;
 
+                    // Two zeroed 512-byte blocks end the stream
+                    if (!buf[0])
+                        continue;
+
                     header = {
                         filename: buf.toString('utf-8', 0, 100).replace(/\0/g, ''),
                         mode: parseInt(buf.toString('ascii', 100, 109), 8),
                         size: parseInt(buf.toString('ascii', 124, 137), 8),
-                        type: buf.readUint8(156) - 48
+                        type: buf[156] - 48
                     };
 
                     if (buf.toString('ascii', 257, 263) == 'ustar\0') {
                         let prefix = buf.toString('utf-8', 345, 500).replace(/\0/g, '');
-                        filename = prefix + filename;
+                        header.filename = prefix + header.filename;
                     }
 
-                    filename = filename.replace(/\\/g, '/');
-                    if (has_dotdot(filename))
-                        reject(new Error(`Insecure path containing '..' inside TAR archive`));
+                    // Safety checks
+                    header.filename = header.filename.replace(/\\/g, '/');
+                    if (!header.filename.length)
+                        reject(new Error(`Insecure empty filename inside TAR archive`));
+                    if (header.filename[0] == '/')
+                        reject(new Error(`Insecure filename starting with / inside TAR archive`));
+                    if (has_dotdot(header.filename))
+                        reject(new Error(`Insecure filename containing '..' inside TAR archive`));
 
                     for (let i = 0; i < strip; i++)
                         header.filename = header.filename.substr(header.filename.indexOf('/') + 1);
@@ -362,7 +371,7 @@ function extract_targz(filename, dest_dir, strip = 0) {
     });
 }
 
-// Does not care about Windows separators
+// Does not care about Windows separators, normalize first
 function has_dotdot(path) {
     let start = 0;
 
