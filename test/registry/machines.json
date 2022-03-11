@@ -15,7 +15,7 @@
         },
 
         "commands": {
-            "Build": "npm install --omit dev"
+            "Build": "npm install --production"
         }
     },
 
@@ -35,7 +35,7 @@
         },
 
         "commands": {
-            "Build": "npm install --omit dev"
+            "Build": "npm install --production"
         }
     },
 
@@ -55,7 +55,7 @@
         },
 
         "commands": {
-            "Build": "npm install --omit dev"
+            "Build": "npm install --production"
         }
     },
 
@@ -75,7 +75,7 @@
         },
 
         "commands": {
-            "Build": "npm install --omit dev"
+            "Build": "npm install --production"
         }
     },
 
@@ -100,8 +100,8 @@
         },
 
         "commands": {
-            "Build 32 bit": "rm -rf node_modules build && C:\\Users\\windows\\Desktop\\node32.cmd npm install --omit dev",
-            "Build 64 bit": "rm -rf node_modules build && C:\\Users\\windows\\Desktop\\node64.cmd npm install --omit dev"
+            "Build 32 bit": "rm -rf node_modules build && C:\\Users\\windows\\Desktop\\node32.cmd npm install --production",
+            "Build 64 bit": "rm -rf node_modules build && C:\\Users\\windows\\Desktop\\node64.cmd npm install --production"
         }
     }
 }
