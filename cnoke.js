@@ -485,8 +485,6 @@ function write_delay_hook_c(filename) {
 
 static FARPROC WINAPI self_exe_hook(unsigned int event, DelayLoadInfo *info)
 {
-    HMODULE m;
-
     if (event == dliNotePreLoadLibrary && !stricmp(info->szDll, "node.exe")) {
         HMODULE h = GetModuleHandle(NULL);
         return (FARPROC)h;
