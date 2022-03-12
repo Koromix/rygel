@@ -62,7 +62,8 @@ endif()
 if(MSVC)
     target_compile_options(koffi PRIVATE /wd4200)
 else()
-    target_compile_options(koffi PRIVATE -fno-exceptions -Wno-missing-field-initializers)
+    target_compile_options(koffi PRIVATE -fno-exceptions -Wno-missing-field-initializers
+                                         -fno-strict-aliasing)
 endif()
 
 # ---- Raylib ----
