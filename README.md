@@ -29,6 +29,17 @@ template to get started:
 cmake_minimum_required(VERSION 3.11)
 project(hello C CXX)
 
+find_package(CNoke)
+
+add_node_addon(NAME hello SOURCES hello.cc)
+```
+
+You can also do it manually (without the module) if you prefer:
+
+```cmake
+cmake_minimum_required(VERSION 3.11)
+project(hello C CXX)
+
 add_library(hello SHARED hello.cc ${NODE_JS_SRC})
 set_target_properties(hello PROPERTIES PREFIX "" SUFFIX ".node")
 target_include_directories(hello PRIVATE ${NODE_JS_INC})

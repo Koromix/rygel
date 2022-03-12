@@ -205,6 +205,9 @@ async function configure(retry = true) {
         fs.copyFileSync(destname, work_dir + '/node.lib');
     }
 
+    write_cmake_module(`${work_dir}/FindCNoke.cmake`);
+    args.push(`-DCMAKE_MODULE_PATH=${work_dir}`);
+
     args.push(`-DNODE_JS_INC=${work_dir}/headers/include/node`);
 
     switch (process.platform) {
@@ -457,7 +460,34 @@ function has_dotdot(path) {
     return false;
 }
 
-// Windows
+// Extra code
+
+function write_cmake_module(filename) {
+    let code = `# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+function(add_node_addon)
+    cmake_parse_arguments(ARG "" "NAME" "SOURCES" \${ARGN})
+
+    add_library(\${ARG_NAME} SHARED \${ARG_SOURCES} \${NODE_JS_SRC})
+    set_target_properties(\${ARG_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
+    target_include_directories(\${ARG_NAME} PRIVATE \${NODE_JS_INC})
+    target_link_libraries(\${ARG_NAME} PRIVATE \${NODE_JS_LIB})
+endfunction()
+`;
+
+    fs.writeFileSync(filename, code);
+}
 
 function write_delay_hook_c(filename) {
     let code = `// This program is free software: you can redistribute it and/or modify
