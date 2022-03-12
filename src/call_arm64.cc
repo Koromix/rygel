@@ -326,12 +326,21 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 }
             } break;
             case PrimitiveKind::Pointer: {
-                if (RG_UNLIKELY(!CheckValueTag(instance, value, param.type))) {
+                uint8_t *ptr;
+
+                if (CheckValueTag(instance, value, param.type)) {
+                    ptr = value.As<Napi::External<uint8_t>>().Data();
+                } else if (value.IsObject() && param.type->ref->primitive == PrimitiveKind::Record) {
+                    Napi::Object obj = value.As<Napi::Object>();
+
+                    if (RG_UNLIKELY(!call.AllocHeap(param.type->ref->size, 16, &ptr)))
+                        return env.Null();
+                    if (!call.PushObject(obj, param.type->ref, ptr))
+                        return env.Null();
+                } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), i + 1, param.type->name);
                     return env.Null();
                 }
-
-                void *ptr = value.As<Napi::External<void>>();
 
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint64_t)ptr;
