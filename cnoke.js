@@ -163,6 +163,10 @@ Configure options:
 async function configure(retry = true) {
     let args = [project_dir];
 
+    // Check for CMakeLists.txt
+    if (!fs.existsSync(project_dir + '/CMakeLists.txt'))
+        throw new Error('This directory does not appear to have a CMakeLists.txt file');
+
     // Check for CMake
     {
         let proc = spawnSync('cmake', ['--version']);
