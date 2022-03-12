@@ -1,6 +1,6 @@
 {
   "name": "cnoke",
-  "version": "0.9.13",
+  "version": "0.9.14",
   "description": "Simple alternative to CMake.js",
   "keywords": [
     "native",
@@ -15,5 +15,10 @@
   },
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "bin": "cnoke.js",
-  "license": "AGPL-3.0"
+  "license": "AGPL-3.0",
+  "files": [
+    "cnoke.js",
+    "LICENSE.txt",
+    "README.md"
+  ]
 }
