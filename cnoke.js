@@ -29,6 +29,8 @@ let version = null;
 let arch = null;
 let debug = false;
 
+let cmake_bin = null;
+
 let project_dir = null;
 let build_dir = null;
 let download_dir = null;
@@ -163,16 +165,7 @@ Configure options:
 async function configure(retry = true) {
     let args = [project_dir];
 
-    // Check for CMakeLists.txt
-    if (!fs.existsSync(project_dir + '/CMakeLists.txt'))
-        throw new Error('This directory does not appear to have a CMakeLists.txt file');
-
-    // Check for CMake
-    {
-        let proc = spawnSync('cmake', ['--version']);
-        if (proc.status != 0)
-            throw new Error('CMake does not seem to be available');
-    }
+    check_cmake();
 
     // Prepare build directory
     fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
@@ -247,7 +240,7 @@ async function configure(retry = true) {
     }
     args.push('--no-warn-unused-cli');
 
-    let proc = spawnSync('cmake', args, { cwd: work_dir, stdio: 'inherit' });
+    let proc = spawnSync(cmake_bin, args, { cwd: work_dir, stdio: 'inherit' });
     if (proc.status != 0) {
         if (retry && fs.existsSync(work_dir + '/CMakeCache.txt')) {
             unlink_recursive(work_dir);
@@ -259,6 +252,8 @@ async function configure(retry = true) {
 }
 
 async function build() {
+    check_cmake();
+
     if (!fs.existsSync(work_dir + '/CMakeCache.txt'))
         await configure();
 
@@ -271,7 +266,7 @@ async function build() {
         '--config', debug ? 'Debug' : 'Release'
     ];
 
-    let proc = spawnSync('cmake', args, { stdio: 'inherit' });
+    let proc = spawnSync(cmake_bin, args, { stdio: 'inherit' });
     if (proc.status != 0)
         throw new Error('Failed to run build step');
 }
@@ -289,6 +284,44 @@ async function clean() {
 }
 
 // Utility
+
+function check_cmake() {
+    if (cmake_bin != null)
+        return;
+
+    // Check for CMakeLists.txt
+    if (!fs.existsSync(project_dir + '/CMakeLists.txt'))
+        throw new Error('This directory does not appear to have a CMakeLists.txt file');
+
+    // Check for CMake
+    {
+        let proc = spawnSync('cmake', ['--version']);
+
+        if (proc.status == 0) {
+            cmake_bin = 'cmake';
+        } else {
+            if (process.platform == 'win32') {
+                // I really don't want to depend on anything in CNoke, and Node.js does not provide
+                // anything to read from the registry. This is okay, REG.exe exists since Windows XP.
+                let proc = spawnSync('reg', ['query', 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Kitware\\CMake', '/v', 'InstallDir']);
+
+                if (proc.status == 0) {
+                    let matches = proc.stdout.toString('utf-8').match(/InstallDir[ \t]+REG_[A-Z_]+[ \t]+(.*)+/);
+
+                    if (matches != null) {
+                        let bin = path.join(matches[1].trim(), 'bin\\cmake.exe');
+
+                        if (fs.existsSync(bin))
+                            cmake_bin = bin;
+                    }
+                }
+            }
+
+            if (cmake_bin == null)
+                throw new Error('CMake does not seem to be available');
+        }
+    }
+}
 
 function unlink_recursive(path) {
     try {
