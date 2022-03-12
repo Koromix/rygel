@@ -80,7 +80,7 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 version = value;
-                if (!v.startsWith('v'))
+                if (!version.startsWith('v'))
                     version = 'v' + version;
             } else if (arg == '-a' || arg == '--arch') {
                 if (value == null)
