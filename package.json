@@ -19,6 +19,7 @@
   "files": [
     "cnoke.js",
     "LICENSE.txt",
-    "README.md"
+    "README.md",
+    "assets"
   ]
 }

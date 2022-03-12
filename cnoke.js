@@ -31,6 +31,7 @@ let debug = false;
 
 let cmake_bin = null;
 
+let app_dir = null;
 let project_dir = null;
 let build_dir = null;
 let download_dir = null;
@@ -121,6 +122,7 @@ async function main() {
     if (arch == null)
         arch = process.arch;
 
+    app_dir = path.dirname(__filename);
     if (project_dir == null)
         project_dir = process.cwd();
     project_dir = project_dir.replace(/\\/g, '/');
@@ -203,17 +205,16 @@ async function configure(retry = true) {
         }
 
         fs.copyFileSync(destname, work_dir + '/node.lib');
+        fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
     }
 
-    write_cmake_module(`${work_dir}/FindCNoke.cmake`);
+    fs.copyFileSync(`${app_dir}/assets/FindCNoke.cmake`, `${work_dir}/FindCNoke.cmake`);
     args.push(`-DCMAKE_MODULE_PATH=${work_dir}`);
 
     args.push(`-DNODE_JS_INC=${work_dir}/headers/include/node`);
 
     switch (process.platform) {
         case 'win32': {
-            write_delay_hook_c(`${work_dir}/win_delay_hook.c`);
-
             args.push(`-DNODE_JS_SRC=${work_dir}/win_delay_hook.c`);
             args.push(`-DNODE_JS_LIB=${work_dir}/node.lib`);
 
@@ -458,73 +459,4 @@ function has_dotdot(path) {
     }
 
     return false;
-}
-
-// Extra code
-
-function write_cmake_module(filename) {
-    let code = `# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program. If not, see https://www.gnu.org/licenses/.
-
-function(add_node_addon)
-    cmake_parse_arguments(ARG "" "NAME" "SOURCES" \${ARGN})
-
-    add_library(\${ARG_NAME} SHARED \${ARG_SOURCES} \${NODE_JS_SRC})
-    set_target_properties(\${ARG_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
-    target_include_directories(\${ARG_NAME} PRIVATE \${NODE_JS_INC})
-    target_link_libraries(\${ARG_NAME} PRIVATE \${NODE_JS_LIB})
-endfunction()
-`;
-
-    fs.writeFileSync(filename, code);
-}
-
-function write_delay_hook_c(filename) {
-    let code = `// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see https://www.gnu.org/licenses/.
-
-#include <stdlib.h>
-#ifndef NOMINMAX
-    #define NOMINMAX
-#endif
-#ifndef WIN32_LEAN_AND_MEAN
-    #define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#include <delayimp.h>
-
-static FARPROC WINAPI self_exe_hook(unsigned int event, DelayLoadInfo *info)
-{
-    if (event == dliNotePreLoadLibrary && !stricmp(info->szDll, "node.exe")) {
-        HMODULE h = GetModuleHandle(NULL);
-        return (FARPROC)h;
-    }
-
-    return NULL;
-}
-
-const PfnDliHook __pfnDliNotifyHook2 = self_exe_hook;
-`;
-
-    fs.writeFileSync(filename, code);
 }
