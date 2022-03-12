@@ -195,8 +195,14 @@ async function configure(retry = true) {
             } break;
         }
 
-        let url = `https://nodejs.org/dist/${version}/${dirname}/node.lib`;
-        await download(url, work_dir + `/node.lib`);
+        let destname = `${download_dir}/node_${version}_${arch}.lib`;
+
+        if (!fs.existsSync(destname)) {
+            let url = `https://nodejs.org/dist/${version}/${dirname}/node.lib`;
+            await download(url, destname);
+        }
+
+        fs.copyFileSync(destname, work_dir + '/node.lib');
     }
 
     args.push(`-DNODE_JS_INC=${work_dir}/headers/include/node`);
