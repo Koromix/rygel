@@ -219,7 +219,7 @@ async function configure(retry = true) {
             args.push(`-DNODE_JS_LIBRARIES=${work_dir}/node.lib`);
 
             if (arch === 'ia32') {
-                args.push('-DNODE_JS_LDFLAGS=/DELAYLOAD:node.exe /SAFESEH:NO');
+                args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
                 args.push('-A', 'Win32');
             } else {
                 args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
