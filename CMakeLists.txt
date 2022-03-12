@@ -14,12 +14,14 @@
 cmake_minimum_required(VERSION 3.11)
 project(koffi C CXX ASM)
 
+find_package(CNoke)
+
 set(CMAKE_CXX_STANDARD 17)
 if(MSVC)
     enable_language(ASM_MASM)
 endif()
 
-# ---- Koffi ----
+# ---- koffi ----
 
 set(KOFFI_SRC
     src/call_arm32.cc
@@ -49,10 +51,8 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     endif()
 endif()
 
-add_library(koffi SHARED ${KOFFI_SRC} ${NODE_JS_SRC})
-set_target_properties(koffi PROPERTIES PREFIX "" SUFFIX ".node")
-target_include_directories(koffi PRIVATE . ${NODE_JS_INC} vendor/node-addon-api)
-target_link_libraries(koffi PRIVATE ${NODE_JS_LIB})
+add_node_addon(NAME koffi SOURCES ${KOFFI_SRC})
+target_include_directories(koffi PRIVATE . vendor/node-addon-api)
 
 target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS)
 if(WIN32)
