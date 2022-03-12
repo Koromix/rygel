@@ -246,6 +246,8 @@ async function configure(retry = true) {
     }
     args.push('--no-warn-unused-cli');
 
+    console.log('>> Running configuration');
+
     let proc = spawnSync(cmake_bin, args, { cwd: work_dir, stdio: 'inherit' });
     if (proc.status != 0) {
         if (retry && fs.existsSync(work_dir + '/CMakeCache.txt')) {
@@ -271,6 +273,8 @@ async function build() {
         '--build', work_dir,
         '--config', debug ? 'Debug' : 'Release'
     ];
+
+    console.log('>> Running build');
 
     let proc = spawnSync(cmake_bin, args, { stdio: 'inherit' });
     if (proc.status != 0)
@@ -327,6 +331,8 @@ function check_cmake() {
                 throw new Error('CMake does not seem to be available');
         }
     }
+
+    console.log(`>> Using CMake binary: ${cmake_bin}`);
 }
 
 function unlink_recursive(path) {
@@ -343,6 +349,8 @@ function unlink_recursive(path) {
 }
 
 function download(url, dest) {
+    console.log('>> Downloading ' + url);
+
     return new Promise((resolve, reject) => {
         try {
             let file = fs.createWriteStream(dest);
