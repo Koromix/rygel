@@ -211,23 +211,23 @@ async function configure(retry = true) {
     fs.copyFileSync(`${app_dir}/assets/FindCNoke.cmake`, `${work_dir}/FindCNoke.cmake`);
     args.push(`-DCMAKE_MODULE_PATH=${work_dir}`);
 
-    args.push(`-DNODE_JS_INC=${work_dir}/headers/include/node`);
+    args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
 
     switch (process.platform) {
         case 'win32': {
-            args.push(`-DNODE_JS_SRC=${work_dir}/win_delay_hook.c`);
-            args.push(`-DNODE_JS_LIB=${work_dir}/node.lib`);
+            args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
+            args.push(`-DNODE_JS_LIBRARIES=${work_dir}/node.lib`);
 
             if (arch === 'ia32') {
-                args.push('-DCMAKE_SHARED_LINKER_FLAGS=/DELAYLOAD:node.exe /SAFESEH:NO');
+                args.push('-DNODE_JS_LDFLAGS=/DELAYLOAD:node.exe /SAFESEH:NO');
                 args.push('-A', 'Win32');
             } else {
-                args.push('-DCMAKE_SHARED_LINKER_FLAGS=/DELAYLOAD:node.exe');
+                args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
             }
         } break;
 
         case 'darwin': {
-            args.push('-DCMAKE_SHARED_LINKER_FLAGS=-undefined dynamic_lookup');
+            args.push('-DNODE_JS_LINK_FLAGS=-undefined dynamic_lookup');
         } break;
     }
 

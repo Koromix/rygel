@@ -40,10 +40,12 @@ You can also do it manually (without the module) if you prefer:
 cmake_minimum_required(VERSION 3.11)
 project(hello C CXX)
 
-add_library(hello SHARED hello.cc ${NODE_JS_SRC})
+add_library(hello SHARED hello.cc ${NODE_JS_SOURCES})
 set_target_properties(hello PROPERTIES PREFIX "" SUFFIX ".node")
-target_include_directories(hello PRIVATE ${NODE_JS_INC})
-target_link_libraries(hello PRIVATE ${NODE_JS_LIB})
+target_include_directories(hello PRIVATE ${NODE_JS_INCLUDE_DIRS})
+target_link_libraries(hello PRIVATE ${NODE_JS_LIBRARIES})
+target_compile_options(hello PRIVATE ${NODE_JS_COMPILE_FLAGS})
+target_link_options(hello PRIVATE ${NODE_JS_LINK_FLAGS})
 ```
 
 In order for this to run when `npm install` runs (directly or when someone else installs

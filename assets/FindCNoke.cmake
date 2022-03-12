@@ -14,8 +14,10 @@
 function(add_node_addon)
     cmake_parse_arguments(ARG "" "NAME" "SOURCES" ${ARGN})
 
-    add_library(${ARG_NAME} SHARED ${ARG_SOURCES} ${NODE_JS_SRC})
+    add_library(${ARG_NAME} SHARED ${ARG_SOURCES} ${NODE_JS_SOURCES})
     set_target_properties(${ARG_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
-    target_include_directories(${ARG_NAME} PRIVATE ${NODE_JS_INC})
-    target_link_libraries(${ARG_NAME} PRIVATE ${NODE_JS_LIB})
+    target_include_directories(${ARG_NAME} PRIVATE ${NODE_JS_INCLUDE_DIRS})
+    target_link_libraries(${ARG_NAME} PRIVATE ${NODE_JS_LIBRARIES})
+    target_compile_options(${ARG_NAME} PRIVATE ${NODE_JS_COMPILE_FLAGS})
+    target_link_options(${ARG_NAME} PRIVATE ${NODE_JS_LINK_FLAGS})
 endfunction()
