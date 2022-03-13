@@ -1,9 +1,10 @@
 {
     "debian_arm32": {
         "name": "Debian ARM32",
-        "qemu": "qemu-system-arm -M virt -cpu cortex-a15 -m 2G -smp 2 -kernel vmlinuz-5.10.0-11-armmp-lpae -initrd initrd.img-5.10.0-11-armmp-lpae -append \"root=/dev/vda2 apparmor=0\" -drive if=none,file=disk.qcow2,format=qcow2,id=hd -device virtio-blk-device,drive=hd -netdev user,id=mynet,hostfwd=tcp::22201-:22 -device virtio-net-device,netdev=mynet",
+        "qemu": "qemu-system-arm -M virt -cpu cortex-a15 -m 2G -smp 2 -kernel vmlinuz-5.10.0-12-armmp-lpae -initrd initrd.img-5.10.0-12-armmp-lpae -append \"root=/dev/vda2 apparmor=0\" -drive if=none,file=disk.qcow2,format=qcow2,id=hd -device virtio-blk-device,drive=hd -netdev user,id=mynet,hostfwd=tcp::22201-:22 -device virtio-net-device,netdev=mynet",
 
         "info": {
+            "version": 1,
             "platform": "linux",
             "arch": "arm",
 
@@ -16,15 +17,17 @@
         },
 
         "commands": {
-            "Build": "npm install --production"
+            "Build": "npm install --production",
+            "Test Raylib": "xvfb-run node test/tests/raylib.js"
         }
     },
 
     "debian_arm64": {
         "name": "Debian ARM64",
-        "qemu": "qemu-system-aarch64 -M virt -cpu cortex-a53 -m 2G -smp 2 -kernel vmlinuz-5.10.0-11-arm64 -initrd initrd.img-5.10.0-11-arm64 -append \"root=/dev/vda2 apparmor=0\" -drive if=none,file=disk.qcow2,format=qcow2,id=hd -device virtio-blk-device,drive=hd -netdev user,id=mynet,hostfwd=tcp::22202-:22 -device virtio-net-device,netdev=mynet",
+        "qemu": "qemu-system-aarch64 -M virt -cpu cortex-a53 -m 2G -smp 2 -kernel vmlinuz-5.10.0-12-arm64 -initrd initrd.img-5.10.0-12-arm64 -append \"root=/dev/vda2 apparmor=0\" -drive if=none,file=disk.qcow2,format=qcow2,id=hd -device virtio-blk-device,drive=hd -netdev user,id=mynet,hostfwd=tcp::22202-:22 -device virtio-net-device,netdev=mynet",
 
         "info": {
+            "version": 1,
             "platform": "linux",
             "arch": "arm64",
 
@@ -37,15 +40,17 @@
         },
 
         "commands": {
-            "Build": "npm install --production"
+            "Build": "npm install --production",
+            "Test Raylib": "xvfb-run node test/tests/raylib.js"
         }
     },
 
     "debian_i386": {
         "name": "Debian i386",
-        "qemu": "qemu-system-i386 -cpu max -m 2G -smp 2 -kernel vmlinuz-5.10.0-11-686-pae -initrd initrd.img-5.10.0-11-686-pae -append \"root=/dev/sda1 apparmor=0\" -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22203-:22 -device e1000,netdev=mynet",
+        "qemu": "qemu-system-i386 -cpu max -m 2G -smp 2 -kernel vmlinuz-5.10.0-12-686-pae -initrd initrd.img-5.10.0-12-686-pae -append \"root=/dev/sda1 apparmor=0\" -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22203-:22 -device e1000,netdev=mynet",
 
         "info": {
+            "version": 1,
             "platform": "linux",
             "arch": "ia32",
 
@@ -58,15 +63,17 @@
         },
 
         "commands": {
-            "Build": "npm install --production"
+            "Build": "npm install --production",
+            "Test Raylib": "xvfb-run node test/tests/raylib.js"
         }
     },
 
     "debian_x64": {
         "name": "Debian x64",
-        "qemu": "qemu-system-x86_64 -m 2G -smp 2 -kernel vmlinuz-5.10.0-11-amd64 -initrd initrd.img-5.10.0-11-amd64 -append \"root=/dev/sda1 apparmor=0\" -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22204-:22 -device e1000,netdev=mynet",
+        "qemu": "qemu-system-x86_64 -m 2G -smp 2 -kernel vmlinuz-5.10.0-12-amd64 -initrd initrd.img-5.10.0-12-amd64 -append \"root=/dev/sda1 apparmor=0\" -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22204-:22 -device e1000,netdev=mynet",
 
         "info": {
+            "version": 1,
             "platform": "linux",
             "arch": "x64",
 
@@ -79,15 +86,17 @@
         },
 
         "commands": {
-            "Build": "npm install --production"
+            "Build": "npm install --production",
+            "Test Raylib": "xvfb-run node test/tests/raylib.js"
         }
     },
 
     "windows": {
         "name": "Windows",
-        "qemu": "qemu-system-x86_64 -m 3G -smp 2 -rtc clock=host,base=localtime -drive if=pflash,format=raw,readonly=on,file=edk2-x86_64-code.fd -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22205-:22 -device e1000,netdev=mynet -vga std",
+        "qemu": "qemu-system-x86_64 -m 3G -smp 2 -rtc clock=host,base=localtime -drive if=pflash,format=raw,readonly=on,file=edk2-x86_64-code.fd -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22205-:22 -device e1000,netdev=mynet -vga qxl -device qemu-xhci -device usb-tablet",
 
         "info": {
+            "version": 1,
             "platform": "win32",
             "arch": "x64",
 
@@ -100,13 +109,16 @@
         },
 
         "uploads": {
-            "node32.cmd": "C:/Users/windows/Desktop/node32.cmd",
-            "node64.cmd": "C:/Users/windows/Desktop/node64.cmd"
+            "node32.cmd": "C:/Node32/node32.cmd",
+            "node64.cmd": "C:/Node64/node64.cmd"
         },
 
         "commands": {
-            "Build 32 bit": "rm -rf node_modules build && C:\\Users\\windows\\Desktop\\node32.cmd npm install --production",
-            "Build 64 bit": "rm -rf node_modules build && C:\\Users\\windows\\Desktop\\node64.cmd npm install --production"
+            "Build (32 bit)": "rm -rf node_modules build && C:\\Node32\\node32.cmd npm install --production",
+            "Test Raylib (32 bit)": "seatsh \"C:\\Node32\\node32.cmd node test/tests/raylib.js\"",
+
+            "Build (64 bit)": "rm -rf node_modules build && C:\\Node64\\node64.cmd npm install --production",
+            "Test Raylib (64 bit)": "seatsh \"C:\\Node64\\node64.cmd node test/tests/raylib.js\""
         }
     }
 }

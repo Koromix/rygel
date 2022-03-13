@@ -179,6 +179,21 @@ async function start(detach = true) {
             return;
         }
 
+        // Version check
+        {
+            let filename = dirname + '/VERSION';
+            let version = fs.existsSync(filename) ? parseInt(fs.readFileSync(filename).toString(), 10) : 0;
+
+            if (version != machine.info.version) {
+                log(machine, 'Download newer machine', chalk.bold.gray('[ignore]'));
+
+                ignore.add(machine);
+                missing++;
+
+                return;
+            }
+        }
+
         try {
            await boot(machine, dirname, detach, display);
         } catch (err) {
@@ -422,8 +437,7 @@ async function boot(machine, dirname, detach, display) {
     if (machine.uploads != null) {
         for (let src in machine.uploads) {
             let dest = machine.uploads[src];
-
-            await machine.ssh.putFile(dirname + '/' + src, dest);
+            await machine.ssh.putFile('files/' + src, dest);
         }
     }
 
