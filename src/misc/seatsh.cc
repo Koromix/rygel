@@ -11,8 +11,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-// Install service (from admin command): sc create binpath="C:\seatsh.exe" obj=".\LocalSystem" password=""
-
 #include "src/core/libcc/libcc.hh"
 
 #ifndef NOMINMAX
@@ -53,7 +51,7 @@ Options:
     %!..+-w, --work_dir <dir>%!0   Change working directory
 
 In order for this to work, you must first install the service from an elevated command prompt:
-%!D..+sc create SeatSH binPath= "%2" obj= LocalSystem password= "")", FelixTarget);
+%!..+sc create SeatSH start= auto binPath= "%2" obj= LocalSystem password= ""%!0)", FelixTarget, GetApplicationExecutable());
     };
 
     // Parse arguments
