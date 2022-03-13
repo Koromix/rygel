@@ -23,6 +23,17 @@
 #endif
 #include <windows.h>
 #include <wtsapi32.h>
+#include <sddl.h>
+
+static DWORD NTAPI (*NtCompareTokens)(HANDLE FirstTokenHandle, HANDLE SecondTokenHandle, PBOOLEAN Equal);
+
+RG_INIT(FindNtCompareTokens)
+{
+    HMODULE m = LoadLibraryA("ntdll.dll");
+    RG_DEFER { FreeLibrary(m); };
+
+    NtCompareTokens = (decltype(NtCompareTokens))GetProcAddress(m, "NtCompareTokens");
+}
 
 namespace RG {
 
@@ -84,7 +95,9 @@ In order for this to work, you must first install the service from an elevated c
         LogError("Failed to call SeatSH service: %1", GetWin32ErrorString());
         return 1;
     }
-    RG_CRITICAL(read == 4);
+    if (read < 4) {
+        exit_code = 128;
+    }
 
     return (int)exit_code;
 }
@@ -95,6 +108,7 @@ static SERVICE_STATUS_HANDLE status_handle = nullptr;
 static int current_state = 0;
 static int current_error = 0;
 static HANDLE stop_event = nullptr;
+static std::atomic_uint client_counter = 0;
 
 static void ReportStatus(int state)
 {
@@ -112,11 +126,12 @@ static void ReportStatus(int state)
     status.dwServiceSpecificExitCode = (DWORD)current_error;
 
     SetServiceStatus(status_handle, &status);
-    LogInfo("Reported status: %1", FmtHex(state));
 }
 
 static void ReportError(int error)
 {
+    RG_ASSERT(error > 0);
+
     current_error = error;
 
     ReportStatus(SERVICE_STOPPED);
@@ -141,41 +156,72 @@ static DWORD WINAPI ServiceHandler(DWORD ctrl, DWORD event, void *data, void *ct
     return ERROR_CALL_NOT_IMPLEMENTED;
 }
 
+static bool GetTokenUser(HANDLE token, PSID *out_sid)
+{
+    union {
+        TOKEN_USER user;
+        char raw[1024];
+    } buf;
+    DWORD size;
+
+    if (!GetTokenInformation(token, TokenUser, &buf, RG_SIZE(buf), &size)) {
+        LogError("Failed to get token user information: %1", GetWin32ErrorString());
+        return false;
+    }
+    *out_sid = (PSID)buf.user.User.Sid;
+
+    return true;
+}
+
 static DWORD WINAPI RunPipeThread(void *pipe)
 {
+    RG_DEFER { CloseHandle(pipe); };
+
+    unsigned int client = ++client_counter;
+
+    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+        char ctx_buf[1024];
+        Fmt(ctx_buf, "Client %1%2%3", client, ctx ? ": " : "", ctx ? ctx : "");
+
+        func(level, ctx_buf, msg);
+    });
+    RG_DEFER { PopLogFilter(); };
+
     char buf[8192];
     OVERLAPPED ov = {};
     DWORD len;
 
     if (!::ReadFile(pipe, buf, sizeof(buf) - 1, nullptr, &ov) && GetLastError() != ERROR_IO_PENDING) {
         LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
-        ReportError(10);
         return 1;
     }
     if (!GetOverlappedResult(pipe, &ov, &len, TRUE)) {
         LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
-        ReportError(11);
         return 1;
     }
     buf[len] = 0;
 
+    // Security checks: same user?
+
     char *cmd = buf;
-    char *cwd = buf + strlen(cmd) + 1;
+    char *work_dir = buf + strlen(cmd) + 1;
 
-    DWORD sid = WTSGetActiveConsoleSessionId();
-    if (sid == UINT32_MAX) {
-        LogError("Failed to get active control session ID: %1", GetWin32ErrorString());
-        ReportError(12);
-        return 1;
-    }
+    LogInfo("Executing '%1' in '%2'", cmd, work_dir);
 
-    HANDLE token;
-    if (!WTSQueryUserToken(sid, &token)) {
-        LogError("Failed to query active session user token: %1", GetWin32ErrorString());
-        ReportError(13);
-        return 1;
+    HANDLE console_token;
+    {
+        DWORD sid = WTSGetActiveConsoleSessionId();
+
+        if (sid == UINT32_MAX) {
+            LogError("Failed to get active control session ID: %1", GetWin32ErrorString());
+            return 1;
+        }
+        if (!WTSQueryUserToken(sid, &console_token)) {
+            LogError("Failed to query active session user token: %1", GetWin32ErrorString());
+            return 1;
+        }
     }
-    RG_DEFER { CloseHandle(token); };
+    RG_DEFER { CloseHandle(console_token); };
 
     STARTUPINFOA si = {};
     PROCESS_INFORMATION pi = {};
@@ -184,9 +230,8 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     si.cb = RG_SIZE(si);
     si.lpDesktop = (char *)"winsta0\\default";
 
-    if (!CreateProcessAsUserA(token, nullptr, cmd, nullptr, nullptr, TRUE, 0, nullptr, cwd, &si, &pi)) {
+    if (!CreateProcessAsUserA(console_token, nullptr, cmd, nullptr, nullptr, TRUE, 0, nullptr, work_dir, &si, &pi)) {
         LogError("Failed to create process on desktop session: %1", GetWin32ErrorString());
-        ReportError(14);
         return 1;
     }
     RG_DEFER {
@@ -195,14 +240,12 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     };
     if (!GetExitCodeProcess(pi.hProcess, &exit_code)) {
         LogError("Failed to get process exit code: %1", GetWin32ErrorString());
-        ReportError(15);
         return 1;
     }
 
     // Send exit code to client
     if (!::WriteFile(pipe, &exit_code, sizeof(exit_code), &len, nullptr)) {
         LogError("Failed to send process exit code to client: %1", GetWin32ErrorString());
-        ReportError(16);
         return 1;
     }
 
@@ -211,19 +254,30 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
 static void WINAPI RunService(DWORD argc, char **argv)
 {
-    static StreamWriter logger("C:\\log");
+    HANDLE log = OpenEventLogA(nullptr, "SeatSH");
+    if (!log) {
+        LogError("Failed to register event provider: %1", GetWin32ErrorString());
+        ReportError(__LINE__);
+        return;
+    }
+    RG_DEFER { CloseEventLog(log); };
 
-    SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
+    // Redirect log to Win32 stuff
+    SetLogHandler([&](LogLevel level, const char *ctx, const char *msg) {
+        const char *strings[] = {
+            ctx,
+            msg
+        };
+
         switch (level)  {
-            case LogLevel::Debug:
-            case LogLevel::Info: { PrintLn(&logger, "%!D..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
-            case LogLevel::Warning: { PrintLn(&logger, "%!M..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
-            case LogLevel::Error: { PrintLn(&logger, "%!R..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
+            case LogLevel::Debug: { ReportEventA(log, EVENTLOG_INFORMATION_TYPE, 0, 0, nullptr, 2, 0, strings, nullptr); } break;
+            case LogLevel::Info: { ReportEventA(log, EVENTLOG_INFORMATION_TYPE, 0, 0, nullptr, 2, 0, strings, nullptr); } break;
+            case LogLevel::Warning: { ReportEventA(log, EVENTLOG_WARNING_TYPE, 0, 0, nullptr, 2, 0, strings, nullptr); } break;
+            case LogLevel::Error: { ReportEventA(log, EVENTLOG_ERROR_TYPE, 0, 0, nullptr, 2, 0, strings, nullptr); } break;
         }
-
-        logger.Flush();
     });
 
+    // Register our service controller
     status_handle = RegisterServiceCtrlHandlerExA("SeatSH", &ServiceHandler, nullptr);
     RG_CRITICAL(status_handle, "Failed to register service controller: %1", GetWin32ErrorString());
 
@@ -233,7 +287,7 @@ static void WINAPI RunService(DWORD argc, char **argv)
     stop_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
     if (!connect_event || !stop_event) {
         LogError("Failed to create event: %1", GetWin32ErrorString());
-        ReportError(1);
+        ReportError(__LINE__);
         return;
     }
 
@@ -254,7 +308,7 @@ static void WINAPI RunService(DWORD argc, char **argv)
                                        PIPE_UNLIMITED_INSTANCES, 8192, 8192, 0, &sa);
         if (pipe == INVALID_HANDLE_VALUE) {
             LogError("Failed to create main named pipe: %1", GetWin32ErrorString());
-            ReportError(2);
+            ReportError(__LINE__);
             return;
         }
         RG_DEFER_N(pipe_guard) {
@@ -267,7 +321,7 @@ static void WINAPI RunService(DWORD argc, char **argv)
 
         if (!ConnectNamedPipe(pipe, &ov) && GetLastError() != ERROR_IO_PENDING) {
             LogError("Failed to connect named pipe: %1", GetWin32ErrorString());
-            ReportError(3);
+            ReportError(__LINE__);
             return;
         }
 
@@ -281,14 +335,14 @@ static void WINAPI RunService(DWORD argc, char **argv)
             DWORD dummy;
             if (!GetOverlappedResult(pipe, &ov, &dummy, TRUE)) {
                 LogError("Failed to connect named pipe: %1", GetWin32ErrorString());
-                ReportError(4);
+                ReportError(__LINE__);
                 return;
             }
 
             HANDLE thread = CreateThread(nullptr, 0, RunPipeThread, pipe, 0, nullptr);
             if (!thread) {
                 LogError("Failed to create new thread: %1", GetWin32ErrorString());
-                ReportError(5);
+                ReportError(__LINE__);
                 return;
             }
             CloseHandle(thread);
@@ -297,7 +351,7 @@ static void WINAPI RunService(DWORD argc, char **argv)
             break;
         } else {
             LogError("WaitForMultipleObjects() failed: %1", GetWin32ErrorString());
-            ReportError(6);
+            ReportError(__LINE__);
             return;
         }
     }
