@@ -101,13 +101,12 @@ In order for this to work, you must first install the service from an elevated c
     msg.len = Fmt(msg.data, "%1%2%3", cmd, '\0', work_dir).len + 1;
 
     // Ask SeatSH nicely
-    {
-        if (!::WriteFile(pipe, msg.data, msg.len, &dummy, nullptr)) {
-
-        }
+    if (!::WriteFile(pipe, msg.data, msg.len, &dummy, nullptr)) {
+        LogError("Failed to send command to SeatSH: %1", GetWin32ErrorString());
+        return 127;
     }
 
-    int exit_code = 127;
+    int exit_code = 0;
 
     // Read relayed output from SeatSH service
     for (;;) {
@@ -251,10 +250,44 @@ static bool MatchUsers(HANDLE token1, HANDLE token2)
     return EqualSid(sid1, sid2);
 }
 
-static DWORD WINAPI RunPipeThread(void *pipe)
+struct PendingIO {
+    OVERLAPPED ov = {}; // Keep first
+    bool pending = false;
+    DWORD err = 0;
+    DWORD len = 0;
+    uint8_t buf[8192];
+};
+
+static void CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
 {
+    PendingIO *pending = (PendingIO *)ov;
+
+    pending->pending = false;
+    pending->err = err;
+    pending->len = len;
+}
+
+static bool WriteToClient(HANDLE h, void *buf, Size buf_len)
+{
+    OVERLAPPED ov = {};
     DWORD dummy;
 
+    if (!::WriteFile(h, buf, (DWORD)buf_len, nullptr, &ov) &&
+            GetLastError() != ERROR_IO_PENDING) {
+        LogError("Failed to write to client: %1", GetWin32ErrorString());
+        return false;
+    }
+
+    if (!GetOverlappedResult(h, &ov, &dummy, TRUE)) {
+        LogError("Failed to write to client: %1", GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
+static DWORD WINAPI RunPipeThread(void *pipe)
+{
     RG_DEFER { CloseHandle(pipe); };
 
     unsigned int client = ++client_counter;
@@ -264,7 +297,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     err_buf[0] = 1;
 
     // If something fails (command does not exist, etc), send it to the client
-    RG_DEFER_N(err_guard) { ::WriteFile(pipe, err_buf, strlen(err_buf), &dummy, nullptr); };
+    RG_DEFER_N(err_guard) { WriteToClient(pipe, err_buf, strlen(err_buf)); };
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
@@ -391,186 +424,47 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
     // Forward stdout and stderr to client
     {
-        HANDLE events[] = {
-            CreateEvent(nullptr, TRUE, TRUE, nullptr),
-            CreateEvent(nullptr, TRUE, TRUE, nullptr),
-            pi.hProcess
-        };
-        RG_DEFER {
-            CloseHandleSafe(&events[0]);
-            CloseHandleSafe(&events[1]);
-        };
-        if (!events[0] || !events[1]) {
-            LogError("Failed to create event HANDLE: %1", GetWin32ErrorString());
-            return 1;
+        PendingIO out;
+        PendingIO err;
+
+        for (;;) {
+            if (!out.pending && !ReadFileEx(out_pipe[0], out.buf + 1, RG_SIZE(out.buf) - 1, &out.ov, CompletionHandler)) {
+                LogError("Failed to read process stdout: %1", GetWin32ErrorString());
+            }
+            out.pending = true;
+
+            if (!err.pending && !ReadFileEx(err_pipe[0], err.buf + 1, RG_SIZE(err.buf) - 1, &err.ov, CompletionHandler)) {
+                LogError("Failed to read process stderr: %1", GetWin32ErrorString());
+            }
+            err.pending = true;
+
+            if (WaitForSingleObjectEx(pi.hProcess, INFINITE, TRUE) == WAIT_OBJECT_0)
+                break;
+
+            if (!out.pending) {
+                if (out.err) {
+                    LogError("Failed to read process stdout: %1", GetWin32ErrorString(out.err));
+                    out.pending = true;
+                } else {
+                    out.buf[0] = 2;
+                    out.pending = !WriteToClient(pipe, out.buf, out.len + 1);
+                }
+            }
+
+            if (!err.pending) {
+                if (err.err) {
+                    LogError("Failed to read process stderr: %1", GetWin32ErrorString(err.err));
+                    err.pending = true;
+                } else {
+                    err.buf[0] = 3;
+                    err.pending = !WriteToClient(pipe, err.buf, err.len + 1);
+                }
+            }
         }
-
-        uint8_t stdout_buf[8192];
-        bool stdout_pending = false;
-        OVERLAPPED stdout_ov = {};
-        stdout_ov.hEvent = events[0];
-
-        uint8_t stderr_buf[8192];
-        bool stderr_pending = false;
-        OVERLAPPED stderr_ov = {};
-        stderr_ov.hEvent = events[1];
-
-        do {
-            DWORD ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE);
-
-            if (RG_UNLIKELY(ret < WAIT_OBJECT_0 || ret >= WAIT_OBJECT_0 + RG_LEN(events))) {
-                // Not sure how this could happen, but who knows?
-                LogError("Read/write for process failed: %1", GetWin32ErrorString());
-                break;
-            }
-
-            // Try to read from stdout
-            if (ret == WAIT_OBJECT_0) {
-                if (stdout_pending) {
-                    DWORD out_len = 0;
-
-                    if (GetOverlappedResult(out_pipe[0], &stdout_ov, &out_len, TRUE)) {
-                        stdout_buf[0] = 2;
-
-                        if (::WriteFile(pipe, stdout_buf, out_len + 1, &dummy, nullptr)) {
-                            stdout_pending = false;
-                        } else {
-                            LogError("Failed to relay stdout to client: %1", GetWin32ErrorString());
-
-                            CancelIo(out_pipe[0]);
-                            CloseHandleSafe(&out_pipe[0]);
-                            ResetEvent(events[0]);
-                        }
-                    } else {
-                        DWORD err = GetLastError();
-
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to read process output: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(out_pipe[0]);
-                        CloseHandleSafe(&out_pipe[0]);
-                        ResetEvent(events[0]);
-                    }
-                }
-
-                if (RG_LIKELY(out_pipe[0])) {
-                    DWORD out_len = 0;
-
-                    while (::ReadFile(out_pipe[0], stdout_buf + 1, RG_SIZE(stdout_buf) - 1, nullptr, &stdout_ov) &&
-                           GetOverlappedResult(out_pipe[0], &stdout_ov, &out_len, FALSE)) {
-                        stdout_buf[0] = 2;
-
-                        if (!::WriteFile(pipe, stdout_buf, out_len + 1, &dummy, nullptr)) {
-                            LogError("Failed to relay stdout to client: %1", GetWin32ErrorString());
-
-                            CancelIo(out_pipe[0]);
-                            CloseHandleSafe(&out_pipe[0]);
-                            ResetEvent(events[0]);
-
-                            SetLastError(ERROR_IO_PENDING);
-                        }
-                    }
-
-                    DWORD err = GetLastError();
-
-                    if (err == ERROR_IO_PENDING) {
-                        stdout_pending = true;
-                    } else {
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to read process output: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(out_pipe[0]);
-                        CloseHandleSafe(&out_pipe[0]);
-                        ResetEvent(events[0]);
-                    }
-                }
-            }
-
-            // Try to read from stderr
-            if (ret == WAIT_OBJECT_0 + 1) {
-                if (stderr_pending) {
-                    DWORD err_len = 0;
-
-                    if (GetOverlappedResult(err_pipe[0], &stderr_ov, &err_len, TRUE)) {
-                        stderr_buf[0] = 3;
-
-                        if (::WriteFile(pipe, stderr_buf, err_len + 1, &dummy, nullptr)) {
-                            stderr_pending = false;
-                        } else {
-                            LogError("Failed to relay stderr to client: %1", GetWin32ErrorString());
-
-                            CancelIo(err_pipe[0]);
-                            CloseHandleSafe(&err_pipe[0]);
-                            ResetEvent(events[1]);
-                        }
-                    } else {
-                        DWORD err = GetLastError();
-
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to read process output: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(err_pipe[0]);
-                        CloseHandleSafe(&err_pipe[0]);
-                        ResetEvent(events[1]);
-                    }
-                }
-
-                if (RG_LIKELY(err_pipe[0])) {
-                    DWORD err_len = 0;
-
-                    while (::ReadFile(err_pipe[0], stderr_buf + 1, RG_SIZE(stderr_buf) - 1, nullptr, &stderr_ov) &&
-                           GetOverlappedResult(err_pipe[0], &stderr_ov, &err_len, FALSE)) {
-                        stderr_buf[0] = 3;
-
-                        if (!::WriteFile(pipe, stderr_buf, err_len + 1, &dummy, nullptr)) {
-                            LogError("Failed to relay stderr to client: %1", GetWin32ErrorString());
-
-                            CancelIo(err_pipe[0]);
-                            CloseHandleSafe(&err_pipe[0]);
-                            ResetEvent(events[1]);
-
-                            SetLastError(ERROR_IO_PENDING);
-                        }
-                    }
-
-                    DWORD err = GetLastError();
-
-                    if (err == ERROR_IO_PENDING) {
-                        stderr_pending = true;
-                    } else {
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to read process output: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(err_pipe[0]);
-                        CloseHandleSafe(&err_pipe[0]);
-                        ResetEvent(events[1]);
-                    }
-                }
-            }
-
-            if (ret == WAIT_OBJECT_0 + 2) {
-                if (out_pipe[0]) {
-                    CancelIo(out_pipe[0]);
-                }
-                if (err_pipe[0]) {
-                    CancelIo(err_pipe[0]);
-                }
-
-                break;
-            }
-        } while (out_pipe[0] || err_pipe[0]);
     }
 
-    // Wait for process exit and get exit code
+    // Get process exit code
     DWORD exit_code;
-    if (WaitForSingleObject(pi.hProcess, INFINITE) == WAIT_FAILED) {
-        LogError("WaitForSingleObject() failed: %1", GetWin32ErrorString());
-        return 1;
-    }
     if (!GetExitCodeProcess(pi.hProcess, &exit_code)) {
         LogError("GetExitCodeProcess() failed: %1", GetWin32ErrorString());
         return 1;
@@ -583,13 +477,13 @@ static DWORD WINAPI RunPipeThread(void *pipe)
         buf[0] = 0;
         memcpy(buf + 1, &exit_code, 4);
 
-        if (!::WriteFile(pipe, &buf, RG_SIZE(buf), &len, nullptr)) {
+        if (!WriteToClient(pipe, buf, RG_SIZE(buf))) {
             LogError("Failed to send process exit code to client: %1", GetWin32ErrorString());
             return 1;
         }
-        err_guard.Disable();
     }
 
+    err_guard.Disable();
     return 0;
 }
 
