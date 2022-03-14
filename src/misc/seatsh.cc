@@ -154,6 +154,23 @@ static DWORD WINAPI ServiceHandler(DWORD ctrl, DWORD event, void *data, void *ct
     return ERROR_CALL_NOT_IMPLEMENTED;
 }
 
+static HANDLE GetClientToken(HANDLE pipe)
+{
+    if (!ImpersonateNamedPipeClient(pipe)) {
+        LogError("Failed to get pipe client information: %1", GetWin32ErrorString());
+        return nullptr;
+    }
+    RG_DEFER { RevertToSelf(); };
+
+    HANDLE token;
+    if (!OpenThreadToken(GetCurrentThread(), TOKEN_READ, FALSE, &token)) {
+        LogError("Failed to get pipe client information: %1", GetWin32ErrorString());
+        return nullptr;
+    }
+
+    return token;
+}
+
 static bool GetTokenUser(HANDLE token, PSID *out_sid)
 {
     union {
@@ -169,6 +186,18 @@ static bool GetTokenUser(HANDLE token, PSID *out_sid)
     *out_sid = (PSID)buf.user.User.Sid;
 
     return true;
+}
+
+static bool MatchUsers(HANDLE token1, HANDLE token2)
+{
+    PSID sid1;
+    PSID sid2;
+    if (!GetTokenUser(token1, &sid1))
+        return false;
+    if (!GetTokenUser(token2, &sid2))
+        return false;
+
+    return EqualSid(sid1, sid2);
 }
 
 static DWORD WINAPI RunPipeThread(void *pipe)
@@ -206,6 +235,9 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
     LogInfo("Executing '%1' in '%2'", cmd, work_dir);
 
+    HANDLE client_token = GetClientToken(pipe);
+    RG_DEFER { CloseHandle(client_token); };
+
     HANDLE console_token;
     {
         DWORD sid = WTSGetActiveConsoleSessionId();
@@ -220,6 +252,11 @@ static DWORD WINAPI RunPipeThread(void *pipe)
         }
     }
     RG_DEFER { CloseHandle(console_token); };
+
+    if (!MatchUsers(client_token, console_token)) {
+        LogError("SeatSH refuses to do cross-user launches");
+        return 1;
+    }
 
     STARTUPINFOA si = {};
     PROCESS_INFORMATION pi = {};
