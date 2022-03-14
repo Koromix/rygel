@@ -3415,16 +3415,7 @@ static bool InitConsoleCtrlHandler()
     return success;
 }
 
-static void CloseHandleSafe(HANDLE *handle_ptr)
-{
-    if (*handle_ptr && *handle_ptr != INVALID_HANDLE_VALUE) {
-        CloseHandle(*handle_ptr);
-    }
-
-    *handle_ptr = nullptr;
-}
-
-static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handles[2])
+bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handles[2])
 {
     static LONG pipe_idx;
 
@@ -3460,6 +3451,15 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handle
     out_handles[0] = handles[0];
     out_handles[1] = handles[1];
     return true;
+}
+
+void CloseHandleSafe(HANDLE *handle_ptr)
+{
+    if (*handle_ptr && *handle_ptr != INVALID_HANDLE_VALUE) {
+        CloseHandle(*handle_ptr);
+    }
+
+    *handle_ptr = nullptr;
 }
 
 bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
@@ -3728,7 +3728,6 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
     }
 
     // Wait for process exit
-    DWORD exit_code;
     {
         HANDLE events[2] = {
             process_handle,
@@ -3742,6 +3741,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
     }
 
     // Get exit code
+    DWORD exit_code;
     if (WaitForSingleObject(console_ctrl_event, 0) == WAIT_OBJECT_0) {
         TerminateJobObject(job_handle, STATUS_CONTROL_C_EXIT);
         exit_code = STATUS_CONTROL_C_EXIT;
@@ -3851,7 +3851,7 @@ bool CreatePipe(int pfd[2])
 #endif
 }
 
-static void CloseDescriptorSafe(int *fd_ptr)
+void CloseDescriptorSafe(int *fd_ptr)
 {
     if (*fd_ptr >= 0) {
         close(*fd_ptr);
