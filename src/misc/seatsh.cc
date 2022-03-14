@@ -23,16 +23,6 @@
 #include <wtsapi32.h>
 #include <sddl.h>
 
-static DWORD NTAPI (*NtCompareTokens)(HANDLE FirstTokenHandle, HANDLE SecondTokenHandle, PBOOLEAN Equal);
-
-RG_INIT(FindNtCompareTokens)
-{
-    HMODULE m = LoadLibraryA("ntdll.dll");
-    RG_DEFER { FreeLibrary(m); };
-
-    NtCompareTokens = (decltype(NtCompareTokens))GetProcAddress(m, "NtCompareTokens");
-}
-
 namespace RG {
 
 // Client
