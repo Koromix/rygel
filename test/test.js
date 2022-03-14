@@ -385,7 +385,9 @@ async function ssh() {
 
     let args = [
         '-p' + machine.info.password,
-        'ssh', '-p', machine.info.port, machine.info.username + '@127.0.0.1'
+        'ssh', '-o', 'StrictHostKeyChecking=no',
+               '-o', 'UserKnownHostsFile=' + (process.platform == 'win32' ? 'NUL' : '/dev/null'),
+               '-p', machine.info.port, machine.info.username + '@127.0.0.1'
     ];
 
     let proc = spawnSync('sshpass', args, { stdio: 'inherit' });
