@@ -24,6 +24,7 @@ nav#top_menu ul {
     padding: 0;
     background: #24579d;
     overflow: hidden;
+    z-index: 1;
 }
 nav#top_menu li {
     float: left;
