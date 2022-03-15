@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!-- This program is free software: you can redistribute it and/or modify
+     it under the terms of the GNU Affero General Public License as published by
+     the Free Software Foundation, either version 3 of the License, or
+     (at your option) any later version.
+
+     This program is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU Affero General Public License for more details.
+
+     You should have received a copy of the GNU Affero General Public License
+     along with this program. If not, see https://www.gnu.org/licenses/. -->
+<html class="nojs" lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>koromix.dev — Koffi</title>
+
+        <link rel="stylesheet" href="static/koromix.dev.css">
+        <link rel="stylesheet" href="static/opensans/OpenSans.css"/>
+
+        <script type="text/javascript" src="static/koromix.dev.js" async></script>
+    </head>
+
+    <body class="js">
+        <div id="top">
+            <a id="top_deploy" onclick="parentNode.querySelector('#top_menu').classList.toggle('active');"></a>
+            <nav id="top_menu">
+                <ul>
+                    <li><a href="/index">Home</a></li>
+                    <li><a href="/goupile">Goupile</a></li>
+                    <li><a href="/tytools">TyTools</a></li>
+                    <li><a href="/libhs">libhs</a></li>
+                    <li><a href="/koffi" class="active">Koffi</a></li>
+                    <li><a href="/misc">Other</a></li>
+
+                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
+                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub Profile</a></li>
+                </ul>
+            </nav>
+        </div>
+
+        <div id="content">
+            <a id="side_deploy" onclick="parentNode.querySelector('#side_menu').classList.toggle('active');"></a>
+            <nav id="side_menu">
+                <ul>
+                    <li><a href="#overview" class="lv1">Overview</a></li>
+                    <li><a href="#install" class="lv1">Installation</a><li>
+                    <li><a href="#install_windows" class="lv2">Windows</a></li>
+                    <li><a href="#install_other" class="lv2">Other platforms</a></li>
+                    <li><a href="#start" class="lv1">Get started</a></li>
+                    <li><a href="#tests" class="lv1">Tests</a></li>
+                </ul>
+            </nav>
+
+            <main>
+                <h1 id="overview">Overview</h1>
+                <p>Koffi is a fast and easy-to-use FFI module for <a href="https://nodejs.org/">Node.js</a>, with support for complex data types such as structs.</p>
+                <p>The following platforms <b>are supported</b> at the moment:</p>
+                <ul>
+                    <li>Windows x86 <i>(cdecl, stdcall)</i></li>
+                    <li>Windows x86_64</li>
+                    <li>Linux x86</li>
+                    <li>Linux x86_64</li>
+                    <li>Linux ARM32+VFP Little Endian</li>
+                    <li>Linux ARM64 Little Endian</li>
+                </ul>
+                <p>The following platforms are <b>not yet supported</b> but will be soon:</p>
+                <ul>
+                    <li>macOS x86_64</li>
+                    <li>macOS ARM64</li>
+                    <li>FreeBSD/NetBSD/OpenBSD x86_64</li>
+                    <li>FreeBSD/NetBSD/OpenBSD ARM64</li>
+                </ul>
+                <p>This is still in development, bugs are to expected. More tests will come in the near future.</p>
+
+                <h1 id="install">Installation</h1>
+                <p>You can find the <a href="https://www.npmjs.com/package/koffi">package published on NPM</a>.</p>
+                <h2 id="install_windows">Windows</h2>
+                <p>First, make sure the following dependencies are met:</p>
+                <ul>
+                    <li>The &quot;Desktop development with C++&quot; workload from <a href="https://visualstudio.microsoft.com/downloads/">Visual Studio 2022 or 2019</a> or the &quot;C++ build tools&quot; workload from the <a href="https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022">Build Tools</a>, with the default optional components.</li>
+                    <li><a href="https://cmake.org/">CMake meta build system</a></li>
+                    <li><a href="https://nodejs.org/">Node 16 LTS</a>, but a newer version should work too</li>
+                </ul>
+                <p>Once these dependencies are met, simply run the follow command:</p>
+<pre>
+<span class="line"></span>npm install koffi
+</pre>
+                <h2 id="install_other">Other platforms</h2>
+                <p>Make sure the following dependencies are met:</p>
+                <ul>
+                    <li><code>gcc</code> and <code>g++</code> &gt;= 8.3 or newer</li>
+                    <li>GNU Make 3.81 or newer</li>
+                    <li><a href="https://cmake.org/">CMake meta build system</a></li>
+                </ul>
+                <p>Once these dependencies are met, simply run the follow command:</p>
+<pre>
+<span class="line"></span>npm install koffi
+</pre>
+                <h1 id="start">Get started</h1>
+                <p>This section assumes you know how to build C shared libraries.</p>
+                <p>This examples illustrates how to use Koffi with a Raylib shared library:</p>
+                <p>Once this is done, run this command from the project root:</p>
+<pre>
+<span class="line"></span><span style="color: #006699; font-weight: bold">const</span> koffi <span style="color: #555555">=</span> require(<span style="color: #CC3300">&#39;build/koffi.node&#39;</span>);
+<span class="line"></span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">const</span> Color <span style="color: #555555">=</span> koffi.struct(<span style="color: #CC3300">&#39;Color&#39;</span>, {
+<span class="line"></span>    r<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;uchar&#39;</span>,
+<span class="line"></span>    g<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;uchar&#39;</span>,
+<span class="line"></span>    b<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;uchar&#39;</span>,
+<span class="line"></span>    a<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;uchar&#39;</span>
+<span class="line"></span>});
+<span class="line"></span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">const</span> Image <span style="color: #555555">=</span> koffi.struct(<span style="color: #CC3300">&#39;Image&#39;</span>, {
+<span class="line"></span>    data<span style="color: #555555">:</span> koffi.pointer(<span style="color: #CC3300">&#39;void&#39;</span>),
+<span class="line"></span>    width<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    height<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    mipmaps<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    format<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>
+<span class="line"></span>});
+<span class="line"></span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">const</span> GlyphInfo <span style="color: #555555">=</span> koffi.struct(<span style="color: #CC3300">&#39;GlyphInfo&#39;</span>, {
+<span class="line"></span>    value<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    offsetX<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    offsetY<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    advanceX<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    image<span style="color: #555555">:</span> Image
+<span class="line"></span>});
+<span class="line"></span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">const</span> Vector2 <span style="color: #555555">=</span> koffi.struct(<span style="color: #CC3300">&#39;Vector2&#39;</span>, {
+<span class="line"></span>    x<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;float&#39;</span>,
+<span class="line"></span>    y<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;float&#39;</span>
+<span class="line"></span>});
+<span class="line"></span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">const</span> Rectangle <span style="color: #555555">=</span> koffi.struct(<span style="color: #CC3300">&#39;Rectangle&#39;</span>, {
+<span class="line"></span>    x<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;float&#39;</span>,
+<span class="line"></span>    y<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;float&#39;</span>,
+<span class="line"></span>    width<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;float&#39;</span>,
+<span class="line"></span>    height<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;float&#39;</span>
+<span class="line"></span>});
+<span class="line"></span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">const</span> Texture <span style="color: #555555">=</span> koffi.struct(<span style="color: #CC3300">&#39;Texture&#39;</span>, {
+<span class="line"></span>    id<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;uint&#39;</span>,
+<span class="line"></span>    width<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    height<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    mipmaps<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    format<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>
+<span class="line"></span>});
+<span class="line"></span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">const</span> Font <span style="color: #555555">=</span> koffi.struct(<span style="color: #CC3300">&#39;Font&#39;</span>, {
+<span class="line"></span>    baseSize<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    glyphCount<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    glyphPadding<span style="color: #555555">:</span> <span style="color: #CC3300">&#39;int&#39;</span>,
+<span class="line"></span>    texture<span style="color: #555555">:</span> Texture,
+<span class="line"></span>    recs<span style="color: #555555">:</span> koffi.pointer(Rectangle),
+<span class="line"></span>    glyphs<span style="color: #555555">:</span> koffi.pointer(GlyphInfo)
+<span class="line"></span>});
+<span class="line"></span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">// Fix the path to Raylib DLL</span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">let</span> raylib <span style="color: #555555">=</span> koffi.load(<span style="color: #CC3300">&#39;Raylib.dll&#39;</span>, {
+<span class="line"></span>    InitWindow<span style="color: #555555">:</span> [<span style="color: #CC3300">&#39;void&#39;</span>, [<span style="color: #CC3300">&#39;int&#39;</span>, <span style="color: #CC3300">&#39;int&#39;</span>, <span style="color: #CC3300">&#39;string&#39;</span>]],
+<span class="line"></span>    SetTargetFPS<span style="color: #555555">:</span> [<span style="color: #CC3300">&#39;void&#39;</span>, [<span style="color: #CC3300">&#39;int&#39;</span>]],
+<span class="line"></span>    GetScreenWidth<span style="color: #555555">:</span> [<span style="color: #CC3300">&#39;int&#39;</span>, []],
+<span class="line"></span>    GetScreenHeight<span style="color: #555555">:</span> [<span style="color: #CC3300">&#39;int&#39;</span>, []],
+<span class="line"></span>    ClearBackground<span style="color: #555555">:</span> [<span style="color: #CC3300">&#39;void&#39;</span>, [Color]],
+<span class="line"></span>    BeginDrawing<span style="color: #555555">:</span> [<span style="color: #CC3300">&#39;void&#39;</span>, []],
+<span class="line"></span>    EndDrawing<span style="color: #555555">:</span> [<span style="color: #CC3300">&#39;void&#39;</span>, []],
+<span class="line"></span>    WindowShouldClose<span style="color: #555555">:</span> [<span style="color: #CC3300">&#39;bool&#39;</span>, []],
+<span class="line"></span>    GetFontDefault<span style="color: #555555">:</span> [Font, []],
+<span class="line"></span>    MeasureTextEx<span style="color: #555555">:</span> [Vector2, [Font, <span style="color: #CC3300">&#39;string&#39;</span>, <span style="color: #CC3300">&#39;float&#39;</span>, <span style="color: #CC3300">&#39;float&#39;</span>]],
+<span class="line"></span>    DrawTextEx<span style="color: #555555">:</span> [<span style="color: #CC3300">&#39;void&#39;</span>, [Font, <span style="color: #CC3300">&#39;string&#39;</span>, Vector2, <span style="color: #CC3300">&#39;float&#39;</span>, <span style="color: #CC3300">&#39;float&#39;</span>, Color]]
+<span class="line"></span>});
+<span class="line"></span>
+<span class="line"></span>raylib.InitWindow(<span style="color: #FF6600">800</span>, <span style="color: #FF6600">600</span>, <span style="color: #CC3300">&#39;Test Raylib&#39;</span>);
+<span class="line"></span>raylib.SetTargetFPS(<span style="color: #FF6600">60</span>);
+<span class="line"></span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">let</span> angle <span style="color: #555555">=</span> <span style="color: #FF6600">0</span>;
+<span class="line"></span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">while</span> (<span style="color: #555555">!</span>raylib.WindowShouldClose()) {
+<span class="line"></span>    raylib.BeginDrawing();
+<span class="line"></span>    raylib.ClearBackground({ r<span style="color: #555555">:</span> <span style="color: #FF6600">0</span>, g<span style="color: #555555">:</span> <span style="color: #FF6600">0</span>, b<span style="color: #555555">:</span> <span style="color: #FF6600">0</span>, a<span style="color: #555555">:</span> <span style="color: #FF6600">255</span> }); <span style="color: #0099FF; font-style: italic">// black</span>
+<span class="line"></span>
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">let</span> win_width <span style="color: #555555">=</span> raylib.GetScreenWidth();
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">let</span> win_height <span style="color: #555555">=</span> raylib.GetScreenHeight();
+<span class="line"></span>
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">let</span> text <span style="color: #555555">=</span> <span style="color: #CC3300">&#39;Hello World!&#39;</span>;
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">let</span> text_width <span style="color: #555555">=</span> raylib.MeasureTextEx(raylib.GetFontDefault(), text, <span style="color: #FF6600">32</span>, <span style="color: #FF6600">1</span>).x;
+<span class="line"></span>
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">let</span> color <span style="color: #555555">=</span> {
+<span class="line"></span>        r<span style="color: #555555">:</span> <span style="color: #FF6600">127.5</span> <span style="color: #555555">+</span> <span style="color: #FF6600">127.5</span> <span style="color: #555555">*</span> <span style="color: #336666">Math</span>.sin(angle),
+<span class="line"></span>        g<span style="color: #555555">:</span> <span style="color: #FF6600">127.5</span> <span style="color: #555555">+</span> <span style="color: #FF6600">127.5</span> <span style="color: #555555">*</span> <span style="color: #336666">Math</span>.sin(angle <span style="color: #555555">+</span> <span style="color: #336666">Math</span>.PI <span style="color: #555555">/</span> <span style="color: #FF6600">2</span>),
+<span class="line"></span>        b<span style="color: #555555">:</span> <span style="color: #FF6600">127.5</span> <span style="color: #555555">+</span> <span style="color: #FF6600">127.5</span> <span style="color: #555555">*</span> <span style="color: #336666">Math</span>.sin(angle <span style="color: #555555">+</span> <span style="color: #336666">Math</span>.PI),
+<span class="line"></span>        a<span style="color: #555555">:</span> <span style="color: #FF6600">255</span>
+<span class="line"></span>    };
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">let</span> pos <span style="color: #555555">=</span> {
+<span class="line"></span>        x<span style="color: #555555">:</span> (win_width <span style="color: #555555">/</span> <span style="color: #FF6600">2</span> <span style="color: #555555">-</span> text_width <span style="color: #555555">/</span> <span style="color: #FF6600">2</span>) <span style="color: #555555">+</span> <span style="color: #FF6600">120</span> <span style="color: #555555">*</span> <span style="color: #336666">Math</span>.cos(angle <span style="color: #555555">-</span> <span style="color: #336666">Math</span>.PI <span style="color: #555555">/</span> <span style="color: #FF6600">2</span>),
+<span class="line"></span>        y<span style="color: #555555">:</span> (win_height <span style="color: #555555">/</span> <span style="color: #FF6600">2</span> <span style="color: #555555">-</span> <span style="color: #FF6600">16</span>) <span style="color: #555555">+</span> <span style="color: #FF6600">120</span> <span style="color: #555555">*</span> <span style="color: #336666">Math</span>.sin(angle <span style="color: #555555">-</span> <span style="color: #336666">Math</span>.PI <span style="color: #555555">/</span> <span style="color: #FF6600">2</span>)
+<span class="line"></span>    };
+<span class="line"></span>
+<span class="line"></span>    raylib.DrawTextEx(raylib.GetFontDefault(), text, pos, <span style="color: #FF6600">32</span>, <span style="color: #FF6600">1</span>, color);
+<span class="line"></span>
+<span class="line"></span>    raylib.EndDrawing();
+<span class="line"></span>
+<span class="line"></span>    angle <span style="color: #555555">+=</span> <span style="color: #336666">Math</span>.PI <span style="color: #555555">/</span> <span style="color: #FF6600">180</span>;
+<span class="line"></span>}
+</pre>
+
+                <h1 id="tests">Tests</h1>
+                <p>Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as <code>qemu-system</code> (or even <code>qemu-system-gui</code>) on Ubuntu.</p>
+                <p>These machines are not included directly in this repository (for license and size reasons), but they are available here: <a href="https://koromix.dev/files/koffi/">https://koromix.dev/files/koffi/</a></p>
+                <p>For example, if you want to run the tests on Debian ARM64, run the following commands:</p>
+<pre>
+<span class="line"></span>cd luigi/koffi/test/
+<span class="line"></span>wget -q -O- https://koromix.dev/files/koffi/qemu_debian_arm64.tar.zst | zstd -d | tar xv
+<span class="line"></span>sha256sum -c --ignore-missing registry/sha256sum.txt
+</pre>
+                <p>Note that the machine disk content may change each time the machine runs, so the checksum test will fail once a machine has been used at least once.</p>
+                <p>And now you can run the tests with:</p>
+<pre>
+<span class="line"></span>node test.js <span style="color: #696969;"># Several options are available, use --help</span>
+</pre>
+                <p>And be patient, this can be pretty slow for emulated machines.</p>
+            </main>
+        </div>
+    </body>
+</html>
