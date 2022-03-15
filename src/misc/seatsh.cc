@@ -155,6 +155,7 @@ malformed:
 // Server (service)
 
 static SERVICE_STATUS_HANDLE status_handle = nullptr;
+static int instance_id = 0;
 static int current_state = 0;
 static int current_error = 0;
 static HANDLE stop_event = nullptr;
@@ -295,7 +296,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
     RG_DEFER { CloseHandle(pipe); };
 
-    unsigned int client = ++client_counter;
+    unsigned int client_id = ++client_counter;
 
     char err_buf[8192];
     CopyString("Unknown error", MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
@@ -306,7 +307,8 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
-        Fmt(ctx_buf, "Client %1%2%3", client, ctx ? ": " : "", ctx ? ctx : "");
+        Fmt(ctx_buf, "Client %1_%2%3%4", FmtArg(instance_id).Pad0(-8), FmtArg(client_id).Pad0(-8),
+                                         ctx ? ": " : "", ctx ? ctx : "");
 
         if (level == LogLevel::Error) {
             CopyString(msg, MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
@@ -576,6 +578,8 @@ static void WINAPI RunService(DWORD argc, char **argv)
     RG_CRITICAL(status_handle, "Failed to register service controller: %1", GetWin32ErrorString());
 
     ReportStatus(SERVICE_START_PENDING);
+
+    instance_id = GetRandomIntSafe(0, 100000000);
 
     HANDLE connect_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
     stop_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
