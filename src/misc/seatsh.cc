@@ -441,7 +441,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
             }
 
             if (!CreateProcessAsUserA(console_token, nullptr, cmd.ptr, nullptr, nullptr, TRUE,
-                                      CREATE_UNICODE_ENVIRONMENT, env, work_dir.ptr, &si, &pi)) {
+                                      CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW, env, work_dir.ptr, &si, &pi)) {
                 LogError("Failed to start process: %1", GetWin32ErrorString());
                 return 1;
             }
