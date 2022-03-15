@@ -33,7 +33,7 @@ static int RunClient(int argc, char **argv)
     DWORD dummy;
 
     // Options
-    Span<const char> cmd = nullptr;
+    Span<const char> cmd_line = nullptr;
     Span<const char> work_dir = GetWorkingDirectory();
 
     const auto print_usage = [](FILE *fp) {
@@ -63,8 +63,8 @@ In order for this to work, you must first install the service from an elevated c
             }
         }
 
-        cmd = opt.ConsumeNonOption();
-        if (!cmd.len) {
+        cmd_line = opt.ConsumeNonOption();
+        if (!cmd_line.len) {
             LogError("No command provided");
             return 127;
         }
@@ -96,11 +96,11 @@ In order for this to work, you must first install the service from an elevated c
     // Ask SeatSH nicely
     {
         LocalArray<char, 8192> msg;
-        if (cmd.len + work_dir.len > RG_SIZE(msg.data) - 2) {
+        if (cmd_line.len + work_dir.len > RG_SIZE(msg.data) - 2) {
             LogError("Excessive command or working directory length");
             return 127;
         }
-        msg.len = Fmt(msg.data, "%1%2%3", cmd, '\0', work_dir).len + 1;
+        msg.len = Fmt(msg.data, "%1%2%3", cmd_line, '\0', work_dir).len + 1;
 
         if (!::WriteFile(pipe, msg.data, msg.len, &dummy, nullptr)) {
             LogError("Failed to send command to SeatSH: %1", GetWin32ErrorString());
@@ -316,8 +316,8 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     });
     RG_DEFER { PopLogFilter(); };
 
-    Span<char> cmd;
-    Span<char> work_dir;
+    Span<const char> cmd_line;
+    Span<const char> work_dir;
     {
         char buf[8192];
         OVERLAPPED ov = {};
@@ -333,11 +333,23 @@ static DWORD WINAPI RunPipeThread(void *pipe)
         }
         buf[len] = 0;
 
-        cmd = DuplicateString(buf, &temp_alloc);
-        work_dir = DuplicateString(buf + cmd.len + 1, &temp_alloc);
+        cmd_line = DuplicateString(buf, &temp_alloc);
+        work_dir = DuplicateString(buf + cmd_line.len + 1, &temp_alloc);
     }
 
-    LogInfo("Executing '%1' in '%2'", cmd, work_dir);
+    LogInfo("Executing '%1' in '%2'", cmd_line, work_dir);
+
+    // Fuck UCS-2 and UTF-16...
+    Span<wchar_t> cmd_line_w;
+    Span<wchar_t> work_dir_w;
+    cmd_line_w.len = 4 * cmd_line.len + 2;
+    cmd_line_w.ptr = (wchar_t *)Allocator::Allocate(&temp_alloc, cmd_line_w.len);
+    cmd_line_w.len = ConvertUtf8ToWin32Wide(cmd_line, cmd_line_w);
+    work_dir_w.len = 4 * work_dir.len + 2;
+    work_dir_w.ptr = (wchar_t *)Allocator::Allocate(&temp_alloc, work_dir_w.len);
+    work_dir_w.len = ConvertUtf8ToWin32Wide(work_dir, work_dir_w);
+    if (cmd_line_w.len < 0 || work_dir_w.len < 0)
+        return 1;
 
     HANDLE client_token = GetClientToken(pipe);
     RG_DEFER { CloseHandle(client_token); };
@@ -363,12 +375,12 @@ static DWORD WINAPI RunPipeThread(void *pipe)
         return 1;
     }
 
-    STARTUPINFOA si = {};
+    STARTUPINFOW si = {};
     PROCESS_INFORMATION pi = {};
 
     // Basic startup information
     si.cb = RG_SIZE(si);
-    si.lpDesktop = (char *)"winsta0\\default";
+    si.lpDesktop = (wchar_t *)L"winsta0\\default";
     si.dwFlags |= STARTF_USESTDHANDLES;
 
     // Prepare stdout and stderr redirection pipes
@@ -399,10 +411,10 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     RG_DEFER { DestroyEnvironmentBlock(env); };
 
     // Find the PATH variable
-    const wchar_t *path = nullptr;
+    const wchar_t *path_w = nullptr;
     for (const wchar_t *ptr = (const wchar_t *)env; ptr[0]; ptr += wcslen(ptr) + 1) {
         if (!_wcsnicmp(ptr, L"PATH=", 5)) {
-            path = ptr + 5;
+            path_w = ptr + 5;
             break;
         }
     }
@@ -432,16 +444,16 @@ static DWORD WINAPI RunPipeThread(void *pipe)
         }
 
         // Launch process, after setting the PATH variable to match the user. This is a bit dirty, and needs a lock.
-        // A better solution would be to extract the binary from cmd and to use FindExecutableInPath.
+        // XXX: A better solution would be to extract the binary from cmd_line and to use FindExecutableInPath.
         {
             std::lock_guard<std::mutex> lock(start_mutex);
 
-            if (path) {
-                SetEnvironmentVariableW(L"PATH", path);
+            if (path_w) {
+                SetEnvironmentVariableW(L"PATH", path_w);
             }
 
-            if (!CreateProcessAsUserA(console_token, nullptr, cmd.ptr, nullptr, nullptr, TRUE,
-                                      CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW, env, work_dir.ptr, &si, &pi)) {
+            if (!CreateProcessAsUserW(console_token, nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE,
+                                      CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW, env, work_dir_w.ptr, &si, &pi)) {
                 LogError("Failed to start process: %1", GetWin32ErrorString());
                 return 1;
             }
