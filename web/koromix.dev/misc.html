@@ -46,6 +46,7 @@
             <nav id="side_menu">
                 <ul>
                     <li><a href="#intro" class="lv1">Introduction</a></li>
+                    <li><a href="#seatsh" class="lv1">SeatSH</a></li>
                     <li><a href="#blikk" class="lv1">blikk</a></li>
                     <li><a href="#drd" class="lv1">drd</a></li>
                     <li><a href="#luigi" class="lv1">Luigi</a></li>
@@ -60,6 +61,14 @@
                 <h1 id="blikk">blikk</h1>
                 <p>blikk is an <b>embeddable beginner-friendly programming language</b> with static types, fast compilation.</p>
                 <p>You can find out more <a href="https://github.com/Koromix/rygel/tree/master/src/blikk">in the code repository</a>.</p>
+
+                <h1 id="seatsh">SeatSH</h1>
+                <p>SeatSH is a Windows service that enables you to launch graphical applications from an SSH connection on Windows 10. As an example, try to start <code>notepad</code> from an SSH connection: it won't work, because this
+                    session does not have access to the active console (desktop) session.</p>
+                <p>SeatSH runs as a service, waits for a client to connect, and launches the command line specified by the client on the active console session. Once the service is installed, launching a graphical application from the command line is as simple as <code>seatsh notepad</code>.</p>
+                <p>It will transparently forward standard streams (stdin, stdout, stderr) and report the application exit code as its own.</p>
+                <P>It is mainly useful for automated test systems, <b>do not install it on production machines</b> because it is a security risk. SeatSH only makes sure that the user connected to the SSH matches the one on the active console session, nothing more.</p>
+                <p>You can find out more <a href="https://github.com/Koromix/rygel/tree/master/src/misc">in the code repository</a>.</p>
 
                 <h1 id="drd">drd</h1>
                 <p>The drd project strives to provide a <b>fully-featured and up-to-date alternative french PMSI MCO classifier</b>.</p>
