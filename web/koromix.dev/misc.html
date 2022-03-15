@@ -46,6 +46,7 @@
             <nav id="side_menu">
                 <ul>
                     <li><a href="#intro" class="lv1">Introduction</a></li>
+                    <li><a href="#cnoke" class="lv1">CNoke</a></li>
                     <li><a href="#seatsh" class="lv1">SeatSH</a></li>
                     <li><a href="#blikk" class="lv1">blikk</a></li>
                     <li><a href="#drd" class="lv1">drd</a></li>
@@ -61,6 +62,28 @@
                 <h1 id="blikk">blikk</h1>
                 <p>blikk is an <b>embeddable beginner-friendly programming language</b> with static types, fast compilation.</p>
                 <p>You can find out more <a href="https://github.com/Koromix/rygel/tree/master/src/blikk">in the code repository</a>.</p>
+
+                <h1 id="cnoke">CNoke</h1>
+                <p>CNoke is a simpler alternative to CMake.js, without any dependency, designed to build native Node addons based on CMake.</p>
+                <p>Install it like this:</p>
+<pre>
+<span class="line"></span>npm install cnoke
+</pre>
+                <p>It obviously requires <a href="http://www.cmake.org/download/">CMake</a> and a proper C/C++ toolchain:</p>
+                <ul>
+                    <li><i>Windows</i>: Visual C++ Build Tools or a recent version of Visual C++ will do (the free Community version works well)</li>
+                    <li><i>POSIX (Linux, macOS, etc.)</i>: Clang or GCC, and Make (Ninja is preferred if available)</li>
+                </ul>
+                <p>Once everything is in place, get started with your addon with the CMakeLists.txt template:</p>
+<pre>
+<span class="line"></span><span style="font-weight: bold;">cmake_minimum_required</span>(VERSION <span style="color: #a00;">3.11</span>)
+<span class="line"></span><span style="font-weight: bold;">project</span>(hello C CXX)
+<span class="line"></span>
+<span class="line"></span><span style="font-weight: bold;">find_package</span>(CNoke)
+<span class="line"></span>
+<span class="line"></span>add_node_addon(NAME hello SOURCES hello.cc)
+</pre>
+                <p>You can find out more <a href="https://www.npmjs.com/package/cnoke">in the NPM repository</a>.</p>
 
                 <h1 id="seatsh">SeatSH</h1>
                 <p>SeatSH is a Windows service that enables you to launch graphical applications from an SSH connection on Windows 10. As an example, try to start <code>notepad</code> from an SSH connection: it won't work, because this
