@@ -162,6 +162,23 @@ static HANDLE stop_event = nullptr;
 static std::atomic_uint client_counter = 0;
 static std::mutex start_mutex;
 
+struct PendingIO {
+    OVERLAPPED ov = {}; // Keep first
+    bool pending = false;
+    DWORD err = 0;
+    DWORD len = 0;
+    uint8_t buf[8192];
+
+    static void CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
+    {
+        PendingIO *self = (PendingIO *)ov;
+
+        self->pending = false;
+        self->err = err;
+        self->len = len;
+    }
+};
+
 static void ReportStatus(int state)
 {
     if (current_error) {
@@ -225,7 +242,7 @@ static HANDLE GetClientToken(HANDLE pipe)
     return token;
 }
 
-static bool GetTokenUser(HANDLE token, PSID *out_sid)
+static bool GetTokenSID(HANDLE token, PSID *out_sid)
 {
     union {
         TOKEN_USER user;
@@ -246,29 +263,12 @@ static bool MatchUsers(HANDLE token1, HANDLE token2)
 {
     PSID sid1;
     PSID sid2;
-    if (!GetTokenUser(token1, &sid1))
+    if (!GetTokenSID(token1, &sid1))
         return false;
-    if (!GetTokenUser(token2, &sid2))
+    if (!GetTokenSID(token2, &sid2))
         return false;
 
     return EqualSid(sid1, sid2);
-}
-
-struct PendingIO {
-    OVERLAPPED ov = {}; // Keep first
-    bool pending = false;
-    DWORD err = 0;
-    DWORD len = 0;
-    uint8_t buf[8192];
-};
-
-static void CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
-{
-    PendingIO *pending = (PendingIO *)ov;
-
-    pending->pending = false;
-    pending->err = err;
-    pending->len = len;
 }
 
 static bool WriteToClient(HANDLE h, void *buf, Size buf_len)
@@ -473,50 +473,52 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     // Forward stdout and stderr to client
     {
         bool running = true;
-        PendingIO out;
-        PendingIO err;
+        PendingIO proc_out;
+        PendingIO proc_err;
         bool client = true;
 
-        while (running && client && !out.err && !err.err) {
-            if (!out.pending && !ReadFileEx(out_pipe[0], out.buf + 1, RG_SIZE(out.buf) - 1, &out.ov, CompletionHandler)) {
+        while (running && client && !proc_out.err && !proc_err.err) {
+            if (!proc_out.pending && !ReadFileEx(out_pipe[0], proc_out.buf + 1, RG_SIZE(proc_out.buf) - 1, &proc_out.ov,
+                                                 PendingIO::CompletionHandler)) {
                 if (GetLastError() != ERROR_BROKEN_PIPE && GetLastError() != ERROR_NO_DATA) {
                     LogError("Failed to read process stdout: %1", GetWin32ErrorString());
                 }
             }
-            out.pending = true;
+            proc_out.pending = true;
 
-            if (!err.pending && !ReadFileEx(err_pipe[0], err.buf + 1, RG_SIZE(err.buf) - 1, &err.ov, CompletionHandler)) {
+            if (!proc_err.pending && !ReadFileEx(err_pipe[0], proc_err.buf + 1, RG_SIZE(proc_err.buf) - 1, &proc_err.ov,
+                                                 PendingIO::CompletionHandler)) {
                 if (GetLastError() != ERROR_BROKEN_PIPE && GetLastError() != ERROR_NO_DATA) {
                     LogError("Failed to read process stderr: %1", GetWin32ErrorString());
                 }
             }
-            err.pending = true;
+            proc_err.pending = true;
 
             running = (WaitForSingleObjectEx(pi.hProcess, INFINITE, TRUE) != WAIT_OBJECT_0);
 
-            if (!out.pending) {
-                if (out.err) {
-                    if (out.err != ERROR_BROKEN_PIPE && out.err != ERROR_NO_DATA) {
-                        LogError("Failed to read process stdout: %1", GetWin32ErrorString(out.err));
+            if (!proc_out.pending) {
+                if (proc_out.err) {
+                    if (proc_out.err != ERROR_BROKEN_PIPE && proc_out.err != ERROR_NO_DATA) {
+                        LogError("Failed to read process stdout: %1", GetWin32ErrorString(proc_out.err));
                     }
-                    out.pending = true;
+                    proc_out.pending = true;
                 } else {
-                    out.buf[0] = 2;
-                    out.pending = !WriteToClient(pipe, out.buf, out.len + 1);
-                    client &= !err.pending;
+                    proc_out.buf[0] = 2;
+                    proc_out.pending = !WriteToClient(pipe, proc_out.buf, proc_out.len + 1);
+                    client &= !proc_out.pending;
                 }
             }
 
-            if (!err.pending) {
-                if (err.err) {
-                    if (err.err != ERROR_BROKEN_PIPE && err.err != ERROR_NO_DATA) {
-                        LogError("Failed to read process stderr: %1", GetWin32ErrorString(err.err));
+            if (!proc_err.pending) {
+                if (proc_err.err) {
+                    if (proc_err.err != ERROR_BROKEN_PIPE && proc_err.err != ERROR_NO_DATA) {
+                        LogError("Failed to read process stderr: %1", GetWin32ErrorString(proc_err.err));
                     }
-                    err.pending = true;
+                    proc_err.pending = true;
                 } else {
-                    err.buf[0] = 3;
-                    err.pending = !WriteToClient(pipe, err.buf, err.len + 1);
-                    client &= !err.pending;
+                    proc_err.buf[0] = 3;
+                    proc_err.pending = !WriteToClient(pipe, proc_err.buf, proc_err.len + 1);
+                    client &= !proc_err.pending;
                 }
             }
         }
