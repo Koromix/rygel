@@ -9,7 +9,7 @@
 
 # Introduction
 
-koffi is a fast and easy-to-use FFI module for Node.js, with support for complex data types such as structs.
+Koffi is a fast and easy-to-use FFI module for Node.js, with support for complex data types such as structs.
 
 The following platforms __are supported__ at the moment:
 
@@ -17,8 +17,8 @@ The following platforms __are supported__ at the moment:
 * Windows x86_64
 * Linux x86
 * Linux x86_64
-* Linux ARM32+VFP Little Endian *(Raspberry Pi OS 32-bit)*
-* Linux ARM64 Little Endian *(Raspberry Pi OS 64-bit)*
+* Linux ARM32+VFP Little Endian
+* Linux ARM64 Little Endian
 
 The following platforms are __not yet supported__ but will be soon:
 
@@ -63,7 +63,7 @@ npm install koffi
 
 This section assumes you know how to build C shared libraries.
 
-This examples illustrates how to use koffi with a Raylib shared library:
+This examples illustrates how to use Koffi with a Raylib shared library:
 
 ```js
 const koffi = require('build/koffi.node');
@@ -172,7 +172,7 @@ while (!raylib.WindowShouldClose()) {
 
 # Tests
 
-koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as `qemu-system` (or even `qemu-system-gui`) on Ubuntu.
+Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as `qemu-system` (or even `qemu-system-gui`) on Ubuntu.
 
 These machines are not included directly in this repository (for license and size reasons), but they are available here: https://koromix.dev/files/koffi/
 
