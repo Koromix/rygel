@@ -21,7 +21,8 @@
 #endif
 #include <windows.h>
 #include <wtsapi32.h>
-#include <sddl.h>
+#include <userenv.h>
+#include <wchar.h>
 
 namespace RG {
 
@@ -92,18 +93,19 @@ In order for this to work, you must first install the service from an elevated c
         }
     }
 
-    // Assemble message for SeatSH
-    LocalArray<char, 8192> msg;
-    if (cmd.len + work_dir.len > RG_SIZE(msg.data) - 2) {
-        LogError("Excessive command or working directory length");
-        return 127;
-    }
-    msg.len = Fmt(msg.data, "%1%2%3", cmd, '\0', work_dir).len + 1;
-
     // Ask SeatSH nicely
-    if (!::WriteFile(pipe, msg.data, msg.len, &dummy, nullptr)) {
-        LogError("Failed to send command to SeatSH: %1", GetWin32ErrorString());
-        return 127;
+    {
+        LocalArray<char, 8192> msg;
+        if (cmd.len + work_dir.len > RG_SIZE(msg.data) - 2) {
+            LogError("Excessive command or working directory length");
+            return 127;
+        }
+        msg.len = Fmt(msg.data, "%1%2%3", cmd, '\0', work_dir).len + 1;
+
+        if (!::WriteFile(pipe, msg.data, msg.len, &dummy, nullptr)) {
+            LogError("Failed to send command to SeatSH: %1", GetWin32ErrorString());
+            return 127;
+        }
     }
 
     int exit_code = 0;
@@ -157,6 +159,7 @@ static int current_state = 0;
 static int current_error = 0;
 static HANDLE stop_event = nullptr;
 static std::atomic_uint client_counter = 0;
+static std::mutex start_mutex;
 
 static void ReportStatus(int state)
 {
@@ -288,6 +291,8 @@ static bool WriteToClient(HANDLE h, void *buf, Size buf_len)
 
 static DWORD WINAPI RunPipeThread(void *pipe)
 {
+    BlockAllocator temp_alloc;
+
     RG_DEFER { CloseHandle(pipe); };
 
     unsigned int client = ++client_counter;
@@ -311,25 +316,26 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     });
     RG_DEFER { PopLogFilter(); };
 
+    Span<char> cmd;
+    Span<char> work_dir;
+    {
+        char buf[8192];
+        OVERLAPPED ov = {};
+        DWORD len;
 
-    char buf[8192];
-    OVERLAPPED ov = {};
-    DWORD len;
+        if (!::ReadFile(pipe, buf, RG_SIZE(buf) - 1, nullptr, &ov) && GetLastError() != ERROR_IO_PENDING) {
+            LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
+            return 1;
+        }
+        if (!GetOverlappedResult(pipe, &ov, &len, TRUE)) {
+            LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
+            return 1;
+        }
+        buf[len] = 0;
 
-    if (!::ReadFile(pipe, buf, RG_SIZE(buf) - 1, nullptr, &ov) && GetLastError() != ERROR_IO_PENDING) {
-        LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
-        return 1;
+        cmd = DuplicateString(buf, &temp_alloc);
+        work_dir = DuplicateString(buf + cmd.len + 1, &temp_alloc);
     }
-    if (!GetOverlappedResult(pipe, &ov, &len, TRUE)) {
-        LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
-        return 1;
-    }
-    buf[len] = 0;
-
-    // Security checks: same user?
-
-    char *cmd = buf;
-    char *work_dir = buf + strlen(cmd) + 1;
 
     LogInfo("Executing '%1' in '%2'", cmd, work_dir);
 
@@ -351,6 +357,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     }
     RG_DEFER { CloseHandle(console_token); };
 
+    // Security check: same user?
     if (!MatchUsers(client_token, console_token)) {
         LogError("SeatSH refuses to do cross-user launches");
         return 1;
@@ -383,6 +390,23 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     if (!CreateOverlappedPipe(true, false, err_pipe))
         return 1;
 
+    // Retrieve user environment
+    void *env;
+    if (!CreateEnvironmentBlock(&env, client_token, FALSE)) {
+        LogError("Failed to retrieve user environment: %1", GetWin32ErrorString());
+        return 1;
+    }
+    RG_DEFER { DestroyEnvironmentBlock(env); };
+
+    // Find the PATH variable
+    const wchar_t *path = nullptr;
+    for (const wchar_t *ptr = (const wchar_t *)env; ptr[0]; ptr += wcslen(ptr) + 1) {
+        if (!_wcsnicmp(ptr, L"PATH=", 5)) {
+            path = ptr + 5;
+            break;
+        }
+    }
+
     // Launch process with our redirections
     {
         RG_DEFER {
@@ -407,10 +431,20 @@ static DWORD WINAPI RunPipeThread(void *pipe)
             return 1;
         }
 
-        // Launch process
-        if (!CreateProcessAsUserA(console_token, nullptr, cmd, nullptr, nullptr, TRUE, 0, nullptr, work_dir, &si, &pi)) {
-            LogError("Failed to start process: %1", GetWin32ErrorString());
-            return 1;
+        // Launch process, after setting the PATH variable to match the user. This is a bit dirty, and needs a lock.
+        // A better solution would be to extract the binary from cmd and to use FindExecutableInPath.
+        {
+            std::lock_guard<std::mutex> lock(start_mutex);
+
+            if (path) {
+                SetEnvironmentVariableW(L"PATH", path);
+            }
+
+            if (!CreateProcessAsUserA(console_token, nullptr, cmd.ptr, nullptr, nullptr, TRUE,
+                                      CREATE_UNICODE_ENVIRONMENT, env, work_dir.ptr, &si, &pi)) {
+                LogError("Failed to start process: %1", GetWin32ErrorString());
+                return 1;
+            }
         }
 
         CloseHandleSafe(&in_pipe[0]);
