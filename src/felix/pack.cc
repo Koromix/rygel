@@ -183,7 +183,7 @@ static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
                                   FunctionRef<void(Span<const uint8_t> buf)> func)
 {
     for (const PackSourceInfo &src: sources) {
-        func(Span<const char>(src.prefix).CastAs<const uint8_t>());
+        func(Span<const char>(src.prefix).As<const uint8_t>());
 
         StreamReader reader(src.filename);
         do {
@@ -195,7 +195,7 @@ static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
             func(read_buf);
         } while (!reader.IsEOF());
 
-        func(Span<const char>(src.suffix).CastAs<const uint8_t>());
+        func(Span<const char>(src.suffix).As<const uint8_t>());
     }
 
     return true;

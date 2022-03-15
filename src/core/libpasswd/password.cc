@@ -274,7 +274,7 @@ static bool CheckComplexity(Span<const char> password)
         }
 
         if (problems.len) {
-            LogError("Password is insufficient: %1", FmtSpan((Span<const char *>)problems));
+            LogError("Password is insufficient: %1", FmtSpan(problems.As()));
             return false;
         }
     }

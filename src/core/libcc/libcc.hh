@@ -917,7 +917,7 @@ struct Span {
     }
 
     template <typename U>
-    Span<U> CastAs() const { return Span<U>((U *)ptr, len); }
+    Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
 // Use strlen() to build Span<const char> instead of the template-based
@@ -971,7 +971,7 @@ struct Span<const char> {
     }
 
     template <typename U>
-    Span<U> CastAs() const { return Span<U>((U *)ptr, len); }
+    Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
 template <typename T>
@@ -1139,6 +1139,9 @@ public:
     Span<T> Take() const { return Span<T>(data, len); }
     Span<T> Take(Size offset, Size len) const { return Span<T>((T *)data, N).Take(offset, len); }
     Span<T> TakeAvailable() const { return Span<T>((T *)data + len, N - len); }
+
+    template <typename U = T>
+    Span<U> As() const { return Span<U>((U *)data, len); }
 };
 
 template <typename T>
@@ -1356,6 +1359,9 @@ public:
         Trim(extra_capacity);
         return Leak();
     }
+
+    template <typename U = T>
+    Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
 template <typename T, Size BucketSize = 64, typename AllocatorType = BlockAllocator>
@@ -2693,7 +2699,7 @@ public:
     bool IsEOF() const { return eof; }
 
     Size Read(Span<uint8_t> out_buf);
-    Size Read(Span<char> out_buf) { return Read(out_buf.CastAs<uint8_t>()); }
+    Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
     Size Read(Size max_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, max_len)); }
 
     Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
@@ -2859,7 +2865,7 @@ public:
     bool IsValid() const { return filename && !error; }
 
     bool Write(Span<const uint8_t> buf);
-    bool Write(Span<const char> buf) { return Write(buf.CastAs<const uint8_t>()); }
+    bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }
     bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
@@ -3911,14 +3917,14 @@ static inline bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> 
 static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
                                       FunctionRef<void(Span<char> buf)> out_func, int *out_code)
 {
-    const auto write = [&](Span<uint8_t> buf) { out_func(buf.CastAs<char>()); };
+    const auto write = [&](Span<uint8_t> buf) { out_func(buf.As<char>()); };
 
-    return ExecuteCommandLine(cmd_line, in_buf.CastAs<const uint8_t>(), write, out_code);
+    return ExecuteCommandLine(cmd_line, in_buf.As<const uint8_t>(), write, out_code);
 }
 static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf, Size max_len,
                                       HeapArray<char> *out_buf, int *out_code)
 {
-    return ExecuteCommandLine(cmd_line, in_buf.CastAs<const uint8_t>(), max_len,
+    return ExecuteCommandLine(cmd_line, in_buf.As<const uint8_t>(), max_len,
                               (HeapArray<uint8_t> *)out_buf, out_code);
 }
 
