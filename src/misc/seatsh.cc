@@ -29,9 +29,9 @@ namespace RG {
 struct PendingIO {
     OVERLAPPED ov = {}; // Keep first
 
-    int pending = 0;
+    bool pending = false;
     DWORD err = 0;
-    Size len = 0;
+    Size len = -1;
 
     uint8_t buf[8192];
 
@@ -191,24 +191,23 @@ In order for this to work, you must first install the service from an elevated c
         DWORD buf_len;
 
         for (;;) {
-            if (!::ReadFile(GetStdHandle(STD_INPUT_HANDLE), buf + 1, RG_SIZE(buf) - 1, &buf_len, nullptr)) {
+            if (!::ReadFile(GetStdHandle(STD_INPUT_HANDLE), buf, RG_SIZE(buf), &buf_len, nullptr)) {
                 LogError("Failed to read from standard input: %1", GetWin32ErrorString());
                 return (DWORD)1;
             }
             if (!buf_len)
                 break;
 
-            buf[0] = 1;
-            if (!WriteSync(send_pipe, buf, buf_len + 1)) {
+            if (!WriteSync(send_pipe, buf, buf_len)) {
                 LogError("Failed to relay stdin to server: %1", GetWin32ErrorString());
                 return (DWORD)1;
             }
         }
 
         // Signal EOF
-        buf[0] = 0;
-        if (!WriteSync(send_pipe, buf, 1)) {
+        if (!WriteSync(send_pipe, buf, 0)) {
             LogError("Failed to relay EOF to server: %1", GetWin32ErrorString());
+            return (DWORD)1;
         }
 
         return (DWORD)0;
@@ -374,130 +373,35 @@ static bool MatchUsers(HANDLE token1, HANDLE token2)
     return EqualSid(sid1, sid2);
 }
 
-static DWORD WINAPI RunPipeThread(void *pipe)
+static bool HandleClient(HANDLE pipe, ClientControl *client, Span<const char> cmd_line,
+                         Span<const char> work_dir, Allocator *alloc)
 {
-    BlockAllocator temp_alloc;
-
-    ClientControl client = {};
-
-    RG_DEFER_N(pipe_guard) {
-        HANDLE client_pipe = client.pipe.load();
-
-        CloseHandle(pipe);
-        if (client_pipe) {
-            CloseHandle(client_pipe);
-        }
-    };
-
-    client.id = GetRandomIntSafe(0, 100000000);
-    client.wakeup = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-    if (!client.wakeup) {
-        LogError("Failed to create event: %1", GetWin32ErrorString());
-        return 1;
-    }
-    RG_DEFER { CloseHandle(client.wakeup); };
-
-    char err_buf[8192];
-    CopyString("Unknown error", MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
-    err_buf[0] = 1;
-
-    // If something fails (command does not exist, etc), send it to the client
-    RG_DEFER_N(err_guard) { WriteSync(pipe, err_buf, strlen(err_buf)); };
-
-    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        char ctx_buf[1024];
-        Fmt(ctx_buf, "Client %1_%2%3%4", FmtArg(instance_id).Pad0(-8), FmtArg(client.id).Pad0(-8),
-                                         ctx ? ": " : "", ctx ? ctx : "");
-
-        if (level == LogLevel::Error) {
-            CopyString(msg, MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
-        };
-
-        func(level, ctx_buf, msg);
-    });
-    RG_DEFER { PopLogFilter(); };
-
-    Span<const char> cmd_line;
-    Span<const char> work_dir;
-    {
-        char buf[8192];
-        OVERLAPPED ov = {};
-        DWORD buf_len;
-
-        if (!::ReadFile(pipe, buf, RG_SIZE(buf) - 1, nullptr, &ov) && GetLastError() != ERROR_IO_PENDING) {
-            LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
-            return 1;
-        }
-        if (!GetOverlappedResult(pipe, &ov, &buf_len, TRUE)) {
-            LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
-            return 1;
-        }
-
-        if (!buf_len) {
-            LogError("Received empty message from client");
-            return 1;
-        }
-        buf[buf_len] = 0;
-
-        if (buf[0] == 0) {
-            cmd_line = DuplicateString(buf + 1, &temp_alloc);
-            work_dir = DuplicateString(buf + cmd_line.len + 2, &temp_alloc);
-        } else if (buf[0] == 1) {
-            std::lock_guard<std::mutex> lock(server_mutex);
-
-            if (buf_len != 5) {
-                LogError("Malformed message from client");
-                return 1;
-            }
-
-            int id = *(int *)(buf + 1);
-
-            ClientControl *target = clients_map.FindValue(id, nullptr);
-            if (!target) {
-                LogError("Trying to join non-existent client '%1'", id);
-                return 1;
-            }
-
-            LogInfo("Joining client %1 for sending", id);
-
-            target->pipe.store(pipe);
-            pipe_guard.Disable();
-
-            SetEvent(target->wakeup);
-
-            return 0;
-        } else {
-            LogError("Malformed message from client");
-            return 1;
-        }
-    }
-
     LogInfo("Executing '%1' in '%2'", cmd_line, work_dir);
 
     // Register this client
     {
         std::lock_guard<std::mutex> lock(server_mutex);
-        clients_map.Set(&client);
+        clients_map.Set(client);
     }
-    RG_DEFER { clients_map.Remove(client.id); };
+    RG_DEFER { clients_map.Remove(client->id); };
 
     // Give the ID to the client
-    if (!WriteSync(pipe, &client.id, RG_SIZE(client.id))) {
+    if (!WriteSync(pipe, &client->id, RG_SIZE(client->id))) {
         LogError("Failed to send ID to client: %1", GetWin32ErrorString());
-        return 1;
+        return false;
     }
 
     // Fuck UCS-2 and UTF-16...
     Span<wchar_t> cmd_line_w;
     Span<wchar_t> work_dir_w;
     cmd_line_w.len = 4 * cmd_line.len + 2;
-    cmd_line_w.ptr = (wchar_t *)Allocator::Allocate(&temp_alloc, cmd_line_w.len);
+    cmd_line_w.ptr = (wchar_t *)Allocator::Allocate(alloc, cmd_line_w.len);
     cmd_line_w.len = ConvertUtf8ToWin32Wide(cmd_line, cmd_line_w);
     work_dir_w.len = 4 * work_dir.len + 2;
-    work_dir_w.ptr = (wchar_t *)Allocator::Allocate(&temp_alloc, work_dir_w.len);
+    work_dir_w.ptr = (wchar_t *)Allocator::Allocate(alloc, work_dir_w.len);
     work_dir_w.len = ConvertUtf8ToWin32Wide(work_dir, work_dir_w);
     if (cmd_line_w.len < 0 || work_dir_w.len < 0)
-        return 1;
+        return false;
 
     HANDLE client_token = GetClientToken(pipe);
     RG_DEFER { CloseHandle(client_token); };
@@ -508,11 +412,11 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
         if (sid == UINT32_MAX) {
             LogError("Failed to get active control session ID: %1", GetWin32ErrorString());
-            return 1;
+            return false;
         }
         if (!WTSQueryUserToken(sid, &console_token)) {
             LogError("Failed to query active session user token: %1", GetWin32ErrorString());
-            return 1;
+            return false;
         }
     }
     RG_DEFER { CloseHandle(console_token); };
@@ -520,7 +424,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     // Security check: same user?
     if (!MatchUsers(client_token, console_token)) {
         LogError("SeatSH refuses to do cross-user launches");
-        return 1;
+        return false;
     }
 
     STARTUPINFOW si = {};
@@ -531,7 +435,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     si.lpDesktop = (wchar_t *)L"winsta0\\default";
     si.dwFlags |= STARTF_USESTDHANDLES;
 
-    // Prepare stdout and stderr redirection pipes
+    // Prepare standard stream redirection pipes
     HANDLE in_pipe[2] = {};
     HANDLE out_pipe[2] = {};
     HANDLE err_pipe[2] = {};
@@ -544,17 +448,17 @@ static DWORD WINAPI RunPipeThread(void *pipe)
         CloseHandleSafe(&err_pipe[1]);
     };
     if (!CreateOverlappedPipe(false, true, in_pipe))
-        return 1;
+        return false;
     if (!CreateOverlappedPipe(true, false, out_pipe))
-        return 1;
+        return false;
     if (!CreateOverlappedPipe(true, false, err_pipe))
-        return 1;
+        return false;
 
     // Retrieve user environment
     void *env;
     if (!CreateEnvironmentBlock(&env, client_token, FALSE)) {
         LogError("Failed to retrieve user environment: %1", GetWin32ErrorString());
-        return 1;
+        return false;
     }
     RG_DEFER { DestroyEnvironmentBlock(env); };
 
@@ -578,17 +482,17 @@ static DWORD WINAPI RunPipeThread(void *pipe)
         if (!DuplicateHandle(GetCurrentProcess(), in_pipe[0],
                              GetCurrentProcess(), &si.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
             LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
-            return 1;
+            return false;
         }
         if (!DuplicateHandle(GetCurrentProcess(), out_pipe[1],
                              GetCurrentProcess(), &si.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
             LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
-            return 1;
+            return false;
         }
         if (!DuplicateHandle(GetCurrentProcess(), err_pipe[1],
                              GetCurrentProcess(), &si.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
             LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
-            return 1;
+            return false;
         }
 
         // Launch process, after setting the PATH variable to match the user. This is a bit dirty, and needs a lock.
@@ -603,7 +507,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
             if (!CreateProcessAsUserW(console_token, nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE,
                                       CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW, env, work_dir_w.ptr, &si, &pi)) {
                 LogError("Failed to start process: %1", GetWin32ErrorString());
-                return 1;
+                return false;
             }
         }
 
@@ -638,34 +542,31 @@ static DWORD WINAPI RunPipeThread(void *pipe)
                         TerminateProcess(pi.hProcess, 1);
                     }
 
-                    client_in.pending = 2; // Don't try anything again
-                } else if (client_in.len) {
-                    if (client_in.buf[0] == 0) { // EOF
-                        CloseHandleSafe(&in_pipe[1]);
-                        client_in.pending = 2;
-                    } else if (client_in.buf[0] == 1) { // Data
-                        proc_in.len = client_in.len - 1;
-                        memcpy_safe(proc_in.buf, client_in.buf + 1, proc_in.len);
-                        client_in.len = 0;
+                    client_in.pending = true; // Don't try anything again
+                } else if (client_in.len >= 0) {
+                    if (client_in.len) {
+                        proc_in.len = client_in.len;
+                        memcpy_safe(proc_in.buf, client_in.buf, proc_in.len);
+                        client_in.len = -1;
 
                         if (!proc_in.err) {
                             if (WriteFileEx(in_pipe[1], proc_in.buf, proc_in.len, &proc_in.ov, PendingIO::CompletionHandler)) {
-                                proc_in.pending = 1;
+                                proc_in.pending = true;
                             } else {
                                 proc_in.err = GetLastError();
                             }
                         }
-                    } else {
-                        LogError("Malformed message from client");
-                        client_in.pending = 2;
+                    } else { // EOF
+                        CloseHandleSafe(&in_pipe[1]);
+                        client_in.pending = true;
                     }
                 }
 
-                if (!client_in.len) {
-                    HANDLE pipe2 = client.pipe.load();
+                if (client_in.len < 0) {
+                    HANDLE pipe2 = client->pipe.load();
 
                     if (ReadFileEx(pipe2, client_in.buf, RG_SIZE(client_in.buf), &client_in.ov, PendingIO::CompletionHandler)) {
-                        client_in.pending = 1;
+                        client_in.pending = true;
                     } else {
                         client_in.err = GetLastError();
                     }
@@ -679,26 +580,26 @@ static DWORD WINAPI RunPipeThread(void *pipe)
                         LogError("Failed to read process stdout: %1", GetWin32ErrorString(proc_out.err));
                     }
 
-                    proc_out.pending = 2; // Don't try anything again
-                } else if (proc_out.len) {
+                    proc_out.pending = true; // Don't try anything again
+                } else if (proc_out.len >= 0) {
                     client_out.len = proc_out.len + 1;
                     memcpy_safe(client_out.buf, proc_out.buf, client_out.len);
-                    proc_out.len = 0;
+                    proc_out.len = -1;
 
                     if (!client_out.err) {
                         if (WriteFileEx(pipe, client_out.buf, client_out.len, &client_out.ov, PendingIO::CompletionHandler)) {
-                            client_out.pending = 1;
+                            client_out.pending = true;
                         } else {
                             client_out.err = GetLastError();
                         }
                     }
                 }
 
-                if (!proc_out.len) {
+                if (proc_out.len < 0) {
                     proc_out.buf[0] = 2;
 
                     if (ReadFileEx(out_pipe[0], proc_out.buf + 1, RG_SIZE(proc_out.buf) - 1, &proc_out.ov, PendingIO::CompletionHandler)) {
-                        proc_out.pending = 1;
+                        proc_out.pending = true;
                     } else {
                         proc_out.err = GetLastError();
                     }
@@ -711,26 +612,26 @@ static DWORD WINAPI RunPipeThread(void *pipe)
                     if (proc_err.err != ERROR_BROKEN_PIPE && proc_err.err != ERROR_NO_DATA) {
                         LogError("Failed to read process stderr: %1", GetWin32ErrorString(proc_err.err));
                     }
-                    proc_err.pending = 2; // Don't try anything again
-                } else if (proc_err.len) {
+                    proc_err.pending = true; // Don't try anything again
+                } else if (proc_err.len >= 0) {
                     client_out.len = proc_err.len + 1;
                     memcpy_safe(client_out.buf, proc_err.buf, client_out.len);
-                    proc_err.len = 0;
+                    proc_err.len = -1;
 
                     if (!client_out.err) {
                         if (WriteFileEx(pipe, client_out.buf, client_out.len, &client_out.ov, PendingIO::CompletionHandler)) {
-                            client_out.pending = 1;
+                            client_out.pending = true;
                         } else {
                             client_out.err = GetLastError();
                         }
                     }
                 }
 
-                if (!proc_err.len) {
+                if (proc_err.len < 0) {
                     proc_err.buf[0] = 3;
 
                     if (ReadFileEx(err_pipe[0], proc_err.buf + 1, RG_SIZE(proc_err.buf) - 1, &proc_err.ov, PendingIO::CompletionHandler)) {
-                        proc_err.pending = 1;
+                        proc_err.pending = true;
                     } else {
                         proc_err.err = GetLastError();
                     }
@@ -739,10 +640,10 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
             HANDLE events[] = {
                 pi.hProcess,
-                client.wakeup
+                client->wakeup
             };
             running = (WaitForMultipleObjectsEx(RG_LEN(events), events, FALSE, INFINITE, TRUE) != WAIT_OBJECT_0);
-            ResetEvent(client.wakeup);
+            ResetEvent(client->wakeup);
         }
     }
 
@@ -750,7 +651,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     DWORD exit_code;
     if (!GetExitCodeProcess(pi.hProcess, &exit_code)) {
         LogError("GetExitCodeProcess() failed: %1", GetWin32ErrorString());
-        return 1;
+        return false;
     }
 
     // Send exit code to client
@@ -762,12 +663,107 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
         if (!WriteSync(pipe, buf, RG_SIZE(buf))) {
             LogError("Failed to send process exit code to client: %1", GetWin32ErrorString());
-            return 1;
+            return false;
         }
     }
 
-    err_guard.Disable();
-    return 0;
+    return true;
+}
+
+static DWORD WINAPI RunPipeThread(void *pipe)
+{
+    BlockAllocator temp_alloc;
+
+    ClientControl client = {};
+
+    RG_DEFER {
+        HANDLE client_pipe = client.pipe.load();
+
+        if (pipe) {
+            CloseHandle(pipe);
+        }
+        if (client_pipe) {
+            CloseHandle(client_pipe);
+        }
+    };
+
+    client.id = GetRandomIntSafe(0, 100000000);
+    client.wakeup = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    if (!client.wakeup) {
+        LogError("Failed to create event: %1", GetWin32ErrorString());
+        return 1;
+    }
+    RG_DEFER { CloseHandle(client.wakeup); };
+
+    char err_buf[8192];
+    CopyString("Unknown error", MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
+    err_buf[0] = 1;
+
+    // If something fails (command does not exist, etc), send it to the client
+    RG_DEFER_N(err_guard) { WriteSync(pipe, err_buf, strlen(err_buf)); };
+
+    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+        char ctx_buf[1024];
+        Fmt(ctx_buf, "Client %1_%2%3%4", FmtArg(instance_id).Pad0(-8), FmtArg(client.id).Pad0(-8),
+                                         ctx ? ": " : "", ctx ? ctx : "");
+
+        if (level == LogLevel::Error) {
+            CopyString(msg, MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
+        };
+
+        func(level, ctx_buf, msg);
+    });
+    RG_DEFER { PopLogFilter(); };
+
+    char buf[8192];
+    Size buf_len = ReadSync(pipe, buf, RG_SIZE(buf) - 1);
+    if (buf_len < 0)
+        return 1;
+    if (!buf_len) {
+        LogError("Received empty message from client");
+        return 1;
+    }
+    buf[buf_len] = 0;
+
+    if (buf[0] == 0) {
+        Span<const char> cmd_line = DuplicateString(buf + 1, &temp_alloc);
+        Span<const char> work_dir = DuplicateString(buf + cmd_line.len + 2, &temp_alloc);
+
+        if (HandleClient(pipe, &client, cmd_line, work_dir, &temp_alloc)) {
+            err_guard.Disable();
+            return 0;
+        } else {
+            return 1;
+        }
+    } else if (buf[0] == 1) {
+        std::lock_guard<std::mutex> lock(server_mutex);
+
+        if (buf_len != 5) {
+            LogError("Malformed message from client");
+            return 1;
+        }
+
+        int id = *(int *)(buf + 1);
+
+        ClientControl *target = clients_map.FindValue(id, nullptr);
+        if (!target) {
+            LogError("Trying to join non-existent client '%1'", id);
+            return 1;
+        }
+
+        LogInfo("Joining client %1 for sending", id);
+
+        target->pipe.store(pipe);
+        pipe = nullptr; // Don't close it in defer
+
+        SetEvent(target->wakeup);
+
+        err_guard.Disable();
+        return 0;
+    } else {
+        LogError("Malformed message from client");
+        return 1;
+    }
 }
 
 static void WINAPI RunService(DWORD argc, char **argv)
