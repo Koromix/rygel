@@ -119,56 +119,56 @@
 
                 <p>The following code uses libhs to enumerate serial and HID devices:</p>
 
-<!-- I've used https://tohtml.com/ to do highlight this code -->
+<!-- HTML generated using hilite.me (style: manni) -->
 <pre>
-<span class="line"></span><span style='color:#696969; '>/* libhs - public domain</span>
-<span class="line"></span><span style='color:#696969; '>&#xa0;&#xa0;&#xa0;Niels Martignène </span><span style='color:#0000e6; '>&lt;</span><span style='color:#7144c4; '>niels.martignene@protonmail.com</span><span style='color:#0000e6; '>></span><span style='color:#696969; '></span>
-<span class="line"></span><span style='color:#696969; '>&#xa0;&#xa0;&#xa0;</span><span style='color:#5555dd; '>https://koromix.dev/libhs</span><span style='color:#696969; '></span>
-<span class="line"></span><span style='color:#696969; '></span>
-<span class="line"></span><span style='color:#696969; '>&#xa0;&#xa0;&#xa0;This software is in the public domain. Where that dedication is not</span>
-<span class="line"></span><span style='color:#696969; '>&#xa0;&#xa0;&#xa0;recognized, you are granted a perpetual, irrevocable license to copy,</span>
-<span class="line"></span><span style='color:#696969; '>&#xa0;&#xa0;&#xa0;distribute, and modify this file as you see fit.</span>
-<span class="line"></span><span style='color:#696969; '></span>
-<span class="line"></span><span style='color:#696969; '>&#xa0;&#xa0;&#xa0;See the LICENSE file for more details. */</span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">/* libhs - public domain</span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">   Niels Martignène &lt;niels.martignene@protonmail.com&gt;</span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">   https://koromix.dev/libhs</span>
 <span class="line"></span>
-<span class="line"></span><span style='color:#004a43; '>#</span><span style='color:#004a43; '>include </span><span style='color:#800000; '>&lt;</span><span style='color:#40015a; '>inttypes.h</span><span style='color:#800000; '>></span>
-<span class="line"></span><span style='color:#004a43; '>#</span><span style='color:#004a43; '>include </span><span style='color:#800000; '>&lt;</span><span style='color:#40015a; '>stdio.h</span><span style='color:#800000; '>></span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">   This software is in the public domain. Where that dedication is not</span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">   recognized, you are granted a perpetual, irrevocable license to copy,</span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">   distribute, and modify this file as you see fit.</span>
 <span class="line"></span>
-<span class="line"></span><span style='color:#004a43; '>#</span><span style='color:#004a43; '>define</span><span style='color:#004a43; '> HS_IMPLEMENTATION</span>
-<span class="line"></span><span style='color:#004a43; '>#</span><span style='color:#004a43; '>include </span><span style='color:#800000; '>"</span><span style='color:#40015a; '>libhs.h</span><span style='color:#800000; '>"</span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">   See the LICENSE file for more details. */</span>
 <span class="line"></span>
-<span class="line"></span><span style='color:#800000; font-weight:bold; '>static</span> <span style='color:#800000; font-weight:bold; '>int</span> device_callback<span style='color:#808030; '>(</span>hs_device <span style='color:#808030; '>*</span>dev<span style='color:#808030; '>,</span> <span style='color:#800000; font-weight:bold; '>void</span> <span style='color:#808030; '>*</span>udata<span style='color:#808030; '>)</span>
-<span class="line"></span><span style='color:#800080; '>{</span>
-<span class="line"></span>    <span style='color:#808030; '>(</span><span style='color:#800000; font-weight:bold; '>void</span><span style='color:#808030; '>)</span><span style='color:#808030; '>(</span>udata<span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
+<span class="line"></span><span style="color: #009999">#include &lt;inttypes.h&gt;</span>
+<span class="line"></span><span style="color: #009999">#include &lt;stdio.h&gt;</span>
 <span class="line"></span>
-<span class="line"></span>    <span style='color:#603000; '>printf</span><span style='color:#808030; '>(</span><span style='color:#800000; '>"</span><span style='color:#0000e6; '>+ </span><span style='color:#007997; '>%s</span><span style='color:#0000e6; '>@%</span><span style='color:#800000; '>"</span>PRIu8<span style='color:#800000; '>"</span><span style='color:#0000e6; '> %04</span><span style='color:#800000; '>"</span>PRIx16<span style='color:#800000; '>"</span><span style='color:#0000e6; '>:%04</span><span style='color:#800000; '>"</span>PRIx16<span style='color:#800000; '>"</span><span style='color:#0000e6; '> (</span><span style='color:#007997; '>%s</span><span style='color:#0000e6; '>)</span><span style='color:#0f69ff; '>\n</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span>
-<span class="line"></span>           dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>location<span style='color:#808030; '>,</span> dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>iface_number<span style='color:#808030; '>,</span> dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>vid<span style='color:#808030; '>,</span> dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>pid<span style='color:#808030; '>,</span>
-<span class="line"></span>           hs_device_type_strings<span style='color:#808030; '>[</span>dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>type<span style='color:#808030; '>]</span><span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
-<span class="line"></span>    <span style='color:#603000; '>printf</span><span style='color:#808030; '>(</span><span style='color:#800000; '>"</span><span style='color:#0000e6; '>  - device node:   </span><span style='color:#007997; '>%s</span><span style='color:#0f69ff; '>\n</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>path<span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
-<span class="line"></span>    <span style='color:#800000; font-weight:bold; '>if</span> <span style='color:#808030; '>(</span>dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>manufacturer_string<span style='color:#808030; '>)</span>
-<span class="line"></span>        <span style='color:#603000; '>printf</span><span style='color:#808030; '>(</span><span style='color:#800000; '>"</span><span style='color:#0000e6; '>  - manufacturer:  </span><span style='color:#007997; '>%s</span><span style='color:#0f69ff; '>\n</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>manufacturer_string<span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
-<span class="line"></span>    <span style='color:#800000; font-weight:bold; '>if</span> <span style='color:#808030; '>(</span>dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>product_string<span style='color:#808030; '>)</span>
-<span class="line"></span>        <span style='color:#603000; '>printf</span><span style='color:#808030; '>(</span><span style='color:#800000; '>"</span><span style='color:#0000e6; '>  - product:       </span><span style='color:#007997; '>%s</span><span style='color:#0f69ff; '>\n</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>product_string<span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
-<span class="line"></span>    <span style='color:#800000; font-weight:bold; '>if</span> <span style='color:#808030; '>(</span>dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>serial_number_string<span style='color:#808030; '>)</span>
-<span class="line"></span>        <span style='color:#603000; '>printf</span><span style='color:#808030; '>(</span><span style='color:#800000; '>"</span><span style='color:#0000e6; '>  - serial number: </span><span style='color:#007997; '>%s</span><span style='color:#0f69ff; '>\n</span><span style='color:#800000; '>"</span><span style='color:#808030; '>,</span> dev<span style='color:#808030; '>-</span><span style='color:#808030; '>></span>serial_number_string<span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
+<span class="line"></span><span style="color: #009999">#define HS_IMPLEMENTATION</span>
+<span class="line"></span><span style="color: #009999">#include &quot;libhs.h&quot;</span>
 <span class="line"></span>
-<span class="line"></span>    <span style='color:#696969; '>/* If you return a non-zero value, the enumeration is aborted and this value is returned</span>
-<span class="line"></span><span style='color:#696969; '>&#xa0;&#xa0;&#xa0;&#xa0;&#xa0;&#xa0;&#xa0;from the calling function. */</span>
-<span class="line"></span>    <span style='color:#800000; font-weight:bold; '>return</span> <span style='color:#008c00; '>0</span><span style='color:#800080; '>;</span>
-<span class="line"></span><span style='color:#800080; '>}</span>
+<span class="line"></span><span style="color: #006699; font-weight: bold">static</span> <span style="color: #007788; font-weight: bold">int</span> <span style="color: #CC00FF">device_callback</span>(hs_device <span style="color: #555555">*</span>dev, <span style="color: #007788; font-weight: bold">void</span> <span style="color: #555555">*</span>udata)
+<span class="line"></span>{
+<span class="line"></span>    (<span style="color: #007788; font-weight: bold">void</span>)(udata);
 <span class="line"></span>
-<span class="line"></span><span style='color:#800000; font-weight:bold; '>int</span> <span style='color:#400000; '>main</span><span style='color:#808030; '>(</span><span style='color:#800000; font-weight:bold; '>void</span><span style='color:#808030; '>)</span>
-<span class="line"></span><span style='color:#800080; '>{</span>
-<span class="line"></span>    <span style='color:#800000; font-weight:bold; '>int</span> r<span style='color:#800080; '>;</span>
+<span class="line"></span>    printf(<span style="color: #CC3300">&quot;+ %s@%&quot;</span>PRIu8<span style="color: #CC3300">&quot; %04&quot;</span>PRIx16<span style="color: #CC3300">&quot;:%04&quot;</span>PRIx16<span style="color: #CC3300">&quot; (%s)</span><span style="color: #CC3300; font-weight: bold">\n</span><span style="color: #CC3300">&quot;</span>,
+<span class="line"></span>           dev<span style="color: #555555">-&gt;</span>location, dev<span style="color: #555555">-&gt;</span>iface_number, dev<span style="color: #555555">-&gt;</span>vid, dev<span style="color: #555555">-&gt;</span>pid,
+<span class="line"></span>           hs_device_type_strings[dev<span style="color: #555555">-&gt;</span>type]);
+<span class="line"></span>    printf(<span style="color: #CC3300">&quot;  - device node:   %s</span><span style="color: #CC3300; font-weight: bold">\n</span><span style="color: #CC3300">&quot;</span>, dev<span style="color: #555555">-&gt;</span>path);
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">if</span> (dev<span style="color: #555555">-&gt;</span>manufacturer_string)
+<span class="line"></span>        printf(<span style="color: #CC3300">&quot;  - manufacturer:  %s</span><span style="color: #CC3300; font-weight: bold">\n</span><span style="color: #CC3300">&quot;</span>, dev<span style="color: #555555">-&gt;</span>manufacturer_string);
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">if</span> (dev<span style="color: #555555">-&gt;</span>product_string)
+<span class="line"></span>        printf(<span style="color: #CC3300">&quot;  - product:       %s</span><span style="color: #CC3300; font-weight: bold">\n</span><span style="color: #CC3300">&quot;</span>, dev<span style="color: #555555">-&gt;</span>product_string);
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">if</span> (dev<span style="color: #555555">-&gt;</span>serial_number_string)
+<span class="line"></span>        printf(<span style="color: #CC3300">&quot;  - serial number: %s</span><span style="color: #CC3300; font-weight: bold">\n</span><span style="color: #CC3300">&quot;</span>, dev<span style="color: #555555">-&gt;</span>serial_number_string);
 <span class="line"></span>
-<span class="line"></span>    <span style='color:#696969; '>/* Go through the device tree and call our callback for each device. The callback can abort</span>
-<span class="line"></span><span style='color:#696969; '>&#xa0;&#xa0;&#xa0;&#xa0;&#xa0;&#xa0;&#xa0;the enumeration by returning a non-zero value. */</span>
-<span class="line"></span>    r <span style='color:#808030; '>=</span> hs_enumerate<span style='color:#808030; '>(</span><span style='color:#7d0045; '>NULL</span><span style='color:#808030; '>,</span> <span style='color:#008c00; '>0</span><span style='color:#808030; '>,</span> device_callback<span style='color:#808030; '>,</span> <span style='color:#7d0045; '>NULL</span><span style='color:#808030; '>)</span><span style='color:#800080; '>;</span>
-<span class="line"></span>    <span style='color:#800000; font-weight:bold; '>if</span> <span style='color:#808030; '>(</span>r <span style='color:#808030; '>&lt;</span> <span style='color:#008c00; '>0</span><span style='color:#808030; '>)</span>
-<span class="line"></span>        <span style='color:#800000; font-weight:bold; '>return</span> <span style='color:#808030; '>-</span>r<span style='color:#800080; '>;</span>
+<span class="line"></span>    <span style="color: #0099FF; font-style: italic">/* If you return a non-zero value, the enumeration is aborted and this value is returned</span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">       from the calling function. */</span>
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">return</span> <span style="color: #FF6600">0</span>;
+<span class="line"></span>}
 <span class="line"></span>
-<span class="line"></span>    <span style='color:#800000; font-weight:bold; '>return</span> <span style='color:#008c00; '>0</span><span style='color:#800080; '>;</span>
-<span class="line"></span><span style='color:#800080; '>}</span>
+<span class="line"></span><span style="color: #007788; font-weight: bold">int</span> <span style="color: #CC00FF">main</span>(<span style="color: #007788; font-weight: bold">void</span>)
+<span class="line"></span>{
+<span class="line"></span>    <span style="color: #007788; font-weight: bold">int</span> r;
+<span class="line"></span>
+<span class="line"></span>    <span style="color: #0099FF; font-style: italic">/* Go through the device tree and call our callback for each device. The callback can abort</span>
+<span class="line"></span><span style="color: #0099FF; font-style: italic">       the enumeration by returning a non-zero value. */</span>
+<span class="line"></span>    r <span style="color: #555555">=</span> hs_enumerate(<span style="color: #336666">NULL</span>, <span style="color: #FF6600">0</span>, device_callback, <span style="color: #336666">NULL</span>);
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">if</span> (r <span style="color: #555555">&lt;</span> <span style="color: #FF6600">0</span>)
+<span class="line"></span>        <span style="color: #006699; font-weight: bold">return</span> <span style="color: #555555">-</span>r;
+<span class="line"></span>
+<span class="line"></span>    <span style="color: #006699; font-weight: bold">return</span> <span style="color: #FF6600">0</span>;
+<span class="line"></span>}
 </pre>
 
                 <p>The reference documentation is in the header file, but if you prefer
