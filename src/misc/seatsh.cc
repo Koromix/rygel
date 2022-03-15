@@ -26,12 +26,88 @@
 
 namespace RG {
 
+struct PendingIO {
+    OVERLAPPED ov = {}; // Keep first
+
+    int pending = 0;
+    DWORD err = 0;
+    Size len = 0;
+
+    uint8_t buf[8192];
+
+    static void CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
+    {
+        PendingIO *self = (PendingIO *)ov;
+
+        self->pending = false;
+        self->err = err;
+        self->len = err ? -1 : len;
+    }
+};
+
+static Size ReadSync(HANDLE h, void *buf, Size buf_len)
+{
+    OVERLAPPED ov = {};
+    DWORD len;
+
+    if (!::ReadFile(h, buf, (DWORD)buf_len, nullptr, &ov) &&
+            GetLastError() != ERROR_IO_PENDING)
+        return -1;
+    if (!GetOverlappedResult(h, &ov, &len, TRUE))
+        return -1;
+
+    return (Size)len;
+}
+
+static bool WriteSync(HANDLE h, const void *buf, Size buf_len)
+{
+    OVERLAPPED ov = {};
+    DWORD dummy;
+
+    if (!::WriteFile(h, buf, (DWORD)buf_len, nullptr, &ov) &&
+            GetLastError() != ERROR_IO_PENDING)
+        return false;
+    if (!GetOverlappedResult(h, &ov, &dummy, TRUE))
+        return false;
+
+    return true;
+}
+
 // Client
+
+static HANDLE ConnectToServer(Span<const uint8_t> msg)
+{
+    HANDLE pipe = CreateFileA("\\\\.\\pipe\\SeatSH", GENERIC_READ | GENERIC_WRITE,
+                              0, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
+    if (pipe == INVALID_HANDLE_VALUE) {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+            LogError("SeatSH service does not seem to be running");
+        } else {
+            LogError("Failed to call SeatSH service: %1", GetWin32ErrorString());
+        }
+        return nullptr;
+    }
+    RG_DEFER_N(err_guard) { CloseHandle(pipe); };
+
+    // We want messages, not bytes
+    DWORD mode = PIPE_READMODE_MESSAGE;
+    if (!SetNamedPipeHandleState(pipe, &mode, nullptr, nullptr)) {
+        LogError("Failed to switch pipe to message mode: %1", GetWin32ErrorString());
+        return nullptr;
+    }
+
+    // Welcome message
+    if (!WriteSync(pipe, msg.ptr, msg.len)) {
+        LogError("Failed to send welcome to SeatSH: %1", GetWin32ErrorString());
+        return nullptr;
+    }
+
+    err_guard.Disable();
+    return pipe;
+}
 
 static int RunClient(int argc, char **argv)
 {
-    DWORD dummy;
-
     // Options
     Span<const char> cmd_line = nullptr;
     Span<const char> work_dir = GetWorkingDirectory();
@@ -70,57 +146,90 @@ In order for this to work, you must first install the service from an elevated c
         }
     }
 
-    // Contact SeatSH service
-    HANDLE pipe = CreateFileA("\\\\.\\pipe\\SeatSH", GENERIC_READ | GENERIC_WRITE,
-                              0, nullptr, OPEN_EXISTING, 0, nullptr);
-    if (pipe == INVALID_HANDLE_VALUE) {
-        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
-            LogError("SeatSH service does not seem to be running");
-        } else {
-            LogError("Failed to call SeatSH service: %1", GetWin32ErrorString());
-        }
-        return 127;
-    }
-    RG_DEFER { CloseHandle(pipe); };
-
-    // We want messages, not bytes
-    {
-        DWORD mode = PIPE_READMODE_MESSAGE;
-
-        if (!SetNamedPipeHandleState(pipe, &mode, nullptr, nullptr)) {
-            LogError("Failed to switch pipe to message mode: %1", GetWin32ErrorString());
-            return 127;
-        }
-    }
-
-    // Ask SeatSH nicely
+    // Ask SeatSH to launch process
+    HANDLE pipe;
     {
         LocalArray<char, 8192> msg;
         if (cmd_line.len + work_dir.len > RG_SIZE(msg.data) - 2) {
             LogError("Excessive command or working directory length");
             return 127;
         }
-        msg.len = Fmt(msg.data, "%1%2%3", cmd_line, '\0', work_dir).len + 1;
+        msg.len = Fmt(msg.data, "%1%2%3%4", '\0', cmd_line, '\0', work_dir).len + 1;
 
-        if (!::WriteFile(pipe, msg.data, msg.len, &dummy, nullptr)) {
-            LogError("Failed to send command to SeatSH: %1", GetWin32ErrorString());
+        pipe = ConnectToServer(msg.As<uint8_t>());
+        if (!pipe)
             return 127;
-        }
     }
+    RG_DEFER { CloseHandle(pipe); };
 
+    int client_id = 0;
     int exit_code = 0;
 
-    // Read relayed output from SeatSH service
-    for (;;) {
+    // Get the client ID from the server
+    if (!ReadSync(pipe, &client_id, RG_SIZE(client_id))) {
+        LogError("Failed to get back client ID: %1", GetWin32ErrorString());
+        return 127;
+    }
+
+    HANDLE send_pipe;
+    {
+        uint8_t msg[5];
+        msg[0] = 1;
+        memcpy(msg + 1, &client_id, RG_SIZE(client_id));
+
+        send_pipe = ConnectToServer(msg);
+        if (!send_pipe)
+            return 127;
+    }
+    RG_DEFER { CloseHandle(send_pipe); };
+
+    // Send stdin through second pipe and from background thread, to avoid issues when trying
+    // to do asynchronous I/O with standard input/output and using the same pipe.
+    // A lot of weird things happened, I gave up. If you want to simplify this, you're welcome!
+    HANDLE send_thread = CreateThread(nullptr, 0, +[](void *send_pipe) {
         uint8_t buf[8192];
         DWORD buf_len;
 
-        if (!::ReadFile(pipe, buf, RG_SIZE(buf), &buf_len, nullptr)) {
+        for (;;) {
+            if (!::ReadFile(GetStdHandle(STD_INPUT_HANDLE), buf + 1, RG_SIZE(buf) - 1, &buf_len, nullptr)) {
+                LogError("Failed to read from standard input: %1", GetWin32ErrorString());
+                return (DWORD)1;
+            }
+            if (!buf_len)
+                break;
+
+            buf[0] = 1;
+            if (!WriteSync(send_pipe, buf, buf_len + 1)) {
+                LogError("Failed to relay stdin to server: %1", GetWin32ErrorString());
+                return (DWORD)1;
+            }
+        }
+
+        // Signal EOF
+        buf[0] = 0;
+        if (!WriteSync(send_pipe, buf, 1)) {
+            LogError("Failed to relay EOF to server: %1", GetWin32ErrorString());
+        }
+
+        return (DWORD)0;
+    }, send_pipe, 0, nullptr);
+    if (!send_thread) {
+        LogError("Failed to create thread: %1", GetWin32ErrorString());
+        return 127;
+    }
+    RG_DEFER { CloseHandle(send_thread); };
+
+    // Interpret messages from server (output, exit, error)
+    for (;;) {
+        uint8_t buf[8192];
+        Size buf_len;
+
+        buf_len = ReadSync(pipe, buf, RG_SIZE(buf));
+        if (buf_len < 0) {
             LogError("Failed to read from SeatSH: %1", GetWin32ErrorString());
             return 127;
         }
-
-        if (buf_len <= 0)
+        if (!buf_len)
             goto malformed;
 
         if (buf[0] == 0) { // exit
@@ -135,9 +244,11 @@ In order for this to work, you must first install the service from an elevated c
 
             break;
         } else if (buf[0] == 2) { // stdout
-            fwrite(buf + 1, 1, buf_len - 1, stdout);
+            DWORD dummy;
+            ::WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf + 1, buf_len - 1, &dummy, nullptr);
         } else if (buf[0] == 3) { // stderr
-            fwrite(buf + 1, 1, buf_len - 1, stderr);
+            DWORD dummy;
+            ::WriteFile(GetStdHandle(STD_ERROR_HANDLE), buf + 1, buf_len - 1, &dummy, nullptr);
         } else {
             goto malformed;
         }
@@ -154,30 +265,22 @@ malformed:
 
 // Server (service)
 
+struct ClientControl {
+    int id;
+
+    std::atomic<void *> pipe;
+    HANDLE wakeup;
+
+    RG_HASHTABLE_HANDLER(ClientControl, id);
+};
+
+static std::mutex server_mutex;
 static SERVICE_STATUS_HANDLE status_handle = nullptr;
 static int instance_id = 0;
 static int current_state = 0;
 static int current_error = 0;
 static HANDLE stop_event = nullptr;
-static std::atomic_uint client_counter = 0;
-static std::mutex start_mutex;
-
-struct PendingIO {
-    OVERLAPPED ov = {}; // Keep first
-    bool pending = false;
-    DWORD err = 0;
-    DWORD len = 0;
-    uint8_t buf[8192];
-
-    static void CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
-    {
-        PendingIO *self = (PendingIO *)ov;
-
-        self->pending = false;
-        self->err = err;
-        self->len = len;
-    }
-};
+static HashTable<int, ClientControl *> clients_map;
 
 static void ReportStatus(int state)
 {
@@ -271,43 +374,39 @@ static bool MatchUsers(HANDLE token1, HANDLE token2)
     return EqualSid(sid1, sid2);
 }
 
-static bool WriteToClient(HANDLE h, void *buf, Size buf_len)
-{
-    OVERLAPPED ov = {};
-    DWORD dummy;
-
-    if (!::WriteFile(h, buf, (DWORD)buf_len, nullptr, &ov) &&
-            GetLastError() != ERROR_IO_PENDING) {
-        LogError("Failed to write to client: %1", GetWin32ErrorString());
-        return false;
-    }
-
-    if (!GetOverlappedResult(h, &ov, &dummy, TRUE)) {
-        LogError("Failed to write to client: %1", GetWin32ErrorString());
-        return false;
-    }
-
-    return true;
-}
-
 static DWORD WINAPI RunPipeThread(void *pipe)
 {
     BlockAllocator temp_alloc;
 
-    RG_DEFER { CloseHandle(pipe); };
+    ClientControl client = {};
 
-    unsigned int client_id = ++client_counter;
+    RG_DEFER_N(pipe_guard) {
+        HANDLE client_pipe = client.pipe.load();
+
+        CloseHandle(pipe);
+        if (client_pipe) {
+            CloseHandle(client_pipe);
+        }
+    };
+
+    client.id = GetRandomIntSafe(0, 100000000);
+    client.wakeup = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    if (!client.wakeup) {
+        LogError("Failed to create event: %1", GetWin32ErrorString());
+        return 1;
+    }
+    RG_DEFER { CloseHandle(client.wakeup); };
 
     char err_buf[8192];
     CopyString("Unknown error", MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
     err_buf[0] = 1;
 
     // If something fails (command does not exist, etc), send it to the client
-    RG_DEFER_N(err_guard) { WriteToClient(pipe, err_buf, strlen(err_buf)); };
+    RG_DEFER_N(err_guard) { WriteSync(pipe, err_buf, strlen(err_buf)); };
 
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
-        Fmt(ctx_buf, "Client %1_%2%3%4", FmtArg(instance_id).Pad0(-8), FmtArg(client_id).Pad0(-8),
+        Fmt(ctx_buf, "Client %1_%2%3%4", FmtArg(instance_id).Pad0(-8), FmtArg(client.id).Pad0(-8),
                                          ctx ? ": " : "", ctx ? ctx : "");
 
         if (level == LogLevel::Error) {
@@ -323,23 +422,70 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     {
         char buf[8192];
         OVERLAPPED ov = {};
-        DWORD len;
+        DWORD buf_len;
 
         if (!::ReadFile(pipe, buf, RG_SIZE(buf) - 1, nullptr, &ov) && GetLastError() != ERROR_IO_PENDING) {
             LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
             return 1;
         }
-        if (!GetOverlappedResult(pipe, &ov, &len, TRUE)) {
+        if (!GetOverlappedResult(pipe, &ov, &buf_len, TRUE)) {
             LogError("Failed to read from named pipe: %1", GetWin32ErrorString());
             return 1;
         }
-        buf[len] = 0;
 
-        cmd_line = DuplicateString(buf, &temp_alloc);
-        work_dir = DuplicateString(buf + cmd_line.len + 1, &temp_alloc);
+        if (!buf_len) {
+            LogError("Received empty message from client");
+            return 1;
+        }
+        buf[buf_len] = 0;
+
+        if (buf[0] == 0) {
+            cmd_line = DuplicateString(buf + 1, &temp_alloc);
+            work_dir = DuplicateString(buf + cmd_line.len + 2, &temp_alloc);
+        } else if (buf[0] == 1) {
+            std::lock_guard<std::mutex> lock(server_mutex);
+
+            if (buf_len != 5) {
+                LogError("Malformed message from client");
+                return 1;
+            }
+
+            int id = *(int *)(buf + 1);
+
+            ClientControl *target = clients_map.FindValue(id, nullptr);
+            if (!target) {
+                LogError("Trying to join non-existent client '%1'", id);
+                return 1;
+            }
+
+            LogInfo("Joining client %1 for sending", id);
+
+            target->pipe.store(pipe);
+            pipe_guard.Disable();
+
+            SetEvent(target->wakeup);
+
+            return 0;
+        } else {
+            LogError("Malformed message from client");
+            return 1;
+        }
     }
 
     LogInfo("Executing '%1' in '%2'", cmd_line, work_dir);
+
+    // Register this client
+    {
+        std::lock_guard<std::mutex> lock(server_mutex);
+        clients_map.Set(&client);
+    }
+    RG_DEFER { clients_map.Remove(client.id); };
+
+    // Give the ID to the client
+    if (!WriteSync(pipe, &client.id, RG_SIZE(client.id))) {
+        LogError("Failed to send ID to client: %1", GetWin32ErrorString());
+        return 1;
+    }
 
     // Fuck UCS-2 and UTF-16...
     Span<wchar_t> cmd_line_w;
@@ -448,7 +594,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
         // Launch process, after setting the PATH variable to match the user. This is a bit dirty, and needs a lock.
         // XXX: A better solution would be to extract the binary from cmd_line and to use FindExecutableInPath.
         {
-            std::lock_guard<std::mutex> lock(start_mutex);
+            std::lock_guard<std::mutex> lock(server_mutex);
 
             if (path_w) {
                 SetEnvironmentVariableW(L"PATH", path_w);
@@ -473,54 +619,130 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     // Forward stdout and stderr to client
     {
         bool running = true;
+
+        PendingIO client_in;
+        PendingIO client_out;
+        PendingIO proc_in;
         PendingIO proc_out;
         PendingIO proc_err;
-        bool client = true;
 
-        while (running && client && !proc_out.err && !proc_err.err) {
-            if (!proc_out.pending && !ReadFileEx(out_pipe[0], proc_out.buf + 1, RG_SIZE(proc_out.buf) - 1, &proc_out.ov,
-                                                 PendingIO::CompletionHandler)) {
-                if (GetLastError() != ERROR_BROKEN_PIPE && GetLastError() != ERROR_NO_DATA) {
-                    LogError("Failed to read process stdout: %1", GetWin32ErrorString());
+        while (running) {
+            // Transmit stdin from client to process
+            if (!client_in.pending && !proc_in.pending) {
+                if (client_in.err) {
+                    if (client_in.err != ERROR_BROKEN_PIPE && client_in.err != ERROR_NO_DATA) {
+                        LogError("Lost connection to client: %1", GetWin32ErrorString(client_in.err));
+                    }
+
+                    if (in_pipe[1]) {
+                        TerminateProcess(pi.hProcess, 1);
+                    }
+
+                    client_in.pending = 2; // Don't try anything again
+                } else if (client_in.len) {
+                    if (client_in.buf[0] == 0) { // EOF
+                        CloseHandleSafe(&in_pipe[1]);
+                        client_in.pending = 2;
+                    } else if (client_in.buf[0] == 1) { // Data
+                        proc_in.len = client_in.len - 1;
+                        memcpy_safe(proc_in.buf, client_in.buf + 1, proc_in.len);
+                        client_in.len = 0;
+
+                        if (!proc_in.err) {
+                            if (WriteFileEx(in_pipe[1], proc_in.buf, proc_in.len, &proc_in.ov, PendingIO::CompletionHandler)) {
+                                proc_in.pending = 1;
+                            } else {
+                                proc_in.err = GetLastError();
+                            }
+                        }
+                    } else {
+                        LogError("Malformed message from client");
+                        client_in.pending = 2;
+                    }
+                }
+
+                if (!client_in.len) {
+                    HANDLE pipe2 = client.pipe.load();
+
+                    if (ReadFileEx(pipe2, client_in.buf, RG_SIZE(client_in.buf), &client_in.ov, PendingIO::CompletionHandler)) {
+                        client_in.pending = 1;
+                    } else {
+                        client_in.err = GetLastError();
+                    }
                 }
             }
-            proc_out.pending = true;
 
-            if (!proc_err.pending && !ReadFileEx(err_pipe[0], proc_err.buf + 1, RG_SIZE(proc_err.buf) - 1, &proc_err.ov,
-                                                 PendingIO::CompletionHandler)) {
-                if (GetLastError() != ERROR_BROKEN_PIPE && GetLastError() != ERROR_NO_DATA) {
-                    LogError("Failed to read process stderr: %1", GetWin32ErrorString());
-                }
-            }
-            proc_err.pending = true;
-
-            running = (WaitForSingleObjectEx(pi.hProcess, INFINITE, TRUE) != WAIT_OBJECT_0);
-
-            if (!proc_out.pending) {
+            // Transmit stdout from process to client
+            if (!proc_out.pending && !client_out.pending) {
                 if (proc_out.err) {
                     if (proc_out.err != ERROR_BROKEN_PIPE && proc_out.err != ERROR_NO_DATA) {
                         LogError("Failed to read process stdout: %1", GetWin32ErrorString(proc_out.err));
                     }
-                    proc_out.pending = true;
-                } else {
+
+                    proc_out.pending = 2; // Don't try anything again
+                } else if (proc_out.len) {
+                    client_out.len = proc_out.len + 1;
+                    memcpy_safe(client_out.buf, proc_out.buf, client_out.len);
+                    proc_out.len = 0;
+
+                    if (!client_out.err) {
+                        if (WriteFileEx(pipe, client_out.buf, client_out.len, &client_out.ov, PendingIO::CompletionHandler)) {
+                            client_out.pending = 1;
+                        } else {
+                            client_out.err = GetLastError();
+                        }
+                    }
+                }
+
+                if (!proc_out.len) {
                     proc_out.buf[0] = 2;
-                    proc_out.pending = !WriteToClient(pipe, proc_out.buf, proc_out.len + 1);
-                    client &= !proc_out.pending;
+
+                    if (ReadFileEx(out_pipe[0], proc_out.buf + 1, RG_SIZE(proc_out.buf) - 1, &proc_out.ov, PendingIO::CompletionHandler)) {
+                        proc_out.pending = 1;
+                    } else {
+                        proc_out.err = GetLastError();
+                    }
                 }
             }
 
-            if (!proc_err.pending) {
+            // Transmit stderr from process to client
+            if (!proc_err.pending && !client_out.pending) {
                 if (proc_err.err) {
                     if (proc_err.err != ERROR_BROKEN_PIPE && proc_err.err != ERROR_NO_DATA) {
                         LogError("Failed to read process stderr: %1", GetWin32ErrorString(proc_err.err));
                     }
-                    proc_err.pending = true;
-                } else {
+                    proc_err.pending = 2; // Don't try anything again
+                } else if (proc_err.len) {
+                    client_out.len = proc_err.len + 1;
+                    memcpy_safe(client_out.buf, proc_err.buf, client_out.len);
+                    proc_err.len = 0;
+
+                    if (!client_out.err) {
+                        if (WriteFileEx(pipe, client_out.buf, client_out.len, &client_out.ov, PendingIO::CompletionHandler)) {
+                            client_out.pending = 1;
+                        } else {
+                            client_out.err = GetLastError();
+                        }
+                    }
+                }
+
+                if (!proc_err.len) {
                     proc_err.buf[0] = 3;
-                    proc_err.pending = !WriteToClient(pipe, proc_err.buf, proc_err.len + 1);
-                    client &= !proc_err.pending;
+
+                    if (ReadFileEx(err_pipe[0], proc_err.buf + 1, RG_SIZE(proc_err.buf) - 1, &proc_err.ov, PendingIO::CompletionHandler)) {
+                        proc_err.pending = 1;
+                    } else {
+                        proc_err.err = GetLastError();
+                    }
                 }
             }
+
+            HANDLE events[] = {
+                pi.hProcess,
+                client.wakeup
+            };
+            running = (WaitForMultipleObjectsEx(RG_LEN(events), events, FALSE, INFINITE, TRUE) != WAIT_OBJECT_0);
+            ResetEvent(client.wakeup);
         }
     }
 
@@ -538,7 +760,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
         buf[0] = 0;
         memcpy(buf + 1, &exit_code, 4);
 
-        if (!WriteToClient(pipe, buf, RG_SIZE(buf))) {
+        if (!WriteSync(pipe, buf, RG_SIZE(buf))) {
             LogError("Failed to send process exit code to client: %1", GetWin32ErrorString());
             return 1;
         }
@@ -550,8 +772,6 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
 static void WINAPI RunService(DWORD argc, char **argv)
 {
-    DWORD dummy;
-
     HANDLE log = OpenEventLogA(nullptr, "SeatSH");
     if (!log) {
         LogError("Failed to register event provider: %1", GetWin32ErrorString());
@@ -583,13 +803,23 @@ static void WINAPI RunService(DWORD argc, char **argv)
 
     instance_id = GetRandomIntSafe(0, 100000000);
 
+    // This event is used (embedded in an OVERLAPPED) to wake up on connection
     HANDLE connect_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-    stop_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-    if (!connect_event || !stop_event) {
+    if (!connect_event) {
         LogError("Failed to create event: %1", GetWin32ErrorString());
         ReportError(__LINE__);
         return;
     }
+    RG_DEFER { CloseHandle(connect_event); };
+
+    // The stop event is used by the service control handler, for shutdown
+    stop_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    if (!stop_event) {
+        LogError("Failed to create event: %1", GetWin32ErrorString());
+        ReportError(__LINE__);
+        return;
+    }
+    RG_DEFER { CloseHandle(stop_event); };
 
     // Open for everyone!
     SECURITY_DESCRIPTOR sd;
@@ -632,6 +862,8 @@ static void WINAPI RunService(DWORD argc, char **argv)
         DWORD ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE);
 
         if (ret == WAIT_OBJECT_0) {
+            DWORD dummy;
+
             if (!GetOverlappedResult(pipe, &ov, &dummy, TRUE)) {
                 LogError("Failed to connect named pipe: %1", GetWin32ErrorString());
                 ReportError(__LINE__);
