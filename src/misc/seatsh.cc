@@ -458,40 +458,51 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
     // Forward stdout and stderr to client
     {
+        bool running = true;
         PendingIO out;
         PendingIO err;
+        bool client = true;
 
-        for (;;) {
+        while (running && client && !out.err && !err.err) {
             if (!out.pending && !ReadFileEx(out_pipe[0], out.buf + 1, RG_SIZE(out.buf) - 1, &out.ov, CompletionHandler)) {
-                LogError("Failed to read process stdout: %1", GetWin32ErrorString());
+                if (GetLastError() != ERROR_BROKEN_PIPE && GetLastError() != ERROR_NO_DATA) {
+                    LogError("Failed to read process stdout: %1", GetWin32ErrorString());
+                }
             }
             out.pending = true;
 
             if (!err.pending && !ReadFileEx(err_pipe[0], err.buf + 1, RG_SIZE(err.buf) - 1, &err.ov, CompletionHandler)) {
-                LogError("Failed to read process stderr: %1", GetWin32ErrorString());
+                if (GetLastError() != ERROR_BROKEN_PIPE && GetLastError() != ERROR_NO_DATA) {
+                    LogError("Failed to read process stderr: %1", GetWin32ErrorString());
+                }
             }
             err.pending = true;
 
-            if (WaitForSingleObjectEx(pi.hProcess, INFINITE, TRUE) == WAIT_OBJECT_0)
-                break;
+            running = (WaitForSingleObjectEx(pi.hProcess, INFINITE, TRUE) != WAIT_OBJECT_0);
 
             if (!out.pending) {
                 if (out.err) {
-                    LogError("Failed to read process stdout: %1", GetWin32ErrorString(out.err));
+                    if (out.err != ERROR_BROKEN_PIPE && out.err != ERROR_NO_DATA) {
+                        LogError("Failed to read process stdout: %1", GetWin32ErrorString(out.err));
+                    }
                     out.pending = true;
                 } else {
                     out.buf[0] = 2;
                     out.pending = !WriteToClient(pipe, out.buf, out.len + 1);
+                    client &= !err.pending;
                 }
             }
 
             if (!err.pending) {
                 if (err.err) {
-                    LogError("Failed to read process stderr: %1", GetWin32ErrorString(err.err));
+                    if (err.err != ERROR_BROKEN_PIPE && err.err != ERROR_NO_DATA) {
+                        LogError("Failed to read process stderr: %1", GetWin32ErrorString(err.err));
+                    }
                     err.pending = true;
                 } else {
                     err.buf[0] = 3;
                     err.pending = !WriteToClient(pipe, err.buf, err.len + 1);
+                    client &= !err.pending;
                 }
             }
         }
