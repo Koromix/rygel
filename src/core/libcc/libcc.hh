@@ -1343,6 +1343,7 @@ public:
 
     Span<T> Take() const { return Span<T>(ptr, len); }
     Span<T> Take(Size offset, Size len) const { return Span<T>(ptr, this->len).Take(offset, len); }
+    Span<T> TakeAvailable() const { return Span<T>((T *)ptr + len, capacity - len); }
 
     Span<T> Leak()
     {
