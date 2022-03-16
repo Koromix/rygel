@@ -2430,10 +2430,11 @@ bool MatchPathSpec(const char *path, const char *spec)
     return false;
 }
 
-bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_path)
+bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *alloc, const char **out_path)
 {
     RG_ASSERT(alloc || !out_path);
 
+    // Fast path
     if (strpbrk(name, RG_PATH_SEPARATORS)) {
         if (!TestFile(name, FileType::File))
             return false;
@@ -2442,68 +2443,86 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
             *out_path = DuplicateString(name, alloc).ptr;
         }
         return true;
-    } else {
-#ifdef _WIN32
-        LocalArray<char, 16384> env_buf;
-        Span<const char> env;
-        if (win32_utf8) {
-            env = getenv("PATH");
-        } else {
-            wchar_t buf_w[RG_SIZE(env_buf.data)];
-            DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, RG_LEN(buf_w));
+    }
 
-            if (!len && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
-                LogError("Failed to get PATH environment variable: %1", GetWin32ErrorString());
-                return false;
-            } else if (len >= RG_LEN(buf_w)) {
-                LogError("Failed to get PATH environment variable: buffer to small");
-                return false;
-            }
-            buf_w[len] = 0;
+    while (paths.len) {
+        Span<const char> path = SplitStr(paths, RG_PATH_DELIMITER, &paths);
 
-            env_buf.len = ConvertWin32WideToUtf8(buf_w, env_buf.data);
-            if (env_buf.len < 0)
-                return false;
-
-            env = env_buf;
-        }
-#else
-        Span<const char> env = getenv("PATH");
-#endif
-
-        while (env.len) {
-            Span<const char> path = SplitStr(env, RG_PATH_DELIMITER, &env);
-
-            LocalArray<char, 4096> buf;
-            buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
+        LocalArray<char, 4096> buf;
+        buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
 
 #ifdef _WIN32
-            static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
+        static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
 
-            for (Span<const char> ext: extensions) {
-                if (RG_LIKELY(ext.len < buf.Available() - 1)) {
-                    memcpy_safe(buf.end(), ext.ptr, ext.len + 1);
+        for (Span<const char> ext: extensions) {
+            if (RG_LIKELY(ext.len < buf.Available() - 1)) {
+                memcpy_safe(buf.end(), ext.ptr, ext.len + 1);
 
-                    if (TestFile(buf.data)) {
-                        if (out_path) {
-                            *out_path = DuplicateString(buf.data, alloc).ptr;
-                        }
-                        return true;
+                if (TestFile(buf.data)) {
+                    if (out_path) {
+                        *out_path = DuplicateString(buf.data, alloc).ptr;
                     }
+                    return true;
                 }
             }
-#else
-            if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data)) {
-                if (out_path) {
-                    *out_path = DuplicateString(buf.data, alloc).ptr;
-                }
-                return true;
-            }
-#endif
         }
+#else
+        if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data)) {
+            if (out_path) {
+                *out_path = DuplicateString(buf.data, alloc).ptr;
+            }
+            return true;
+        }
+#endif
     }
 
     return false;
+}
+
+bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_path)
+{
+    RG_ASSERT(alloc || !out_path);
+
+    // Fast path
+    if (strpbrk(name, RG_PATH_SEPARATORS)) {
+        if (!TestFile(name, FileType::File))
+            return false;
+
+        if (out_path) {
+            *out_path = DuplicateString(name, alloc).ptr;
+        }
+        return true;
+    }
+
+#ifdef _WIN32
+    LocalArray<char, 16384> env_buf;
+    Span<const char> paths;
+    if (win32_utf8) {
+        paths = getenv("PATH");
+    } else {
+        wchar_t buf_w[RG_SIZE(env_buf.data)];
+        DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, RG_LEN(buf_w));
+
+        if (!len && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
+            LogError("Failed to get PATH environment variable: %1", GetWin32ErrorString());
+            return false;
+        } else if (len >= RG_LEN(buf_w)) {
+            LogError("Failed to get PATH environment variable: buffer to small");
+            return false;
+        }
+        buf_w[len] = 0;
+
+        env_buf.len = ConvertWin32WideToUtf8(buf_w, env_buf.data);
+        if (env_buf.len < 0)
+            return false;
+
+        paths = env_buf;
+    }
+#else
+    Span<const char> paths = getenv("PATH");
+#endif
+
+    return FindExecutableInPath(paths, name, alloc, out_path);
 }
 
 bool SetWorkingDirectory(const char *directory)
