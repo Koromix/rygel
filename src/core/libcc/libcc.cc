@@ -3434,7 +3434,7 @@ static bool InitConsoleCtrlHandler()
     return success;
 }
 
-bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handles[2])
+bool CreateOverlappedPipe(bool overlap0, bool overlap1, PipeMode mode, HANDLE out_handles[2])
 {
     static LONG pipe_idx;
 
@@ -3450,7 +3450,11 @@ bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handles[2])
             GetCurrentProcessId(), InterlockedIncrement(&pipe_idx));
 
         DWORD open_mode = PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | (overlap0 ? FILE_FLAG_OVERLAPPED : 0);
-        DWORD pipe_mode = PIPE_TYPE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
+        DWORD pipe_mode = PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
+        switch (mode) {
+            case PipeMode::Byte: { pipe_mode |= PIPE_TYPE_BYTE; } break;
+            case PipeMode::Message: { pipe_mode |= PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE; } break;
+        }
 
         handles[0] = CreateNamedPipeA(pipe_name, open_mode, pipe_mode, 1, 8192, 8192, 0, nullptr);
         if (!handles[0] && GetLastError() != ERROR_ACCESS_DENIED) {
@@ -3464,6 +3468,14 @@ bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handles[2])
     if (handles[1] == INVALID_HANDLE_VALUE) {
         LogError("Failed to create pipe: %1", GetWin32ErrorString());
         return false;
+    }
+
+    if (mode == PipeMode::Message) {
+        DWORD value = PIPE_READMODE_MESSAGE;
+        if (!SetNamedPipeHandleState(handles[1], &value, nullptr, nullptr)) {
+            LogError("Failed to switch pipe to message mode: %1", GetWin32ErrorString());
+            return false;
+        }
     }
 
     handle_guard.Disable();
@@ -3528,7 +3540,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         CloseHandleSafe(&in_pipe[0]);
         CloseHandleSafe(&in_pipe[1]);
     };
-    if (in_func.IsValid() && !CreateOverlappedPipe(false, true, in_pipe))
+    if (in_func.IsValid() && !CreateOverlappedPipe(false, true, PipeMode::Byte, in_pipe))
         return false;
 
     // Create write pipes
@@ -3537,7 +3549,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         CloseHandleSafe(&out_pipe[0]);
         CloseHandleSafe(&out_pipe[1]);
     };
-    if (out_func.IsValid() && !CreateOverlappedPipe(true, false, out_pipe))
+    if (out_func.IsValid() && !CreateOverlappedPipe(true, false, PipeMode::Byte, out_pipe))
         return false;
 
     // Start process

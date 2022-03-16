@@ -3892,7 +3892,12 @@ const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, 
 const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
 
 #ifdef _WIN32
-bool CreateOverlappedPipe(bool overlap0, bool overlap1, void *out_handles[2]); // HANDLE
+enum class PipeMode {
+    Byte,
+    Message
+};
+
+bool CreateOverlappedPipe(bool overlap0, bool overlap1, PipeMode mode, void *out_handles[2]); // HANDLE
 void CloseHandleSafe(void **handle_ptr); // HANDLE
 #else
 bool CreatePipe(int pfd[2]);
