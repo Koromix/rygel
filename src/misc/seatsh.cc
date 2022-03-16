@@ -750,6 +750,10 @@ static DWORD WINAPI RunPipeThread(void *pipe)
             LogError("Trying to join non-existent client '%1'", id);
             return 1;
         }
+        if (target->pipe.load()) {
+            LogError("Cannot join client '%1' again", id);
+            return 1;
+        }
 
         LogInfo("Joining client %1 for sending", id);
 
