@@ -27,7 +27,6 @@ const chalk = require('chalk');
 
 let machines = [];
 let display = false;
-let shutdown = true;
 let ignore = new Set;
 
 // Main
@@ -86,8 +85,6 @@ async function main() {
                 return;
             } else if ((command == test || command == start) && (arg == '-d' || arg == '--display')) {
                 display = true;
-            } else if ((command == test) && (arg == '-l' || arg == '--leave')) {
-                shutdown = false;
             } else if (arg[0] == '-') {
                 throw new Error(`Unexpected argument '${arg}'`);
             } else {
@@ -153,7 +150,6 @@ Commands:
 
 Options:
     -d, --display                Show the QEMU display during the procedure
-    -l, --leave                  Leave the systems running after test
 `;
 
     console.log(help);
@@ -212,7 +208,7 @@ async function start(detach = true) {
 async function test() {
     let success = true;
 
-    success &= await start(!shutdown);
+    success &= await start(false);
 
     console.log('>> Copy source code...');
     await Promise.all(machines.map(async machine => {
@@ -292,8 +288,8 @@ async function test() {
         }
     }));
 
-    if (shutdown)
-        success &= await stop();
+    if (machines.some(machine => machine.started))
+        success &= await stop(false);
 
     console.log('');
     if (success) {
@@ -307,12 +303,14 @@ async function test() {
     return success;
 }
 
-async function stop() {
+async function stop(all = true) {
     let success = true;
 
     console.log('>> Sending shutdown commands...');
     await Promise.all(machines.map(async machine => {
         if (ignore.has(machine))
+            return;
+        if (!machine.started && !all)
             return;
 
         if (machine.ssh == null) {
@@ -382,8 +380,6 @@ async function boot(machine, dirname, detach, display) {
     if (!display)
         qemu += ' -display none';
 
-    let started = null;
-
     try {
         let proc = spawn(qemu, [], {
             cwd: dirname,
@@ -391,10 +387,8 @@ async function boot(machine, dirname, detach, display) {
             detached: detach,
             stdio: 'ignore'
         });
-
-        if (detach) {
+        if (detach)
             proc.unref();
-        }
 
         await new Promise((resolve, reject) => {
             proc.on('spawn', () => wait(2 * 1000).then(resolve));
@@ -403,10 +397,10 @@ async function boot(machine, dirname, detach, display) {
         });
 
         await join(machine, 30);
-        started = true;
+        machine.started = true;
     } catch (err) {
         await join(machine, 2);
-        started = false;
+        machine.started = false;
     }
 
     if (machine.uploads != null) {
@@ -416,7 +410,7 @@ async function boot(machine, dirname, detach, display) {
         }
     }
 
-    let action = (started ? 'Start' : 'Join') + (machine.kvm ? ' (KVM)' : '');
+    let action = (machine.started ? 'Start' : 'Join') + (machine.kvm ? ' (KVM)' : '');
     log(machine, action, chalk.bold.green('[ok]'));
 }
 
