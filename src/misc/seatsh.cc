@@ -211,7 +211,12 @@ In order for this to work, you must first install the service from an elevated c
 
         for (;;) {
             if (!::ReadFile(GetStdHandle(STD_INPUT_HANDLE), buf, RG_SIZE(buf), &buf_len, nullptr)) {
-                LogError("Failed to read from standard input: %1", GetWin32ErrorString());
+                DWORD err = GetLastError();
+
+                if (err != ERROR_BROKEN_PIPE && err != ERROR_NO_DATA) {
+                    LogError("Failed to read from standard input: %1", GetWin32ErrorString(err));
+                }
+
                 return (DWORD)1;
             }
             if (!buf_len)
@@ -670,6 +675,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
                     if (proc_err.err != ERROR_BROKEN_PIPE && proc_err.err != ERROR_NO_DATA) {
                         LogError("Failed to read process stderr: %1", GetWin32ErrorString(proc_err.err));
                     }
+
                     proc_err.pending = true; // Don't try anything again
                 } else if (proc_err.len >= 0) {
                     client_out.len = proc_err.len + 1;
