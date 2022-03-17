@@ -293,32 +293,6 @@ async function test() {
         }
     }));
 
-    console.log('>> Cleaning up code...');
-    await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine))
-            return;
-
-        let remote_dir = machine.info.home + '/luigi';
-
-        try {
-            await machine.ssh.exec('rm', ['-rf', remote_dir]);
-            log(machine, 'Delete', chalk.bold.green('[ok]'));
-        } catch (err) {
-            if (process.platform == 'win32') {
-                await wait(1000);
-
-                try {
-                    await machine.ssh.exec('rm', ['-rf', remote_dir]);
-                    log(machine, 'Delete', chalk.bold.green('[ok]'));
-                } catch (err) {
-                    log(machine, 'Delete', chalk.bold.red('[error]'));
-                }
-            } else {
-                log(machine, 'Delete', chalk.bold.red('[error]'));
-            }
-        }
-    }));
-
     if (shutdown)
         success &= await stop();
 
