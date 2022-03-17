@@ -96,7 +96,7 @@
         "qemu": "qemu-system-x86_64 -m 3G -smp 2 -rtc clock=host,base=localtime -drive if=pflash,format=raw,readonly=on,file=edk2-x86_64-code.fd -hda disk.qcow2 -netdev user,id=mynet,hostfwd=tcp::22205-:22 -device e1000,netdev=mynet -vga qxl -device qemu-xhci -device usb-tablet",
 
         "info": {
-            "version": 2,
+            "version": 3,
             "platform": "win32",
             "arch": "x64",
 
@@ -115,10 +115,10 @@
 
         "commands": {
             "Build (32 bit)": "rm -rf node_modules build && C:\\Node32\\node32.cmd npm install --production",
-            "Test Raylib (32 bit)": "seatsh \"C:\\Node32\\node32.cmd node test/tests/raylib.js\"",
+            "Test Raylib (32 bit)": "seatsh C:\\Node32\\node32.cmd node test/tests/raylib.js",
 
             "Build (64 bit)": "rm -rf node_modules build && C:\\Node64\\node64.cmd npm install --production",
-            "Test Raylib (64 bit)": "seatsh \"C:\\Node64\\node64.cmd node test/tests/raylib.js\""
+            "Test Raylib (64 bit)": "seatsh C:\\Node64\\node64.cmd node test/tests/raylib.js"
         }
     }
 }
