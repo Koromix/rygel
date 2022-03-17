@@ -83,6 +83,7 @@ enum class CallConvention {
 
 struct ParameterInfo {
     const TypeInfo *type;
+    int direction;
 
     // ABI-specific part
 

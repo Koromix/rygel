@@ -41,7 +41,7 @@ namespace RG {
 // Value does not matter, the tag system uses memory addresses
 static const int TypeInfoMarker = 0xdeadbeef;
 
-static const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value)
+static const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_direction = nullptr)
 {
     if (value.IsString()) {
         std::string str = value.As<Napi::String>();
@@ -53,13 +53,21 @@ static const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value val
             return nullptr;
         }
 
+        if (out_direction) {
+            *out_direction = 1;
+        }
         return type;
     } else if (CheckValueTag(instance, value, &TypeInfoMarker)) {
         Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
 
-        const TypeInfo *type = external.Data();
+        const TypeInfo *raw = external.Data();
+        const TypeInfo *type = AlignDown(raw, 4);
         RG_ASSERT(type);
 
+        if (out_direction) {
+            Size delta = (uint8_t *)raw - (uint8_t *)type;
+            *out_direction = 1 + (int)delta;
+        }
         return type;
     } else {
         ThrowError<Napi::TypeError>(value.Env(), "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
@@ -165,6 +173,45 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     SetValueTag(instance, external, &TypeInfoMarker);
 
     return external;
+}
+
+static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int direction)
+{
+    RG_ASSERT(direction >= 1 && direction <= 3);
+
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(instance, info[0]);
+    if (!type)
+        return env.Null();
+    if (type->primitive != PrimitiveKind::Pointer) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", info.Length());
+        return env.Null();
+    }
+
+    // We need to lose the const for Napi::External to work
+    TypeInfo *marked = (TypeInfo *)((uint8_t *)type + direction - 1);
+
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, marked);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
+}
+
+static Napi::Value MarkOut(const Napi::CallbackInfo &info)
+{
+    return EncodePointerDirection(info, 2);
+}
+
+static Napi::Value MarkInOut(const Napi::CallbackInfo &info)
+{
+    return EncodePointerDirection(info, 3);
 }
 
 static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
@@ -284,7 +331,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         for (uint32_t j = 0; j < parameters.Length(); j++) {
             ParameterInfo param = {};
 
-            param.type = ResolveType(instance, parameters[j]);
+            param.type = ResolveType(instance, parameters[j], &param.direction);
             if (!param.type)
                 return env.Null();
             if (param.type->primitive == PrimitiveKind::Void) {
@@ -468,6 +515,8 @@ static void InitInternal(v8::Local<v8::Object> target, v8::Local<v8::Value>,
     SetValue(env, target, "struct", Napi::Function::New(env_napi, CreateStructType));
     SetValue(env, target, "pointer", Napi::Function::New(env_napi, CreatePointerType));
     SetValue(env, target, "load", Napi::Function::New(env_napi, LoadSharedLibrary));
+    SetValue(env, target, "out", Napi::Function::New(env_napi, MarkOut));
+    SetValue(env, target, "inout", Napi::Function::New(env_napi, MarkInOut));
     SetValue(env, target, "internal", Napi::Boolean::New(env_napi, true));
 
     Napi::Object types = InitBaseTypes(env_cxx);
@@ -489,6 +538,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("struct", Napi::Function::New(env, CreateStructType));
     exports.Set("pointer", Napi::Function::New(env, CreatePointerType));
     exports.Set("load", Napi::Function::New(env, LoadSharedLibrary));
+    exports.Set("out", Napi::Function::New(env, MarkOut));
+    exports.Set("inout", Napi::Function::New(env, MarkInOut));
     exports.Set("internal", Napi::Boolean::New(env, false));
 
     Napi::Object types = InitBaseTypes(env);
