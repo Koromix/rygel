@@ -38,14 +38,24 @@ async function main() {
     let root_dir = fs.realpathSync(path.dirname(__filename));
     process.chdir(root_dir);
 
-    let command = 'test';
+    let command = test;
 
     // Parse options
     {
         let i = 2;
 
         if (process.argv.length >= 3 && process.argv[2][0] != '-') {
-            command = process.argv[2];
+            switch (process.argv[2]) {
+                case 'test': { command = test; } break;
+                case 'start': { command = start; } break;
+                case 'stop': { command = stop; } break;
+                case 'ssh': { command = ssh; } break;
+
+                default: {
+                    throw new Error(`Unknown command '${process.argv[2]}'`);
+                } break;
+            }
+
             i++;
         }
 
@@ -74,9 +84,9 @@ async function main() {
             if (arg == '--help') {
                 print_usage();
                 return;
-            } else if (arg == '-d' || arg == '--display') {
+            } else if ((command == test || command == start) && (arg == '-d' || arg == '--display')) {
                 display = true;
-            } else if (arg == '-l' || arg == '--leave') {
+            } else if ((command == test) && (arg == '-l' || arg == '--leave')) {
                 shutdown = false;
             } else if (arg[0] == '-') {
                 throw new Error(`Unexpected argument '${arg}'`);
@@ -86,17 +96,6 @@ async function main() {
 
                 machines.push(arg);
             }
-        }
-
-        switch (command) {
-            case 'test': { command = test; } break;
-            case 'start': { command = start; } break;
-            case 'stop': { command = stop; } break;
-            case 'ssh': { command = ssh; } break;
-
-            default: {
-                throw new Error(`Unknown command '${command}'`);
-            } break;
         }
     }
 
