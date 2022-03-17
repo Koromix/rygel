@@ -4178,6 +4178,12 @@ struct OptionDesc {
     const char *help;
 };
 
+enum class OptionMode {
+    Rotate,
+    Skip,
+    Stop
+};
+
 enum class OptionType {
     NoValue,
     Value,
@@ -4188,7 +4194,7 @@ class OptionParser {
     RG_DELETE_COPY(OptionParser)
 
     Span<const char *> args;
-    unsigned int flags;
+    OptionMode mode;
 
     Size pos = 0;
     Size limit;
@@ -4198,18 +4204,15 @@ class OptionParser {
     bool test_failed = false;
 
 public:
-    enum class Flag {
-        SkipNonOptions = 1 << 0
-    };
 
     const char *current_option = nullptr;
     const char *current_value = nullptr;
 
-    OptionParser(Span<const char *> args, unsigned int flags = 0)
-        : args(args), flags(flags), limit(args.len) {}
-    OptionParser(int argc, char **argv, unsigned int flags = 0)
+    OptionParser(Span<const char *> args, OptionMode mode = OptionMode::Rotate)
+        : args(args), mode(mode), limit(args.len) {}
+    OptionParser(int argc, char **argv, OptionMode mode = OptionMode::Rotate)
         : args(argc > 0 ? (const char **)(argv + 1) : nullptr, std::max(0, argc - 1)),
-          flags(flags), limit(args.len) {}
+          mode(mode), limit(args.len) {}
 
     const char *Next();
 

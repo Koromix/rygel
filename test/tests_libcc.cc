@@ -500,6 +500,35 @@ TEST_FUNCTION("libcc/TestOptionParser")
         TEST_EQ(opt.Next(), nullptr);
         TEST_EQ(opt.ConsumeNonOption(), nullptr);
     }
+
+    // Skip mode
+
+    {
+        const char *args[] = {"-f", "FOO", "--bar", "--foo", "BAR"};
+        OptionParser opt(args, OptionMode::Skip);
+
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.Next(), "--bar");
+        TEST_STR(opt.Next(), "--foo");
+        TEST_STR(opt.ConsumeNonOption(), "BAR");
+        TEST_STR(opt.Next(), nullptr);
+        TEST_STR(opt.ConsumeNonOption(), nullptr);
+    }
+
+    // Stop mode
+
+    {
+        const char *args[] = {"-f", "--bar", "FOO", "--foo", "BAR"};
+        OptionParser opt(args, OptionMode::Stop);
+
+        TEST_STR(opt.Next(), "-f");
+        TEST_STR(opt.Next(), "--bar");
+        TEST_STR(opt.Next(), nullptr);
+        TEST_STR(opt.ConsumeNonOption(), "FOO");
+        TEST_STR(opt.ConsumeNonOption(), "--foo");
+        TEST_STR(opt.ConsumeNonOption(), "BAR");
+        TEST_STR(opt.ConsumeNonOption(), nullptr);
+    }
 }
 
 TEST_FUNCTION("libcc/TestPathCheck")

@@ -848,7 +848,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
     // Find config filename
     {
-        OptionParser opt(arguments, (int)OptionParser::Flag::SkipNonOptions);
+        OptionParser opt(arguments, OptionMode::Skip);
 
         while (opt.Next()) {
             if (opt.Test("--help")) {

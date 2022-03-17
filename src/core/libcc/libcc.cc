@@ -6746,16 +6746,21 @@ const char *OptionParser::Next()
         return current_option;
     }
 
+    if (mode == OptionMode::Stop && !IsOption(args[pos])) {
+        limit = pos;
+        return nullptr;
+    }
+
     // Skip non-options, do the permutation once we reach an option or the last argument
     Size next_index = pos;
     while (next_index < limit && !IsOption(args[next_index])) {
         next_index++;
     }
-    if (flags & (int)Flag::SkipNonOptions) {
-        pos = next_index;
-    } else {
+    if (mode == OptionMode::Rotate) {
         std::rotate(args.ptr + pos, args.ptr + next_index, args.end());
         limit -= (next_index - pos);
+    } else if (mode == OptionMode::Skip) {
+        pos = next_index;
     }
     if (pos >= limit)
         return nullptr;
@@ -6795,11 +6800,11 @@ const char *OptionParser::Next()
         current_option = buf;
         smallopt_offset = opt[2] ? 2 : 0;
 
-        // The main point of SkipNonOptions is to be able to parse arguments in
+        // The main point of Skip mode is to be able to parse arguments in
         // multiple passes. This does not work well with ambiguous short options
         // (such as -oOption, which can be interpeted as multiple one-char options
         // or one -o option with a value), so force the value interpretation.
-        if (flags & (int)Flag::SkipNonOptions) {
+        if (mode == OptionMode::Skip) {
             ConsumeValue();
         }
     } else {

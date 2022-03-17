@@ -605,7 +605,7 @@ Options:
 
     // Find config filename
     {
-        OptionParser opt(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
+        OptionParser opt(argc, argv, OptionMode::Skip);
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
