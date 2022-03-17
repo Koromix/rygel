@@ -193,3 +193,30 @@ node test.js # Several options are available, use --help
 ```
 
 And be patient, this can be pretty slow for emulated machines.
+
+By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:
+
+```sh
+node test.js start # Start the machines
+node test.js # Test (without shutting down)
+node test.js # Test again
+node test.js stop # Stop everything
+```
+
+You can also restrict the test to a subset of machines:
+
+```sh
+# Full test cycle
+node test.js test debian_x64 debian_i386
+
+# Separate start, test, shutdown
+node test.js start debian_x64 debian_i386
+node test.js test debian_x64 debian_i386
+node test.js stop
+```
+
+Finally, you can join a running machine with SSH with the following shortcut, if you need to do some debugging or any other manual procedure:
+
+```sh
+node test.js ssh debian_i386
+```
