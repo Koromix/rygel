@@ -223,6 +223,27 @@
 <span class="line"></span>node test.js <span style="color: #696969;"># Several options are available, use --help</span>
 </pre>
                 <p>And be patient, this can be pretty slow for emulated machines.</p>
+                <p>By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:</p>
+<pre>
+<span class="line"></span>node test.js start <span style="color: #696969;"># Start the machines</span>
+<span class="line"></span>node test.js <span style="color: #696969;"># Test (without shutting down)</span>
+<span class="line"></span>node test.js <span style="color: #696969;"># Test again</span>
+<span class="line"></span>node test.js stop <span style="color: #696969;"># Stop everything</span>
+</pre>
+                <p>You can also restrict the test to a subset of machines:</p>
+<pre>
+<span class="line"></span><span style="color: #696969;"># Full test cycle</span>
+<span class="line"></span>node test.js test debian_x64 debian_i386
+<span class="line"></span>
+<span class="line"></span><span style="color: #696969;"># Separate start, test, shutdown</span>
+<span class="line"></span>node test.js start debian_x64 debian_i386
+<span class="line"></span>node test.js test debian_x64 debian_i386
+<span class="line"></span>node test.js stop
+</pre>
+                <p>Finally, you can join a running machine with SSH with the following shortcut, if you need to do some debugging or any other manual procedure:</p>
+<pre>
+<span class="line"></span>node test.js ssh debian_i386
+</pre>
             </main>
         </div>
     </body>
