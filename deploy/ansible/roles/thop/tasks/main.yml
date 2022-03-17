@@ -140,9 +140,15 @@
   when: download_tables.changed
   become: yes
 
+- name: Enable THOP service
+  service:
+    name: thop
+    enabled: yes
+  become: yes
+
 - name: Restart THOP
   service:
-    name: nginx
+    name: thop
     state: restarted
   when: build_thop.changed
   become: yes
