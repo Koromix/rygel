@@ -25,31 +25,40 @@ const { spawnSync } = require('child_process');
 
 // Globals
 
-let version = null;
-let arch = null;
-let debug = false;
-
-let cmake_bin = null;
-
 let app_dir = null;
 let project_dir = null;
 let build_dir = null;
 let download_dir = null;
 let work_dir = null;
 
+let version = null;
+let arch = null;
+let debug = false;
+
+let cmake_bin = null;
+
 // Main
 
 main();
 
 async function main() {
-    let command = 'build';
+    let command = build;
 
     // Parse options
     {
         let i = 2;
 
         if (process.argv.length >= 3 && process.argv[2][0] != '-') {
-            command = process.argv[2];
+            switch (process.argv[2]) {
+                case 'build': { command = build; } break;
+                case 'configure': { command = configure; } break;
+                case 'clean': { command = clean; } break;
+
+                default: {
+                    throw new Error(`Unknown command '${process.argv[2]}'`);
+                } break;
+            }
+
             i++;
         }
 
@@ -78,24 +87,24 @@ async function main() {
             if (arg == '--help') {
                 print_usage();
                 return;
-            } else if (arg == '-v' || arg == '--version') {
+            } else if (arg == '-C' || arg == '--directory') {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                project_dir = fs.realpathSync(value);
+            } else if ((command == build || command == configure) && (arg == '-v' || arg == '--version')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 version = value;
                 if (!version.startsWith('v'))
                     version = 'v' + version;
-            } else if (arg == '-a' || arg == '--arch') {
+            } else if ((command == build || command == configure) && (arg == '-a' || arg == '--arch')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 arch = value;
-            } else if (arg == '-C' || arg == '--directory') {
-                if (value == null)
-                    throw new Error(`Missing value for ${arg}`);
-
-                project_dir = fs.realpathSync(value);
-            } else if (arg == '--debug') {
+            } else if ((command == build || command == configure) && arg == '--debug') {
                 debug = true;
             } else {
                 if (arg[0] == '-') {
@@ -104,16 +113,6 @@ async function main() {
                     throw new Error(`Unexpected value '${arg}'`);
                 }
             }
-        }
-
-        switch (command) {
-            case 'build': { command = build; } break;
-            case 'configure': { command = configure; } break;
-            case 'clean': { command = clean; } break;
-
-            default: {
-                throw new Error(`Unknown command '${command}'`);
-            } break;
         }
     }
 
