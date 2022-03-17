@@ -190,12 +190,15 @@ async function start(detach = true) {
         }
 
         try {
-           await boot(machine, dirname, detach, display);
+            await boot(machine, dirname, detach, display);
+
+            let action = (machine.started ? 'Start' : 'Join') + (machine.kvm ? ' (KVM)' : '');
+            log(machine, action, chalk.bold.green('[ok]'));
         } catch (err) {
-            console.error(err);
+            log(machine, 'Start', chalk.bold.red('[error]'));
 
             ignore.add(machine);
-            success = false;
+            missing++;
         }
     }));
 
@@ -373,17 +376,16 @@ async function ssh() {
 // Utility
 
 async function boot(machine, dirname, detach, display) {
-    let qemu = machine.qemu;
+    let args = machine.qemu.arguments.slice();
 
     if (machine.kvm)
-        qemu += ' -accel kvm';
+        args.push('-accel', 'kvm');
     if (!display)
-        qemu += ' -display none';
+        args.push('-display', 'none');
 
     try {
-        let proc = spawn(qemu, [], {
+        let proc = spawn(machine.qemu.binary, args, {
             cwd: dirname,
-            shell: true,
             detached: detach,
             stdio: 'ignore'
         });
@@ -399,6 +401,9 @@ async function boot(machine, dirname, detach, display) {
         await join(machine, 30);
         machine.started = true;
     } catch (err) {
+        if (typeof err != 'number')
+            throw err;
+
         await join(machine, 2);
         machine.started = false;
     }
@@ -409,9 +414,6 @@ async function boot(machine, dirname, detach, display) {
             await machine.ssh.putFile('files/' + src, dest);
         }
     }
-
-    let action = (machine.started ? 'Start' : 'Join') + (machine.kvm ? ' (KVM)' : '');
-    log(machine, action, chalk.bold.green('[ok]'));
 }
 
 async function join(machine, tries) {
