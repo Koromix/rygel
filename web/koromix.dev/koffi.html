@@ -47,11 +47,7 @@
             <nav id="side_menu">
                 <ul>
                     <li><a href="#overview" class="lv1">Overview</a></li>
-                    <li><a href="#install" class="lv1">Installation</a><li>
-                    <li><a href="#install_windows" class="lv2">Windows</a></li>
-                    <li><a href="#install_other" class="lv2">Other platforms</a></li>
-                    <li><a href="#start" class="lv1">Get started</a></li>
-                    <li><a href="#tests" class="lv1">Tests</a></li>
+                    <li><a href="#example" class="lv1">Example</a></li>
                 </ul>
             </nav>
 
@@ -67,43 +63,10 @@
                     <li>Linux ARM32+VFP Little Endian</li>
                     <li>Linux ARM64 Little Endian</li>
                 </ul>
-                <p>The following platforms are <b>not yet supported</b> but will be soon:</p>
-                <ul>
-                    <li>macOS x86_64</li>
-                    <li>macOS ARM64</li>
-                    <li>FreeBSD/NetBSD/OpenBSD x86_64</li>
-                    <li>FreeBSD/NetBSD/OpenBSD ARM64</li>
-                </ul>
                 <p>This is still in development, bugs are to expected. More tests will come in the near future.</p>
-
-                <h1 id="install">Installation</h1>
-                <p>You can find the <a href="https://www.npmjs.com/package/koffi">package published on NPM</a>.</p>
-                <h2 id="install_windows">Windows</h2>
-                <p>First, make sure the following dependencies are met:</p>
-                <ul>
-                    <li>The &quot;Desktop development with C++&quot; workload from <a href="https://visualstudio.microsoft.com/downloads/">Visual Studio 2022 or 2019</a> or the &quot;C++ build tools&quot; workload from the <a href="https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022">Build Tools</a>, with the default optional components.</li>
-                    <li><a href="https://cmake.org/">CMake meta build system</a></li>
-                    <li><a href="https://nodejs.org/">Node 16 LTS</a>, but a newer version should work too</li>
-                </ul>
-                <p>Once these dependencies are met, simply run the follow command:</p>
-<pre>
-<span class="line"></span>npm install koffi
-</pre>
-                <h2 id="install_other">Other platforms</h2>
-                <p>Make sure the following dependencies are met:</p>
-                <ul>
-                    <li><code>gcc</code> and <code>g++</code> &gt;= 8.3 or newer</li>
-                    <li>GNU Make 3.81 or newer</li>
-                    <li><a href="https://cmake.org/">CMake meta build system</a></li>
-                </ul>
-                <p>Once these dependencies are met, simply run the follow command:</p>
-<pre>
-<span class="line"></span>npm install koffi
-</pre>
-                <h1 id="start">Get started</h1>
-                <p>This section assumes you know how to build C shared libraries.</p>
-                <p>This examples illustrates how to use Koffi with a Raylib shared library:</p>
-                <p>Once this is done, run this command from the project root:</p>
+                <p>You can find more information about Koffi (installation, tests, etc.) <a href="https://github.com/Koromix/luigi/tree/master/koffi">in the official repository</a>.</p>
+                <h1 id="example">Example</h1>
+                <p>This example illustrates how to use Koffi with a Raylib shared library:</p>
 <pre>
 <span class="line"></span><span style="color: #006699; font-weight: bold">const</span> koffi <span style="color: #555555">=</span> require(<span style="color: #CC3300">&#39;build/koffi.node&#39;</span>);
 <span class="line"></span>
@@ -206,43 +169,6 @@
 <span class="line"></span>
 <span class="line"></span>    angle <span style="color: #555555">+=</span> <span style="color: #336666">Math</span>.PI <span style="color: #555555">/</span> <span style="color: #FF6600">180</span>;
 <span class="line"></span>}
-</pre>
-
-                <h1 id="tests">Tests</h1>
-                <p>Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as <code>qemu-system</code> (or even <code>qemu-system-gui</code>) on Ubuntu.</p>
-                <p>These machines are not included directly in this repository (for license and size reasons), but they are available here: <a href="https://koromix.dev/files/koffi/">https://koromix.dev/files/koffi/</a></p>
-                <p>For example, if you want to run the tests on Debian ARM64, run the following commands:</p>
-<pre>
-<span class="line"></span>cd luigi/koffi/test/
-<span class="line"></span>wget -q -O- https://koromix.dev/files/koffi/qemu_debian_arm64.tar.zst | zstd -d | tar xv
-<span class="line"></span>sha256sum -c --ignore-missing registry/sha256sum.txt
-</pre>
-                <p>Note that the machine disk content may change each time the machine runs, so the checksum test will fail once a machine has been used at least once.</p>
-                <p>And now you can run the tests with:</p>
-<pre>
-<span class="line"></span>node test.js <span style="color: #696969;"># Several options are available, use --help</span>
-</pre>
-                <p>And be patient, this can be pretty slow for emulated machines.</p>
-                <p>By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:</p>
-<pre>
-<span class="line"></span>node test.js start <span style="color: #696969;"># Start the machines</span>
-<span class="line"></span>node test.js <span style="color: #696969;"># Test (without shutting down)</span>
-<span class="line"></span>node test.js <span style="color: #696969;"># Test again</span>
-<span class="line"></span>node test.js stop <span style="color: #696969;"># Stop everything</span>
-</pre>
-                <p>You can also restrict the test to a subset of machines:</p>
-<pre>
-<span class="line"></span><span style="color: #696969;"># Full test cycle</span>
-<span class="line"></span>node test.js test debian_x64 debian_i386
-<span class="line"></span>
-<span class="line"></span><span style="color: #696969;"># Separate start, test, shutdown</span>
-<span class="line"></span>node test.js start debian_x64 debian_i386
-<span class="line"></span>node test.js test debian_x64 debian_i386
-<span class="line"></span>node test.js stop
-</pre>
-                <p>Finally, you can join a running machine with SSH with the following shortcut, if you need to do some debugging or any other manual procedure:</p>
-<pre>
-<span class="line"></span>node test.js ssh debian_i386
 </pre>
             </main>
         </div>
