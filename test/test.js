@@ -339,7 +339,7 @@ async function stop(all = true) {
 
                 machine.ssh.connection.on('close', resolve);
                 machine.ssh.connection.on('end', resolve);
-                wait(10000).then(reject);
+                wait(60000).then(() => { reject(new Error('Timeout')) });
 
                 execRemote(machine, machine.info.shutdown);
             });
