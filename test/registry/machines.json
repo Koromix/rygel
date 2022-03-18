@@ -4,7 +4,7 @@
 
         "qemu": {
             "binary": "qemu-system-arm",
-            "arguments": ["-M", "virt", "-cpu", "cortex-a15", "-m", "2G", "-smp", "2", "-kernel", "vmlinuz-5.10.0-12-armmp-lpae", "-initrd", "initrd.img-5.10.0-12-armmp-lpae", "-append", "root=/dev/vda2 apparmor=0", "-drive", "if=none,file=disk.qcow2,format=qcow2,id=hd", "-device", "virtio-blk-device,drive=hd", "-netdev", "user,id=mynet,hostfwd=tcp::22201-:22", "-device", "virtio-net-device,netdev=mynet"]
+            "arguments": ["-M", "virt", "-cpu", "cortex-a15", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-armmp-lpae", "-initrd", "initrd.img-5.10.0-12-armmp-lpae", "-append", "root=/dev/vda2 apparmor=0", "-drive", "if=none,file=disk.qcow2,format=qcow2,id=hd", "-device", "virtio-blk-device,drive=hd", "-netdev", "user,id=mynet,hostfwd=tcp::22201-:22", "-device", "virtio-net-device,netdev=mynet"]
         },
 
         "info": {
@@ -15,15 +15,19 @@
             "port": 22201,
             "username": "debian",
             "password": "debian",
-            "home": "/home/debian",
 
             "shutdown": "sudo poweroff"
         },
 
-        "commands": {
-            "Build": "npm install --production",
-            "Test Raylib": "xvfb-run node test/tests/raylib.js"
-        }
+        "tests": [
+            {
+                "directory": "/home/debian/luigi",
+                "commands": {
+                    "Build": "npm install --production",
+                    "Test Raylib": "xvfb-run node test/tests/raylib.js"
+                }
+            }
+        ]
     },
 
     "debian_arm64": {
@@ -31,7 +35,7 @@
 
         "qemu": {
             "binary": "qemu-system-aarch64",
-            "arguments": ["-M", "virt", "-cpu", "cortex-a53", "-m", "2G", "-smp", "2", "-kernel", "vmlinuz-5.10.0-12-arm64", "-initrd", "initrd.img-5.10.0-12-arm64", "-append", "root=/dev/vda2 apparmor=0", "-drive", "if=none,file=disk.qcow2,format=qcow2,id=hd", "-device", "virtio-blk-device,drive=hd", "-netdev", "user,id=mynet,hostfwd=tcp::22202-:22", "-device", "virtio-net-device,netdev=mynet"]
+            "arguments": ["-M", "virt", "-cpu", "cortex-a53", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-arm64", "-initrd", "initrd.img-5.10.0-12-arm64", "-append", "root=/dev/vda2 apparmor=0", "-drive", "if=none,file=disk.qcow2,format=qcow2,id=hd", "-device", "virtio-blk-device,drive=hd", "-netdev", "user,id=mynet,hostfwd=tcp::22202-:22", "-device", "virtio-net-device,netdev=mynet"]
         },
 
         "info": {
@@ -42,15 +46,19 @@
             "port": 22202,
             "username": "debian",
             "password": "debian",
-            "home": "/home/debian",
 
             "shutdown": "sudo poweroff"
         },
 
-        "commands": {
-            "Build": "npm install --production",
-            "Test Raylib": "xvfb-run node test/tests/raylib.js"
-        }
+        "tests": [
+            {
+                "directory": "/home/debian/luigi",
+                "commands": {
+                    "Build": "npm install --production",
+                    "Test Raylib": "xvfb-run node test/tests/raylib.js"
+                }
+            }
+        ]
     },
 
     "debian_i386": {
@@ -58,7 +66,7 @@
 
         "qemu": {
             "binary": "qemu-system-i386",
-            "arguments": ["-cpu", "max", "-m", "2G", "-smp", "2", "-kernel", "vmlinuz-5.10.0-12-686-pae", "-initrd", "initrd.img-5.10.0-12-686-pae", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22203-:22", "-device", "e1000,netdev=mynet"]
+            "arguments": ["-cpu", "max", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-686-pae", "-initrd", "initrd.img-5.10.0-12-686-pae", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22203-:22", "-device", "e1000,netdev=mynet"]
         },
 
         "info": {
@@ -69,15 +77,19 @@
             "port": 22203,
             "username": "debian",
             "password": "debian",
-            "home": "/home/debian",
 
             "shutdown": "sudo poweroff"
         },
 
-        "commands": {
-            "Build": "npm install --production",
-            "Test Raylib": "xvfb-run node test/tests/raylib.js"
-        }
+        "tests": [
+            {
+                "directory": "/home/debian/luigi",
+                "commands": {
+                    "Build": "npm install --production",
+                    "Test Raylib": "xvfb-run node test/tests/raylib.js"
+                }
+            }
+        ]
     },
 
     "debian_x64": {
@@ -85,7 +97,7 @@
 
         "qemu": {
             "binary": "qemu-system-x86_64",
-            "arguments": ["-m", "2G", "-smp", "2", "-kernel", "vmlinuz-5.10.0-12-amd64", "-initrd", "initrd.img-5.10.0-12-amd64", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22204-:22", "-device", "e1000,netdev=mynet"]
+            "arguments": ["-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-amd64", "-initrd", "initrd.img-5.10.0-12-amd64", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22204-:22", "-device", "e1000,netdev=mynet"]
         },
 
         "info": {
@@ -96,15 +108,19 @@
             "port": 22204,
             "username": "debian",
             "password": "debian",
-            "home": "/home/debian",
 
             "shutdown": "sudo poweroff"
         },
 
-        "commands": {
-            "Build": "npm install --production",
-            "Test Raylib": "xvfb-run node test/tests/raylib.js"
-        }
+        "tests": [
+            {
+                "directory": "/home/debian/luigi",
+                "commands": {
+                    "Build": "npm install --production",
+                    "Test Raylib": "xvfb-run node test/tests/raylib.js"
+                }
+            }
+        ]
     },
 
     "windows": {
@@ -112,7 +128,7 @@
 
         "qemu": {
             "binary": "qemu-system-x86_64",
-            "arguments": ["-m", "3G", "-smp", 2, "-rtc", "clock=host,base=localtime", "-bios", "bios.bin", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22205-:22", "-device", "e1000,netdev=mynet", "-vga", "qxl", "-device", "qemu-xhci", "-device", "usb-tablet"]
+            "arguments": ["-m", "3G", "-smp", 4, "-rtc", "clock=host,base=localtime", "-bios", "bios.bin", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22205-:22", "-device", "e1000,netdev=mynet", "-vga", "qxl", "-device", "qemu-xhci", "-device", "usb-tablet"]
         },
 
         "info": {
@@ -133,12 +149,22 @@
             "node64.cmd": "C:/Node64/node64.cmd"
         },
 
-        "commands": {
-            "Build (32 bit)": "rm -rf node_modules build && C:\\Node32\\node32.cmd npm install --production",
-            "Test Raylib (32 bit)": "seatsh C:\\Node32\\node32.cmd node test/tests/raylib.js",
+        "tests": [
+            {
+                "directory": "C:/Users/windows/Desktop/luigi32",
+                "commands": {
+                    "Build (32 bit)": "C:\\Node32\\node32.cmd npm install --production",
+                    "Test Raylib (32 bit)": "seatsh C:\\Node32\\node32.cmd node test/tests/raylib.js"
+                }
+            },
 
-            "Build (64 bit)": "rm -rf node_modules build && C:\\Node64\\node64.cmd npm install --production",
-            "Test Raylib (64 bit)": "seatsh C:\\Node64\\node64.cmd node test/tests/raylib.js"
-        }
+            {
+                "directory": "C:/Users/windows/Desktop/luigi64",
+                "commands": {
+                    "Build (64 bit)": "C:\\Node64\\node64.cmd npm install --production",
+                    "Test Raylib (64 bit)": "seatsh C:\\Node64\\node64.cmd node test/tests/raylib.js"
+                }
+            }
+        ]
     }
 }

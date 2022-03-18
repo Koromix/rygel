@@ -230,39 +230,42 @@ async function test() {
         if (ignore.has(machine))
             return;
 
-        let local_dir = '../..';
-        let remote_dir = machine.info.home + '/luigi';
+        let copied = true;
 
-        try {
-            await machine.ssh.exec('rm', ['-rf', remote_dir]);
-        } catch (err) {
-            // Fails often on Windows (busy directory or whatever), but rarely a problem
+        for (let test of machine.tests) {
+            let local_dir = '../..';
+
+            try {
+                await machine.ssh.exec('rm', ['-rf', test.directory]);
+            } catch (err) {
+                // Fails often on Windows (busy directory or whatever), but rarely a problem
+            }
+
+            try {
+                await machine.ssh.putDirectory(local_dir, test.directory, {
+                    recursive: true,
+                    concurrency: 2,
+
+                    validate: filename => {
+                        let basename = path.basename(filename);
+
+                        return basename !== '.git' &&
+                               basename !== 'qemu' && !basename.startsWith('qemu_') &&
+                               basename !== 'node_modules' &&
+                               basename !== 'node' &&
+                               basename !== 'build' &&
+                               basename !== 'luigi';
+                    }
+                });
+            } catch (err) {
+                ignore.add(machine);
+                success = false;
+                copied = false;
+            }
         }
 
-        try {
-            await machine.ssh.putDirectory(local_dir, remote_dir, {
-                recursive: true,
-                concurrency: 2,
-
-                validate: filename => {
-                    let basename = path.basename(filename);
-
-                    return basename !== '.git' &&
-                           basename !== 'qemu' && !basename.startsWith('qemu_') &&
-                           basename !== 'node_modules' &&
-                           basename !== 'node' &&
-                           basename !== 'build' &&
-                           basename !== 'luigi';
-                }
-            });
-
-            log(machine, 'Copy', chalk.bold.green('[ok]'));
-        } catch (err) {
-            log(machine, 'Copy', chalk.bold.red('[error]'));
-
-            ignore.add(machine);
-            success = false;
-        }
+        let status = copied ? chalk.bold.green('[ok]') : chalk.bold.red('[error]');
+        log(machine, 'Copy', status);
     }));
 
     console.log('>> Run test commands...');
@@ -270,37 +273,39 @@ async function test() {
         if (ignore.has(machine))
             return;
 
-        for (let name in machine.commands) {
-            let cmd = machine.commands[name];
-            let cwd = machine.info.home + '/luigi/koffi';
+        await Promise.all(machine.tests.map(async test => {
+            for (let name in test.commands) {
+                let cmd = test.commands[name];
+                let cwd = test.directory + '/koffi';
 
-            let start = process.hrtime.bigint();
-            let ret = await execRemote(machine, cmd, cwd);
-            let time = Number((process.hrtime.bigint() - start) / 1000000n);
+                let start = process.hrtime.bigint();
+                let ret = await execRemote(machine, cmd, cwd);
+                let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
-            if (ret.code == 0) {
-                log(machine, name, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
-            } else {
-                log(machine, name, chalk.bold.red('[error]'));
+                if (ret.code == 0) {
+                    log(machine, name, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
+                } else {
+                    log(machine, name, chalk.bold.red('[error]'));
 
-                if (ret.stdout || ret.stderr)
-                    console.error('');
+                    if (ret.stdout || ret.stderr)
+                        console.error('');
 
-                let align = log.align + 9;
-                if (ret.stdout) {
-                    let str = ' '.repeat(align) + 'Standard output:\n' +
-                              chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                    console.error(str);
+                    let align = log.align + 9;
+                    if (ret.stdout) {
+                        let str = ' '.repeat(align) + 'Standard output:\n' +
+                                  chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                        console.error(str);
+                    }
+                    if (ret.stderr) {
+                        let str = ' '.repeat(align) + 'Standard error:\n' +
+                                  chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                        console.error(str);
+                    }
+
+                    success = false;
                 }
-                if (ret.stderr) {
-                    let str = ' '.repeat(align) + 'Standard error:\n' +
-                              chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                    console.error(str);
-                }
-
-                success = false;
             }
-        }
+        }));
     }));
 
     if (machines.some(machine => machine.started))
