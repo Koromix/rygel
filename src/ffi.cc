@@ -41,7 +41,7 @@ namespace RG {
 // Value does not matter, the tag system uses memory addresses
 static const int TypeInfoMarker = 0xdeadbeef;
 
-static const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_direction = nullptr)
+static const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_directions = nullptr)
 {
     if (value.IsString()) {
         std::string str = value.As<Napi::String>();
@@ -53,8 +53,8 @@ static const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value val
             return nullptr;
         }
 
-        if (out_direction) {
-            *out_direction = 1;
+        if (out_directions) {
+            *out_directions = 1;
         }
         return type;
     } else if (CheckValueTag(instance, value, &TypeInfoMarker)) {
@@ -64,9 +64,9 @@ static const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value val
         const TypeInfo *type = AlignDown(raw, 4);
         RG_ASSERT(type);
 
-        if (out_direction) {
+        if (out_directions) {
             Size delta = (uint8_t *)raw - (uint8_t *)type;
-            *out_direction = 1 + (int)delta;
+            *out_directions = 1 + (int)delta;
         }
         return type;
     } else {
@@ -175,9 +175,9 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     return external;
 }
 
-static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int direction)
+static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int directions)
 {
-    RG_ASSERT(direction >= 1 && direction <= 3);
+    RG_ASSERT(directions >= 1 && directions <= 3);
 
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -196,12 +196,17 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     }
 
     // We need to lose the const for Napi::External to work
-    TypeInfo *marked = (TypeInfo *)((uint8_t *)type + direction - 1);
+    TypeInfo *marked = (TypeInfo *)((uint8_t *)type + directions - 1);
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, marked);
     SetValueTag(instance, external, &TypeInfoMarker);
 
     return external;
+}
+
+static Napi::Value MarkIn(const Napi::CallbackInfo &info)
+{
+    return EncodePointerDirection(info, 1);
 }
 
 static Napi::Value MarkOut(const Napi::CallbackInfo &info)
@@ -331,7 +336,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         for (uint32_t j = 0; j < parameters.Length(); j++) {
             ParameterInfo param = {};
 
-            param.type = ResolveType(instance, parameters[j], &param.direction);
+            param.type = ResolveType(instance, parameters[j], &param.directions);
             if (!param.type)
                 return env.Null();
             if (param.type->primitive == PrimitiveKind::Void) {
@@ -515,6 +520,7 @@ static void InitInternal(v8::Local<v8::Object> target, v8::Local<v8::Value>,
     SetValue(env, target, "struct", Napi::Function::New(env_napi, CreateStructType));
     SetValue(env, target, "pointer", Napi::Function::New(env_napi, CreatePointerType));
     SetValue(env, target, "load", Napi::Function::New(env_napi, LoadSharedLibrary));
+    SetValue(env, target, "in", Napi::Function::New(env_napi, MarkIn));
     SetValue(env, target, "out", Napi::Function::New(env_napi, MarkOut));
     SetValue(env, target, "inout", Napi::Function::New(env_napi, MarkInOut));
     SetValue(env, target, "internal", Napi::Boolean::New(env_napi, true));
@@ -538,6 +544,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("struct", Napi::Function::New(env, CreateStructType));
     exports.Set("pointer", Napi::Function::New(env, CreatePointerType));
     exports.Set("load", Napi::Function::New(env, LoadSharedLibrary));
+    exports.Set("in", Napi::Function::New(env, MarkIn));
     exports.Set("out", Napi::Function::New(env, MarkOut));
     exports.Set("inout", Napi::Function::New(env, MarkInOut));
     exports.Set("internal", Napi::Boolean::New(env, false));
