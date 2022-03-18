@@ -27,6 +27,7 @@ const chalk = require('chalk');
 
 let machines = [];
 let display = false;
+let accelerate = true;
 let ignore = new Set;
 
 // Main
@@ -85,6 +86,8 @@ async function main() {
                 return;
             } else if ((command == test || command == start) && (arg == '-d' || arg == '--display')) {
                 display = true;
+            } else if ((command == test || command == start) && arg == '--no-accel') {
+                accelerate = false;
             } else if (arg[0] == '-') {
                 throw new Error(`Unexpected argument '${arg}'`);
             } else {
@@ -106,11 +109,15 @@ async function main() {
             let machine = machines_map[key];
 
             machine.key = key;
+            machine.started = false;
 
-            if (process.arch == 'x64' && (machine.info.arch == 'x64' || machine.info.arch == 'ia32')) {
-                switch (process.platform) {
-                    case 'linux': { machine.accelerate = 'kvm'; } break;
-                    case 'win32': { machine.accelerate = 'whpx'; } break;
+            machine.qemu.accelerate = null;
+            if (accelerate) {
+                if (process.arch == 'x64' && (machine.info.arch == 'x64' || machine.info.arch == 'ia32')) {
+                    switch (process.platform) {
+                        case 'linux': { machine.qemu.accelerate = 'kvm'; } break;
+                        case 'win32': { machine.qemu.accelerate = 'whpx'; } break;
+                    }
                 }
             }
         }
@@ -197,7 +204,7 @@ async function start(detach = true) {
         try {
             await boot(machine, dirname, detach, display);
 
-            let action = (machine.started ? 'Start' : 'Join') + (machine.accelerate ? ` (${machine.accelerate})` : '');
+            let action = `${machine.started ? 'Start' : 'Join'} (${machine.qemu.accelerate || 'emulated'})`;
             log(machine, action, chalk.bold.green('[ok]'));
         } catch (err) {
             log(machine, 'Start', chalk.bold.red('[error]'));
@@ -383,8 +390,8 @@ async function ssh() {
 async function boot(machine, dirname, detach, display) {
     let args = machine.qemu.arguments.slice();
 
-    if (machine.accelerate)
-        args.push('-accel', machine.accelerate);
+    if (machine.qemu.accelerate)
+        args.push('-accel', machine.qemu.accelerate);
     if (!display)
         args.push('-display', 'none');
 
