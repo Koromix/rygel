@@ -236,7 +236,7 @@ async function test() {
 
         let copied = true;
 
-        for (let test of machine.tests) {
+        for (let test of Object.values(machine.tests)) {
             let local_dir = '../..';
 
             try {
@@ -277,9 +277,15 @@ async function test() {
         if (ignore.has(machine))
             return;
 
-        await Promise.all(machine.tests.map(async test => {
-            for (let name in test.commands) {
-                let cmd = test.commands[name];
+        await Promise.all(Object.keys(machine.tests).map(async suite => {
+            let test = machine.tests[suite];
+            let commands = {
+                Build: test.build,
+                ...test.commands
+            };
+
+            for (let name in commands) {
+                let cmd = commands[name];
                 let cwd = test.directory + '/koffi';
 
                 let start = process.hrtime.bigint();
@@ -287,9 +293,9 @@ async function test() {
                 let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
                 if (ret.code == 0) {
-                    log(machine, name, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
+                    log(machine, `${suite} > ${name}`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
                 } else {
-                    log(machine, name, chalk.bold.red('[error]'));
+                    log(machine, `${suite} > ${name}`, chalk.bold.red('[error]'));
 
                     if (ret.stdout || ret.stderr)
                         console.error('');
@@ -307,6 +313,9 @@ async function test() {
                     }
 
                     success = false;
+
+                    if (name == 'Build')
+                        break;
                 }
             }
         }));
@@ -472,8 +481,8 @@ function log(machine, action, status) {
         log.align = Math.max(...lengths);
     }
 
-    let align1 = log.align - machine.name.length;
-    let align2 = 22 - action.length;
+    let align1 = Math.max(log.align - machine.name.length, 0);
+    let align2 = Math.max(30 - action.length, 0);
 
     console.log(`     [${machine.name}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
 }

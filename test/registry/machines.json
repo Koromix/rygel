@@ -19,15 +19,15 @@
             "shutdown": "sudo poweroff"
         },
 
-        "tests": [
-            {
+        "tests": {
+            "Linux ARM32": {
                 "directory": "/home/debian/luigi",
+                "build": "npm install --production",
                 "commands": {
-                    "Build": "npm install --production",
                     "Test Raylib": "xvfb-run node test/tests/raylib.js"
                 }
             }
-        ]
+        }
     },
 
     "debian_arm64": {
@@ -50,15 +50,15 @@
             "shutdown": "sudo poweroff"
         },
 
-        "tests": [
-            {
+        "tests": {
+            "Linux ARM64": {
                 "directory": "/home/debian/luigi",
+                "build": "npm install --production",
                 "commands": {
-                    "Build": "npm install --production",
                     "Test Raylib": "xvfb-run node test/tests/raylib.js"
                 }
             }
-        ]
+        }
     },
 
     "debian_i386": {
@@ -81,15 +81,15 @@
             "shutdown": "sudo poweroff"
         },
 
-        "tests": [
-            {
+        "tests": {
+            "Linux i386": {
                 "directory": "/home/debian/luigi",
+                "build": "npm install --production",
                 "commands": {
-                    "Build": "npm install --production",
                     "Test Raylib": "xvfb-run node test/tests/raylib.js"
                 }
             }
-        ]
+        }
     },
 
     "debian_x64": {
@@ -112,15 +112,15 @@
             "shutdown": "sudo poweroff"
         },
 
-        "tests": [
-            {
+        "tests": {
+            "Linux x64": {
                 "directory": "/home/debian/luigi",
+                "build": "npm install --production",
                 "commands": {
-                    "Build": "npm install --production",
                     "Test Raylib": "xvfb-run node test/tests/raylib.js"
                 }
             }
-        ]
+        }
     },
 
     "windows": {
@@ -149,22 +149,22 @@
             "node64.cmd": "C:/Node64/node64.cmd"
         },
 
-        "tests": [
-            {
+        "tests": {
+            "Windows i386": {
                 "directory": "C:/Users/windows/Desktop/luigi32",
+                "build": "C:\\Node32\\node32.cmd npm install --production",
                 "commands": {
-                    "Build (32 bit)": "C:\\Node32\\node32.cmd npm install --production",
-                    "Test Raylib (32 bit)": "seatsh C:\\Node32\\node32.cmd node test/tests/raylib.js"
+                    "Test Raylib": "seatsh C:\\Node32\\node32.cmd node test/tests/raylib.js"
                 }
             },
 
-            {
+            "Windows x64": {
                 "directory": "C:/Users/windows/Desktop/luigi64",
+                "build": "C:\\Node64\\node64.cmd npm install --production",
                 "commands": {
-                    "Build (64 bit)": "C:\\Node64\\node64.cmd npm install --production",
-                    "Test Raylib (64 bit)": "seatsh C:\\Node64\\node64.cmd node test/tests/raylib.js"
+                    "Test Raylib": "seatsh C:\\Node64\\node64.cmd node test/tests/raylib.js"
                 }
             }
-        ]
+        }
     }
 }
