@@ -80,9 +80,13 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         *(args_ptr++) = (uint32_t)return_ptr;
     }
 
+    LocalArray<OutObject, MaxOutParameters> out_objects;
+
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
         const ParameterInfo &param = func->parameters[i];
+        RG_ASSERT(param.directions >= 1 && param.directions <= 3);
+
         Napi::Value value = info[i];
 
         switch (param.type->primitive) {
@@ -162,8 +166,13 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
                     if (RG_UNLIKELY(!call.AllocHeap(param.type->ref->size, 16, &ptr)))
                         return env.Null();
-                    if (!call.PushObject(obj, param.type->ref, ptr))
+
+                    if ((param.directions & 1) && !call.PushObject(obj, param.type->ref, ptr))
                         return env.Null();
+                    if (param.directions & 2) {
+                        OutObject out = {obj, ptr, param.type->ref};
+                        out_objects.Append(out);
+                    }
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), i + 1, param.type->name);
                     return env.Null();
@@ -197,11 +206,15 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         case PrimitiveKind::Float32: {
             float f = ForwardCallF(func->func, call.GetSP());
 
+            PopOutArguments(out_objects);
+
             return Napi::Number::New(env, (double)f);
         } break;
 
         case PrimitiveKind::Float64: {
             double d = ForwardCallD(func->func, call.GetSP());
+
+            PopOutArguments(out_objects);
 
             return Napi::Number::New(env, d);
         } break;
@@ -215,6 +228,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 uint32_t rdx;
             } ret;
             memcpy(&ret, &raw, RG_SIZE(raw));
+
+            PopOutArguments(out_objects);
 
             switch (func->ret.type->primitive) {
                 case PrimitiveKind::Void: return env.Null();

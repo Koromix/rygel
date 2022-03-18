@@ -19,6 +19,9 @@
 
 namespace RG {
 
+static const Size MaxParameters = 32;
+static const Size MaxOutParameters = 8;
+
 enum class PrimitiveKind {
     Void,
 

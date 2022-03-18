@@ -333,6 +333,8 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         if (!func->ret.type)
             return env.Null();
 
+        Size out_counter = 0;
+
         for (uint32_t j = 0; j < parameters.Length(); j++) {
             ParameterInfo param = {};
 
@@ -343,6 +345,16 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
                 ThrowError<Napi::TypeError>(env, "Type void cannot be used as a parameter");
                 return env.Null();
             }
+
+            if (func->parameters.len >= MaxParameters) {
+                ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
+                return env.Null();
+            }
+            if ((param.directions & 2) && ++out_counter >= MaxOutParameters) {
+                ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
+                return env.Null();
+            }
+
             func->parameters.Append(param);
         }
 

@@ -21,7 +21,7 @@ if(MSVC)
     enable_language(ASM_MASM)
 endif()
 
-# ---- koffi ----
+# ---- Koffi ----
 
 set(KOFFI_SRC
     src/call_arm32.cc
@@ -104,3 +104,8 @@ set_target_properties(sqlite3 PROPERTIES PREFIX "")
 if(win32)
     target_compile_definitions(sqlite PRIVATE SQLITE_API=__declspec\(dllexport\))
 endif()
+
+# ---- Misc ----
+
+add_library(misc SHARED test/tests/misc.c)
+set_target_properties(misc PROPERTIES PREFIX "")

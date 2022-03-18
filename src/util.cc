@@ -206,13 +206,12 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
     return true;
 }
 
-Napi::Object PopObject(Napi::Env env, const uint8_t *ptr, const TypeInfo *type)
+void PopObject(Napi::Object obj, const uint8_t *ptr, const TypeInfo *type)
 {
+    Napi::Env env = obj.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
-
-    Napi::Object obj = Napi::Object::New(env);
 
     ptr = AlignUp(ptr, type->align);
 
@@ -289,8 +288,20 @@ Napi::Object PopObject(Napi::Env env, const uint8_t *ptr, const TypeInfo *type)
 
         ptr += member.type->size;
     }
+}
 
+Napi::Object PopObject(Napi::Env env, const uint8_t *ptr, const TypeInfo *type)
+{
+    Napi::Object obj = Napi::Object::New(env);
+    PopObject(obj, ptr, type);
     return obj;
+}
+
+void PopOutArguments(Span<const OutObject> objects)
+{
+    for (const OutObject &obj: objects) {
+        PopObject(obj.obj, obj.ptr, obj.type);
+    }
 }
 
 static void DumpMemory(const char *type, Span<const uint8_t> bytes)

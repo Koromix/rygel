@@ -230,9 +230,13 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         gpr_ptr[8] = (uint64_t)return_ptr;
     }
 
+    LocalArray<OutObject, MaxOutParameters> out_objects;
+
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
         const ParameterInfo &param = func->parameters[i];
+        RG_ASSERT(param.directions >= 1 && param.directions <= 3);
+
         Napi::Value value = info[i];
 
         switch (param.type->primitive) {
@@ -335,8 +339,13 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
                     if (RG_UNLIKELY(!call.AllocHeap(param.type->ref->size, 16, &ptr)))
                         return env.Null();
-                    if (!call.PushObject(obj, param.type->ref, ptr))
+
+                    if ((param.directions & 1) && !call.PushObject(obj, param.type->ref, ptr))
                         return env.Null();
+                    if (param.directions & 2) {
+                        OutObject out = {obj, ptr, param.type->ref};
+                        out_objects.Append(out);
+                    }
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), i + 1, param.type->name);
                     return env.Null();
@@ -414,11 +423,15 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         case PrimitiveKind::Float32: {
             float f = PERFORM_CALL(F);
 
+            PopOutArguments(out_objects);
+
             return Napi::Number::New(env, (double)f);
         } break;
 
         case PrimitiveKind::Float64: {
             HfaRet ret = PERFORM_CALL(DDDD);
+
+            PopOutArguments(out_objects);
 
             return Napi::Number::New(env, (double)ret.d0);
         } break;
@@ -427,10 +440,14 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
             if (func->ret.gpr_count) {
                 X0X1Ret ret = PERFORM_CALL(GG);
 
+                PopOutArguments(out_objects);
+
                 Napi::Object obj = PopObject(env, (const uint8_t *)&ret, func->ret.type);
                 return obj;
             } else if (func->ret.vec_count) {
                 HfaRet ret = PERFORM_CALL(DDDD);
+
+                PopOutArguments(out_objects);
 
                 Napi::Object obj = PopHFA(env, (const uint8_t *)&ret, func->ret.type);
                 return obj;
@@ -440,10 +457,14 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 X0X1Ret ret = PERFORM_CALL(GG);
                 RG_ASSERT(ret.x0 == (uint64_t)return_ptr);
 
+                PopOutArguments(out_objects);
+
                 Napi::Object obj = PopObject(env, return_ptr, func->ret.type);
                 return obj;
             } else {
                 PERFORM_CALL(GG);
+
+                PopOutArguments(out_objects);
 
                 Napi::Object obj = Napi::Object::New(env);
                 return obj;
@@ -452,6 +473,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
         default: {
             X0X1Ret ret = PERFORM_CALL(GG);
+
+            PopOutArguments(out_objects);
 
             switch (func->ret.type->primitive) {
                 case PrimitiveKind::Void: return env.Null();
