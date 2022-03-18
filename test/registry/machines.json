@@ -132,7 +132,7 @@
         },
 
         "info": {
-            "version": 4,
+            "version": 5,
             "platform": "win32",
             "arch": "x64",
 
