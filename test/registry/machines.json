@@ -112,11 +112,11 @@
 
         "qemu": {
             "binary": "qemu-system-x86_64",
-            "arguments": ["-m", "3G", "-smp", 2, "-rtc", "clock=host,base=localtime", "-drive", "if=pflash,format=raw,readonly=on,file=edk2-x86_64-code.fd", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22205-:22", "-device", "e1000,netdev=mynet", "-vga", "qxl", "-device", "qemu-xhci", "-device", "usb-tablet"]
+            "arguments": ["-m", "3G", "-smp", 2, "-rtc", "clock=host,base=localtime", "-bios", "bios.bin", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22205-:22", "-device", "e1000,netdev=mynet", "-vga", "qxl", "-device", "qemu-xhci", "-device", "usb-tablet"]
         },
 
         "info": {
-            "version": 3,
+            "version": 4,
             "platform": "win32",
             "arch": "x64",
 

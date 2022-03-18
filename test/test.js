@@ -106,8 +106,13 @@ async function main() {
             let machine = machines_map[key];
 
             machine.key = key;
-            machine.kvm = process.platform == 'linux' && process.arch == 'x64' &&
-                          (machine.info.arch == 'x64' || machine.info.arch == 'ia32');
+
+            if (process.arch == 'x64' && (machine.info.arch == 'x64' || machine.info.arch == 'ia32')) {
+                switch (process.platform) {
+                    case 'linux': { machine.accelerate = 'kvm'; } break;
+                    case 'win32': { machine.accelerate = 'whpx'; } break;
+                }
+            }
         }
     }
 
@@ -192,7 +197,7 @@ async function start(detach = true) {
         try {
             await boot(machine, dirname, detach, display);
 
-            let action = (machine.started ? 'Start' : 'Join') + (machine.kvm ? ' (KVM)' : '');
+            let action = (machine.started ? 'Start' : 'Join') + (machine.accelerate ? ` (${machine.accelerate})` : '');
             log(machine, action, chalk.bold.green('[ok]'));
         } catch (err) {
             log(machine, 'Start', chalk.bold.red('[error]'));
@@ -378,8 +383,8 @@ async function ssh() {
 async function boot(machine, dirname, detach, display) {
     let args = machine.qemu.arguments.slice();
 
-    if (machine.kvm)
-        args.push('-accel', 'kvm');
+    if (machine.accelerate)
+        args.push('-accel', machine.accelerate);
     if (!display)
         args.push('-display', 'none');
 
