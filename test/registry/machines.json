@@ -8,7 +8,7 @@
         },
 
         "info": {
-            "version": 2,
+            "version": 3,
             "platform": "linux",
             "arch": "arm",
 
@@ -39,7 +39,7 @@
         },
 
         "info": {
-            "version": 2,
+            "version": 3,
             "platform": "linux",
             "arch": "arm64",
 
@@ -70,7 +70,7 @@
         },
 
         "info": {
-            "version": 2,
+            "version": 3,
             "platform": "linux",
             "arch": "ia32",
 
@@ -101,7 +101,7 @@
         },
 
         "info": {
-            "version": 2,
+            "version": 3,
             "platform": "linux",
             "arch": "x64",
 
@@ -132,7 +132,7 @@
         },
 
         "info": {
-            "version": 5,
+            "version": 6,
             "platform": "win32",
             "arch": "x64",
 
