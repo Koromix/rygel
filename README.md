@@ -192,7 +192,7 @@ And now you can run the tests with:
 node test.js # Several options are available, use --help
 ```
 
-And be patient, this can be pretty slow for emulated machines.
+And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.
 
 By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:
 
