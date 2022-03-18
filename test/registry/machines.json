@@ -139,7 +139,6 @@
             "port": 22205,
             "username": "windows",
             "password": "windows",
-            "home": "C:/Users/windows/Desktop",
 
             "shutdown": "shutdown -s -t 0"
         },
