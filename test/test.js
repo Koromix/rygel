@@ -204,8 +204,12 @@ async function start(detach = true) {
         try {
             await boot(machine, dirname, detach, display);
 
-            let action = `${machine.started ? 'Start' : 'Join'} (${machine.qemu.accelerate || 'emulated'})`;
-            log(machine, action, chalk.bold.green('[ok]'));
+            if (machine.started) {
+                let action = `Start (${machine.qemu.accelerate || 'emulated'})`;
+                log(machine, action, chalk.bold.green('[ok]'));
+            } else {
+                log(machine, 'Join', chalk.bold.green('[ok]'));
+            }
         } catch (err) {
             log(machine, 'Start', chalk.bold.red('[error]'));
 
