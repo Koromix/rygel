@@ -15,6 +15,7 @@
 
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const http = require('https');
 const os = require('os');
@@ -27,8 +28,8 @@ const { spawnSync } = require('child_process');
 
 let app_dir = null;
 let project_dir = null;
+let cache_dir = null;
 let build_dir = null;
-let download_dir = null;
 let work_dir = null;
 
 let version = null;
@@ -125,9 +126,9 @@ async function main() {
     if (project_dir == null)
         project_dir = process.cwd();
     project_dir = project_dir.replace(/\\/g, '/');
+    cache_dir = get_cache_directory();
     build_dir = project_dir + '/build';
-    download_dir = build_dir + `/downloads`;
-    work_dir = build_dir + `/cmake/${version}_${arch}`;
+    work_dir = build_dir + `/${version}_${arch}`;
 
     try {
         await command();
@@ -169,15 +170,15 @@ async function configure(retry = true) {
     check_cmake();
 
     // Prepare build directory
+    fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
     fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
-    fs.mkdirSync(download_dir, { recursive: true, mode: 0o755 });
     fs.mkdirSync(work_dir, { recursive: true, mode: 0o755 });
 
     // Download Node headers
     {
         let basename = `node-${version}-headers.tar.gz`;
         let url = `https://nodejs.org/dist/${version}/${basename}`;
-        let destname = `${download_dir}/${basename}`;
+        let destname = `${cache_dir}/${basename}`;
 
         if (!fs.existsSync(destname))
             await download(url, destname);
@@ -196,7 +197,7 @@ async function configure(retry = true) {
             } break;
         }
 
-        let destname = `${download_dir}/node_${version}_${arch}.lib`;
+        let destname = `${cache_dir}/node_${version}_${arch}.lib`;
 
         if (!fs.existsSync(destname)) {
             let url = `https://nodejs.org/dist/${version}/${dirname}/node.lib`;
@@ -298,6 +299,30 @@ async function clean() {
 
 // Utility
 
+function get_cache_directory() {
+    if (process.platform == 'win32') {
+        let cache_dir = process.env['APPDATA'];
+        if (cache_dir == null)
+            throw new Error('Missing APPDATA environment variable');
+
+        cache_dir = path.join(cache_dir, 'cnoke');
+        return cache_dir;
+    } else {
+        let cache_dir = process.env['XDG_CACHE_HOME'];
+
+        if (cache_dir == null) {
+            let home = process.env['HOME'];
+            if (home == null)
+                throw new Error('Missing HOME environment variable');
+
+            cache_dir = path.join(home, '.cache');
+        }
+
+        cache_dir = path.join(cache_dir, 'cnoke');
+        return cache_dir;
+    }
+}
+
 function check_cmake() {
     if (cmake_bin != null)
         return;
@@ -351,21 +376,56 @@ function unlink_recursive(path) {
     }
 }
 
-function download(url, dest) {
+async function download(url, dest) {
     console.log('>> Downloading ' + url);
 
-    return new Promise((resolve, reject) => {
-        try {
-            let file = fs.createWriteStream(dest);
+    let [tmp_name, file] = open_temporary_stream(dest);
 
-            http.get(url, response => {
+    try {
+        await new Promise((resolve, reject) => {
+            let request = http.get(url, response => {
                 response.pipe(file);
-                file.on('finish', () => file.close(resolve));
+
+                file.on('finish', () => file.close(() => {
+                    try {
+                        fs.renameSync(file.path, dest);
+                    } catch (err) {
+                        if (err.code != 'EBUSY')
+                            reject(err);
+                    }
+
+                    resolve();
+                }));
             });
+
+            request.on('error', reject);
+            file.on('error', reject);
+        });
+    } catch (err) {
+        file.close();
+        fs.unlink(tmp_name);
+
+        throw err;
+    }
+}
+
+function open_temporary_stream(prefix) {
+    let buf = Buffer.allocUnsafe(4);
+
+    for (;;) {
+        try {
+            crypto.randomFillSync(buf);
+
+            let suffix = buf.toString('hex').padStart(8, '0');
+            let filename = `${prefix}.${suffix}`;
+
+            let file = fs.createWriteStream(filename, { flags: 'wx', mode: 0o644 });
+            return [filename, file];
         } catch (err) {
-            reject(err);
+            if (err.code != 'EEXIST')
+                throw err;
         }
-    });
+    }
 }
 
 function extract_targz(filename, dest_dir, strip = 0) {
