@@ -30,7 +30,6 @@ let script_dir = null;
 let root_dir = null;
 
 let machines = [];
-let display = false;
 let accelerate = true;
 let ignore = new Set;
 
@@ -92,8 +91,6 @@ async function main() {
             if (arg == '--help') {
                 print_usage();
                 return;
-            } else if ((command == test || command == start) && (arg == '-d' || arg == '--display')) {
-                display = true;
             } else if ((command == test || command == start) && arg == '--no-accel') {
                 accelerate = false;
             } else if (arg[0] == '-') {
@@ -170,7 +167,7 @@ Commands:
     reset                        Reset initial disk snapshot
 
 Options:
-    -d, --display                Show the QEMU display during the procedure
+        --no-accel               Disable QEMU acceleration
 `;
 
     console.log(help);
@@ -211,7 +208,7 @@ async function start(detach = true) {
         }
 
         try {
-            await boot(machine, dirname, detach, display);
+            await boot(machine, dirname, detach);
 
             if (machine.started) {
                 let action = `Start (${machine.qemu.accelerate || 'emulated'})`;
@@ -402,7 +399,7 @@ async function ssh() {
         '-p' + machine.info.password,
         'ssh', '-o', 'StrictHostKeyChecking=no',
                '-o', 'UserKnownHostsFile=' + (process.platform == 'win32' ? 'NUL' : '/dev/null'),
-               '-p', machine.info.port, machine.info.username + '@127.0.0.1'
+               '-p', machine.info.ssh_port, machine.info.username + '@127.0.0.1'
     ];
 
     let proc = spawnSync('sshpass', args, { stdio: 'inherit' });
@@ -473,13 +470,12 @@ function unlink_recursive(path) {
     }
 }
 
-async function boot(machine, dirname, detach, display) {
+async function boot(machine, dirname, detach) {
     let args = machine.qemu.arguments.slice();
 
     if (machine.qemu.accelerate)
         args.push('-accel', machine.qemu.accelerate);
-    if (!display)
-        args.push('-display', 'none');
+    args.push('-display', 'none');
 
     try {
         let proc = spawn(machine.qemu.binary, args, {
@@ -521,7 +517,7 @@ async function join(machine, tries) {
         try {
             await ssh.connect({
                 host: '127.0.0.1',
-                port: machine.info.port,
+                port: machine.info.ssh_port,
                 username: machine.info.username,
                 password: machine.info.password
             });

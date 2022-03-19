@@ -4,7 +4,7 @@
 
         "qemu": {
             "binary": "qemu-system-arm",
-            "arguments": ["-M", "virt", "-cpu", "cortex-a15", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-armmp-lpae", "-initrd", "initrd.img-5.10.0-12-armmp-lpae", "-append", "root=/dev/vda2 apparmor=0", "-drive", "if=none,file=disk.qcow2,format=qcow2,id=hd", "-device", "virtio-blk-device,drive=hd", "-netdev", "user,id=mynet,hostfwd=tcp::22201-:22", "-device", "virtio-net-device,netdev=mynet"]
+            "arguments": ["-M", "virt", "-cpu", "cortex-a15", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-armmp-lpae", "-initrd", "initrd.img-5.10.0-12-armmp-lpae", "-append", "root=/dev/vda2 apparmor=0", "-drive", "if=none,file=disk.qcow2,format=qcow2,id=hd", "-device", "virtio-blk-device,drive=hd", "-netdev", "user,id=mynet,hostfwd=tcp::22201-:22", "-device", "virtio-net-device,netdev=mynet", "-spice", "port=22301,addr=127.0.0.1,disable-ticketing"]
         },
 
         "info": {
@@ -12,7 +12,9 @@
             "platform": "linux",
             "arch": "arm",
 
-            "port": 22201,
+            "ssh_port": 22201,
+            "spice_port": 22301,
+
             "username": "debian",
             "password": "debian",
 
@@ -36,7 +38,7 @@
 
         "qemu": {
             "binary": "qemu-system-aarch64",
-            "arguments": ["-M", "virt", "-cpu", "cortex-a53", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-arm64", "-initrd", "initrd.img-5.10.0-12-arm64", "-append", "root=/dev/vda2 apparmor=0", "-drive", "if=none,file=disk.qcow2,format=qcow2,id=hd", "-device", "virtio-blk-device,drive=hd", "-netdev", "user,id=mynet,hostfwd=tcp::22202-:22", "-device", "virtio-net-device,netdev=mynet"]
+            "arguments": ["-M", "virt", "-cpu", "cortex-a53", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-arm64", "-initrd", "initrd.img-5.10.0-12-arm64", "-append", "root=/dev/vda2 apparmor=0", "-drive", "if=none,file=disk.qcow2,format=qcow2,id=hd", "-device", "virtio-blk-device,drive=hd", "-netdev", "user,id=mynet,hostfwd=tcp::22202-:22", "-device", "virtio-net-device,netdev=mynet", "-spice", "port=22302,addr=127.0.0.1,disable-ticketing"]
         },
 
         "info": {
@@ -44,7 +46,9 @@
             "platform": "linux",
             "arch": "arm64",
 
-            "port": 22202,
+            "ssh_port": 22202,
+            "spice_port": 22302,
+
             "username": "debian",
             "password": "debian",
 
@@ -68,7 +72,7 @@
 
         "qemu": {
             "binary": "qemu-system-i386",
-            "arguments": ["-cpu", "max", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-686-pae", "-initrd", "initrd.img-5.10.0-12-686-pae", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22203-:22", "-device", "e1000,netdev=mynet"]
+            "arguments": ["-cpu", "max", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-686-pae", "-initrd", "initrd.img-5.10.0-12-686-pae", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22203-:22", "-device", "e1000,netdev=mynet", "-spice", "port=22303,addr=127.0.0.1,disable-ticketing"]
         },
 
         "info": {
@@ -76,7 +80,9 @@
             "platform": "linux",
             "arch": "ia32",
 
-            "port": 22203,
+            "ssh_port": 22203,
+            "spice_port": 22303,
+
             "username": "debian",
             "password": "debian",
 
@@ -100,7 +106,7 @@
 
         "qemu": {
             "binary": "qemu-system-x86_64",
-            "arguments": ["-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-amd64", "-initrd", "initrd.img-5.10.0-12-amd64", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22204-:22", "-device", "e1000,netdev=mynet"]
+            "arguments": ["-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-amd64", "-initrd", "initrd.img-5.10.0-12-amd64", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22204-:22", "-device", "e1000,netdev=mynet", "-spice", "port=22304,addr=127.0.0.1,disable-ticketing"]
         },
 
         "info": {
@@ -108,7 +114,9 @@
             "platform": "linux",
             "arch": "x64",
 
-            "port": 22204,
+            "ssh_port": 22204,
+            "spice_port": 22304,
+
             "username": "debian",
             "password": "debian",
 
@@ -132,7 +140,7 @@
 
         "qemu": {
             "binary": "qemu-system-x86_64",
-            "arguments": ["-m", "3G", "-smp", 4, "-rtc", "clock=host,base=localtime", "-bios", "bios.bin", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22205-:22", "-device", "e1000,netdev=mynet", "-vga", "qxl", "-device", "qemu-xhci", "-device", "usb-tablet"]
+            "arguments": ["-m", "3G", "-smp", 4, "-rtc", "clock=host,base=localtime", "-bios", "bios.bin", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22205-:22", "-device", "e1000,netdev=mynet", "-vga", "qxl", "-device", "qemu-xhci", "-device", "usb-tablet", "-spice", "port=22305,addr=127.0.0.1,disable-ticketing"]
         },
 
         "info": {
@@ -140,7 +148,9 @@
             "platform": "win32",
             "arch": "x64",
 
-            "port": 22205,
+            "ssh_port": 22205,
+            "spice_port": 22305,
+
             "username": "windows",
             "password": "windows",
 
