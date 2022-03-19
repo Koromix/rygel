@@ -3843,6 +3843,7 @@ RG_INIT(SetupDefaultHandlers)
     SetSignalHandler(SIGINT, nullptr, DefaultSignalHandler);
     SetSignalHandler(SIGTERM, nullptr, DefaultSignalHandler);
     SetSignalHandler(SIGHUP, nullptr, DefaultSignalHandler);
+    SetSignalHandler(SIGPIPE, nullptr, [](int) {});
 }
 
 RG_EXIT(TerminateChildren)
@@ -3996,7 +3997,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         }
 
         if (RG_POSIX_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
-            LogError("Failed to read process output: %1", strerror(errno));
+            LogError("Failed to poll process I/O: %1", strerror(errno));
             break;
         }
 
@@ -4005,10 +4006,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         unsigned int term_revents = (term_idx >= 0) ? pfds[term_idx].revents : 0;
 
         // Try to write
-        if (in_revents & POLLERR) {
-            if (!term_revents) {
-                LogError("Failed to poll process input");
-            }
+        if (in_revents & (POLLHUP | POLLERR)) {
             CloseDescriptorSafe(&in_pfd[1]);
         } else if (in_revents & POLLOUT) {
             RG_ASSERT(in_func.IsValid());
@@ -4036,8 +4034,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         }
 
         // Try to read
-        if (out_revents & POLLERR) {
-            LogError("Failed to poll process output");
+        if (out_revents & (POLLHUP | POLLERR)) {
             break;
         } else if (out_revents & POLLIN) {
             RG_ASSERT(out_func.IsValid());
@@ -4054,8 +4051,6 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
                 LogError("Failed to read process output: %1", strerror(errno));
                 break;
             }
-        } else if (out_revents & POLLHUP) {
-            break;
         }
 
         if (term_revents) {
