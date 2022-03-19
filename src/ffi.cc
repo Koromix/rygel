@@ -190,8 +190,13 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     const TypeInfo *type = ResolveType(instance, info[0]);
     if (!type)
         return env.Null();
+
     if (type->primitive != PrimitiveKind::Pointer) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", PrimitiveKindNames[(int)type->primitive]);
+        return env.Null();
+    }
+    if ((directions & 2) && type->ref->primitive != PrimitiveKind::Record) {
+        ThrowError<Napi::TypeError>(env, "Only objects can be used as out parameters (for now)");
         return env.Null();
     }
 
