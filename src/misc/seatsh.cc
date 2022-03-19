@@ -591,6 +591,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
 
         PendingIO client_in;
         PendingIO client_out;
+        PendingIO client_err;
         PendingIO proc_in;
         PendingIO proc_out;
         PendingIO proc_err;
@@ -599,106 +600,125 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
             // Transmit stdin from client to process
             if (!client_in.pending && !proc_in.pending) {
                 if (client_in.err) {
-                    if (client_in.err != ERROR_BROKEN_PIPE && client_in.err != ERROR_NO_DATA) {
-                        LogError("Lost connection to client: %1", GetWin32ErrorString(client_in.err));
-                    }
-
-                    if (in_pipe[1]) {
-                        TerminateProcess(pi.hProcess, 1);
-                    }
-
-                    client_in.pending = true; // Don't try anything again
+                    TerminateProcess(pi.hProcess, 1);
                 } else if (client_in.len >= 0) {
                     if (client_in.len) {
                         proc_in.len = client_in.len;
                         memcpy_safe(proc_in.buf, client_in.buf, proc_in.len);
                         client_in.len = -1;
 
-                        if (!proc_in.err) {
-                            if (WriteFileEx(in_pipe[1], proc_in.buf, proc_in.len, &proc_in.ov, PendingIO::CompletionHandler)) {
-                                proc_in.pending = true;
-                            } else {
-                                proc_in.err = GetLastError();
-                            }
+                        if (!proc_in.err && !WriteFileEx(in_pipe[1], proc_in.buf, proc_in.len,
+                                                         &proc_in.ov, PendingIO::CompletionHandler)) {
+                            proc_in.err = GetLastError();
                         }
                     } else { // EOF
                         CloseHandleSafe(&in_pipe[1]);
-                        client_in.pending = true;
                     }
+
+                    proc_in.pending = true;
                 }
 
                 if (client_in.len < 0) {
-                    if (ReadFileEx(rev[0], client_in.buf, RG_SIZE(client_in.buf), &client_in.ov, PendingIO::CompletionHandler)) {
-                        client_in.pending = true;
-                    } else {
+                    if (!ReadFileEx(rev[0], client_in.buf, RG_SIZE(client_in.buf),
+                                    &client_in.ov, PendingIO::CompletionHandler)) {
                         client_in.err = GetLastError();
                     }
+
+                    client_in.pending = true;
+                }
+
+                if (client_in.err) {
+                    TerminateProcess(pi.hProcess, 1);
+                    if (client_in.err != ERROR_BROKEN_PIPE && client_in.err != ERROR_NO_DATA) {
+                        LogError("Lost read connection to client: %1", GetWin32ErrorString(client_in.err));
+                    }
+                    client_in.pending = true;
+                }
+                if (proc_in.err) {
+                    if (proc_in.err != ERROR_BROKEN_PIPE && proc_in.err != ERROR_NO_DATA) {
+                        LogError("Failed to write to process: %1", GetWin32ErrorString(proc_in.err));
+                    }
+                    proc_in.pending = true;
                 }
             }
 
             // Transmit stdout from process to client
             if (!proc_out.pending && !client_out.pending) {
-                if (proc_out.err) {
-                    if (proc_out.err != ERROR_BROKEN_PIPE && proc_out.err != ERROR_NO_DATA) {
-                        LogError("Failed to read process stdout: %1", GetWin32ErrorString(proc_out.err));
-                    }
-
-                    proc_out.pending = true; // Don't try anything again
-                } else if (proc_out.len >= 0) {
+                if (!proc_out.err && proc_out.len >= 0) {
                     client_out.len = proc_out.len + 1;
                     memcpy_safe(client_out.buf, proc_out.buf, client_out.len);
                     proc_out.len = -1;
 
-                    if (!client_out.err) {
-                        if (WriteFileEx(pipe, client_out.buf, client_out.len, &client_out.ov, PendingIO::CompletionHandler)) {
-                            client_out.pending = true;
-                        } else {
-                            client_out.err = GetLastError();
-                        }
+                    if (!client_out.err && !WriteFileEx(pipe, client_out.buf, client_out.len,
+                                                        &client_out.ov, PendingIO::CompletionHandler)) {
+                        client_out.err = GetLastError();
                     }
+
+                    client_out.pending = true;
                 }
 
                 if (proc_out.len < 0) {
                     proc_out.buf[0] = 2;
 
-                    if (ReadFileEx(out_pipe[0], proc_out.buf + 1, RG_SIZE(proc_out.buf) - 1, &proc_out.ov, PendingIO::CompletionHandler)) {
-                        proc_out.pending = true;
-                    } else {
+                    if (!ReadFileEx(out_pipe[0], proc_out.buf + 1, RG_SIZE(proc_out.buf) - 1,
+                                    &proc_out.ov, PendingIO::CompletionHandler)) {
                         proc_out.err = GetLastError();
                     }
+
+                    proc_out.pending = true;
+                }
+
+                if (proc_out.err) {
+                    if (proc_out.err != ERROR_BROKEN_PIPE && proc_out.err != ERROR_NO_DATA) {
+                        LogError("Failed to read process stdout: %1", GetWin32ErrorString(proc_out.err));
+                    }
+                    proc_out.pending = true;
+                }
+                if (client_out.err) {
+                    if (client_out.err != ERROR_BROKEN_PIPE && client_out.err != ERROR_NO_DATA) {
+                        LogError("Lost write connection to client: %1", GetWin32ErrorString(client_out.err));
+                    }
+                    client_out.pending = true;
                 }
             }
 
             // Transmit stderr from process to client
-            if (!proc_err.pending && !client_out.pending) {
-                if (proc_err.err) {
-                    if (proc_err.err != ERROR_BROKEN_PIPE && proc_err.err != ERROR_NO_DATA) {
-                        LogError("Failed to read process stderr: %1", GetWin32ErrorString(proc_err.err));
-                    }
-
-                    proc_err.pending = true; // Don't try anything again
-                } else if (proc_err.len >= 0) {
-                    client_out.len = proc_err.len + 1;
-                    memcpy_safe(client_out.buf, proc_err.buf, client_out.len);
+            if (!proc_err.pending && !client_err.pending) {
+                if (!proc_err.err && proc_err.len >= 0) {
+                    client_err.len = proc_err.len + 1;
+                    memcpy_safe(client_err.buf, proc_err.buf, client_err.len);
                     proc_err.len = -1;
 
-                    if (!client_out.err) {
-                        if (WriteFileEx(pipe, client_out.buf, client_out.len, &client_out.ov, PendingIO::CompletionHandler)) {
-                            client_out.pending = true;
-                        } else {
-                            client_out.err = GetLastError();
-                        }
+                    if (!client_err.err && !WriteFileEx(pipe, client_err.buf, client_err.len,
+                                                        &client_err.ov, PendingIO::CompletionHandler)) {
+                        client_err.err = GetLastError();
                     }
+
+                    client_err.pending = true;
                 }
 
                 if (proc_err.len < 0) {
                     proc_err.buf[0] = 3;
 
-                    if (ReadFileEx(err_pipe[0], proc_err.buf + 1, RG_SIZE(proc_err.buf) - 1, &proc_err.ov, PendingIO::CompletionHandler)) {
-                        proc_err.pending = true;
-                    } else {
+                    if (!ReadFileEx(err_pipe[0], proc_err.buf + 1, RG_SIZE(proc_err.buf) - 1,
+                                    &proc_err.ov, PendingIO::CompletionHandler)) {
                         proc_err.err = GetLastError();
                     }
+
+                    proc_err.pending = true;
+                }
+
+                if (proc_err.err) {
+                    if (proc_err.err != ERROR_BROKEN_PIPE && proc_err.err != ERROR_NO_DATA) {
+                        LogError("Failed to read process stderr: %1", GetWin32ErrorString(proc_err.err));
+                    }
+                    proc_err.pending = true;
+                }
+                if (client_err.err) {
+                    if (client_err.err != ERROR_BROKEN_PIPE && client_err.err != ERROR_NO_DATA) {
+                        LogError("Lost write connection to client: %1", GetWin32ErrorString(client_err.err));
+                    }
+                    client_err.pending = true;
                 }
             }
 
