@@ -33,6 +33,8 @@ let machines = [];
 let accelerate = true;
 let ignore = new Set;
 
+let qemu_prefix = null;
+
 // Main
 
 main();
@@ -180,6 +182,8 @@ Options:
 async function start(detach = true) {
     let success = true;
     let missing = 0;
+
+    check_qemu();
 
     console.log('>> Starting up machines...');
     await Promise.all(machines.map(async machine => {
@@ -424,12 +428,16 @@ async function ssh() {
 }
 
 async function reset() {
+    check_qemu();
+
+    let binary = qemu_prefix + 'qemu-img' + (process.platform == 'win32' ? '.exe' : '');
+
     console.log('>> Restoring snapshots...')
     await Promise.all(machines.map(machine => {
         let dirname = `qemu/${machine.key}`;
         let disk = dirname + '/disk.qcow2';
 
-        let proc = spawnSync('qemu-img', ['snapshot', disk, '-a', 'base']);
+        let proc = spawnSync(binary, ['snapshot', disk, '-a', 'base']);
 
         if (!proc.status) {
             log(machine, 'Reset disk', chalk.bold.green('[ok]'));
@@ -449,6 +457,32 @@ async function reset() {
 }
 
 // Utility
+
+function check_qemu() {
+    if (qemu_prefix != null)
+        return;
+
+    if (spawnSync('qemu-img', ['--version']).status === 0) {
+        qemu_prefix = '';
+    } else if (process.platform == 'win32') {
+        let proc = spawnSync('reg', ['query', 'HKEY_LOCAL_MACHINE\\SOFTWARE\\QEMU', '/v', 'Install_Dir']);
+
+        if (proc.status == 0) {
+            let matches = proc.stdout.toString('utf-8').match(/Install_Dir[ \t]+REG_[A-Z_]+[ \t]+(.*)+/);
+
+            if (matches != null) {
+                let prefix = matches[1].trim() + '/';
+                let binary = prefix + 'qemu-img.exe';
+
+                if (fs.existsSync(binary))
+                    qemu_prefix = prefix;
+            }
+        }
+    }
+
+    if (qemu_prefix == null)
+        throw new Error('QEMU does not seem to be installed');
+}
 
 function copy_recursive(src, dest, validate = filename => true) {
     let entries = fs.readdirSync(src, { withFileTypes: true });
@@ -490,7 +524,9 @@ async function boot(machine, dirname, detach) {
     args.push('-display', 'none');
 
     try {
-        let proc = spawn(machine.qemu.binary, args, {
+        let binary = qemu_prefix + machine.qemu.binary + (process.platform == 'win32' ? '.exe' : '');
+
+        let proc = spawn(binary, args, {
             cwd: dirname,
             detached: detach,
             stdio: 'ignore'
