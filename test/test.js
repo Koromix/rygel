@@ -57,6 +57,7 @@ async function main() {
                 case 'start': { command = start; } break;
                 case 'stop': { command = stop; } break;
                 case 'ssh': { command = ssh; } break;
+                case 'reset': { command = reset; } break;
 
                 default: {
                     throw new Error(`Unknown command '${process.argv[2]}'`);
@@ -166,6 +167,7 @@ Commands:
     start                        Start the machines but don't run anythingh
     stop                         Stop running machines
     ssh                          Start SSH session with specific machine
+    reset                        Reset initial disk snapshot
 
 Options:
     -d, --display                Show the QEMU display during the procedure
@@ -410,6 +412,31 @@ async function ssh() {
     }
 
     return true;
+}
+
+async function reset() {
+    console.log('>> Restoring snapshots...')
+    await Promise.all(machines.map(machine => {
+        let dirname = `qemu/${machine.key}`;
+        let disk = dirname + '/disk.qcow2';
+
+        let proc = spawnSync('qemu-img', ['snapshot', disk, '-a', 'base']);
+
+        if (!proc.status) {
+            log(machine, 'Reset disk', chalk.bold.green('[ok]'));
+        } else {
+            log(machine, 'Reset disk', chalk.bold.red('[error]'));
+
+            if (proc.stderr) {
+                console.error('');
+
+                let align = log.align + 9;
+                let str = ' '.repeat(align) + 'Standard error:\n' +
+                          chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                console.error(str);
+            }
+        }
+    }));
 }
 
 // Utility
