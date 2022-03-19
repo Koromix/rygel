@@ -286,15 +286,7 @@ async function build() {
 }
 
 async function clean() {
-    let entries = fs.readdirSync(build_dir);
-
-    for (let basename of entries) {
-        if (basename == 'downloads')
-            continue;
-
-        let filename = build_dir + '/' + basename;
-        unlink_recursive(filename);
-    }
+    unlink_recursive(build_dir);
 }
 
 // Utility
