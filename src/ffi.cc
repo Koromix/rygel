@@ -191,7 +191,7 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     if (!type)
         return env.Null();
     if (type->primitive != PrimitiveKind::Pointer) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", info.Length());
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", PrimitiveKindNames[(int)type->primitive]);
         return env.Null();
     }
 
