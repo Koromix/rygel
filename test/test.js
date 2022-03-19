@@ -289,7 +289,7 @@ async function test() {
                 let cwd = test.directory + '/koffi';
 
                 let start = process.hrtime.bigint();
-                let ret = await execRemote(machine, cmd, cwd);
+                let ret = await exec_remote(machine, cmd, cwd);
                 let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
                 if (ret.code == 0) {
@@ -366,7 +366,7 @@ async function stop(all = true) {
                 machine.ssh.connection.on('end', resolve);
                 wait(60000).then(() => { reject(new Error('Timeout')) });
 
-                execRemote(machine, machine.info.shutdown);
+                exec_remote(machine, machine.info.shutdown);
             });
 
             log(machine, 'Stop', chalk.bold.green('[ok]'));
@@ -487,7 +487,7 @@ function log(machine, action, status) {
     console.log(`     [${machine.name}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
 }
 
-async function execRemote(machine, cmd, cwd = null) {
+async function exec_remote(machine, cmd, cwd = null) {
     try {
         if (machine.info.platform == 'win32') {
             if (cwd != null) {
