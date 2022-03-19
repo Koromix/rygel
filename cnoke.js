@@ -233,11 +233,11 @@ async function configure(retry = true) {
 
     if (process.platform != 'win32') {
         // Prefer Ninja if available
-        if (spawnSync('ninja', ['--version']).status == 0)
+        if (spawnSync('ninja', ['--version']).status === 0)
             args.push('-G', 'Ninja');
 
         // Use CCache if available
-        if (spawnSync('ccache', ['--version']).status == 0) {
+        if (spawnSync('ccache', ['--version']).status === 0) {
             args.push('-DCMAKE_C_COMPILER_LAUNCHER=ccache');
             args.push('-DCMAKE_CXX_COMPILER_LAUNCHER=ccache');
         }
@@ -253,7 +253,7 @@ async function configure(retry = true) {
     console.log('>> Running configuration');
 
     let proc = spawnSync(cmake_bin, args, { cwd: work_dir, stdio: 'inherit' });
-    if (proc.status != 0) {
+    if (proc.status !== 0) {
         if (retry && fs.existsSync(work_dir + '/CMakeCache.txt')) {
             unlink_recursive(work_dir);
             return configure(false);
@@ -281,7 +281,7 @@ async function build() {
     console.log('>> Running build');
 
     let proc = spawnSync(cmake_bin, args, { stdio: 'inherit' });
-    if (proc.status != 0)
+    if (proc.status !== 0)
         throw new Error('Failed to run build step');
 }
 
@@ -327,7 +327,7 @@ function check_cmake() {
     {
         let proc = spawnSync('cmake', ['--version']);
 
-        if (proc.status == 0) {
+        if (proc.status === 0) {
             cmake_bin = 'cmake';
         } else {
             if (process.platform == 'win32') {
@@ -335,7 +335,7 @@ function check_cmake() {
                 // anything to read from the registry. This is okay, REG.exe exists since Windows XP.
                 let proc = spawnSync('reg', ['query', 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Kitware\\CMake', '/v', 'InstallDir']);
 
-                if (proc.status == 0) {
+                if (proc.status === 0) {
                     let matches = proc.stdout.toString('utf-8').match(/InstallDir[ \t]+REG_[A-Z_]+[ \t]+(.*)+/);
 
                     if (matches != null) {
