@@ -6670,7 +6670,7 @@ const char *OptionParser::Next()
         return current_option;
     }
 
-    if (mode == OptionMode::Stop && !IsOption(args[pos])) {
+    if (mode == OptionMode::Stop && (pos >= limit || !IsOption(args[pos]))) {
         limit = pos;
         return nullptr;
     }
