@@ -3493,6 +3493,23 @@ void CloseHandleSafe(HANDLE *handle_ptr)
     *handle_ptr = nullptr;
 }
 
+struct PendingIO {
+    OVERLAPPED ov = {}; // Keep first
+
+    bool pending = false;
+    DWORD err = 0;
+    Size len = -1;
+
+    static void CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
+    {
+        PendingIO *self = (PendingIO *)ov;
+
+        self->pending = false;
+        self->err = err;
+        self->len = err ? -1 : len;
+    }
+};
+
 bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
@@ -3596,166 +3613,78 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 
     // Read and write standard process streams
     {
-        HANDLE events[4] = {
-            CreateEvent(nullptr, TRUE, in_func.IsValid(), nullptr),
-            CreateEvent(nullptr, TRUE, out_func.IsValid(), nullptr),
-            process_handle,
-            console_ctrl_event
-        };
-        RG_DEFER {
-            CloseHandleSafe(&events[0]);
-            CloseHandleSafe(&events[1]);
-        };
-        if (!events[0] || !events[1]) {
-            LogError("Failed to create event HANDLE: %1", GetWin32ErrorString());
-            return false;
-        }
+        bool running = true;
 
+        PendingIO proc_in;
         Span<const uint8_t> write_buf = {};
-        bool write_pending = false;
-        OVERLAPPED write_ov = {};
-        write_ov.hEvent = events[0];
-
+        PendingIO proc_out;
         uint8_t read_buf[4096];
-        bool read_pending = false;
-        OVERLAPPED read_ov = {};
-        read_ov.hEvent = events[1];
 
-        do {
-            DWORD ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE);
-
-            if (RG_UNLIKELY(ret < WAIT_OBJECT_0 || ret >= WAIT_OBJECT_0 + RG_LEN(events))) {
-                // Not sure how this could happen, but who knows?
-                LogError("Read/write for process failed: %1", GetWin32ErrorString());
-                break;
-            }
-
+        while (running) {
             // Try to write
-            if (ret == WAIT_OBJECT_0) {
-                RG_ASSERT(in_func.IsValid());
-
-                if (write_pending) {
-                    DWORD write_len = 0;
-
-                    if (GetOverlappedResult(in_pipe[1], &write_ov, &write_len, TRUE)) {
-                        write_buf.ptr += (Size)write_len;
-                        write_buf.len -= (Size)write_len;
-
-                        write_pending = false;
-                    } else {
-                        DWORD err = GetLastError();
-
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to write process input: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(in_pipe[1]);
-                        CloseHandleSafe(&in_pipe[1]);
-                        ResetEvent(events[0]);
+            if (in_func.IsValid() && !proc_in.pending) {
+                if (!proc_in.err) {
+                    if (proc_in.len >= 0) {
+                        write_buf.ptr += proc_in.len;
+                        write_buf.len -= proc_in.len;
                     }
-                }
 
-                if (RG_LIKELY(in_pipe[1])) {
                     if (!write_buf.len) {
                         write_buf = in_func();
                         RG_ASSERT(write_buf.len >= 0);
                     }
 
                     if (write_buf.len) {
-                        DWORD len = (DWORD)std::min((Size)UINT32_MAX, write_buf.len);
-                        DWORD write_len = 0;
-
-                        while (write_buf.len &&
-                               ::WriteFile(in_pipe[1], write_buf.ptr, len, nullptr, &write_ov) &&
-                               GetOverlappedResult(in_pipe[1], &write_ov, &write_len, FALSE)) {
-                            write_buf.ptr += (Size)write_len;
-                            write_buf.len -= (Size)write_len;
-                        }
-
-                        DWORD err = GetLastError();
-
-                        if (err == ERROR_SUCCESS) {
-                            SetEvent(events[0]);
-                        } else if (err == ERROR_IO_PENDING) {
-                            write_pending = true;
-                        } else {
-                            if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                                LogError("Failed to write process input: %1", GetWin32ErrorString(err));
-                            }
-
-                            CancelIo(in_pipe[1]);
-                            CloseHandleSafe(&in_pipe[1]);
-                            ResetEvent(events[0]);
+                        if (!WriteFileEx(in_pipe[1], write_buf.ptr, write_buf.len, &proc_in.ov, PendingIO::CompletionHandler)) {
+                            proc_in.err = GetLastError();
                         }
                     } else {
                         CloseHandleSafe(&in_pipe[1]);
-                        ResetEvent(events[0]);
                     }
                 }
+
+                if (proc_in.err && proc_in.err != ERROR_BROKEN_PIPE && proc_in.err != ERROR_NO_DATA) {
+                    LogError("Failed to write to process: %1", GetWin32ErrorString(proc_in.err));
+                }
+                proc_in.pending = true;
             }
 
             // Try to read
-            if (ret == WAIT_OBJECT_0 + 1) {
-                RG_ASSERT(out_func.IsValid());
+            if (out_func.IsValid() && !proc_out.pending) {
+                if (!proc_out.err) {
+                    if (proc_out.len >= 0) {
+                        out_func(MakeSpan(read_buf, proc_out.len));
+                        proc_out.len = -1;
+                    }
 
-                if (read_pending) {
-                    DWORD read_len = 0;
-
-                    if (GetOverlappedResult(out_pipe[0], &read_ov, &read_len, TRUE)) {
-                        out_func(MakeSpan(read_buf, read_len));
-                        read_pending = false;
-                    } else {
-                        DWORD err = GetLastError();
-
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to read process output: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(out_pipe[0]);
-                        CloseHandleSafe(&out_pipe[0]);
-                        ResetEvent(events[1]);
+                    if (proc_out.len && !ReadFileEx(out_pipe[0], read_buf, RG_SIZE(read_buf), &proc_out.ov, PendingIO::CompletionHandler)) {
+                        proc_out.err = GetLastError();
                     }
                 }
 
-                if (RG_LIKELY(out_pipe[0])) {
-                    DWORD read_len = 0;
-
-                    while (::ReadFile(out_pipe[0], read_buf, RG_SIZE(read_buf), nullptr, &read_ov) &&
-                           GetOverlappedResult(out_pipe[0], &read_ov, &read_len, FALSE)) {
-                        out_func(MakeSpan(read_buf, read_len));
-                    }
-
-                    DWORD err = GetLastError();
-
-                    if (err == ERROR_IO_PENDING) {
-                        read_pending = true;
-                    } else {
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to read process output: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(out_pipe[0]);
-                        CloseHandleSafe(&out_pipe[0]);
-                        ResetEvent(events[1]);
-                    }
+                if (proc_out.err && proc_out.err != ERROR_BROKEN_PIPE && proc_out.err != ERROR_NO_DATA) {
+                    LogError("Failed to read process output: %1", GetWin32ErrorString(proc_out.err));
                 }
+                proc_out.pending = true;
             }
 
-            // Ctrl+C or process ended
-            if (ret >= WAIT_OBJECT_0 + 2) {
-                if (in_pipe[1]) {
-                    CancelIo(in_pipe[1]);
-                }
-                if (out_pipe[0]) {
-                    CancelIo(out_pipe[0]);
-                }
+            HANDLE events[2] = {
+                process_handle,
+                console_ctrl_event
+            };
 
-                break;
-            }
-        } while (in_pipe[1] || out_pipe[0]);
+            running = (WaitForMultipleObjectsEx(RG_LEN(events), events, FALSE, INFINITE, TRUE) > WAIT_OBJECT_0 + 1);
+        }
+    }
 
-        CloseHandleSafe(&out_pipe[0]);
+    // Terminate any remaining I/O
+    if (in_pipe[1]) {
+        CancelIo(in_pipe[1]);
         CloseHandleSafe(&in_pipe[1]);
+    }
+    if (out_pipe[0]) {
+        CancelIo(out_pipe[0]);
+        CloseHandleSafe(&out_pipe[0]);
     }
 
     // Wait for process exit
