@@ -290,13 +290,6 @@ void PopObject(Napi::Object obj, const uint8_t *ptr, const TypeInfo *type)
     }
 }
 
-Napi::Object PopObject(Napi::Env env, const uint8_t *ptr, const TypeInfo *type)
-{
-    Napi::Object obj = Napi::Object::New(env);
-    PopObject(obj, ptr, type);
-    return obj;
-}
-
 void PopOutArguments(Span<const OutObject> objects)
 {
     for (const OutObject &obj: objects) {
