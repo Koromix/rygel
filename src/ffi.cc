@@ -162,8 +162,8 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
 
         type->primitive = PrimitiveKind::Pointer;
-        type->size = sizeof(void *);
-        type->align = sizeof(void *);
+        type->size = RG_SIZE(void *);
+        type->align = RG_SIZE(void *);
         type->ref = ref;
 
         instance->types_map.Set(type);
@@ -463,8 +463,8 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(instance, "float64", PrimitiveKind::Float64, 8);
     RegisterPrimitiveType(instance, "float", PrimitiveKind::Float32, 4);
     RegisterPrimitiveType(instance, "double", PrimitiveKind::Float64, 8);
-    RegisterPrimitiveType(instance, "string", PrimitiveKind::String, sizeof(void *));
-    RegisterPrimitiveType(instance, "str", PrimitiveKind::String, sizeof(void *));
+    RegisterPrimitiveType(instance, "string", PrimitiveKind::String, RG_SIZE(void *));
+    RegisterPrimitiveType(instance, "str", PrimitiveKind::String, RG_SIZE(void *));
 
     Napi::Object types = Napi::Object::New(env);
     for (TypeInfo &type: instance->types) {
