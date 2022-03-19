@@ -419,7 +419,7 @@ async function ssh() {
     ];
 
     let proc = spawnSync('sshpass', args, { stdio: 'inherit' });
-    if (proc.status != 0) {
+    if (proc.status !== 0) {
         console.error('Connection failed');
         return false;
     }
@@ -439,7 +439,7 @@ async function reset() {
 
         let proc = spawnSync(binary, ['snapshot', disk, '-a', 'base']);
 
-        if (!proc.status) {
+        if (proc.status === 0) {
             log(machine, 'Reset disk', chalk.bold.green('[ok]'));
         } else {
             log(machine, 'Reset disk', chalk.bold.red('[error]'));
@@ -467,7 +467,7 @@ function check_qemu() {
     } else if (process.platform == 'win32') {
         let proc = spawnSync('reg', ['query', 'HKEY_LOCAL_MACHINE\\SOFTWARE\\QEMU', '/v', 'Install_Dir']);
 
-        if (proc.status == 0) {
+        if (proc.status === 0) {
             let matches = proc.stdout.toString('utf-8').match(/Install_Dir[ \t]+REG_[A-Z_]+[ \t]+(.*)+/);
 
             if (matches != null) {
