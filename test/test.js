@@ -437,7 +437,12 @@ async function reset() {
         let dirname = `qemu/${machine.key}`;
         let disk = dirname + '/disk.qcow2';
 
-        let proc = spawnSync(binary, ['snapshot', disk, '-a', 'base']);
+        if (!fs.existsSync(dirname)) {
+            log(machine, 'Missing files', chalk.bold.gray('[ignore]'));
+            return;
+        }
+
+        let proc = spawnSync(binary, ['snapshot', disk, '-a', 'base'], { encoding: 'utf-8' });
 
         if (proc.status === 0) {
             log(machine, 'Reset disk', chalk.bold.green('[ok]'));
@@ -449,7 +454,7 @@ async function reset() {
 
                 let align = log.align + 9;
                 let str = ' '.repeat(align) + 'Standard error:\n' +
-                          chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                          chalk.yellow(proc.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
                 console.error(str);
             }
         }
