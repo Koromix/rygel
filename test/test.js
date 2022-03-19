@@ -55,6 +55,7 @@ async function main() {
                 case 'test': { command = test; } break;
                 case 'start': { command = start; } break;
                 case 'stop': { command = stop; } break;
+                case 'info': { command = info; } break;
                 case 'ssh': { command = ssh; } break;
                 case 'reset': { command = reset; } break;
 
@@ -163,6 +164,7 @@ Commands:
     test                         Run the machines and perform the tests (default)
     start                        Start the machines but don't run anythingh
     stop                         Stop running machines
+    info                         Print basic information about machine
     ssh                          Start SSH session with specific machine
     reset                        Reset initial disk snapshot
 
@@ -385,6 +387,16 @@ async function stop(all = true) {
     }));
 
     return success;
+}
+
+async function info() {
+    for (let machine of machines) {
+        console.log(`>> ${machine.name} (${machine.key})`);
+        console.log(`  - SSH port: ${machine.info.ssh_port}`);
+        console.log(`  - SPICE port: ${machine.info.spice_port}`);
+        console.log(`  - Username: ${machine.info.username}`);
+        console.log(`  - Password: ${machine.info.password}`);
+    }
 }
 
 async function ssh() {
