@@ -17,6 +17,7 @@
 
 const process = require('process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const util = require('util');
 const { spawn, spawnSync } = require('child_process');
@@ -24,6 +25,9 @@ const { NodeSSH } = require('node-ssh');
 const chalk = require('chalk');
 
 // Globals
+
+let script_dir = null;
+let root_dir = null;
 
 let machines = [];
 let display = false;
@@ -35,8 +39,11 @@ let ignore = new Set;
 main();
 
 async function main() {
-    let root_dir = fs.realpathSync(path.dirname(__filename));
-    process.chdir(root_dir);
+    script_dir = fs.realpathSync(path.dirname(__filename));
+    root_dir = fs.realpathSync(script_dir + '/../..');
+
+    // All the code assumes we are working from the script directory
+    process.chdir(script_dir);
 
     let command = test;
 
@@ -227,6 +234,21 @@ async function start(detach = true) {
 async function test() {
     let success = true;
 
+    let snapshot_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'luigi-'));
+    process.on('exit', () => unlink_recursive(snapshot_dir));
+
+    console.log('>> Snapshot code...');
+    copy_recursive(root_dir, snapshot_dir, filename => {
+        let basename = path.basename(filename);
+
+        return basename !== '.git' &&
+               basename !== 'qemu' && !basename.startsWith('qemu_') &&
+               basename !== 'node_modules' &&
+               basename !== 'node' &&
+               basename !== 'build' &&
+               basename !== 'luigi';
+    });
+
     success &= await start(false);
 
     console.log('>> Copy source code...');
@@ -237,8 +259,6 @@ async function test() {
         let copied = true;
 
         for (let test of Object.values(machine.tests)) {
-            let local_dir = '../..';
-
             try {
                 await machine.ssh.exec('rm', ['-rf', test.directory]);
             } catch (err) {
@@ -246,20 +266,9 @@ async function test() {
             }
 
             try {
-                await machine.ssh.putDirectory(local_dir, test.directory, {
+                await machine.ssh.putDirectory(snapshot_dir, test.directory, {
                     recursive: true,
-                    concurrency: 2,
-
-                    validate: filename => {
-                        let basename = path.basename(filename);
-
-                        return basename !== '.git' &&
-                               basename !== 'qemu' && !basename.startsWith('qemu_') &&
-                               basename !== 'node_modules' &&
-                               basename !== 'node' &&
-                               basename !== 'build' &&
-                               basename !== 'luigi';
-                    }
+                    concurrency: 4
                 });
             } catch (err) {
                 ignore.add(machine);
@@ -404,6 +413,38 @@ async function ssh() {
 }
 
 // Utility
+
+function copy_recursive(src, dest, validate = filename => true) {
+    let entries = fs.readdirSync(src, { withFileTypes: true });
+
+    for (let entry of entries) {
+        let filename = path.join(src, entry.name);
+        let destname = path.join(dest, entry.name);
+
+        if (!validate(filename))
+            continue;
+
+        if (entry.isDirectory()) {
+            fs.mkdirSync(destname, { mode: 0o755 });
+            copy_recursive(filename, destname, validate);
+        } else if (entry.isFile()) {
+            fs.copyFileSync(filename, destname);
+        }
+    }
+}
+
+function unlink_recursive(path) {
+    try {
+        if (fs.rmSync != null) {
+            fs.rmSync(path, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+        } else {
+            fs.rmdirSync(path, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
+        }
+    } catch (err) {
+        if (err.code !== 'ENOENT')
+            throw err;
+    }
+}
 
 async function boot(machine, dirname, detach, display) {
     let args = machine.qemu.arguments.slice();
