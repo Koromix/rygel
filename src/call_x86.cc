@@ -146,14 +146,18 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 args_ptr += 2;
             } break;
             case PrimitiveKind::String: {
-                if (RG_UNLIKELY(!value.IsString())) {
+                const char *str;
+                if (RG_LIKELY(value.IsString())) {
+                    str = call.PushString(value);
+                    if (RG_UNLIKELY(!str))
+                        return env.Null();
+                } else if (value.IsNull()) {
+                    str = nullptr;
+                } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected string", GetValueType(instance, value), i + 1);
                     return env.Null();
                 }
 
-                const char *str = call.PushString(value);
-                if (RG_UNLIKELY(!str))
-                    return env.Null();
                 *(const char **)(args_ptr++) = str;
             } break;
             case PrimitiveKind::Pointer: {
@@ -173,6 +177,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                         OutObject out = {obj, ptr, param.type->ref};
                         out_objects.Append(out);
                     }
+                } else if (value.IsNull()) {
+                    ptr = nullptr;
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), i + 1, param.type->name);
                     return env.Null();
