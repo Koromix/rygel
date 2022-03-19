@@ -101,8 +101,8 @@ endif()
 add_library(sqlite3 SHARED vendor/sqlite3/sqlite3.c)
 set_target_properties(sqlite3 PROPERTIES PREFIX "")
 
-if(win32)
-    target_compile_definitions(sqlite PRIVATE SQLITE_API=__declspec\(dllexport\))
+if(WIN32)
+    target_compile_definitions(sqlite3 PRIVATE SQLITE_API=__declspec\(dllexport\))
 endif()
 
 # ---- Misc ----
