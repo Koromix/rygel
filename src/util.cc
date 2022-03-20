@@ -54,8 +54,10 @@ bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *
 {
     bool match = false;
 
-    napi_type_tag tag = { instance->tag_lower, (uint64_t)marker };
-    napi_check_object_type_tag(value.Env(), value, &tag, &match);
+    if (!IsNullOrUndefined(value)) {
+        napi_type_tag tag = { instance->tag_lower, (uint64_t)marker };
+        napi_check_object_type_tag(value.Env(), value, &tag, &match);
+    }
 
     return match;
 }
@@ -104,7 +106,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
     Napi::Env env = obj.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    RG_ASSERT(obj.IsObject());
+    RG_ASSERT(IsObject(obj));
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
     dest = AlignUp(dest, type->align);
@@ -189,7 +191,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
             } break;
 
             case PrimitiveKind::Record: {
-                if (RG_UNLIKELY(!value.IsObject())) {
+                if (RG_UNLIKELY(!IsObject(value))) {
                     ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected object", GetValueType(instance, value), member.name);
                     return false;
                 }

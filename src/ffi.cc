@@ -88,7 +88,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (!info[1].IsObject()) {
+    if (!IsObject(info[1])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(instance, info[1]));
         return env.Null();
     }
@@ -282,11 +282,11 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, not %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsString() && !info[0].IsNull()) {
+    if (!info[0].IsString() && !IsNullOrUndefined(info[0])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (!info[1].IsObject()) {
+    if (!IsObject(info[1])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for functions, expected object", GetValueType(instance, info[1]));
         return env.Null();
     }

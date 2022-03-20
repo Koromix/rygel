@@ -299,7 +299,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     str = call.PushString(value);
                     if (RG_UNLIKELY(!str))
                         return env.Null();
-                } else if (value.IsNull()) {
+                } else if (IsNullOrUndefined(value)) {
                     str = nullptr;
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected string", GetValueType(instance, value), i + 1);
@@ -319,7 +319,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
                 if (CheckValueTag(instance, value, param.type)) {
                     ptr = value.As<Napi::External<uint8_t>>().Data();
-                } else if (value.IsObject() && param.type->ref->primitive == PrimitiveKind::Record) {
+                } else if (IsObject(value) && param.type->ref->primitive == PrimitiveKind::Record) {
                     Napi::Object obj = value.As<Napi::Object>();
 
                     if (RG_UNLIKELY(!call.AllocHeap(param.type->ref->size, 16, &ptr)))
@@ -331,7 +331,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                         OutObject out = {obj, ptr, param.type->ref};
                         out_objects.Append(out);
                     }
-                } else if (value.IsNull()) {
+                } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), i + 1, param.type->name);
@@ -348,7 +348,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
             } break;
 
             case PrimitiveKind::Record: {
-                if (RG_UNLIKELY(!value.IsObject())) {
+                if (RG_UNLIKELY(!IsObject(value))) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected object", GetValueType(instance, value), i + 1);
                     return env.Null();
                 }

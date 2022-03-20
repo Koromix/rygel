@@ -27,7 +27,8 @@ void ThrowError(Napi::Env env, const char *msg, Args... args)
     char buf[1024];
     Fmt(buf, msg, args...);
 
-    T::New(env, buf).ThrowAsJavaScriptException();
+    auto err = T::New(env, buf);
+    err.ThrowAsJavaScriptException();
 }
 
 static inline Size AlignLen(Size len, Size align)
@@ -55,6 +56,16 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value);
 
 void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
+
+static inline bool IsNullOrUndefined(Napi::Value value)
+{
+    return value.IsNull() || value.IsUndefined();
+}
+
+static inline bool IsObject(Napi::Value value)
+{
+    return value.IsObject() && !IsNullOrUndefined(value) && !value.IsArray();
+}
 
 class CallData {
     Napi::Env env;
