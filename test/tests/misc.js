@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -26,7 +28,7 @@ main();
 async function main() {
     try {
         await test();
-        console.log('Everything OK');
+        console.log('Success!');
     } catch (err) {
         console.error(err);
         process.exit(1);
