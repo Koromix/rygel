@@ -427,62 +427,66 @@ function extract_targz(filename, dest_dir, strip = 0) {
         let header = null;
 
         reader.on('readable', () => {
-            for (;;) {
-                if (header == null) {
-                    let buf = reader.read(512);
-                    if (buf == null)
-                        break;
+            try {
+                for (;;) {
+                    if (header == null) {
+                        let buf = reader.read(512);
+                        if (buf == null)
+                            break;
 
-                    // Two zeroed 512-byte blocks end the stream
-                    if (!buf[0])
-                        continue;
+                        // Two zeroed 512-byte blocks end the stream
+                        if (!buf[0])
+                            continue;
 
-                    header = {
-                        filename: buf.toString('utf-8', 0, 100).replace(/\0/g, ''),
-                        mode: parseInt(buf.toString('ascii', 100, 109), 8),
-                        size: parseInt(buf.toString('ascii', 124, 137), 8),
-                        type: buf[156] - 48
-                    };
+                        header = {
+                            filename: buf.toString('utf-8', 0, 100).replace(/\0/g, ''),
+                            mode: parseInt(buf.toString('ascii', 100, 109), 8),
+                            size: parseInt(buf.toString('ascii', 124, 137), 8),
+                            type: String.fromCharCode(buf[156])
+                        };
 
-                    if (buf.toString('ascii', 257, 263) == 'ustar\0') {
-                        let prefix = buf.toString('utf-8', 345, 500).replace(/\0/g, '');
-                        header.filename = prefix + header.filename;
+                        if (buf.toString('ascii', 257, 263) == 'ustar\0') {
+                            let prefix = buf.toString('utf-8', 345, 500).replace(/\0/g, '');
+                            header.filename = prefix ? (prefix + '/' + header.filename) : '';
+                        }
+
+                        // Safety checks
+                        header.filename = header.filename.replace(/\\/g, '/');
+                        if (!header.filename.length)
+                            throw new Error(`Insecure empty filename inside TAR archive`);
+                        if (header.filename[0] == '/')
+                            throw new Error(`Insecure filename starting with / inside TAR archive`);
+                        if (has_dotdot(header.filename))
+                            throw new Error(`Insecure filename containing '..' inside TAR archive`);
+
+                        for (let i = 0; i < strip; i++)
+                            header.filename = header.filename.substr(header.filename.indexOf('/') + 1);
                     }
 
-                    // Safety checks
-                    header.filename = header.filename.replace(/\\/g, '/');
-                    if (!header.filename.length)
-                        reject(new Error(`Insecure empty filename inside TAR archive`));
-                    if (header.filename[0] == '/')
-                        reject(new Error(`Insecure filename starting with / inside TAR archive`));
-                    if (has_dotdot(header.filename))
-                        reject(new Error(`Insecure filename containing '..' inside TAR archive`));
+                    let aligned = Math.floor((header.size + 511) / 512) * 512;
+                    let data = header.size ? reader.read(aligned) : null;
+                    if (data == null) {
+                        if (header.size)
+                            break;
+                        data = Buffer.alloc(0);
+                    }
+                    data = data.subarray(0, header.size);
 
-                    for (let i = 0; i < strip; i++)
-                        header.filename = header.filename.substr(header.filename.indexOf('/') + 1);
+                    if (header.type == '0' || header.type == '7') {
+                        let filename = dest_dir + '/' + header.filename;
+                        let dirname = path.dirname(filename);
+
+                        fs.mkdirSync(dirname, { recursive: true, mode: 0o755 });
+                        fs.writeFileSync(filename, data, { mode: header.mode });
+                    } else if (header.type == '5') {
+                        let filename = dest_dir + '/' + header.filename;
+                        fs.mkdirSync(filename, { recursive: true, mode: header.mode });
+                    }
+
+                    header = null;
                 }
-
-                let aligned = Math.floor((header.size + 511) / 512) * 512;
-                let data = header.size ? reader.read(aligned) : null;
-                if (data == null) {
-                    if (header.size)
-                        break;
-                    data = Buffer.alloc(0);
-                }
-                data = data.subarray(0, header.size);
-
-                if (header.type == 0 || header.type == 7) {
-                    let filename = dest_dir + '/' + header.filename;
-                    let dirname = path.dirname(filename);
-
-                    fs.mkdirSync(dirname, { recursive: true, mode: 0o755 });
-                    fs.writeFileSync(filename, data, { mode: header.mode });
-                } else if (header.type == 5) {
-                    let filename = dest_dir + '/' + header.filename;
-                    fs.mkdirSync(filename, { recursive: true, mode: header.mode });
-                }
-
-                header = null;
+            } catch (err) {
+                reject(err);
             }
         });
 
