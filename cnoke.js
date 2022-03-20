@@ -425,6 +425,7 @@ function extract_targz(filename, dest_dir, strip = 0) {
 
     return new Promise((resolve, reject) => {
         let header = null;
+        let extended = {};
 
         reader.on('readable', () => {
             try {
@@ -445,10 +446,14 @@ function extract_targz(filename, dest_dir, strip = 0) {
                             type: String.fromCharCode(buf[156])
                         };
 
+                        // UStar filename prefix
                         if (buf.toString('ascii', 257, 263) == 'ustar\0') {
                             let prefix = buf.toString('utf-8', 345, 500).replace(/\0/g, '');
-                            header.filename = prefix ? (prefix + '/' + header.filename) : '';
+                            header.filename = prefix ? (prefix + '/' + header.filename) : header.filename;
                         }
+
+                        Object.assign(header, extended);
+                        extended = {};
 
                         // Safety checks
                         header.filename = header.filename.replace(/\\/g, '/');
@@ -481,6 +486,29 @@ function extract_targz(filename, dest_dir, strip = 0) {
                     } else if (header.type == '5') {
                         let filename = dest_dir + '/' + header.filename;
                         fs.mkdirSync(filename, { recursive: true, mode: header.mode });
+                    } else if (header.type == 'L') { // GNU tar
+                        extended.filename = data.toString('utf-8').replace(/\0/g, '');
+                    } else if (header.type == 'x') { // PAX entry
+                        let str = data.toString('utf-8');
+
+                        try {
+                            while (str.length) {
+                                let matches = str.match(/^([0-9]+) ([a-zA-Z0-9\._]+)=(.*)\n/);
+
+                                let skip = parseInt(matches[1], 10);
+                                let key = matches[2];
+                                let value = matches[3];
+
+                                switch (key) {
+                                    case 'path': { extended.filename = value; } break;
+                                    case 'size': { extended.size = parseInt(value, 10); } break;
+                                }
+
+                                str = str.substr(skip).trimStart();
+                            }
+                        } catch (err) {
+                            throw new Error('Malformed PAX entry');
+                        }
                     }
 
                     header = null;
