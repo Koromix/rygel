@@ -39,7 +39,7 @@
 namespace RG {
 
 // Value does not matter, the tag system uses memory addresses
-static const int TypeInfoMarker = 0xdeadbeef;
+static const int TypeInfoMarker = 0xDEADBEEF;
 
 static const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_directions = nullptr)
 {
