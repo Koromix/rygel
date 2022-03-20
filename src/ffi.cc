@@ -137,6 +137,55 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info)
     return external;
 }
 
+static Napi::Value CreateHandleType(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+    if (!info[0].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    TypeInfo *type = instance->types.AppendDefault();
+    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
+
+    std::string name = info[0].As<Napi::String>();
+
+    type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+
+    type->primitive = PrimitiveKind::Record;
+    type->align = RG_SIZE(void *);
+    type->size = RG_SIZE(void *);
+
+    // Add single handle member
+    {
+        RecordMember member = {};
+
+        member.name = "ptr";
+        member.type = instance->types_map.FindValue("void *", nullptr);
+        RG_ASSERT(member.type);
+
+        type->members.Append(member);
+    }
+
+    // If the insert succeeds, we cannot fail anymore
+    if (!instance->types_map.TrySet(type).second) {
+        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+        return env.Null();
+    }
+    err_guard.Disable();
+
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
+}
+
 static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -420,6 +469,7 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RG_ASSERT(!instance->types.len);
 
     RegisterPrimitiveType(instance, "void", PrimitiveKind::Void, 0);
+    RegisterPrimitiveType(instance, "void *", PrimitiveKind::Pointer, RG_SIZE(void *));
     RegisterPrimitiveType(instance, "bool", PrimitiveKind::Bool, 1);
     RegisterPrimitiveType(instance, "int8", PrimitiveKind::Int8, 1);
     RegisterPrimitiveType(instance, "int8_t", PrimitiveKind::Int8, 1);
@@ -535,6 +585,7 @@ static void InitInternal(v8::Local<v8::Object> target, v8::Local<v8::Value>,
     FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
     SetValue(env, target, "struct", Napi::Function::New(env_napi, CreateStructType));
+    SetValue(env, target, "handle", Napi::Function::New(env_napi, CreateHandleType));
     SetValue(env, target, "pointer", Napi::Function::New(env_napi, CreatePointerType));
     SetValue(env, target, "load", Napi::Function::New(env_napi, LoadSharedLibrary));
     SetValue(env, target, "in", Napi::Function::New(env_napi, MarkIn));
@@ -559,6 +610,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
     exports.Set("struct", Napi::Function::New(env, CreateStructType));
+    exports.Set("handle", Napi::Function::New(env, CreateHandleType));
     exports.Set("pointer", Napi::Function::New(env, CreatePointerType));
     exports.Set("load", Napi::Function::New(env, LoadSharedLibrary));
     exports.Set("in", Napi::Function::New(env, MarkIn));
