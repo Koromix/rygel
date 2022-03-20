@@ -221,7 +221,7 @@ Finally, you can join a running machine with SSH with the following shortcut, if
 node test.js ssh debian_i386
 ```
 
-Each machine is configured to run a SPICE server available locally, which you can use to access the display, using virt-viewer or any other compatible tool. Use the `info` command to get the SPICE port.
+Each machine is configured to run a VNC server available locally, which you can use to access the display, using KRDC or any other compatible viewer. Use the `info` command to get the VNC port.
 
 ```sh
 node test.js info debian_x64

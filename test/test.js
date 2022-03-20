@@ -397,7 +397,7 @@ async function info() {
     for (let machine of machines) {
         console.log(`>> ${machine.name} (${machine.key})`);
         console.log(`  - SSH port: ${machine.info.ssh_port}`);
-        console.log(`  - SPICE port: ${machine.info.spice_port}`);
+        console.log(`  - VNC port: ${machine.info.vnc_port}`);
         console.log(`  - Username: ${machine.info.username}`);
         console.log(`  - Password: ${machine.info.password}`);
     }
