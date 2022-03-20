@@ -82,8 +82,8 @@ public:
 
     Span<uint8_t> GetHeap() const
     {
-        uint8_t *ptr = heap_mem->ptr;
-        Size len = ptr - old_heap_mem.ptr;
+        uint8_t *ptr = old_heap_mem.ptr;
+        Size len = heap_mem->ptr - ptr;
 
         return MakeSpan(ptr, len);
     }
