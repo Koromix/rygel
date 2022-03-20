@@ -27,7 +27,8 @@
                 "build": "npm install --production",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js"
+                    "Test Misc": "node test/tests/misc.js",
+                    "Test SQLite": "node test/tests/sqlite.js"
                 }
             }
         }
@@ -61,7 +62,8 @@
                 "build": "npm install --production",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js"
+                    "Test Misc": "node test/tests/misc.js",
+                    "Test SQLite": "node test/tests/sqlite.js"
                 }
             }
         }
@@ -95,7 +97,8 @@
                 "build": "npm install --production",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js"
+                    "Test Misc": "node test/tests/misc.js",
+                    "Test SQLite": "node test/tests/sqlite.js"
                 }
             }
         }
@@ -129,7 +132,8 @@
                 "build": "npm install --production",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js"
+                    "Test Misc": "node test/tests/misc.js",
+                    "Test SQLite": "node test/tests/sqlite.js"
                 }
             }
         }
@@ -168,7 +172,8 @@
                 "build": "C:\\Node32\\node32.cmd npm install --production",
                 "commands": {
                     "Test Raylib": "seatsh C:\\Node32\\node32.cmd node test/tests/raylib.js",
-                    "Test Misc": "C:\\Node32\\node32.cmd node test/tests/misc.js"
+                    "Test Misc": "C:\\Node32\\node32.cmd node test/tests/misc.js",
+                    "Test SQLite": "C:\\Node32\\node32.cmd node test/tests/sqlite.js"
                 }
             },
 
@@ -177,7 +182,8 @@
                 "build": "C:\\Node64\\node64.cmd npm install --production",
                 "commands": {
                     "Test Raylib": "seatsh C:\\Node64\\node64.cmd node test/tests/raylib.js",
-                    "Test Misc": "C:\\Node64\\node64.cmd node test/tests/misc.js"
+                    "Test Misc": "C:\\Node64\\node64.cmd node test/tests/misc.js",
+                    "Test SQLite": "C:\\Node64\\node64.cmd node test/tests/sqlite.js"
                 }
             }
         }
