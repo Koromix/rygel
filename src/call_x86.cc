@@ -207,20 +207,23 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         call.DumpDebug();
     }
 
+#define PERFORM_CALL(Suffix) \
+        ([&]() { \
+            auto ret = ForwardCall ## Suffix(func->func, call.GetSP()); \
+            PopOutArguments(out_objects); \
+            return ret; \
+        })()
+
     // Execute and convert return value
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Float32: {
-            float f = ForwardCallF(func->func, call.GetSP());
-
-            PopOutArguments(out_objects);
+            float f = PERFORM_CALL(G);
 
             return Napi::Number::New(env, (double)f);
         } break;
 
         case PrimitiveKind::Float64: {
-            double d = ForwardCallD(func->func, call.GetSP());
-
-            PopOutArguments(out_objects);
+            double d = PERFORM_CALL(D);
 
             return Napi::Number::New(env, d);
         } break;
@@ -228,14 +231,12 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         default: {
             // We can't directly use the struct as a return value, because not all platforms
             // treat it the same: it is trivial only on Windows (see AnalyseFunction).
-            uint64_t raw = ForwardCallG(func->func, call.GetSP());
+            uint64_t raw = PERFORM_CALL(G);
             struct {
                 uint32_t rax;
                 uint32_t rdx;
             } ret;
             memcpy(&ret, &raw, RG_SIZE(raw));
-
-            PopOutArguments(out_objects);
 
             switch (func->ret.type->primitive) {
                 case PrimitiveKind::Void: return env.Null();
@@ -268,6 +269,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
             }
         } break;
     }
+
+#undef PERFORM_CALL
 
     RG_UNREACHABLE();
 }

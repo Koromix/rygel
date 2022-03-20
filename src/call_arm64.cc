@@ -420,23 +420,23 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
     }
 
 #define PERFORM_CALL(Suffix) \
-        (func->forward_fp ? ForwardCallX ## Suffix(func->func, call.GetSP()) \
-                          : ForwardCall ## Suffix(func->func, call.GetSP()))
+        ([&]() { \
+            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, call.GetSP()) \
+                                         : ForwardCall ## Suffix(func->func, call.GetSP())); \
+            PopOutArguments(out_objects); \
+            return ret; \
+        })()
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Float32: {
             float f = PERFORM_CALL(F);
 
-            PopOutArguments(out_objects);
-
             return Napi::Number::New(env, (double)f);
         } break;
 
         case PrimitiveKind::Float64: {
             HfaRet ret = PERFORM_CALL(DDDD);
-
-            PopOutArguments(out_objects);
 
             return Napi::Number::New(env, (double)ret.d0);
         } break;
@@ -445,14 +445,10 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
             if (func->ret.gpr_count) {
                 X0X1Ret ret = PERFORM_CALL(GG);
 
-                PopOutArguments(out_objects);
-
                 Napi::Object obj = PopObject(env, (const uint8_t *)&ret, func->ret.type);
                 return obj;
             } else if (func->ret.vec_count) {
                 HfaRet ret = PERFORM_CALL(DDDD);
-
-                PopOutArguments(out_objects);
 
                 Napi::Object obj = PopHFA(env, (const uint8_t *)&ret, func->ret.type);
                 return obj;
@@ -462,14 +458,10 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 X0X1Ret ret = PERFORM_CALL(GG);
                 RG_ASSERT(ret.x0 == (uint64_t)return_ptr);
 
-                PopOutArguments(out_objects);
-
                 Napi::Object obj = PopObject(env, return_ptr, func->ret.type);
                 return obj;
             } else {
                 PERFORM_CALL(GG);
-
-                PopOutArguments(out_objects);
 
                 Napi::Object obj = Napi::Object::New(env);
                 return obj;
@@ -478,8 +470,6 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
         default: {
             X0X1Ret ret = PERFORM_CALL(GG);
-
-            PopOutArguments(out_objects);
 
             switch (func->ret.type->primitive) {
                 case PrimitiveKind::Void: return env.Null();

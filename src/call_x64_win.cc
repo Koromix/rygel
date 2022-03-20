@@ -203,15 +203,17 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
     }
 
 #define PERFORM_CALL(Suffix) \
-        (func->forward_fp ? ForwardCallX ## Suffix(func->func, call.GetSP()) \
-                          : ForwardCall ## Suffix(func->func, call.GetSP()))
+        ([&]() { \
+            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, call.GetSP()) \
+                                         : ForwardCall ## Suffix(func->func, call.GetSP())); \
+            PopOutArguments(out_objects); \
+            return ret; \
+        })()
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Float32: {
             float f = PERFORM_CALL(F);
-
-            PopOutArguments(out_objects);
 
             return Napi::Number::New(env, (double)f);
         } break;
@@ -219,15 +221,11 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         case PrimitiveKind::Float64: {
             double d = PERFORM_CALL(D);
 
-            PopOutArguments(out_objects);
-
             return Napi::Number::New(env, d);
         } break;
 
         default: {
             uint64_t rax = PERFORM_CALL(G);
-
-            PopOutArguments(out_objects);
 
             switch (func->ret.type->primitive) {
                 case PrimitiveKind::Void: return env.Null();

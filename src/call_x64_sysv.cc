@@ -396,23 +396,23 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
     }
 
 #define PERFORM_CALL(Suffix) \
-        (func->forward_fp ? ForwardCallX ## Suffix(func->func, call.GetSP()) \
-                          : ForwardCall ## Suffix(func->func, call.GetSP()))
+        ([&]() { \
+            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, call.GetSP()) \
+                                         : ForwardCall ## Suffix(func->func, call.GetSP())); \
+            PopOutArguments(out_objects); \
+            return ret; \
+        })()
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Float32: {
             float f = PERFORM_CALL(F);
 
-            PopOutArguments(out_objects);
-
             return Napi::Number::New(env, (double)f);
         } break;
 
         case PrimitiveKind::Float64: {
             Xmm0RaxRet ret = PERFORM_CALL(DG);
-
-            PopOutArguments(out_objects);
 
             return Napi::Number::New(env, ret.xmm0);
         } break;
@@ -421,21 +421,15 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
             if (func->ret.gpr_first && !func->ret.xmm_count) {
                 RaxRdxRet ret = PERFORM_CALL(GG);
 
-                PopOutArguments(out_objects);
-
                 Napi::Object obj = PopObject(env, (const uint8_t *)&ret, func->ret.type);
                 return obj;
             } else if (func->ret.gpr_first) {
                 RaxXmm0Ret ret = PERFORM_CALL(GD);
 
-                PopOutArguments(out_objects);
-
                 Napi::Object obj = PopObject(env, (const uint8_t *)&ret, func->ret.type);
                 return obj;
             } else if (func->ret.xmm_count) {
                 Xmm0RaxRet ret = PERFORM_CALL(DG);
-
-                PopOutArguments(out_objects);
 
                 Napi::Object obj = PopObject(env, (const uint8_t *)&ret, func->ret.type);
                 return obj;
@@ -445,14 +439,10 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 RaxRdxRet ret = PERFORM_CALL(GG);
                 RG_ASSERT(ret.rax == (uint64_t)return_ptr);
 
-                PopOutArguments(out_objects);
-
                 Napi::Object obj = PopObject(env, return_ptr, func->ret.type);
                 return obj;
             } else {
                 PERFORM_CALL(GG);
-
-                PopOutArguments(out_objects);
 
                 Napi::Object obj = Napi::Object::New(env);
                 return obj;
@@ -461,8 +451,6 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
         default: {
             RaxRdxRet ret = PERFORM_CALL(GG);
-
-            PopOutArguments(out_objects);
 
             switch (func->ret.type->primitive) {
                 case PrimitiveKind::Void: return env.Null();
