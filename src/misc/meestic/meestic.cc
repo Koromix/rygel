@@ -25,17 +25,16 @@ struct RgbColor {
 #pragma pack(push, 1)
 // Guessed through retro-engineering, each field is subject to interpretation
 struct ControlPacket {
-    int8_t report; // Report ID = 0
-    int8_t version; // Version = 2
+    int8_t report; // Report ID = 2
     char _pad1[1];
     int8_t mode; // 0 = disabled, 1 = static, 2 = breating, 5 = cycle
     int8_t speed; // 0 to 2
     int8_t intensity; // 1 to 10
     int8_t count; // 1 to 7 (or more?)
     RgbColor colors[7];
-    char _pad2[36];
+    char _pad2[38];
 };
-RG_STATIC_ASSERT(RG_SIZE(ControlPacket) == 64);
+RG_STATIC_ASSERT(RG_SIZE(ControlPacket) == 65);
 #pragma pack(pop)
 
 enum class LightMode {
@@ -186,7 +185,7 @@ static bool ApplySettings(const LightSettings &settings)
 
     ControlPacket pkt = {};
 
-    pkt.version = 2;
+    pkt.report = 2;
     switch (settings.mode) {
         case LightMode::Disabled: { pkt.mode = 0; } break;
         case LightMode::Static: { pkt.mode = 1; } break;
