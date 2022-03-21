@@ -12,9 +12,31 @@ It is mainly useful for automated test systems, **do not install it** on product
 
 Meestic is a small command-line Linux only (at the moment) tool to control the keyboard lights of MSI Delta 15 laptops. It was made by looking at the HID packets sent by the Windows tool with Wireshark. It is provided "as is", I don't make any guarantee about this tool.
 
-Here are a few examples of how to use it:
+In order to build Meestic on Linux, clone the repository and run these commands from the root directory:
 
-* Disable lighting: `meestic -m Disabled`
-* Set default static MSI blue: `meestic -m Static MsiBlue`
-* Slowly breathe between Orange and MsiBlue: `meestic -m Breathe -s 0 "#FFA100" MsiBlue`
-* Quickly transition between Magenta, Orange and MsiBlue colors: `meestic -m Transition -s 2 Magenta Orange MsiBlue`
+```sh
+# Install required dependencies on Debian or Ubuntu:
+sudo apt install git build-essential libudev-dev
+
+# Build the meestic binary:
+./bootstrap.sh
+./felix -pFast meestic
+```
+
+After that, the binary will be available in the `bin/Fast` directory.
+
+Here are a few examples on how to use it:
+
+```sh
+# Disable lighting
+meestic -m Disabled
+
+# Set default static MSI blue
+meestic -m Static MsiBlue
+
+# Slowly breathe between Orange and MsiBlue
+meestic -m Breathe -s 0 "#FFA100" MsiBlue
+
+# Quickly transition between Magenta, Orange and MsiBlue colors
+meestic -m Transition -s 2 Magenta Orange MsiBlue
+```
