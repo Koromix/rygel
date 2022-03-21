@@ -4995,6 +4995,10 @@ void WINAPI Fiber::FiberCallback(void *udata)
 
 #else
 
+#if defined(__linux__) && !defined(__GLIBC__)
+    #error Only glibc is supported on Linux at the moment
+#endif
+
 static RG_THREAD_LOCAL ucontext_t fib_self;
 static RG_THREAD_LOCAL ucontext_t *fib_run;
 
