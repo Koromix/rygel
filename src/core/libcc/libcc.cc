@@ -3635,7 +3635,10 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
                     }
 
                     if (write_buf.len) {
-                        if (!WriteFileEx(in_pipe[1], write_buf.ptr, write_buf.len, &proc_in.ov, PendingIO::CompletionHandler)) {
+                        RG_ASSERT(write_buf.len < UINT_MAX);
+
+                        if (!WriteFileEx(in_pipe[1], write_buf.ptr, (DWORD)write_buf.len,
+                                         &proc_in.ov, PendingIO::CompletionHandler)) {
                             proc_in.err = GetLastError();
                         }
                     } else {
@@ -4480,7 +4483,7 @@ void FillRandomSafe(void *out_buf, Size len)
     for (Size i = copy_len; i < len; i += RG_SIZE(rnd_buf)) {
         RunChaCha20(rnd_state, rnd_buf);
 
-        Size copy_len = std::min(RG_SIZE(rnd_buf), len - i);
+        copy_len = std::min(RG_SIZE(rnd_buf), len - i);
         memcpy_safe((uint8_t *)out_buf + i, rnd_buf, (size_t)copy_len);
         ZeroMemorySafe(rnd_buf, copy_len);
         rnd_offset = copy_len;
@@ -4908,9 +4911,7 @@ Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
     }
     RG_DEFER_N(self_guard) {
         if (!fib_fibers) {
-            bool success = ConvertFiberToThread();
-            RG_ASSERT(success);
-
+            RG_CRITICAL(ConvertFiberToThread(), "ConvertFiberToThread() failed: %1", GetWin32ErrorString());
             fib_self = nullptr;
         }
     };
@@ -4939,9 +4940,7 @@ Fiber::~Fiber()
         fiber = nullptr;
 
         if (!--fib_fibers && fib_self) {
-            bool success = ConvertFiberToThread();
-            RG_ASSERT(success);
-
+            RG_CRITICAL(ConvertFiberToThread(), "ConvertFiberToThread() failed: %1", GetWin32ErrorString());
             fib_self = nullptr;
         }
     }

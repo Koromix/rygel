@@ -268,10 +268,10 @@ In order for this to work, you must first install the service from an elevated c
             break;
         } else if (buf[0] == 2) { // stdout
             DWORD dummy;
-            ::WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf + 1, buf_len - 1, &dummy, nullptr);
+            ::WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buf + 1, (DWORD)buf_len - 1, &dummy, nullptr);
         } else if (buf[0] == 3) { // stderr
             DWORD dummy;
-            ::WriteFile(GetStdHandle(STD_ERROR_HANDLE), buf + 1, buf_len - 1, &dummy, nullptr);
+            ::WriteFile(GetStdHandle(STD_ERROR_HANDLE), buf + 1, (DWORD)buf_len - 1, &dummy, nullptr);
         } else {
             goto malformed;
         }
@@ -607,7 +607,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
                         memcpy_safe(proc_in.buf, client_in.buf, proc_in.len);
                         client_in.len = -1;
 
-                        if (!proc_in.err && !WriteFileEx(in_pipe[1], proc_in.buf, proc_in.len,
+                        if (!proc_in.err && !WriteFileEx(in_pipe[1], proc_in.buf, (DWORD)proc_in.len,
                                                          &proc_in.ov, PendingIO::CompletionHandler)) {
                             proc_in.err = GetLastError();
                         }
@@ -649,7 +649,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
                     memcpy_safe(client_out.buf, proc_out.buf, client_out.len);
                     proc_out.len = -1;
 
-                    if (!client_out.err && !WriteFileEx(pipe, client_out.buf, client_out.len,
+                    if (!client_out.err && !WriteFileEx(pipe, client_out.buf, (DWORD)client_out.len,
                                                         &client_out.ov, PendingIO::CompletionHandler)) {
                         client_out.err = GetLastError();
                     }
@@ -689,7 +689,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
                     memcpy_safe(client_err.buf, proc_err.buf, client_err.len);
                     proc_err.len = -1;
 
-                    if (!client_err.err && !WriteFileEx(pipe, client_err.buf, client_err.len,
+                    if (!client_err.err && !WriteFileEx(pipe, client_err.buf, (DWORD)client_err.len,
                                                         &client_err.ov, PendingIO::CompletionHandler)) {
                         client_err.err = GetLastError();
                     }
