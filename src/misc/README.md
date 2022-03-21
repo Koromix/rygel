@@ -40,3 +40,5 @@ meestic -m Breathe -s 0 "#FFA100" MsiBlue
 # Quickly transition between Magenta, Orange and MsiBlue colors
 meestic -m Transition -s 2 Magenta Orange MsiBlue
 ```
+
+Be careful, color names and most options are **case-sensitive**.

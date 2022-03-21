@@ -248,7 +248,9 @@ Examples:
     %!..+%1 -m Breathe -s 0 "#FFA100" MsiBlue%!0
 
     Quickly transition between Magenta, Orange and MsiBlue colors
-    %!..+%1 -m Transition -s 2 Magenta Orange MsiBlue%!0)", FelixTarget);
+    %!..+%1 -m Transition -s 2 Magenta Orange MsiBlue%!0
+
+Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTarget);
     };
 
     // Handle version
