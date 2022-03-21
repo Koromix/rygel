@@ -4889,7 +4889,7 @@ void AsyncPool::RunTask(Task *task)
 // Fibers
 // ------------------------------------------------------------------------
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static RG_THREAD_LOCAL int fib_fibers;
 static RG_THREAD_LOCAL void *fib_self;
@@ -4993,11 +4993,7 @@ void WINAPI Fiber::FiberCallback(void *udata)
     SwitchToFiber(fib_self);
 }
 
-#else
-
-#if defined(__linux__) && !defined(__GLIBC__)
-    #error Only glibc is supported on Linux at the moment
-#endif
+#elif defined(RG_FIBER_USE_UCONTEXT)
 
 static RG_THREAD_LOCAL ucontext_t fib_self;
 static RG_THREAD_LOCAL ucontext_t *fib_run;
@@ -5075,6 +5071,90 @@ void Fiber::FiberCallback(unsigned int high, unsigned int low)
     self->done = true;
 
     RG_CRITICAL(swapcontext(&self->ucp, &fib_self) == 0, "swapcontext() failed: %1", strerror(errno));
+}
+
+#else
+
+#warning makecontext API is not available, using slower thread-based implementation
+
+static RG_THREAD_LOCAL std::unique_lock<std::mutex> *fib_lock;
+static RG_THREAD_LOCAL Fiber *fib_self;
+
+Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
+    : f(f)
+{
+    thread = std::thread(ThreadCallback, this);
+    done = false;
+
+    while (toggle == 1) {
+        cv.wait(lock);
+    }
+}
+
+Fiber::~Fiber()
+{
+    // We are forced to execute it until the end
+    Finalize();
+
+    if (thread.joinable()) {
+        thread.join();
+    }
+}
+
+void Fiber::SwitchTo()
+{
+    if (!done) {
+        Toggle(1, &lock);
+    }
+}
+
+bool Fiber::Finalize()
+{
+    fib_lock = nullptr;
+    SwitchTo();
+
+    return success;
+}
+
+bool Fiber::SwitchBack()
+{
+    if (fib_lock) {
+        Fiber *self = fib_self;
+        self->Toggle(0, fib_lock);
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void Fiber::ThreadCallback(void *udata)
+{
+    Fiber *self = (Fiber *)udata;
+
+    std::unique_lock<std::mutex> lock(self->mutex);
+
+    fib_lock = &lock;
+    fib_self = self;
+
+    // Wait for our turn
+    self->Toggle(0, fib_lock);
+
+    self->success = self->f();
+    self->done = true;
+
+    self->toggle = 0;
+    self->cv.notify_one();
+}
+
+void Fiber::Toggle(int to, std::unique_lock<std::mutex> *lock)
+{
+    toggle = to;
+
+    cv.notify_one();
+    while (toggle == to) {
+        cv.wait(*lock);
+    }
 }
 
 #endif

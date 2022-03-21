@@ -33,10 +33,13 @@
 #include <string.h>
 #include <type_traits>
 #include <utility>
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <intrin.h>
-#else
+#elif !defined(__linux__) || defined(__GLIBC__)
+    #define RG_FIBER_USE_UCONTEXT
     #include <ucontext.h>
+#else
+    #include <thread>
 #endif
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
@@ -4048,8 +4051,15 @@ class Fiber {
 
 #ifdef _WIN32
     void *fiber = nullptr;
-#else
+#elif defined(RG_FIBER_USE_UCONTEXT)
     ucontext_t ucp = {};
+#else
+    std::thread thread;
+
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::unique_lock<std::mutex> lock { mutex };
+    int toggle = 1;
 #endif
 
     bool done = true;
@@ -4069,8 +4079,11 @@ private:
     static void FiberCallback(void *udata);
 #elif defined(_WIN32)
     static void __stdcall FiberCallback(void *udata);
-#else
+#elif defined(RG_FIBER_USE_UCONTEXT)
     static void FiberCallback(unsigned int high, unsigned int low);
+#else
+    static void ThreadCallback(void *udata);
+    void Toggle(int to, std::unique_lock<std::mutex> *lock);
 #endif
 };
 
