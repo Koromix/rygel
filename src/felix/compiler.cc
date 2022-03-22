@@ -261,6 +261,9 @@ public:
             supported |= (int)CompileFeature::SafeStack;
         }
         supported |= (int)CompileFeature::Cxx17;
+        if (host == HostPlatform::Windows) {
+            supported |= (int)CompileFeature::NoConsole;
+        }
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -607,6 +610,9 @@ public:
         if (features & (int)CompileFeature::ShuffleCode) {
             Fmt(&buf, " -Wl,--shuffle-sections=0");
         }
+        if (features & (int)CompileFeature::NoConsole) {
+            Fmt(&buf, " -Wl,/subsystem:windows, -Wl,/entry:mainCRTStartup");
+        }
 
         if (ld) {
             Fmt(&buf, " -fuse-ld=%1", ld);
@@ -698,6 +704,9 @@ public:
         }
         supported |= (int)CompileFeature::ZeroInit;
         supported |= (int)CompileFeature::Cxx17;
+        if (host == HostPlatform::Windows) {
+            supported |= (int)CompileFeature::NoConsole;
+        }
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -992,6 +1001,9 @@ public:
         if (host == HostPlatform::Windows) {
             Fmt(&buf, " -lssp");
         }
+        if (features & (int)CompileFeature::NoConsole) {
+            Fmt(&buf, " -mwindows");
+        }
 
         if (ld) {
             Fmt(&buf, " -fuse-ld=%1", ld);
@@ -1057,6 +1069,9 @@ public:
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::CFI;
         supported |= (int)CompileFeature::Cxx17;
+        if (host == HostPlatform::Windows) {
+            supported |= (int)CompileFeature::NoConsole;
+        }
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -1270,7 +1285,10 @@ public:
             Fmt(&buf, " /DEBUG:NONE");
         }
         if (features & (int)CompileFeature::CFI) {
-            Fmt(&buf, " /guard:cf /guard:ehcont");
+            Fmt(&buf, " /GUARD:cf /GUARD:ehcont");
+        }
+        if (features & (int)CompileFeature::NoConsole) {
+            Fmt(&buf, " /SUBSYSTEM:windows /ENTRY:mainCRTStartup");
         }
 
         if (env_flags) {

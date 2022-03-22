@@ -92,7 +92,8 @@ enum class CompileFeature {
     ZeroInit = 1 << 12,
     CFI = 1 << 13,
     ShuffleCode = 1 << 14,
-    Cxx17 = 1 << 15
+    Cxx17 = 1 << 15,
+    NoConsole = 1 << 16
 };
 static const OptionDesc CompileFeatureOptions[] = {
     {"PCH",           "Use precompiled headers for faster compilation"},
@@ -110,7 +111,8 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"ZeroInit",      "Zero-init all undefined variables (Clang)"},
     {"CFI",           "Enable forward-edge CFI protection (Clang LTO)"},
     {"ShuffleCode",   "Randomize ordering of data and functions (Clang)"},
-    {"C++17",         "Use C++17 standard instead of C++20"}
+    {"C++17",         "Use C++17 standard instead of C++20"},
+    {"NoConsole",     "Link with /subsystem:windows (only for Windows)"}
 };
 
 enum class SourceType {
