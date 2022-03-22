@@ -118,9 +118,9 @@ static bool ParseColor(const char *str, RgbColor *out_color)
             return false;
         }
 
-        out_color->red = (ParseHexadecimalChar(remain[0]) << 4) | ParseHexadecimalChar(remain[1]);
-        out_color->green = (ParseHexadecimalChar(remain[2]) << 4) | ParseHexadecimalChar(remain[3]);
-        out_color->blue = (ParseHexadecimalChar(remain[4]) << 4) | ParseHexadecimalChar(remain[5]);
+        out_color->red = (uint8_t)((ParseHexadecimalChar(remain[0]) << 4) | ParseHexadecimalChar(remain[1]));
+        out_color->green = (uint8_t)((ParseHexadecimalChar(remain[2]) << 4) | ParseHexadecimalChar(remain[3]));
+        out_color->blue = (uint8_t)((ParseHexadecimalChar(remain[4]) << 4) | ParseHexadecimalChar(remain[5]));
 
         return true;
     }
