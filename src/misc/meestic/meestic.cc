@@ -144,6 +144,27 @@ static void DumpPacket(Span<const uint8_t> bytes)
     }
 }
 
+static hs_port *FindDevice()
+{
+    hs_match_spec spec = HS_MATCH_TYPE_VID_PID(HS_DEVICE_TYPE_HID, 0x1462, 0x1564, nullptr);
+
+    hs_device *dev;
+    int ret = hs_find(&spec, 1, &dev);
+    if (ret < 0)
+        return nullptr;
+    if (!ret) {
+        LogError("Cannot find Mystic Light HID device (1462:1564)");;
+        return nullptr;
+    }
+    RG_DEFER { hs_device_unref(dev); };
+
+    hs_port *port;
+    if (hs_port_open(dev, HS_PORT_MODE_WRITE, &port) < 0)
+        return nullptr;
+
+    return port;
+}
+
 static bool ApplySettings(const LightSettings &settings)
 {
     // Sanity checks
@@ -164,22 +185,8 @@ static bool ApplySettings(const LightSettings &settings)
         return false;
     }
 
-    hs_device *dev;
-    {
-        hs_match_spec spec = HS_MATCH_TYPE_VID_PID(HS_DEVICE_TYPE_HID, 0x1462, 0x1564, nullptr);
-
-        int ret = hs_find(&spec, 1, &dev);
-        if (ret < 0)
-            return false;
-        if (!ret) {
-            LogError("Cannot find Mystic Light HID device (1462:1564)");;
-            return false;
-        }
-    }
-    RG_DEFER { hs_device_unref(dev); };
-
-    hs_port *port;
-    if (hs_port_open(dev, HS_PORT_MODE_WRITE, &port) < 0)
+    hs_port *port = FindDevice();
+    if (!port)
         return false;
     RG_DEFER { hs_port_close(port); };
 
