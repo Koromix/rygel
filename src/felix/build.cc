@@ -93,7 +93,7 @@ static bool UpdateVersionSource(const char *target_name, const BuildSettings &bu
 }
 
 template <typename T>
-static bool SaveXmlString(const pugi::xml_document *doc, T *out_buf)
+static bool AssembleResourceFile(const pugi::xml_document *doc, const char *icon_filename, T *out_buf)
 {
     class StaticWriter: public pugi::xml_writer {
         T *out_buf;
@@ -144,6 +144,11 @@ static bool SaveXmlString(const pugi::xml_document *doc, T *out_buf)
 
     StaticWriter writer(out_buf);
     writer.Append("#include <winuser.h>\n\n");
+    if (icon_filename) {
+        writer.Append("1 ICON \"");
+        writer.Append(icon_filename);
+        writer.Append("\"\n");
+    }
     writer.Append("1 24 {\n\t\"");
     doc->save(writer);
     writer.Append("\"\n}\n");
@@ -151,7 +156,7 @@ static bool SaveXmlString(const pugi::xml_document *doc, T *out_buf)
     return writer.IsValid();
 }
 
-static bool UpdateResourceFile(const char *target_name, bool fake, const char *dest_filename)
+static bool UpdateResourceFile(const char *target_name, const char *icon_filename, bool fake, const char *dest_filename)
 {
     static const char *const manifest = R"(
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -174,25 +179,25 @@ static bool UpdateResourceFile(const char *target_name, bool fake, const char *d
     pugi::xml_node identity = doc.select_node("/assembly/assemblyIdentity").node();
     identity.attribute("name").set_value(target_name);
 
-    LocalArray<char, 2048> xml;
-    if (!SaveXmlString(&doc, &xml))
+    LocalArray<char, 2048> res;
+    if (!AssembleResourceFile(&doc, icon_filename, &res))
         return false;
 
     bool new_manifest;
     if (TestFile(dest_filename, FileType::File)) {
-        char old_xml[1024] = {};
+        char old_res[2048] = {};
         {
             StreamReader reader(dest_filename);
-            reader.Read(RG_SIZE(old_xml) - 1, old_xml);
+            reader.Read(RG_SIZE(old_res) - 1, old_res);
         }
 
-        new_manifest = !TestStr(old_xml, xml);
+        new_manifest = !TestStr(old_res, res);
     } else {
         new_manifest = true;
     }
 
     if (!fake && new_manifest) {
-        return WriteFile(xml, dest_filename);
+        return WriteFile(res, dest_filename);
     } else {
         return true;
     }
@@ -386,14 +391,18 @@ bool Builder::AddTarget(const TargetInfo &target)
         const char *rc_filename = Fmt(&str_alloc, "%1%/Misc%/%2.rc", cache_directory, target.name).ptr;
         const char *res_filename = Fmt(&str_alloc, "%1%/Misc%/%2.res", cache_directory, target.name).ptr;
 
-        if (!UpdateResourceFile(target.name, build.fake, rc_filename))
+        if (!UpdateResourceFile(target.name, target.icon_filename, build.fake, rc_filename))
             return false;
 
         Command cmd = {};
         build.compiler->MakeResourceCommand(rc_filename, res_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Build %!..+%1%!0 resource file", target.name).ptr;
-        AppendNode(text, res_filename, cmd, rc_filename, ns);
+        if (target.icon_filename) {
+            AppendNode(text, res_filename, cmd, {rc_filename, target.icon_filename}, ns);
+        } else {
+            AppendNode(text, res_filename, cmd, rc_filename, ns);
+        }
 
         obj_filenames.Append(res_filename);
     }

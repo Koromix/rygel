@@ -30,6 +30,8 @@ struct TargetConfig {
     unsigned int hosts;
     bool enable_by_default;
 
+    const char *icon_filename;
+
     FileSet src_file_set;
     const char *c_pch_filename;
     const char *cxx_pch_filename;
@@ -207,6 +209,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
                     if (prop.key == "EnableByDefault") {
                         valid &= ParseBool(prop.value, &target_config.enable_by_default);
+                    } else if (prop.key == "IconFile") {
+                        target_config.icon_filename = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "SourceDirectory") {
                         valid &= AppendNormalizedPath(prop.value,
                                                       &set.str_alloc, &target_config.src_file_set.directories);
@@ -361,6 +365,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     target->type = target_config->type;
     target->hosts = target_config->hosts;
     target->enable_by_default = target_config->enable_by_default;
+    target->icon_filename = target_config->icon_filename;
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->export_definitions, target_config->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);

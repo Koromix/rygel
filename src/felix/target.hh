@@ -44,6 +44,8 @@ struct TargetInfo {
     unsigned int hosts;
     bool enable_by_default;
 
+    const char *icon_filename = nullptr;
+
     HeapArray<const TargetInfo *> imports;
 
     HeapArray<const char *> definitions;
