@@ -1823,7 +1823,9 @@ bool RedirectLogToWindowsEvents(const char *name)
     atexit([]() { CloseEventLog(log); });
 
     SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
-        WORD type;
+        WORD type = 0;
+        LocalArray<wchar_t, 8192> buf_w;
+
         switch (level)  {
             case LogLevel::Debug:
             case LogLevel::Info: { type = EVENTLOG_INFORMATION_TYPE; } break;
@@ -1831,19 +1833,25 @@ bool RedirectLogToWindowsEvents(const char *name)
             case LogLevel::Error: { type = EVENTLOG_ERROR_TYPE; } break;
         }
 
-        wchar_t ctx_w[2048];
-        wchar_t msg_w[2048];
-        LocalArray<const wchar_t *, 2> strings_w;
+        // Append context
         if (ctx) {
-            if (ConvertUtf8ToWin32Wide(ctx, ctx_w) < 0)
+            Size len = ConvertUtf8ToWin32Wide(ctx, buf_w.Take(0, RG_LEN(buf_w.data) / 2));
+            if (len < 0)
                 return;
-            strings_w.Append(ctx_w);
+            wcscpy(buf_w.data + len, L": ");
+            buf_w.len += len + 2;
         }
-        if (ConvertUtf8ToWin32Wide(msg, msg_w) < 0)
-            return;
-        strings_w.Append(msg_w);
 
-        ReportEventW(log, type, 0, 0, nullptr, (WORD)strings_w.len, 0, strings_w.data, nullptr);
+        // Append message
+        {
+            Size len = ConvertUtf8ToWin32Wide(msg, buf_w.TakeAvailable());
+            if (len < 0)
+                return;
+            buf_w.len += len;
+        }
+
+        const wchar_t *ptr = buf_w.data;
+        ReportEventW(log, type, 0, 0, nullptr, 1, 0, &ptr, nullptr);
     });
 
     return true;
