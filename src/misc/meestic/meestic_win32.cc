@@ -89,12 +89,12 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 HMENU menu = CreatePopupMenu();
                 RG_DEFER { DestroyMenu(menu); };
 
-                AppendMenuA(menu, MF_STRING, 1, "Enable");
-                AppendMenuA(menu, MF_STRING, 2, "Disable");
+                AppendMenuA(menu, MF_STRING, 1, "&Enable");
+                AppendMenuA(menu, MF_STRING, 2, "&Disable");
                 AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-                AppendMenuA(menu, MF_STRING, 3, "About");
+                AppendMenuA(menu, MF_STRING, 3, "&About");
                 AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-                AppendMenuA(menu, MF_STRING, 4, "Exit");
+                AppendMenuA(menu, MF_STRING, 4, "E&xit");
 
                 int align = GetSystemMetrics(SM_MENUDROPALIGNMENT) ? TPM_RIGHTALIGN : TPM_LEFTALIGN;
                 int action = (int)TrackPopupMenu(menu, align | TPM_BOTTOMALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD,
