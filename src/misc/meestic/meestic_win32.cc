@@ -37,6 +37,7 @@ static Config config;
 static Size profile_idx = 0;
 
 static HWND hwnd;
+static NOTIFYICONDATAA notify;
 
 static void ShowAboutDialog()
 {
@@ -82,6 +83,8 @@ static void ShowAboutDialog()
 
 static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
+    static UINT taskbar_created = RegisterWindowMessageA("TaskbarCreated");
+
     switch (msg) {
         case WM_USER_TRAY: {
             int button = LOWORD(lparam);
@@ -144,6 +147,13 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         case WM_CLOSE: {
             PostQuitMessage(0);
             return 0;
+        } break;
+
+        default: {
+            if (msg == taskbar_created && !Shell_NotifyIconA(NIM_ADD, &notify)) {
+                LogError("Failed to restore tray icon: %1", GetWin32ErrorString());
+                PostQuitMessage(1);
+            }
         } break;
     }
 
@@ -242,7 +252,7 @@ Options:
 
     // Create hidden window
     hwnd = CreateWindowExA(0, cls_name, win_name, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-                           CW_USEDEFAULT, CW_USEDEFAULT, HWND_MESSAGE, nullptr, module, nullptr);
+                           CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, module, nullptr);
     if (!hwnd) {
         LogError("Failed to create window named '%1': %2", win_name, GetWin32ErrorString());
         return 1;
@@ -259,7 +269,6 @@ Options:
     RG_DEFER { UnhookWindowsHookEx(hook); };
 
     // Create tray icon
-    NOTIFYICONDATAA notify = {};
     {
         notify.cbSize = RG_SIZE(notify);
         notify.hWnd = hwnd;
@@ -281,16 +290,25 @@ Options:
         return 1;
 
     // Run main message loop
+    int code;
     {
         MSG msg;
+        DWORD ret;
 
-        while (GetMessage(&msg, nullptr, 0, 0)) {
+        msg.wParam = 1;
+        while ((ret = GetMessage(&msg, nullptr, 0, 0))) {
+            if (ret < 0) {
+                LogError("GetMessage() failed: %1", GetWin32ErrorString());
+                return 1;
+            }
+
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+        code = (int)msg.wParam;
     }
 
-    return 0;
+    return code;
 }
 
 }
