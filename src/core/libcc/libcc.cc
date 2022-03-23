@@ -1735,8 +1735,16 @@ static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *
 
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
 {
+    static RG_THREAD_LOCAL bool skip = false;
+
     static bool init = false;
     static bool log_times;
+
+    // Avoid deadlock if a log filter or the handler tries to log something while handling a previous call
+    if (skip)
+        return;
+    skip = true;
+    RG_DEFER { skip = false; };
 
     if (!init) {
         // Do this first... GetDebugFlag() might log an error or something, in which
