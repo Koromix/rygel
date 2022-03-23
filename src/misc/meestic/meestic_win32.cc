@@ -62,12 +62,13 @@ static void ShowAboutDialog()
     config.pszMainInstruction = main;
     config.pszContent = content;
 
-    config.pfCallback = [](HWND, UINT msg, WPARAM, LPARAM lparam, LONG_PTR) {
+    config.pfCallback = [](HWND hwnd, UINT msg, WPARAM, LPARAM lparam, LONG_PTR) {
         if (msg == TDN_HYPERLINK_CLICKED) {
             const wchar_t *url = (const wchar_t *)lparam;
             ShellExecuteW(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
 
-            return (HRESULT)S_FALSE;
+            // Close the dialog by simulating a button click
+            PostMessageW(hwnd, TDM_CLICK_BUTTON, IDOK, 0);
         }
 
         return (HRESULT)S_OK;
