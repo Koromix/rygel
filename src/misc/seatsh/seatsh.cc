@@ -121,7 +121,7 @@ static int RunClient(int argc, char **argv)
 R"(Usage: %!..+%1 [options] <bin> [args...]%!0
 
 Options:
-    %!..+-w, --work_dir <dir>%!0   Change working directory
+    %!..+-w, --work_dir <dir>%!0         Change working directory
 
 In order for this to work, you must first install the service from an elevated command prompt:
 
