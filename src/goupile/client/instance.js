@@ -206,7 +206,7 @@ function InstanceController() {
                             style="background-position-y: calc(-274px + 1.2em);"
                             @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
                 ` : ''}
-                ${profile.lock != null && profile.lock.unlockable ? html`
+                ${profile.lock != null ? html`
                     <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
                             @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
                 ` : ''}
@@ -263,7 +263,6 @@ function InstanceController() {
                                 <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
                                 <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
                                 <hr/>
-                                ${app.lockable ? html`<button @click=${ui.wrapAction(e => goupile.runLockDialog(e, form_record.chain[0].ulid))}>Verrouiller</button>` : ''}
                             ` : ''}
                             ${profile.admin ? html`
                                 <button @click=${e => window.open('/admin/')}>Administration</button>
@@ -1042,7 +1041,7 @@ function InstanceController() {
 
                         let entry;
                         if (obj != null) {
-                            entry = await goupile.decryptSymmetric(obj.enc, 'records');
+                            entry = await goupile.decryptSymmetric(obj.enc, ['records', 'lock']);
                             if (hid != null)
                                 entry.hid = hid;
                         } else {
@@ -1139,7 +1138,7 @@ function InstanceController() {
                     if (obj == null)
                         throw new Error('Cet enregistrement est introuvable');
 
-                    let entry = await goupile.decryptSymmetric(obj.enc, 'records');
+                    let entry = await goupile.decryptSymmetric(obj.enc, ['records', 'lock']);
 
                     // Mark as deleted with special fragment
                     let fragment = {
@@ -1577,7 +1576,7 @@ function InstanceController() {
             // Go to default record?
             if (!ulid && !app.panels.data) {
                 if (profile.lock != null) {
-                    ulid = profile.lock.ctx;
+                    ulid = profile.lock.ulid;
                 } else {
                     let range = IDBKeyRange.only(profile.namespaces.records + `/${new_route.form.key}`);
                     let keys = await db.list('rec_records/form', range);
@@ -1653,7 +1652,7 @@ function InstanceController() {
             await expandRecord(new_record, load);
 
             // Safety checks
-            if (profile.lock != null && !new_record.chain.some(record => record.ulid === profile.lock.ctx))
+            if (profile.lock != null && !new_record.chain.some(record => record.ulid === profile.lock.ulid))
                 throw new Error('Enregistrement non autorisé');
             if (!isPageEnabled(new_route.page, new_record)) {
                 new_route.page = findEnabledPage(new_route.form, new_record);
@@ -2217,7 +2216,7 @@ function InstanceController() {
     async function decryptRecord(obj, version, allow_deleted) {
         let historical = (version != null);
 
-        let entry = await goupile.decryptSymmetric(obj.enc, 'records');
+        let entry = await goupile.decryptSymmetric(obj.enc, ['records', 'lock']);
         let fragments = entry.fragments;
 
         let form = app.forms.get(entry.form);
@@ -2372,7 +2371,7 @@ function InstanceController() {
 
                 for (let obj of objects) {
                     try {
-                        let entry = await goupile.decryptSymmetric(obj.enc, 'records');
+                        let entry = await goupile.decryptSymmetric(obj.enc, ['records', 'lock']);
                         entries.push(entry);
                     } catch (err) {
                         console.log(err);

@@ -186,10 +186,7 @@ const goupile = new function() {
                     },
                     namespaces: lock.namespaces,
                     keys: lock.keys,
-                    lock: {
-                        unlockable: true,
-                        ctx: lock.ctx
-                    }
+                    lock: lock.lock
                 };
                 await updateProfile(new_profile);
 
@@ -814,6 +811,8 @@ const goupile = new function() {
             throw new Error('Lock context must not be undefined');
         if (session_rnd == null)
             throw new Error('Cannot lock without session cookie');
+        if (profile_keys.lock == null)
+            throw new Error('Cannot lock session without lock key');
 
         await self.confirmDangerousAction(e);
 
@@ -826,13 +825,15 @@ const goupile = new function() {
             username: profile.username,
             salt: bytesToBase64(salt),
             errors: 0,
-            namespaces: profile.namespaces,
-            keys: {},
+            namespaces: {
+                records: profile.namespaces.records
+            },
+            keys: {
+                records: bytesToBase64(profile_keys.records)
+            },
             session_rnd: enc,
-            ctx: ctx
+            lock: ctx
         };
-        for (let key in lock.namespaces)
-            lock.keys[key] = bytesToBase64(profile_keys[key]);
 
         await storeSessionValue('lock', lock);
         util.deleteCookie('session_rnd', '/');
@@ -932,20 +933,32 @@ const goupile = new function() {
         current_url = url;
     };
 
-    this.encryptSymmetric = function(obj, namespace) {
-        let key = profile_keys[namespace];
+    this.encryptSymmetric = function(obj, ns) {
+        let key = profile_keys[ns];
         if (key == null)
-            throw new Error(`Cannot encrypt without '${namespace}' key`);
+            throw new Error(`Cannot encrypt without '${ns}' key`);
 
         return encryptSecretBox(obj, key);
     };
 
-    this.decryptSymmetric = function(enc, namespace) {
-        let key = profile_keys[namespace];
-        if (key == null)
-            throw new Error(`Cannot decrypt without '${namespace}' key`);
+    this.decryptSymmetric = function(enc, namespaces) {
+        let last_err;
 
-        return decryptSecretBox(enc, key);
+        for (let ns of namespaces) {
+            let key = profile_keys[ns];
+
+            if (key == null)
+                continue;
+
+            try {
+                let obj = decryptSecretBox(enc, key);
+                return obj;
+            } catch (err) {
+                last_err = err;
+            }
+        }
+
+        throw last_err || new Error(`Cannot encrypt without valid namespace key`);
     };
 
     this.encryptBackup = function(obj) {
@@ -960,7 +973,7 @@ const goupile = new function() {
         return encryptBox(obj, backup_key, key);
     };
 
-    async function encryptSecretBox(obj, key) {
+    function encryptSecretBox(obj, key) {
         let nonce = new Uint8Array(24);
         crypto.getRandomValues(nonce);
 
@@ -976,7 +989,7 @@ const goupile = new function() {
         return enc;
     }
 
-    async function decryptSecretBox(enc, key) {
+    function decryptSecretBox(enc, key) {
         let nonce = base64ToBytes(enc.nonce);
         let box = base64ToBytes(enc.box);
 
@@ -995,7 +1008,7 @@ const goupile = new function() {
         return obj;
     }
 
-    async function encryptBox(obj, public_key, secret_key) {
+    function encryptBox(obj, public_key, secret_key) {
         let nonce = new Uint8Array(24);
         crypto.getRandomValues(nonce);
 
@@ -1011,7 +1024,7 @@ const goupile = new function() {
         return enc;
     }
 
-    async function loadSessionValue(key) {
+    function loadSessionValue(key) {
         key = ENV.urls.base + key;
 
         let json = localStorage.getItem(key);
@@ -1021,14 +1034,14 @@ const goupile = new function() {
         return JSON.parse(json);
     }
 
-    async function storeSessionValue(key, obj) {
+    function storeSessionValue(key, obj) {
         key = ENV.urls.base + key;
         obj = JSON.stringify(obj);
 
         localStorage.setItem(key, obj);
     }
 
-    async function deleteSessionValue(key) {
+    function deleteSessionValue(key) {
         key = ENV.urls.base + key;
         localStorage.removeItem(key);
     }

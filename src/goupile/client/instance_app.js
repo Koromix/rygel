@@ -21,7 +21,6 @@ function ApplicationInfo() {
         data: !goupile.isLocked(),
         view: true
     };
-    this.lockable = false;
 }
 
 function FormInfo(key, title) {
@@ -182,10 +181,6 @@ function ApplicationBuilder(app) {
             page.form = new FormInfo(key, title);
         }
         page.url = `${ENV.urls.instance}main/${key}`;
-
-        // XXX: Let the user decide the global option, instead of this hack
-        if (page.getOption('lockable'))
-            app.lockable = true;
 
         let item = {
             key: key,

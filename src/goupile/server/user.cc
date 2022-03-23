@@ -245,6 +245,9 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                 } else {
                     json.Key("records"); json.String(session->local_key);
                 }
+                if (session->type == SessionType::Login) {
+                    json.Key("lock"); json.String(instance->config.lock_key);
+                }
                 json.EndObject();
                 if (instance->config.shared_key) {
                     json.Key("encrypt_usb"); json.Bool(true);

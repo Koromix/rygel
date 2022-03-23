@@ -52,6 +52,7 @@ public:
         SyncMode sync_mode = SyncMode::Online;
         int max_file_size = (int)Megabytes(16);
         const char *shared_key = nullptr;
+        const char *lock_key = nullptr;
         const char *token_key = nullptr;
         uint8_t token_skey[32];
         uint8_t token_pkey[32];

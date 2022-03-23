@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 50;
+const int InstanceVersion = 51;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -126,6 +126,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     config.name = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "SharedKey")) {
                     config.shared_key = DuplicateString(value, &str_alloc).ptr;
+                } else if (TestStr(setting, "LockKey")) {
+                    config.lock_key = DuplicateString(value, &str_alloc).ptr;
                 }
             }
         }
@@ -1499,9 +1501,21 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 50: {
+                char lock_key[45];
+                {
+                    uint8_t buf[32];
+                    FillRandomSafe(buf);
+                    sodium_bin2base64(lock_key, RG_SIZE(lock_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                }
+
+                if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('LockKey', ?1);", lock_key))
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 50);
+            RG_STATIC_ASSERT(InstanceVersion == 51);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
