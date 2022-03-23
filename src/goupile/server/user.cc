@@ -414,7 +414,7 @@ static int CountEvents(const char *where, const char *who)
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    io->RunAsync([=]() {
+    io->RunAsync([=]() mutable {
         // Read POST values
         const char *username;
         const char *password;
@@ -439,16 +439,9 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 
         sq_Statement stmt;
         if (instance) {
-            if (instance->slaves.len) {
-                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin,
-                                                    u.local_key, u.confirm, u.secret
-                                             FROM dom_users u
-                                             INNER JOIN dom_permissions p ON (p.userid = u.userid)
-                                             INNER JOIN dom_instances i ON (i.instance = p.instance)
-                                             WHERE u.username = ?1 AND i.master = ?2 AND
-                                                   p.permissions > 0)", &stmt))
-                    return;
-            } else {
+            InstanceHolder *master = instance->master;
+
+            if (!instance->slaves.len) {
                 if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin,
                                                     u.local_key, u.confirm, u.secret
                                              FROM dom_users u
@@ -457,9 +450,28 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                                              WHERE u.username = ?1 AND i.instance = ?2 AND
                                                    p.permissions > 0)", &stmt))
                     return;
+                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+
+                stmt.Run();
             }
-            sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+
+            if (!stmt.IsRow() && master->slaves.len) {
+                instance = master;
+
+                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin,
+                                                    u.local_key, u.confirm, u.secret
+                                             FROM dom_users u
+                                             INNER JOIN dom_permissions p ON (p.userid = u.userid)
+                                             INNER JOIN dom_instances i ON (i.instance = p.instance)
+                                             WHERE u.username = ?1 AND i.master = ?2 AND
+                                                   p.permissions > 0)", &stmt))
+                    return;
+                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
+
+                stmt.Run();
+            }
         } else {
             if (!gp_domain.db.Prepare(R"(SELECT userid, password_hash, admin,
                                                 local_key, confirm, secret
@@ -467,9 +479,11 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                                          WHERE username = ?1 AND admin = 1)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+
+            stmt.Run();
         }
 
-        if (stmt.Step()) {
+        if (stmt.IsRow()) {
             int64_t userid = sqlite3_column_int64(stmt, 0);
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
             bool admin = (sqlite3_column_int(stmt, 2) == 1);
