@@ -25,7 +25,7 @@ struct ControlPacket {
     int8_t mode; // 0 = disabled, 1 = static, 2 = breating, 5 = cycle
     int8_t speed; // 0 to 2
     int8_t intensity; // 1 to 10
-    int8_t count; // 1 to 7 (or more?)
+    int8_t count; // 1 to 7 (there's space for more in the packet, I tried it but colors beyond 7 seem to be ignored)
     RgbColor colors[7];
     char _pad2[38];
 };
