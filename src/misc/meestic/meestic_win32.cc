@@ -186,7 +186,7 @@ int Main(int argc, char **argv)
     RG_DEFER { DestroyWindow(hwnd); };
 
     // We want to intercept Fn+F8, and this is not possible with RegisterHotKey because
-    // it is not mapped to a virutal key. We want the raw scan code.
+    // it is not mapped to a virtual key. We want the raw scan code.
     HHOOK hook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, nullptr, 0);
     if (!hook) {
         LogError("Failed to insert low-level keyboard hook: %1", GetWin32ErrorString());
