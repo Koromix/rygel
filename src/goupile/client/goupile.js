@@ -258,8 +258,11 @@ const goupile = new function() {
 
             d.action('Se connecter', {disabled: !d.isValid()}, async () => {
                 try {
-                    let new_profile = await login(username.value, password.value);
-                    resolve([new_profile, password.value]);
+                    let username2 = (username.value || '').trim();
+                    let password2 = (password.value || '').trim();
+
+                    let new_profile = await login(username2, password2);
+                    resolve([new_profile, password2]);
                 } catch (err) {
                     log.error(err);
                     d.refresh();

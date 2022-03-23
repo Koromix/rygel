@@ -73,8 +73,11 @@ const user = new function() {
         let username_el = document.querySelector('#usr_username');
         let password_el = document.querySelector('#usr_password');
 
+        let username = (username_el.value || '').trim();
+        let password = (password_el.value || '').trim();
+
         fieldset_el.disabled = true;
-        let p = self.login(username_el.value, password_el.value);
+        let p = self.login(username, password);
 
         p.then(success => {
             if (success) {
