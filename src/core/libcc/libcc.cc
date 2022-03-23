@@ -5906,7 +5906,11 @@ restart:
 // XXX: Maximum line length
 bool LineReader::Next(Span<char> *out_line)
 {
-    if (RG_UNLIKELY(error || eof))
+    if (eof) {
+        line_number = 0;
+        return false;
+    }
+    if (RG_UNLIKELY(error))
         return false;
 
     for (;;) {
@@ -5941,8 +5945,12 @@ void LineReader::PushLogFilter()
 {
     RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
-        Fmt(ctx_buf, "%1(%2)%3%4", st->GetFileName(), line_number,
-                                   ctx ? ": " : "", ctx ? ctx : "");
+
+        if (line_number > 0) {
+            Fmt(ctx_buf, "%1(%2)%3%4", st->GetFileName(), line_number, ctx ? ": " : "", ctx ? ctx : "");
+        } else {
+            Fmt(ctx_buf, "%1%2%3", st->GetFileName(), ctx ? ": " : "", ctx ? ctx : "");
+        }
 
         func(level, ctx_buf, msg);
     });
