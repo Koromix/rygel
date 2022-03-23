@@ -14,6 +14,7 @@
 #ifdef _WIN32
 
 #include "src/core/libcc/libcc.hh"
+#include "config.hh"
 #include "lights.hh"
 
 #ifndef NOMINMAX
@@ -32,14 +33,16 @@ namespace RG {
 #define WM_USER_TRAY (WM_USER + 1)
 #define WM_USER_TOGGLE (WM_USER + 2)
 
+static Config config;
+static Size profile_idx = 0;
+
 static HWND hwnd;
-static LightSettings settings;
 
 static void ShowAboutDialog()
 {
     HINSTANCE module = GetModuleHandle(nullptr);
 
-    TASKDIALOGCONFIG config = {};
+    TASKDIALOGCONFIG dialog = {};
 
     wchar_t title[2048];
     wchar_t main[2048];
@@ -52,17 +55,17 @@ static void ShowAboutDialog()
     }
     ConvertUtf8ToWin32Wide(R"(<a href="https://koromix.dev/misc#meestic">https://koromix.dev/</a>)", content);
 
-    config.cbSize = RG_SIZE(config);
-    config.hwndParent = hwnd;
-    config.hInstance = module;
-    config.dwFlags = TDF_ENABLE_HYPERLINKS | TDF_USE_HICON_MAIN | TDF_SIZE_TO_CONTENT;
-    config.dwCommonButtons = TDCBF_OK_BUTTON;
-    config.pszWindowTitle = title;
-    config.hMainIcon = LoadIcon(module, MAKEINTRESOURCE(1));
-    config.pszMainInstruction = main;
-    config.pszContent = content;
+    dialog.cbSize = RG_SIZE(dialog);
+    dialog.hwndParent = hwnd;
+    dialog.hInstance = module;
+    dialog.dwFlags = TDF_ENABLE_HYPERLINKS | TDF_USE_HICON_MAIN | TDF_SIZE_TO_CONTENT;
+    dialog.dwCommonButtons = TDCBF_OK_BUTTON;
+    dialog.pszWindowTitle = title;
+    dialog.hMainIcon = LoadIcon(module, MAKEINTRESOURCE(1));
+    dialog.pszMainInstruction = main;
+    dialog.pszContent = content;
 
-    config.pfCallback = [](HWND hwnd, UINT msg, WPARAM, LPARAM lparam, LONG_PTR) {
+    dialog.pfCallback = [](HWND hwnd, UINT msg, WPARAM, LPARAM lparam, LONG_PTR) {
         if (msg == TDN_HYPERLINK_CLICKED) {
             const wchar_t *url = (const wchar_t *)lparam;
             ShellExecuteW(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
@@ -74,7 +77,7 @@ static void ShowAboutDialog()
         return (HRESULT)S_OK;
     };
 
-    TaskDialogIndirect(&config, nullptr, nullptr, nullptr);
+    TaskDialogIndirect(&dialog, nullptr, nullptr, nullptr);
 }
 
 static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -90,28 +93,37 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 HMENU menu = CreatePopupMenu();
                 RG_DEFER { DestroyMenu(menu); };
 
-                AppendMenuA(menu, MF_STRING, 1, "&Enable");
-                AppendMenuA(menu, MF_STRING, 2, "&Disable");
+                for (Size i = 0; i < config.profiles.len; i++) {
+                    const ConfigProfile &profile = config.profiles[i];
+
+                    int flags = MF_STRING | (i == profile_idx ? MF_CHECKED : 0);
+                    AppendMenuA(menu, flags, i + 10, profile.name);
+                }
                 AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-                AppendMenuA(menu, MF_STRING, 3, "&About");
+                AppendMenuA(menu, MF_STRING, 1, "&About");
                 AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-                AppendMenuA(menu, MF_STRING, 4, "E&xit");
+                AppendMenuA(menu, MF_STRING, 2, "&Exit");
 
                 int align = GetSystemMetrics(SM_MENUDROPALIGNMENT) ? TPM_RIGHTALIGN : TPM_LEFTALIGN;
                 int action = (int)TrackPopupMenu(menu, align | TPM_BOTTOMALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD,
                                                  click.x, click.y, 0, hwnd, nullptr);
 
                 switch (action) {
-                    case 1: {
-                        settings.mode = LightMode::Static;
-                        ApplyLight(settings);
+                    case 0: {} break;
+
+                    case 1: { ShowAboutDialog(); } break;
+                    case 2: { PostQuitMessage(0); } break;
+
+                    default: {
+                        Size idx = action - 10;
+
+                        if (idx >= 0 && idx < config.profiles.len) {
+                            profile_idx = idx;
+
+                            const ConfigProfile &profile = config.profiles[idx];
+                            ApplyLight(profile.settings);
+                        }
                     } break;
-                    case 2: {
-                        settings.mode = LightMode::Disabled;
-                        ApplyLight(settings);
-                    } break;
-                    case 3: { ShowAboutDialog(); } break;
-                    case 4: { PostQuitMessage(0); } break;
                 }
 
                 return TRUE;
@@ -119,8 +131,14 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         } break;
 
         case WM_USER_TOGGLE: {
-            settings.mode = (settings.mode == LightMode::Disabled) ? LightMode::Static : LightMode::Disabled;
-            ApplyLight(settings);
+            do {
+                profile_idx++;
+                if (profile_idx >= config.profiles.len) {
+                    profile_idx = 0;
+                }
+            } while (config.profiles[profile_idx].manual);
+
+            ApplyLight(config.profiles[profile_idx].settings);
         } break;
 
         case WM_CLOSE: {
@@ -149,16 +167,61 @@ int Main(int argc, char **argv)
 {
     InitCommonControls();
 
-    HINSTANCE module = GetModuleHandle(nullptr);
-
-    const char *cls_name = FelixTarget;
-    const char *win_name = FelixTarget;
-
     // Redirect log when /subsystem:windows is used
     if (GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == FILE_TYPE_UNKNOWN) {
         if (!RedirectLogToWindowsEvents(FelixTarget))
             return 1;
     }
+
+    // Default config filename
+    const char *config_filename;
+    {
+        Span<const char> prefix = GetApplicationExecutable();
+        prefix.len -= prefix.end() - GetPathExtension(prefix).ptr;
+
+        config_filename = Fmt(&config.str_alloc, "%1.ini", prefix).ptr;
+    }
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 [options]%!0
+
+Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+                                 %!D..(default: %2)%!0%!0)",
+                FelixTarget, config_filename);
+    };
+
+    // Parse options
+    {
+        OptionParser opt(argc, argv);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
+            } else if (opt.TestHasFailed()) {
+                return 1;
+            }
+        }
+    }
+
+    // Parse config file
+    if (TestFile(config_filename, FileType::File)) {
+        if (!LoadConfig(config_filename, &config))
+            return 1;
+
+        profile_idx = config.default_idx;
+    } else {
+        config.profiles.Append({.name = "Enable", .settings = {.mode = LightMode::Static}});
+        config.profiles.Append({.name = "Disable", .settings = {.mode = LightMode::Disabled}});
+    }
+
+    HINSTANCE module = GetModuleHandle(nullptr);
+    const char *cls_name = FelixTarget;
+    const char *win_name = FelixTarget;
 
     // Register window class
     {
@@ -214,7 +277,7 @@ int Main(int argc, char **argv)
     RG_DEFER { Shell_NotifyIconA(NIM_DELETE, &notify); };
 
     // Check that it works once, at least
-    if (!ApplyLight(settings))
+    if (!ApplyLight(config.profiles[config.default_idx].settings))
         return 1;
 
     // Run main message loop

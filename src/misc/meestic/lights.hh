@@ -43,6 +43,7 @@ struct LightSettings {
     LocalArray<RgbColor, 7> colors;
 };
 
+bool CheckSettings(const LightSettings &settings);
 bool ApplyLight(const LightSettings &settings);
 
 }

@@ -68,25 +68,34 @@ static void DumpPacket(Span<const uint8_t> bytes)
     }
 }
 
-bool ApplyLight(const LightSettings &settings)
+bool CheckSettings(const LightSettings &settings)
 {
-    // Sanity checks
+    bool valid = true;
+
     if (settings.intensity < 0 || settings.intensity > 10) {
         LogError("Intensity must be between 0 and 10");
-        return false;
+        valid = false;
     }
     if (settings.speed < 0 || settings.speed > 2) {
         LogError("Speed must be between 0 and 2");
-        return false;
+        valid = false;
     }
     if (settings.mode == LightMode::Disabled && settings.colors.len) {
         LogError("Cannot set any color in Disabled mode");
-        return false;
+        valid = false;
     }
     if (settings.mode == LightMode::Static && settings.colors.len > 1) {
         LogError("Only one color is supported in Static mode");
-        return false;
+        valid = false;
     }
+
+    return valid;
+}
+
+bool ApplyLight(const LightSettings &settings)
+{
+    if (!CheckSettings(settings))
+        return false;
 
     hs_port *port = FindDevice();
     if (!port)
