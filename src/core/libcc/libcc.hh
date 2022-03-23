@@ -3226,6 +3226,10 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);
 void PushLogFilter(const std::function<LogFilterFunc> &func);
 void PopLogFilter();
 
+#ifdef _WIN32
+bool RedirectLogToWindowsEvents(const char *name);
+#endif
+
 // ------------------------------------------------------------------------
 // Strings
 // ------------------------------------------------------------------------

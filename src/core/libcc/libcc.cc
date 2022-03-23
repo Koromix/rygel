@@ -1801,6 +1801,47 @@ void PopLogFilter()
     delete log_filters[--log_filters_len];
 }
 
+#ifdef _WIN32
+bool RedirectLogToWindowsEvents(const char *name)
+{
+    static HANDLE log = nullptr;
+    RG_ASSERT(!log);
+
+    log = OpenEventLogA(nullptr, name);
+    if (!log) {
+        LogError("Failed to register event provider: %1", GetWin32ErrorString());
+        return false;
+    }
+    atexit([]() { CloseEventLog(log); });
+
+    SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
+        WORD type;
+        switch (level)  {
+            case LogLevel::Debug:
+            case LogLevel::Info: { type = EVENTLOG_INFORMATION_TYPE; } break;
+            case LogLevel::Warning: { type = EVENTLOG_WARNING_TYPE; } break;
+            case LogLevel::Error: { type = EVENTLOG_ERROR_TYPE; } break;
+        }
+
+        wchar_t ctx_w[2048];
+        wchar_t msg_w[4096];
+        LocalArray<const wchar_t *, 2> strings_w;
+        if (ctx) {
+            if (ConvertUtf8ToWin32Wide(ctx, ctx_w) < 0)
+                return;
+            strings_w.Append(ctx_w);
+        }
+        if (ConvertUtf8ToWin32Wide(msg, msg_w) < 0)
+            return;
+        strings_w.Append(msg_w);
+
+        ReportEventW(log, type, 0, 0, nullptr, (WORD)strings_w.len, 0, strings_w.data, nullptr);
+    });
+
+    return true;
+}
+#endif
+
 // ------------------------------------------------------------------------
 // System
 // ------------------------------------------------------------------------

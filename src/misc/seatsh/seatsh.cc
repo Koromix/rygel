@@ -820,28 +820,10 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 
 static void WINAPI RunService(DWORD argc, char **argv)
 {
-    HANDLE log = OpenEventLogA(nullptr, "SeatSH");
-    if (!log) {
-        LogError("Failed to register event provider: %1", GetWin32ErrorString());
+    if (!RedirectLogToWindowsEvents("SeatSH")) {
         ReportError(__LINE__);
         return;
     }
-    RG_DEFER { CloseEventLog(log); };
-
-    // Redirect log to Win32 stuff
-    SetLogHandler([&](LogLevel level, const char *ctx, const char *msg) {
-        const char *strings[] = {
-            ctx,
-            msg
-        };
-
-        switch (level)  {
-            case LogLevel::Debug: { ReportEventA(log, EVENTLOG_INFORMATION_TYPE, 0, 0, nullptr, 2, 0, strings, nullptr); } break;
-            case LogLevel::Info: { ReportEventA(log, EVENTLOG_INFORMATION_TYPE, 0, 0, nullptr, 2, 0, strings, nullptr); } break;
-            case LogLevel::Warning: { ReportEventA(log, EVENTLOG_WARNING_TYPE, 0, 0, nullptr, 2, 0, strings, nullptr); } break;
-            case LogLevel::Error: { ReportEventA(log, EVENTLOG_ERROR_TYPE, 0, 0, nullptr, 2, 0, strings, nullptr); } break;
-        }
-    });
 
     // Register our service controller
     status_handle = RegisterServiceCtrlHandlerExA("SeatSH", &ServiceHandler, nullptr);
