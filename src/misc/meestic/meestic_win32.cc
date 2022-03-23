@@ -89,16 +89,27 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 HMENU menu = CreatePopupMenu();
                 RG_DEFER { DestroyMenu(menu); };
 
-                AppendMenuA(menu, MF_STRING, 1, "About");
+                AppendMenuA(menu, MF_STRING, 1, "Enable");
+                AppendMenuA(menu, MF_STRING, 2, "Disable");
                 AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
-                AppendMenuA(menu, MF_STRING, 2, "Exit");
+                AppendMenuA(menu, MF_STRING, 3, "About");
+                AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
+                AppendMenuA(menu, MF_STRING, 4, "Exit");
 
                 int action = (int)TrackPopupMenu(menu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN | TPM_RETURNCMD,
                                                  click.x, click.y, 0, hwnd, nullptr);
 
                 switch (action) {
-                    case 1: { ShowAboutDialog(); } break;
-                    case 2: { PostQuitMessage(0); } break;
+                    case 1: {
+                        settings.mode = LightMode::Static;
+                        ApplyLight(settings);
+                    } break;
+                    case 2: {
+                        settings.mode = LightMode::Disabled;
+                        ApplyLight(settings);
+                    } break;
+                    case 3: { ShowAboutDialog(); } break;
+                    case 4: { PostQuitMessage(0); } break;
                 }
 
                 return TRUE;
