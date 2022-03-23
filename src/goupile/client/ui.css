@@ -199,35 +199,24 @@ html.small .ui_toolbar button.icon {
 .ui_toolbar > .drop > div button:not(.active):hover { background-color: var(--menu_color_n2); }
 html.small .ui_toolbar > .drop > button.icon::after { display: none; }
 
-.ui_toolbar .expand {
+.ui_toolbar > .drop .expand {
     display: flex;
     flex-direction: column;
 }
-.ui_toolbar .expand > button::before {
-    padding-right: 3px;
-    content: '+';
-    color: #ccc;
-}
-.ui_toolbar .expand > div { display: none; }
-.ui_toolbar .expand.active > div {
+.ui_toolbar > .drop .expand > button { text-align: center; }
+.ui_toolbar > .drop .expand > div {
     display: flex;
     flex-direction: column;
     font-size: 0.9em;
 }
-.ui_toolbar .expand > div > button {
+.ui_toolbar > .drop .expand > div > button {
     display: flex;
     font-style: italic;
     background: var(--menu_color_n2);
     align-items: center;
 }
-.ui_toolbar .expand > div > button::before {
-    padding-left: 6px;
-    padding-right: 3px;
-    content: '–';
-    color: #ccc;
-}
-.ui_toolbar .expand > div > button.active { background-color: var(--menu_color_n3); }
-.ui_toolbar .expand > div > button:not(.active):hover { background-color: var(--menu_color_n3); }
+.ui_toolbar > .drop .expand > div > button.active { background-color: var(--menu_color_n3); }
+.ui_toolbar > .drop .expand > div > button:not(.active):hover { background-color: var(--menu_color_n3); }
 
 /* -------------------- Panels -------------------- */
 

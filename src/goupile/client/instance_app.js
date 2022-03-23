@@ -131,12 +131,13 @@ function ApplicationBuilder(app) {
                 form_ref.url = form_ref.forms.values().next().value.url;
             }
 
-            if (prev_form != null) {
+            if (prev_form != null && showMenuRec(form_ref)) {
                 let item = {
                     key: key,
                     title: title,
                     type: 'form',
-                    form: form_ref
+                    form: form_ref,
+                    url: form_ref.url
                 };
                 prev_form.menu.push(item);
 
@@ -150,6 +151,20 @@ function ApplicationBuilder(app) {
             form_ref = prev_form;
         }
     };
+
+    function showMenuRec(form) {
+        for (let page of form_ref.pages.values()) {
+            if (page.getOption('menu', null, true))
+                return true;
+        }
+
+        for (let child of form.forms.values()) {
+            if (showMenuRec(child))
+                return true;
+        }
+
+        return false;
+    }
 
     this.many = function(key, multi, title, func = null, options = {}) {
         if (form_ref == null)
@@ -181,13 +196,16 @@ function ApplicationBuilder(app) {
         }
         page.url = `${ENV.urls.instance}main/${key}`;
 
-        let item = {
-            key: key,
-            title: title,
-            type: 'page',
-            page: page
-        };
-        page.form.menu.push(item);
+        if (page.getOption('menu', null, true)) {
+            let item = {
+                key: key,
+                title: title,
+                type: 'page',
+                page: page,
+                url: page.url
+            };
+            page.form.menu.push(item);
+        }
 
         page.form.pages.set(key, page);
         app.pages.set(key, page);
