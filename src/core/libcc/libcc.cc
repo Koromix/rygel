@@ -1824,7 +1824,7 @@ bool RedirectLogToWindowsEvents(const char *name)
         }
 
         wchar_t ctx_w[2048];
-        wchar_t msg_w[4096];
+        wchar_t msg_w[2048];
         LocalArray<const wchar_t *, 2> strings_w;
         if (ctx) {
             if (ConvertUtf8ToWin32Wide(ctx, ctx_w) < 0)

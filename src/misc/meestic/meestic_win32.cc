@@ -152,6 +152,12 @@ int Main(int argc, char **argv)
     const char *cls_name = FelixTarget;
     const char *win_name = FelixTarget;
 
+    // Redirect log when /subsystem:windows is used
+    if (GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == FILE_TYPE_UNKNOWN) {
+        if (!RedirectLogToWindowsEvents(FelixTarget))
+            return 1;
+    }
+
     // Register window class
     {
         WNDCLASSEXA wc = {};
