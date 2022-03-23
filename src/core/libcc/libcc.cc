@@ -3570,7 +3570,7 @@ struct PendingIO {
 bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
-    STARTUPINFOW startup_info = {};
+    STARTUPINFOW si = {};
 
     // Convert command line
     Span<wchar_t> cmd_line_w;
@@ -3630,38 +3630,38 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
     HANDLE process_handle;
     {
         RG_DEFER {
-            CloseHandleSafe(&startup_info.hStdInput);
-            CloseHandleSafe(&startup_info.hStdOutput);
-            CloseHandleSafe(&startup_info.hStdError);
+            CloseHandleSafe(&si.hStdInput);
+            CloseHandleSafe(&si.hStdOutput);
+            CloseHandleSafe(&si.hStdError);
         };
         if (in_func.IsValid() || out_func.IsValid()) {
             if (!DuplicateHandle(GetCurrentProcess(), in_func.IsValid() ? in_pipe[0] : GetStdHandle(STD_INPUT_HANDLE),
-                                 GetCurrentProcess(), &startup_info.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
+                                 GetCurrentProcess(), &si.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
                 LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
                 return false;
             }
             if (!DuplicateHandle(GetCurrentProcess(), out_func.IsValid() ? out_pipe[1] : GetStdHandle(STD_OUTPUT_HANDLE),
-                                 GetCurrentProcess(), &startup_info.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
+                                 GetCurrentProcess(), &si.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
                 !DuplicateHandle(GetCurrentProcess(), out_func.IsValid() ? out_pipe[1] : GetStdHandle(STD_ERROR_HANDLE),
-                                 GetCurrentProcess(), &startup_info.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
+                                 GetCurrentProcess(), &si.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
                 LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
                 return false;
             }
-            startup_info.dwFlags |= STARTF_USESTDHANDLES;
+            si.dwFlags |= STARTF_USESTDHANDLES;
         }
 
-        PROCESS_INFORMATION process_info = {};
+        PROCESS_INFORMATION pi = {};
         if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP,
-                            nullptr, nullptr, &startup_info, &process_info)) {
+                            nullptr, nullptr, &si, &pi)) {
             LogError("Failed to start process: %1", GetWin32ErrorString());
             return false;
         }
-        if (!AssignProcessToJobObject(job_handle, process_info.hProcess)) {
+        if (!AssignProcessToJobObject(job_handle, pi.hProcess)) {
             CloseHandleSafe(&job_handle);
         }
 
-        process_handle = process_info.hProcess;
-        CloseHandleSafe(&process_info.hThread);
+        process_handle = pi.hProcess;
+        CloseHandle(pi.hThread);
 
         CloseHandleSafe(&in_pipe[0]);
         CloseHandleSafe(&out_pipe[1]);
