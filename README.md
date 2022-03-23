@@ -9,7 +9,6 @@
 | *goupile*  | Programmable electronic data capture application                           | Work in progress |
 | *heimdall* | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
 | *mael*     | Mael robot code for 'Coupe de France de Robotique 2022' competition        | Work in progress |
-| *otocyon*  | Small spooky spaceship game made for fun                                   | Work in progress |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
 
@@ -49,14 +48,3 @@ There are two killers features for me:
 * Simplified dependency management
 
 You can find a more detailed rationale here: https://danluu.com/monorepo/
-
-# Encrypted files
-
-Some projects contain proprietary assets (such as Otocyon), these files are encrypted with
-[git-crypt](https://github.com/AGWA/git-crypt), using a simple symmetric key. Ask me if you want the
-key to work on these projects :)
-
-For ease of use on Windows, the compiled binary is available in the repository: `vendor/git-crypt/git-crypt.exe`.
-If you want to rebuild it, use `mingw32-make LDFLAGS="-static-libgcc -static-libstdc++ -static -lcrypto -lws2_32 -s"`.
-
-Once you have the key file, just run `git-crypt unlock <path_to_key>` and enjoy!
