@@ -96,7 +96,8 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 AppendMenuA(menu, MF_SEPARATOR, 0, nullptr);
                 AppendMenuA(menu, MF_STRING, 4, "Exit");
 
-                int action = (int)TrackPopupMenu(menu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN | TPM_RETURNCMD,
+                int align = GetSystemMetrics(SM_MENUDROPALIGNMENT) ? TPM_RIGHTALIGN : TPM_LEFTALIGN;
+                int action = (int)TrackPopupMenu(menu, align | TPM_BOTTOMALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD,
                                                  click.x, click.y, 0, hwnd, nullptr);
 
                 switch (action) {
