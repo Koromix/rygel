@@ -59,12 +59,12 @@ static void ShowAboutDialog()
     dialog.cbSize = RG_SIZE(dialog);
     dialog.hwndParent = hwnd;
     dialog.hInstance = module;
-    dialog.dwFlags = TDF_ENABLE_HYPERLINKS | TDF_USE_HICON_MAIN | TDF_SIZE_TO_CONTENT;
     dialog.dwCommonButtons = TDCBF_OK_BUTTON;
     dialog.pszWindowTitle = title;
     dialog.hMainIcon = LoadIcon(module, MAKEINTRESOURCE(1));
     dialog.pszMainInstruction = main;
     dialog.pszContent = content;
+    dialog.dwFlags = TDF_ENABLE_HYPERLINKS | TDF_SIZE_TO_CONTENT | (dialog.hMainIcon ? TDF_USE_HICON_MAIN : 0);
 
     dialog.pfCallback = [](HWND hwnd, UINT msg, WPARAM, LPARAM lparam, LONG_PTR) {
         if (msg == TDN_HYPERLINK_CLICKED) {
@@ -272,13 +272,13 @@ Options:
     {
         notify.cbSize = RG_SIZE(notify);
         notify.hWnd = hwnd;
-        notify.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         notify.uID = 0xA56B96F2u;
         notify.hIcon = LoadIcon(module, MAKEINTRESOURCE(1));
         notify.uCallbackMessage = WM_USER_TRAY;
         CopyString(FelixTarget, notify.szTip);
+        notify.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
 
-        if (!Shell_NotifyIconA(NIM_ADD, &notify)) {
+        if (!notify.hIcon || !Shell_NotifyIconA(NIM_ADD, &notify)) {
             LogError("Failed to register tray icon: %1", GetWin32ErrorString());
             return 1;
         }
