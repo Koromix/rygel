@@ -26,6 +26,7 @@ function InstanceController() {
         ulid: null,
         version: null
     };
+    let nav_next = null;
 
     let head_length = Number.MAX_SAFE_INTEGER;
     let page_div = document.createElement('div');
@@ -709,6 +710,8 @@ function InstanceController() {
         try {
             form_builder.pushOptions({});
 
+            nav_next = null;
+
             let meta = Object.assign({}, form_record);
             runCodeSync('Formulaire', code, {
                 app: app,
@@ -732,6 +735,17 @@ function InstanceController() {
                         } else {
                             deleteRecord(ulid);
                         }
+                    },
+
+                    next: (key, stay = false) => {
+                        let page = app.pages.get(key);
+                        if (page == null)
+                            throw new Error(`Page '${key}' does not exist`);
+
+                        nav_next = {
+                            url: page.url,
+                            stay: stay
+                        };
                     },
 
                     isLocked: goupile.isLocked
@@ -765,14 +779,25 @@ function InstanceController() {
                 let prev_actions = model.actions;
                 model.actions = [];
 
-                form_builder.action('+Enregistrer', {disabled: !form_state.hasChanged(),
-                                                     color: '#2d8261'}, async () => {
-                    form_builder.triggerErrors();
+                if (nav_next == null || nav_next.stay) {
+                    form_builder.action('+Enregistrer', {disabled: !form_state.hasChanged(),
+                                                         color: '#2d8261'}, async () => {
+                        form_builder.triggerErrors();
 
-                    await saveRecord(form_record, new_hid, form_values, route.page);
+                        await saveRecord(form_record, new_hid, form_values, route.page);
+                        self.run();
+                    });
+                }
+                if (nav_next != null) {
+                    form_builder.action('+Continuer', {disabled: !form_state.hasChanged(),
+                                                       color: '#2d8261'}, async e => {
+                        form_builder.triggerErrors();
 
-                    self.run();
-                });
+                        let url = nav_next.url;
+                        await saveRecord(form_record, new_hid, form_values, route.page);
+                        self.go(e, url);
+                    });
+                }
 
                 if (!goupile.isLocked()) {
                     if (form_state.just_triggered) {
