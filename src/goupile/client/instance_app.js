@@ -76,7 +76,6 @@ function ApplicationBuilder(app) {
     let options_stack = [
         // {
         //     enabled: true,
-        //     lockable: false,
         //     dictionaries: null,
         //     load: null,
         //     default_actions: true,

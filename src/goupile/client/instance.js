@@ -1808,12 +1808,7 @@ function InstanceController() {
         if (!reality && profile.develop)
             return true;
 
-        let lockable = page.getOption('lockable', record, false);
         let enabled = page.getOption('enabled', record, true);
-
-        if (goupile.isLocked() && !lockable)
-            return false;
-
         return enabled;
     }
 
