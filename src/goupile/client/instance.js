@@ -174,6 +174,8 @@ function InstanceController() {
     this.hasUnsavedData = function() {
         if (form_state == null)
             return false;
+        if (!route.page.getOption('safety', form_record, true))
+            return false;
 
         return form_state.hasChanged();
     };
