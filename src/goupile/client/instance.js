@@ -711,6 +711,21 @@ function InstanceController() {
             form_builder.pushOptions({});
 
             nav_next = null;
+            if (profile.lock != null) {
+                let pages = profile.lock.pages;
+                let idx = pages.indexOf(route.page.key) + 1;
+
+                if (idx < pages.length) {
+                    let page = app.pages.get(pages[idx]);
+
+                    if (page != null) {
+                        nav_next = {
+                            url: page.url,
+                            stay: false
+                        };
+                    }
+                }
+            }
 
             let meta = Object.assign({}, form_record);
             runCodeSync('Formulaire', code, {
@@ -1614,6 +1629,12 @@ function InstanceController() {
             if (key && key.match(/^[A-Z0-9]{26}(@[0-9]+)?$/)) {
                 what = key;
                 key = app.home.key;
+            }
+
+            // Follow lock sequence
+            if (profile.lock != null) {
+                if (!profile.lock.pages.includes(key))
+                    key = profile.lock.pages[0];
             }
 
             // Find page information
