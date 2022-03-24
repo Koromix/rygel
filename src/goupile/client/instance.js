@@ -242,6 +242,7 @@ function InstanceController() {
                         }
                     })}
                 ` : ''}
+                ${!menu ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
                 <div style="flex: 1; min-width: 15px;"></div>
 
                 ${!goupile.isLocked() && profile.instances == null ?
