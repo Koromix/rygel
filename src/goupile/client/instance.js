@@ -754,6 +754,14 @@ function InstanceController() {
                         }
                     },
 
+                    lock: (e, keys) => {
+                        let lock = {
+                            ulid: form_record.chain[0].ulid,
+                            pages: keys
+                        };
+
+                        return goupile.runLockDialog(e, lock);
+                    },
                     next: (key, stay = false) => {
                         let page = app.pages.get(key);
                         if (page == null)
@@ -770,6 +778,7 @@ function InstanceController() {
 
                 data: {
                     dict: form_dictionaries,
+
                     store: (idx, values) => {
                         let form = route.form.chain[route.form.chain.length - idx - 1];
                         if (form == null)
