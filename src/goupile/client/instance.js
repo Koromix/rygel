@@ -748,6 +748,9 @@ function InstanceController() {
                         await self.run();
                     },
                     delete: (e, ulid, confirm = true) => {
+                        if (e != null && e.target == null)
+                            [e, ulid, confirm] = [null, e, ulid];
+
                         if (confirm) {
                             runDeleteRecordDialog(e, ulid);
                         } else {
@@ -756,6 +759,9 @@ function InstanceController() {
                     },
 
                     lock: (e, keys) => {
+                        if (e != null && e.target == null)
+                            [e, keys] = [null, e];
+
                         let lock = {
                             ulid: form_record.chain[0].ulid,
                             pages: keys
