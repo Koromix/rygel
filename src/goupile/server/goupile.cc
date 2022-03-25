@@ -802,6 +802,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
                 }
             } break;
 
+            case FileType::Device:
             case FileType::Link:
             case FileType::Unknown: {
                 // Should not happen, don't touch this crap

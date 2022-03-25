@@ -3829,6 +3829,7 @@ enum class FileType {
     Directory,
     File,
     Link,
+    Device,
     Unknown
 };
 

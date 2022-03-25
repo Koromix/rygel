@@ -2166,6 +2166,8 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
         out_info->type = FileType::Directory;
     } else if (S_ISREG(sb.st_mode)) {
         out_info->type = FileType::File;
+    } else if (S_ISBLK(sb.st_mode) || S_ISCHR(sb.st_mode)) {
+        out_info->type = FileType::Device;
     } else if (S_ISLNK(sb.st_mode)) {
         out_info->type = FileType::Link;
     } else {
@@ -2293,6 +2295,8 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                     file_type = FileType::Directory;
                 } else if (S_ISREG(sb.st_mode)) {
                     file_type = FileType::File;
+                } else if (S_ISBLK(sb.st_mode) || S_ISCHR(sb.st_mode)) {
+                    file_type = FileType::Device;
                 } else if (S_ISLNK(sb.st_mode)) {
                     file_type = FileType::Link;
                 } else {
@@ -2340,6 +2344,7 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
                 }
             } break;
 
+            case FileType::Device: {} break;
             case FileType::Unknown: {} break;
         }
 
@@ -2375,6 +2380,7 @@ bool TestFile(const char *filename, FileType type)
         switch (type) {
             case FileType::Directory: { LogError("Path '%1' is not a directory", filename); } break;
             case FileType::File: { LogError("Path '%1' is not a file", filename); } break;
+            case FileType::Device: { LogError("Path '%1' is not a device", filename); } break;
 
             case FileType::Link:
             case FileType::Unknown: { RG_UNREACHABLE(); } break;
