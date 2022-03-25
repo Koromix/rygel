@@ -2095,7 +2095,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
             DWORD attrib = GetFileAttributesW(find_filter_w);
             if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY))
-                return EnumStatus::Done;
+                return EnumStatus::Complete;
         }
 
         LogError("Cannot enumerate directory '%1': %2", dirname,
@@ -2122,7 +2122,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         FileType file_type = FileAttributesToType(find_data.dwFileAttributes);
 
         if (!func(filename, file_type))
-            return EnumStatus::Partial;
+            return EnumStatus::Stopped;
     } while (FindNextFileW(handle, &find_data));
 
     if (GetLastError() != ERROR_NO_MORE_FILES) {
@@ -2131,7 +2131,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         return EnumStatus::Error;
     }
 
-    return EnumStatus::Done;
+    return EnumStatus::Complete;
 }
 
 #else
@@ -2305,7 +2305,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
             }
 
             if (!func(dent->d_name, file_type))
-                return EnumStatus::Partial;
+                return EnumStatus::Stopped;
         }
 
         errno = 0;
@@ -2316,7 +2316,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         return EnumStatus::Error;
     }
 
-    return EnumStatus::Done;
+    return EnumStatus::Complete;
 }
 
 #endif
@@ -2327,11 +2327,11 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
     RG_DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
     EnumStatus status = EnumerateDirectory(dirname, nullptr, max_files,
-                                           [&](const char *filename, FileType file_type) {
+                                           [&](const char *basename, FileType file_type) {
         switch (file_type) {
             case FileType::Directory: {
                 if (max_depth) {
-                    const char *sub_directory = Fmt(str_alloc, "%1%/%2", dirname, filename).ptr;
+                    const char *sub_directory = Fmt(str_alloc, "%1%/%2", dirname, basename).ptr;
                     return EnumerateFiles(sub_directory, filter, std::max((Size)-1, max_depth - 1),
                                           max_files, str_alloc, out_files);
                 }
@@ -2339,8 +2339,9 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 
             case FileType::File:
             case FileType::Link: {
-                if (!filter || MatchPathName(filename, filter)) {
-                    out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
+                if (!filter || MatchPathName(basename, filter)) {
+                    const char *filename = Fmt(str_alloc, "%1%/%2", dirname, basename).ptr;
+                    out_files->Append(filename);
                 }
             } break;
 
@@ -2360,7 +2361,7 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 bool IsDirectoryEmpty(const char *dirname)
 {
     EnumStatus status = EnumerateDirectory(dirname, nullptr, -1, [](const char *, FileType) { return false; });
-    return status == EnumStatus::Done;
+    return status == EnumStatus::Complete;
 }
 
 bool TestFile(const char *filename, FileType type)

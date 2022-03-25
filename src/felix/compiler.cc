@@ -1425,7 +1425,7 @@ public:
 
             return true;
         });
-        if (status != EnumStatus::Done)
+        if (status != EnumStatus::Complete)
             return false;
 
         uint64_t hash = 0;

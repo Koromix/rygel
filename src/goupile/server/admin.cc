@@ -1877,7 +1877,7 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
 
         return true;
     });
-    if (status != EnumStatus::Done)
+    if (status != EnumStatus::Complete)
         return;
     json.EndArray();
 

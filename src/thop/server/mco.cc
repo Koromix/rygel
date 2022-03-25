@@ -116,7 +116,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
                 if (file_type == FileType::Link) {
                     FileInfo file_info;
                     if (!StatFile(filename, (int)StatFlag::FollowSymlink, &file_info))
-                        return false;
+                        return true;
                     file_type = file_info.type;
                 }
 

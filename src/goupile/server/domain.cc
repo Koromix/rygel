@@ -832,7 +832,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
                         return stmt.Run();
                     });
-                    if (status != EnumStatus::Done)
+                    if (status != EnumStatus::Complete)
                         return false;
                 }
 

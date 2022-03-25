@@ -3843,7 +3843,8 @@ struct FileInfo {
 enum class EnumStatus {
     Error,
     Partial,
-    Done
+    Stopped,
+    Complete
 };
 
 bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info);
