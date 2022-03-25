@@ -2723,6 +2723,27 @@ private:
     Size ReadRaw(Size max_len, void *out_buf);
 };
 
+static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<uint8_t> out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.Read(out_buf);
+}
+static inline Size ReadFile(const char *filename, Span<uint8_t> out_buf)
+{
+    StreamReader st(filename);
+    return st.Read(out_buf);
+}
+static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<char> out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.Read(out_buf);
+}
+static inline Size ReadFile(const char *filename, Span<char> out_buf)
+{
+    StreamReader st(filename);
+    return st.Read(out_buf);
+}
+
 static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
                             HeapArray<uint8_t> *out_buf)
 {
