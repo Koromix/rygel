@@ -4654,7 +4654,7 @@ int OpenUnixSocket(const char *path)
     }
     RG_DEFER_N(err_guard) { closesocket(fd); };
 #else
-    int fd = (int)socket(AF_UNIX, SOCK_STREAM, 0);
+    int fd = (int)socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (fd < 0) {
         LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
         return -1;
