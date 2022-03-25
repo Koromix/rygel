@@ -4016,8 +4016,13 @@ static const char *const SocketTypeNames[] = {
     "Unix"
 };
 
-int OpenIPSocket(SocketType type, int port);
-int OpenUnixSocket(const char *path);
+enum class SocketMode {
+    Stream,
+    Messages
+};
+
+int OpenIPSocket(SocketType type, int port, SocketMode mode = SocketMode::Stream);
+int OpenUnixSocket(const char *path, SocketMode mode = SocketMode::Stream);
 void CloseSocket(int fd);
 
 // ------------------------------------------------------------------------

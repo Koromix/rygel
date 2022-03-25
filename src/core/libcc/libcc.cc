@@ -4576,21 +4576,27 @@ int GetRandomIntSafe(int min, int max)
 // Sockets
 // ------------------------------------------------------------------------
 
-int OpenIPSocket(SocketType type, int port)
+int OpenIPSocket(SocketType type, int port, SocketMode mode)
 {
     RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
 
     int family = (type == SocketType::IPv4) ? AF_INET : AF_INET6;
 
+    int flags = 0;
+    switch (mode) {
+        case SocketMode::Stream: { flags = SOCK_STREAM; } break;
+        case SocketMode::Messages: { flags = SOCK_DGRAM; } break;
+    }
+
 #ifdef _WIN32
-    SOCKET fd = socket(family, SOCK_STREAM, 0);
+    SOCKET fd = socket(family, flags, 0);
     if (fd == INVALID_SOCKET) {
         LogError("Failed to create AF_INET socket: %1", strerror(errno));
         return -1;
     }
     RG_DEFER_N(err_guard) { closesocket(fd); };
 #else
-    int fd = socket(family, SOCK_STREAM, 0);
+    int fd = socket(family, flags, 0);
     if (fd < 0) {
         LogError("Failed to create AF_INET socket: %1", strerror(errno));
         return -1;
@@ -4644,17 +4650,25 @@ int OpenIPSocket(SocketType type, int port)
     return (int)fd;
 }
 
-int OpenUnixSocket(const char *path)
+int OpenUnixSocket(const char *path, SocketMode mode)
 {
+    int flags = 0;
+    switch (mode) {
+        case SocketMode::Stream: { flags = SOCK_STREAM; } break;
+        case SocketMode::Messages: { flags = SOCK_SEQPACKET; } break;
+    }
+
 #ifdef _WIN32
-    SOCKET fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    SOCKET fd = socket(AF_UNIX, flags, 0);
     if (fd == INVALID_SOCKET) {
         LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
         return -1;
     }
     RG_DEFER_N(err_guard) { closesocket(fd); };
 #else
-    int fd = (int)socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    flags |= SOCK_CLOEXEC;
+
+    int fd = (int)socket(AF_UNIX, flags, 0);
     if (fd < 0) {
         LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
         return -1;
