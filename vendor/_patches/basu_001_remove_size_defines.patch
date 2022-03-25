@@ -1,0 +1,69 @@
+diff --git a/vendor/basu/src/basic/format-util.h b/vendor/basu/src/basic/format-util.h
+index 3d63ff417..ad79ec667 100644
+--- a/vendor/basu/src/basic/format-util.h
++++ b/vendor/basu/src/basic/format-util.h
+@@ -3,27 +3,7 @@
+ 
+ #include <inttypes.h>
+ 
+-#if SIZEOF_PID_T == 4
+-#  define PID_PRI PRIi32
+-#elif SIZEOF_PID_T == 2
+-#  define PID_PRI PRIi16
+-#else
+-#  error Unknown pid_t size
+-#endif
++#define PID_PRI PRIi32
+ #define PID_FMT "%" PID_PRI
+-
+-#if SIZEOF_UID_T == 4
+-#  define UID_FMT "%" PRIu32
+-#elif SIZEOF_UID_T == 2
+-#  define UID_FMT "%" PRIu16
+-#else
+-#  error Unknown uid_t size
+-#endif
+-
+-#if SIZEOF_GID_T == 4
+-#  define GID_FMT "%" PRIu32
+-#elif SIZEOF_GID_T == 2
+-#  define GID_FMT "%" PRIu16
+-#else
+-#  error Unknown gid_t size
+-#endif
++#define UID_FMT "%" PRIu32
++#define GID_FMT "%" PRIu32
+diff --git a/vendor/basu/src/basic/hash-funcs.c b/vendor/basu/src/basic/hash-funcs.c
+index 6f6832d23..79380a834 100644
+--- a/vendor/basu/src/basic/hash-funcs.c
++++ b/vendor/basu/src/basic/hash-funcs.c
+@@ -95,7 +95,6 @@ const struct hash_ops uint64_hash_ops = {
+         .compare = uint64_compare_func
+ };
+ 
+-#if SIZEOF_DEV_T != 8
+ void devt_hash_func(const void *p, struct siphash *state) {
+         siphash24_compress(p, sizeof(dev_t), state);
+ }
+@@ -111,4 +110,3 @@ const struct hash_ops devt_hash_ops = {
+         .hash = devt_hash_func,
+         .compare = devt_compare_func
+ };
+-#endif
+diff --git a/vendor/basu/src/basic/hash-funcs.h b/vendor/basu/src/basic/hash-funcs.h
+index fa45cfe25..8391dcb3a 100644
+--- a/vendor/basu/src/basic/hash-funcs.h
++++ b/vendor/basu/src/basic/hash-funcs.h
+@@ -34,12 +34,6 @@ extern const struct hash_ops uint64_hash_ops;
+ 
+ /* On some archs dev_t is 32bit, and on others 64bit. And sometimes it's 64bit on 32bit archs, and sometimes 32bit on
+  * 64bit archs. Yuck! */
+-#if SIZEOF_DEV_T != 8
+ void devt_hash_func(const void *p, struct siphash *state) _pure_;
+ int devt_compare_func(const void *a, const void *b) _pure_;
+ extern const struct hash_ops devt_hash_ops;
+-#else
+-#define devt_hash_func uint64_hash_func
+-#define devt_compare_func uint64_compare_func
+-#define devt_hash_ops uint64_hash_ops
+-#endif
