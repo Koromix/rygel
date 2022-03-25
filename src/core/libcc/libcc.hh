@@ -4022,7 +4022,10 @@ enum class SocketMode {
 };
 
 int OpenIPSocket(SocketType type, int port, SocketMode mode = SocketMode::Stream);
+
 int OpenUnixSocket(const char *path, SocketMode mode = SocketMode::Stream);
+int ConnectToUnixSocket(const char *path, SocketMode mode = SocketMode::Stream);
+
 void CloseSocket(int fd);
 
 // ------------------------------------------------------------------------

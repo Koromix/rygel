@@ -4694,6 +4694,48 @@ int OpenUnixSocket(const char *path, SocketMode mode)
     return (int)fd;
 }
 
+int ConnectToUnixSocket(const char *path, SocketMode mode)
+{
+    int flags = 0;
+    switch (mode) {
+        case SocketMode::Stream: { flags = SOCK_STREAM; } break;
+        case SocketMode::Messages: { flags = SOCK_SEQPACKET; } break;
+    }
+
+#ifdef _WIN32
+    SOCKET fd = socket(AF_UNIX, flags, 0);
+    if (fd == INVALID_SOCKET) {
+        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { closesocket(fd); };
+#else
+    flags |= SOCK_CLOEXEC;
+
+    int fd = (int)socket(AF_UNIX, flags, 0);
+    if (fd < 0) {
+        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { close(fd); };
+#endif
+
+    struct sockaddr_un addr = {};
+    addr.sun_family = AF_UNIX;
+    if (!CopyString(path, addr.sun_path)) {
+        LogError("Excessive UNIX socket path length");
+        return -1;
+    }
+
+    if (connect(fd, (struct sockaddr *)&addr, RG_SIZE(addr)) < 0) {
+        LogError("Failed to connect to '%1': %2", path, strerror(errno));
+        return -1;
+    }
+
+    err_guard.Disable();
+    return (int)fd;
+}
+
 void CloseSocket(int fd)
 {
 #ifdef _WIN32
