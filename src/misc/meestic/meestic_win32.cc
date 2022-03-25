@@ -202,6 +202,13 @@ Options:
                 FelixTarget, config_filename);
     };
 
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+        PrintLn("Compiler: %1", FelixCompiler);
+        return 0;
+    }
+
     // Parse options
     {
         OptionParser opt(argc, argv);
