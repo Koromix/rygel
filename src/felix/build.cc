@@ -311,8 +311,8 @@ bool Builder::AddTarget(const TargetInfo &target)
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
                                        build.compiler->GetObjectExtension()).ptr;
 
-        bool module = (build.features & (int)CompileFeature::HotAssets);
         uint32_t features = target.CombineFeatures(build.features);
+        bool module = (features & (int)CompileFeature::HotAssets);
 
         // Make C file
         {
