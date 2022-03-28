@@ -335,7 +335,7 @@ pump:
         };
 
         if (poll(pfds, RG_LEN(pfds), -1) < 0) {
-            LogError("Failed to read from socket: %1", strerror(errno));
+            LogError("Failed to poll I/O loop: %1", strerror(errno));
             return -1;
         }
 #endif
