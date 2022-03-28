@@ -204,10 +204,17 @@ def run_sync(config):
 
     # Detect binary mismatches
     print('>>> Check Goupile binary versions', file = sys.stderr)
-    binary_inode = os.stat(binary).st_ino
     for domain, info in domains.items():
+        domain_binary = os.path.join(info.main_directory, 'goupile')
+
+        try:
+            inode = os.stat(domain_binary).st_ino
+        except FileNotFoundError:
+            os.symlink(binary, domain_binary)
+            inode = os.stat(domain_binary).st_ino
+
         status = services.get(domain)
-        if status is not None and status.running and status.inode != binary_inode:
+        if status is not None and status.running and status.inode != inode:
             print(f'  + Domain {domain} is running old version')
             info.mismatch = True
 
