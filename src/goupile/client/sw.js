@@ -24,6 +24,16 @@ self.addEventListener('install', e => {
         await cache.addAll(assets.map(url => `${ENV.urls.base}${url}`));
         await cache.addAll(list.files.map(file => `${ENV.urls.files}${file.filename}`));
 
+        // We need to cache application files with two URLs:
+        // the URL with the version qualifier, and the one without.
+        for (let file of list.files) {
+            let url1 = `${ENV.urls.files}${file.filename}`;
+            let url2 = `${ENV.urls.base}files/${file.filename}`;
+
+            let response = await cache.match(url1);
+            await cache.put(url2, response);
+        }
+
         await self.skipWaiting();
     }());
 });
