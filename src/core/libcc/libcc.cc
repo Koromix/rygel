@@ -2147,7 +2147,7 @@ void SetEnvironmentVar(const char *name, const char *value)
 void DeleteEnvironmentVar(const char *name)
 {
     RG_ASSERT(name && name[0] && !strchr(name, '='));
-    RG_CRITICAL(unsetenv(name), "Failed to clear environment variable '%1'", name);
+    RG_CRITICAL(!unsetenv(name), "Failed to clear environment variable '%1'", name);
 }
 
 bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
