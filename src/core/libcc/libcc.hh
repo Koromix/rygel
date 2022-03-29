@@ -3851,7 +3851,8 @@ enum class FileType {
     File,
     Link,
     Device,
-    Unknown
+    Pipe,
+    Socket
 };
 
 struct FileInfo {
@@ -3881,7 +3882,8 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
                     Allocator *str_alloc, HeapArray<const char *> *out_files);
 bool IsDirectoryEmpty(const char *dirname);
 
-bool TestFile(const char *filename, FileType type = FileType::Unknown);
+bool TestFile(const char *filename);
+bool TestFile(const char *filename, FileType type);
 
 bool MatchPathName(const char *path, const char *spec);
 bool MatchPathSpec(const char *path, const char *spec);

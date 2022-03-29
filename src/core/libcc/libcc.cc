@@ -1988,7 +1988,7 @@ static FileType FileAttributesToType(uint32_t attr)
     if (attr & FILE_ATTRIBUTE_DIRECTORY) {
         return FileType::Directory;
     } else if (attr & FILE_ATTRIBUTE_DEVICE) {
-        return FileType::Unknown;
+        return FileType::Device;
     } else {
         return FileType::File;
     }
@@ -2150,6 +2150,26 @@ void DeleteEnvironmentVar(const char *name)
     RG_CRITICAL(!unsetenv(name), "Failed to clear environment variable '%1': %2", name, strerror(errno));
 }
 
+static FileType FileModeToType(mode_t mode)
+{
+    if (S_ISDIR(mode)) {
+        return FileType::Directory;
+    } else if (S_ISREG(mode)) {
+        return FileType::File;
+    } else if (S_ISBLK(mode) || S_ISCHR(mode)) {
+        return FileType::Device;
+    } else if (S_ISLNK(mode)) {
+        return FileType::Link;
+    } else if (S_ISFIFO(mode)) {
+        return FileType::Pipe;
+    } else if (S_ISSOCK(mode)) {
+        return FileType::Socket;
+    } else {
+        // This... should not happen. But who knows?
+        return FileType::File;
+    }
+}
+
 bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
@@ -2162,18 +2182,7 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
         return false;
     }
 
-    if (S_ISDIR(sb.st_mode)) {
-        out_info->type = FileType::Directory;
-    } else if (S_ISREG(sb.st_mode)) {
-        out_info->type = FileType::File;
-    } else if (S_ISBLK(sb.st_mode) || S_ISCHR(sb.st_mode)) {
-        out_info->type = FileType::Device;
-    } else if (S_ISLNK(sb.st_mode)) {
-        out_info->type = FileType::Link;
-    } else {
-        out_info->type = FileType::Unknown;
-    }
-
+    out_info->type = FileModeToType(sb.st_mode);
     out_info->size = (int64_t)sb.st_size;
 #if defined(__linux__)
     out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
@@ -2280,7 +2289,15 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                     case DT_DIR: { file_type = FileType::Directory; } break;
                     case DT_REG: { file_type = FileType::File; } break;
                     case DT_LNK: { file_type = FileType::Link; } break;
-                    default: { file_type = FileType::Unknown; } break;
+                    case DT_BLK:
+                    case DT_CHR: { file_type = FileType::Device; } break;
+                    case DT_FIFO: { file_type = FileType::Pipe; } break;
+                    case DT_SOCK: { file_type = FileType::Socket; } break;
+
+                    default: {
+                        // This... should not happen. But who knows?
+                        file_type = FileType::File;
+                    } break;
                 }
             } else
 #endif
@@ -2291,17 +2308,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                     continue;
                 }
 
-                if (S_ISDIR(sb.st_mode)) {
-                    file_type = FileType::Directory;
-                } else if (S_ISREG(sb.st_mode)) {
-                    file_type = FileType::File;
-                } else if (S_ISBLK(sb.st_mode) || S_ISCHR(sb.st_mode)) {
-                    file_type = FileType::Device;
-                } else if (S_ISLNK(sb.st_mode)) {
-                    file_type = FileType::Link;
-                } else {
-                    file_type = FileType::Unknown;
-                }
+                file_type = FileModeToType(sb.st_mode);
             }
 
             if (!func(dent->d_name, file_type))
@@ -2345,8 +2352,9 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
                 }
             } break;
 
-            case FileType::Device: {} break;
-            case FileType::Unknown: {} break;
+            case FileType::Device:
+            case FileType::Pipe:
+            case FileType::Socket: {} break;
         }
 
         return true;
@@ -2364,6 +2372,12 @@ bool IsDirectoryEmpty(const char *dirname)
     return status == EnumStatus::Complete;
 }
 
+bool TestFile(const char *filename)
+{
+    FileInfo file_info;
+    return StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+}
+
 bool TestFile(const char *filename, FileType type)
 {
     RG_ASSERT(type != FileType::Link);
@@ -2377,14 +2391,15 @@ bool TestFile(const char *filename, FileType type)
         file_info.type = FileType::File;
     }
 
-    if (type != FileType::Unknown && type != file_info.type) {
+    if (type != file_info.type) {
         switch (type) {
             case FileType::Directory: { LogError("Path '%1' is not a directory", filename); } break;
             case FileType::File: { LogError("Path '%1' is not a file", filename); } break;
             case FileType::Device: { LogError("Path '%1' is not a device", filename); } break;
+            case FileType::Pipe: { LogError("Path '%1' is not a pipe", filename); } break;
+            case FileType::Socket: { LogError("Path '%1' is not a socket", filename); } break;
 
-            case FileType::Link:
-            case FileType::Unknown: { RG_UNREACHABLE(); } break;
+            case FileType::Link: { RG_UNREACHABLE(); } break;
         }
 
         return false;

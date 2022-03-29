@@ -804,7 +804,8 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
 
             case FileType::Device:
             case FileType::Link:
-            case FileType::Unknown: {
+            case FileType::Pipe:
+            case FileType::Socket: {
                 // Should not happen, don't touch this crap
                 LogDebug("Unexpected non-regular file '%1'", filename);
                 complete = false;
