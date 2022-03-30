@@ -2702,12 +2702,8 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        char *path_buf = realpath("/proc/self/exe", nullptr);
-        RG_ASSERT(path_buf);
-        RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
-
-        CopyString(path_buf, executable_path);
-        free(path_buf);
+        ssize_t ret = readlink("/proc/self/exe", executable_path, RG_SIZE(executable_path));
+        RG_ASSERT(ret > 0 && ret < RG_SIZE(executable_path));
     }
 
     return executable_path;
