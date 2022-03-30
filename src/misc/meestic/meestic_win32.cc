@@ -81,6 +81,30 @@ static void ShowAboutDialog()
     TaskDialogIndirect(&dialog, nullptr, nullptr, nullptr);
 }
 
+static bool ToggleProfile(int delta)
+{
+    if (!delta)
+        return true;
+
+    Size next_idx = profile_idx;
+
+    do {
+        next_idx += delta;
+
+        if (next_idx < 0) {
+            next_idx = config.profiles.len - 1;
+        } else if (next_idx >= config.profiles.len) {
+            next_idx = 0;
+        }
+    } while (config.profiles[next_idx].manual);
+
+    if (!ApplyLight(config.profiles[next_idx].settings))
+        return false;
+    profile_idx = next_idx;
+
+    return true;
+}
+
 static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     static UINT taskbar_created = RegisterWindowMessageA("TaskbarCreated");
@@ -89,7 +113,9 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         case WM_USER_TRAY: {
             int button = LOWORD(lparam);
 
-            if (button == WM_RBUTTONDOWN) {
+            if (button == WM_LBUTTONDOWN) {
+                ToggleProfile(1);
+            } else if (button == WM_RBUTTONDOWN) {
                 POINT click;
                 GetCursorPos(&click);
 
@@ -128,20 +154,11 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                         }
                     } break;
                 }
-
-                return TRUE;
             }
         } break;
 
         case WM_USER_TOGGLE: {
-            do {
-                profile_idx++;
-                if (profile_idx >= config.profiles.len) {
-                    profile_idx = 0;
-                }
-            } while (config.profiles[profile_idx].manual);
-
-            ApplyLight(config.profiles[profile_idx].settings);
+            ToggleProfile(1);
         } break;
 
         case WM_CLOSE: {
