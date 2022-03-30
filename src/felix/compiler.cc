@@ -159,8 +159,8 @@ class ClangCompiler final: public Compiler {
     const char *rc;
     const char *ld;
 
-    bool clang11 = false;
-    bool lld11 = false;
+    int clang_ver = 0;
+    int lld_ver = 0;
 
     BlockAllocator str_alloc;
 
@@ -199,7 +199,7 @@ public:
 
             HeapArray<char> output;
             if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
-                compiler->clang11 = ParseMajorVersion(cmd, output, "version") >= 11;
+                compiler->clang_ver = ParseMajorVersion(cmd, output, "version");
             }
 
             return true;
@@ -221,7 +221,7 @@ public:
 
                 HeapArray<char> output;
                 if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
-                    compiler->lld11 = ParseMajorVersion(cmd, output, "LLD") >= 11;
+                    compiler->lld_ver = ParseMajorVersion(cmd, output, "LLD");
                 }
             }
 
@@ -286,7 +286,7 @@ public:
             LogError("Clang CFI feature requires LTO compilation");
             return false;
         }
-        if (!lld11 && (features & (int)CompileFeature::ShuffleCode)) {
+        if (lld_ver < 11 && (features & (int)CompileFeature::ShuffleCode)) {
             LogError("ShuffleCode requires LLD >= 11, try --host option (e.g. --host=,clang-11 or --host=,clang-11,lld-11)");
             return false;
         }
@@ -402,14 +402,14 @@ public:
 
             case HostPlatform::macOS: {
                 Fmt(&buf, " -pthread -fPIC");
-                if (clang11) {
+                if (clang_ver >= 11) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
             } break;
 
             default: {
                 Fmt(&buf, " -D_FILE_OFFSET_BITS=64 -pthread -fPIC");
-                if (clang11) {
+                if (clang_ver >= 11) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
@@ -441,7 +441,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-        if (host == HostPlatform::Linux && clang11) {
+        if (host == HostPlatform::Linux && (clang_ver >= 11)) {
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::SafeStack) {
@@ -608,7 +608,11 @@ public:
             Fmt(&buf, " -fsanitize=cfi");
         }
         if (features & (int)CompileFeature::ShuffleCode) {
-            Fmt(&buf, " -Wl,--shuffle-sections=0");
+            if (lld_ver >= 13) {
+                Fmt(&buf, " -Wl,--shuffle-sections=*=0");
+            } else {
+                Fmt(&buf, " -Wl,--shuffle-sections=0");
+            }
         }
         if (features & (int)CompileFeature::NoConsole) {
             Fmt(&buf, " -Wl,/subsystem:windows, -Wl,/entry:mainCRTStartup");
@@ -639,7 +643,7 @@ class GnuCompiler final: public Compiler {
     const char *windres;
     const char *ld;
 
-    bool gcc12 = false;
+    int gcc_ver = 0;
     bool i686 = false;
 
     BlockAllocator str_alloc;
@@ -672,7 +676,7 @@ public:
 
             HeapArray<char> output;
             if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
-                compiler->gcc12 = ParseMajorVersion(cmd, output, "version") >= 12;
+                compiler->gcc_ver = ParseMajorVersion(cmd, output, "version");
                 compiler->i686 = FindStr(output, "i686") >= 0;
             }
 
@@ -725,7 +729,7 @@ public:
             LogError("Cannot use ASan and TSan at the same time");
             return false;
         }
-        if (!gcc12 && (features & (int)CompileFeature::ZeroInit)) {
+        if (gcc_ver < 12 && (features & (int)CompileFeature::ZeroInit)) {
             LogError("ZeroInit requires GCC >= 12, try --host option (e.g. --host=,gcc-12)");
             return false;
         }
