@@ -1469,7 +1469,7 @@ instead of:
                                           @click=${ui.wrapAction(func)}>${label}</button>`;
 
             if (options.always == null)
-                options.always = !model.actions.length;
+                options.always = false;
         }
 
         let intf = makeWidget('action', label, render, options);

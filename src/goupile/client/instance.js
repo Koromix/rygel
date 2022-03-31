@@ -26,7 +26,7 @@ function InstanceController() {
         ulid: null,
         version: null
     };
-    let nav_next = null;
+    let nav_sequence = null;
 
     let head_length = Number.MAX_SAFE_INTEGER;
     let page_div = document.createElement('div');
@@ -713,19 +713,38 @@ function InstanceController() {
         try {
             form_builder.pushOptions({});
 
-            nav_next = null;
-            if (profile.lock != null) {
-                let pages = profile.lock.pages;
-                let idx = pages.indexOf(route.page.key) + 1;
+            // Previous and next page?
+            {
+                let sequence = (profile.lock != null) ? profile.lock.pages : route.page.getOption('sequence', form_record);
 
-                if (idx < pages.length) {
-                    let page = app.pages.get(pages[idx]);
+                if (typeof sequence === 'boolean')
+                    sequence = sequence ? Array.from(route.form.pages.keys()) : null;
 
-                    if (page != null) {
-                        nav_next = {
-                            url: page.url,
-                            stay: false
-                        };
+                nav_sequence = {
+                    prev: null,
+                    next: null,
+                    stay: true
+                };
+
+                if (sequence != null) {
+                    let idx = sequence.indexOf(route.page.key);
+
+                    if (idx - 1 >= 0) {
+                        let page = app.pages.get(sequence[idx - 1]);
+
+                        if (page != null) {
+                            nav_sequence.prev = page.url;
+                            nav_sequence.stay = form_record.saved;
+                        }
+                    }
+
+                    if (idx >= 0 && idx + 1 < sequence.length) {
+                        let page = app.pages.get(sequence[idx + 1]);
+
+                        if (page != null) {
+                            nav_sequence.next = page.url;
+                            nav_sequence.stay = form_record.saved;
+                        }
                     }
                 }
             }
@@ -769,16 +788,6 @@ function InstanceController() {
 
                         return goupile.runLockDialog(e, lock);
                     },
-                    next: (key, stay = false) => {
-                        let page = app.pages.get(key);
-                        if (page == null)
-                            throw new Error(`Page '${key}' does not exist`);
-
-                        nav_next = {
-                            url: page.url,
-                            stay: stay
-                        };
-                    },
 
                     isLocked: goupile.isLocked
                 },
@@ -812,23 +821,36 @@ function InstanceController() {
                 let prev_actions = model.actions;
                 model.actions = [];
 
-                if (nav_next == null || nav_next.stay) {
-                    form_builder.action('+Enregistrer', {disabled: !form_state.hasChanged(),
-                                                         color: '#2d8261'}, async () => {
+                if (nav_sequence.prev != null || nav_sequence.next != null) {
+                    form_builder.action('Précédent', {disabled: nav_sequence.prev == null}, async e => {
+                        let url = nav_sequence.prev;
+                        self.go(e, url);
+                    });
+
+                    form_builder.action('Continuer', {color: '#2d8261',
+                                                      always: nav_sequence.next != null,
+                                                      disabled: nav_sequence.next == null}, async e => {
+                        let url = nav_sequence.next;
+
+                        if (!form_record.saved || form_state.hasChanged())
+                            form_builder.triggerErrors();
+                        if (form_state.hasChanged())
+                            await saveRecord(form_record, new_hid, form_values, route.page);
+
+                        self.go(e, url);
+                    });
+
+                    if (nav_sequence.stay)
+                        form_builder.action('-');
+                }
+                if (nav_sequence.stay) {
+                    form_builder.action('Enregistrer', {disabled: !form_state.hasChanged(),
+                                                        color: nav_sequence.next == null ? '#2d8261' : null,
+                                                        always: nav_sequence.next == null}, async () => {
                         form_builder.triggerErrors();
 
                         await saveRecord(form_record, new_hid, form_values, route.page);
                         self.run();
-                    });
-                }
-                if (nav_next != null) {
-                    form_builder.action('+Continuer', {disabled: !form_state.hasChanged(),
-                                                       color: '#2d8261'}, async e => {
-                        form_builder.triggerErrors();
-
-                        let url = nav_next.url;
-                        await saveRecord(form_record, new_hid, form_values, route.page);
-                        self.go(e, url);
                     });
                 }
 
@@ -847,7 +869,7 @@ function InstanceController() {
                     if (form_state.hasChanged()) {
                         form_builder.action('-');
 
-                        form_builder.action('+Oublier', {color: '#db0a0a'}, async e => {
+                        form_builder.action('Oublier', {color: '#db0a0a', always: form_record.saved}, async e => {
                             await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                                    'Oublier', () => {});
 
