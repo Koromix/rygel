@@ -762,6 +762,11 @@ function InstanceController() {
                     page: route.page,
                     go: (url) => self.go(null, url),
 
+                    url: (key) => {
+                        let page = app.pages.get(key);
+                        return page ? page.url : null;
+                    },
+
                     save: async () => {
                         await saveRecord(form_record, new_hid, form_values, route.page);
                         await self.run();
@@ -788,7 +793,6 @@ function InstanceController() {
 
                         return goupile.runLockDialog(e, lock);
                     },
-
                     isLocked: goupile.isLocked
                 },
 
