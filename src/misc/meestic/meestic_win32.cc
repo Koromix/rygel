@@ -39,6 +39,8 @@ static Size profile_idx = 0;
 static HWND hwnd;
 static NOTIFYICONDATAA notify;
 
+static hs_port *port = nullptr;
+
 static void ShowAboutDialog()
 {
     HINSTANCE module = GetModuleHandle(nullptr);
@@ -98,7 +100,7 @@ static bool ToggleProfile(int delta)
         }
     } while (config.profiles[next_idx].manual);
 
-    if (!ApplyLight(config.profiles[next_idx].settings))
+    if (!ApplyLight(port, config.profiles[next_idx].settings))
         return false;
     profile_idx = next_idx;
 
@@ -150,7 +152,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                             profile_idx = idx;
 
                             const ConfigProfile &profile = config.profiles[idx];
-                            ApplyLight(profile.settings);
+                            ApplyLight(port, profile.settings);
                         }
                     } break;
                 }
@@ -309,8 +311,14 @@ Options:
     }
     RG_DEFER { Shell_NotifyIconA(NIM_DELETE, &notify); };
 
+    // Open the light MSI HID device ahead of time
+    port = OpenLightDevice();
+    if (!port)
+        return false;
+    RG_DEFER { CloseLightDevice(port); };
+
     // Check that it works once, at least
-    if (!ApplyLight(config.profiles[config.default_idx].settings))
+    if (!ApplyLight(port, config.profiles[config.default_idx].settings))
         return 1;
 
     // Run main message loop

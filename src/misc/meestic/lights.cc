@@ -32,27 +32,6 @@ struct ControlPacket {
 RG_STATIC_ASSERT(RG_SIZE(ControlPacket) == 65);
 #pragma pack(pop)
 
-static hs_port *FindDevice()
-{
-    hs_match_spec spec = HS_MATCH_TYPE_VID_PID(HS_DEVICE_TYPE_HID, 0x1462, 0x1564, nullptr);
-
-    hs_device *dev;
-    int ret = hs_find(&spec, 1, &dev);
-    if (ret < 0)
-        return nullptr;
-    if (!ret) {
-        LogError("Cannot find Mystic Light HID device (1462:1564)");;
-        return nullptr;
-    }
-    RG_DEFER { hs_device_unref(dev); };
-
-    hs_port *port;
-    if (hs_port_open(dev, HS_PORT_MODE_WRITE, &port) < 0)
-        return nullptr;
-
-    return port;
-}
-
 static void DumpPacket(Span<const uint8_t> bytes)
 {
     PrintLn(stderr, "Length = %1:", FmtMemSize(bytes.len));
@@ -68,7 +47,7 @@ static void DumpPacket(Span<const uint8_t> bytes)
     }
 }
 
-bool CheckSettings(const LightSettings &settings)
+bool CheckLightSettings(const LightSettings &settings)
 {
     bool valid = true;
 
@@ -92,15 +71,36 @@ bool CheckSettings(const LightSettings &settings)
     return valid;
 }
 
-bool ApplyLight(const LightSettings &settings)
+hs_port *OpenLightDevice()
 {
-    if (!CheckSettings(settings))
-        return false;
+    hs_match_spec spec = HS_MATCH_TYPE_VID_PID(HS_DEVICE_TYPE_HID, 0x1462, 0x1564, nullptr);
 
-    hs_port *port = FindDevice();
-    if (!port)
+    hs_device *dev;
+    int ret = hs_find(&spec, 1, &dev);
+    if (ret < 0)
+        return nullptr;
+    if (!ret) {
+        LogError("Cannot find Mystic Light HID device (1462:1564)");
+        return nullptr;
+    }
+    RG_DEFER { hs_device_unref(dev); };
+
+    hs_port *port;
+    if (hs_port_open(dev, HS_PORT_MODE_WRITE, &port) < 0)
+        return nullptr;
+
+    return port;
+}
+
+void CloseLightDevice(hs_port *port)
+{
+    hs_port_close(port);
+}
+
+bool ApplyLight(hs_port *port, const LightSettings &settings)
+{
+    if (!CheckLightSettings(settings))
         return false;
-    RG_DEFER { hs_port_close(port); };
 
     ControlPacket pkt = {};
 
@@ -128,6 +128,16 @@ bool ApplyLight(const LightSettings &settings)
         return false;
 
     return true;
+}
+
+bool ApplyLight(const LightSettings &settings)
+{
+    hs_port *port = OpenLightDevice();
+    if (!port)
+        return false;
+    RG_DEFER { hs_port_close(port); };
+
+    return ApplyLight(port, settings);
 }
 
 }

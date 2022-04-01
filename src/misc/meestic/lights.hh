@@ -15,6 +15,8 @@
 
 #include "src/core/libcc/libcc.hh"
 
+struct hs_port;
+
 namespace RG {
 
 struct RgbColor {
@@ -43,7 +45,12 @@ struct LightSettings {
     LocalArray<RgbColor, 7> colors;
 };
 
-bool CheckSettings(const LightSettings &settings);
+bool CheckLightSettings(const LightSettings &settings);
+
+hs_port *OpenLightDevice();
+void CloseLightDevice(hs_port *port);
+
+bool ApplyLight(hs_port *port, const LightSettings &settings);
 bool ApplyLight(const LightSettings &settings);
 
 }

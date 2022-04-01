@@ -83,7 +83,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     }
                 } while (ini.NextInSection(&prop));
 
-                valid &= CheckSettings(profile->settings);
+                valid &= CheckLightSettings(profile->settings);
 
                 if (default_name && TestStr(default_name, profile->name)) {
                     config.default_idx = config.profiles.len - 1;
