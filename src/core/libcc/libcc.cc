@@ -38,6 +38,7 @@
     #include <sys/types.h>
     #include <sys/stat.h>
     #include <direct.h>
+    #include <shlobj.h>
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
@@ -3415,70 +3416,6 @@ bool UnlinkFile(const char *filename, bool error_if_missing)
 
 #endif
 
-static const char *CreateTemporaryPath(Span<const char> directory, const char *prefix, const char *extension,
-                                       Allocator *alloc, FunctionRef<bool(const char *path)> create)
-{
-    RG_ASSERT(alloc);
-
-    HeapArray<char> filename(alloc);
-    filename.Append(directory);
-    filename.Append(*RG_PATH_SEPARATORS);
-    filename.Append(prefix);
-
-    Size change_offset = filename.len;
-
-    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-    RG_DEFER_N(log_guard) { PopLogFilter(); };
-
-    for (Size i = 0; i < 1000; i++) {
-        // We want to show an error on last try
-        if (RG_UNLIKELY(i == 999)) {
-            PopLogFilter();
-            log_guard.Disable();
-        }
-
-        filename.RemoveFrom(change_offset);
-        Fmt(&filename, "%1%2", FmtRandom(24), extension);
-
-        if (create(filename.ptr)) {
-            const char *ret = filename.TrimAndLeak(1).ptr;
-            return ret;
-        }
-    }
-
-    return nullptr;
-}
-
-const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
-                                Allocator *alloc, FILE **out_fp)
-{
-    return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
-        int flags = (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
-                    (int)OpenFileFlag::Exclusive;
-
-        FILE *fp = OpenFile(path, flags);
-
-        if (fp) {
-            if (out_fp) {
-                *out_fp = fp;
-            } else {
-                fclose(fp);
-            }
-
-            return true;
-        } else {
-            return false;
-        }
-    });
-}
-
-const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc)
-{
-    return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) {
-        return MakeDirectory(path);
-    });
-}
-
 bool EnsureDirectoryExists(const char *filename)
 {
     Span<const char> directory = GetPathDirectory(filename);
@@ -4351,6 +4288,248 @@ bool NotifySystemd()
     return true;
 }
 #endif
+
+// ------------------------------------------------------------------------
+// Standard paths
+// ------------------------------------------------------------------------
+
+#ifdef _WIN32
+
+const char *GetUserConfigPath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    static char cache_dir[4096];
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        wchar_t *dir = nullptr;
+        RG_DEFER { CoTaskMemFree(dir); };
+
+        RG_CRITICAL(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &dir) == S_OK,
+                    "Failed to retrieve path to roaming user AppData");
+        RG_CRITICAL(ConvertWin32WideToUtf8(dir, cache_dir) >= 0,
+                    "Path to roaming AppData is invalid or too big");
+    });
+
+    const char *path = Fmt(alloc, "%1%/%2", cache_dir, name).ptr;
+    return path;
+}
+
+const char *GetUserCachePath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    static char cache_dir[4096];
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        wchar_t *dir = nullptr;
+        RG_DEFER { CoTaskMemFree(dir); };
+
+        RG_CRITICAL(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &dir) == S_OK,
+                    "Failed to retrieve path to local user AppData");
+        RG_CRITICAL(ConvertWin32WideToUtf8(dir, cache_dir) >= 0,
+                    "Path to local AppData is invalid or too big");
+    });
+
+    const char *path = Fmt(alloc, "%1%/%2", cache_dir, name).ptr;
+    return path;
+}
+
+const char *GetTemporaryDirectory()
+{
+    static char temp_dir[4096];
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        Size len;
+        if (win32_utf8) {
+            len = (Size)GetTempPathA(RG_SIZE(temp_dir), temp_dir);
+            RG_CRITICAL(len < RG_SIZE(temp_dir), "Temporary directory path is too big");
+        } else {
+            static wchar_t dir_w[4096];
+            Size len_w = (Size)GetTempPathW(RG_LEN(dir_w), dir_w);
+
+            RG_CRITICAL(len_w < RG_LEN(dir_w), "Temporary directory path is too big");
+
+            len = ConvertWin32WideToUtf8(dir_w, temp_dir);
+            RG_CRITICAL(len >= 0, "Temporary directory path is invalid or too big");
+        }
+
+        while (len > 0 && IsPathSeparator(temp_dir[len - 1])) {
+            len--;
+        }
+        temp_dir[len] = 0;
+    });
+
+    return temp_dir;
+}
+
+#else
+
+const char *GetUserConfigPath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    const char *xdg = getenv("XDG_CONFIG_HOME");
+
+    if (xdg) {
+        const char *path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
+        return path;
+    } else {
+        const char *home = getenv("HOME");
+        RG_CRITICAL(home, "Failed to get HOME environment variable: %1", strerror(errno));
+
+        const char *path = Fmt(alloc, "%1%/.config/%2", home, name).ptr;
+        return path;
+    }
+}
+
+const char *GetUserCachePath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    const char *xdg = getenv("XDG_CACHE_HOME");
+
+    if (xdg) {
+        const char *path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
+        return path;
+    } else {
+        const char *home = getenv("HOME");
+        RG_CRITICAL(home, "Failed to get HOME environment variable: %1", strerror(errno));
+
+        const char *path = Fmt(alloc, "%1%/.cache/%2", home, name).ptr;
+        return path;
+    }
+}
+
+static const char *GetSystemConfigPath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    const char *path = Fmt(alloc, "/etc/%1", name).ptr;
+    return path;
+}
+
+const char *GetTemporaryDirectory()
+{
+    static char temp_dir[4096];
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        Span<const char> env = getenv("TMPDIR");
+
+        while (env.len > 0 && IsPathSeparator(env[env.len - 1])) {
+            env.len--;
+        }
+
+        if (env.len && env.len < RG_SIZE(temp_dir)) {
+            CopyString(env, temp_dir);
+        } else {
+            CopyString("/tmp", temp_dir);
+        }
+    });
+
+    return temp_dir;
+}
+
+#endif
+
+const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const char *, 4> *out_possibilities)
+{
+    decltype(GetUserConfigPath) *funcs[] = {
+        [](const char *name, Allocator *alloc) {
+            Span<const char> dir = GetApplicationDirectory();
+
+            const char *filename = Fmt(alloc, "%1%/%2", dir, name).ptr;
+            return filename;
+        },
+        GetUserConfigPath,
+#ifndef _WIN32
+        GetSystemConfigPath
+#endif
+    };
+
+    const char *filename = nullptr;
+
+    for (const auto &func: funcs) {
+        const char *path = func(name, alloc);
+
+        if (TestFile(path, FileType::File)) {
+            filename = path;
+        }
+        if (out_possibilities) {
+            out_possibilities->Append(path);
+        }
+    }
+
+    return filename;
+}
+
+static const char *CreateTemporaryPath(Span<const char> directory, const char *prefix, const char *extension,
+                                       Allocator *alloc, FunctionRef<bool(const char *path)> create)
+{
+    RG_ASSERT(alloc);
+
+    HeapArray<char> filename(alloc);
+    filename.Append(directory);
+    filename.Append(*RG_PATH_SEPARATORS);
+    filename.Append(prefix);
+
+    Size change_offset = filename.len;
+
+    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+    RG_DEFER_N(log_guard) { PopLogFilter(); };
+
+    for (Size i = 0; i < 1000; i++) {
+        // We want to show an error on last try
+        if (RG_UNLIKELY(i == 999)) {
+            PopLogFilter();
+            log_guard.Disable();
+        }
+
+        filename.RemoveFrom(change_offset);
+        Fmt(&filename, "%1%2", FmtRandom(24), extension);
+
+        if (create(filename.ptr)) {
+            const char *ret = filename.TrimAndLeak(1).ptr;
+            return ret;
+        }
+    }
+
+    return nullptr;
+}
+
+const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
+                                Allocator *alloc, FILE **out_fp)
+{
+    return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
+        int flags = (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
+                    (int)OpenFileFlag::Exclusive;
+
+        FILE *fp = OpenFile(path, flags);
+
+        if (fp) {
+            if (out_fp) {
+                *out_fp = fp;
+            } else {
+                fclose(fp);
+            }
+
+            return true;
+        } else {
+            return false;
+        }
+    });
+}
+
+const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc)
+{
+    return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) {
+        return MakeDirectory(path);
+    });
+}
 
 // ------------------------------------------------------------------------
 // Random

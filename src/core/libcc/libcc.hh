@@ -3920,10 +3920,6 @@ bool FlushFile(FILE *fp, const char *filename);
 
 bool FileIsVt100(FILE *fp);
 
-const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
-                                Allocator *alloc, FILE **out_fp = nullptr);
-const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
-
 #ifdef _WIN32
 enum class PipeMode {
     Byte,
@@ -3997,6 +3993,20 @@ bool NotifySystemd();
             return ret; \
         })()
 #endif
+
+// ------------------------------------------------------------------------
+// Standard paths
+// ------------------------------------------------------------------------
+
+const char *GetUserConfigPath(const char *name, Allocator *alloc);
+const char *GetUserCachePath(const char *name, Allocator *alloc);
+const char *GetTemporaryDirectory();
+
+const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const char *, 4> *out_possibilities = nullptr);
+
+const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
+                                Allocator *alloc, FILE **out_fp = nullptr);
+const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
 
 // ------------------------------------------------------------------------
 // Random
