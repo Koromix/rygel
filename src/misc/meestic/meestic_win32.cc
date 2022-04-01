@@ -194,6 +194,8 @@ static LRESULT __stdcall LowLevelKeyboardProc(int code, WPARAM wparam, LPARAM lp
 
 int Main(int argc, char **argv)
 {
+    BlockAllocator temp_alloc;
+
     InitCommonControls();
 
     // Redirect log when /subsystem:windows is used
@@ -203,13 +205,8 @@ int Main(int argc, char **argv)
     }
 
     // Default config filename
-    const char *config_filename;
-    {
-        Span<const char> prefix = GetApplicationExecutable();
-        prefix.len -= prefix.end() - GetPathExtension(prefix).ptr;
-
-        config_filename = Fmt(&config.str_alloc, "%1.ini", prefix).ptr;
-    }
+    LocalArray<const char *, 4> config_filenames;
+    const char *config_filename = FindConfigFile("MeesticGui.ini", &temp_alloc, &config_filenames);
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -218,7 +215,7 @@ R"(Usage: %!..+%1 [options]%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
                                  %!D..(default: %2)%!0%!0)",
-                FelixTarget, config_filename);
+                FelixTarget, FmtSpan(config_filenames.As()));
     };
 
     // Handle version
