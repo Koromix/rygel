@@ -459,6 +459,10 @@ public:
                 // to not take this precaution. Without it, SQLite3 crashes.
                 Fmt(&buf, " -fsanitize-cfi-icall-generalize-pointers");
             }
+
+            if (clang_ver >= 14) {
+                Fmt(&buf, " -cfprotection=branch");
+            }
         }
         if (features & (int)CompileFeature::ShuffleCode) {
             Fmt(&buf, " -ffunction-sections -fdata-sections");
@@ -707,6 +711,9 @@ public:
             supported |= (int)CompileFeature::LTO;
         }
         supported |= (int)CompileFeature::ZeroInit;
+        if (gcc_ver >= 9) {
+            supported |= (int)CompileFeature::CFI;
+        }
         supported |= (int)CompileFeature::Cxx17;
         if (host == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
@@ -877,6 +884,9 @@ public:
         }
         if (features & (int)CompileFeature::ZeroInit) {
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
+        }
+        if (features & (int)CompileFeature::CFI) {
+            Fmt(&buf, " -cfprotection=branch");
         }
 
         // Sources and definitions
