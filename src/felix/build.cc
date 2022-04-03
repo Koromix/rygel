@@ -160,7 +160,7 @@ static bool UpdateResourceFile(const char *target_name, const char *icon_filenam
 {
     static const char *const manifest = R"(
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
     <assemblyIdentity type="win32" name="" version="1.0.0.0"/>
     <application>
         <windowsSettings>
@@ -169,6 +169,12 @@ static bool UpdateResourceFile(const char *target_name, const char *icon_filenam
             <heapType xmlns="http://schemas.microsoft.com/SMI/2020/WindowsSettings">SegmentHeap</heapType>
         </windowsSettings>
     </application>
+    <asmv3:application>
+        <asmv3:windowsSettings>
+            <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
+            <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+        </asmv3:windowsSettings>
+    </asmv3:application>
     <dependency>
         <dependentAssembly>
             <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0"

@@ -100,6 +100,25 @@ static bool ToggleProfile(int delta)
     return true;
 }
 
+static bool UpdateTrayIcon()
+{
+    HINSTANCE module = GetModuleHandle(nullptr);
+    HICON icon = LoadIcon(module, MAKEINTRESOURCE(1));
+
+    if (!icon) {
+        LogError("Failed to update tray icon: %1", GetWin32ErrorString());
+        icon = notify.hIcon;
+    }
+    notify.hIcon = icon;
+
+    if (!Shell_NotifyIconA(NIM_ADD, &notify)) {
+        LogError("Failed to restore tray icon: %1", GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
 static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     static UINT taskbar_created = RegisterWindowMessageA("TaskbarCreated");
@@ -161,10 +180,17 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             return 0;
         } break;
 
-        default: {
-            if (msg == taskbar_created && !Shell_NotifyIconA(NIM_ADD, &notify)) {
-                LogError("Failed to restore tray icon: %1", GetWin32ErrorString());
+        case WM_DPICHANGED: {
+            if (!UpdateTrayIcon()) {
                 PostQuitMessage(1);
+            }
+        } break;
+
+        default: {
+            if (msg == taskbar_created) {
+                if (!UpdateTrayIcon()) {
+                    PostQuitMessage(1);
+                }
             }
         } break;
     }
