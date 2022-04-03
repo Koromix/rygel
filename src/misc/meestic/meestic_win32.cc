@@ -47,16 +47,9 @@ static void ShowAboutDialog()
 
     TASKDIALOGCONFIG dialog = {};
 
-    wchar_t title[2048];
-    wchar_t main[2048];
-    wchar_t content[2048];
-    ConvertUtf8ToWin32Wide(FelixTarget, title);
-    {
-        char buf[2048];
-        Fmt(buf, "%1 %2", FelixTarget, FelixVersion);
-        ConvertUtf8ToWin32Wide(buf, main);
-    }
-    ConvertUtf8ToWin32Wide(R"(<a href="https://koromix.dev/misc#meestic">https://koromix.dev/</a>)", content);
+    wchar_t title[1024]; ConvertUtf8ToWin32Wide(FelixTarget, title);
+    wchar_t main[1024]; swprintf(main, RG_LEN(main), L"%hs %hs", FelixTarget, FelixVersion);
+    const wchar_t *content = LR"(<a href="https://koromix.dev/misc#meestic">https://koromix.dev/</a>)";
 
     dialog.cbSize = RG_SIZE(dialog);
     dialog.hwndParent = hwnd;
