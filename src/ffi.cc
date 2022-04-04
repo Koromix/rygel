@@ -166,7 +166,7 @@ static Napi::Value CreateHandleType(const Napi::CallbackInfo &info)
     {
         RecordMember member = {};
 
-        member.name = "ptr";
+        member.name = "value";
         member.type = instance->types_map.FindValue("void *", nullptr);
         RG_ASSERT(member.type);
 
