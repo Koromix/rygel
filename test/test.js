@@ -107,6 +107,14 @@ async function main() {
         }
     }
 
+    // Sanity checks
+    if (parseInt(process.versions.node, 10) < 16)
+        throw new Error('Please use Node version >= 16');
+    if (spawnSync('ssh', ['-V']).status !== 0)
+        throw new Error('Missing ssh binary in PATH');
+    if (spawnSync('sshpass', ['-V']).status !== 0)
+        throw new Error('Missing sshpass binary in PATH');
+
     // Load machine registry
     let machines_map;
     {
@@ -414,7 +422,7 @@ async function ssh() {
     let args = [
         '-p' + machine.info.password,
         'ssh', '-o', 'StrictHostKeyChecking=no',
-               '-o', 'UserKnownHostsFile=' + (process.platform == 'win32' ? 'NUL' : '/dev/null'),
+               '-o', 'UserKnownHostsFile=' + (process.platform == 'win32' ? '\\\\.\\NUL' : '/dev/null'),
                '-p', machine.info.ssh_port, machine.info.username + '@127.0.0.1'
     ];
 
@@ -526,7 +534,7 @@ async function boot(machine, dirname, detach) {
 
     if (machine.qemu.accelerate)
         args.push('-accel', machine.qemu.accelerate);
-    args.push('-display', 'none');
+    // args.push('-display', 'none');
 
     try {
         let binary = qemu_prefix + machine.qemu.binary + (process.platform == 'win32' ? '.exe' : '');
