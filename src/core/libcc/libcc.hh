@@ -3981,6 +3981,9 @@ void SignalWaitFor();
 
 int GetCoreCount();
 
+#ifndef _WIN32
+bool DropSetuid();
+#endif
 #ifdef __linux__
 bool NotifySystemd();
 #endif

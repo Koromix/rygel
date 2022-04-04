@@ -63,6 +63,7 @@
     #include <dirent.h>
     #include <fcntl.h>
     #include <fnmatch.h>
+    #include <grp.h>
     #include <poll.h>
     #include <signal.h>
     #include <spawn.h>
@@ -4230,6 +4231,33 @@ int GetCoreCount()
     return cores;
 #endif
 }
+
+#ifndef _WIN32
+bool DropSetuid()
+{
+    uid_t uid = getuid();
+    uid_t euid = geteuid();
+    gid_t gid = getgid();
+
+    if (uid != euid) {
+        LogDebug("Dropping SUID privileges...");
+    }
+
+    if (!euid && setgroups(1, &gid) < 0)
+        goto error;
+    if (setregid(gid, gid) < 0)
+        goto error;
+    if (setreuid(uid, uid) < 0)
+        goto error;
+    RG_CRITICAL(setuid(0) < 0, "Managed to regain root privileges");
+
+    return true;
+
+error:
+    LogError("Failed to drop setuid privilegies: %1", strerror(errno));
+    return false;
+}
+#endif
 
 #ifdef __linux__
 bool NotifySystemd()
