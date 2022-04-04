@@ -1,0 +1,72 @@
+diff --git a/vendor/basu/src/libsystemd/sd-bus/sd-bus.c b/vendor/basu/src/libsystemd/sd-bus/sd-bus.c
+index 0ec9019f8..064d823a3 100644
+--- a/vendor/basu/src/libsystemd/sd-bus/sd-bus.c
++++ b/vendor/basu/src/libsystemd/sd-bus/sd-bus.c
+@@ -58,7 +58,7 @@ static sd_bus **bus_choose_default(int (**bus_open)(sd_bus **)) {
+          * we can share the connection with the user/system default
+          * bus. */
+ 
+-        e = secure_getenv("DBUS_STARTER_BUS_TYPE");
++        e = getenv("DBUS_STARTER_BUS_TYPE");
+         if (e) {
+                 if (streq(e, "system")) {
+                         if (bus_open)
+@@ -73,7 +73,7 @@ static sd_bus **bus_choose_default(int (**bus_open)(sd_bus **)) {
+ 
+         /* No type is specified, so we have not other option than to
+          * use the starter address if it is set. */
+-        e = secure_getenv("DBUS_STARTER_ADDRESS");
++        e = getenv("DBUS_STARTER_ADDRESS");
+         if (e) {
+                 if (bus_open)
+                         *bus_open = sd_bus_open;
+@@ -941,7 +941,7 @@ _public_ int sd_bus_open_with_description(sd_bus **ret, const char *description)
+          * otherwise to the bus that is appropropriate for the scope
+          * we are running in */
+ 
+-        e = secure_getenv("DBUS_STARTER_BUS_TYPE");
++        e = getenv("DBUS_STARTER_BUS_TYPE");
+         if (e) {
+                 if (streq(e, "system"))
+                         return sd_bus_open_system_with_description(ret, description);
+@@ -949,7 +949,7 @@ _public_ int sd_bus_open_with_description(sd_bus **ret, const char *description)
+                         return sd_bus_open_user_with_description(ret, description);
+         }
+ 
+-        e = secure_getenv("DBUS_STARTER_ADDRESS");
++        e = getenv("DBUS_STARTER_ADDRESS");
+         if (!e) {
+                 return sd_bus_open_system_with_description(ret, description);
+         }
+@@ -986,7 +986,7 @@ int bus_set_address_system(sd_bus *b) {
+         const char *e;
+         assert(b);
+ 
+-        e = secure_getenv("DBUS_SYSTEM_BUS_ADDRESS");
++        e = getenv("DBUS_SYSTEM_BUS_ADDRESS");
+         if (e)
+                 return sd_bus_set_address(b, e);
+ 
+@@ -1040,11 +1040,11 @@ int bus_set_address_user(sd_bus *b) {
+ 
+         assert(b);
+ 
+-        e = secure_getenv("DBUS_SESSION_BUS_ADDRESS");
++        e = getenv("DBUS_SESSION_BUS_ADDRESS");
+         if (e)
+                 return sd_bus_set_address(b, e);
+ 
+-        e = secure_getenv("XDG_RUNTIME_DIR");
++        e = getenv("XDG_RUNTIME_DIR");
+         if (!e)
+                 return -ENOENT;
+ 
+@@ -3333,7 +3333,7 @@ _public_ int sd_bus_get_method_call_timeout(sd_bus *bus, uint64_t *ret) {
+                 return 0;
+         }
+ 
+-        e = secure_getenv("SYSTEMD_BUS_TIMEOUT");
++        e = getenv("SYSTEMD_BUS_TIMEOUT");
+         if (e && parse_sec(e, &usec) >= 0 && usec != 0) {
+                 /* Save the parsed value to avoid multiple parsing. To change the timeout value,
+                  * use sd_bus_set_method_call_timeout() instead of setenv(). */
