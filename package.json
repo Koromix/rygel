@@ -1,6 +1,6 @@
 {
   "name": "koffi",
-  "version": "0.9.11",
+  "version": "0.9.12",
   "description": "Fast and simple FFI (foreign function interface) for Node.js",
   "keywords": [
     "foreign",
@@ -18,7 +18,7 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "build/koffi.node",
   "scripts": {
-    "install": "cnoke.js",
+    "install": "cnoke",
     "test": "node test/test.js"
   },
   "license": "AGPL-3.0",
