@@ -1,6 +1,6 @@
 {
   "name": "koffi",
-  "version": "0.9.10",
+  "version": "0.9.11",
   "description": "Fast and simple FFI (foreign function interface) for Node.js",
   "keywords": [
     "foreign",
@@ -37,6 +37,7 @@
     "test/test.js",
     "vendor",
     "LICENSE.txt",
-    "README.md"
+    "README.md",
+    "CMakeLists.txt"
   ]
 }
