@@ -1,6 +1,6 @@
 {
   "name": "koffi",
-  "version": "0.9.12",
+  "version": "0.9.13",
   "description": "Fast and simple FFI (foreign function interface) for Node.js",
   "keywords": [
     "foreign",
@@ -16,7 +16,7 @@
     "url": "https://github.com/Koromix/luigi.git"
   },
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
-  "main": "build/koffi.node",
+  "main": "index.js",
   "scripts": {
     "install": "cnoke",
     "test": "node test/test.js"
