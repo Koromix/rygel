@@ -1,6 +1,6 @@
 {
   "name": "cnoke",
-  "version": "0.9.22",
+  "version": "0.9.23",
   "description": "Build native Node addons based on CMake, without extra dependency",
   "keywords": [
     "native",
@@ -14,7 +14,7 @@
     "url": "https://github.com/Koromix/luigi.git"
   },
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
-  "bin": "cnoke.js",
+  "bin": "cnoke",
   "license": "AGPL-3.0",
   "files": [
     "cnoke.js",
