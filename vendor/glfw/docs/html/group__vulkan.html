@@ -166,9 +166,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>An array of ASCII encoded extension names, or <code>NULL</code> if an <a class="el" href="intro_guide.html#error_handling">error</a> occurred.</dd></dl>
 <dl class="section user"><dt>Errors</dt><dd>Possible errors include <a class="el" href="group__errors.html#ga2374ee02c177f12e1fa76ff3ed15e14a">GLFW_NOT_INITIALIZED</a> and <a class="el" href="group__errors.html#ga56882b290db23261cc6c053c40c2d08e">GLFW_API_UNAVAILABLE</a>.</dd></dl>
-<dl class="section remark"><dt>Remarks</dt><dd>Additional extensions may be required by future versions of GLFW. You should check if any extensions you wish to enable are already in the returned array, as it is an error to specify an extension more than once in the <code>VkInstanceCreateInfo</code> struct.</dd>
-<dd>
-<b>macOS:</b> GLFW currently supports both the <code>VK_MVK_macos_surface</code> and the newer <code>VK_EXT_metal_surface</code> extensions.</dd></dl>
+<dl class="section remark"><dt>Remarks</dt><dd>Additional extensions may be required by future versions of GLFW. You should check if any extensions you wish to enable are already in the returned array, as it is an error to specify an extension more than once in the <code>VkInstanceCreateInfo</code> struct.</dd></dl>
 <dl class="section user"><dt>Pointer lifetime</dt><dd>The returned array is allocated and freed by GLFW. You should not free it yourself. It is guaranteed to be valid only until the library is terminated.</dd></dl>
 <dl class="section user"><dt>Thread safety</dt><dd>This function may be called from any thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="vulkan_guide.html#vulkan_ext">Querying required Vulkan extensions</a> </dd>
@@ -333,7 +331,7 @@ Functions</h2></td></tr>
 <dl class="section user"><dt>Errors</dt><dd>Possible errors include <a class="el" href="group__errors.html#ga2374ee02c177f12e1fa76ff3ed15e14a">GLFW_NOT_INITIALIZED</a>, <a class="el" href="group__errors.html#ga56882b290db23261cc6c053c40c2d08e">GLFW_API_UNAVAILABLE</a>, <a class="el" href="group__errors.html#gad44162d78100ea5e87cdd38426b8c7a1">GLFW_PLATFORM_ERROR</a> and <a class="el" href="group__errors.html#gaaf2ef9aa8202c2b82ac2d921e554c687">GLFW_INVALID_VALUE</a></dd></dl>
 <dl class="section remark"><dt>Remarks</dt><dd>If an error occurs before the creation call is made, GLFW returns the Vulkan error code most appropriate for the error. Appropriate use of <a class="el" href="group__vulkan.html#ga2e7f30931e02464b5bc8d0d4b6f9fe2b">glfwVulkanSupported</a> and <a class="el" href="group__vulkan.html#ga99ad342d82f4a3421e2864978cb6d1d6">glfwGetRequiredInstanceExtensions</a> should eliminate almost all occurrences of these errors.</dd>
 <dd>
-<b>macOS:</b> This function currently only supports the <code>VK_MVK_macos_surface</code> extension from MoltenVK.</dd>
+<b>macOS:</b> GLFW prefers the <code>VK_EXT_metal_surface</code> extension, with the <code>VK_MVK_macos_surface</code> extension as a fallback. The name of the selected extension, if any, is included in the array returned by <a class="el" href="group__vulkan.html#ga99ad342d82f4a3421e2864978cb6d1d6">glfwGetRequiredInstanceExtensions</a>.</dd>
 <dd>
 <b>macOS:</b> This function creates and sets a <code>CAMetalLayer</code> instance for the window content view, which is required for MoltenVK to function.</dd></dl>
 <dl class="section user"><dt>Thread safety</dt><dd>This function may be called from any thread. For synchronization details of Vulkan objects, see the Vulkan specification.</dd></dl>
@@ -347,7 +345,7 @@ Functions</h2></td></tr>
 </div><!-- contents -->
 <address class="footer">
 <p>
-Last update on Thu Dec 9 2021 for GLFW 3.3.6
+Last update on Tue Apr 5 2022 for GLFW 3.3.7
 </p>
 </address>
 </body>

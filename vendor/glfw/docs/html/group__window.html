@@ -2456,6 +2456,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section user"><dt>Errors</dt><dd>Possible errors include <a class="el" href="group__errors.html#ga2374ee02c177f12e1fa76ff3ed15e14a">GLFW_NOT_INITIALIZED</a> and <a class="el" href="group__errors.html#gad44162d78100ea5e87cdd38426b8c7a1">GLFW_PLATFORM_ERROR</a>.</dd></dl>
+<dl class="section remark"><dt>Remarks</dt><dd><b>Wayland:</b> Because Wayland wants every frame of the desktop to be complete, this function does not immediately make the window visible. Instead it will become visible the next time the window framebuffer is updated after this call.</dd></dl>
 <dl class="section user"><dt>Thread safety</dt><dd>This function must only be called from the main thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="window_guide.html#window_hide">Window visibility</a> </dd>
 <dd>
@@ -3418,7 +3419,7 @@ Zero is a valid value for many window and context related attributes so you cann
 </div><!-- contents -->
 <address class="footer">
 <p>
-Last update on Thu Dec 9 2021 for GLFW 3.3.6
+Last update on Tue Apr 5 2022 for GLFW 3.3.7
 </p>
 </address>
 </body>

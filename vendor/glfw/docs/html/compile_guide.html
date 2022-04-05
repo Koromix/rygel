@@ -105,7 +105,7 @@ Dependencies for X11 on Unix-like systems</h3>
 <div class="fragment"><div class="line">sudo dnf install libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel</div>
 </div><!-- fragment --><p >On FreeBSD the X11 headers are installed along the end-user X11 packages, so if you have an X server running you should have the headers as well. If not, install the <code>xorgproto</code> package.</p>
 <div class="fragment"><div class="line">pkg install xorgproto</div>
-</div><!-- fragment --><p >On Cygwin the <code>xorgproto</code> package in the Devel section of the GUI installer will install the headers and other development related files for all of X11.</p>
+</div><!-- fragment --><p >On Cygwin the <code>libXcursor-devel</code>, <code>libXi-devel</code>, <code>libXinerama-devel</code>, <code>libXrandr-devel</code> and <code>libXrender-devel</code> packages in the Libs section of the GUI installer will install all the headers and other development related files GLFW requires for X11.</p>
 <p >Once you have the required depdendencies, move on to <a class="el" href="compile_guide.html#compile_generate">Generating build files with CMake</a>.</p>
 <h3><a class="anchor" id="compile_deps_wayland"></a>
 Dependencies for Wayland on Unix-like systems</h3>
@@ -209,7 +209,7 @@ Compiling GLFW manually</h1>
 </div><!-- PageDoc -->
 <address class="footer">
 <p>
-Last update on Thu Dec 9 2021 for GLFW 3.3.6
+Last update on Tue Apr 5 2022 for GLFW 3.3.7
 </p>
 </address>
 </body>

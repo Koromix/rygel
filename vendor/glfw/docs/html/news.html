@@ -95,6 +95,7 @@ $(function() {
 <li class="level3"><a href="#x11_linking_33">X11 extension libraries are loaded dynamically</a></li>
 <li class="level3"><a href="#cmake_version_33">CMake 3.0 or later is required</a></li>
 <li class="level3"><a href="#caveat_fbtransparency_33">Framebuffer transparency requires DWM transparency</a></li>
+<li class="level3"><a href="#emptyevents_33">Empty events on X11 no longer roundtrip to server</a></li>
 </ul>
 </li>
 <li class="level2"><a href="#deprecations_33">Deprecations in version 3.3</a><ul><li class="level3"><a href="#charmods_callback_33">Character with modifiers callback</a></li>
@@ -296,6 +297,9 @@ CMake 3.0 or later is required</h3>
 <h3><a class="anchor" id="caveat_fbtransparency_33"></a>
 Framebuffer transparency requires DWM transparency</h3>
 <p >GLFW no longer supports framebuffer transparency enabled via <a class="el" href="group__window.html#ga60a0578c3b9449027d683a9c6abb9f14">GLFW_TRANSPARENT_FRAMEBUFFER</a> on Windows 7 if DWM transparency is off (the Transparency setting under Personalization &gt; Window Color).</p>
+<h3><a class="anchor" id="emptyevents_33"></a>
+Empty events on X11 no longer roundtrip to server</h3>
+<p >Starting with GLFW 3.3.7, events posted with <a class="el" href="group__window.html#gab5997a25187e9fd5c6f2ecbbc8dfd7e9">glfwPostEmptyEvent</a> now use a separate unnamed pipe instead of sending an X11 client event to the helper window.</p>
 <h2><a class="anchor" id="deprecations_33"></a>
 Deprecations in version 3.3</h2>
 <h3><a class="anchor" id="charmods_callback_33"></a>
@@ -599,7 +603,7 @@ Doxygen documentation</h3>
 </div><!-- PageDoc -->
 <address class="footer">
 <p>
-Last update on Thu Dec 9 2021 for GLFW 3.3.6
+Last update on Tue Apr 5 2022 for GLFW 3.3.7
 </p>
 </address>
 </body>
