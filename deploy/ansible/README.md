@@ -62,6 +62,11 @@ vagrant provision
 The secret ansible-vault key is needed for this. You must __never ever__ distribute it or put it in the repository!
 
 ```sh
-ansible-playbook hds.yml -i inventories/pknet/prod/hosts.yml -u <USER> --key-file <KEY_FILE> --vault-password-file /path/to/ansible-pknet.vault --ask-become-pass
+ansible-playbook pknet.yml -i inventories/pknet/prod/hosts.yml -u <USER> --key-file <KEY_FILE> --vault-password-file /path/to/ansible-pknet.vault --ask-become-pass
 ```
 
+## Add a new host/VPS
+
+```sh
+ansible-playbook playbook.yml -i inventories/pknet/prod -e ansible_user=debian -e ansible_password=PASSWORD -l HOST --tags=base pknet.yml
+```

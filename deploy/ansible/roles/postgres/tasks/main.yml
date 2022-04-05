@@ -1,0 +1,62 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+- name: Install packages
+  package:
+    update_cache: yes
+    pkg:
+      - postgresql
+      - python3-psycopg2
+    state: latest
+  become: yes
+
+- name: Enable services
+  service:
+    name: postgresql
+    enabled: yes
+    state: started
+
+- name: Create database tables
+  community.postgresql.postgresql_db:
+    state: present
+    name: '{{ item.name }}'
+  loop: '{{ pg_databases }}'
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining: true
+
+- name: Create database roles
+  community.postgresql.postgresql_user:
+    state: present
+    name: '{{ item.name }}'
+    password: '{{ item.password }}'
+    encrypted: yes
+  loop: '{{ pg_users }}'
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining: true
+
+- name: Grant database user permissions
+  community.postgresql.postgresql_privs:
+    type: database
+    database: "{{ item.name }}"
+    roles: "{{ item.role }}"
+    grant_option: no
+    privs: all
+  loop: '{{ pg_databases }}'
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining: true

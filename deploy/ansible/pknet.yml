@@ -19,6 +19,10 @@
     - name: base
       tags:
         - base
+    - name: postgres
+      when: 'pg_users is defined'
+      tags:
+        - postgres
     - name: nginx
       when: 'nginx_domains is defined'
       tags:

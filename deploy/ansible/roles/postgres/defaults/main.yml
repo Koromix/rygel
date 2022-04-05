@@ -11,9 +11,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-all:
-  hosts:
-    host1:
-    host2:
-    backup:
-    monitor:
+# pg_databases:
+#   - name: test
+#     role: foo
+
+# pg_users:
+#   - name: foo
+#     password: bar
