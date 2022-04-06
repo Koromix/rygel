@@ -364,8 +364,8 @@ public:
             Fmt(&buf, " -o \"%1\"", dest_filename);
         } else {
             switch (src_type) {
-                case SourceType::C: { Fmt(&buf, " -x c-header"); } break;
-                case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
+                case SourceType::C: { Fmt(&buf, " -x c-header -Xclang -fno-pch-timestamp"); } break;
+                case SourceType::CXX: { Fmt(&buf, " -x c++-header -Xclang -fno-pch-timestamp"); } break;
             }
         }
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
