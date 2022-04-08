@@ -112,8 +112,6 @@ async function main() {
         throw new Error('Please use Node version >= 16');
     if (spawnSync('ssh', ['-V']).status !== 0)
         throw new Error('Missing ssh binary in PATH');
-    if (spawnSync('sshpass', ['-V']).status !== 0)
-        throw new Error('Missing sshpass binary in PATH');
 
     // Load machine registry
     let machines_map;
