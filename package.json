@@ -16,7 +16,7 @@
     "url": "https://github.com/Koromix/luigi.git"
   },
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "install": "cnoke",
     "test": "node test/test.js"
