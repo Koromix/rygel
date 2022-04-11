@@ -38,17 +38,16 @@ async function main() {
 async function test() {
     let lib_filename = path.dirname(__filename) + '/../../build/misc' +
                        (process.platform == 'win32' ? '.dll' : '.so');
+    let lib = koffi.load(lib_filename);
 
-    let misc = koffi.load(lib_filename, {
-        FillPack3: ['void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]],
-        AddPack3: ['void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]]
-    });
+    const FillPack3 = lib.func('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
+    const AddPack3 = lib.func('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
 
     let p = {};
 
-    misc.FillPack3(1, 2, 3, p);
+    FillPack3(1, 2, 3, p);
     assert.deepEqual(p, { a: 1, b: 2, c: 3 });
 
-    misc.AddPack3(6, 9, -12, p);
+    AddPack3(6, 9, -12, p);
     assert.deepEqual(p, { a: 7, b: 11, c: -9 });
 }

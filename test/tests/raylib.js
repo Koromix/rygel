@@ -85,29 +85,28 @@ async function main() {
 async function test() {
     let lib_filename = path.dirname(__filename) + '/../../build/raylib' +
                        (process.platform == 'win32' ? '.dll' : '.so');
+    let lib = koffi.load(lib_filename);
 
-    let raylib = koffi.load(lib_filename, {
-        InitWindow: ['void', ['int', 'int', 'string']],
-        SetTraceLogLevel: ['void', ['int']],
-        SetWindowState: ['void', ['uint']],
-        GenImageColor: [Image, ['int', 'int', Color]],
-        GetFontDefault: [Font, []],
-        MeasureTextEx: [Vector2, [Font, 'string', 'float', 'float']],
-        ImageDrawTextEx: ['void', [koffi.pointer(Image), Font, 'string', Vector2, 'float', 'float', Color]],
-        ExportImage: ['bool', [Image, 'string']]
-    });
+    const InitWindow = lib.func('InitWindow', 'void', ['int', 'int', 'string']);
+    const SetTraceLogLevel = lib.func('SetTraceLogLevel', 'void', ['int']);
+    const SetWindowState = lib.func('SetWindowState', 'void', ['uint']);
+    const GenImageColor = lib.func('GenImageColor', Image, ['int', 'int', Color]);
+    const GetFontDefault = lib.func('GetFontDefault', Font, []);
+    const MeasureTextEx = lib.func('MeasureTextEx', Vector2, [Font, 'string', 'float', 'float']);
+    const ImageDrawTextEx = lib.func('ImageDrawTextEx', 'void', [koffi.pointer(Image), Font, 'string', Vector2, 'float', 'float', Color]);
+    const ExportImage = lib.func('ExportImage', 'bool', [Image, 'string']);
 
     // We need to call InitWindow before using anything else (such as fonts)
-    raylib.SetTraceLogLevel(4); // Warnings
-    raylib.SetWindowState(0x80); // Hidden
-    raylib.InitWindow(640, 480, "Raylib Test");
+    SetTraceLogLevel(4); // Warnings
+    SetWindowState(0x80); // Hidden
+    InitWindow(640, 480, "Raylib Test");
 
-    let img = raylib.GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
-    let font = raylib.GetFontDefault();
+    let img = GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
+    let font = GetFontDefault();
 
     for (let i = 0; i < 360; i++) {
         let text = 'Hello World!';
-        let text_width = raylib.MeasureTextEx(font, text, 10, 1).x;
+        let text_width = MeasureTextEx(font, text, 10, 1).x;
 
         let angle = (i * 4) * Math.PI / 180;
         let color = {
@@ -121,7 +120,7 @@ async function test() {
             y: (img.height / 2 - 16) + i * Math.sin(angle - Math.PI / 2)
         };
 
-        raylib.ImageDrawTextEx(img, font, text, pos, 10, 1, color);
+        ImageDrawTextEx(img, font, text, pos, 10, 1, color);
     }
 
     // In theory we could directly checksum the image data, but we can't do it easily right now
@@ -129,7 +128,7 @@ async function test() {
     let tmp_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'raylib'));
 
     try {
-        raylib.ExportImage(img, tmp_dir + '/hello.png');
+        ExportImage(img, tmp_dir + '/hello.png');
 
         let sha256 = await new Promise((resolve, reject) => {
             try {

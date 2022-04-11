@@ -121,34 +121,34 @@ const Font = koffi.struct('Font', {
 });
 
 // Fix the path to Raylib DLL
-let raylib = koffi.load('Raylib.dll', {
-    InitWindow: ['void', ['int', 'int', 'string']],
-    SetTargetFPS: ['void', ['int']],
-    GetScreenWidth: ['int', []],
-    GetScreenHeight: ['int', []],
-    ClearBackground: ['void', [Color]],
-    BeginDrawing: ['void', []],
-    EndDrawing: ['void', []],
-    WindowShouldClose: ['bool', []],
-    GetFontDefault: [Font, []],
-    MeasureTextEx: [Vector2, [Font, 'string', 'float', 'float']],
-    DrawTextEx: ['void', [Font, 'string', Vector2, 'float', 'float', Color]]
-});
+let lib = koffi.load('Raylib.dll');
 
-raylib.InitWindow(800, 600, 'Test Raylib');
-raylib.SetTargetFPS(60);
+const InitWindow = lib.func('InitWindow', ['void', ['int', 'int', 'string']]);
+const SetTargetFPS = lib.func('SetTargetFPS', ['void', ['int']]);
+const GetScreenWidth = lib.func('GetScreenWidth', ['int', []]);
+const GetScreenHeight = lib.func('GetScreenHeight', ['int', []]);
+const ClearBackground = lib.func('ClearBackground', ['void', [Color]]);
+const BeginDrawing = lib.func('BeginDrawing', ['void', []]);
+const EndDrawing = lib.func('EndDrawing', ['void', []]);
+const WindowShouldClose = lib.func('WindowShouldClose', ['bool', []]);
+const GetFontDefault = lib.func('GetFontDefault', [Font, []]);
+const MeasureTextEx = lib.func('MeasureTextEx', [Vector2, [Font, 'string', 'float', 'float']]);
+const DrawTextEx = lib.func('DrawTextEx', ['void', [Font, 'string', Vector2, 'float', 'float', Color]]);
+
+InitWindow(800, 600, 'Test Raylib');
+SetTargetFPS(60);
 
 let angle = 0;
 
-while (!raylib.WindowShouldClose()) {
-    raylib.BeginDrawing();
-    raylib.ClearBackground({ r: 0, g: 0, b: 0, a: 255 }); // black
+while (!WindowShouldClose()) {
+    BeginDrawing();
+    ClearBackground({ r: 0, g: 0, b: 0, a: 255 }); // black
 
-    let win_width = raylib.GetScreenWidth();
-    let win_height = raylib.GetScreenHeight();
+    let win_width = GetScreenWidth();
+    let win_height = GetScreenHeight();
 
     let text = 'Hello World!';
-    let text_width = raylib.MeasureTextEx(raylib.GetFontDefault(), text, 32, 1).x;
+    let text_width = MeasureTextEx(GetFontDefault(), text, 32, 1).x;
 
     let color = {
         r: 127.5 + 127.5 * Math.sin(angle),
@@ -161,9 +161,9 @@ while (!raylib.WindowShouldClose()) {
         y: (win_height / 2 - 16) + 120 * Math.sin(angle - Math.PI / 2)
     };
 
-    raylib.DrawTextEx(raylib.GetFontDefault(), text, pos, 32, 1, color);
+    DrawTextEx(GetFontDefault(), text, pos, 32, 1, color);
 
-    raylib.EndDrawing();
+    EndDrawing();
 
     angle += Math.PI / 180;
 }

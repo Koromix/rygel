@@ -273,21 +273,119 @@ static Napi::Value MarkInOut(const Napi::CallbackInfo &info)
     return EncodePointerDirection(info, 3);
 }
 
+static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    LibraryHolder *lib = (LibraryHolder *)info.Data();
+
+    if (info.Length() < 3) {
+        ThrowError<Napi::TypeError>(env, "Expected 3 or 4 arguments, not %1", info.Length());
+        return env.Null();
+    }
+    if (!info[0].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    FunctionInfo *func = new FunctionInfo();
+    RG_DEFER_N(func_guard) { delete func; };
+
+    std::string name = ((Napi::Value)info[0u]).As<Napi::String>();
+    func->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+    func->decorated_name = func->name;
+    func->lib = lib->Ref();
+
+    Napi::Array parameters;
+
+    if (info.Length() >= 4 && info[3u].IsArray()) {
+        std::string conv = ((Napi::Value)info[1u]).As<Napi::String>();
+
+        if (conv == "cdecl" || conv == "__cdecl") {
+            func->convention = CallConvention::Default;
+        } else if (conv == "stdcall" || conv == "__stdcall") {
+            func->convention = CallConvention::Stdcall;
+        } else {
+            ThrowError<Napi::Error>(env, "Unknown calling convention '%1'", conv.c_str());
+            return env.Null();
+        }
+
+        func->ret.type = ResolveType(instance, info[2u]);
+        if (!func->ret.type)
+            return env.Null();
+        if (!((Napi::Value)info[3u]).IsArray()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, (Napi::Value)info[1u]), func->name);
+            return env.Null();
+        }
+        parameters = ((Napi::Value)info[3u]).As<Napi::Array>();
+    } else {
+        func->ret.type = ResolveType(instance, info[1u]);
+        if (!func->ret.type)
+            return env.Null();
+        if (!((Napi::Value)info[2u]).IsArray()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, (Napi::Value)info[1u]), func->name);
+            return env.Null();
+        }
+        parameters = ((Napi::Value)info[2u]).As<Napi::Array>();
+    }
+
+    Size out_counter = 0;
+
+    for (uint32_t j = 0; j < parameters.Length(); j++) {
+        ParameterInfo param = {};
+
+        param.type = ResolveType(instance, parameters[j], &param.directions);
+        if (!param.type)
+            return env.Null();
+        if (param.type->primitive == PrimitiveKind::Void) {
+            ThrowError<Napi::TypeError>(env, "Type void cannot be used as a parameter");
+            return env.Null();
+        }
+
+        if (func->parameters.len >= MaxParameters) {
+            ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
+            return env.Null();
+        }
+        if ((param.directions & 2) && ++out_counter >= MaxOutParameters) {
+            ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
+            return env.Null();
+        }
+
+        func->parameters.Append(param);
+    }
+
+    if (!AnalyseFunction(instance, func))
+        return env.Null();
+
+#ifdef _WIN32
+    func->func = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
+#else
+    func->func = dlsym(lib->module, func->decorated_name);
+#endif
+    if (!func->func) {
+        RG_DEBUG_BREAK();
+        ThrowError<Napi::Error>(env, "Cannot find function '%1' in shared library", name.c_str());
+        return env.Null();
+    }
+
+    Napi::Function wrapper = Napi::Function::New(env, TranslateCall, name.c_str(), (void *)func);
+    wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { delete func; }, func);
+    func_guard.Disable();
+
+    return wrapper;
+}
+
 static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (info.Length() < 2) {
+    if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, not %1", info.Length());
         return env.Null();
     }
     if (!info[0].IsString() && !IsNullOrUndefined(info[0])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(instance, info[0]));
-        return env.Null();
-    }
-    if (!IsObject(info[1])) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for functions, expected object", GetValueType(instance, info[1]));
         return env.Null();
     }
 
@@ -329,108 +427,14 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     }
 #endif
 
-    std::shared_ptr<LibraryHolder> lib = std::make_shared<LibraryHolder>(module);
+    LibraryHolder *lib = new LibraryHolder(module);
+    RG_DEFER { lib->Unref(); };
+
     Napi::Object obj = Napi::Object::New(env);
-    Napi::Object functions = info[1].As<Napi::Array>();
-    Napi::Array keys = functions.GetPropertyNames();
 
-    for (uint32_t i = 0; i < keys.Length(); i++) {
-        FunctionInfo *func = new FunctionInfo();
-        RG_DEFER_N(func_guard) { delete func; };
-
-        std::string key = ((Napi::Value)keys[i]).As<Napi::String>();
-        Napi::Array value = ((Napi::Value)functions[key]).As<Napi::Array>();
-
-        func->name = DuplicateString(key.c_str(), &instance->str_alloc).ptr;
-        func->decorated_name = func->name;
-        func->lib = lib;
-
-        if (!value.IsArray()) {
-            ThrowError<Napi::TypeError>(env, "Unexpexted %1 value for signature of '%2', expected an array", GetValueType(instance, value), func->name);
-            return env.Null();
-        }
-        if (value.Length() < 2 || value.Length() > 3) {
-            ThrowError<Napi::TypeError>(env, "Unexpected array of length %1 for '%2', expected 2 or 3 elements", value.Length(), func->name);
-            return env.Null();
-        }
-
-        Napi::Array parameters;
-
-        if (((Napi::Value)value[1u]).IsString()) {
-            std::string conv = ((Napi::Value)value[1u]).As<Napi::String>();
-
-            if (conv == "cdecl" || conv == "__cdecl") {
-                func->convention = CallConvention::Default;
-            } else if (conv == "stdcall" || conv == "__stdcall") {
-                func->convention = CallConvention::Stdcall;
-            } else {
-                ThrowError<Napi::Error>(env, "Unknown calling convention '%1'", conv.c_str());
-                return env.Null();
-            }
-
-            if (!((Napi::Value)value[2u]).IsArray()) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, (Napi::Value)value[1u]), func->name);
-                return env.Null();
-            }
-
-            parameters = ((Napi::Value)value[2u]).As<Napi::Array>();
-        } else {
-            if (!((Napi::Value)value[1u]).IsArray()) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, (Napi::Value)value[1u]), func->name);
-                return env.Null();
-            }
-
-            parameters = ((Napi::Value)value[1u]).As<Napi::Array>();
-        }
-
-        func->ret.type = ResolveType(instance, value[0u]);
-        if (!func->ret.type)
-            return env.Null();
-
-        Size out_counter = 0;
-
-        for (uint32_t j = 0; j < parameters.Length(); j++) {
-            ParameterInfo param = {};
-
-            param.type = ResolveType(instance, parameters[j], &param.directions);
-            if (!param.type)
-                return env.Null();
-            if (param.type->primitive == PrimitiveKind::Void) {
-                ThrowError<Napi::TypeError>(env, "Type void cannot be used as a parameter");
-                return env.Null();
-            }
-
-            if (func->parameters.len >= MaxParameters) {
-                ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
-                return env.Null();
-            }
-            if ((param.directions & 2) && ++out_counter >= MaxOutParameters) {
-                ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
-                return env.Null();
-            }
-
-            func->parameters.Append(param);
-        }
-
-        if (!AnalyseFunction(instance, func))
-            return env.Null();
-
-#ifdef _WIN32
-        func->func = (void *)GetProcAddress((HMODULE)module, func->decorated_name);
-#else
-        func->func = dlsym(module, func->decorated_name);
-#endif
-        if (!func->func) {
-            ThrowError<Napi::Error>(env, "Cannot find function '%1' in shared library", key.c_str());
-            return env.Null();
-        }
-
-        Napi::Function wrapper = Napi::Function::New(env, TranslateCall, key.c_str(), (void *)func);
-        wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { delete func; }, func);
-        func_guard.Disable();
-
-        obj.Set(key, wrapper);
-    }
+    Napi::Function func = Napi::Function::New(env, FindLibraryFunction, "func", (void *)lib->Ref());
+    func.AddFinalizer([](Napi::Env, LibraryHolder *lib) { lib->Unref(); }, lib);
+    obj.Set("func", func);
 
     return obj;
 }
@@ -446,6 +450,19 @@ LibraryHolder::~LibraryHolder()
         dlclose(module);
     }
 #endif
+}
+
+LibraryHolder *LibraryHolder::Ref()
+{
+    refcount++;
+    return this;
+}
+
+void LibraryHolder::Unref()
+{
+    if (!--refcount) {
+        delete this;
+    }
 }
 
 static void RegisterPrimitiveType(InstanceData *instance, const char *name, PrimitiveKind primitive, int16_t size)
@@ -535,6 +552,13 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     types.Freeze();
 
     return types;
+}
+
+FunctionInfo::~FunctionInfo()
+{
+    if (lib) {
+        lib->Unref();
+    }
 }
 
 InstanceData::InstanceData()

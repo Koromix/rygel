@@ -38,43 +38,42 @@ async function main() {
 async function test() {
     let lib_filename = path.dirname(__filename) + '/../../build/sqlite3' +
                        (process.platform == 'win32' ? '.dll' : '.so');
+    let lib = koffi.load(lib_filename);
 
-    let sqlite3 = koffi.load(lib_filename, {
-        sqlite3_open_v2: ['int', ['string', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'string']],
-        sqlite3_exec: ['int', [sqlite3_db, 'string', 'void *', 'void *', 'void *']],
-        sqlite3_prepare_v2: ['int', [sqlite3_db, 'string', 'int', koffi.out(koffi.pointer(sqlite3_stmt)), 'string']],
-        sqlite3_reset: ['int', [sqlite3_stmt]],
-        sqlite3_bind_text: ['int', [sqlite3_stmt, 'int', 'string', 'int', 'void *']],
-        sqlite3_bind_int: ['int', [sqlite3_stmt, 'int', 'int']],
-        sqlite3_step: ['int', [sqlite3_stmt]],
-        sqlite3_finalize: ['int', [sqlite3_stmt]],
-        sqlite3_close_v2: ['int', [sqlite3_db]]
-    });
+    const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['string', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'string']);
+    const sqlite3_exec = lib.func('sqlite3_exec', 'int', [sqlite3_db, 'string', 'void *', 'void *', 'void *']);
+    const sqlite3_prepare_v2 = lib.func('sqlite3_prepare_v2', 'int', [sqlite3_db, 'string', 'int', koffi.out(koffi.pointer(sqlite3_stmt)), 'string']);
+    const sqlite3_reset = lib.func('sqlite3_reset', 'int', [sqlite3_stmt]);
+    const sqlite3_bind_text = lib.func('sqlite3_bind_text', 'int', [sqlite3_stmt, 'int', 'string', 'int', 'void *']);
+    const sqlite3_bind_int = lib.func('sqlite3_bind_int', 'int', [sqlite3_stmt, 'int', 'int']);
+    const sqlite3_step = lib.func('sqlite3_step', 'int', [sqlite3_stmt]);
+    const sqlite3_finalize = lib.func('sqlite3_finalize', 'int', [sqlite3_stmt]);
+    const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [sqlite3_db]);
 
     let filename = create_temporary_file(path.join(os.tmpdir(), 'test_sqlite'));
     let db = {};
 
     try {
-        if (sqlite3.sqlite3_open_v2(filename, db, 0x2 | 0x4, null) != 0)
+        if (sqlite3_open_v2(filename, db, 0x2 | 0x4, null) != 0)
             throw new Error('Failed to open database');
-        if (sqlite3.sqlite3_exec(db, 'CREATE TABLE foo (id INTEGER PRIMARY KEY, bar TEXT, value INT);', null, null, null) != 0)
+        if (sqlite3_exec(db, 'CREATE TABLE foo (id INTEGER PRIMARY KEY, bar TEXT, value INT);', null, null, null) != 0)
             throw new Error('Failed to create table');
 
         let stmt = {};
-        if (sqlite3.sqlite3_prepare_v2(db, "INSERT INTO foo (bar, value) VALUES (?1, ?2)", -1, stmt, null) != 0)
+        if (sqlite3_prepare_v2(db, "INSERT INTO foo (bar, value) VALUES (?1, ?2)", -1, stmt, null) != 0)
             throw new Error('Failed to prepare insert statement for table foo');
         for (let i = 0; i < 200; i++) {
-            sqlite3.sqlite3_reset(stmt);
+            sqlite3_reset(stmt);
 
-            sqlite3.sqlite3_bind_text(stmt, 1, `TXT ${i}`, -1, null);
-            sqlite3.sqlite3_bind_int(stmt, 2, i * 2);
+            sqlite3_bind_text(stmt, 1, `TXT ${i}`, -1, null);
+            sqlite3_bind_int(stmt, 2, i * 2);
 
-            if (sqlite3.sqlite3_step(stmt) != 101)
+            if (sqlite3_step(stmt) != 101)
                 throw new Erorr('Failed to insert new test row');
         }
-        sqlite3.sqlite3_finalize(stmt);
+        sqlite3_finalize(stmt);
     } finally {
-        sqlite3.sqlite3_close_v2(db);
+        sqlite3_close_v2(db);
         fs.unlinkSync(filename);
     }
 }

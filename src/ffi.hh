@@ -91,12 +91,15 @@ struct RecordMember {
     const TypeInfo *type;
 };
 
-class LibraryHolder {
+struct LibraryHolder {
     void *module = nullptr; // HMODULE on Windows
+    std::atomic_int refcount {1};
 
-public:
     LibraryHolder(void *module) : module(module) {}
     ~LibraryHolder();
+
+    LibraryHolder *Ref();
+    void Unref();
 };
 
 enum class CallConvention {
@@ -127,10 +130,11 @@ struct ParameterInfo {
 };
 
 struct FunctionInfo {
+    ~FunctionInfo();
+
     const char *name;
     const char *decorated_name;
-
-    std::shared_ptr<LibraryHolder> lib;
+    LibraryHolder *lib = nullptr;
 
     void *func;
     CallConvention convention;
