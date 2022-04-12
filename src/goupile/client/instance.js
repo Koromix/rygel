@@ -253,7 +253,8 @@ function InstanceController() {
                         <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
                                 @click=${ui.deployMenu}>${ENV.title}</button>
                         <div>
-                            ${profile.instances.map(instance =>
+                            ${profile.instances.slice().sort(util.makeComparator(instance => instance.name))
+                                               .map(instance =>
                                 html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
                                              @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
                         </div>
