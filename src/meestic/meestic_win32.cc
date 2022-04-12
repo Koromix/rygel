@@ -30,14 +30,16 @@
 
 namespace RG {
 
-#define WM_USER_TRAY (WM_USER + 1)
-#define WM_USER_TOGGLE (WM_USER + 2)
+#define WM_APP_TRAY (WM_APP + 1)
+#define WM_APP_REHOOK (WM_APP + 2)
 
 static Config config;
 static Size profile_idx = 0;
 
 static HWND hwnd;
 static NOTIFYICONDATAA notify;
+static HHOOK hook;
+static HANDLE toggle;
 
 static hs_port *port = nullptr;
 
@@ -76,6 +78,30 @@ static void ShowAboutDialog()
     TaskDialogIndirect(&dialog, nullptr, nullptr, nullptr);
 }
 
+static bool ApplyProfile(Size idx)
+{
+    // Should work first time...
+    {
+        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc> func) {});
+        RG_DEFER { PopLogFilter(); };
+
+        if (ApplyLight(port, config.profiles[idx].settings)) {
+            profile_idx = idx;
+            return true;
+        }
+    }
+
+    CloseLightDevice(port);
+    port = OpenLightDevice();
+    if (!port)
+        return false;
+    if (!ApplyLight(port, config.profiles[idx].settings))
+        return false;
+
+    profile_idx = idx;
+    return true;
+}
+
 static bool ToggleProfile(int delta)
 {
     if (!delta)
@@ -93,11 +119,7 @@ static bool ToggleProfile(int delta)
         }
     } while (config.profiles[next_idx].manual);
 
-    if (!ApplyLight(port, config.profiles[next_idx].settings))
-        return false;
-    profile_idx = next_idx;
-
-    return true;
+    return ApplyProfile(next_idx);
 }
 
 static bool UpdateTrayIcon()
@@ -119,16 +141,33 @@ static bool UpdateTrayIcon()
     return true;
 }
 
+static LRESULT __stdcall LowLevelKeyboardProc(int code, WPARAM wparam, LPARAM lparam)
+{
+    if (code == 0) {
+        const KBDLLHOOKSTRUCT *kbd = (const KBDLLHOOKSTRUCT *)lparam;
+
+        if (wparam == WM_KEYDOWN && kbd->vkCode == 255 && kbd->scanCode == 14) {
+            SetEvent(toggle);
+        }
+    }
+
+    return CallNextHookEx(hook, code, wparam, lparam);
+}
+
 static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     static UINT taskbar_created = RegisterWindowMessageA("TaskbarCreated");
 
-    switch (msg) {
-        case WM_USER_TRAY: {
+    UINT msg_or_timer = (msg != WM_TIMER) ? msg : (UINT)wparam;
+
+    switch (msg_or_timer) {
+        case WM_APP_TRAY: {
             int button = LOWORD(lparam);
 
             if (button == WM_LBUTTONDOWN) {
-                ToggleProfile(1);
+                if (!ToggleProfile(1)) {
+                    PostQuitMessage(1);
+                }
             } else if (button == WM_RBUTTONDOWN) {
                 POINT click;
                 GetCursorPos(&click);
@@ -161,18 +200,27 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                         Size idx = action - 10;
 
                         if (idx >= 0 && idx < config.profiles.len) {
-                            profile_idx = idx;
-
-                            const ConfigProfile &profile = config.profiles[idx];
-                            ApplyLight(port, profile.settings);
+                            if (!ApplyProfile(idx)) {
+                                PostQuitMessage(1);
+                            }
                         }
                     } break;
                 }
             }
         } break;
 
-        case WM_USER_TOGGLE: {
-            ToggleProfile(1);
+        case WM_APP_REHOOK: {
+            if (hook) {
+                UnhookWindowsHookEx(hook);
+            }
+
+            LogDebug("Reinserting low-level keyboard hook");
+
+            hook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, nullptr, 0);
+            if (!hook) {
+                LogError("Failed to insert low-level keyboard hook: %1", GetWin32ErrorString());
+                PostQuitMessage(1);
+            }
         } break;
 
         case WM_CLOSE: {
@@ -196,19 +244,6 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     }
 
     return DefWindowProcA(hwnd, msg, wparam, lparam);
-}
-
-static LRESULT __stdcall LowLevelKeyboardProc(int code, WPARAM wparam, LPARAM lparam)
-{
-    if (code == 0) {
-        const KBDLLHOOKSTRUCT *kbd = (const KBDLLHOOKSTRUCT *)lparam;
-
-        if (wparam == WM_KEYDOWN && kbd->vkCode == 255 && kbd->scanCode == 14) {
-            PostMessageA(hwnd, WM_USER_TOGGLE, 0, 0);
-        }
-    }
-
-    return CallNextHookEx(nullptr, code, wparam, lparam);
 }
 
 int Main(int argc, char **argv)
@@ -303,12 +338,30 @@ Options:
 
     // We want to intercept Fn+F8, and this is not possible with RegisterHotKey because
     // it is not mapped to a virtual key. We want the raw scan code.
-    HHOOK hook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, nullptr, 0);
+    hook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, nullptr, 0);
     if (!hook) {
         LogError("Failed to insert low-level keyboard hook: %1", GetWin32ErrorString());
         return 1;
     }
-    RG_DEFER { UnhookWindowsHookEx(hook); };
+    RG_DEFER {
+        if (hook) {
+            UnhookWindowsHookEx(hook);
+        }
+    };
+
+    // Unfortunately, Windows sometimes disconnects our hook for no good reason
+    if (!SetTimer(hwnd, WM_APP_REHOOK, 30000, nullptr)) {
+        LogError("Failed to create Win32 timer: %1", GetWin32ErrorString());
+        return 1;
+    }
+    RG_DEFER { KillTimer(hwnd, WM_APP_REHOOK); };
+
+    toggle = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    if (!toggle) {
+        LogError("Failed to create Win32 event object: %1", GetWin32ErrorString());
+        return 1;
+    }
+    RG_DEFER { CloseHandle(toggle); };
 
     // Create tray icon
     {
@@ -316,7 +369,7 @@ Options:
         notify.hWnd = hwnd;
         notify.uID = 0xA56B96F2u;
         notify.hIcon = LoadIcon(module, MAKEINTRESOURCE(1));
-        notify.uCallbackMessage = WM_USER_TRAY;
+        notify.uCallbackMessage = WM_APP_TRAY;
         CopyString(FelixTarget, notify.szTip);
         notify.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
 
@@ -330,7 +383,7 @@ Options:
     // Open the light MSI HID device ahead of time
     port = OpenLightDevice();
     if (!port)
-        return false;
+        return 1;
     RG_DEFER { CloseLightDevice(port); };
 
     // Check that it works once, at least
@@ -338,25 +391,27 @@ Options:
         return 1;
 
     // Run main message loop
-    int code;
-    {
-        MSG msg;
-        DWORD ret;
+    for (;;) {
+        DWORD ret = MsgWaitForMultipleObjects(1, &toggle, FALSE, INFINITE, QS_ALLINPUT);
 
-        msg.wParam = 1;
-        while ((ret = GetMessage(&msg, nullptr, 0, 0))) {
-            if (ret < 0) {
-                LogError("GetMessage() failed: %1", GetWin32ErrorString());
+        if (ret == WAIT_OBJECT_0) {
+            if (!ToggleProfile(1))
                 return 1;
+            ResetEvent(toggle);
+        } else if (ret == WAIT_OBJECT_0 + 1) {
+            MSG msg;
+            while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+                if (msg.message == WM_QUIT)
+                    return (int)msg.wParam;
+
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
             }
-
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+        } else {
+            LogError("Failed in Win32 wait loop: %1", GetWin32ErrorString());
+            return 1;
         }
-        code = (int)msg.wParam;
     }
-
-    return code;
 }
 
 }
