@@ -104,7 +104,8 @@ struct LibraryHolder {
 
 enum class CallConvention {
     Default,
-    Stdcall
+    Stdcall,
+    Fastcall
 };
 
 struct ParameterInfo {
@@ -133,6 +134,7 @@ struct FunctionInfo {
     ~FunctionInfo();
 
     const char *name;
+    const char *decorated_name;
     LibraryHolder *lib = nullptr;
 
     void *func;

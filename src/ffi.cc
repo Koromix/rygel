@@ -294,6 +294,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
     std::string name = ((Napi::Value)info[0u]).As<Napi::String>();
     func->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
     func->lib = lib->Ref();
+    func->convention = convention;
 
     func->ret.type = ResolveType(instance, info[1u]);
     if (!func->ret.type)
@@ -333,15 +334,24 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
         return env.Null();
 
 #ifdef _WIN32
-    func->func = (void *)GetProcAddress((HMODULE)lib->module, func->name);
+    if (func->decorated_name) {
+        func->func = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
+    }
+    if (!func->func) {
+        func->func = (void *)GetProcAddress((HMODULE)lib->module, func->name);
+    }
 #else
-    func->func = dlsym(lib->module, func->name);
+    if (func->decorated_name) {
+        func->func = dlsym(lib->module, func->decorated_name);
+    }
+    if (!func->func) {
+        func->func = dlsym(lib->module, func->name);
+    }
 #endif
     if (!func->func) {
         ThrowError<Napi::Error>(env, "Cannot find function '%1' in shared library", func->name);
         return env.Null();
     }
-    func->convention = convention;
 
     Napi::Function wrapper = Napi::Function::New(env, TranslateCall, name.c_str(), (void *)func);
     wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { delete func; }, func);
@@ -417,6 +427,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     ADD_CONVENTION("cdecl", CallConvention::Default);
     ADD_CONVENTION("stdcall", CallConvention::Stdcall);
+    ADD_CONVENTION("fastcall", CallConvention::Fastcall);
 
 #undef ADD_CONVENTION
 

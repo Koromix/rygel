@@ -18,6 +18,11 @@
 #else
     #define EXPORT __attribute__((visibility("default")))
 #endif
+#ifdef _MSC_VER
+    #define FASTCALL __fastcall
+#else
+    #define FASTCALL __attribute__((fastcall))
+#endif
 
 typedef struct Pack3 {
     int a;
@@ -32,7 +37,7 @@ EXPORT void FillPack3(int a, int b, int c, Pack3 *p)
     p->c = c;
 }
 
-EXPORT void AddPack3(int a, int b, int c, Pack3 *p)
+EXPORT void FASTCALL AddPack3(int a, int b, int c, Pack3 *p)
 {
     p->a += a;
     p->b += b;

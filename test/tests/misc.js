@@ -41,7 +41,7 @@ async function test() {
     let lib = koffi.load(lib_filename);
 
     const FillPack3 = lib.cdecl('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
-    const AddPack3 = lib.cdecl('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
+    const AddPack3 = lib.fastcall('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
 
     let p = {};
 

@@ -25,6 +25,9 @@ namespace RG {
 extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallF(const void *func, uint8_t *sp);
 extern "C" double ForwardCallD(const void *func, uint8_t *sp);
+extern "C" uint64_t ForwardCallRG(const void *func, uint8_t *sp);
+extern "C" float ForwardCallRF(const void *func, uint8_t *sp);
+extern "C" double ForwardCallRD(const void *func, uint8_t *sp);
 
 bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
 {
@@ -39,10 +42,22 @@ bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
 #endif
     }
 
+    Size params_size = 0;
     for (const ParameterInfo &param: func->parameters) {
-        func->args_size += std::max((int16_t)4, param.type->size);
+        params_size += std::max((int16_t)4, param.type->size);
     }
-    func->args_size += 4 * !func->ret.trivial;
+    func->args_size = params_size + 4 * !func->ret.trivial;
+
+    switch (func->convention) {
+        case CallConvention::Default: {} break;
+        case CallConvention::Stdcall: {
+            func->decorated_name = Fmt(&instance->str_alloc, "_%1@%2", func->name, params_size).ptr;
+        } break;
+        case CallConvention::Fastcall: {
+            func->decorated_name = Fmt(&instance->str_alloc, "@%1@%2", func->name, params_size).ptr;
+            func->args_size = std::max((Size)8, func->args_size);
+        } break;
+    }
 
     return true;
 }
@@ -202,7 +217,8 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = ForwardCall ## Suffix(func->func, call.GetSP()); \
+            auto ret = (func->convention == CallConvention::Fastcall ? ForwardCallR ## Suffix(func->func, call.GetSP()) \
+                                                                     : ForwardCall ## Suffix(func->func, call.GetSP())); \
             PopOutArguments(out_objects); \
             return ret; \
         })()
@@ -210,7 +226,7 @@ Napi::Value TranslateCall(const Napi::CallbackInfo &info)
     // Execute and convert return value
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Float32: {
-            float f = PERFORM_CALL(G);
+            float f = PERFORM_CALL(F);
 
             return Napi::Number::New(env, (double)f);
         } break;

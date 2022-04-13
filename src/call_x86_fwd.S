@@ -14,13 +14,13 @@
 .global ForwardCallG
 .global ForwardCallF
 .global ForwardCallD
+.global ForwardCallRG
+.global ForwardCallRF
+.global ForwardCallRD
 
 // Copy function pointer to EAX, in order to save it through argument forwarding.
 // Save ESP in EBX (non-volatile), and use carefully assembled stack provided by caller.
-// Call native function.
-// Once done, restore normal stack pointer and return.
-// The return value is passed back untouched.
-.macro forward
+.macro prologue
     .cfi_startproc
     .cfi_def_cfa esp, 4
     endbr32
@@ -30,6 +30,18 @@
     movl %esp, %ebx
     .cfi_def_cfa ebx, 8
     movl 12(%esp), %esp
+.endm
+
+.macro fastcall
+    movl 0(%esp), %ecx
+    movl 4(%esp), %edx
+    add $8, %esp
+.endm
+
+// Call native function.
+// Once done, restore normal stack pointer and return.
+// The return value is passed back untouched.
+.macro epilogue
     call *%eax
     movl %ebx, %esp
     pop %ebx
@@ -39,10 +51,28 @@
 .endm
 
 ForwardCallG:
-    forward
+    prologue
+    epilogue
 
 ForwardCallF:
-    forward
+    prologue
+    epilogue
 
 ForwardCallD:
-    forward
+    prologue
+    epilogue
+
+ForwardCallRG:
+    prologue
+    fastcall
+    epilogue
+
+ForwardCallRF:
+    prologue
+    fastcall
+    epilogue
+
+ForwardCallRD:
+    prologue
+    fastcall
+    epilogue

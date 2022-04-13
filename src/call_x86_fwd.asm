@@ -14,21 +14,33 @@
 public ForwardCallG
 public ForwardCallF
 public ForwardCallD
+public ForwardCallRG
+public ForwardCallRF
+public ForwardCallRD
 
 .model flat, C
 .code
 
 ; Copy function pointer to EAX, in order to save it through argument forwarding.
 ; Save ESP in EBX (non-volatile), and use carefully assembled stack provided by caller.
-; Call native function.
-; Once done, restore normal stack pointer and return.
-; The return value is passed back untouched.
-forward macro
+prologue macro
     endbr32
     push ebx
     mov ebx, esp
     mov eax, dword ptr [esp+8]
     mov esp, dword ptr [esp+12]
+endm
+
+fastcall macro
+    mov ecx, dword ptr [esp+0]
+    mov edx, dword ptr [esp+4]
+    add esp, 8
+endm
+
+; Call native function.
+; Once done, restore normal stack pointer and return.
+; The return value is passed back untouched.
+epilogue macro
     call eax
     mov esp, ebx
     pop ebx
@@ -36,15 +48,36 @@ forward macro
 endm
 
 ForwardCallG proc
-    forward
+    prologue
+    epilogue
 ForwardCallG endp
 
 ForwardCallF proc
-    forward
+    prologue
+    epilogue
 ForwardCallF endp
 
 ForwardCallD proc
-    forward
+    prologue
+    epilogue
 ForwardCallD endp
+
+ForwardCallRG proc
+    prologue
+    fastcall
+    epilogue
+ForwardCallRG endp
+
+ForwardCallRF proc
+    prologue
+    fastcall
+    epilogue
+ForwardCallRF endp
+
+ForwardCallRD proc
+    prologue
+    fastcall
+    epilogue
+ForwardCallRD endp
 
 end
