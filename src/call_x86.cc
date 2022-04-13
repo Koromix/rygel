@@ -39,17 +39,10 @@ bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
 #endif
     }
 
-    Size params_size = 0;
     for (const ParameterInfo &param: func->parameters) {
-        params_size += std::max((int16_t)4, param.type->size);
+        func->args_size += std::max((int16_t)4, param.type->size);
     }
-    func->args_size = params_size + 4 * !func->ret.trivial;
-
-#ifdef _WIN32
-    if (func->convention == CallConvention::Stdcall) {
-        func->decorated_name = Fmt(&instance->str_alloc, "_%1@%2", func->name, params_size).ptr;
-    }
-#endif
+    func->args_size += 4 * !func->ret.trivial;
 
     return true;
 }

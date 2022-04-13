@@ -63,6 +63,8 @@ npm install koffi
 
 This section assumes you know how to build C shared libraries.
 
+## Raylib example
+
 This examples illustrates how to use Koffi with a Raylib shared library:
 
 ```js
@@ -123,17 +125,17 @@ const Font = koffi.struct('Font', {
 // Fix the path to Raylib DLL if needed
 let lib = koffi.load('build/raylib' + (process.platform == 'win32' ? '.dll' : '.so'));
 
-const InitWindow = lib.func('InitWindow', 'void', ['int', 'int', 'string']);
-const SetTargetFPS = lib.func('SetTargetFPS', 'void', ['int']);
-const GetScreenWidth = lib.func('GetScreenWidth', 'int', []);
-const GetScreenHeight = lib.func('GetScreenHeight', 'int', []);
-const ClearBackground = lib.func('ClearBackground', 'void', [Color]);
-const BeginDrawing = lib.func('BeginDrawing', 'void', []);
-const EndDrawing = lib.func('EndDrawing', 'void', []);
-const WindowShouldClose = lib.func('WindowShouldClose', 'bool', []);
-const GetFontDefault = lib.func('GetFontDefault', Font, []);
-const MeasureTextEx = lib.func('MeasureTextEx', Vector2, [Font, 'string', 'float', 'float']);
-const DrawTextEx = lib.func('DrawTextEx', 'void', [Font, 'string', Vector2, 'float', 'float', Color]);
+const InitWindow = lib.cdecl('InitWindow', 'void', ['int', 'int', 'string']);
+const SetTargetFPS = lib.cdecl('SetTargetFPS', 'void', ['int']);
+const GetScreenWidth = lib.cdecl('GetScreenWidth', 'int', []);
+const GetScreenHeight = lib.cdecl('GetScreenHeight', 'int', []);
+const ClearBackground = lib.cdecl('ClearBackground', 'void', [Color]);
+const BeginDrawing = lib.cdecl('BeginDrawing', 'void', []);
+const EndDrawing = lib.cdecl('EndDrawing', 'void', []);
+const WindowShouldClose = lib.cdecl('WindowShouldClose', 'bool', []);
+const GetFontDefault = lib.cdecl('GetFontDefault', Font, []);
+const MeasureTextEx = lib.cdecl('MeasureTextEx', Vector2, [Font, 'string', 'float', 'float']);
+const DrawTextEx = lib.cdecl('DrawTextEx', 'void', [Font, 'string', Vector2, 'float', 'float', Color]);
 
 InitWindow(800, 600, 'Test Raylib');
 SetTargetFPS(60);
@@ -168,6 +170,18 @@ while (!WindowShouldClose()) {
     angle += Math.PI / 180;
 }
 
+```
+
+## Win32 (\__stdcall) example
+
+```js
+const koffi = require('koffi');
+
+let lib = koffi.load('user32.dll');
+
+const MessageBoxA = lib.stdcall('MessageBoxA', 'int', ['void *', 'string', 'string', 'uint']);
+
+MessageBoxA(null, 'Hello', 'Foobar', 0x40); // MB_ICONINFORMATION
 ```
 
 # Tests

@@ -40,8 +40,8 @@ async function test() {
                        (process.platform == 'win32' ? '.dll' : '.so');
     let lib = koffi.load(lib_filename);
 
-    const FillPack3 = lib.func('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
-    const AddPack3 = lib.func('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
+    const FillPack3 = lib.cdecl('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
+    const AddPack3 = lib.cdecl('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
 
     let p = {};
 

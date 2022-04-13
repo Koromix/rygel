@@ -40,15 +40,15 @@ async function test() {
                        (process.platform == 'win32' ? '.dll' : '.so');
     let lib = koffi.load(lib_filename);
 
-    const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['string', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'string']);
-    const sqlite3_exec = lib.func('sqlite3_exec', 'int', [sqlite3_db, 'string', 'void *', 'void *', 'void *']);
-    const sqlite3_prepare_v2 = lib.func('sqlite3_prepare_v2', 'int', [sqlite3_db, 'string', 'int', koffi.out(koffi.pointer(sqlite3_stmt)), 'string']);
-    const sqlite3_reset = lib.func('sqlite3_reset', 'int', [sqlite3_stmt]);
-    const sqlite3_bind_text = lib.func('sqlite3_bind_text', 'int', [sqlite3_stmt, 'int', 'string', 'int', 'void *']);
-    const sqlite3_bind_int = lib.func('sqlite3_bind_int', 'int', [sqlite3_stmt, 'int', 'int']);
-    const sqlite3_step = lib.func('sqlite3_step', 'int', [sqlite3_stmt]);
-    const sqlite3_finalize = lib.func('sqlite3_finalize', 'int', [sqlite3_stmt]);
-    const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [sqlite3_db]);
+    const sqlite3_open_v2 = lib.cdecl('sqlite3_open_v2', 'int', ['string', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'string']);
+    const sqlite3_exec = lib.cdecl('sqlite3_exec', 'int', [sqlite3_db, 'string', 'void *', 'void *', 'void *']);
+    const sqlite3_prepare_v2 = lib.cdecl('sqlite3_prepare_v2', 'int', [sqlite3_db, 'string', 'int', koffi.out(koffi.pointer(sqlite3_stmt)), 'string']);
+    const sqlite3_reset = lib.cdecl('sqlite3_reset', 'int', [sqlite3_stmt]);
+    const sqlite3_bind_text = lib.cdecl('sqlite3_bind_text', 'int', [sqlite3_stmt, 'int', 'string', 'int', 'void *']);
+    const sqlite3_bind_int = lib.cdecl('sqlite3_bind_int', 'int', [sqlite3_stmt, 'int', 'int']);
+    const sqlite3_step = lib.cdecl('sqlite3_step', 'int', [sqlite3_stmt]);
+    const sqlite3_finalize = lib.cdecl('sqlite3_finalize', 'int', [sqlite3_stmt]);
+    const sqlite3_close_v2 = lib.cdecl('sqlite3_close_v2', 'int', [sqlite3_db]);
 
     let filename = create_temporary_file(path.join(os.tmpdir(), 'test_sqlite'));
     let db = {};

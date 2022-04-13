@@ -133,7 +133,6 @@ struct FunctionInfo {
     ~FunctionInfo();
 
     const char *name;
-    const char *decorated_name;
     LibraryHolder *lib = nullptr;
 
     void *func;

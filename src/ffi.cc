@@ -273,7 +273,7 @@ static Napi::Value MarkInOut(const Napi::CallbackInfo &info)
     return EncodePointerDirection(info, 3);
 }
 
-static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
+static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConvention convention)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -293,42 +293,17 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
 
     std::string name = ((Napi::Value)info[0u]).As<Napi::String>();
     func->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
-    func->decorated_name = func->name;
     func->lib = lib->Ref();
 
-    Napi::Array parameters;
-
-    if (info.Length() >= 4 && info[3u].IsArray()) {
-        std::string conv = ((Napi::Value)info[1u]).As<Napi::String>();
-
-        if (conv == "cdecl" || conv == "__cdecl") {
-            func->convention = CallConvention::Default;
-        } else if (conv == "stdcall" || conv == "__stdcall") {
-            func->convention = CallConvention::Stdcall;
-        } else {
-            ThrowError<Napi::Error>(env, "Unknown calling convention '%1'", conv.c_str());
-            return env.Null();
-        }
-
-        func->ret.type = ResolveType(instance, info[2u]);
-        if (!func->ret.type)
-            return env.Null();
-        if (!((Napi::Value)info[3u]).IsArray()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, (Napi::Value)info[1u]), func->name);
-            return env.Null();
-        }
-        parameters = ((Napi::Value)info[3u]).As<Napi::Array>();
-    } else {
-        func->ret.type = ResolveType(instance, info[1u]);
-        if (!func->ret.type)
-            return env.Null();
-        if (!((Napi::Value)info[2u]).IsArray()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, (Napi::Value)info[1u]), func->name);
-            return env.Null();
-        }
-        parameters = ((Napi::Value)info[2u]).As<Napi::Array>();
+    func->ret.type = ResolveType(instance, info[1u]);
+    if (!func->ret.type)
+        return env.Null();
+    if (!((Napi::Value)info[2u]).IsArray()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, (Napi::Value)info[1u]), func->name);
+        return env.Null();
     }
 
+    Napi::Array parameters = ((Napi::Value)info[2u]).As<Napi::Array>();
     Size out_counter = 0;
 
     for (uint32_t j = 0; j < parameters.Length(); j++) {
@@ -358,15 +333,15 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
         return env.Null();
 
 #ifdef _WIN32
-    func->func = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
+    func->func = (void *)GetProcAddress((HMODULE)lib->module, func->name);
 #else
-    func->func = dlsym(lib->module, func->decorated_name);
+    func->func = dlsym(lib->module, func->name);
 #endif
     if (!func->func) {
-        RG_DEBUG_BREAK();
-        ThrowError<Napi::Error>(env, "Cannot find function '%1' in shared library", name.c_str());
+        ThrowError<Napi::Error>(env, "Cannot find function '%1' in shared library", func->name);
         return env.Null();
     }
+    func->convention = convention;
 
     Napi::Function wrapper = Napi::Function::New(env, TranslateCall, name.c_str(), (void *)func);
     wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { delete func; }, func);
@@ -432,9 +407,18 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     Napi::Object obj = Napi::Object::New(env);
 
-    Napi::Function func = Napi::Function::New(env, FindLibraryFunction, "func", (void *)lib->Ref());
-    func.AddFinalizer([](Napi::Env, LibraryHolder *lib) { lib->Unref(); }, lib);
-    obj.Set("func", func);
+#define ADD_CONVENTION(Name, Value) \
+        do { \
+            const auto wrapper = [](const Napi::CallbackInfo &info) { return FindLibraryFunction(info, (Value)); }; \
+            Napi::Function func = Napi::Function::New(env, wrapper, (Name), (void *)lib->Ref()); \
+            func.AddFinalizer([](Napi::Env, LibraryHolder *lib) { lib->Unref(); }, lib); \
+            obj.Set((Name), func); \
+        } while (false)
+
+    ADD_CONVENTION("cdecl", CallConvention::Default);
+    ADD_CONVENTION("stdcall", CallConvention::Stdcall);
+
+#undef ADD_CONVENTION
 
     return obj;
 }
