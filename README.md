@@ -66,7 +66,7 @@ This section assumes you know how to build C shared libraries.
 This examples illustrates how to use Koffi with a Raylib shared library:
 
 ```js
-const koffi = require('build/koffi.node');
+const koffi = require('koffi');
 
 const Color = koffi.struct('Color', {
     r: 'uchar',
@@ -120,20 +120,20 @@ const Font = koffi.struct('Font', {
     glyphs: koffi.pointer(GlyphInfo)
 });
 
-// Fix the path to Raylib DLL
-let lib = koffi.load('Raylib.dll');
+// Fix the path to Raylib DLL if needed
+let lib = koffi.load('build/raylib' + (process.platform == 'win32' ? '.dll' : '.so'));
 
-const InitWindow = lib.func('InitWindow', ['void', ['int', 'int', 'string']]);
-const SetTargetFPS = lib.func('SetTargetFPS', ['void', ['int']]);
-const GetScreenWidth = lib.func('GetScreenWidth', ['int', []]);
-const GetScreenHeight = lib.func('GetScreenHeight', ['int', []]);
-const ClearBackground = lib.func('ClearBackground', ['void', [Color]]);
-const BeginDrawing = lib.func('BeginDrawing', ['void', []]);
-const EndDrawing = lib.func('EndDrawing', ['void', []]);
-const WindowShouldClose = lib.func('WindowShouldClose', ['bool', []]);
-const GetFontDefault = lib.func('GetFontDefault', [Font, []]);
-const MeasureTextEx = lib.func('MeasureTextEx', [Vector2, [Font, 'string', 'float', 'float']]);
-const DrawTextEx = lib.func('DrawTextEx', ['void', [Font, 'string', Vector2, 'float', 'float', Color]]);
+const InitWindow = lib.func('InitWindow', 'void', ['int', 'int', 'string']);
+const SetTargetFPS = lib.func('SetTargetFPS', 'void', ['int']);
+const GetScreenWidth = lib.func('GetScreenWidth', 'int', []);
+const GetScreenHeight = lib.func('GetScreenHeight', 'int', []);
+const ClearBackground = lib.func('ClearBackground', 'void', [Color]);
+const BeginDrawing = lib.func('BeginDrawing', 'void', []);
+const EndDrawing = lib.func('EndDrawing', 'void', []);
+const WindowShouldClose = lib.func('WindowShouldClose', 'bool', []);
+const GetFontDefault = lib.func('GetFontDefault', Font, []);
+const MeasureTextEx = lib.func('MeasureTextEx', Vector2, [Font, 'string', 'float', 'float']);
+const DrawTextEx = lib.func('DrawTextEx', 'void', [Font, 'string', Vector2, 'float', 'float', Color]);
 
 InitWindow(800, 600, 'Test Raylib');
 SetTargetFPS(60);
