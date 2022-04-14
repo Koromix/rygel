@@ -4233,12 +4233,16 @@ int GetCoreCount()
 }
 
 #ifndef _WIN32
-bool DropSetuid()
+bool DropRootIdentity()
 {
     uid_t uid = getuid();
     uid_t euid = geteuid();
     gid_t gid = getgid();
 
+    if (!uid) {
+        LogError("This program must not be run as root");
+        return false;
+    }
     if (uid != euid) {
         LogDebug("Dropping SUID privileges...");
     }
@@ -4254,7 +4258,7 @@ bool DropSetuid()
     return true;
 
 error:
-    LogError("Failed to drop setuid privilegies: %1", strerror(errno));
+    LogError("Failed to drop root privilegies: %1", strerror(errno));
     return false;
 }
 #endif

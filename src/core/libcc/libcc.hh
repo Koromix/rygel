@@ -3982,7 +3982,7 @@ void SignalWaitFor();
 int GetCoreCount();
 
 #ifndef _WIN32
-bool DropSetuid();
+bool DropRootIdentity();
 #endif
 #ifdef __linux__
 bool NotifySystemd();
