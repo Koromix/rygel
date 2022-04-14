@@ -58,6 +58,8 @@ extern "C" Xmm0RaxRet ForwardCallXDG(const void *func, uint8_t *sp);
 extern "C" RaxXmm0Ret ForwardCallXGD(const void *func, uint8_t *sp);
 extern "C" Xmm0Xmm1Ret ForwardCallXDD(const void *func, uint8_t *sp);
 
+static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
+
 static inline RegisterClass MergeClasses(RegisterClass cls1, RegisterClass cls2)
 {
     if (cls1 == cls2)
@@ -159,7 +161,7 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int xmm_avail)
     }
 }
 
-bool AnalyseFunction(InstanceData *, FunctionInfo *func)
+Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     AnalyseParameter(&func->ret, 2, 2);
 
@@ -177,10 +179,10 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 
     func->forward_fp = (xmm_avail < 8);
 
-    return true;
+    return TranslateCall;
 }
 
-Napi::Value TranslateCall(const Napi::CallbackInfo &info)
+static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();

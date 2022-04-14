@@ -29,13 +29,15 @@ extern "C" uint64_t ForwardCallXG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" double ForwardCallXD(const void *func, uint8_t *sp);
 
+static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
+
 static inline bool IsRegular(Size size)
 {
     bool regular = (size <= 8 && !(size & (size - 1)));
     return regular;
 }
 
-bool AnalyseFunction(InstanceData *, FunctionInfo *func)
+Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     func->ret.regular = IsRegular(func->ret.type->size);
 
@@ -48,10 +50,10 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 
     func->args_size = AlignLen(8 * std::max((Size)4, func->parameters.len + !func->ret.regular), 16);
 
-    return true;
+    return TranslateCall;
 }
 
-Napi::Value TranslateCall(const Napi::CallbackInfo &info)
+static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();

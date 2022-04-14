@@ -29,7 +29,9 @@ extern "C" uint64_t ForwardCallRG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallRF(const void *func, uint8_t *sp);
 extern "C" double ForwardCallRD(const void *func, uint8_t *sp);
 
-bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
+static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
+
+Napi::Function::Callback AnalyseFunction(InstanceData *instance, FunctionInfo *func)
 {
     if (IsIntegral(func->ret.type->primitive)) {
         func->ret.trivial = true;
@@ -59,10 +61,10 @@ bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
         } break;
     }
 
-    return true;
+    return TranslateCall;
 }
 
-Napi::Value TranslateCall(const Napi::CallbackInfo &info)
+static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();

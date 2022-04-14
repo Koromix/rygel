@@ -330,7 +330,8 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
         func->parameters.Append(param);
     }
 
-    if (!AnalyseFunction(instance, func))
+    Napi::Function::Callback call = AnalyseFunction(instance, func);
+    if (!call)
         return env.Null();
 
 #ifdef _WIN32
@@ -353,7 +354,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
         return env.Null();
     }
 
-    Napi::Function wrapper = Napi::Function::New(env, TranslateCall, name.c_str(), (void *)func);
+    Napi::Function wrapper = Napi::Function::New(env, call, name.c_str(), (void *)func);
     wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { delete func; }, func);
     func_guard.Disable();
 

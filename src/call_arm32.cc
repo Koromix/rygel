@@ -37,6 +37,8 @@ extern "C" uint64_t ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
+static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
+
 static bool IsHFA(const TypeInfo *type)
 {
     if (type->primitive != PrimitiveKind::Record)
@@ -56,7 +58,7 @@ static bool IsHFA(const TypeInfo *type)
     return true;
 }
 
-bool AnalyseFunction(InstanceData *, FunctionInfo *func)
+Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     if (IsHFA(func->ret.type)) {
         func->ret.vec_count = func->ret.type->members.len *
@@ -147,7 +149,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 
     func->forward_fp = (vec_avail < 16);
 
-    return true;
+    return TranslateCall;
 }
 
 static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest)
@@ -209,7 +211,7 @@ static Napi::Object PopHFA(napi_env env, const uint8_t *ptr, const TypeInfo *typ
     return obj;
 }
 
-Napi::Value TranslateCall(const Napi::CallbackInfo &info)
+static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
