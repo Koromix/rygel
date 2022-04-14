@@ -63,7 +63,7 @@ static void ShowAboutDialog()
     dialog.pszContent = content;
     dialog.dwFlags = TDF_ENABLE_HYPERLINKS | TDF_SIZE_TO_CONTENT | (dialog.hMainIcon ? TDF_USE_HICON_MAIN : 0);
 
-    dialog.pfCallback = [](HWND hwnd, UINT msg, WPARAM, LPARAM lparam, LONG_PTR) {
+    dialog.pfCallback = [](HWND, UINT msg, WPARAM, LPARAM lparam, LONG_PTR) {
         if (msg == TDN_HYPERLINK_CLICKED) {
             const wchar_t *url = (const wchar_t *)lparam;
             ShellExecuteW(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
@@ -154,7 +154,7 @@ static LRESULT __stdcall LowLevelKeyboardProc(int code, WPARAM wparam, LPARAM lp
     return CallNextHookEx(hook, code, wparam, lparam);
 }
 
-static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+static LRESULT __stdcall MainWindowProc(HWND, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     static UINT taskbar_created = RegisterWindowMessageA("TaskbarCreated");
 
