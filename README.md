@@ -13,7 +13,7 @@ Koffi is a fast and easy-to-use FFI module for Node.js, with support for complex
 
 The following platforms __are supported__ at the moment:
 
-* Windows x86 *(cdecl, stdcall)*
+* Windows x86 *(cdecl, stdcall, fastcall)*
 * Windows x86_64
 * Linux x86
 * Linux x86_64
