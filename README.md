@@ -240,3 +240,34 @@ Each machine is configured to run a VNC server available locally, which you can 
 ```sh
 node test.js info debian_x64
 ```
+
+# Benchmarks
+
+A basic benchmark based around Raylib is available, in three implementations: with Koffi, with node-ffi and with C code using Raylib (as a shared library).
+
+In order to run it, go to `koffi/benchmark` and run `build_c.sh`. Once the C version is built, you can execute each implementation with `time`, e.g. `time ./raylib_c 2000`.
+
+Here are some results from 2022-04-15 on my machine (AMD Ryzen™ 7 5800H 16G):
+
+```sh
+$ time ./raylib_c 2000
+Iterations: 2000
+
+real    0m13,337s
+user    0m13,289s
+sys     0m0,036s
+
+$ time ./raylib_node_ffi.js 2000
+Iterations: 2000
+
+real    1m42,669s
+user    1m56,867s
+sys     0m3,746s
+
+$ time ./raylib_koffi.js 2000
+Iterations: 2000
+
+real    0m17,475s
+user    0m17,314s
+sys     0m0,036s
+```
