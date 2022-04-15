@@ -59,11 +59,11 @@ int main(int argc, char **argv)
     for (int i = 0; i < iterations; i++) {
         ImageClearBackground(&img, (Color){ .r = 0, .g = 0, .b = 0, .a = 255 });
 
-        for (int j = 0; j < 360; j++) {
+        for (int j = 0; j < 3600; j++) {
             const char *text = "Hello World!";
             int text_width = MeasureTextEx(font, text, 10, 1).x;
 
-            double angle = (j * 4) * PI / 180;
+            double angle = (j * 7) * PI / 180;
             Color color = {
                 .r = 127.5 + 127.5 * sin(angle),
                 .g = 127.5 + 127.5 * sin(angle + PI / 2),
@@ -71,8 +71,8 @@ int main(int argc, char **argv)
                 .a = 255
             };
             Vector2 pos = {
-                .x = (img.width / 2 - text_width / 2) + j * cos(angle - PI / 2),
-                .y = (img.height / 2 - 16) + j * sin(angle - PI / 2)
+                .x = (img.width / 2 - text_width / 2) + j * 0.1 * cos(angle - PI / 2),
+                .y = (img.height / 2 - 16) + j * 0.1 * sin(angle - PI / 2)
             };
 
             ImageDrawTextEx(&img, font, text, pos, 10, 1, color);

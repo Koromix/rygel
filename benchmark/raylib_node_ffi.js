@@ -117,16 +117,17 @@ function main() {
     r.InitWindow(640, 480, "Raylib Test");
 
     let img = r.GenImageColor(800, 600, new Color({ r: 0, g: 0, b: 0, a: 255 }));
+    let imgp = img.ref();
     let font = r.GetFontDefault();
 
     for (let i = 0; i < iterations; i++) {
-        r.ImageClearBackground(img.ref(), new Color({ r: 0, g: 0, b: 0, a: 255 }));
+        r.ImageClearBackground(imgp, new Color({ r: 0, g: 0, b: 0, a: 255 }));
 
-        for (let j = 0; j < 360; j++) {
+        for (let j = 0; j < 3600; j++) {
             let text = 'Hello World!';
             let text_width = r.MeasureTextEx(font, text, 10, 1).x;
 
-            let angle = (j * 4) * Math.PI / 180;
+            let angle = (j * 7) * Math.PI / 180;
             let color = new Color({
                 r: 127.5 + 127.5 * Math.sin(angle),
                 g: 127.5 + 127.5 * Math.sin(angle + Math.PI / 2),
@@ -134,11 +135,11 @@ function main() {
                 a: 255
             });
             let pos = new Vector2({
-                x: (img.width / 2 - text_width / 2) + j * Math.cos(angle - Math.PI / 2),
-                y: (img.height / 2 - 16) + j * Math.sin(angle - Math.PI / 2)
+                x: (img.width / 2 - text_width / 2) + j * 0.1 * Math.cos(angle - Math.PI / 2),
+                y: (img.height / 2 - 16) + j * 0.1 * Math.sin(angle - Math.PI / 2)
             });
 
-            r.ImageDrawTextEx(img.ref(), font, text, pos, 10, 1, color);
+            r.ImageDrawTextEx(imgp, font, text, pos, 10, 1, color);
         }
     }
 }

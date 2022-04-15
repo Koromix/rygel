@@ -250,24 +250,24 @@ In order to run it, go to `koffi/benchmark` and run `build_c.sh`. Once the C ver
 Here are some results from 2022-04-15 on my machine (AMD Ryzen™ 7 5800H 16G):
 
 ```sh
-$ time ./raylib_c 2000
-Iterations: 2000
+$ time ./raylib_c 200
+Iterations: 200
 
-real    0m13,337s
-user    0m13,289s
-sys     0m0,036s
+real    0m9,206s
+user    0m9,152s
+sys     0m0,040s
 
-$ time ./raylib_node_ffi.js 2000
-Iterations: 2000
+$ time ./raylib_koffi.js 200
+Iterations: 200
 
-real    1m42,669s
-user    1m56,867s
-sys     0m3,746s
+real    0m13,790s
+user    0m13,699s
+sys     0m0,044s
 
-$ time ./raylib_koffi.js 2000
-Iterations: 2000
+$ time ./raylib_node_ffi.js 200
+Iterations: 200
 
-real    0m17,475s
-user    0m17,314s
-sys     0m0,036s
+real    1m41,523s
+user    1m56,623s
+sys     0m3,731s
 ```

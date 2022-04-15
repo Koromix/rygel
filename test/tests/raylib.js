@@ -104,11 +104,11 @@ async function test() {
     let img = GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
     let font = GetFontDefault();
 
-    for (let i = 0; i < 360; i++) {
+    for (let i = 0; i < 3600; i++) {
         let text = 'Hello World!';
         let text_width = MeasureTextEx(font, text, 10, 1).x;
 
-        let angle = (i * 4) * Math.PI / 180;
+        let angle = (i * 7) * Math.PI / 180;
         let color = {
             r: 127.5 + 127.5 * Math.sin(angle),
             g: 127.5 + 127.5 * Math.sin(angle + Math.PI / 2),
@@ -116,8 +116,8 @@ async function test() {
             a: 255
         };
         let pos = {
-            x: (img.width / 2 - text_width / 2) + i * Math.cos(angle - Math.PI / 2),
-            y: (img.height / 2 - 16) + i * Math.sin(angle - Math.PI / 2)
+            x: (img.width / 2 - text_width / 2) + i * 0.1 * Math.cos(angle - Math.PI / 2),
+            y: (img.height / 2 - 16) + i * 0.1 * Math.sin(angle - Math.PI / 2)
         };
 
         ImageDrawTextEx(img, font, text, pos, 10, 1, color);
@@ -145,7 +145,7 @@ async function test() {
                 reject(err);
             }
         });
-        let expected = '7f462039f1b112c81bc6f23c0ecd3c232c6fd2b098916f4fb276e623d1f56a1d';
+        let expected = '5ec23005377082582a14d261f5d07f51a6615b3bcdf5b91ada29aba65da22c5f';
 
         console.log('Computed checksum: ' + sha256);
         console.log('Expected: ' + expected);
