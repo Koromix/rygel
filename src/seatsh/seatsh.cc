@@ -35,7 +35,7 @@ struct PendingIO {
 
     uint8_t buf[8192];
 
-    static void CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
+    static void CALLBACK CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
     {
         PendingIO *self = (PendingIO *)ov;
 

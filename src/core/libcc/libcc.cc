@@ -3513,7 +3513,7 @@ struct PendingIO {
     DWORD err = 0;
     Size len = -1;
 
-    static void CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
+    static void CALLBACK CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
     {
         PendingIO *self = (PendingIO *)ov;
 
