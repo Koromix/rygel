@@ -561,13 +561,6 @@ async function boot(machine, dirname, detach) {
         await join(machine, 2);
         machine.started = false;
     }
-
-    if (machine.uploads != null) {
-        for (let src in machine.uploads) {
-            let dest = machine.uploads[src];
-            await machine.ssh.putFile('files/' + src, dest);
-        }
-    }
 }
 
 async function join(machine, tries) {

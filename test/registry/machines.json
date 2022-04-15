@@ -148,7 +148,7 @@
         },
 
         "info": {
-            "version": 6,
+            "version": 7,
             "platform": "win32",
             "arch": "x64",
 
@@ -159,11 +159,6 @@
             "password": "windows",
 
             "shutdown": "shutdown -s -t 0"
-        },
-
-        "uploads": {
-            "node32.cmd": "C:/Node32/node32.cmd",
-            "node64.cmd": "C:/Node64/node64.cmd"
         },
 
         "tests": {
