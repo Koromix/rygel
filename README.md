@@ -172,7 +172,7 @@ while (!WindowShouldClose()) {
 
 ```
 
-## Win32 (\__stdcall) example
+## Win32 stdcall example
 
 ```js
 const koffi = require('koffi');
@@ -180,8 +180,9 @@ const koffi = require('koffi');
 let lib = koffi.load('user32.dll');
 
 const MessageBoxA = lib.stdcall('MessageBoxA', 'int', ['void *', 'string', 'string', 'uint']);
+const MB_ICONINFORMATION = 0x40;
 
-MessageBoxA(null, 'Hello', 'Foobar', 0x40); // MB_ICONINFORMATION
+MessageBoxA(null, 'Hello', 'Foobar', MB_ICONINFORMATION);
 ```
 
 # Tests
