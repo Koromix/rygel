@@ -38,6 +38,7 @@
     #include <sys/types.h>
     #include <sys/stat.h>
     #include <direct.h>
+    #include <shlobj.h>
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
@@ -62,6 +63,7 @@
     #include <dirent.h>
     #include <fcntl.h>
     #include <fnmatch.h>
+    #include <grp.h>
     #include <poll.h>
     #include <signal.h>
     #include <spawn.h>
@@ -1735,8 +1737,16 @@ static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *
 
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
 {
+    static RG_THREAD_LOCAL bool skip = false;
+
     static bool init = false;
     static bool log_times;
+
+    // Avoid deadlock if a log filter or the handler tries to log something while handling a previous call
+    if (skip)
+        return;
+    skip = true;
+    RG_DEFER { skip = false; };
 
     if (!init) {
         // Do this first... GetDebugFlag() might log an error or something, in which
@@ -1800,6 +1810,55 @@ void PopLogFilter()
     RG_ASSERT(log_filters_len > 0);
     delete log_filters[--log_filters_len];
 }
+
+#ifdef _WIN32
+bool RedirectLogToWindowsEvents(const char *name)
+{
+    static HANDLE log = nullptr;
+    RG_ASSERT(!log);
+
+    log = OpenEventLogA(nullptr, name);
+    if (!log) {
+        LogError("Failed to register event provider: %1", GetWin32ErrorString());
+        return false;
+    }
+    atexit([]() { CloseEventLog(log); });
+
+    SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
+        WORD type = 0;
+        LocalArray<wchar_t, 8192> buf_w;
+
+        switch (level)  {
+            case LogLevel::Debug:
+            case LogLevel::Info: { type = EVENTLOG_INFORMATION_TYPE; } break;
+            case LogLevel::Warning: { type = EVENTLOG_WARNING_TYPE; } break;
+            case LogLevel::Error: { type = EVENTLOG_ERROR_TYPE; } break;
+        }
+
+        // Append context
+        if (ctx) {
+            Size len = ConvertUtf8ToWin32Wide(ctx, buf_w.Take(0, RG_LEN(buf_w.data) / 2));
+            if (len < 0)
+                return;
+            wcscpy(buf_w.data + len, L": ");
+            buf_w.len += len + 2;
+        }
+
+        // Append message
+        {
+            Size len = ConvertUtf8ToWin32Wide(msg, buf_w.TakeAvailable());
+            if (len < 0)
+                return;
+            buf_w.len += len;
+        }
+
+        const wchar_t *ptr = buf_w.data;
+        ReportEventW(log, type, 0, 0, nullptr, 1, 0, &ptr, nullptr);
+    });
+
+    return true;
+}
+#endif
 
 // ------------------------------------------------------------------------
 // System
@@ -1895,12 +1954,43 @@ fail:
     return str_buf;
 }
 
+void SetEnvironmentVar(const char *name, const char *value)
+{
+    RG_ASSERT(name && name[0] && !strchr(name, '='));
+    RG_ASSERT(value);
+
+    if (win32_utf8) {
+        RG_CRITICAL(SetEnvironmentVariableA(name, value), "Failed to set environment variable '%1' to '%2': %3", name, value, GetWin32ErrorString());
+    } else {
+        wchar_t name_w[256];
+        wchar_t value_w[4096];
+
+        RG_CRITICAL(ConvertUtf8ToWin32Wide(name, name_w) >= 0, "Failed to set environment variable '%1' to '%2'", name, value);
+        RG_CRITICAL(ConvertUtf8ToWin32Wide(value, value_w) >= 0, "Failed to set environment variable '%1' to '%2'", name, value);
+        RG_CRITICAL(SetEnvironmentVariableW(name_w, value_w), "Failed to set environment variable '%1' to '%2': %3", name, value, GetWin32ErrorString());
+    }
+}
+
+void DeleteEnvironmentVar(const char *name)
+{
+    RG_ASSERT(name && name[0] && !strchr(name, '='));
+
+    if (win32_utf8) {
+        RG_CRITICAL(SetEnvironmentVariableA(name, nullptr), "Failed to clear environment variable '%1': %2", name, GetWin32ErrorString());
+    } else {
+        wchar_t name_w[256];
+
+        RG_CRITICAL(ConvertUtf8ToWin32Wide(name, name_w) >= 0, "Failed to clear environment variable '%1'", name);
+        RG_CRITICAL(SetEnvironmentVariableW(name_w, nullptr), "Failed to clear environment variable '%1': %2", name, GetWin32ErrorString());
+    }
+}
+
 static FileType FileAttributesToType(uint32_t attr)
 {
     if (attr & FILE_ATTRIBUTE_DIRECTORY) {
         return FileType::Directory;
     } else if (attr & FILE_ATTRIBUTE_DEVICE) {
-        return FileType::Unknown;
+        return FileType::Device;
     } else {
         return FileType::File;
     }
@@ -2007,7 +2097,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
             DWORD attrib = GetFileAttributesW(find_filter_w);
             if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY))
-                return EnumStatus::Done;
+                return EnumStatus::Complete;
         }
 
         LogError("Cannot enumerate directory '%1': %2", dirname,
@@ -2034,7 +2124,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         FileType file_type = FileAttributesToType(find_data.dwFileAttributes);
 
         if (!func(filename, file_type))
-            return EnumStatus::Partial;
+            return EnumStatus::Stopped;
     } while (FindNextFileW(handle, &find_data));
 
     if (GetLastError() != ERROR_NO_MORE_FILES) {
@@ -2043,10 +2133,44 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         return EnumStatus::Error;
     }
 
-    return EnumStatus::Done;
+    return EnumStatus::Complete;
 }
 
 #else
+
+void SetEnvironmentVar(const char *name, const char *value)
+{
+    RG_ASSERT(name && name[0] && !strchr(name, '='));
+    RG_ASSERT(value);
+
+    RG_CRITICAL(!setenv(name, value, 1), "Failed to set environment variable '%1' to '%2': %3", name, value, strerror(errno));
+}
+
+void DeleteEnvironmentVar(const char *name)
+{
+    RG_ASSERT(name && name[0] && !strchr(name, '='));
+    RG_CRITICAL(!unsetenv(name), "Failed to clear environment variable '%1': %2", name, strerror(errno));
+}
+
+static FileType FileModeToType(mode_t mode)
+{
+    if (S_ISDIR(mode)) {
+        return FileType::Directory;
+    } else if (S_ISREG(mode)) {
+        return FileType::File;
+    } else if (S_ISBLK(mode) || S_ISCHR(mode)) {
+        return FileType::Device;
+    } else if (S_ISLNK(mode)) {
+        return FileType::Link;
+    } else if (S_ISFIFO(mode)) {
+        return FileType::Pipe;
+    } else if (S_ISSOCK(mode)) {
+        return FileType::Socket;
+    } else {
+        // This... should not happen. But who knows?
+        return FileType::File;
+    }
+}
 
 bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
@@ -2060,16 +2184,7 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
         return false;
     }
 
-    if (S_ISDIR(sb.st_mode)) {
-        out_info->type = FileType::Directory;
-    } else if (S_ISREG(sb.st_mode)) {
-        out_info->type = FileType::File;
-    } else if (S_ISLNK(sb.st_mode)) {
-        out_info->type = FileType::Link;
-    } else {
-        out_info->type = FileType::Unknown;
-    }
-
+    out_info->type = FileModeToType(sb.st_mode);
     out_info->size = (int64_t)sb.st_size;
 #if defined(__linux__)
     out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
@@ -2176,7 +2291,15 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                     case DT_DIR: { file_type = FileType::Directory; } break;
                     case DT_REG: { file_type = FileType::File; } break;
                     case DT_LNK: { file_type = FileType::Link; } break;
-                    default: { file_type = FileType::Unknown; } break;
+                    case DT_BLK:
+                    case DT_CHR: { file_type = FileType::Device; } break;
+                    case DT_FIFO: { file_type = FileType::Pipe; } break;
+                    case DT_SOCK: { file_type = FileType::Socket; } break;
+
+                    default: {
+                        // This... should not happen. But who knows?
+                        file_type = FileType::File;
+                    } break;
                 }
             } else
 #endif
@@ -2187,19 +2310,11 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                     continue;
                 }
 
-                if (S_ISDIR(sb.st_mode)) {
-                    file_type = FileType::Directory;
-                } else if (S_ISREG(sb.st_mode)) {
-                    file_type = FileType::File;
-                } else if (S_ISLNK(sb.st_mode)) {
-                    file_type = FileType::Link;
-                } else {
-                    file_type = FileType::Unknown;
-                }
+                file_type = FileModeToType(sb.st_mode);
             }
 
             if (!func(dent->d_name, file_type))
-                return EnumStatus::Partial;
+                return EnumStatus::Stopped;
         }
 
         errno = 0;
@@ -2210,7 +2325,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         return EnumStatus::Error;
     }
 
-    return EnumStatus::Done;
+    return EnumStatus::Complete;
 }
 
 #endif
@@ -2221,11 +2336,11 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
     RG_DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
     EnumStatus status = EnumerateDirectory(dirname, nullptr, max_files,
-                                           [&](const char *filename, FileType file_type) {
+                                           [&](const char *basename, FileType file_type) {
         switch (file_type) {
             case FileType::Directory: {
                 if (max_depth) {
-                    const char *sub_directory = Fmt(str_alloc, "%1%/%2", dirname, filename).ptr;
+                    const char *sub_directory = Fmt(str_alloc, "%1%/%2", dirname, basename).ptr;
                     return EnumerateFiles(sub_directory, filter, std::max((Size)-1, max_depth - 1),
                                           max_files, str_alloc, out_files);
                 }
@@ -2233,12 +2348,15 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 
             case FileType::File:
             case FileType::Link: {
-                if (!filter || MatchPathName(filename, filter)) {
-                    out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
+                if (!filter || MatchPathName(basename, filter)) {
+                    const char *filename = Fmt(str_alloc, "%1%/%2", dirname, basename).ptr;
+                    out_files->Append(filename);
                 }
             } break;
 
-            case FileType::Unknown: {} break;
+            case FileType::Device:
+            case FileType::Pipe:
+            case FileType::Socket: {} break;
         }
 
         return true;
@@ -2253,7 +2371,13 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 bool IsDirectoryEmpty(const char *dirname)
 {
     EnumStatus status = EnumerateDirectory(dirname, nullptr, -1, [](const char *, FileType) { return false; });
-    return status == EnumStatus::Done;
+    return status == EnumStatus::Complete;
+}
+
+bool TestFile(const char *filename)
+{
+    FileInfo file_info;
+    return StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
 }
 
 bool TestFile(const char *filename, FileType type)
@@ -2269,13 +2393,15 @@ bool TestFile(const char *filename, FileType type)
         file_info.type = FileType::File;
     }
 
-    if (type != FileType::Unknown && type != file_info.type) {
+    if (type != file_info.type) {
         switch (type) {
             case FileType::Directory: { LogError("Path '%1' is not a directory", filename); } break;
             case FileType::File: { LogError("Path '%1' is not a file", filename); } break;
+            case FileType::Device: { LogError("Path '%1' is not a device", filename); } break;
+            case FileType::Pipe: { LogError("Path '%1' is not a pipe", filename); } break;
+            case FileType::Socket: { LogError("Path '%1' is not a socket", filename); } break;
 
-            case FileType::Link:
-            case FileType::Unknown: { RG_UNREACHABLE(); } break;
+            case FileType::Link: { RG_UNREACHABLE(); } break;
         }
 
         return false;
@@ -2385,10 +2511,11 @@ bool MatchPathSpec(const char *path, const char *spec)
     return false;
 }
 
-bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_path)
+bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *alloc, const char **out_path)
 {
     RG_ASSERT(alloc || !out_path);
 
+    // Fast path
     if (strpbrk(name, RG_PATH_SEPARATORS)) {
         if (!TestFile(name, FileType::File))
             return false;
@@ -2397,68 +2524,86 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
             *out_path = DuplicateString(name, alloc).ptr;
         }
         return true;
-    } else {
-#ifdef _WIN32
-        LocalArray<char, 16384> env_buf;
-        Span<const char> env;
-        if (win32_utf8) {
-            env = getenv("PATH");
-        } else {
-            wchar_t buf_w[RG_SIZE(env_buf.data)];
-            DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, RG_LEN(buf_w));
+    }
 
-            if (!len && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
-                LogError("Failed to get PATH environment variable: %1", GetWin32ErrorString());
-                return false;
-            } else if (len >= RG_LEN(buf_w)) {
-                LogError("Failed to get PATH environment variable: buffer to small");
-                return false;
-            }
-            buf_w[len] = 0;
+    while (paths.len) {
+        Span<const char> path = SplitStr(paths, RG_PATH_DELIMITER, &paths);
 
-            env_buf.len = ConvertWin32WideToUtf8(buf_w, env_buf.data);
-            if (env_buf.len < 0)
-                return false;
-
-            env = env_buf;
-        }
-#else
-        Span<const char> env = getenv("PATH");
-#endif
-
-        while (env.len) {
-            Span<const char> path = SplitStr(env, RG_PATH_DELIMITER, &env);
-
-            LocalArray<char, 4096> buf;
-            buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
+        LocalArray<char, 4096> buf;
+        buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
 
 #ifdef _WIN32
-            static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
+        static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
 
-            for (Span<const char> ext: extensions) {
-                if (RG_LIKELY(ext.len < buf.Available() - 1)) {
-                    memcpy_safe(buf.end(), ext.ptr, ext.len + 1);
+        for (Span<const char> ext: extensions) {
+            if (RG_LIKELY(ext.len < buf.Available() - 1)) {
+                memcpy_safe(buf.end(), ext.ptr, ext.len + 1);
 
-                    if (TestFile(buf.data)) {
-                        if (out_path) {
-                            *out_path = DuplicateString(buf.data, alloc).ptr;
-                        }
-                        return true;
+                if (TestFile(buf.data)) {
+                    if (out_path) {
+                        *out_path = DuplicateString(buf.data, alloc).ptr;
                     }
+                    return true;
                 }
             }
-#else
-            if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data)) {
-                if (out_path) {
-                    *out_path = DuplicateString(buf.data, alloc).ptr;
-                }
-                return true;
-            }
-#endif
         }
+#else
+        if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data)) {
+            if (out_path) {
+                *out_path = DuplicateString(buf.data, alloc).ptr;
+            }
+            return true;
+        }
+#endif
     }
 
     return false;
+}
+
+bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_path)
+{
+    RG_ASSERT(alloc || !out_path);
+
+    // Fast path
+    if (strpbrk(name, RG_PATH_SEPARATORS)) {
+        if (!TestFile(name, FileType::File))
+            return false;
+
+        if (out_path) {
+            *out_path = DuplicateString(name, alloc).ptr;
+        }
+        return true;
+    }
+
+#ifdef _WIN32
+    LocalArray<char, 16384> env_buf;
+    Span<const char> paths;
+    if (win32_utf8) {
+        paths = getenv("PATH");
+    } else {
+        wchar_t buf_w[RG_SIZE(env_buf.data)];
+        DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, RG_LEN(buf_w));
+
+        if (!len && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
+            LogError("Failed to get PATH environment variable: %1", GetWin32ErrorString());
+            return false;
+        } else if (len >= RG_LEN(buf_w)) {
+            LogError("Failed to get PATH environment variable: buffer to small");
+            return false;
+        }
+        buf_w[len] = 0;
+
+        env_buf.len = ConvertWin32WideToUtf8(buf_w, env_buf.data);
+        if (env_buf.len < 0)
+            return false;
+
+        paths = env_buf;
+    }
+#else
+    Span<const char> paths = getenv("PATH");
+#endif
+
+    return FindExecutableInPath(paths, name, alloc, out_path);
 }
 
 bool SetWorkingDirectory(const char *directory)
@@ -2559,12 +2704,8 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        char *path_buf = realpath("/proc/self/exe", nullptr);
-        RG_ASSERT(path_buf);
-        RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
-
-        CopyString(path_buf, executable_path);
-        free(path_buf);
+        ssize_t ret = readlink("/proc/self/exe", executable_path, RG_SIZE(executable_path));
+        RG_ASSERT(ret > 0 && ret < RG_SIZE(executable_path));
     }
 
     return executable_path;
@@ -3276,70 +3417,6 @@ bool UnlinkFile(const char *filename, bool error_if_missing)
 
 #endif
 
-static const char *CreateTemporaryPath(Span<const char> directory, const char *prefix, const char *extension,
-                                       Allocator *alloc, FunctionRef<bool(const char *path)> create)
-{
-    RG_ASSERT(alloc);
-
-    HeapArray<char> filename(alloc);
-    filename.Append(directory);
-    filename.Append(*RG_PATH_SEPARATORS);
-    filename.Append(prefix);
-
-    Size change_offset = filename.len;
-
-    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-    RG_DEFER_N(log_guard) { PopLogFilter(); };
-
-    for (Size i = 0; i < 1000; i++) {
-        // We want to show an error on last try
-        if (RG_UNLIKELY(i == 999)) {
-            PopLogFilter();
-            log_guard.Disable();
-        }
-
-        filename.RemoveFrom(change_offset);
-        Fmt(&filename, "%1%2", FmtRandom(24), extension);
-
-        if (create(filename.ptr)) {
-            const char *ret = filename.TrimAndLeak(1).ptr;
-            return ret;
-        }
-    }
-
-    return nullptr;
-}
-
-const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
-                                Allocator *alloc, FILE **out_fp)
-{
-    return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
-        int flags = (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
-                    (int)OpenFileFlag::Exclusive;
-
-        FILE *fp = OpenFile(path, flags);
-
-        if (fp) {
-            if (out_fp) {
-                *out_fp = fp;
-            } else {
-                fclose(fp);
-            }
-
-            return true;
-        } else {
-            return false;
-        }
-    });
-}
-
-const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc)
-{
-    return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) {
-        return MakeDirectory(path);
-    });
-}
-
 bool EnsureDirectoryExists(const char *filename)
 {
     Span<const char> directory = GetPathDirectory(filename);
@@ -3370,16 +3447,7 @@ static bool InitConsoleCtrlHandler()
     return success;
 }
 
-static void CloseHandleSafe(HANDLE *handle_ptr)
-{
-    if (*handle_ptr && *handle_ptr != INVALID_HANDLE_VALUE) {
-        CloseHandle(*handle_ptr);
-    }
-
-    *handle_ptr = nullptr;
-}
-
-static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handles[2])
+bool CreateOverlappedPipe(bool overlap0, bool overlap1, PipeMode mode, HANDLE out_handles[2])
 {
     static LONG pipe_idx;
 
@@ -3395,7 +3463,11 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handle
             GetCurrentProcessId(), InterlockedIncrement(&pipe_idx));
 
         DWORD open_mode = PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | (overlap0 ? FILE_FLAG_OVERLAPPED : 0);
-        DWORD pipe_mode = PIPE_TYPE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
+        DWORD pipe_mode = PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
+        switch (mode) {
+            case PipeMode::Byte: { pipe_mode |= PIPE_TYPE_BYTE; } break;
+            case PipeMode::Message: { pipe_mode |= PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE; } break;
+        }
 
         handles[0] = CreateNamedPipeA(pipe_name, open_mode, pipe_mode, 1, 8192, 8192, 0, nullptr);
         if (!handles[0] && GetLastError() != ERROR_ACCESS_DENIED) {
@@ -3411,16 +3483,50 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handle
         return false;
     }
 
+    if (mode == PipeMode::Message) {
+        DWORD value = PIPE_READMODE_MESSAGE;
+        if (!SetNamedPipeHandleState(handles[1], &value, nullptr, nullptr)) {
+            LogError("Failed to switch pipe to message mode: %1", GetWin32ErrorString());
+            return false;
+        }
+    }
+
     handle_guard.Disable();
     out_handles[0] = handles[0];
     out_handles[1] = handles[1];
     return true;
 }
 
+void CloseHandleSafe(HANDLE *handle_ptr)
+{
+    if (*handle_ptr && *handle_ptr != INVALID_HANDLE_VALUE) {
+        CloseHandle(*handle_ptr);
+    }
+
+    *handle_ptr = nullptr;
+}
+
+struct PendingIO {
+    OVERLAPPED ov = {}; // Keep first
+
+    bool pending = false;
+    DWORD err = 0;
+    Size len = -1;
+
+    static void CompletionHandler(DWORD err, DWORD len, OVERLAPPED *ov)
+    {
+        PendingIO *self = (PendingIO *)ov;
+
+        self->pending = false;
+        self->err = err;
+        self->len = err ? -1 : len;
+    }
+};
+
 bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
-    STARTUPINFOW startup_info = {};
+    STARTUPINFOW si = {};
 
     // Convert command line
     Span<wchar_t> cmd_line_w;
@@ -3464,7 +3570,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         CloseHandleSafe(&in_pipe[0]);
         CloseHandleSafe(&in_pipe[1]);
     };
-    if (in_func.IsValid() && !CreateOverlappedPipe(false, true, in_pipe))
+    if (in_func.IsValid() && !CreateOverlappedPipe(false, true, PipeMode::Byte, in_pipe))
         return false;
 
     // Create write pipes
@@ -3473,45 +3579,45 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         CloseHandleSafe(&out_pipe[0]);
         CloseHandleSafe(&out_pipe[1]);
     };
-    if (out_func.IsValid() && !CreateOverlappedPipe(true, false, out_pipe))
+    if (out_func.IsValid() && !CreateOverlappedPipe(true, false, PipeMode::Byte, out_pipe))
         return false;
 
     // Start process
     HANDLE process_handle;
     {
         RG_DEFER {
-            CloseHandleSafe(&startup_info.hStdInput);
-            CloseHandleSafe(&startup_info.hStdOutput);
-            CloseHandleSafe(&startup_info.hStdError);
+            CloseHandleSafe(&si.hStdInput);
+            CloseHandleSafe(&si.hStdOutput);
+            CloseHandleSafe(&si.hStdError);
         };
         if (in_func.IsValid() || out_func.IsValid()) {
             if (!DuplicateHandle(GetCurrentProcess(), in_func.IsValid() ? in_pipe[0] : GetStdHandle(STD_INPUT_HANDLE),
-                                 GetCurrentProcess(), &startup_info.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
+                                 GetCurrentProcess(), &si.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
                 LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
                 return false;
             }
             if (!DuplicateHandle(GetCurrentProcess(), out_func.IsValid() ? out_pipe[1] : GetStdHandle(STD_OUTPUT_HANDLE),
-                                 GetCurrentProcess(), &startup_info.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
+                                 GetCurrentProcess(), &si.hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS) ||
                 !DuplicateHandle(GetCurrentProcess(), out_func.IsValid() ? out_pipe[1] : GetStdHandle(STD_ERROR_HANDLE),
-                                 GetCurrentProcess(), &startup_info.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
+                                 GetCurrentProcess(), &si.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
                 LogError("Failed to duplicate handle: %1", GetWin32ErrorString());
                 return false;
             }
-            startup_info.dwFlags |= STARTF_USESTDHANDLES;
+            si.dwFlags |= STARTF_USESTDHANDLES;
         }
 
-        PROCESS_INFORMATION process_info = {};
+        PROCESS_INFORMATION pi = {};
         if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP,
-                            nullptr, nullptr, &startup_info, &process_info)) {
+                            nullptr, nullptr, &si, &pi)) {
             LogError("Failed to start process: %1", GetWin32ErrorString());
             return false;
         }
-        if (!AssignProcessToJobObject(job_handle, process_info.hProcess)) {
+        if (!AssignProcessToJobObject(job_handle, pi.hProcess)) {
             CloseHandleSafe(&job_handle);
         }
 
-        process_handle = process_info.hProcess;
-        CloseHandleSafe(&process_info.hThread);
+        process_handle = pi.hProcess;
+        CloseHandle(pi.hThread);
 
         CloseHandleSafe(&in_pipe[0]);
         CloseHandleSafe(&out_pipe[1]);
@@ -3520,170 +3626,84 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 
     // Read and write standard process streams
     {
-        HANDLE events[4] = {
-            CreateEvent(nullptr, TRUE, in_func.IsValid(), nullptr),
-            CreateEvent(nullptr, TRUE, out_func.IsValid(), nullptr),
-            process_handle,
-            console_ctrl_event
-        };
-        RG_DEFER {
-            CloseHandleSafe(&events[0]);
-            CloseHandleSafe(&events[1]);
-        };
-        if (!events[0] || !events[1]) {
-            LogError("Failed to create event HANDLE: %1", GetWin32ErrorString());
-            return false;
-        }
+        bool running = true;
 
+        PendingIO proc_in;
         Span<const uint8_t> write_buf = {};
-        bool write_pending = false;
-        OVERLAPPED write_ov = {};
-        write_ov.hEvent = events[0];
-
+        PendingIO proc_out;
         uint8_t read_buf[4096];
-        bool read_pending = false;
-        OVERLAPPED read_ov = {};
-        read_ov.hEvent = events[1];
 
-        do {
-            DWORD ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE);
-
-            if (RG_UNLIKELY(ret < WAIT_OBJECT_0 || ret >= WAIT_OBJECT_0 + RG_LEN(events))) {
-                // Not sure how this could happen, but who knows?
-                LogError("Read/write for process failed: %1", GetWin32ErrorString());
-                break;
-            }
-
+        while (running) {
             // Try to write
-            if (ret == WAIT_OBJECT_0) {
-                RG_ASSERT(in_func.IsValid());
-
-                if (write_pending) {
-                    DWORD write_len = 0;
-
-                    if (GetOverlappedResult(in_pipe[1], &write_ov, &write_len, TRUE)) {
-                        write_buf.ptr += (Size)write_len;
-                        write_buf.len -= (Size)write_len;
-
-                        write_pending = false;
-                    } else {
-                        DWORD err = GetLastError();
-
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to write process input: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(in_pipe[1]);
-                        CloseHandleSafe(&in_pipe[1]);
-                        ResetEvent(events[0]);
+            if (in_func.IsValid() && !proc_in.pending) {
+                if (!proc_in.err) {
+                    if (proc_in.len >= 0) {
+                        write_buf.ptr += proc_in.len;
+                        write_buf.len -= proc_in.len;
                     }
-                }
 
-                if (RG_LIKELY(in_pipe[1])) {
                     if (!write_buf.len) {
                         write_buf = in_func();
                         RG_ASSERT(write_buf.len >= 0);
                     }
 
                     if (write_buf.len) {
-                        DWORD len = (DWORD)std::min((Size)UINT32_MAX, write_buf.len);
-                        DWORD write_len = 0;
+                        RG_ASSERT(write_buf.len < UINT_MAX);
 
-                        while (write_buf.len &&
-                               ::WriteFile(in_pipe[1], write_buf.ptr, len, nullptr, &write_ov) &&
-                               GetOverlappedResult(in_pipe[1], &write_ov, &write_len, FALSE)) {
-                            write_buf.ptr += (Size)write_len;
-                            write_buf.len -= (Size)write_len;
-                        }
-
-                        DWORD err = GetLastError();
-
-                        if (err == ERROR_SUCCESS) {
-                            SetEvent(events[0]);
-                        } else if (err == ERROR_IO_PENDING) {
-                            write_pending = true;
-                        } else {
-                            if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                                LogError("Failed to write process input: %1", GetWin32ErrorString(err));
-                            }
-
-                            CancelIo(in_pipe[1]);
-                            CloseHandleSafe(&in_pipe[1]);
-                            ResetEvent(events[0]);
+                        if (!WriteFileEx(in_pipe[1], write_buf.ptr, (DWORD)write_buf.len,
+                                         &proc_in.ov, PendingIO::CompletionHandler)) {
+                            proc_in.err = GetLastError();
                         }
                     } else {
                         CloseHandleSafe(&in_pipe[1]);
-                        ResetEvent(events[0]);
                     }
                 }
+
+                if (proc_in.err && proc_in.err != ERROR_BROKEN_PIPE && proc_in.err != ERROR_NO_DATA) {
+                    LogError("Failed to write to process: %1", GetWin32ErrorString(proc_in.err));
+                }
+                proc_in.pending = true;
             }
 
             // Try to read
-            if (ret == WAIT_OBJECT_0 + 1) {
-                RG_ASSERT(out_func.IsValid());
+            if (out_func.IsValid() && !proc_out.pending) {
+                if (!proc_out.err) {
+                    if (proc_out.len >= 0) {
+                        out_func(MakeSpan(read_buf, proc_out.len));
+                        proc_out.len = -1;
+                    }
 
-                if (read_pending) {
-                    DWORD read_len = 0;
-
-                    if (GetOverlappedResult(out_pipe[0], &read_ov, &read_len, TRUE)) {
-                        out_func(MakeSpan(read_buf, read_len));
-                        read_pending = false;
-                    } else {
-                        DWORD err = GetLastError();
-
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to read process output: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(out_pipe[0]);
-                        CloseHandleSafe(&out_pipe[0]);
-                        ResetEvent(events[1]);
+                    if (proc_out.len && !ReadFileEx(out_pipe[0], read_buf, RG_SIZE(read_buf), &proc_out.ov, PendingIO::CompletionHandler)) {
+                        proc_out.err = GetLastError();
                     }
                 }
 
-                if (RG_LIKELY(out_pipe[0])) {
-                    DWORD read_len = 0;
-
-                    while (::ReadFile(out_pipe[0], read_buf, RG_SIZE(read_buf), nullptr, &read_ov) &&
-                           GetOverlappedResult(out_pipe[0], &read_ov, &read_len, FALSE)) {
-                        out_func(MakeSpan(read_buf, read_len));
-                    }
-
-                    DWORD err = GetLastError();
-
-                    if (err == ERROR_IO_PENDING) {
-                        read_pending = true;
-                    } else {
-                        if (err != ERROR_BROKEN_PIPE && err != ERROR_PIPE_NOT_CONNECTED && err != ERROR_NO_DATA) {
-                            LogError("Failed to read process output: %1", GetWin32ErrorString(err));
-                        }
-
-                        CancelIo(out_pipe[0]);
-                        CloseHandleSafe(&out_pipe[0]);
-                        ResetEvent(events[1]);
-                    }
+                if (proc_out.err && proc_out.err != ERROR_BROKEN_PIPE && proc_out.err != ERROR_NO_DATA) {
+                    LogError("Failed to read process output: %1", GetWin32ErrorString(proc_out.err));
                 }
+                proc_out.pending = true;
             }
 
-            // Ctrl+C or process ended
-            if (ret >= WAIT_OBJECT_0 + 2) {
-                if (in_pipe[1]) {
-                    CancelIo(in_pipe[1]);
-                }
-                if (out_pipe[0]) {
-                    CancelIo(out_pipe[0]);
-                }
+            HANDLE events[2] = {
+                process_handle,
+                console_ctrl_event
+            };
 
-                break;
-            }
-        } while (in_pipe[1] || out_pipe[0]);
+            running = (WaitForMultipleObjectsEx(RG_LEN(events), events, FALSE, INFINITE, TRUE) > WAIT_OBJECT_0 + 1);
+        }
+    }
 
-        CloseHandleSafe(&out_pipe[0]);
+    // Terminate any remaining I/O
+    if (in_pipe[1]) {
+        CancelIo(in_pipe[1]);
         CloseHandleSafe(&in_pipe[1]);
+    }
+    if (out_pipe[0]) {
+        CancelIo(out_pipe[0]);
+        CloseHandleSafe(&out_pipe[0]);
     }
 
     // Wait for process exit
-    DWORD exit_code;
     {
         HANDLE events[2] = {
             process_handle,
@@ -3697,6 +3717,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
     }
 
     // Get exit code
+    DWORD exit_code;
     if (WaitForSingleObject(console_ctrl_event, 0) == WAIT_OBJECT_0) {
         TerminateJobObject(job_handle, STATUS_CONTROL_C_EXIT);
         exit_code = STATUS_CONTROL_C_EXIT;
@@ -3767,6 +3788,7 @@ RG_INIT(SetupDefaultHandlers)
     SetSignalHandler(SIGINT, nullptr, DefaultSignalHandler);
     SetSignalHandler(SIGTERM, nullptr, DefaultSignalHandler);
     SetSignalHandler(SIGHUP, nullptr, DefaultSignalHandler);
+    SetSignalHandler(SIGPIPE, nullptr, [](int) {});
 }
 
 RG_EXIT(TerminateChildren)
@@ -3806,7 +3828,7 @@ bool CreatePipe(int pfd[2])
 #endif
 }
 
-static void CloseDescriptorSafe(int *fd_ptr)
+void CloseDescriptorSafe(int *fd_ptr)
 {
     if (*fd_ptr >= 0) {
         close(*fd_ptr);
@@ -3920,7 +3942,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         }
 
         if (RG_POSIX_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
-            LogError("Failed to read process output: %1", strerror(errno));
+            LogError("Failed to poll process I/O: %1", strerror(errno));
             break;
         }
 
@@ -3929,10 +3951,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         unsigned int term_revents = (term_idx >= 0) ? pfds[term_idx].revents : 0;
 
         // Try to write
-        if (in_revents & POLLERR) {
-            if (!term_revents) {
-                LogError("Failed to poll process input");
-            }
+        if (in_revents & (POLLHUP | POLLERR)) {
             CloseDescriptorSafe(&in_pfd[1]);
         } else if (in_revents & POLLOUT) {
             RG_ASSERT(in_func.IsValid());
@@ -3960,8 +3979,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         }
 
         // Try to read
-        if (out_revents & POLLERR) {
-            LogError("Failed to poll process output");
+        if (out_revents & (POLLHUP | POLLERR)) {
             break;
         } else if (out_revents & POLLIN) {
             RG_ASSERT(out_func.IsValid());
@@ -3978,8 +3996,6 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
                 LogError("Failed to read process output: %1", strerror(errno));
                 break;
             }
-        } else if (out_revents & POLLHUP) {
-            break;
         }
 
         if (term_revents) {
@@ -4216,6 +4232,33 @@ int GetCoreCount()
 #endif
 }
 
+#ifndef _WIN32
+bool DropSetuid()
+{
+    uid_t uid = getuid();
+    uid_t euid = geteuid();
+    gid_t gid = getgid();
+
+    if (uid != euid) {
+        LogDebug("Dropping SUID privileges...");
+    }
+
+    if (!euid && setgroups(1, &gid) < 0)
+        goto error;
+    if (setregid(gid, gid) < 0)
+        goto error;
+    if (setreuid(uid, uid) < 0)
+        goto error;
+    RG_CRITICAL(setuid(0) < 0, "Managed to regain root privileges");
+
+    return true;
+
+error:
+    LogError("Failed to drop setuid privilegies: %1", strerror(errno));
+    return false;
+}
+#endif
+
 #ifdef __linux__
 bool NotifySystemd()
 {
@@ -4269,10 +4312,252 @@ bool NotifySystemd()
         return false;
     }
 
-    unsetenv("NOTIFY_SOCKET");
+    DeleteEnvironmentVar("NOTIFY_SOCKET");
     return true;
 }
 #endif
+
+// ------------------------------------------------------------------------
+// Standard paths
+// ------------------------------------------------------------------------
+
+#ifdef _WIN32
+
+const char *GetUserConfigPath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    static char cache_dir[4096];
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        wchar_t *dir = nullptr;
+        RG_DEFER { CoTaskMemFree(dir); };
+
+        RG_CRITICAL(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &dir) == S_OK,
+                    "Failed to retrieve path to roaming user AppData");
+        RG_CRITICAL(ConvertWin32WideToUtf8(dir, cache_dir) >= 0,
+                    "Path to roaming AppData is invalid or too big");
+    });
+
+    const char *path = Fmt(alloc, "%1%/%2", cache_dir, name).ptr;
+    return path;
+}
+
+const char *GetUserCachePath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    static char cache_dir[4096];
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        wchar_t *dir = nullptr;
+        RG_DEFER { CoTaskMemFree(dir); };
+
+        RG_CRITICAL(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &dir) == S_OK,
+                    "Failed to retrieve path to local user AppData");
+        RG_CRITICAL(ConvertWin32WideToUtf8(dir, cache_dir) >= 0,
+                    "Path to local AppData is invalid or too big");
+    });
+
+    const char *path = Fmt(alloc, "%1%/%2", cache_dir, name).ptr;
+    return path;
+}
+
+const char *GetTemporaryDirectory()
+{
+    static char temp_dir[4096];
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        Size len;
+        if (win32_utf8) {
+            len = (Size)GetTempPathA(RG_SIZE(temp_dir), temp_dir);
+            RG_CRITICAL(len < RG_SIZE(temp_dir), "Temporary directory path is too big");
+        } else {
+            static wchar_t dir_w[4096];
+            Size len_w = (Size)GetTempPathW(RG_LEN(dir_w), dir_w);
+
+            RG_CRITICAL(len_w < RG_LEN(dir_w), "Temporary directory path is too big");
+
+            len = ConvertWin32WideToUtf8(dir_w, temp_dir);
+            RG_CRITICAL(len >= 0, "Temporary directory path is invalid or too big");
+        }
+
+        while (len > 0 && IsPathSeparator(temp_dir[len - 1])) {
+            len--;
+        }
+        temp_dir[len] = 0;
+    });
+
+    return temp_dir;
+}
+
+#else
+
+const char *GetUserConfigPath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    const char *xdg = getenv("XDG_CONFIG_HOME");
+
+    if (xdg) {
+        const char *path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
+        return path;
+    } else {
+        const char *home = getenv("HOME");
+        RG_CRITICAL(home, "Failed to get HOME environment variable: %1", strerror(errno));
+
+        const char *path = Fmt(alloc, "%1%/.config/%2", home, name).ptr;
+        return path;
+    }
+}
+
+const char *GetUserCachePath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    const char *xdg = getenv("XDG_CACHE_HOME");
+
+    if (xdg) {
+        const char *path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
+        return path;
+    } else {
+        const char *home = getenv("HOME");
+        RG_CRITICAL(home, "Failed to get HOME environment variable: %1", strerror(errno));
+
+        const char *path = Fmt(alloc, "%1%/.cache/%2", home, name).ptr;
+        return path;
+    }
+}
+
+static const char *GetSystemConfigPath(const char *name, Allocator *alloc)
+{
+    RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
+
+    const char *path = Fmt(alloc, "/etc/%1", name).ptr;
+    return path;
+}
+
+const char *GetTemporaryDirectory()
+{
+    static char temp_dir[4096];
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        Span<const char> env = getenv("TMPDIR");
+
+        while (env.len > 0 && IsPathSeparator(env[env.len - 1])) {
+            env.len--;
+        }
+
+        if (env.len && env.len < RG_SIZE(temp_dir)) {
+            CopyString(env, temp_dir);
+        } else {
+            CopyString("/tmp", temp_dir);
+        }
+    });
+
+    return temp_dir;
+}
+
+#endif
+
+const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const char *, 4> *out_possibilities)
+{
+    decltype(GetUserConfigPath) *funcs[] = {
+        [](const char *name, Allocator *alloc) {
+            Span<const char> dir = GetApplicationDirectory();
+
+            const char *filename = Fmt(alloc, "%1%/%2", dir, name).ptr;
+            return filename;
+        },
+        GetUserConfigPath,
+#ifndef _WIN32
+        GetSystemConfigPath
+#endif
+    };
+
+    const char *filename = nullptr;
+
+    for (const auto &func: funcs) {
+        const char *path = func(name, alloc);
+
+        if (TestFile(path, FileType::File)) {
+            filename = path;
+        }
+        if (out_possibilities) {
+            out_possibilities->Append(path);
+        }
+    }
+
+    return filename;
+}
+
+static const char *CreateTemporaryPath(Span<const char> directory, const char *prefix, const char *extension,
+                                       Allocator *alloc, FunctionRef<bool(const char *path)> create)
+{
+    RG_ASSERT(alloc);
+
+    HeapArray<char> filename(alloc);
+    filename.Append(directory);
+    filename.Append(*RG_PATH_SEPARATORS);
+    filename.Append(prefix);
+
+    Size change_offset = filename.len;
+
+    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+    RG_DEFER_N(log_guard) { PopLogFilter(); };
+
+    for (Size i = 0; i < 1000; i++) {
+        // We want to show an error on last try
+        if (RG_UNLIKELY(i == 999)) {
+            PopLogFilter();
+            log_guard.Disable();
+        }
+
+        filename.RemoveFrom(change_offset);
+        Fmt(&filename, "%1%2", FmtRandom(24), extension);
+
+        if (create(filename.ptr)) {
+            const char *ret = filename.TrimAndLeak(1).ptr;
+            return ret;
+        }
+    }
+
+    return nullptr;
+}
+
+const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
+                                Allocator *alloc, FILE **out_fp)
+{
+    return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
+        int flags = (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
+                    (int)OpenFileFlag::Exclusive;
+
+        FILE *fp = OpenFile(path, flags);
+
+        if (fp) {
+            if (out_fp) {
+                *out_fp = fp;
+            } else {
+                fclose(fp);
+            }
+
+            return true;
+        } else {
+            return false;
+        }
+    });
+}
+
+const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc)
+{
+    return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) {
+        return MakeDirectory(path);
+    });
+}
 
 // ------------------------------------------------------------------------
 // Random
@@ -4480,7 +4765,7 @@ void FillRandomSafe(void *out_buf, Size len)
     for (Size i = copy_len; i < len; i += RG_SIZE(rnd_buf)) {
         RunChaCha20(rnd_state, rnd_buf);
 
-        Size copy_len = std::min(RG_SIZE(rnd_buf), len - i);
+        copy_len = std::min(RG_SIZE(rnd_buf), len - i);
         memcpy_safe((uint8_t *)out_buf + i, rnd_buf, (size_t)copy_len);
         ZeroMemorySafe(rnd_buf, copy_len);
         rnd_offset = copy_len;
@@ -4509,21 +4794,27 @@ int GetRandomIntSafe(int min, int max)
 // Sockets
 // ------------------------------------------------------------------------
 
-int OpenIPSocket(SocketType type, int port)
+int OpenIPSocket(SocketType type, int port, SocketMode mode)
 {
     RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
 
     int family = (type == SocketType::IPv4) ? AF_INET : AF_INET6;
 
+    int flags = 0;
+    switch (mode) {
+        case SocketMode::Stream: { flags = SOCK_STREAM; } break;
+        case SocketMode::Messages: { flags = SOCK_DGRAM; } break;
+    }
+
 #ifdef _WIN32
-    SOCKET fd = socket(family, SOCK_STREAM, 0);
+    SOCKET fd = socket(family, flags, 0);
     if (fd == INVALID_SOCKET) {
         LogError("Failed to create AF_INET socket: %1", strerror(errno));
         return -1;
     }
     RG_DEFER_N(err_guard) { closesocket(fd); };
 #else
-    int fd = socket(family, SOCK_STREAM, 0);
+    int fd = socket(family, flags, 0);
     if (fd < 0) {
         LogError("Failed to create AF_INET socket: %1", strerror(errno));
         return -1;
@@ -4577,17 +4868,25 @@ int OpenIPSocket(SocketType type, int port)
     return (int)fd;
 }
 
-int OpenUnixSocket(const char *path)
+int OpenUnixSocket(const char *path, SocketMode mode)
 {
+    int flags = 0;
+    switch (mode) {
+        case SocketMode::Stream: { flags = SOCK_STREAM; } break;
+        case SocketMode::Messages: { flags = SOCK_SEQPACKET; } break;
+    }
+
 #ifdef _WIN32
-    SOCKET fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    SOCKET fd = socket(AF_UNIX, flags, 0);
     if (fd == INVALID_SOCKET) {
         LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
         return -1;
     }
     RG_DEFER_N(err_guard) { closesocket(fd); };
 #else
-    int fd = (int)socket(AF_UNIX, SOCK_STREAM, 0);
+    flags |= SOCK_CLOEXEC;
+
+    int fd = (int)socket(AF_UNIX, flags, 0);
     if (fd < 0) {
         LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
         return -1;
@@ -4608,6 +4907,48 @@ int OpenUnixSocket(const char *path)
         return -1;
     }
     chmod(path, 0666);
+
+    err_guard.Disable();
+    return (int)fd;
+}
+
+int ConnectToUnixSocket(const char *path, SocketMode mode)
+{
+    int flags = 0;
+    switch (mode) {
+        case SocketMode::Stream: { flags = SOCK_STREAM; } break;
+        case SocketMode::Messages: { flags = SOCK_SEQPACKET; } break;
+    }
+
+#ifdef _WIN32
+    SOCKET fd = socket(AF_UNIX, flags, 0);
+    if (fd == INVALID_SOCKET) {
+        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { closesocket(fd); };
+#else
+    flags |= SOCK_CLOEXEC;
+
+    int fd = (int)socket(AF_UNIX, flags, 0);
+    if (fd < 0) {
+        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { close(fd); };
+#endif
+
+    struct sockaddr_un addr = {};
+    addr.sun_family = AF_UNIX;
+    if (!CopyString(path, addr.sun_path)) {
+        LogError("Excessive UNIX socket path length");
+        return -1;
+    }
+
+    if (connect(fd, (struct sockaddr *)&addr, RG_SIZE(addr)) < 0) {
+        LogError("Failed to connect to '%1': %2", path, strerror(errno));
+        return -1;
+    }
 
     err_guard.Disable();
     return (int)fd;
@@ -4889,7 +5230,7 @@ void AsyncPool::RunTask(Task *task)
 // Fibers
 // ------------------------------------------------------------------------
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static RG_THREAD_LOCAL int fib_fibers;
 static RG_THREAD_LOCAL void *fib_self;
@@ -4908,9 +5249,7 @@ Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
     }
     RG_DEFER_N(self_guard) {
         if (!fib_fibers) {
-            bool success = ConvertFiberToThread();
-            RG_ASSERT(success);
-
+            RG_CRITICAL(ConvertFiberToThread(), "ConvertFiberToThread() failed: %1", GetWin32ErrorString());
             fib_self = nullptr;
         }
     };
@@ -4939,9 +5278,7 @@ Fiber::~Fiber()
         fiber = nullptr;
 
         if (!--fib_fibers && fib_self) {
-            bool success = ConvertFiberToThread();
-            RG_ASSERT(success);
-
+            RG_CRITICAL(ConvertFiberToThread(), "ConvertFiberToThread() failed: %1", GetWin32ErrorString());
             fib_self = nullptr;
         }
     }
@@ -4993,7 +5330,7 @@ void WINAPI Fiber::FiberCallback(void *udata)
     SwitchToFiber(fib_self);
 }
 
-#else
+#elif defined(RG_FIBER_USE_UCONTEXT)
 
 static RG_THREAD_LOCAL ucontext_t fib_self;
 static RG_THREAD_LOCAL ucontext_t *fib_run;
@@ -5071,6 +5408,90 @@ void Fiber::FiberCallback(unsigned int high, unsigned int low)
     self->done = true;
 
     RG_CRITICAL(swapcontext(&self->ucp, &fib_self) == 0, "swapcontext() failed: %1", strerror(errno));
+}
+
+#else
+
+#warning makecontext API is not available, using slower thread-based implementation
+
+static RG_THREAD_LOCAL std::unique_lock<std::mutex> *fib_lock;
+static RG_THREAD_LOCAL Fiber *fib_self;
+
+Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
+    : f(f)
+{
+    thread = std::thread(ThreadCallback, this);
+    done = false;
+
+    while (toggle == 1) {
+        cv.wait(lock);
+    }
+}
+
+Fiber::~Fiber()
+{
+    // We are forced to execute it until the end
+    Finalize();
+
+    if (thread.joinable()) {
+        thread.join();
+    }
+}
+
+void Fiber::SwitchTo()
+{
+    if (!done) {
+        Toggle(1, &lock);
+    }
+}
+
+bool Fiber::Finalize()
+{
+    fib_lock = nullptr;
+    SwitchTo();
+
+    return success;
+}
+
+bool Fiber::SwitchBack()
+{
+    if (fib_lock) {
+        Fiber *self = fib_self;
+        self->Toggle(0, fib_lock);
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void Fiber::ThreadCallback(void *udata)
+{
+    Fiber *self = (Fiber *)udata;
+
+    std::unique_lock<std::mutex> lock(self->mutex);
+
+    fib_lock = &lock;
+    fib_self = self;
+
+    // Wait for our turn
+    self->Toggle(0, fib_lock);
+
+    self->success = self->f();
+    self->done = true;
+
+    self->toggle = 0;
+    self->cv.notify_one();
+}
+
+void Fiber::Toggle(int to, std::unique_lock<std::mutex> *lock)
+{
+    toggle = to;
+
+    cv.notify_one();
+    while (toggle == to) {
+        cv.wait(*lock);
+    }
 }
 
 #endif
@@ -5766,7 +6187,11 @@ restart:
 // XXX: Maximum line length
 bool LineReader::Next(Span<char> *out_line)
 {
-    if (RG_UNLIKELY(error || eof))
+    if (eof) {
+        line_number = 0;
+        return false;
+    }
+    if (RG_UNLIKELY(error))
         return false;
 
     for (;;) {
@@ -5801,8 +6226,12 @@ void LineReader::PushLogFilter()
 {
     RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
-        Fmt(ctx_buf, "%1(%2)%3%4", st->GetFileName(), line_number,
-                                   ctx ? ": " : "", ctx ? ctx : "");
+
+        if (line_number > 0) {
+            Fmt(ctx_buf, "%1(%2)%3%4", st->GetFileName(), line_number, ctx ? ": " : "", ctx ? ctx : "");
+        } else {
+            Fmt(ctx_buf, "%1%2%3", st->GetFileName(), ctx ? ": " : "", ctx ? ctx : "");
+        }
 
         func(level, ctx_buf, msg);
     });
@@ -6670,16 +7099,21 @@ const char *OptionParser::Next()
         return current_option;
     }
 
+    if (mode == OptionMode::Stop && (pos >= limit || !IsOption(args[pos]))) {
+        limit = pos;
+        return nullptr;
+    }
+
     // Skip non-options, do the permutation once we reach an option or the last argument
     Size next_index = pos;
     while (next_index < limit && !IsOption(args[next_index])) {
         next_index++;
     }
-    if (flags & (int)Flag::SkipNonOptions) {
-        pos = next_index;
-    } else {
+    if (mode == OptionMode::Rotate) {
         std::rotate(args.ptr + pos, args.ptr + next_index, args.end());
         limit -= (next_index - pos);
+    } else if (mode == OptionMode::Skip) {
+        pos = next_index;
     }
     if (pos >= limit)
         return nullptr;
@@ -6719,11 +7153,11 @@ const char *OptionParser::Next()
         current_option = buf;
         smallopt_offset = opt[2] ? 2 : 0;
 
-        // The main point of SkipNonOptions is to be able to parse arguments in
+        // The main point of Skip mode is to be able to parse arguments in
         // multiple passes. This does not work well with ambiguous short options
         // (such as -oOption, which can be interpeted as multiple one-char options
         // or one -o option with a value), so force the value interpretation.
-        if (flags & (int)Flag::SkipNonOptions) {
+        if (mode == OptionMode::Skip) {
             ConsumeValue();
         }
     } else {

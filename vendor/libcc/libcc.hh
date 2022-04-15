@@ -33,10 +33,13 @@
 #include <string.h>
 #include <type_traits>
 #include <utility>
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <intrin.h>
-#else
+#elif !defined(__linux__) || defined(__GLIBC__)
+    #define RG_FIBER_USE_UCONTEXT
     #include <ucontext.h>
+#else
+    #include <thread>
 #endif
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
@@ -130,6 +133,7 @@ extern "C" const char *FelixCompiler;
         _Pragma("GCC diagnostic ignored \"-Wsign-conversion\"") \
         _Pragma("GCC diagnostic ignored \"-Wunused-function\"") \
         _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") \
+        _Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"") \
         _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
     #define RG_POP_NO_WARNINGS \
         _Pragma("GCC diagnostic pop")
@@ -917,7 +921,7 @@ struct Span {
     }
 
     template <typename U>
-    Span<U> CastAs() const { return Span<U>((U *)ptr, len); }
+    Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
 // Use strlen() to build Span<const char> instead of the template-based
@@ -971,7 +975,7 @@ struct Span<const char> {
     }
 
     template <typename U>
-    Span<U> CastAs() const { return Span<U>((U *)ptr, len); }
+    Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
 template <typename T>
@@ -1139,6 +1143,9 @@ public:
     Span<T> Take() const { return Span<T>(data, len); }
     Span<T> Take(Size offset, Size len) const { return Span<T>((T *)data, N).Take(offset, len); }
     Span<T> TakeAvailable() const { return Span<T>((T *)data + len, N - len); }
+
+    template <typename U = T>
+    Span<U> As() const { return Span<U>((U *)data, len); }
 };
 
 template <typename T>
@@ -1340,6 +1347,7 @@ public:
 
     Span<T> Take() const { return Span<T>(ptr, len); }
     Span<T> Take(Size offset, Size len) const { return Span<T>(ptr, this->len).Take(offset, len); }
+    Span<T> TakeAvailable() const { return Span<T>((T *)ptr + len, capacity - len); }
 
     Span<T> Leak()
     {
@@ -1356,6 +1364,9 @@ public:
         Trim(extra_capacity);
         return Leak();
     }
+
+    template <typename U = T>
+    Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
 template <typename T, Size BucketSize = 64, typename AllocatorType = BlockAllocator>
@@ -2693,7 +2704,7 @@ public:
     bool IsEOF() const { return eof; }
 
     Size Read(Span<uint8_t> out_buf);
-    Size Read(Span<char> out_buf) { return Read(out_buf.CastAs<uint8_t>()); }
+    Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
     Size Read(Size max_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, max_len)); }
 
     Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
@@ -2712,6 +2723,27 @@ private:
 
     Size ReadRaw(Size max_len, void *out_buf);
 };
+
+static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<uint8_t> out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.Read(out_buf);
+}
+static inline Size ReadFile(const char *filename, Span<uint8_t> out_buf)
+{
+    StreamReader st(filename);
+    return st.Read(out_buf);
+}
+static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<char> out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.Read(out_buf);
+}
+static inline Size ReadFile(const char *filename, Span<char> out_buf)
+{
+    StreamReader st(filename);
+    return st.Read(out_buf);
+}
 
 static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
                             HeapArray<uint8_t> *out_buf)
@@ -2859,7 +2891,7 @@ public:
     bool IsValid() const { return filename && !error; }
 
     bool Write(Span<const uint8_t> buf);
-    bool Write(Span<const char> buf) { return Write(buf.CastAs<const uint8_t>()); }
+    bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }
     bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
@@ -2971,6 +3003,7 @@ public:
     char pad_char;
 
     FmtArg() = default;
+    FmtArg(std::nullptr_t) : type(FmtType::Str1) { u.str1 = "(null)"; }
     FmtArg(const char *str) : type(FmtType::Str1) { u.str1 = str ? str : "(null)"; }
     FmtArg(Span<const char> str) : type(FmtType::Str2) { u.str2 = str; }
     FmtArg(char c) : type(FmtType::Char) { u.ch = c; }
@@ -3214,6 +3247,10 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);
 
 void PushLogFilter(const std::function<LogFilterFunc> &func);
 void PopLogFilter();
+
+#ifdef _WIN32
+bool RedirectLogToWindowsEvents(const char *name);
+#endif
 
 // ------------------------------------------------------------------------
 // Strings
@@ -3773,6 +3810,16 @@ static inline void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
     #define RG_SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
+#ifdef _WIN32
+bool IsWin32Utf8();
+Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w);
+Size ConvertWin32WideToUtf8(const wchar_t *str_w, Span<char> out_str);
+char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
+#endif
+
+void SetEnvironmentVar(const char *name, const char *value);
+void DeleteEnvironmentVar(const char *name);
+
 static inline bool IsPathSeparator(char c)
 {
 #ifdef _WIN32
@@ -3781,13 +3828,6 @@ static inline bool IsPathSeparator(char c)
     return c == '/';
 #endif
 }
-
-#ifdef _WIN32
-bool IsWin32Utf8();
-Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w);
-Size ConvertWin32WideToUtf8(const wchar_t *str_w, Span<char> out_str);
-char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
-#endif
 
 Span<const char> GetPathDirectory(Span<const char> filename);
 Span<const char> GetPathExtension(Span<const char> filename,
@@ -3811,7 +3851,9 @@ enum class FileType {
     Directory,
     File,
     Link,
-    Unknown
+    Device,
+    Pipe,
+    Socket
 };
 
 struct FileInfo {
@@ -3824,7 +3866,8 @@ struct FileInfo {
 enum class EnumStatus {
     Error,
     Partial,
-    Done
+    Stopped,
+    Complete
 };
 
 bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info);
@@ -3840,11 +3883,14 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
                     Allocator *str_alloc, HeapArray<const char *> *out_files);
 bool IsDirectoryEmpty(const char *dirname);
 
-bool TestFile(const char *filename, FileType type = FileType::Unknown);
+bool TestFile(const char *filename);
+bool TestFile(const char *filename, FileType type);
 
 bool MatchPathName(const char *path, const char *spec);
 bool MatchPathSpec(const char *path, const char *spec);
 
+bool FindExecutableInPath(const char *path, const char *name,
+                          Allocator *alloc = nullptr, const char **out_path = nullptr);
 bool FindExecutableInPath(const char *name, Allocator *alloc = nullptr,
                           const char **out_path = nullptr);
 
@@ -3874,12 +3920,17 @@ bool FlushFile(FILE *fp, const char *filename);
 
 bool FileIsVt100(FILE *fp);
 
-const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
-                                Allocator *alloc, FILE **out_fp = nullptr);
-const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
+#ifdef _WIN32
+enum class PipeMode {
+    Byte,
+    Message
+};
 
-#ifndef _WIN32
+bool CreateOverlappedPipe(bool overlap0, bool overlap1, PipeMode mode, void *out_handles[2]); // HANDLE
+void CloseHandleSafe(void **handle_ptr); // HANDLE
+#else
 bool CreatePipe(int pfd[2]);
+void CloseDescriptorSafe(int *fd_ptr);
 #endif
 
 bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
@@ -3903,14 +3954,14 @@ static inline bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> 
 static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf,
                                       FunctionRef<void(Span<char> buf)> out_func, int *out_code)
 {
-    const auto write = [&](Span<uint8_t> buf) { out_func(buf.CastAs<char>()); };
+    const auto write = [&](Span<uint8_t> buf) { out_func(buf.As<char>()); };
 
-    return ExecuteCommandLine(cmd_line, in_buf.CastAs<const uint8_t>(), write, out_code);
+    return ExecuteCommandLine(cmd_line, in_buf.As<const uint8_t>(), write, out_code);
 }
 static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_buf, Size max_len,
                                       HeapArray<char> *out_buf, int *out_code)
 {
-    return ExecuteCommandLine(cmd_line, in_buf.CastAs<const uint8_t>(), max_len,
+    return ExecuteCommandLine(cmd_line, in_buf.As<const uint8_t>(), max_len,
                               (HeapArray<uint8_t> *)out_buf, out_code);
 }
 
@@ -3930,6 +3981,9 @@ void SignalWaitFor();
 
 int GetCoreCount();
 
+#ifndef _WIN32
+bool DropSetuid();
+#endif
 #ifdef __linux__
 bool NotifySystemd();
 #endif
@@ -3942,6 +3996,20 @@ bool NotifySystemd();
             return ret; \
         })()
 #endif
+
+// ------------------------------------------------------------------------
+// Standard paths
+// ------------------------------------------------------------------------
+
+const char *GetUserConfigPath(const char *name, Allocator *alloc);
+const char *GetUserCachePath(const char *name, Allocator *alloc);
+const char *GetTemporaryDirectory();
+
+const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const char *, 4> *out_possibilities = nullptr);
+
+const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
+                                Allocator *alloc, FILE **out_fp = nullptr);
+const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
 
 // ------------------------------------------------------------------------
 // Random
@@ -3985,8 +4053,16 @@ static const char *const SocketTypeNames[] = {
     "Unix"
 };
 
-int OpenIPSocket(SocketType type, int port);
-int OpenUnixSocket(const char *path);
+enum class SocketMode {
+    Stream,
+    Messages
+};
+
+int OpenIPSocket(SocketType type, int port, SocketMode mode = SocketMode::Stream);
+
+int OpenUnixSocket(const char *path, SocketMode mode = SocketMode::Stream);
+int ConnectToUnixSocket(const char *path, SocketMode mode = SocketMode::Stream);
+
 void CloseSocket(int fd);
 
 // ------------------------------------------------------------------------
@@ -4026,8 +4102,15 @@ class Fiber {
 
 #ifdef _WIN32
     void *fiber = nullptr;
-#else
+#elif defined(RG_FIBER_USE_UCONTEXT)
     ucontext_t ucp = {};
+#else
+    std::thread thread;
+
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::unique_lock<std::mutex> lock { mutex };
+    int toggle = 1;
 #endif
 
     bool done = true;
@@ -4047,8 +4130,11 @@ private:
     static void FiberCallback(void *udata);
 #elif defined(_WIN32)
     static void __stdcall FiberCallback(void *udata);
-#else
+#elif defined(RG_FIBER_USE_UCONTEXT)
     static void FiberCallback(unsigned int high, unsigned int low);
+#else
+    static void ThreadCallback(void *udata);
+    void Toggle(int to, std::unique_lock<std::mutex> *lock);
 #endif
 };
 
@@ -4156,6 +4242,12 @@ struct OptionDesc {
     const char *help;
 };
 
+enum class OptionMode {
+    Rotate,
+    Skip,
+    Stop
+};
+
 enum class OptionType {
     NoValue,
     Value,
@@ -4166,7 +4258,7 @@ class OptionParser {
     RG_DELETE_COPY(OptionParser)
 
     Span<const char *> args;
-    unsigned int flags;
+    OptionMode mode;
 
     Size pos = 0;
     Size limit;
@@ -4176,18 +4268,15 @@ class OptionParser {
     bool test_failed = false;
 
 public:
-    enum class Flag {
-        SkipNonOptions = 1 << 0
-    };
 
     const char *current_option = nullptr;
     const char *current_value = nullptr;
 
-    OptionParser(Span<const char *> args, unsigned int flags = 0)
-        : args(args), flags(flags), limit(args.len) {}
-    OptionParser(int argc, char **argv, unsigned int flags = 0)
+    OptionParser(Span<const char *> args, OptionMode mode = OptionMode::Rotate)
+        : args(args), mode(mode), limit(args.len) {}
+    OptionParser(int argc, char **argv, OptionMode mode = OptionMode::Rotate)
         : args(argc > 0 ? (const char **)(argv + 1) : nullptr, std::max(0, argc - 1)),
-          flags(flags), limit(args.len) {}
+          mode(mode), limit(args.len) {}
 
     const char *Next();
 
