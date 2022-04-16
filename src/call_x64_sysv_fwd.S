@@ -11,20 +11,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+#ifdef __APPLE__
+    #define SYMBOL(Symbol) _ ## Symbol
+#else
+    #define SYMBOL(Symbol) Symbol
+#endif
+
 // These five are the same, but they differ (in the C side) by their return type.
 // Unlike the five next functions, these ones don't forward XMM argument registers.
-.global ForwardCallGG
-.global ForwardCallF
-.global ForwardCallDG
-.global ForwardCallGD
-.global ForwardCallDD
+.global SYMBOL(ForwardCallGG)
+.global SYMBOL(ForwardCallF)
+.global SYMBOL(ForwardCallDG)
+.global SYMBOL(ForwardCallGD)
+.global SYMBOL(ForwardCallDD)
 
 // The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-.global ForwardCallXGG
-.global ForwardCallXF
-.global ForwardCallXDG
-.global ForwardCallXGD
-.global ForwardCallXDD
+.global SYMBOL(ForwardCallXGG)
+.global SYMBOL(ForwardCallXF)
+.global SYMBOL(ForwardCallXDG)
+.global SYMBOL(ForwardCallXGD)
+.global SYMBOL(ForwardCallXDD)
 
 // Copy function pointer to RAX, in order to save it through argument forwarding.
 // Save RSP in RBX (non-volatile), and use carefully assembled stack provided by caller.
@@ -37,8 +43,7 @@
     .cfi_def_cfa rsp, 16
     movq %rsp, %rbx
     .cfi_def_cfa rbx, 16
-    movq %rsi, %rsp
-    addq $112, %rsp
+    leaq 112(%rsi), %rsp
 .endm
 
 // Call native function.
@@ -75,56 +80,56 @@
     movsd 48(%rsi), %xmm0
 .endm
 
-ForwardCallGG:
+SYMBOL(ForwardCallGG):
     prologue
     forward_int
     epilogue
 
-ForwardCallF:
+SYMBOL(ForwardCallF):
     prologue
     forward_int
     epilogue
 
-ForwardCallDG:
+SYMBOL(ForwardCallDG):
     prologue
     forward_int
     epilogue
 
-ForwardCallGD:
+SYMBOL(ForwardCallGD):
     prologue
     forward_int
     epilogue
 
-ForwardCallDD:
+SYMBOL(ForwardCallDD):
     prologue
     forward_int
     epilogue
 
-ForwardCallXGG:
-    prologue
-    forward_xmm
-    forward_int
-    epilogue
-
-ForwardCallXF:
+SYMBOL(ForwardCallXGG):
     prologue
     forward_xmm
     forward_int
     epilogue
 
-ForwardCallXDG:
+SYMBOL(ForwardCallXF):
     prologue
     forward_xmm
     forward_int
     epilogue
 
-ForwardCallXGD:
+SYMBOL(ForwardCallXDG):
     prologue
     forward_xmm
     forward_int
     epilogue
 
-ForwardCallXDD:
+SYMBOL(ForwardCallXGD):
+    prologue
+    forward_xmm
+    forward_int
+    epilogue
+
+SYMBOL(ForwardCallXDD):
     prologue
     forward_xmm
     forward_int
