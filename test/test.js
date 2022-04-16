@@ -572,7 +572,8 @@ async function join(machine, tries) {
                 host: '127.0.0.1',
                 port: machine.info.ssh_port,
                 username: machine.info.username,
-                password: machine.info.password
+                password: machine.info.password,
+                tryKeyboard: true
             });
 
             break;

@@ -182,5 +182,110 @@
                 }
             }
         }
+    },
+
+    "freebsd_x64": {
+        "name": "FreeBSD x64",
+
+        "qemu": {
+            "binary": "qemu-system-x86_64",
+            "arguments": ["-m", "2G", "-smp", 2, "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22206-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:16"]
+        },
+
+        "info": {
+            "version": 1,
+            "platform": "freebsd",
+            "arch": "x64",
+
+            "ssh_port": 22206,
+            "vnc_port": 5916,
+
+            "username": "freebsd",
+            "password": "freebsd",
+
+            "shutdown": "sudo poweroff"
+        },
+
+        "tests": {
+            "FreeBSD x64": {
+                "directory": "/home/freebsd/luigi",
+                "build": "npm install --production",
+                "commands": {
+                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
+                    "Test Misc": "node test/tests/misc.js",
+                    "Test SQLite": "node test/tests/sqlite.js"
+                }
+            }
+        }
+    },
+
+    "freebsd_i386": {
+        "name": "FreeBSD i386",
+
+        "qemu": {
+            "binary": "qemu-system-i386",
+            "arguments": ["-m", "2G", "-smp", 2, "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22207-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:17"]
+        },
+
+        "info": {
+            "version": 1,
+            "platform": "freebsd",
+            "arch": "ia32",
+
+            "ssh_port": 22207,
+            "vnc_port": 5917,
+
+            "username": "freebsd",
+            "password": "freebsd",
+
+            "shutdown": "sudo poweroff"
+        },
+
+        "tests": {
+            "FreeBSD i386": {
+                "directory": "/home/freebsd/luigi",
+                "build": "npm install --production",
+                "commands": {
+                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
+                    "Test Misc": "node test/tests/misc.js",
+                    "Test SQLite": "node test/tests/sqlite.js"
+                }
+            }
+        }
+    },
+
+    "freebsd_arm64": {
+        "name": "FreeBSD ARM64",
+
+        "qemu": {
+            "binary": "qemu-system-aarch64",
+            "arguments": ["-M", "virt", "-cpu", "cortex-a53", "-m", "2G", "-smp", 2, "-drive", "if=pflash,format=raw,file=QEMU_EFI.img", "-drive", "if=pflash,file=varstore.img", "-drive", "if=virtio,file=disk.qcow2,format=qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22208-:22", "-device", "virtio-net-device,netdev=mynet", "-vnc", "127.0.0.1:18"]
+        },
+
+        "info": {
+            "version": 1,
+            "platform": "freebsd",
+            "arch": "arm64",
+
+            "ssh_port": 22208,
+            "vnc_port": 5918,
+
+            "username": "freebsd",
+            "password": "freebsd",
+
+            "shutdown": "sudo poweroff"
+        },
+
+        "tests": {
+            "FreeBSD ARM64": {
+                "directory": "/home/freebsd/luigi",
+                "build": "npm install --production",
+                "commands": {
+                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
+                    "Test Misc": "node test/tests/misc.js",
+                    "Test SQLite": "node test/tests/sqlite.js"
+                }
+            }
+        }
     }
 }

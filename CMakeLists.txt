@@ -96,6 +96,10 @@ else()
                                           -Wno-unused-result)
 endif()
 
+if(CMAKE_SYSTEM_NAME MATCHES "BSD")
+    target_include_directories(raylib PRIVATE /usr/local/include)
+endif()
+
 # ---- SQLite ----
 
 add_library(sqlite3 SHARED vendor/sqlite3/sqlite3.c)
