@@ -35,7 +35,7 @@
 #include <utility>
 #if defined(_WIN32)
     #include <intrin.h>
-#elif !defined(__linux__) || defined(__GLIBC__)
+#elif !defined(__APPLE__) && (!defined(__linux__) || defined(__GLIBC__))
     #define RG_FIBER_USE_UCONTEXT
     #include <ucontext.h>
 #else

@@ -82,6 +82,7 @@
     extern char **environ;
 #endif
 #ifdef __APPLE__
+    #include <sys/random.h>
     #include <mach-o/dyld.h>
 
     #define off64_t off_t
@@ -4295,12 +4296,23 @@ bool NotifySystemd()
         return false;
     }
 
+#ifdef __APPLE__
+    int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        LogError("Failed to create UNIX socket: %1", strerror(errno));
+        return false;
+    }
+    RG_DEFER { close(fd); };
+
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+#else
     int fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
     if (fd < 0) {
         LogError("Failed to create UNIX socket: %1", strerror(errno));
         return false;
     }
     RG_DEFER { close(fd); };
+#endif
 
     struct iovec iov = {};
     struct msghdr msg = {};
@@ -4880,13 +4892,22 @@ int OpenUnixSocket(const char *path, SocketMode mode)
         case SocketMode::Messages: { flags = SOCK_SEQPACKET; } break;
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     SOCKET fd = socket(AF_UNIX, flags, 0);
     if (fd == INVALID_SOCKET) {
         LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
         return -1;
     }
     RG_DEFER_N(err_guard) { closesocket(fd); };
+#elif defined(__APPLE__)
+    int fd = (int)socket(AF_UNIX, flags, 0);
+    if (fd < 0) {
+        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { close(fd); };
+
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
 #else
     flags |= SOCK_CLOEXEC;
 
@@ -4924,13 +4945,22 @@ int ConnectToUnixSocket(const char *path, SocketMode mode)
         case SocketMode::Messages: { flags = SOCK_SEQPACKET; } break;
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     SOCKET fd = socket(AF_UNIX, flags, 0);
     if (fd == INVALID_SOCKET) {
         LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
         return -1;
     }
     RG_DEFER_N(err_guard) { closesocket(fd); };
+#elif defined(__APPLE__)
+    int fd = (int)socket(AF_UNIX, flags, 0);
+    if (fd < 0) {
+        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { close(fd); };
+
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
 #else
     flags |= SOCK_CLOEXEC;
 
