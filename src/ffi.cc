@@ -611,7 +611,15 @@ static void InitInternal(v8::Local<v8::Object> target, v8::Local<v8::Value>,
     SetValue(env, target, "in", Napi::Function::New(env_napi, MarkIn));
     SetValue(env, target, "out", Napi::Function::New(env_napi, MarkOut));
     SetValue(env, target, "inout", Napi::Function::New(env_napi, MarkInOut));
+
     SetValue(env, target, "internal", Napi::Boolean::New(env_napi, true));
+#if defined(_WIN32)
+    SetValue(env, target, "extension", Napi::String::New(env_napi, ".dll"));
+#elif defined(__APPLE__)
+    SetValue(env, target, "extension", Napi::String::New(env_napi, ".dylib"));
+#else
+    SetValue(env, target, "extension", Napi::String::New(env_napi, ".so"));
+#endif
 
     Napi::Object types = InitBaseTypes(env_cxx);
     SetValue(env, target, "types", types);
@@ -636,7 +644,15 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("in", Napi::Function::New(env, MarkIn));
     exports.Set("out", Napi::Function::New(env, MarkOut));
     exports.Set("inout", Napi::Function::New(env, MarkInOut));
+
     exports.Set("internal", Napi::Boolean::New(env, false));
+#if defined(_WIN32)
+    exports.Set("extension", Napi::String::New(env, ".dll"));
+#elif defined(__APPLE__)
+    exports.Set("extension", Napi::String::New(env, ".dylib"));
+#else
+    exports.Set("extension", Napi::String::New(env, ".so"));
+#endif
 
     Napi::Object types = InitBaseTypes(env);
     exports.Set("types", types);

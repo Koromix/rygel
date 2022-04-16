@@ -131,7 +131,7 @@ const Font = koffi.struct('Font', {
 });
 
 // Fix the path to Raylib DLL if needed
-let lib = koffi.load('build/raylib' + (process.platform == 'win32' ? '.dll' : '.so'));
+let lib = koffi.load('build/raylib' + koffi.extension);
 
 const InitWindow = lib.cdecl('InitWindow', 'void', ['int', 'int', 'string']);
 const SetTargetFPS = lib.cdecl('SetTargetFPS', 'void', ['int']);

@@ -36,8 +36,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.dirname(__filename) + '/../../build/misc' +
-                       (process.platform == 'win32' ? '.dll' : '.so');
+    let lib_filename = path.dirname(__filename) + '/../../build/misc' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
     const FillPack3 = lib.cdecl('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);

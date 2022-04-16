@@ -81,8 +81,7 @@ function main() {
         throw new Error('Value must be positive');
     console.log('Iterations:', iterations);
 
-    let lib_filename = path.dirname(__filename) + '/../build/raylib' +
-                       (process.platform == 'win32' ? '.dll' : '.so');
+    let lib_filename = path.dirname(__filename) + '/../build/raylib' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
     const InitWindow = lib.cdecl('InitWindow', 'void', ['int', 'int', 'string']);
