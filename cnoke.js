@@ -227,7 +227,7 @@ async function configure(retry = true) {
         } break;
 
         case 'darwin': {
-            args.push('-DNODE_JS_LINK_FLAGS=-undefined dynamic_lookup');
+            args.push('-DNODE_JS_LINK_FLAGS=-undefined;dynamic_lookup');
         } break;
     }
 
