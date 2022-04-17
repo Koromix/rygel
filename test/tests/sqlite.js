@@ -49,7 +49,7 @@ async function test() {
     const sqlite3_finalize = lib.cdecl('sqlite3_finalize', 'int', [sqlite3_stmt]);
     const sqlite3_close_v2 = lib.cdecl('sqlite3_close_v2', 'int', [sqlite3_db]);
 
-    let filename = create_temporary_file(path.join(os.tmpdir(), 'test_sqlite'));
+    let filename = await create_temporary_file(path.join(os.tmpdir(), 'test_sqlite'));
     let db = {};
 
     try {
@@ -77,7 +77,7 @@ async function test() {
     }
 }
 
-function create_temporary_file(prefix) {
+async function create_temporary_file(prefix) {
     let buf = Buffer.allocUnsafe(4);
 
     for (;;) {
@@ -87,7 +87,12 @@ function create_temporary_file(prefix) {
             let suffix = buf.toString('hex').padStart(8, '0');
             let filename = `${prefix}.${suffix}`;
 
-            let file = fs.createWriteStream(filename, { flags: 'wx', mode: 0o644 });
+            let file = await new Promise((resolve, reject) => {
+                let file = fs.createWriteStream(filename, { flags: 'wx', mode: 0o644 });
+
+                file.on('open', () => resolve(file));
+                file.on('error', reject);
+            });
             file.close();
 
             return filename;
