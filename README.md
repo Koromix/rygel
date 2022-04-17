@@ -22,10 +22,10 @@ The following platforms __are officially supported and tested__ at the moment:
 * FreeBSD x86
 * FreeBSD x86_64
 * FreeBSD ARM64 Little Endian
+* macOS x86_64
 
 The following platforms will __soon be officially supported__:
 
-* macOS x86_64
 * macOS ARM64
 
 The following platforms __may be supported__ but are not tested:
