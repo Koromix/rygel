@@ -23,13 +23,14 @@ const util = require('util');
 const { spawn, spawnSync } = require('child_process');
 const { NodeSSH } = require('node-ssh');
 const chalk = require('chalk');
+const minimatch = require('minimatch');
 
 // Globals
 
 let script_dir = null;
 let root_dir = null;
 
-let machines = [];
+let machines = null;
 let accelerate = true;
 let ignore = new Set;
 
@@ -47,6 +48,7 @@ async function main() {
     process.chdir(script_dir);
 
     let command = test;
+    let patterns = [];
 
     // Parse options
     {
@@ -96,7 +98,7 @@ async function main() {
                 if (arg.startsWith('__') || arg.match(/[\\/\.]/))
                     throw new Error(`Machine name '${arg} is not valid`);
 
-                machines.push(arg);
+                patterns.push(arg);
             }
         }
     }
@@ -132,15 +134,34 @@ async function main() {
         }
     }
 
-    if (!machines.length) {
-        for (let name in machines_map)
-            machines.push(name);
+    if (patterns.length) {
+        machines = new Set;
 
-        if (!machines.length) {
+        for (let pattern of patterns) {
+            let re = minimatch.makeRe(pattern);
+
+            for (let name in machines_map) {
+                let machine = machines_map[name];
+
+                if (name.match(re) || machine.name.match(re))
+                    machines.add(name);
+            }
+        }
+
+        if (!machines.size) {
+            console.log('Could not match any machine');
+            process.exit(1);
+        }
+    } else {
+        machines = new Set(...Object.keys(machines_map));
+
+        if (!machines.size) {
             console.error('Could not detect any machine');
             process.exit(1);
         }
     }
+
+    machines = Array.from(machines);
     machines = machines.map(name => {
         let machine = machines_map[name];
         if (machine == null) {
@@ -150,6 +171,9 @@ async function main() {
         }
         return machine;
     });
+
+    console.log('Machines:', machines.map(machine => machine.name).join(', '));
+    console.log();
 
     try {
         let success = await command();
