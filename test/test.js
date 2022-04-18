@@ -54,19 +54,13 @@ async function main() {
 
         if (process.argv.length >= 3 && process.argv[2][0] != '-') {
             switch (process.argv[2]) {
-                case 'test': { command = test; } break;
-                case 'start': { command = start; } break;
-                case 'stop': { command = stop; } break;
-                case 'info': { command = info; } break;
-                case 'ssh': { command = ssh; } break;
-                case 'reset': { command = reset; } break;
-
-                default: {
-                    throw new Error(`Unknown command '${process.argv[2]}'`);
-                } break;
+                case 'test': { command = test; i++; } break;
+                case 'start': { command = start; i++; } break;
+                case 'stop': { command = stop; i++; } break;
+                case 'info': { command = info; i++; } break;
+                case 'ssh': { command = ssh; i++; } break;
+                case 'reset': { command = reset; i++; } break;
             }
-
-            i++;
         }
 
         for (; i < process.argv.length; i++) {
