@@ -254,7 +254,9 @@ node test.js info debian_x64
 
 A basic benchmark based around Raylib is available, in three implementations: with Koffi, with node-ffi and with C code using Raylib (as a shared library).
 
-In order to run it, go to `koffi/benchmark` and run `build_c.sh`. Once the C version is built, you can execute each implementation with `time`, e.g. `time ./raylib_c 2000`.
+In order to run it, go to `koffi/benchmark` and run `build.sh` before doing anything else.
+
+Once this is done, you can execute each implementation with `time`, e.g. `time ./raylib_c 2000`.
 
 Here are some results from 2022-04-15 on my machine (AMD Ryzen™ 7 5800H 16G):
 
