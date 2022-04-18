@@ -35,6 +35,7 @@ let work_dir = null;
 let version = null;
 let arch = null;
 let debug = false;
+let targets = [];
 
 let cmake_bin = null;
 
@@ -51,16 +52,10 @@ async function main() {
 
         if (process.argv.length >= 3 && process.argv[2][0] != '-') {
             switch (process.argv[2]) {
-                case 'build': { command = build; } break;
-                case 'configure': { command = configure; } break;
-                case 'clean': { command = clean; } break;
-
-                default: {
-                    throw new Error(`Unknown command '${process.argv[2]}'`);
-                } break;
+                case 'build': { command = build; i++; } break;
+                case 'configure': { command = configure; i++; } break;
+                case 'clean': { command = clean; i++; } break;
             }
-
-            i++;
         }
 
         for (; i < process.argv.length; i++) {
@@ -107,6 +102,8 @@ async function main() {
                 arch = value;
             } else if ((command == build || command == configure) && arg == '--debug') {
                 debug = true;
+            } else if (command == build && arg[0] != '-') {
+                targets.push(arg);
             } else {
                 if (arg[0] == '-') {
                     throw new Error(`Unexpected argument '${arg}'`);
@@ -139,7 +136,7 @@ async function main() {
 }
 
 function print_usage() {
-    let help = `Usage: cnoke [command] [options...]
+    let help = `Usage: cnoke [command] [options...] [targets...]
 
 Commands:
     configure                    Configure CMake build
@@ -277,6 +274,9 @@ async function build() {
         '--build', work_dir,
         '--config', debug ? 'Debug' : 'Release'
     ];
+
+    for (let target of targets)
+        args.push('--target', target);
 
     console.log('>> Running build');
 
