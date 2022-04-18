@@ -6,6 +6,7 @@
   * [Other platforms](#other-platforms)
 - [Get started](#get-started)
 - [Tests](#tests)
+- [Benchmarks](#benchmarks)
 
 # Introduction
 
