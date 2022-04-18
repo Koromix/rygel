@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.12)
 project(koffi C CXX ASM)
 
 find_package(CNoke)
@@ -106,6 +106,42 @@ if(APPLE)
     target_compile_definitions(raylib PRIVATE GL_SILENCE_DEPRECATION)
     set_source_files_properties(vendor/raylib/src/rglfw.c PROPERTIES COMPILE_FLAGS "-x objective-c")
     target_link_libraries(raylib PRIVATE "-framework Cocoa" "-framework IOKit" "-framework CoreFoundation" "-framework OpenGL")
+endif()
+
+if(UNIX AND NOT APPLE)
+    set(missing_xlib "")
+
+    find_path(XLIB_INCLUDE_DIRS X11/Xlib.h)
+    if(NOT XLIB_INCLUDE_DIRS)
+        list(APPEND missing_xlib Xlib)
+    endif()
+    find_path(XCURSOR_INCLUDE_DIRS X11/Xcursor/Xcursor.h)
+    if(NOT XCURSOR_INCLUDE_DIRS)
+        list(APPEND missing_xlib Xcursor)
+    endif()
+    find_path(XRANDR_INCLUDE_DIRS X11/extensions/Xrandr.h)
+    if(NOT XRANDR_INCLUDE_DIRS)
+        list(APPEND missing_xlib Xrandr)
+    endif()
+    find_path(XKB_INCLUDE_DIRS X11/XKBlib.h)
+    if(NOT XKB_INCLUDE_DIRS)
+        list(APPEND missing_xlib Xkbcommon)
+    endif()
+    find_path(XINERAMA_INCLUDE_DIRS X11/extensions/Xinerama.h)
+    if(NOT XINERAMA_INCLUDE_DIRS)
+        list(APPEND missing_xlib Xinerama)
+    endif()
+    find_path(XINPUT_INCLUDE_DIRS X11/extensions/XInput2.h)
+    if(NOT XINPUT_INCLUDE_DIRS)
+        list(APPEND missing_xlib XInput2)
+    endif()
+
+    if(missing_xlib)
+        list(JOIN missing_xlib ", " missing_xlib_str)
+        message(FATAL_ERROR "Missing X11 development files: ${missing_xlib_str}")
+    endif()
+
+    target_include_directories(raylib PRIVATE ${XLIB_INCLUDE_DIRS})
 endif()
 
 # ---- SQLite ----
