@@ -301,7 +301,7 @@ async function test() {
         await Promise.all(Object.keys(machine.tests).map(async suite => {
             let test = machine.tests[suite];
             let commands = {
-                Build: test.build,
+                ...test.build,
                 ...test.commands
             };
 
