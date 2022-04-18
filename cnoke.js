@@ -171,6 +171,8 @@ async function configure(retry = true) {
     fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
     fs.mkdirSync(work_dir, { recursive: true, mode: 0o755 });
 
+    retry &= fs.existsSync(work_dir + '/CMakeCache.txt');
+
     // Download Node headers
     {
         let basename = `node-${version}-headers.tar.gz`;
@@ -251,10 +253,9 @@ async function configure(retry = true) {
 
     let proc = spawnSync(cmake_bin, args, { cwd: work_dir, stdio: 'inherit' });
     if (proc.status !== 0) {
-        if (retry && fs.existsSync(work_dir + '/CMakeCache.txt')) {
-            unlink_recursive(work_dir);
+        unlink_recursive(work_dir);
+        if (retry)
             return configure(false);
-        }
 
         throw new Error('Failed to run configure step');
     }
