@@ -24,7 +24,7 @@
         "tests": {
             "Linux ARM32": {
                 "directory": "/home/debian/luigi",
-                "build": "npm install --production",
+                "build": "npm install --production && ../cnoke/cnoke.js",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
                     "Test Misc": "node test/tests/misc.js",
@@ -59,7 +59,7 @@
         "tests": {
             "Linux ARM64": {
                 "directory": "/home/debian/luigi",
-                "build": "npm install --production",
+                "build": "npm install --production && ../cnoke/cnoke.js",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
                     "Test Misc": "node test/tests/misc.js",
@@ -94,7 +94,7 @@
         "tests": {
             "Linux i386": {
                 "directory": "/home/debian/luigi",
-                "build": "npm install --production",
+                "build": "npm install --production && ../cnoke/cnoke.js",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
                     "Test Misc": "node test/tests/misc.js",
@@ -129,7 +129,7 @@
         "tests": {
             "Linux x64": {
                 "directory": "/home/debian/luigi",
-                "build": "npm install --production",
+                "build": "npm install --production && ../cnoke/cnoke.js",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
                     "Test Misc": "node test/tests/misc.js",
@@ -164,7 +164,7 @@
         "tests": {
             "Windows i386": {
                 "directory": "C:/Users/windows/Desktop/luigi32",
-                "build": "C:\\Node32\\node32.cmd npm install --production",
+                "build": "C:\\Node32\\node32.cmd npm install --production && C:\\Node32\\node32.cmd node ../cnoke/cnoke.js",
                 "commands": {
                     "Test Raylib": "seatsh C:\\Node32\\node32.cmd node test/tests/raylib.js",
                     "Test Misc": "C:\\Node32\\node32.cmd node test/tests/misc.js",
@@ -174,7 +174,7 @@
 
             "Windows x64": {
                 "directory": "C:/Users/windows/Desktop/luigi64",
-                "build": "C:\\Node64\\node64.cmd npm install --production",
+                "build": "C:\\Node64\\node64.cmd npm install --production && C:\\Node64\\node64.cmd node ../cnoke/cnoke.js",
                 "commands": {
                     "Test Raylib": "seatsh C:\\Node64\\node64.cmd node test/tests/raylib.js",
                     "Test Misc": "C:\\Node64\\node64.cmd node test/tests/misc.js",
@@ -209,7 +209,7 @@
         "tests": {
             "FreeBSD x64": {
                 "directory": "/home/freebsd/luigi",
-                "build": "npm install --production",
+                "build": "npm install --production && ../cnoke/cnoke.js",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
                     "Test Misc": "node test/tests/misc.js",
@@ -244,7 +244,7 @@
         "tests": {
             "FreeBSD i386": {
                 "directory": "/home/freebsd/luigi",
-                "build": "npm install --production",
+                "build": "npm install --production && ../cnoke/cnoke.js",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
                     "Test Misc": "node test/tests/misc.js",
@@ -279,7 +279,7 @@
         "tests": {
             "FreeBSD ARM64": {
                 "directory": "/home/freebsd/luigi",
-                "build": "npm install --production",
+                "build": "npm install --production && ../cnoke/cnoke.js",
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
                     "Test Misc": "node test/tests/misc.js",
