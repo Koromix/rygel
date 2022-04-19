@@ -22,7 +22,7 @@ It obviously requires [CMake](http://www.cmake.org/download/) and a proper C/C++
 
 # Get started
 
-In order to build a ntive Node.js addon with CNoke, you can use the following CMakeLists.txt
+In order to build a native Node.js addon with CNoke, you can use the following CMakeLists.txt
 template to get started:
 
 ```cmake
