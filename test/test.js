@@ -153,7 +153,7 @@ async function main() {
             process.exit(1);
         }
     } else {
-        machines = new Set(...Object.keys(machines_map));
+        machines = new Set(Object.keys(machines_map));
 
         if (!machines.size) {
             console.error('Could not detect any machine');
