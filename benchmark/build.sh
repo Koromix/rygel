@@ -9,4 +9,4 @@ echo "Building dependencies..."
 node ../cnoke/cnoke.js
 
 echo "Building raylib_c..."
-gcc -std=gnu99 -Wall -Wl,-rpath,$(realpath $(pwd)/build) -fPIC benchmark/raylib_c.c -o benchmark/raylib_c build/raylib.so -lm
+gcc -O2 -std=gnu99 -Wall -Wl,-rpath,$(realpath $(pwd)/build) -fPIC benchmark/raylib_c.c -o benchmark/raylib_c build/raylib.so -lm -pthread -ldl
