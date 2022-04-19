@@ -265,16 +265,16 @@ Here are some results from 2022-04-15 on my machine (AMD Ryzen™ 7 5800H 16G):
 $ time ./raylib_c 200
 Iterations: 200
 
-real    0m9,206s
-user    0m9,152s
-sys     0m0,040s
+real    0m8,871s
+user    0m8,792s
+sys     0m0,016s
 
 $ time ./raylib_koffi.js 200
 Iterations: 200
 
-real    0m13,790s
-user    0m13,699s
-sys     0m0,044s
+real    0m13,011s
+user    0m12,923s
+sys     0m0,032s
 
 $ time ./raylib_node_ffi.js 200
 Iterations: 200
