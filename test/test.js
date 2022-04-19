@@ -618,7 +618,7 @@ function log(machine, action, status) {
     }
 
     let align1 = Math.max(log.align - machine.name.length, 0);
-    let align2 = Math.max(30 - action.length, 0);
+    let align2 = Math.max(34 - action.length, 0);
 
     console.log(`     [${machine.name}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
 }

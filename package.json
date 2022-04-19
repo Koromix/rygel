@@ -18,7 +18,7 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "src/index.js",
   "scripts": {
-    "install": "cnoke koffi",
+    "install": "cnoke",
     "test": "node test/test.js"
   },
   "license": "AGPL-3.0",
