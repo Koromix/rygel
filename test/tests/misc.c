@@ -18,10 +18,14 @@
 #else
     #define EXPORT __attribute__((visibility("default")))
 #endif
-#ifdef _MSC_VER
-    #define FASTCALL __fastcall
+#if defined(_M_IX86) || defined(__i386__)
+    #ifdef _MSC_VER
+        #define FASTCALL __fastcall
+    #else
+        #define FASTCALL __attribute__((fastcall))
+    #endif
 #else
-    #define FASTCALL __attribute__((fastcall))
+    #define FASTCALL
 #endif
 
 typedef struct Pack3 {
