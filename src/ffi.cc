@@ -566,6 +566,30 @@ InstanceData::InstanceData()
     heap_mem.ptr = (uint8_t *)Allocator::Allocate(&mem_alloc, heap_mem.len);
 }
 
+template <typename Func>
+static void SetExports(Napi::Env env, Func func)
+{
+    func("struct", Napi::Function::New(env, CreateStructType));
+    func("handle", Napi::Function::New(env, CreateHandleType));
+    func("pointer", Napi::Function::New(env, CreatePointerType));
+    func("load", Napi::Function::New(env, LoadSharedLibrary));
+    func("in", Napi::Function::New(env, MarkIn));
+    func("out", Napi::Function::New(env, MarkOut));
+    func("inout", Napi::Function::New(env, MarkInOut));
+
+    func("internal", Napi::Boolean::New(env, true));
+#if defined(_WIN32)
+    func("extension", Napi::String::New(env, ".dll"));
+#elif defined(__APPLE__)
+    func("extension", Napi::String::New(env, ".dylib"));
+#else
+    func("extension", Napi::String::New(env, ".so"));
+#endif
+
+    Napi::Object types = InitBaseTypes(env);
+    func("types", types);
+}
+
 }
 
 #if NODE_WANT_INTERNALS
@@ -604,25 +628,7 @@ static void InitInternal(v8::Local<v8::Object> target, v8::Local<v8::Value>,
     instance->debug = GetDebugFlag("DUMP_CALLS");
     FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
-    SetValue(env, target, "struct", Napi::Function::New(env_napi, CreateStructType));
-    SetValue(env, target, "handle", Napi::Function::New(env_napi, CreateHandleType));
-    SetValue(env, target, "pointer", Napi::Function::New(env_napi, CreatePointerType));
-    SetValue(env, target, "load", Napi::Function::New(env_napi, LoadSharedLibrary));
-    SetValue(env, target, "in", Napi::Function::New(env_napi, MarkIn));
-    SetValue(env, target, "out", Napi::Function::New(env_napi, MarkOut));
-    SetValue(env, target, "inout", Napi::Function::New(env_napi, MarkInOut));
-
-    SetValue(env, target, "internal", Napi::Boolean::New(env_napi, true));
-#if defined(_WIN32)
-    SetValue(env, target, "extension", Napi::String::New(env_napi, ".dll"));
-#elif defined(__APPLE__)
-    SetValue(env, target, "extension", Napi::String::New(env_napi, ".dylib"));
-#else
-    SetValue(env, target, "extension", Napi::String::New(env_napi, ".so"));
-#endif
-
-    Napi::Object types = InitBaseTypes(env_cxx);
-    SetValue(env, target, "types", types);
+    SetExports(env_napi, [&](const char *name, Napi::Value value) { SetValue(env, target, name, value); });
 }
 
 #else
@@ -637,25 +643,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     instance->debug = GetDebugFlag("DUMP_CALLS");
     FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
-    exports.Set("struct", Napi::Function::New(env, CreateStructType));
-    exports.Set("handle", Napi::Function::New(env, CreateHandleType));
-    exports.Set("pointer", Napi::Function::New(env, CreatePointerType));
-    exports.Set("load", Napi::Function::New(env, LoadSharedLibrary));
-    exports.Set("in", Napi::Function::New(env, MarkIn));
-    exports.Set("out", Napi::Function::New(env, MarkOut));
-    exports.Set("inout", Napi::Function::New(env, MarkInOut));
-
-    exports.Set("internal", Napi::Boolean::New(env, false));
-#if defined(_WIN32)
-    exports.Set("extension", Napi::String::New(env, ".dll"));
-#elif defined(__APPLE__)
-    exports.Set("extension", Napi::String::New(env, ".dylib"));
-#else
-    exports.Set("extension", Napi::String::New(env, ".so"));
-#endif
-
-    Napi::Object types = InitBaseTypes(env);
-    exports.Set("types", types);
+    SetExports(env, [&](const char *name, Napi::Value value) { exports.Set(name, value); });
 
     return exports;
 }
