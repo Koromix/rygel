@@ -558,7 +558,7 @@ bool MigrateInstance(sq_Database *db)
                     ini.PushLogFilter();
                     RG_DEFER { PopLogFilter(); };
 
-                    const char *sql = R"(INSERT INTO fs_settings (key, value) VALUES (?, ?)
+                    const char *sql = R"(INSERT INTO fs_settings (key, value) VALUES (?1, ?2)
                                          ON CONFLICT DO UPDATE SET value = excluded.value)";
 
                     IniProperty prop;

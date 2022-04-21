@@ -521,6 +521,12 @@ class RecordExporter {
         RG_HASHTABLE_HANDLER(Table, name);
     };
 
+    const char *instance_key;
+    const char *project;
+    const char *center;
+    int64_t schema;
+    int64_t mtime;
+
     json_Parser *parser;
 
     BucketArray<Table> tables;
@@ -529,7 +535,7 @@ class RecordExporter {
     BlockAllocator str_alloc;
 
 public:
-    RecordExporter() {}
+    RecordExporter(InstanceHolder *instance);
 
     bool Parse(const char *root_ulid, const char *ulid, const char *hid, const char *form, Span<const char> json);
     bool Export(const char *filename);
@@ -541,6 +547,21 @@ private:
     Row *GetRow(Table *table, const char *root_ulid, const char *ulid, const char *hid);
     Column *GetColumn(Table *table, const char *prefix, const char *key, const char *suffix);
 };
+
+RecordExporter::RecordExporter(InstanceHolder *instance)
+{
+    InstanceHolder *master = instance->master;
+
+    instance_key = DuplicateString(instance->key, &str_alloc).ptr;
+    project = DuplicateString(master->config.name, &str_alloc).ptr;
+    if (master != instance) {
+        center = DuplicateString(instance->config.name, &str_alloc).ptr;
+    } else {
+        center = nullptr;
+    }
+    schema = master->fs_version.load();
+    mtime = GetUnixTime();
+}
 
 static void EncodeSqlName(const char *name, HeapArray<char> *out_buf)
 {
@@ -592,6 +613,32 @@ bool RecordExporter::Export(const char *filename)
             }
             it = it->next;
         }
+    }
+
+    // Project information
+    {
+        bool success = db.RunMany(R"(
+            CREATE TABLE _goupile (
+                key TEXT NOT NULL,
+                value BLOB
+           );
+        )");
+        if (!success)
+            return false;
+
+
+        const char *sql = "INSERT INTO _goupile (key, value) VALUES (?1, ?2)";
+
+        if (!db.Run(sql, "instance", instance_key))
+            return false;
+        if (!db.Run(sql, "project", project))
+            return false;
+        if (!db.Run(sql, "center", center))
+            return false;
+        if (!db.Run(sql, "schema", schema))
+            return false;
+        if (!db.Run(sql, "date", mtime))
+            return false;
     }
 
     // Create tables
@@ -992,7 +1039,7 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
         const char *export_filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator);
         RG_DEFER { UnlinkFile(export_filename); };
 
-        RecordExporter exporter;
+        RecordExporter exporter(instance);
 
         while (stmt.Step()) {
             const char *root_ulid = (const char *)sqlite3_column_text(stmt, 0);
