@@ -140,7 +140,8 @@ check_PROGRAMS = miniseq$(EXEEXT) 01-sim-allow$(EXEEXT) \
 	53-sim-binary_tree$(EXEEXT) 54-live-binary_tree$(EXEEXT) \
 	55-basic-pfc_binary_tree$(EXEEXT) \
 	56-basic-iterate_syscalls$(EXEEXT) 57-basic-rawsysrc$(EXEEXT) \
-	58-live-tsync_notify$(EXEEXT)
+	58-live-tsync_notify$(EXEEXT) \
+	59-basic-empty_binary_tree$(EXEEXT)
 EXTRA_PROGRAMS = 00-test$(EXEEXT)
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -470,6 +471,12 @@ am__DEPENDENCIES_1 =
 58_live_tsync_notify_LDADD = $(LDADD)
 58_live_tsync_notify_DEPENDENCIES = util.la ../src/libseccomp.la \
 	$(am__DEPENDENCIES_1)
+59_basic_empty_binary_tree_SOURCES = 59-basic-empty_binary_tree.c
+59_basic_empty_binary_tree_OBJECTS =  \
+	59-basic-empty_binary_tree.$(OBJEXT)
+59_basic_empty_binary_tree_LDADD = $(LDADD)
+59_basic_empty_binary_tree_DEPENDENCIES = util.la ../src/libseccomp.la \
+	$(am__DEPENDENCIES_1)
 miniseq_SOURCES = miniseq.c
 miniseq_OBJECTS = miniseq.$(OBJEXT)
 miniseq_DEPENDENCIES =
@@ -540,8 +547,9 @@ am__depfiles_remade = ./$(DEPDIR)/00-test.Po \
 	./$(DEPDIR)/55-basic-pfc_binary_tree.Po \
 	./$(DEPDIR)/56-basic-iterate_syscalls.Po \
 	./$(DEPDIR)/57-basic-rawsysrc.Po \
-	./$(DEPDIR)/58-live-tsync_notify.Po ./$(DEPDIR)/miniseq.Po \
-	./$(DEPDIR)/util.Plo
+	./$(DEPDIR)/58-live-tsync_notify.Po \
+	./$(DEPDIR)/59-basic-empty_binary_tree.Po \
+	./$(DEPDIR)/miniseq.Po ./$(DEPDIR)/util.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -588,7 +596,8 @@ SOURCES = $(util_la_SOURCES) $(nodist_00_test_SOURCES) 01-sim-allow.c \
 	51-live-user_notification.c 52-basic-load.c \
 	53-sim-binary_tree.c 54-live-binary_tree.c \
 	55-basic-pfc_binary_tree.c 56-basic-iterate_syscalls.c \
-	57-basic-rawsysrc.c 58-live-tsync_notify.c miniseq.c
+	57-basic-rawsysrc.c 58-live-tsync_notify.c \
+	59-basic-empty_binary_tree.c miniseq.c
 DIST_SOURCES = $(util_la_SOURCES) 01-sim-allow.c 02-sim-basic.c \
 	03-sim-basic_chains.c 04-sim-multilevel_chains.c \
 	05-sim-long_jumps.c 06-sim-actions.c 07-sim-db_bug_looping.c \
@@ -615,7 +624,8 @@ DIST_SOURCES = $(util_la_SOURCES) 01-sim-allow.c 02-sim-basic.c \
 	51-live-user_notification.c 52-basic-load.c \
 	53-sim-binary_tree.c 54-live-binary_tree.c \
 	55-basic-pfc_binary_tree.c 56-basic-iterate_syscalls.c \
-	57-basic-rawsysrc.c 58-live-tsync_notify.c miniseq.c
+	57-basic-rawsysrc.c 58-live-tsync_notify.c \
+	59-basic-empty_binary_tree.c miniseq.c
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -873,7 +883,8 @@ EXTRA_DIST_TESTPYTHON = \
 	54-live-binary_tree.py \
 	56-basic-iterate_syscalls.py \
 	57-basic-rawsysrc.py \
-	58-live-tsync_notify.py
+	58-live-tsync_notify.py \
+	59-basic-empty_binary_tree.py
 
 EXTRA_DIST_TESTCFGS = \
 	01-sim-allow.tests \
@@ -933,7 +944,8 @@ EXTRA_DIST_TESTCFGS = \
 	55-basic-pfc_binary_tree.tests \
 	56-basic-iterate_syscalls.tests \
 	57-basic-rawsysrc.tests \
-	58-live-tsync_notify.tests
+	58-live-tsync_notify.tests \
+	59-basic-empty_binary_tree.tests
 
 EXTRA_DIST_TESTSCRIPTS = \
 	38-basic-pfc_coverage.sh 38-basic-pfc_coverage.pfc \
@@ -1242,6 +1254,10 @@ util.la: $(util_la_OBJECTS) $(util_la_DEPENDENCIES) $(EXTRA_util_la_DEPENDENCIES
 	@rm -f 58-live-tsync_notify$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(58_live_tsync_notify_OBJECTS) $(58_live_tsync_notify_LDADD) $(LIBS)
 
+59-basic-empty_binary_tree$(EXEEXT): $(59_basic_empty_binary_tree_OBJECTS) $(59_basic_empty_binary_tree_DEPENDENCIES) $(EXTRA_59_basic_empty_binary_tree_DEPENDENCIES) 
+	@rm -f 59-basic-empty_binary_tree$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(59_basic_empty_binary_tree_OBJECTS) $(59_basic_empty_binary_tree_LDADD) $(LIBS)
+
 miniseq$(EXEEXT): $(miniseq_OBJECTS) $(miniseq_DEPENDENCIES) $(EXTRA_miniseq_DEPENDENCIES) 
 	@rm -f miniseq$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(miniseq_OBJECTS) $(miniseq_LDADD) $(LIBS)
@@ -1311,6 +1327,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/56-basic-iterate_syscalls.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/57-basic-rawsysrc.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/58-live-tsync_notify.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/59-basic-empty_binary_tree.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/miniseq.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@ # am--include-marker
 
@@ -1629,6 +1646,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/56-basic-iterate_syscalls.Po
 	-rm -f ./$(DEPDIR)/57-basic-rawsysrc.Po
 	-rm -f ./$(DEPDIR)/58-live-tsync_notify.Po
+	-rm -f ./$(DEPDIR)/59-basic-empty_binary_tree.Po
 	-rm -f ./$(DEPDIR)/miniseq.Po
 	-rm -f ./$(DEPDIR)/util.Plo
 	-rm -f Makefile
@@ -1735,6 +1753,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/56-basic-iterate_syscalls.Po
 	-rm -f ./$(DEPDIR)/57-basic-rawsysrc.Po
 	-rm -f ./$(DEPDIR)/58-live-tsync_notify.Po
+	-rm -f ./$(DEPDIR)/59-basic-empty_binary_tree.Po
 	-rm -f ./$(DEPDIR)/miniseq.Po
 	-rm -f ./$(DEPDIR)/util.Plo
 	-rm -f Makefile
