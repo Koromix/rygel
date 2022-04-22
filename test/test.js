@@ -353,7 +353,7 @@ async function test() {
 
                     success = false;
 
-                    if (name == 'Build')
+                    if (name in test.build)
                         break;
                 }
             }
