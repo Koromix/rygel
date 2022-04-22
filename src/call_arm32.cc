@@ -63,8 +63,8 @@ Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
     if (IsHFA(func->ret.type)) {
         func->ret.vec_count = func->ret.type->members.len *
                               (func->ret.type->members[0].type->size / 4);
-    } else if (func->ret.type->size <= 4) {
-        func->ret.gpr_count = 1;
+    } else if (func->ret.type->primitive != PrimitiveKind::Record) {
+        func->ret.gpr_count = (func->ret.type->size >= 4) ? 2 : 1;
     } else {
         func->ret.use_memory = true;
     }
@@ -267,7 +267,8 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint32_t)b;
                 } else {
-                    *(args_ptr++) = (uint8_t)b;
+                    *args_ptr = (uint8_t)b;
+                    args_ptr += 4;
                 }
             } break;
             case PrimitiveKind::Int8:
@@ -286,9 +287,8 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint32_t)v;
                 } else {
-                    args_ptr = AlignUp(args_ptr, param.type->align);
                     memcpy(args_ptr, &v, param.type->size); // Little Endian
-                    args_ptr += param.type->size;
+                    args_ptr += 4;
                 }
             } break;
             case PrimitiveKind::Int64:
@@ -320,7 +320,6 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.vec_count)) {
                     memcpy(vec_ptr++, &f, 4);
                 } else {
-                    args_ptr = AlignUp(args_ptr, 4);
                     memcpy(args_ptr, &f, 4);
                     args_ptr += 4;
                 }
@@ -358,7 +357,6 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint64_t)str;
                 } else {
-                    args_ptr = AlignUp(args_ptr, 4);
                     *(const char **)args_ptr = str;
                     args_ptr += 4;
                 }
@@ -390,7 +388,6 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint64_t)ptr;
                 } else {
-                    args_ptr = AlignUp(args_ptr, 4);
                     *(void **)args_ptr = ptr;
                     args_ptr += 4;
                 }
