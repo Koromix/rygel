@@ -52,6 +52,7 @@ async function test() {
     let lib = koffi.load(lib_filename);
 
     const FillPack3 = lib.cdecl('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
+    const RetPack3 = lib.cdecl('RetPack3', Pack3, ['int', 'int', 'int']);
     const AddPack3 = lib.fastcall('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
     const ConcatenateToInt1 = lib.cdecl('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
     const ConcatenateToInt4 = lib.cdecl('ConcatenateToInt4', 'int64_t', Array(12).fill('int32_t'));
@@ -65,6 +66,9 @@ async function test() {
 
     FillPack3(1, 2, 3, p);
     assert.deepEqual(p, { a: 1, b: 2, c: 3 });
+
+    let q = RetPack3(6, 9, -12);
+    assert.deepEqual(q, { a: 6, b: 9, c: -12 });
 
     AddPack3(6, 9, -12, p);
     assert.deepEqual(p, { a: 7, b: 11, c: -9 });

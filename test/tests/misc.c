@@ -61,6 +61,17 @@ EXPORT void FillPack3(int a, int b, int c, Pack3 *p)
     p->c = c;
 }
 
+EXPORT Pack3 RetPack3(int a, int b, int c)
+{
+    Pack3 p;
+    
+    p.a = a;
+    p.b = b;
+    p.c = c;
+
+    return p;
+}
+
 EXPORT void FASTCALL AddPack3(int a, int b, int c, Pack3 *p)
 {
     p->a += a;
