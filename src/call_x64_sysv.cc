@@ -237,7 +237,8 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint64_t)b;
                 } else {
-                    *(args_ptr++) = (uint8_t)b;
+                    *args_ptr = (uint8_t)b;
+                    args_ptr += 8;
                 }
             } break;
             case PrimitiveKind::Int8:
@@ -260,7 +261,7 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 } else {
                     args_ptr = AlignUp(args_ptr, param.type->align);
                     memcpy(args_ptr, &v, param.type->size); // Little Endian
-                    args_ptr += param.type->size;
+                    args_ptr += 8;
                 }
             } break;
             case PrimitiveKind::Float32: {
@@ -276,7 +277,7 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 } else {
                     args_ptr = AlignUp(args_ptr, 4);
                     memcpy(args_ptr, &f, 4);
-                    args_ptr += 4;
+                    args_ptr += 8;
                 }
             } break;
             case PrimitiveKind::Float64: {
@@ -387,7 +388,7 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                     args_ptr = AlignUp(args_ptr, param.type->align);
                     if (!call.PushObject(obj, param.type, args_ptr))
                         return env.Null();
-                    args_ptr += param.type->size;
+                    args_ptr += AlignLen(param.type->size, 8);
                 }
             } break;
         }
