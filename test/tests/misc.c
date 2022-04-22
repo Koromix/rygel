@@ -12,6 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include <stdio.h>
+#include <stdint.h>
 
 #ifdef _WIN32
     #define EXPORT __declspec(dllexport)
@@ -46,4 +47,34 @@ EXPORT void FASTCALL AddPack3(int a, int b, int c, Pack3 *p)
     p->a += a;
     p->b += b;
     p->c += c;
+}
+
+EXPORT int64_t ConcatenateToInt1(int8_t a, int8_t b, int8_t c, int8_t d, int8_t e, int8_t f,
+                                 int8_t g, int8_t h, int8_t i, int8_t j, int8_t k, int8_t l)
+{
+    int64_t ret = 100000000000ull * a + 10000000000ull * b + 1000000000ull * c +
+                  100000000ull * d + 10000000ull * e + 1000000ull * f +
+                  100000ull * g + 10000ull * h + 1000ull * i +
+                  100ull * j + 10ull * k + 1ull * l;
+    return ret;
+}
+
+EXPORT int64_t ConcatenateToInt4(int32_t a, int32_t b, int32_t c, int32_t d, int32_t e, int32_t f,
+                                 int32_t g, int32_t h, int32_t i, int32_t j, int32_t k, int32_t l)
+{
+    int64_t ret = 100000000000ull * a + 10000000000ull * b + 1000000000ull * c +
+                  100000000ull * d + 10000000ull * e + 1000000ull * f +
+                  100000ull * g + 10000ull * h + 1000ull * i +
+                  100ull * j + 10ull * k + 1ull * l;
+    return ret;
+}
+
+EXPORT int64_t ConcatenateToInt8(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e, int64_t f,
+                                 int64_t g, int64_t h, int64_t i, int64_t j, int64_t k, int64_t l)
+{
+    int64_t ret = 100000000000ull * a + 10000000000ull * b + 1000000000ull * c +
+                  100000000ull * d + 10000000ull * e + 1000000ull * f +
+                  100000ull * g + 10000ull * h + 1000ull * i +
+                  100ull * j + 10ull * k + 1ull * l;
+    return ret;
 }
