@@ -99,8 +99,8 @@ public:
         return MakeSpan(ptr, len);
     }
 
-    template <typename T>
-    bool AllocStack(Size size, Size align, T **out_ptr);
+    template <typename T = void>
+    bool AllocStack(Size size, Size align, T **out_ptr = nullptr);
     template <typename T>
     bool AllocHeap(Size size, Size align, T **out_ptr);
 
@@ -127,7 +127,9 @@ bool CallData::AllocStack(Size size, Size align, T **out_ptr)
 
     stack_mem->len -= delta;
 
-    *out_ptr = (T *)ptr;
+    if (out_ptr) {
+        *out_ptr = (T *)ptr;
+    }
     return true;
 }
 

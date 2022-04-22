@@ -255,7 +255,12 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint64_t)b;
                 } else {
-                    *(args_ptr++) = (uint8_t)b;
+                    *args_ptr = (uint8_t)b;
+#ifdef __APPLE__
+                    args_ptr++;
+#else
+                    args_ptr += 8;
+#endif
                 }
             } break;
             case PrimitiveKind::Int8:
@@ -278,7 +283,11 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 } else {
                     args_ptr = AlignUp(args_ptr, param.type->align);
                     memcpy(args_ptr, &v, param.type->size); // Little Endian
+#ifdef __APPLE__
                     args_ptr += param.type->size;
+#else
+                    args_ptr += 8;
+#endif
                 }
             } break;
             case PrimitiveKind::Float32: {
@@ -294,7 +303,11 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 } else {
                     args_ptr = AlignUp(args_ptr, 4);
                     memcpy(args_ptr, &f, 4);
+#ifdef __APPLE__
                     args_ptr += 4;
+#else
+                    args_ptr += 8;
+#endif
                 }
             } break;
             case PrimitiveKind::Float64: {
