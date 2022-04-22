@@ -109,8 +109,6 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
     RG_ASSERT(IsObject(obj));
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
-    dest = AlignUp(dest, type->align);
-
     for (const RecordMember &member: type->members) {
         Napi::Value value = obj.Get(member.name);
 

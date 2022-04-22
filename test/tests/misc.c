@@ -124,7 +124,7 @@ EXPORT const char *ConcatenateToStr8(int64_t a, int64_t b, int64_t c, int64_t d,
     return buf;
 }
 
-EXPORT BFG STDCALL MakeBFG(int x, double y)
+EXPORT BFG STDCALL MakeBFG(int x, double y, BFG *p)
 {
     BFG bfg;
 
@@ -135,6 +135,7 @@ EXPORT BFG STDCALL MakeBFG(int x, double y)
     bfg.e = x * 27;
     bfg.inner.f = (float)y * x;
     bfg.inner.g = (double)y - x;
+    *p = bfg;
 
     return bfg;
 }
