@@ -105,3 +105,7 @@ endif()
 
 add_library(misc SHARED tests/misc.c)
 set_target_properties(misc PROPERTIES PREFIX "")
+
+if(MSVC)
+    target_compile_options(misc PRIVATE /wd4116)
+endif()

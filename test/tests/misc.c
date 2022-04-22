@@ -12,7 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include <stdio.h>
-#include <stdint.h>
+#include <inttypes.h>
 
 #ifdef _WIN32
     #define EXPORT __declspec(dllexport)
@@ -34,6 +34,10 @@ typedef struct Pack3 {
     int b;
     int c;
 } Pack3;
+
+typedef struct IJK1 { int8_t i; int8_t j; int8_t k; } IJK1;
+typedef struct IJK4 { int32_t i; int32_t j; int32_t k; } IJK4;
+typedef struct IJK8 { int64_t i; int64_t j; int64_t k; } IJK8;
 
 EXPORT void FillPack3(int a, int b, int c, Pack3 *p)
 {
@@ -77,4 +81,30 @@ EXPORT int64_t ConcatenateToInt8(int64_t a, int64_t b, int64_t c, int64_t d, int
                   100000ull * g + 10000ull * h + 1000ull * i +
                   100ull * j + 10ull * k + 1ull * l;
     return ret;
+}
+
+EXPORT const char *ConcatenateToStr1(int8_t a, int8_t b, int8_t c, int8_t d, int8_t e, int8_t f,
+                                     int8_t g, int8_t h, IJK1 ijk, int8_t l)
+{
+    static char buf[128];
+    snprintf(buf, sizeof(buf), "%d%d%d%d%d%d%d%d%d%d%d%d", a, b, c, d, e, f, g, h, ijk.i, ijk.j, ijk.k, l);
+    return buf;
+}
+
+EXPORT const char *ConcatenateToStr4(int32_t a, int32_t b, int32_t c, int32_t d, int32_t e, int32_t f,
+                                     int32_t g, int32_t h, IJK4 *ijk, int32_t l)
+{
+    static char buf[128];
+    snprintf(buf, sizeof(buf), "%d%d%d%d%d%d%d%d%d%d%d%d", a, b, c, d, e, f, g, h, ijk->i, ijk->j, ijk->k, l);
+    return buf;
+}
+
+EXPORT const char *ConcatenateToStr8(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e, int64_t f,
+                                     int64_t g, int64_t h, IJK8 ijk, int64_t l)
+{
+    static char buf[128];
+    snprintf(buf, sizeof(buf), "%" PRIi64 "%" PRIi64 "%" PRIi64 "%" PRIi64 "%" PRIi64 "%" PRIi64
+                               "%" PRIi64 "%" PRIi64 "%" PRIi64 "%" PRIi64 "%" PRIi64 "%" PRIi64,
+             a, b, c, d, e, f, g, h, ijk.i, ijk.j, ijk.k, l);
+    return buf;
 }
