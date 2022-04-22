@@ -22,11 +22,14 @@
 #if defined(_M_IX86) || defined(__i386__)
     #ifdef _MSC_VER
         #define FASTCALL __fastcall
+        #define STDCALL __stdcall
     #else
         #define FASTCALL __attribute__((fastcall))
+        #define STDCALL __attribute__((stdcall))
     #endif
 #else
     #define FASTCALL
+    #define STDCALL
 #endif
 
 typedef struct Pack3 {
@@ -38,6 +41,18 @@ typedef struct Pack3 {
 typedef struct IJK1 { int8_t i; int8_t j; int8_t k; } IJK1;
 typedef struct IJK4 { int32_t i; int32_t j; int32_t k; } IJK4;
 typedef struct IJK8 { int64_t i; int64_t j; int64_t k; } IJK8;
+
+typedef struct BFG {
+    int8_t a;
+    int64_t b;
+    signed char c;
+    const char *d;
+    short e;
+    struct {
+        float f;
+        double g;
+    } inner;
+} BFG;
 
 EXPORT void FillPack3(int a, int b, int c, Pack3 *p)
 {
@@ -107,4 +122,19 @@ EXPORT const char *ConcatenateToStr8(int64_t a, int64_t b, int64_t c, int64_t d,
                                "%" PRIi64 "%" PRIi64 "%" PRIi64 "%" PRIi64 "%" PRIi64 "%" PRIi64,
              a, b, c, d, e, f, g, h, ijk.i, ijk.j, ijk.k, l);
     return buf;
+}
+
+EXPORT BFG STDCALL MakeBFG(int x, double y)
+{
+    BFG bfg;
+
+    bfg.a = x;
+    bfg.b = x * 2;
+    bfg.c = x - 27;
+    bfg.d = "Hello";
+    bfg.e = x * 27;
+    bfg.inner.f = (float)y * x;
+    bfg.inner.g = (double)y - x;
+
+    return bfg;
 }
