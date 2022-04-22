@@ -11,16 +11,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+#ifdef __APPLE__
+    #define SYMBOL(Symbol) _ ## Symbol
+#else
+    #define SYMBOL(Symbol) Symbol
+#endif
+
 // These three are the same, but they differ (in the C side) by their return type.
 // Unlike the three next functions, these ones don't forward XMM argument registers.
-.global ForwardCallGG
-.global ForwardCallF
-.global ForwardCallDDDD
+.global SYMBOL(ForwardCallGG)
+.global SYMBOL(ForwardCallF)
+.global SYMBOL(ForwardCallDDDD)
 
 // The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-.global ForwardCallXGG
-.global ForwardCallXF
-.global ForwardCallXDDDD
+.global SYMBOL(ForwardCallXGG)
+.global SYMBOL(ForwardCallXF)
+.global SYMBOL(ForwardCallXDDDD)
 
 // Copy function pointer to r9, in order to save it through argument forwarding.
 // Save RSP in r29 (non-volatile), and use carefully assembled stack provided by caller.
@@ -76,34 +82,34 @@
     ldr d0, [x1, 72]
 .endm
 
-ForwardCallGG:
+SYMBOL(ForwardCallGG):
     prologue
     forward_int
     epilogue
 
-ForwardCallF:
+SYMBOL(ForwardCallF):
     prologue
     forward_int
     epilogue
 
-ForwardCallDDDD:
+SYMBOL(ForwardCallDDDD):
     prologue
     forward_int
     epilogue
 
-ForwardCallXGG:
-    prologue
-    forward_vec
-    forward_int
-    epilogue
-
-ForwardCallXF:
+SYMBOL(ForwardCallXGG):
     prologue
     forward_vec
     forward_int
     epilogue
 
-ForwardCallXDDDD:
+SYMBOL(ForwardCallXF):
+    prologue
+    forward_vec
+    forward_int
+    epilogue
+
+SYMBOL(ForwardCallXDDDD):
     prologue
     forward_vec
     forward_int
