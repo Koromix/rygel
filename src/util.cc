@@ -215,8 +215,6 @@ void PopObject(Napi::Object obj, const uint8_t *ptr, const TypeInfo *type)
 
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
-    ptr = AlignUp(ptr, type->align);
-
     for (const RecordMember &member: type->members) {
         ptr = AlignUp(ptr, member.type->align);
 
