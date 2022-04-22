@@ -123,7 +123,7 @@ Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
                     } else {
                         gpr_avail = 0;
                     }
-                } else if (gpr_avail) {
+                } else {
                     // Big types (more than 16 bytes) are replaced by a pointer
                     if (gpr_avail) {
                         param.gpr_count = 1;
@@ -400,9 +400,7 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                             return env.Null();
                         gpr_ptr += param.gpr_count;
                     } else if (param.type->size) {
-                        int16_t align = (param.type->align <= 4) ? 4 : 8;
-
-                        args_ptr = AlignUp(args_ptr, align);
+                        args_ptr = AlignUp(args_ptr, 8);
                         if (!call.PushObject(obj, param.type, args_ptr))
                             return env.Null();
                         args_ptr += AlignLen(param.type->size, 8);
