@@ -25,9 +25,7 @@
             "Linux ARM32": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Install": "npm install --production --ignore-scripts",
-                    "Build Koffi": "node ../cnoke/cnoke.js",
-                    "Build dependencies": "node ../cnoke/cnoke.js -C test"
+                    "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
@@ -64,9 +62,7 @@
             "Linux ARM64": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Install": "npm install --production --ignore-scripts",
-                    "Build Koffi": "node ../cnoke/cnoke.js",
-                    "Build dependencies": "node ../cnoke/cnoke.js -C test"
+                    "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
@@ -103,9 +99,7 @@
             "Linux i386": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Install": "npm install --production --ignore-scripts",
-                    "Build Koffi": "node ../cnoke/cnoke.js",
-                    "Build dependencies": "node ../cnoke/cnoke.js -C test"
+                    "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
@@ -142,9 +136,7 @@
             "Linux x64": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Install": "npm install --production --ignore-scripts",
-                    "Build Koffi": "node ../cnoke/cnoke.js",
-                    "Build dependencies": "node ../cnoke/cnoke.js -C test"
+                    "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
@@ -181,9 +173,7 @@
             "Windows i386": {
                 "directory": "C:/Users/windows/Desktop/luigi32",
                 "build": {
-                    "Install": "C:\\Node32\\node32.cmd npm install --production --ignore-scripts",
-                    "Build Koffi": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js",
-                    "Build dependencies": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -C test"
+                    "Build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Raylib": "seatsh C:\\Node32\\node32.cmd node test/tests/raylib.js",
@@ -195,9 +185,7 @@
             "Windows x64": {
                 "directory": "C:/Users/windows/Desktop/luigi64",
                 "build": {
-                    "Install": "C:\\Node64\\node64.cmd npm install --production --ignore-scripts",
-                    "Build Koffi": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js",
-                    "Build dependencies": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -C test"
+                    "Build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Raylib": "seatsh C:\\Node64\\node64.cmd node test/tests/raylib.js",
@@ -234,9 +222,7 @@
             "FreeBSD x64": {
                 "directory": "/home/freebsd/luigi",
                 "build": {
-                    "Install": "npm install --production --ignore-scripts",
-                    "Build Koffi": "node ../cnoke/cnoke.js",
-                    "Build dependencies": "node ../cnoke/cnoke.js -C test"
+                    "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
@@ -273,9 +259,7 @@
             "FreeBSD i386": {
                 "directory": "/home/freebsd/luigi",
                 "build": {
-                    "Install": "npm install --production --ignore-scripts",
-                    "Build Koffi": "node ../cnoke/cnoke.js",
-                    "Build dependencies": "node ../cnoke/cnoke.js -C test"
+                    "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
@@ -312,9 +296,7 @@
             "FreeBSD ARM64": {
                 "directory": "/home/freebsd/luigi",
                 "build": {
-                    "Install": "npm install --production --ignore-scripts",
-                    "Build Koffi": "node ../cnoke/cnoke.js",
-                    "Build dependencies": "node ../cnoke/cnoke.js -C test"
+                    "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Raylib": "xvfb-run node test/tests/raylib.js",
@@ -351,9 +333,7 @@
             "macOS x64": {
                 "directory": "/Users/macos/luigi",
                 "build": {
-                    "Install": "PATH=/usr/local/bin:/usr/bin:/bin npm install --production --ignore-scripts",
-                    "Build Koffi": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js",
-                    "Build dependencies": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -C test"
+                    "Build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Misc": "PATH=/usr/local/bin:/usr/bin:/bin node test/tests/misc.js",

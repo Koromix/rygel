@@ -14,7 +14,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 const crypto = require('crypto');
-const koffi = require('../../build/koffi.node');
+const koffi = require('../build/koffi.node');
 const assert = require('assert');
 const fs = require('fs');
 const os = require('os');

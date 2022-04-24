@@ -14,6 +14,8 @@
 cmake_minimum_required(VERSION 3.12)
 project(koffi C CXX)
 
+add_subdirectory(.. koffi)
+
 # ---- Raylib ----
 
 add_library(raylib SHARED
