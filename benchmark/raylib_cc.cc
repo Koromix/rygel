@@ -20,6 +20,7 @@ int Main(int argc, char **argv)
 {
     if (argc < 2) {
         LogError("Missing number of iterations");
+        LogInfo("Usage: raylib_cc <iterations>");
         return 1;
     }
 
@@ -35,6 +36,8 @@ int Main(int argc, char **argv)
 
     Image img = GenImageColor(800, 600, (Color){ .r = 0, .g = 0, .b = 0, .a = 255 });
     Font font = GetFontDefault();
+
+    int64_t start = GetMonotonicTime();
 
     for (int i = 0; i < iterations; i++) {
         ImageClearBackground(&img, (Color){ .r = 0, .g = 0, .b = 0, .a = 255 });
@@ -58,6 +61,9 @@ int Main(int argc, char **argv)
             ImageDrawTextEx(&img, font, text, pos, 10, 1, color);
         }
     }
+
+    int64_t time = GetMonotonicTime() - start;
+    LogInfo("Time: %1s", FmtDouble((double)time / 1000.0, 2));
 
     return 0;
 }

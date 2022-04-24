@@ -102,6 +102,8 @@ function main() {
     let img = GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
     let font = GetFontDefault();
 
+    let start = performance.now();
+
     for (let i = 0; i < iterations; i++) {
         ImageClearBackground(img, { r: 0, g: 0, b: 0, a: 255 });
 
@@ -124,4 +126,7 @@ function main() {
             ImageDrawTextEx(img, font, text, pos, 10, 1, color);
         }
     }
+
+    let time = performance.now()- start;
+    console.log('Time:', (time / 1000.0).toFixed(2) + 's');
 }

@@ -120,6 +120,8 @@ function main() {
     let imgp = img.ref();
     let font = r.GetFontDefault();
 
+    let start = performance.now();
+
     for (let i = 0; i < iterations; i++) {
         r.ImageClearBackground(imgp, new Color({ r: 0, g: 0, b: 0, a: 255 }));
 
@@ -142,4 +144,7 @@ function main() {
             r.ImageDrawTextEx(imgp, font, text, pos, 10, 1, color);
         }
     }
+
+    let time = performance.now()- start;
+    console.log('Time:', (time / 1000.0).toFixed(2) + 's');
 }

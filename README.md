@@ -255,31 +255,38 @@ node test.js info debian_x64
 
 A basic benchmark based around Raylib is available, in three implementations: with Koffi, with node-ffi and with C code using Raylib (as a shared library).
 
-In order to run it, go to `koffi/benchmark` and run `build.sh` before doing anything else.
+In order to run it, go to `koffi/benchmark` and run `build.sh` (or `build.bat` on Windows) before doing anything else.
 
-Once this is done, you can execute each implementation with `time`, e.g. `time ./raylib_c 2000`.
+Once this is done, you can execute each implementation, e.g. `./raylib_cc 2000`.
 
-Here are some results from 2022-04-15 on my machine (AMD Ryzen™ 7 5800H 16G):
+Here are some results from 2022-04-15 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
-$ time ./raylib_c 200
-Iterations: 200
+$ ./raylib_cc 100
+Iterations: 100
+Time: 4.14s
 
-real    0m8,871s
-user    0m8,792s
-sys     0m0,016s
+$ ./raylib_koffi.js 100
+Iterations: 100
+Time: 6.25s
 
-$ time ./raylib_koffi.js 200
-Iterations: 200
+$ ./raylib_node_ffi.js 100
+Iterations: 100
+Time: 27.13s
+```
 
-real    0m13,011s
-user    0m12,923s
-sys     0m0,032s
+And on my Windows machine (Intel® Core™ i5-4460 16G):
 
-$ time ./raylib_node_ffi.js 200
-Iterations: 200
+```sh
+$ raylib_cc 100
+Iterations: 100
+Time: 10.53s
 
-real    1m41,523s
-user    1m56,623s
-sys     0m3,731s
+$ node raylib_koffi.js 100
+Iterations: 100
+Time: 14.60s
+
+$ node raylib_node_ffi.js 100
+Iterations: 100
+Time: 44.97s
 ```
