@@ -30,23 +30,23 @@ static Napi::Value RunAtoi(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    // We want maximum performance here, this is a benchmark
-#if 0
-    if (info.Length() < 1) {
+    if (RG_UNLIKELY(info.Length() < 1)) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected value for str, expected string");
-        return env.Null();
-    }
-#endif
 
     char str[64];
     {
-        size_t len = 0;
-        napi_status status = napi_get_value_string_utf8(env, info[0], str, RG_SIZE(str), &len);
-        RG_ASSERT(status == napi_ok);
+        napi_status status = napi_get_value_string_utf8(env, info[0], str, RG_SIZE(str), nullptr);
+
+        if (RG_UNLIKELY(status != napi_ok)) {
+            if (status == napi_string_expected) {
+                ThrowError<Napi::TypeError>(env, "Unexpected value for str, expected string");
+            } else {
+                ThrowError<Napi::TypeError>(env, "Failed to read JS string");
+            }
+            return env.Null();
+        }
     }
 
     int value = atoi(str);

@@ -278,7 +278,7 @@ Time: 1.10s
 
 $ ./atoi_koffi.js 20000000
 Iterations: 20000000
-Time: 2.41s
+Time: 2.34s
 
 # Note: the Node-FFI version does a few setTimeout calls to force the GC to run (around 20
 # for the example below), without which Node will consume all memory because the GC never appears
@@ -298,7 +298,7 @@ Time: 0.66s
 
 $ node atoi_napi.js 20000000
 Iterations: 20000000
-Time: 2.80s
+Time: 3.23s
 
 $ node atoi_koffi.js 20000000
 Iterations: 20000000
