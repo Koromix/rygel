@@ -14,7 +14,9 @@
 cmake_minimum_required(VERSION 3.12)
 project(koffi C CXX)
 
-add_subdirectory(.. koffi)
+if(NOT TARGET koffi)
+    add_subdirectory(.. koffi)
+endif()
 
 # ---- Raylib ----
 

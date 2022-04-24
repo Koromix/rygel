@@ -18,7 +18,9 @@ find_package(CNoke)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_subdirectory(.. koffi)
+if(NOT TARGET koffi)
+    add_subdirectory(.. koffi)
+endif()
 add_subdirectory(../test test)
 
 # ---- atoi ----
