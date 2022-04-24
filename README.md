@@ -261,22 +261,22 @@ At this stage, two benchmarks are implemented:
 
 In order to run it, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` (or `node ..\..\cnoke\cnoke.js` on Windows) before doing anything else.
 
-Once this is done, you can execute each implementation, e.g. `build/atoi_cc 20000000` or `./atoi_koffi.js 20000000`.
+Once this is done, you can execute each implementation, e.g. `build/atoi_cc` or `./atoi_koffi.js`. You can optionally define a custom number of iterations, e.g. `./atoi_koffi.js 10000000`.
 
 ## atoi results
 
 Here are some results from 2022-04-24 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
-$ build/atoi_cc 20000000
+$ build/atoi_cc
 Iterations: 20000000
 Time: 0.24s
 
-$ ./atoi_napi.js 20000000
+$ ./atoi_napi.js
 Iterations: 20000000
 Time: 1.10s
 
-$ ./atoi_koffi.js 20000000
+$ ./atoi_koffi.js
 Iterations: 20000000
 Time: 2.34s
 
@@ -284,7 +284,7 @@ Time: 2.34s
 # for the example below), without which Node will consume all memory because the GC never appears
 # to run, or not enough. It's not ideal but on the other hand it counts as another limitation
 # to Node-FFI performance.
-$ ./atoi_node_ffi.js 20000000
+$ ./atoi_node_ffi.js
 Iterations: 20000000
 Time: 640.49s
 ```
@@ -292,19 +292,19 @@ Time: 640.49s
 And on my Windows machine (Intel® Core™ i5-4460 16G):
 
 ```sh
-$ build\atoi_cc.exe 20000000
+$ build\atoi_cc.exe
 Iterations: 20000000
 Time: 0.66s
 
-$ node atoi_napi.js 20000000
+$ node atoi_napi.js
 Iterations: 20000000
 Time: 3.23s
 
-$ node atoi_koffi.js 20000000
+$ node atoi_koffi.js
 Iterations: 20000000
 Time: 4.81s
 
-$ node atoi_node_ffi.js 20000000
+$ node atoi_node_ffi.js
 Iterations: 20000000
 Time: 491.99s
 ```
@@ -314,15 +314,15 @@ Time: 491.99s
 Here are some results from 2022-04-24 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
-$ build/raylib_cc 100
+$ build/raylib_cc
 Iterations: 100
 Time: 4.14s
 
-$ ./raylib_koffi.js 100
+$ ./raylib_koffi.js
 Iterations: 100
 Time: 6.25s
 
-$ ./raylib_node_ffi.js 100
+$ ./raylib_node_ffi.js
 Iterations: 100
 Time: 27.13s
 ```
@@ -330,15 +330,15 @@ Time: 27.13s
 And on my Windows machine (Intel® Core™ i5-4460 16G):
 
 ```sh
-$ build\raylib_cc.exe 100
+$ build\raylib_cc.exe
 Iterations: 100
 Time: 10.53s
 
-$ node raylib_koffi.js 100
+$ node raylib_koffi.js
 Iterations: 100
 Time: 14.60s
 
-$ node raylib_node_ffi.js 100
+$ node raylib_node_ffi.js
 Iterations: 100
 Time: 44.97s
 ```

@@ -71,14 +71,15 @@ const Font = koffi.struct('Font', {
 main();
 
 function main() {
-    if (process.argv.length < 3)
-        throw new Error('Missing number of iterations');
+    let iterations = 100;
 
-    let iterations = parseInt(process.argv[2], 10);
-    if (Number.isNaN(iterations))
-        throw new Error('Not a valid number');
-    if (iterations < 1)
-        throw new Error('Value must be positive');
+    if (process.argv.length >= 3) {
+        iterations = parseInt(process.argv[2], 10);
+        if (Number.isNaN(iterations))
+            throw new Error('Not a valid number');
+        if (iterations < 1)
+            throw new Error('Value must be positive');
+    }
     console.log('Iterations:', iterations);
 
     let lib_filename = path.dirname(__filename) + '/test/build/raylib' + koffi.extension;

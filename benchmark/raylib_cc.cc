@@ -18,15 +18,12 @@ namespace RG {
 
 int Main(int argc, char **argv)
 {
-    if (argc < 2) {
-        LogError("Missing number of iterations");
-        LogInfo("Usage: raylib_cc <iterations>");
-        return 1;
-    }
+    int iterations = 100;
 
-    int iterations = 0;
-    if (!ParseInt(argv[1], &iterations))
-        return 1;
+    if (argc >= 2) {
+        if (!ParseInt(argv[1], &iterations))
+            return 1;
+    }
     LogInfo("Iterations: %1", iterations);
 
     // We need to call InitWindow before using anything else (such as fonts)
