@@ -259,16 +259,16 @@ At this stage, two benchmarks are implemented:
 * The first one is based around repeated calls to atoi, in three implementations: with Koffi, with node-ffi-napi and with C code (with dlsym / GetProcAddress). This is a simple function, thus the JS and FFI overhead is clearly visible.
 * The second one is based around Raylib, and will execute much more heavier functions repeatdly. Also in three versions: Koffi, node-ffi-napi and C code.
 
-In order to run it, go to `koffi/benchmark` and run `./build.sh` (or `build.bat` on Windows) before doing anything else.
+In order to run it, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` (or `node ..\..\cnoke\cnoke.js` on Windows) before doing anything else.
 
-Once this is done, you can execute each implementation, e.g. `./atoi_cc 20000000`.
+Once this is done, you can execute each implementation, e.g. `build/atoi_cc 20000000` or `./atoi_koffi.js 20000000`.
 
 ## atoi results
 
 Here are some results from 2022-04-24 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
-$ ./atoi_cc 20000000
+$ build/atoi_cc 20000000
 Iterations: 20000000
 Time: 0.24s
 
@@ -288,7 +288,7 @@ Time: 640.49s
 And on my Windows machine (Intel® Core™ i5-4460 16G):
 
 ```sh
-$ atoi_cc 20000000
+$ build\atoi_cc.exe 20000000
 Iterations: 20000000
 Time: 0.66s
 
@@ -306,7 +306,7 @@ Time: 491.99s
 Here are some results from 2022-04-24 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
-$ ./raylib_cc 100
+$ build/raylib_cc 100
 Iterations: 100
 Time: 4.14s
 
@@ -322,7 +322,7 @@ Time: 27.13s
 And on my Windows machine (Intel® Core™ i5-4460 16G):
 
 ```sh
-$ raylib_cc 100
+$ build\raylib_cc.exe 100
 Iterations: 100
 Time: 10.53s
 
