@@ -256,7 +256,7 @@ node test.js info debian_x64
 # Benchmarks
 
 At this stage, two benchmarks are implemented:
-* The first one is based around repeated calls to atoi, in three implementations: with Koffi, with node-ffi-napi and with C code (with dlsym / GetProcAddress). This is a simple function, thus the JS and FFI overhead is clearly visible.
+* The first one is based around repeated calls to atoi, and has four implementations: one in C++, one calling atoi through an NAPI module, one using Koffi, and one with node-ffi-napi. This is a simple function, thus the JS and FFI overhead is clearly visible.
 * The second one is based around Raylib, and will execute much more heavier functions repeatdly. Also in three versions: Koffi, node-ffi-napi and C code.
 
 In order to run it, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` (or `node ..\..\cnoke\cnoke.js` on Windows) before doing anything else.
@@ -271,6 +271,10 @@ Here are some results from 2022-04-24 on my Linux machine (AMD® Ryzen™ 7 5800
 $ build/atoi_cc 20000000
 Iterations: 20000000
 Time: 0.24s
+
+$ ./atoi_napi.js 20000000
+Iterations: 20000000
+Time: 1.56s
 
 $ ./atoi_koffi.js 20000000
 Iterations: 20000000
@@ -291,6 +295,10 @@ And on my Windows machine (Intel® Core™ i5-4460 16G):
 $ build\atoi_cc.exe 20000000
 Iterations: 20000000
 Time: 0.66s
+
+$ node atoi_napi.js 20000000
+Iterations: 20000000
+Time: 3.52s
 
 $ node atoi_koffi.js 20000000
 Iterations: 20000000

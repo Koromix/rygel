@@ -31,6 +31,14 @@ if(WIN32)
     target_link_libraries(atoi_cc PRIVATE ws2_32)
 endif()
 
+add_node_addon(NAME atoi_napi SOURCES atoi_napi.cc ../vendor/libcc/libcc.cc)
+target_include_directories(atoi_napi PRIVATE .. ../vendor/node-addon-api)
+
+if(WIN32)
+    target_compile_definitions(atoi_napi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
+    target_link_libraries(atoi_napi PRIVATE ws2_32)
+endif()
+
 # ---- Raylib ----
 
 add_executable(raylib_cc atoi_cc.cc ../vendor/libcc/libcc.cc)

@@ -13,18 +13,6 @@
 
 #include "../vendor/libcc/libcc.hh"
 
-#ifdef _WIN32
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <windows.h>
-#else
-    #include <dlfcn.h>
-#endif
-
 namespace RG {
 
 static const char * strings[] = {
@@ -48,21 +36,10 @@ int Main(int argc, char **argv)
         return 1;
     LogInfo("Iterations: %1", iterations);
 
-    typedef int AtoiFunc(const char *ptr);
-
-#ifdef _WIN32
-    HMODULE module = LoadLibraryA("msvcrt.dll");
-    RG_DEFER { FreeLibrary(module); };
-
-    AtoiFunc *atoi_ptr = (AtoiFunc *)GetProcAddress(module, "atoi");
-#else
-    AtoiFunc *atoi_ptr = (AtoiFunc *)dlsym(RTLD_DEFAULT, "atoi");
-#endif
-
     int64_t start = GetMonotonicTime();
 
     for (int i = 0; i < iterations; i++) {
-        sum += (uint64_t)atoi_ptr(strings[i % RG_LEN(strings)]);
+        sum += (uint64_t)atoi(strings[i % RG_LEN(strings)]);
     }
 
     // Help prevent optimisation of loop
