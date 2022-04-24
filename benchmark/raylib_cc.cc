@@ -11,46 +11,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
+#include "../vendor/libcc/libcc.hh"
 #include "../vendor/raylib/src/raylib.h"
 
-#define STRINGIFY(Value) # Value
+namespace RG {
 
-static int ParseInt(const char *str)
-{
-    char *end;
-    long long value = strtoll(str, &end, 10);
-
-    if (end == str || *end) {
-        fprintf(stderr, "Not a valid integer number\n");
-        return -1;
-    }
-    if (value < 1 || value == LLONG_MAX) {
-        fprintf(stderr, "Value must be between 1 and " STRINGIFY(LLONG_MAX) "\n");
-        return -1;
-    }
-
-    return (int)value;
-}
-
-int main(int argc, char **argv)
+int Main(int argc, char **argv)
 {
     if (argc < 2) {
-        fprintf(stderr, "Missing number of iterations\n");
+        LogError("Missing number of iterations");
         return 1;
     }
 
-    int iterations = ParseInt(argv[1]);
-    if (iterations < 0)
+    int iterations = 0;
+    if (!ParseInt(argv[1], &iterations))
         return 1;
-    printf("Iterations: %d\n", iterations);
+    LogInfo("Iterations: %1", iterations);
 
     // We need to call InitWindow before using anything else (such as fonts)
-    SetTraceLogLevel(4); // Warnings
-    SetWindowState(0x80); // Hidden
+    SetTraceLogLevel(LOG_WARNING);
+    SetWindowState(FLAG_WINDOW_HIDDEN);
     InitWindow(640, 480, "Raylib Test");
 
     Image img = GenImageColor(800, 600, (Color){ .r = 0, .g = 0, .b = 0, .a = 255 });
@@ -65,14 +45,14 @@ int main(int argc, char **argv)
 
             double angle = (j * 7) * PI / 180;
             Color color = {
-                .r = 127.5 + 127.5 * sin(angle),
-                .g = 127.5 + 127.5 * sin(angle + PI / 2),
-                .b = 127.5 + 127.5 * sin(angle + PI),
+                .r = (unsigned char)(127.5 + 127.5 * sin(angle)),
+                .g = (unsigned char)(127.5 + 127.5 * sin(angle + PI / 2)),
+                .b = (unsigned char)(127.5 + 127.5 * sin(angle + PI)),
                 .a = 255
             };
             Vector2 pos = {
-                .x = (img.width / 2 - text_width / 2) + j * 0.1 * cos(angle - PI / 2),
-                .y = (img.height / 2 - 16) + j * 0.1 * sin(angle - PI / 2)
+                .x = (float)((img.width / 2 - text_width / 2) + j * 0.1 * cos(angle - PI / 2)),
+                .y = (float)((img.height / 2 - 16) + j * 0.1 * sin(angle - PI / 2))
             };
 
             ImageDrawTextEx(&img, font, text, pos, 10, 1, color);
@@ -81,3 +61,8 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::Main(argc, argv); }
