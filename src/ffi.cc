@@ -116,7 +116,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info)
         if (!member.type)
             return env.Null();
 
-        type->size = AlignLen(type->size, member.type->align) + member.type->size;
+        type->size = (int16_t)(AlignLen(type->size, member.type->align) + member.type->size);
         type->align = std::max(type->align, member.type->align);
 
         type->members.Append(member);
