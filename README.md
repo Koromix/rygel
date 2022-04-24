@@ -7,6 +7,8 @@
 - [Get started](#get-started)
 - [Tests](#tests)
 - [Benchmarks](#benchmarks)
+  * [atoi results](#atoi-results)
+  * [Raylib results](#raylib-results)
 
 # Introduction
 
@@ -253,13 +255,55 @@ node test.js info debian_x64
 
 # Benchmarks
 
-A basic benchmark based around Raylib is available, in three implementations: with Koffi, with node-ffi and with C code using Raylib (as a shared library).
+At this stage, two benchmarks are implemented:
+* The first one is based around repeated calls to atoi, in three implementations: with Koffi, with node-ffi-napi and with C code (with dlsym / GetProcAddress). This is a simple function, thus the JS and FFI overhead is clearly visible.
+* The second one is based around Raylib, and will execute much more heavier functions repeatdly. Also in three versions: Koffi, node-ffi-napi and C code.
 
-In order to run it, go to `koffi/benchmark` and run `build.sh` (or `build.bat` on Windows) before doing anything else.
+In order to run it, go to `koffi/benchmark` and run `./build.sh` (or `build.bat` on Windows) before doing anything else.
 
-Once this is done, you can execute each implementation, e.g. `./raylib_cc 2000`.
+Once this is done, you can execute each implementation, e.g. `./atoi_cc 20000000`.
 
-Here are some results from 2022-04-15 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
+## atoi results
+
+Here are some results from 2022-04-24 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
+
+```sh
+$ ./atoi_cc 20000000
+Iterations: 20000000
+Time: 0.24s
+
+$ ./atoi_koffi.js 20000000
+Iterations: 20000000
+Time: 2.41s
+
+# Note: the Node-FFI version does a few setTimeout calls to force the GC to run (around 20
+# for the example below), without which Node will consume all memory because the GC never appears
+# to run, or not enough. It's not ideal but on the other hand it counts as another limitation
+# to Node-FFI performance.
+$ ./atoi_node_ffi.js 20000000
+Iterations: 20000000
+Time: 640.49s
+```
+
+And on my Windows machine (Intel® Core™ i5-4460 16G):
+
+```sh
+$ atoi_cc 20000000
+Iterations: 20000000
+Time: 0.66s
+
+$ node atoi_koffi.js 20000000
+Iterations: 20000000
+Time: 4.81s
+
+$ node atoi_node_ffi.js 20000000
+Iterations: 20000000
+Time: 491.99s
+```
+
+## Raylib results
+
+Here are some results from 2022-04-24 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
 $ ./raylib_cc 100
