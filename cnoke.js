@@ -243,7 +243,7 @@ async function configure(retry = true) {
     }
 
     args.push(`-DCMAKE_BUILD_TYPE=${debug ? 'Debug' : 'Release'}`);
-    for (let type of ['RUNTIME', 'LIBRARY']) {
+    for (let type of ['ARCHIVE', 'RUNTIME', 'LIBRARY']) {
         for (let suffix of ['', '_DEBUG', '_RELEASE'])
             args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${build_dir}`);
     }
