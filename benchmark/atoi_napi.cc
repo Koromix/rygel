@@ -42,8 +42,14 @@ static Napi::Value RunAtoi(const Napi::CallbackInfo &info)
     }
 #endif
 
-    std::string name = info[0].As<Napi::String>();
-    int value = atoi(name.c_str());
+    char str[64];
+    {
+        size_t len = 0;
+        napi_status status = napi_get_value_string_utf8(env, info[0], str, RG_SIZE(str), &len);
+        RG_ASSERT(status == napi_ok);
+    }
+
+    int value = atoi(str);
 
     return Napi::Number::New(env, value);
 }

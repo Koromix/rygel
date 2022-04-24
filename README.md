@@ -274,7 +274,7 @@ Time: 0.24s
 
 $ ./atoi_napi.js 20000000
 Iterations: 20000000
-Time: 1.56s
+Time: 1.10s
 
 $ ./atoi_koffi.js 20000000
 Iterations: 20000000
@@ -298,7 +298,7 @@ Time: 0.66s
 
 $ node atoi_napi.js 20000000
 Iterations: 20000000
-Time: 3.52s
+Time: 2.80s
 
 $ node atoi_koffi.js 20000000
 Iterations: 20000000
