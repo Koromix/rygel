@@ -39,6 +39,8 @@ extern "C" uint64_t ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
+static RG_THREAD_LOCAL CallData *exec_call;
+
 static inline int IsHFA(const TypeInfo *type)
 {
 #ifdef __ARM_PCS_VFP
@@ -76,7 +78,8 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             case PrimitiveKind::UInt32:
             case PrimitiveKind::String:
             case PrimitiveKind::String16:
-            case PrimitiveKind::Pointer: {
+            case PrimitiveKind::Pointer:
+            case PrimitiveKind::Callback: {
                 if (gpr_avail) {
                     param.gpr_count = 1;
                     gpr_avail--;
@@ -385,20 +388,49 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     args_ptr += 8;
                 }
             } break;
+            case PrimitiveKind::Callback: {
+                void *ptr;
+
+                if (value.IsFunction()) {
+                    Napi::Function func = value.As<Napi::Function>();
+
+                    Size idx = ReserveTrampoline(param.type->proto, func);
+                    if (RG_UNLIKELY(idx < 0))
+                        return false;
+
+                    ptr = GetTrampoline(idx, param.type->proto);
+                } else if (CheckValueTag(instance, value, param.type)) {
+                    ptr = value.As<Napi::External<void>>().Data();
+                } else if (IsNullOrUndefined(value)) {
+                    ptr = nullptr;
+                } else {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), i + 1, param.type->name);
+                    return false;
+                }
+
+                if (RG_LIKELY(param.gpr_count)) {
+                    *(gpr_ptr++) = (uint64_t)ptr;
+                } else {
+                    *(void **)args_ptr = ptr;
+                    args_ptr += 4;
+                }
+            } break;
         }
     }
 
-    sp = mem->stack.end();
+    new_sp = mem->stack.end();
 
     return true;
 }
 
 void CallData::Execute()
 {
+    exec_call = this;
+
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, sp) \
-                                         : ForwardCall ## Suffix(func->func, sp)); \
+            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, new_sp) \
+                                         : ForwardCall ## Suffix(func->func, new_sp)); \
             return ret; \
         })()
 
@@ -416,7 +448,8 @@ void CallData::Execute()
         case PrimitiveKind::UInt64:
         case PrimitiveKind::String:
         case PrimitiveKind::String16:
-        case PrimitiveKind::Pointer: { result.u64 = PERFORM_CALL(GG); } break;
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(GG); } break;
         case PrimitiveKind::Record: {
             if (func->ret.vec_count) {
                 HfaRet ret = PERFORM_CALL(DDDD);
@@ -453,11 +486,16 @@ Napi::Value CallData::Complete()
         case PrimitiveKind::UInt64: return Napi::BigInt::New(env, result.u64);
         case PrimitiveKind::String: return Napi::String::New(env, (const char *)result.ptr);
         case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)result.ptr);
-        case PrimitiveKind::Pointer: {
-            Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
-            SetValueTag(instance, external, func->ret.type);
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Callback: {
+            if (result.ptr) {
+                Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
+                SetValueTag(instance, external, func->ret.type);
 
-            return external;
+                return external;
+            } else {
+                return env.Null();
+            }
         } break;
         case PrimitiveKind::Record: {
             const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
@@ -472,6 +510,21 @@ Napi::Value CallData::Complete()
     }
 
     RG_UNREACHABLE();
+}
+
+void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+{
+    RG_UNREACHABLE();
+}
+
+void *GetTrampoline(Size, const FunctionInfo *)
+{
+    return nullptr;
+}
+
+extern "C" void RelayCallBack(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+{
+    exec_call->Relay(idx, own_sp, caller_sp, out_reg);
 }
 
 }

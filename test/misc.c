@@ -410,3 +410,9 @@ EXPORT FixedWide ReturnFixedWide(FixedWide str)
 {
     return str;
 }
+
+EXPORT float CallSimpleJS(int i, float (*func)(int i, const char *str, double d))
+{
+    float f = func(i, "Hello!", 42.0);
+    return f;
+}

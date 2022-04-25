@@ -35,7 +35,9 @@ CallData::~CallData()
     mem->stack = old_stack_mem;
     mem->heap = old_heap_mem;
 
-    if (!--mem->depth && mem->temporary) {
+    instance->free_trampolines |= used_trampolines;
+
+    if (--mem->depth && mem->temporary) {
         delete mem;
     }
 }
@@ -237,14 +239,16 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                 *(const char16_t **)dest = str16;
             } break;
             case PrimitiveKind::Pointer: {
-                if (RG_UNLIKELY(!CheckValueTag(instance, value, member.type))) {
+                if (CheckValueTag(instance, value, member.type)) {
+                    Napi::External external = value.As<Napi::External<void>>();
+                    void *ptr = external.Data();
+                    *(void **)dest = ptr;
+                } else if (IsNullOrUndefined(value)) {
+                    *(void **)dest = nullptr;
+                } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected %3", GetValueType(instance, value), member.name, member.type->name);
                     return false;
                 }
-
-                Napi::External external = value.As<Napi::External<void>>();
-                void *ptr = external.Data();
-                *(void **)dest = ptr;
             } break;
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
@@ -283,6 +287,29 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
 
                 double d = CopyNumber<double>(value);
                 *(double *)dest = d;
+            } break;
+            case PrimitiveKind::Callback: {
+                void *ptr;
+
+                if (value.IsFunction()) {
+                    Napi::Function func = value.As<Napi::Function>();
+
+                    Size idx = ReserveTrampoline(member.type->proto, func);
+                    if (RG_UNLIKELY(idx < 0))
+                        return false;
+
+                    ptr = GetTrampoline(idx, member.type->proto);
+                } else if (CheckValueTag(instance, value, member.type)) {
+                    Napi::External external = value.As<Napi::External<void>>();
+                    ptr = external.Data();
+                } else if (IsNullOrUndefined(value)) {
+                    ptr = nullptr;
+                } else {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected %3", GetValueType(instance, value), member.name, member.type->name);
+                    return false;
+                }
+
+                *(void **)dest = ptr;
             } break;
         }
 
@@ -400,9 +427,13 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
                 });
             } break;
             case PrimitiveKind::Pointer: {
-                PUSH_ARRAY(CheckValueTag(instance, value, type->ref), type->ref->name, {
-                    Napi::External external = value.As<Napi::External<void>>();
-                    *(void **)dest = external.Data();
+                PUSH_ARRAY(CheckValueTag(instance, value, type->ref) || IsNullOrUndefined(value), type->ref->name, {
+                    if (!IsNullOrUndefined(value)) {
+                        Napi::External external = value.As<Napi::External<void>>();
+                        *(void **)dest = external.Data();
+                    } else {
+                        *(void **)dest = nullptr;
+                    }
                 });
             } break;
             case PrimitiveKind::Record: {
@@ -430,6 +461,38 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
                     double d = CopyNumber<double>(value);
                     *(double *)dest = d;
                 });
+            } break;
+            case PrimitiveKind::Callback: {
+                for (uint32_t i = 0; i < len; i++) {
+                    Napi::Value value = array[i];
+
+                    int16_t align = std::max(type->ref->align, realign);
+                    dest = AlignUp(dest, align);
+
+                    void *ptr;
+
+                    if (value.IsFunction()) {
+                        Napi::Function func = value.As<Napi::Function>();
+
+                        Size idx = ReserveTrampoline(type->ref->proto, func);
+                        if (RG_UNLIKELY(idx < 0))
+                            return false;
+
+                        ptr = GetTrampoline(idx, type->ref->proto);
+                    } else if (CheckValueTag(instance, value, type->ref)) {
+                        Napi::External external = value.As<Napi::External<void>>();
+                        ptr = external.Data();
+                    } else if (IsNullOrUndefined(value)) {
+                        ptr = nullptr;
+                    } else {
+                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected %2", GetValueType(instance, value), type->ref->name);
+                        return false;
+                    }
+
+                    *(void **)dest = ptr;
+
+                    dest += type->ref->size;
+                }
             } break;
         }
 
@@ -493,8 +556,29 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
     return true;
 }
 
+Size CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
+{
+    uint32_t idx = CountTrailingZeros(instance->free_trampolines);
+
+    if (RG_UNLIKELY(idx >= MaxTrampolines)) {
+        ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
+        return -1;
+    }
+
+    instance->free_trampolines &= ~(1u << idx);
+    used_trampolines |= 1u << idx;
+
+    instance->trampolines[idx].proto = proto;
+    instance->trampolines[idx].func = func;
+
+    return idx;
+}
+
 void CallData::PopObject(Napi::Object obj, const uint8_t *src, const TypeInfo *type, int16_t realign)
 {
+    Napi::Env env = obj.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
     for (const RecordMember &member: type->members) {
@@ -548,13 +632,18 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *src, const TypeInfo *t
                 const char16_t *str16 = *(const char16_t **)src;
                 obj.Set(member.name, Napi::String::New(env, str16));
             } break;
-            case PrimitiveKind::Pointer: {
+            case PrimitiveKind::Pointer:
+            case PrimitiveKind::Callback: {
                 void *ptr2 = *(void **)src;
 
-                Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                SetValueTag(instance, external, member.type);
+                if (ptr2) {
+                    Napi::External<void> external = Napi::External<void>::New(env, ptr2);
+                    SetValueTag(instance, external, member.type);
 
-                obj.Set(member.name, external);
+                    obj.Set(member.name, external);
+                } else {
+                    obj.Set(member.name, env.Null());
+                }
             } break;
             case PrimitiveKind::Record: {
                 Napi::Object obj2 = PopObject(src, member.type, realign);
@@ -598,6 +687,8 @@ Size WideStringLength(const char16_t *str16, Size max)
 
 Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t realign)
 {
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
     uint32_t len = type->size / type->ref->size;
@@ -728,14 +819,19 @@ Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t
                 array.Set(i, Napi::String::New(env, str16));
             });
         } break;
-        case PrimitiveKind::Pointer: {
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Callback: {
             POP_ARRAY({
                 void *ptr2 = *(void **)src;
 
-                Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                SetValueTag(instance, external, type->ref);
+                if (ptr2) {
+                    Napi::External<void> external = Napi::External<void>::New(env, ptr2);
+                    SetValueTag(instance, external, type->ref);
 
-                array.Set(i, external);
+                    array.Set(i, external);
+                } else {
+                    array.Set(i, env.Null());
+                }
             });
         } break;
         case PrimitiveKind::Record: {

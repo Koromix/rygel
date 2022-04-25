@@ -11,6 +11,9 @@
 ; You should have received a copy of the GNU Affero General Public License
 ; along with this program. If not, see https://www.gnu.org/licenses/.
 
+; Forward
+; ----------------------------
+
 ; These three are the same, but they differ (in the C side) by their return type.
 ; Unlike the three next functions, these ones don't forward XMM argument registers.
 public ForwardCallG
@@ -32,6 +35,7 @@ prologue macro
     push rbx
     .pushreg rbx
     mov rbx, rsp
+    mov qword ptr [r8+0], rsp
     .setframe rbx, 0
     .endprolog
     mov rsp, rdx
@@ -101,5 +105,204 @@ ForwardCallXD proc frame
     forward_int
     epilogue
 ForwardCallXD endp
+
+; Callback trampolines
+; ----------------------------
+
+public Trampoline0
+public Trampoline1
+public Trampoline2
+public Trampoline3
+public Trampoline4
+public Trampoline5
+public Trampoline6
+public Trampoline7
+public Trampoline8
+public Trampoline9
+public Trampoline10
+public Trampoline11
+public Trampoline12
+public Trampoline13
+public Trampoline14
+public Trampoline15
+public TrampolineX0
+public TrampolineX1
+public TrampolineX2
+public TrampolineX3
+public TrampolineX4
+public TrampolineX5
+public TrampolineX6
+public TrampolineX7
+public TrampolineX8
+public TrampolineX9
+public TrampolineX10
+public TrampolineX11
+public TrampolineX12
+public TrampolineX13
+public TrampolineX14
+public TrampolineX15
+extern RelayCallBack : PROC
+public CallSwitchStack
+
+trampoline macro ID
+    endbr64
+    sub rsp, 120
+    .allocstack 120
+    .endprolog
+    mov qword ptr [rsp+32], rcx
+    mov qword ptr [rsp+40], rdx
+    mov qword ptr [rsp+48], r8
+    mov qword ptr [rsp+56], r9
+    mov rcx, ID
+    lea rdx, qword ptr [rsp+32]
+    lea r8, qword ptr [rsp+128]
+    lea r9, qword ptr [rsp+96]
+    call RelayCallBack
+    mov qword ptr [rsp+96], rax
+    movsd qword ptr [rsp+104], xmm0
+    add rsp, 120
+    ret
+endm
+
+trampoline_xmm macro ID
+    endbr64
+    sub rsp, 120
+    .allocstack 120
+    .endprolog
+    mov qword ptr [rsp+32], rcx
+    mov qword ptr [rsp+40], rdx
+    mov qword ptr [rsp+48], r8
+    mov qword ptr [rsp+56], r9
+    movsd qword ptr [rsp+64], xmm0
+    movsd qword ptr [rsp+72], xmm1
+    movsd qword ptr [rsp+80], xmm2
+    movsd qword ptr [rsp+88], xmm3
+    mov rcx, ID
+    lea rdx, qword ptr [rsp+32]
+    lea r8, qword ptr [rsp+128]
+    lea r9, qword ptr [rsp+96]
+    call RelayCallBack
+    mov qword ptr [rsp+96], rax
+    movsd qword ptr [rsp+104], xmm0
+    add rsp, 120
+    ret
+endm
+
+Trampoline0 proc frame
+    trampoline 0
+Trampoline0 endp
+Trampoline1 proc frame
+    trampoline 1
+Trampoline1 endp
+Trampoline2 proc frame
+    trampoline 2
+Trampoline2 endp
+Trampoline3 proc frame
+    trampoline 3
+Trampoline3 endp
+Trampoline4 proc frame
+    trampoline 4
+Trampoline4 endp
+Trampoline5 proc frame
+    trampoline 5
+Trampoline5 endp
+Trampoline6 proc frame
+    trampoline 6
+Trampoline6 endp
+Trampoline7 proc frame
+    trampoline 7
+Trampoline7 endp
+Trampoline8 proc frame
+    trampoline 8
+Trampoline8 endp
+Trampoline9 proc frame
+    trampoline 9
+Trampoline9 endp
+Trampoline10 proc frame
+    trampoline 10
+Trampoline10 endp
+Trampoline11 proc frame
+    trampoline 11
+Trampoline11 endp
+Trampoline12 proc frame
+    trampoline 12
+Trampoline12 endp
+Trampoline13 proc frame
+    trampoline 13
+Trampoline13 endp
+Trampoline14 proc frame
+    trampoline 14
+Trampoline14 endp
+Trampoline15 proc frame
+    trampoline 15
+Trampoline15 endp
+
+TrampolineX0 proc frame
+    trampoline_xmm 0
+TrampolineX0 endp
+TrampolineX1 proc frame
+    trampoline_xmm 1
+TrampolineX1 endp
+TrampolineX2 proc frame
+    trampoline_xmm 2
+TrampolineX2 endp
+TrampolineX3 proc frame
+    trampoline_xmm 3
+TrampolineX3 endp
+TrampolineX4 proc frame
+    trampoline_xmm 4
+TrampolineX4 endp
+TrampolineX5 proc frame
+    trampoline_xmm 5
+TrampolineX5 endp
+TrampolineX6 proc frame
+    trampoline_xmm 6
+TrampolineX6 endp
+TrampolineX7 proc frame
+    trampoline_xmm 7
+TrampolineX7 endp
+TrampolineX8 proc frame
+    trampoline_xmm 8
+TrampolineX8 endp
+TrampolineX9 proc frame
+    trampoline_xmm 9
+TrampolineX9 endp
+TrampolineX10 proc frame
+    trampoline_xmm 10
+TrampolineX10 endp
+TrampolineX11 proc frame
+    trampoline_xmm 11
+TrampolineX11 endp
+TrampolineX12 proc frame
+    trampoline_xmm 12
+TrampolineX12 endp
+TrampolineX13 proc frame
+    trampoline_xmm 13
+TrampolineX13 endp
+TrampolineX14 proc frame
+    trampoline_xmm 14
+TrampolineX14 endp
+TrampolineX15 proc frame
+    trampoline_xmm 15
+TrampolineX15 endp
+
+CallSwitchStack proc frame
+    endbr64
+    push rbx
+    .pushreg rbx
+    mov rbx, rsp
+    .setframe rbx, 0
+    .endprolog
+    mov rax, qword ptr [rsp+56]
+    mov r10, rsp
+    mov r11, qword ptr [rsp+48]
+    sub r10, qword ptr [r11+0]
+    mov qword ptr [r11+8], r10
+    lea rsp, [r9-32]
+    call rax
+    mov rsp, rbx
+    pop rbx
+    ret
+CallSwitchStack endp
 
 end

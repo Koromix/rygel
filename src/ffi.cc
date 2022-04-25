@@ -40,11 +40,6 @@
 
 namespace RG {
 
-const Size SyncStackSize = Mebibytes(2);
-const Size SyncHeapSize = Mebibytes(4);
-const Size AsyncStackSize = Mebibytes(1);
-const Size AsyncHeapSize = Mebibytes(2);
-
 // Value does not matter, the tag system uses memory addresses
 const int TypeInfoMarker = 0xDEADBEEF;
 
@@ -325,6 +320,135 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     return external;
 }
 
+static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value ret,
+                                 Napi::Array parameters, FunctionInfo *func)
+{
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+#ifdef _WIN32
+    if (!name.IsString() && !name.IsNumber()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
+        return false;
+    }
+#else
+    if (!name.IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, name));
+        return false;
+    }
+#endif
+
+    func->name = DuplicateString(name.ToString().Utf8Value().c_str(), &instance->str_alloc).ptr;
+
+    func->ret.type = ResolveType(instance, ret);
+    if (!func->ret.type)
+        return false;
+    if (func->ret.type->primitive == PrimitiveKind::Array) {
+        ThrowError<Napi::Error>(env, "You are not allowed to directly return fixed-size arrays");
+        return false;
+    }
+
+    if (!parameters.IsArray()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, parameters), func->name);
+        return false;
+    }
+
+    uint32_t parameters_len = parameters.Length();
+
+    if (parameters_len) {
+        Napi::String str = ((Napi::Value)parameters[parameters_len - 1]).As<Napi::String>();
+
+        if (str.IsString() && str.Utf8Value() == "...") {
+            func->variadic = true;
+            parameters_len--;
+        }
+    }
+
+    for (uint32_t j = 0; j < parameters_len; j++) {
+        ParameterInfo param = {};
+
+        param.type = ResolveType(instance, parameters[j], &param.directions);
+        if (!param.type)
+            return false;
+        if (param.type->primitive == PrimitiveKind::Void ||
+                param.type->primitive == PrimitiveKind::Array) {
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
+            return false;
+        }
+
+        if (func->parameters.len >= MaxParameters) {
+            ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
+            return false;
+        }
+        if ((param.directions & 2) && ++func->out_parameters >= MaxOutParameters) {
+            ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
+            return false;
+        }
+
+        param.offset = (int8_t)j;
+
+        func->parameters.Append(param);
+    }
+
+    return true;
+}
+
+static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    FunctionInfo *func = instance->callbacks.AppendDefault();
+    RG_DEFER_N(err_guard) { instance->callbacks.RemoveLast(1); };
+
+    if (info.Length() >= 3) {
+        if (!ParseClassicFunction(env, info[0u].As<Napi::String>(), info[1u], info[2u].As<Napi::Array>(), func))
+            return env.Null();
+    } else if (info.Length() >= 1) {
+        if (!info[0].IsString()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for prototype, expected string", GetValueType(instance, info[0]));
+            return env.Null();
+        }
+
+        std::string proto = info[0u].As<Napi::String>();
+        if (!ParsePrototype(env, proto.c_str(), func))
+            return env.Null();
+    } else {
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, not %1", info.Length());
+        return env.Null();
+    }
+
+    if (func->variadic) {
+        LogError("Variadic callbacks are not supported");
+        return env.Null();
+    }
+
+    if (!AnalyseFunction(instance, func))
+        return env.Null();
+
+    // We cannot fail after this check
+    if (instance->types_map.Find(func->name)) {
+        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", func->name);
+        return env.Null();
+    }
+    err_guard.Disable();
+
+    TypeInfo *type = instance->types.AppendDefault();
+
+    type->name = func->name;
+
+    type->primitive = PrimitiveKind::Callback;
+    type->align = alignof(void *);
+    type->size = RG_SIZE(void *);
+    type->proto = func;
+
+    instance->types_map.Set(type);
+
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
+}
+
 static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -380,7 +504,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
     return type->defn.Value();
 }
 
-static InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
+static InstanceMemory *AllocateMemory(InstanceData *instance)
 {
     for (Size i = 1; i < instance->memories.len; i++) {
         InstanceMemory *mem = instance->memories[i];
@@ -391,7 +515,7 @@ static InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
 
     InstanceMemory *mem = new InstanceMemory();
 
-    mem->stack.len = AsyncStackSize;
+    mem->stack.len = StackSize;
 #if defined(_WIN32)
     mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #elif defined(__APPLE__)
@@ -401,7 +525,7 @@ static InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
 #endif
     RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 
-    mem->heap.len = AsyncHeapSize;
+    mem->heap.len = HeapSize;
 #ifdef _WIN32
     mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
@@ -581,7 +705,7 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    InstanceMemory *mem = AllocateAsyncMemory(instance);
+    InstanceMemory *mem = AllocateMemory(instance);
     AsyncCall *async = new AsyncCall(env, instance, func, mem, callback);
 
     if (async->Prepare(info) && instance->debug) {
@@ -590,78 +714,6 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     async->Queue();
 
     return env.Null();
-}
-
-static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value ret,
-                                 Napi::Array parameters, FunctionInfo *func)
-{
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-#ifdef _WIN32
-    if (!name.IsString() && !name.IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
-        return false;
-    }
-#else
-    if (!name.IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, name));
-        return false;
-    }
-#endif
-
-    func->name = DuplicateString(name.ToString().Utf8Value().c_str(), &instance->str_alloc).ptr;
-
-    func->ret.type = ResolveType(instance, ret);
-    if (!func->ret.type)
-        return false;
-    if (func->ret.type->primitive == PrimitiveKind::Array) {
-        ThrowError<Napi::Error>(env, "You are not allowed to directly return fixed-size arrays");
-        return false;
-    }
-
-    if (!parameters.IsArray()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, parameters), func->name);
-        return false;
-    }
-
-    uint32_t parameters_len = parameters.Length();
-
-    if (parameters_len) {
-        Napi::String str = ((Napi::Value)parameters[parameters_len - 1]).As<Napi::String>();
-
-        if (str.IsString() && str.Utf8Value() == "...") {
-            func->variadic = true;
-            parameters_len--;
-        }
-    }
-
-    for (uint32_t j = 0; j < parameters_len; j++) {
-        ParameterInfo param = {};
-
-        param.type = ResolveType(instance, parameters[j], &param.directions);
-        if (!param.type)
-            return false;
-        if (param.type->primitive == PrimitiveKind::Void ||
-                param.type->primitive == PrimitiveKind::Array) {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
-            return false;
-        }
-
-        if (func->parameters.len >= MaxParameters) {
-            ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
-            return false;
-        }
-        if ((param.directions & 2) && ++func->out_parameters >= MaxOutParameters) {
-            ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
-            return false;
-        }
-
-        param.offset = (int8_t)j;
-
-        func->parameters.Append(param);
-    }
-
-    return true;
 }
 
 static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConvention convention)
@@ -977,27 +1029,8 @@ InstanceMemory::~InstanceMemory()
 
 InstanceData::InstanceData()
 {
-    InstanceMemory *mem = new InstanceMemory();
-
-    mem->stack.len = SyncStackSize;
-#if defined(_WIN32)
-    mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-#elif defined(__APPLE__)
-    mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-#else
-    mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
-#endif
-    RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
-
-    mem->heap.len = SyncHeapSize;
-#ifdef _WIN32
-    mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-#else
-    mem->heap.ptr = (uint8_t *)mmap(nullptr, mem->heap.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-#endif
-    RG_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
-
-    memories.Append(mem);
+    AllocateMemory(this);
+    RG_ASSERT(memories.len == 1);
 }
 
 InstanceData::~InstanceData()
@@ -1015,6 +1048,7 @@ static void SetExports(Napi::Env env, Func func)
     func("handle", Napi::Function::New(env, CreateHandleType));
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("array", Napi::Function::New(env, CreateArrayType));
+    func("callback", Napi::Function::New(env, CreateCallbackType));
     func("sizeof", Napi::Function::New(env, GetTypeSize));
     func("alignof", Napi::Function::New(env, GetTypeAlign));
     func("introspect", Napi::Function::New(env, GetTypeDefinition));

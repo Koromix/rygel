@@ -17,6 +17,9 @@
     #define SYMBOL(Symbol) Symbol
 #endif
 
+# Forward
+# ----------------------------
+
 # These five are the same, but they differ (in the C side) by their return type.
 # Unlike the five next functions, these ones don't forward XMM argument registers.
 .global SYMBOL(ForwardCallGG)
@@ -41,6 +44,7 @@
     movq %rdi, %r11
     pushq %rbx
     .cfi_def_cfa rsp, 16
+    movq %rsp, (%rdx)
     movq %rsp, %rbx
     .cfi_def_cfa rbx, 16
     leaq 112(%rsi), %rsp
@@ -144,3 +148,189 @@ SYMBOL(ForwardCallXDD):
     forward_int
     movb $8, %al
     epilogue
+
+# Callback trampolines
+# ----------------------------
+
+.global SYMBOL(Trampoline0)
+.global SYMBOL(Trampoline1)
+.global SYMBOL(Trampoline2)
+.global SYMBOL(Trampoline3)
+.global SYMBOL(Trampoline4)
+.global SYMBOL(Trampoline5)
+.global SYMBOL(Trampoline6)
+.global SYMBOL(Trampoline7)
+.global SYMBOL(Trampoline8)
+.global SYMBOL(Trampoline9)
+.global SYMBOL(Trampoline10)
+.global SYMBOL(Trampoline11)
+.global SYMBOL(Trampoline12)
+.global SYMBOL(Trampoline13)
+.global SYMBOL(Trampoline14)
+.global SYMBOL(Trampoline15)
+.global SYMBOL(TrampolineX0)
+.global SYMBOL(TrampolineX1)
+.global SYMBOL(TrampolineX2)
+.global SYMBOL(TrampolineX3)
+.global SYMBOL(TrampolineX4)
+.global SYMBOL(TrampolineX5)
+.global SYMBOL(TrampolineX6)
+.global SYMBOL(TrampolineX7)
+.global SYMBOL(TrampolineX8)
+.global SYMBOL(TrampolineX9)
+.global SYMBOL(TrampolineX10)
+.global SYMBOL(TrampolineX11)
+.global SYMBOL(TrampolineX12)
+.global SYMBOL(TrampolineX13)
+.global SYMBOL(TrampolineX14)
+.global SYMBOL(TrampolineX15)
+.global SYMBOL(RelayCallBack)
+.global SYMBOL(CallSwitchStack)
+
+.macro trampoline id
+    .cfi_startproc
+    .cfi_def_cfa rsp, 8
+    endbr64
+    subq $152, %rsp
+    .cfi_def_cfa rsp, 160
+    movq %rdi, 0(%rsp)
+    movq %rsi, 8(%rsp)
+    movq %rdx, 16(%rsp)
+    movq %rcx, 24(%rsp)
+    movq %r8, 32(%rsp)
+    movq %r9, 40(%rsp)
+    movq $\id, %rdi
+    movq %rsp, %rsi
+    leaq 160(%rsp), %rdx
+    leaq 112(%rsp), %rcx
+    call SYMBOL(RelayCallBack)
+    movq 112(%rsp), %rax
+    movq 120(%rsp), %rdx
+    movsd 128(%rsp), %xmm0
+    movsd 136(%rsp), %xmm1
+    addq $152, %rsp
+    .cfi_def_cfa rsp, 8
+    ret
+    .cfi_endproc
+.endm
+
+.macro trampoline_xmm id
+    .cfi_startproc
+    .cfi_def_cfa rsp, 8
+    endbr64
+    subq $152, %rsp
+    .cfi_def_cfa rsp, 160
+    movq %rdi, 0(%rsp)
+    movq %rsi, 8(%rsp)
+    movq %rdx, 16(%rsp)
+    movq %rcx, 24(%rsp)
+    movq %r8, 32(%rsp)
+    movq %r9, 40(%rsp)
+    movsd %xmm0, 48(%rsp)
+    movsd %xmm1, 56(%rsp)
+    movsd %xmm2, 64(%rsp)
+    movsd %xmm3, 72(%rsp)
+    movsd %xmm4, 80(%rsp)
+    movsd %xmm5, 88(%rsp)
+    movsd %xmm6, 96(%rsp)
+    movsd %xmm7, 104(%rsp)
+    movq $\id, %rdi
+    movq %rsp, %rsi
+    leaq 160(%rsp), %rdx
+    leaq 112(%rsp), %rcx
+    call SYMBOL(RelayCallBack)
+    movq 112(%rsp), %rax
+    movq 120(%rsp), %rdx
+    movsd 128(%rsp), %xmm0
+    movsd 136(%rsp), %xmm1
+    addq $152, %rsp
+    .cfi_def_cfa rsp, 8
+    ret
+    .cfi_endproc
+.endm
+
+SYMBOL(Trampoline0):
+    trampoline 0
+SYMBOL(Trampoline1):
+    trampoline 1
+SYMBOL(Trampoline2):
+    trampoline 2
+SYMBOL(Trampoline3):
+    trampoline 3
+SYMBOL(Trampoline4):
+    trampoline 4
+SYMBOL(Trampoline5):
+    trampoline 5
+SYMBOL(Trampoline6):
+    trampoline 6
+SYMBOL(Trampoline7):
+    trampoline 7
+SYMBOL(Trampoline8):
+    trampoline 8
+SYMBOL(Trampoline9):
+    trampoline 9
+SYMBOL(Trampoline10):
+    trampoline 10
+SYMBOL(Trampoline11):
+    trampoline 11
+SYMBOL(Trampoline12):
+    trampoline 12
+SYMBOL(Trampoline13):
+    trampoline 13
+SYMBOL(Trampoline14):
+    trampoline 14
+SYMBOL(Trampoline15):
+    trampoline 15
+
+SYMBOL(TrampolineX0):
+    trampoline_xmm 0
+SYMBOL(TrampolineX1):
+    trampoline_xmm 1
+SYMBOL(TrampolineX2):
+    trampoline_xmm 2
+SYMBOL(TrampolineX3):
+    trampoline_xmm 3
+SYMBOL(TrampolineX4):
+    trampoline_xmm 4
+SYMBOL(TrampolineX5):
+    trampoline_xmm 5
+SYMBOL(TrampolineX6):
+    trampoline_xmm 6
+SYMBOL(TrampolineX7):
+    trampoline_xmm 7
+SYMBOL(TrampolineX8):
+    trampoline_xmm 8
+SYMBOL(TrampolineX9):
+    trampoline_xmm 9
+SYMBOL(TrampolineX10):
+    trampoline_xmm 10
+SYMBOL(TrampolineX11):
+    trampoline_xmm 11
+SYMBOL(TrampolineX12):
+    trampoline_xmm 12
+SYMBOL(TrampolineX13):
+    trampoline_xmm 13
+SYMBOL(TrampolineX14):
+    trampoline_xmm 14
+SYMBOL(TrampolineX15):
+    trampoline_xmm 15
+
+SYMBOL(CallSwitchStack):
+    .cfi_startproc
+    .cfi_def_cfa rsp, 8
+    endbr64
+    push %rbx
+    .cfi_def_cfa rsp, 16
+    movq %rsp, %rbx
+    movq %rsp, %r10
+    subq 0(%r8), %r10
+    movq %r10, 8(%r8)
+    movq %rcx, %rsp
+    .cfi_def_cfa rsp, 16
+    call *%r9
+    mov %rbx, %rsp
+    .cfi_def_cfa rsp, 16
+    pop %rbx
+    .cfi_def_cfa rsp, 8
+    ret
+    .cfi_endproc

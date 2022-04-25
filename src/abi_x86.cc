@@ -29,6 +29,8 @@ extern "C" uint64_t ForwardCallRG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallRF(const void *func, uint8_t *sp);
 extern "C" double ForwardCallRD(const void *func, uint8_t *sp);
 
+static RG_THREAD_LOCAL CallData *exec_call;
+
 static inline bool IsRegular(Size size)
 {
     bool regular = (size <= 8 && !(size & (size - 1)));
@@ -252,20 +254,44 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 *(double *)args_ptr = d;
                 args_ptr += 2;
             } break;
+            case PrimitiveKind::Callback: {
+                void *ptr;
+
+                if (value.IsFunction()) {
+                    Napi::Function func = value.As<Napi::Function>();
+
+                    Size idx = ReserveTrampoline(param.type->proto, func);
+                    if (RG_UNLIKELY(idx < 0))
+                        return false;
+
+                    ptr = GetTrampoline(idx, param.type->proto);
+                } else if (CheckValueTag(instance, value, param.type)) {
+                    ptr = value.As<Napi::External<uint8_t>>().Data();
+                } else if (IsNullOrUndefined(value)) {
+                    ptr = nullptr;
+                } else {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), i + 1, param.type->name);
+                    return false;
+                }
+
+                *(void **)((param.fast ? fast_ptr : args_ptr)++) = ptr;
+            } break;
         }
     }
 
-    sp = mem->stack.end();
+    new_sp = mem->stack.end();
 
     return true;
 }
 
 void CallData::Execute()
 {
+    exec_call = this;
+
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = (func->fast ? ForwardCallR ## Suffix(func->func, sp) \
-                                   : ForwardCall ## Suffix(func->func, sp)); \
+            auto ret = (func->fast ? ForwardCallR ## Suffix(func->func, new_sp) \
+                                   : ForwardCall ## Suffix(func->func, new_sp)); \
             return ret; \
         })()
 
@@ -284,7 +310,8 @@ void CallData::Execute()
         case PrimitiveKind::String:
         case PrimitiveKind::String16:
         case PrimitiveKind::Pointer:
-        case PrimitiveKind::Record: { result.u64 = PERFORM_CALL(G); } break;
+        case PrimitiveKind::Record: 
+        case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(G); } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
         case PrimitiveKind::Float64: { result.d = PERFORM_CALL(D); } break;
@@ -313,11 +340,16 @@ Napi::Value CallData::Complete()
         case PrimitiveKind::UInt64: return Napi::BigInt::New(env, result.u64);
         case PrimitiveKind::String: return Napi::String::New(env, (const char *)result.ptr);
         case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)result.ptr);
-        case PrimitiveKind::Pointer: {
-            Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
-            SetValueTag(instance, external, func->ret.type);
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Callback: {
+            if (result.ptr) {
+                Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
+                SetValueTag(instance, external, func->ret.type);
 
-            return external;
+                return external;
+            } else {
+                return env.Null();
+            }
         } break;
         case PrimitiveKind::Record: {
             const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
@@ -332,6 +364,21 @@ Napi::Value CallData::Complete()
     }
 
     RG_UNREACHABLE();
+}
+
+void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+{
+    RG_UNREACHABLE();
+}
+
+void *GetTrampoline(Size idx, const FunctionInfo *)
+{
+    return nullptr;
+}
+
+extern "C" void RelayCallBack(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+{
+    exec_call->Relay(idx, own_sp, caller_sp, out_reg);
 }
 
 }

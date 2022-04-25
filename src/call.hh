@@ -23,6 +23,8 @@ namespace RG {
 
 bool AnalyseFunction(InstanceData *instance, FunctionInfo *func);
 
+struct BackRegisters;
+
 class CallData {
     struct OutObject {
         Napi::ObjectReference ref;
@@ -37,9 +39,12 @@ class CallData {
     InstanceMemory *mem;
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
+    uint32_t used_trampolines = 0;
 
     LocalArray<OutObject, MaxOutParameters> out_objects;
-    uint8_t *sp;
+
+    uint8_t *new_sp;
+    uint8_t *old_sp;
 
     union {
         uint32_t u32;
@@ -61,6 +66,8 @@ public:
     void Execute();
     Napi::Value Complete();
 
+    void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg);
+
     void DumpDebug() const;
 
 private:
@@ -77,6 +84,8 @@ private:
     void PopObject(Napi::Object obj, const uint8_t *src, const TypeInfo *type, int16_t realign = 0);
     Napi::Object PopObject(const uint8_t *src, const TypeInfo *type, int16_t realign = 0);
     Napi::Value PopArray(const uint8_t *src, const TypeInfo *type, int16_t realign = 0);
+
+    Size ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 };
 
 template <typename T>
@@ -122,5 +131,7 @@ inline bool CallData::AllocHeap(Size size, Size align, T **out_ptr)
     *out_ptr = (T *)ptr;
     return true;
 }
+
+void *GetTrampoline(Size idx, const FunctionInfo *proto);
 
 }

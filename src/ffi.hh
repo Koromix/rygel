@@ -19,8 +19,12 @@
 
 namespace RG {
 
+static const Size StackSize = Mebibytes(1);
+static const Size HeapSize = Mebibytes(2);
+
 static const Size MaxParameters = 32;
 static const Size MaxOutParameters = 8;
+static const Size MaxTrampolines = 16;
 
 extern const int TypeInfoMarker;
 
@@ -41,7 +45,8 @@ enum class PrimitiveKind {
     Record,
     Array,
     Float32,
-    Float64
+    Float64,
+    Callback
 };
 static const char *const PrimitiveKindNames[] = {
     "Void",
@@ -60,11 +65,13 @@ static const char *const PrimitiveKindNames[] = {
     "Record",
     "Array",
     "Float32",
-    "Float64"
+    "Float64",
+    "Callback"
 };
 
 struct TypeInfo;
 struct RecordMember;
+struct FunctionInfo;
 
 struct TypeInfo {
     enum class ArrayHint {
@@ -85,6 +92,7 @@ struct TypeInfo {
     HeapArray<RecordMember> members; // Record only
     const TypeInfo *ref; // Pointer or array
     ArrayHint hint; // Array only
+    const FunctionInfo *proto; // Callback only
 
     RG_HASHTABLE_HANDLER(TypeInfo, name);
 };
@@ -149,11 +157,12 @@ struct ParameterInfo {
 #endif
 };
 
+// Also used for callbacks, even though many members are not used in this case
 struct FunctionInfo {
     mutable std::atomic_int refcount {1};
 
     const char *name;
-    const char *decorated_name;
+    const char *decorated_name; // Only set for some platforms/calling conventions
     const LibraryHolder *lib = nullptr;
 
     void *func;
@@ -190,19 +199,29 @@ struct InstanceMemory {
     bool temporary;
 };
 
+struct TrampolineInfo {
+    const FunctionInfo *proto;
+    Napi::Function func;
+};
+
 struct InstanceData {
     InstanceData();
     ~InstanceData();
 
     BucketArray<TypeInfo> types;
     HashTable<const char *, TypeInfo *> types_map;
+    BucketArray<FunctionInfo> callbacks;
 
     bool debug;
     uint64_t tag_lower;
 
     LocalArray<InstanceMemory *, 6> memories;
 
+    TrampolineInfo trampolines[MaxTrampolines];
+    uint32_t free_trampolines = UINT32_MAX;
+
     BlockAllocator str_alloc;
 };
+RG_STATIC_ASSERT(MaxTrampolines <= 32);
 
 }
