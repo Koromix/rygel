@@ -1070,7 +1070,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            <label for=${id}>${label || key}</label>
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <span id="${id}" class="fm_calc">${text}</span>
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
