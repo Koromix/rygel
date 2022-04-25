@@ -18,6 +18,9 @@ find_package(CNoke)
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 if(NOT TARGET koffi)
     add_subdirectory(.. koffi)
 endif()
@@ -27,6 +30,7 @@ add_subdirectory(../test test)
 
 add_executable(atoi_cc atoi_cc.cc ../vendor/libcc/libcc.cc)
 target_include_directories(atoi_cc PRIVATE ..)
+target_link_libraries(atoi_cc PRIVATE Threads::Threads)
 
 if(WIN32)
     target_compile_definitions(atoi_cc PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
@@ -35,6 +39,7 @@ endif()
 
 add_node_addon(NAME atoi_napi SOURCES atoi_napi.cc ../vendor/libcc/libcc.cc)
 target_include_directories(atoi_napi PRIVATE .. ../vendor/node-addon-api)
+target_link_libraries(atoi_napi PRIVATE Threads::Threads)
 
 if(WIN32)
     target_compile_definitions(atoi_napi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
@@ -45,6 +50,7 @@ endif()
 
 add_executable(raylib_cc atoi_cc.cc ../vendor/libcc/libcc.cc)
 target_include_directories(raylib_cc PRIVATE ..)
+target_link_libraries(raylib_cc PRIVATE Threads::Threads)
 add_dependencies(raylib_cc raylib)
 
 if(WIN32)
