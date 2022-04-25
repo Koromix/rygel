@@ -265,7 +265,7 @@ Once this is done, you can execute each implementation, e.g. `build/atoi_cc` or 
 
 ## atoi results
 
-Here are some results from 2022-04-24 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
+Here are some results from 2022-04-24 on Linux on my machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
 $ build/atoi_cc
@@ -289,29 +289,29 @@ Iterations: 20000000
 Time: 640.49s
 ```
 
-And on my Windows machine (Intel® Core™ i5-4460 16G):
+And on Windows on the same machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
 $ build\atoi_cc.exe
 Iterations: 20000000
-Time: 0.66s
+Time: 0.25s
 
 $ node atoi_napi.js
 Iterations: 20000000
-Time: 3.23s
+Time: 1.94s
 
 $ node atoi_koffi.js
 Iterations: 20000000
-Time: 4.81s
+Time: 3.15s
 
 $ node atoi_node_ffi.js
 Iterations: 20000000
-Time: 491.99s
+Time: 267.20s
 ```
 
 ## Raylib results
 
-Here are some results from 2022-04-24 on my Linux machine (AMD® Ryzen™ 7 5800H 16G):
+Here are some results from 2022-04-24 on Linux on my machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
 $ build/raylib_cc
@@ -327,18 +327,18 @@ Iterations: 100
 Time: 27.13s
 ```
 
-And on my Windows machine (Intel® Core™ i5-4460 16G):
+And on Windows on the same machine (AMD® Ryzen™ 7 5800H 16G):
 
 ```sh
 $ build\raylib_cc.exe
 Iterations: 100
-Time: 10.53s
+Time: 8.39s
 
 $ node raylib_koffi.js
 Iterations: 100
-Time: 14.60s
+Time: 11.51s
 
 $ node raylib_node_ffi.js
 Iterations: 100
-Time: 44.97s
+Time: 32.47s
 ```
