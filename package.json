@@ -23,7 +23,7 @@
   },
   "license": "AGPL-3.0",
   "dependencies": {
-    "cnoke": "^0.9.26"
+    "cnoke": "^1.0.1"
   },
   "devDependencies": {
     "chalk": "^4.1.2",
