@@ -81,21 +81,36 @@ const char *CallData::PushString(const Napi::Value &value)
 {
     RG_ASSERT(value.IsString());
 
+    const Size SmallSize = 32;
+
     Napi::Env env = value.Env();
     napi_status status;
 
-    size_t len = 0;
-    status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
-    RG_ASSERT(status == napi_ok);
-
     Span<char> buf;
-    buf.len = (Size)len + 1;
+    size_t len = 0;
+
+    // Optimize for small strings
+    buf.len = SmallSize;
     if (RG_UNLIKELY(!AllocHeap(buf.len, 1, &buf.ptr)))
         return nullptr;
-
     if (RG_UNLIKELY(napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len) != napi_ok)) {
         ThrowError<Napi::Error>(env, "Failed to convert string to UTF-8");
         return nullptr;
+    }
+
+    // Slow path for bigger strings
+    if (len >= SmallSize - 1) {
+        status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
+        RG_ASSERT(status == napi_ok);
+        RG_ASSERT(len >= SmallSize);
+
+        buf.len = (Size)len + 1;
+        if (RG_UNLIKELY(!AllocHeap(buf.len - SmallSize, 1, &buf.ptr)))
+            return nullptr;
+        if (RG_UNLIKELY(napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len) != napi_ok)) {
+            ThrowError<Napi::Error>(env, "Failed to convert string to UTF-8");
+            return nullptr;
+        }
     }
 
     return buf.ptr;
