@@ -31,13 +31,13 @@ int Main(int argc, char **argv)
     SetWindowState(FLAG_WINDOW_HIDDEN);
     InitWindow(640, 480, "Raylib Test");
 
-    Image img = GenImageColor(800, 600, (Color){ .r = 0, .g = 0, .b = 0, .a = 255 });
+    Image img = GenImageColor(800, 600, Color { .r = 0, .g = 0, .b = 0, .a = 255 });
     Font font = GetFontDefault();
 
     int64_t start = GetMonotonicTime();
 
     for (int i = 0; i < iterations; i++) {
-        ImageClearBackground(&img, (Color){ .r = 0, .g = 0, .b = 0, .a = 255 });
+        ImageClearBackground(&img, Color { .r = 0, .g = 0, .b = 0, .a = 255 });
 
         for (int j = 0; j < 3600; j++) {
             const char *text = "Hello World!";

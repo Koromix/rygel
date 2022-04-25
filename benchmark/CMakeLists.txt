@@ -16,7 +16,7 @@ project(koffi C CXX ASM)
 
 find_package(CNoke)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -48,10 +48,9 @@ endif()
 
 # ---- Raylib ----
 
-add_executable(raylib_cc atoi_cc.cc ../vendor/libcc/libcc.cc)
+add_executable(raylib_cc raylib_cc.cc ../vendor/libcc/libcc.cc)
 target_include_directories(raylib_cc PRIVATE ..)
-target_link_libraries(raylib_cc PRIVATE Threads::Threads)
-add_dependencies(raylib_cc raylib)
+target_link_libraries(raylib_cc PRIVATE Threads::Threads raylib)
 
 if(WIN32)
     target_compile_definitions(raylib_cc PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
