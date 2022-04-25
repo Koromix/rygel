@@ -34,7 +34,7 @@ let work_dir = null;
 
 let version = null;
 let arch = null;
-let debug = false;
+let mode = 'RelWithDebInfo';
 let targets = [];
 
 let cmake_bin = null;
@@ -100,8 +100,19 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 arch = value;
-            } else if ((command == build || command == configure) && arg == '--debug') {
-                debug = true;
+            } else if ((command == build || command == configure) && arg == '--mode') {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                switch (value.toLowerCase()) {
+                    case 'relwithdebinfo': { mode = 'RelWithDebInfo'; } break;
+                    case 'debug': { mode = 'Debug'; } break;
+                    case 'release': { mode = 'Release'; } break;
+
+                    default: {
+                        throw new Error(`Unknown value '${value}' for ${arg}`);
+                    } break;
+                }
             } else if (command == build && arg[0] != '-') {
                 targets.push(arg);
             } else {
@@ -153,7 +164,8 @@ Configure options:
     -a, --arch <ARCH>            Change architecture
                                  (default: ${process.arch})
 
-        --debug                  Build in debug mode
+        --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
+                                 (default: ${mode})
 `;
 
     console.log(help);
@@ -242,9 +254,9 @@ async function configure(retry = true) {
         }
     }
 
-    args.push(`-DCMAKE_BUILD_TYPE=${debug ? 'Debug' : 'Release'}`);
+    args.push(`-DCMAKE_BUILD_TYPE=${mode}`);
     for (let type of ['ARCHIVE', 'RUNTIME', 'LIBRARY']) {
-        for (let suffix of ['', '_DEBUG', '_RELEASE'])
+        for (let suffix of ['', '_DEBUG', '_RELEASE', '_RELWITHDEBINFO'])
             args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${build_dir}`);
     }
     args.push('--no-warn-unused-cli');
@@ -273,7 +285,7 @@ async function build() {
 
     let args = [
         '--build', work_dir,
-        '--config', debug ? 'Debug' : 'Release'
+        '--config', mode
     ];
 
     for (let target of targets)
