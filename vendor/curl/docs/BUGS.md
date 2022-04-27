@@ -65,7 +65,7 @@
  debug dump with your bug report. The output you get by using the `-v` or
  `--trace` options.
 
- If curl crashed, causing a core dump (in unix), there is hardly any use to
+ If curl crashed, causing a core dump (in Unix), there is hardly any use to
  send that huge file to anyone of us. Unless we have the same system setup as
  you, we cannot do much with it. Instead, we ask you to get a stack trace and
  send that (much smaller) output to us instead.
@@ -128,7 +128,7 @@
 
  The list that is presented is the stack trace. If everything worked, it is
  supposed to contain the chain of functions that were called when curl
- crashed. Include the stack trace with your detailed bug report. it will help a
+ crashed. Include the stack trace with your detailed bug report, it will help a
  lot.
 
 ## Bugs in libcurl bindings

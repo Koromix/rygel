@@ -22,7 +22,7 @@
  - "standard" proxy environment variables support
  - compiles on win32 (reported builds on 70+ operating systems)
  - selectable network interface for outgoing traffic
- - IPv6 support on unix and Windows
+ - IPv6 support on Unix and Windows
  - happy eyeballs dual-stack connects
  - persistent connections
  - SOCKS 4 + 5 support, with or without local name resolving
@@ -198,7 +198,7 @@
 
 ## MQTT
 
- - Subscribe to and publish topics using url scheme `mqtt://broker/topic`
+ - Subscribe to and publish topics using URL scheme `mqtt://broker/topic`
 
 ## Footnotes
 

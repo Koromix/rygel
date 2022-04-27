@@ -13,6 +13,28 @@
 # PARTICULAR PURPOSE.
 
 @SET_MAKE@
+
+#***************************************************************************
+#                                  _   _ ____  _
+#  Project                     ___| | | |  _ \| |
+#                             / __| | | | |_) | |
+#                            | (__| |_| |  _ <| |___
+#                             \___|\___/|_| \_\_____|
+#
+# Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution. The terms
+# are also available at https://curl.se/docs/copyright.html.
+#
+# You may opt to use, copy, modify, merge, publish, distribute and/or sell
+# copies of the Software, and permit persons to whom the Software is
+# furnished to do so, under the terms of the COPYING file.
+#
+# This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
+# KIND, either express or implied.
+#
+###########################################################################
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -188,6 +210,7 @@ CURL_DISABLE_TFTP = @CURL_DISABLE_TFTP@
 CURL_LT_SHLIB_VERSIONED_FLAVOUR = @CURL_LT_SHLIB_VERSIONED_FLAVOUR@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CURL_NETWORK_LIBS = @CURL_NETWORK_LIBS@
+CURL_PLIST_VERSION = @CURL_PLIST_VERSION@
 CURL_WITH_MULTI_SSL = @CURL_WITH_MULTI_SSL@
 CYGPATH_W = @CYGPATH_W@
 DEFAULT_SSL_BACKEND = @DEFAULT_SSL_BACKEND@
@@ -205,6 +228,7 @@ ENABLE_STATIC = @ENABLE_STATIC@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FILECMD = @FILECMD@
 FISH_FUNCTIONS_DIR = @FISH_FUNCTIONS_DIR@
 GCOV = @GCOV@
 GREP = @GREP@
@@ -280,6 +304,7 @@ USE_LIBRTMP = @USE_LIBRTMP@
 USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
 USE_MBEDTLS = @USE_MBEDTLS@
+USE_MSH3 = @USE_MSH3@
 USE_NGHTTP2 = @USE_NGHTTP2@
 USE_NGHTTP3 = @USE_NGHTTP3@
 USE_NGTCP2 = @USE_NGTCP2@
@@ -301,28 +326,6 @@ USE_WOLFSSL = @USE_WOLFSSL@
 VERSION = @VERSION@
 VERSIONNUM = @VERSIONNUM@
 ZLIB_LIBS = @ZLIB_LIBS@
-
-#***************************************************************************
-#                                  _   _ ____  _
-#  Project                     ___| | | |  _ \| |
-#                             / __| | | | |_) | |
-#                            | (__| |_| |  _ <| |___
-#                             \___|\___/|_| \_\_____|
-#
-# Copyright (C) 1998 - 2020, Daniel Stenberg, <daniel@haxx.se>, et al.
-#
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution. The terms
-# are also available at https://curl.se/docs/copyright.html.
-#
-# You may opt to use, copy, modify, merge, publish, distribute and/or sell
-# copies of the Software, and permit persons to whom the Software is
-# furnished to do so, under the terms of the COPYING file.
-#
-# This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
-# KIND, either express or implied.
-#
-###########################################################################
 ZSH_FUNCTIONS_DIR = @ZSH_FUNCTIONS_DIR@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -378,6 +381,9 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+EXTRA_DIST = updatemanpages.pl coverage.sh completion.pl firefox-db2pem.sh \
+ checksrc.pl mk-ca-bundle.pl
+
 ZSH_COMPLETION_FUNCTION_FILENAME = _curl
 FISH_COMPLETION_FUNCTION_FILENAME = curl.fish
 CLEANFILES = $(ZSH_COMPLETION_FUNCTION_FILENAME) $(FISH_COMPLETION_FUNCTION_FILENAME)

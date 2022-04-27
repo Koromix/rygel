@@ -210,6 +210,7 @@ CURL_DISABLE_TFTP = @CURL_DISABLE_TFTP@
 CURL_LT_SHLIB_VERSIONED_FLAVOUR = @CURL_LT_SHLIB_VERSIONED_FLAVOUR@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CURL_NETWORK_LIBS = @CURL_NETWORK_LIBS@
+CURL_PLIST_VERSION = @CURL_PLIST_VERSION@
 CURL_WITH_MULTI_SSL = @CURL_WITH_MULTI_SSL@
 CYGPATH_W = @CYGPATH_W@
 DEFAULT_SSL_BACKEND = @DEFAULT_SSL_BACKEND@
@@ -227,6 +228,7 @@ ENABLE_STATIC = @ENABLE_STATIC@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FILECMD = @FILECMD@
 FISH_FUNCTIONS_DIR = @FISH_FUNCTIONS_DIR@
 GCOV = @GCOV@
 GREP = @GREP@
@@ -302,6 +304,7 @@ USE_LIBRTMP = @USE_LIBRTMP@
 USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
 USE_MBEDTLS = @USE_MBEDTLS@
+USE_MSH3 = @USE_MSH3@
 USE_NGHTTP2 = @USE_NGHTTP2@
 USE_NGHTTP3 = @USE_NGHTTP3@
 USE_NGTCP2 = @USE_NGTCP2@
@@ -420,14 +423,14 @@ test334 test335 test336 test337 test338 test339 test340 test341 test342 \
 test343 test344 test345 test346 test347 test348 test349 test350 test351 \
 test352 test353 test354 test355 test356 test357 test358 test359 test360 \
 test361 test362 test363 test364 test365 test366 test367 test368 test369 \
-test370 test371 test372 test373 test374 \
+test370 test371 test372 test373 test374 test375 test376 test378 \
 \
 test380 test381 test383 test384 test385 test386 \
 \
-test392 test393 test394 test395 test396 test397 \
+test392 test393 test394 test395 test396 test397 test398 \
 \
 test400 test401 test402 test403 test404 test405 test406 test407 test408 \
-test409 test410 \
+test409 test410 test411 \
 \
 test430 test431 test432 test433 test434 test435 test436 \
 \
@@ -468,7 +471,7 @@ test854 test855 test856 test857 test858 test859 test860 test861 test862 \
 test863 test864 test865 test866 test867 test868 test869 test870 test871 \
 test872 test873 test874 test875 test876 test877 test878 test879 test880 \
 test881 test882 test883 test884 test885 test886 test887 test888 test889 \
-test890 test891 test892 test893 test894 test895 test896 test897 \
+test890 test891 test892 test893 test894 test895 test896 test897 test898 \
 \
 test900 test901 test902 test903 test904 test905 test906 test907 test908 \
 test909 test910 test911 test912 test913 test914 test915 test916 test917 \
@@ -478,7 +481,7 @@ test936 test937 test938 test939 test940 test941 test942 test943 test944 \
 test945 test946 test947 test948 test949 test950 test951 test952 test953 \
 test954 test955 test956 test957 test958 test959 test960 test961 test962 \
 test963 test964 test965 test966 test967 test968 test969 test970 test971 \
-test972 \
+test972 test973 test974 test975 test976 \
 \
 test980 test981 test982 test983 test984 test985 test986 \
 \
@@ -568,6 +571,10 @@ test1630 test1631 test1632 test1633 test1634 \
 test1650 test1651 test1652 test1653 test1654 test1655 \
 test1660 test1661 \
 \
+test1670 test1671 \
+\
+test1680 test1681 test1682 test1683 \
+\
 test1700 test1701 test1702 test1703 \
 \
 test1800 test1801 \
@@ -576,7 +583,8 @@ test1800 test1801 \
 test1908 test1909 test1910 test1911 test1912 test1913 test1914 test1915 \
 test1916 test1917 test1918 \
 \
-test1933 test1934 test1935 test1936 test1937 test1938 test1939 \
+test1933 test1934 test1935 test1936 test1937 test1938 test1939 test1940 \
+test1941 test1942 test1943 test1944 test1945 test1946 \
 \
 test2000 test2001 test2002 test2003 test2004 \
 \

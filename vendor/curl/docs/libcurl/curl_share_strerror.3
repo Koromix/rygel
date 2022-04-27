@@ -19,7 +19,7 @@
 .\" * KIND, either express or implied.
 .\" *
 .\" **************************************************************************
-.TH curl_share_strerror 3 "January 05, 2022" "libcurl 7.82.0" "libcurl Manual"
+.TH curl_share_strerror 3 "April 15, 2022" "libcurl 7.83.0" "libcurl Manual"
 
 .SH NAME
 curl_share_strerror - return string describing error code
@@ -32,7 +32,7 @@ The curl_share_strerror() function returns a string describing the CURLSHcode
 error code passed in the argument \fIerrornum\fP.
 .SH EXAMPLE
 .nf
-  CURLSHcode sh
+  CURLSHcode sh;
   share = curl_share_init();
   sh = curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
   if(sh)

@@ -18,11 +18,16 @@ The C API for Hyper is brand new and is still under development.
 
 ## build curl with hyper
 
-Build hyper and enable the C API:
+Since March 3 2022, hyper needs the nightly rustc to build, which you may need
+to install first with:
+
+     % rustup toolchain install nightly
+
+Then build hyper and enable its C API like this:
 
      % git clone https://github.com/hyperium/hyper
      % cd hyper
-     % RUSTFLAGS="--cfg hyper_unstable_ffi" cargo build --features client,http1,http2,ffi
+     % RUSTFLAGS="--cfg hyper_unstable_ffi" cargo +nightly rustc --features client,http1,http2,ffi -Z unstable-options --crate-type cdylib
 
 Build curl to use hyper's C API:
 
@@ -51,8 +56,9 @@ The hyper backend does not support
 - `CURLOPT_IGNORE_CONTENT_LENGTH`
 - `--raw` and disabling `CURLOPT_HTTP_TRANSFER_DECODING`
 - RTSP
-- hyper is much stricter about what HTTP header contents it allow in requests
+- hyper is much stricter about what HTTP header contents it allows
 - HTTP/0.9
+- HTTP/2 upgrade using HTTP:// URLs. Aka 'h2c'
 
 ## Remaining issues
 

@@ -719,7 +719,6 @@ static CURLcode multi_done(struct Curl_easy *data,
   }
 
   Curl_safefree(data->state.buffer);
-  Curl_free_request_state(data);
   return result;
 }
 
@@ -1794,7 +1793,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
     rc = CURLM_OK;
 
     if(multi_ischanged(multi, TRUE)) {
-      DEBUGF(infof(data, "multi changed, check CONNECT_PEND queue!"));
+      DEBUGF(infof(data, "multi changed, check CONNECT_PEND queue"));
       process_pending_handles(multi); /* multiplexed */
     }
 
@@ -2381,7 +2380,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
         CURLcode ret = Curl_retry_request(data, &newurl);
 
         if(!ret) {
-          infof(data, "Downgrades to HTTP/1.1!");
+          infof(data, "Downgrades to HTTP/1.1");
           streamclose(data->conn, "Disconnect HTTP/2 for HTTP/1");
           data->state.httpwant = CURL_HTTP_VERSION_1_1;
           /* clear the error message bit too as we ignore the one we got */

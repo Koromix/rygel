@@ -5,7 +5,7 @@
 .\" *                            | (__| |_| |  _ <| |___
 .\" *                             \___|\___/|_| \_\_____|
 .\" *
-.\" * Copyright (C) 1998 - 2021, Daniel Stenberg, <daniel@haxx.se>, et al.
+.\" * Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
 .\" *
 .\" * This software is licensed as described in the file COPYING, which
 .\" * you should have received as part of this distribution. The terms
@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH libcurl-tutorial 3 "December 20, 2021" "libcurl 7.82.0" "libcurl programming"
+.TH libcurl-tutorial 3 "April 21, 2022" "libcurl 7.83.0" "libcurl programming"
 
 .SH NAME
 libcurl-tutorial \- libcurl programming tutorial
@@ -78,9 +78,8 @@ for different libcurls.
 See also the "Features libcurl Provides" further down.
 .IP "autoconf macro"
 When you write your configure script to detect libcurl and setup variables
-accordingly, we offer a prewritten macro that probably does everything you
-need in this area. See docs/libcurl/libcurl.m4 file - it includes docs on how
-to use it.
+accordingly, we offer a macro that probably does everything you need in this
+area. See docs/libcurl/libcurl.m4 file - it includes docs on how to use it.
 
 .SH "Portable Code in a Portable World"
 The people behind libcurl have put a considerable effort to make libcurl work
@@ -132,8 +131,8 @@ Repeated calls to \fIcurl_global_init(3)\fP and \fIcurl_global_cleanup(3)\fP
 should be avoided. They should only be called once each.
 
 .SH "Features libcurl Provides"
-It is considered best-practice to determine libcurl features at run-time
-rather than at build-time (if possible of course). By calling
+It is considered best-practice to determine libcurl features at runtime rather
+than at build-time (if possible of course). By calling
 \fIcurl_version_info(3)\fP and checking out the details of the returned
 struct, your program can figure out exactly what the currently running libcurl
 supports.
@@ -444,12 +443,12 @@ Simple enough, huh? Since you set the POST options with the
 \fICURLOPT_POSTFIELDS(3)\fP, this automatically switches the handle to use
 POST in the upcoming request.
 
-Ok, so what if you want to post binary data that also requires you to set the
-Content-Type: header of the post? Well, binary posts prevent libcurl from
-being able to do strlen() on the data to figure out the size, so therefore we
-must tell libcurl the size of the post data. Setting headers in libcurl
-requests are done in a generic way, by building a list of our own headers and
-then passing that list to libcurl.
+What if you want to post binary data that also requires you to set the
+Content-Type: header of the post? Well, binary posts prevent libcurl from being
+able to do strlen() on the data to figure out the size, so therefore we must
+tell libcurl the size of the post data. Setting headers in libcurl requests are
+done in a generic way, by building a list of our own headers and then passing
+that list to libcurl.
 
 .nf
  struct curl_slist *headers=NULL;
@@ -852,7 +851,7 @@ SSL is for secure point-to-point connections. This involves strong encryption
 and similar things, which effectively makes it impossible for a proxy to
 operate as a "man in between" which the proxy's task is, as previously
 discussed. Instead, the only way to have SSL work over an HTTP proxy is to ask
-the proxy to tunnel trough everything without being able to check or fiddle
+the proxy to tunnel everything through without being able to check or fiddle
 with the traffic.
 
 Opening an SSL connection over an HTTP proxy is therefore a matter of asking the
@@ -893,24 +892,24 @@ stand in the way for such innovative actions either!
 .IP "Proxy Auto-Config"
 
 Netscape first came up with this. It is basically a web page (usually using a
-\&.pac extension) with a Javascript that when executed by the browser with the
+\&.pac extension) with a JavaScript that when executed by the browser with the
 requested URL as input, returns information to the browser on how to connect
 to the URL. The returned information might be "DIRECT" (which means no proxy
 should be used), "PROXY host:port" (to tell the browser where the proxy for
 this particular URL is) or "SOCKS host:port" (to direct the browser to a SOCKS
 proxy).
 
-libcurl has no means to interpret or evaluate Javascript and thus it does not
+libcurl has no means to interpret or evaluate JavaScript and thus it does not
 support this. If you get yourself in a position where you face this nasty
 invention, the following advice have been mentioned and used in the past:
 
-- Depending on the Javascript complexity, write up a script that translates it
+- Depending on the JavaScript complexity, write up a script that translates it
 to another language and execute that.
 
-- Read the Javascript code and rewrite the same logic in another language.
+- Read the JavaScript code and rewrite the same logic in another language.
 
-- Implement a Javascript interpreter; people have successfully used the
-Mozilla Javascript engine in the past.
+- Implement a JavaScript interpreter; people have successfully used the
+Mozilla JavaScript engine in the past.
 
 - Ask your admins to stop this, for a static proxy setup or similar.
 

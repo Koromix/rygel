@@ -2,7 +2,7 @@
 
 ## Cookie overview
 
-  Cookies are `name=contents` pairs that a HTTP server tells the client to
+  Cookies are `name=contents` pairs that an HTTP server tells the client to
   hold and then the client sends back those to the server on subsequent
   requests to the same domains and paths for which the cookies were set.
 
@@ -111,23 +111,23 @@
   `CURLOPT_COOKIELIST`
 
   Provide detailed information about a single cookie to add to the internal
-  storage of cookies. Pass in the cookie as a HTTP header with all the details
-  set, or pass in a line from a Netscape cookie file. This option can also be
-  used to flush the cookies etc.
+  storage of cookies. Pass in the cookie as an HTTP header with all the
+  details set, or pass in a line from a Netscape cookie file. This option can
+  also be used to flush the cookies etc.
 
   `CURLINFO_COOKIELIST`
 
   Extract cookie information from the internal cookie storage as a linked
   list.
 
-## Cookies with javascript
+## Cookies with JavaScript
 
-  These days a lot of the web is built up by javascript. The webbrowser loads
-  complete programs that render the page you see. These javascript programs
+  These days a lot of the web is built up by JavaScript. The webbrowser loads
+  complete programs that render the page you see. These JavaScript programs
   can also set and access cookies.
 
   Since curl and libcurl are plain HTTP clients without any knowledge of or
-  capability to handle javascript, such cookies will not be detected or used.
+  capability to handle JavaScript, such cookies will not be detected or used.
 
   Often, if you want to mimic what a browser does on such websites, you can
   record web browser HTTP traffic when using such a site and then repeat the

@@ -140,6 +140,7 @@ DPAGES = \
   next.d \
   no-alpn.d \
   no-buffer.d \
+  no-clobber.d \
   no-keepalive.d \
   no-npn.d \
   no-progress-meter.d \
@@ -203,6 +204,7 @@ DPAGES = \
   remote-name-all.d \
   remote-name.d \
   remote-time.d \
+  remove-on-error.d \
   request-target.d \
   request.d \
   resolve.d \

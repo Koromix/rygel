@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 2019 - 2021, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 2019 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -22,6 +22,7 @@
 #include "test.h"
 
 #include "testutil.h"
+#include "timediff.h"
 #include "warnless.h"
 #include "memdebug.h"
 
@@ -73,8 +74,7 @@ int test(char *URL)
     curl_multi_timeout(cm, &max_tout);
 
     if(max_tout > 0) {
-      timeout.tv_sec = max_tout / 1000;
-      timeout.tv_usec = (max_tout % 1000) * 1000;
+      curlx_mstotv(&timeout, max_tout);
     }
     else {
       timeout.tv_sec = 0;

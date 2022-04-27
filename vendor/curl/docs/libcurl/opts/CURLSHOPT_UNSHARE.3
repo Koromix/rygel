@@ -19,7 +19,7 @@
 .\" * KIND, either express or implied.
 .\" *
 .\" **************************************************************************
-.TH CURLSHOPT_UNSHARE 3 "November 12, 2021" "libcurl 7.82.0" "libcurl Manual"
+.TH CURLSHOPT_UNSHARE 3 "April 15, 2022" "libcurl 7.83.0" "libcurl Manual"
 
 .SH NAME
 CURLSHOPT_UNSHARE - remove data to share
@@ -54,7 +54,7 @@ The Public Suffix List is no longer shared.
 All
 .SH EXAMPLE
 .nf
-  CURLSHcode sh
+  CURLSHcode sh;
   share = curl_share_init();
   sh = curl_share_setopt(share, CURLSHOPT_UNSHARE, CURL_LOCK_DATA_COOKIE);
   if(sh)

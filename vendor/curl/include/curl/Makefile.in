@@ -235,6 +235,7 @@ CURL_DISABLE_TFTP = @CURL_DISABLE_TFTP@
 CURL_LT_SHLIB_VERSIONED_FLAVOUR = @CURL_LT_SHLIB_VERSIONED_FLAVOUR@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CURL_NETWORK_LIBS = @CURL_NETWORK_LIBS@
+CURL_PLIST_VERSION = @CURL_PLIST_VERSION@
 CURL_WITH_MULTI_SSL = @CURL_WITH_MULTI_SSL@
 CYGPATH_W = @CYGPATH_W@
 DEFAULT_SSL_BACKEND = @DEFAULT_SSL_BACKEND@
@@ -252,6 +253,7 @@ ENABLE_STATIC = @ENABLE_STATIC@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FILECMD = @FILECMD@
 FISH_FUNCTIONS_DIR = @FISH_FUNCTIONS_DIR@
 GCOV = @GCOV@
 GREP = @GREP@
@@ -327,6 +329,7 @@ USE_LIBRTMP = @USE_LIBRTMP@
 USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
 USE_MBEDTLS = @USE_MBEDTLS@
+USE_MSH3 = @USE_MSH3@
 USE_NGHTTP2 = @USE_NGHTTP2@
 USE_NGHTTP3 = @USE_NGHTTP3@
 USE_NGTCP2 = @USE_NGTCP2@
@@ -411,7 +414,7 @@ top_srcdir = @top_srcdir@
 #                            | (__| |_| |  _ <| |___
 #                             \___|\___/|_| \_\_____|
 #
-# Copyright (C) 1998 - 2020, Daniel Stenberg, <daniel@haxx.se>, et al.
+# Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
@@ -427,7 +430,7 @@ top_srcdir = @top_srcdir@
 ###########################################################################
 pkginclude_HEADERS = \
   curl.h curlver.h easy.h mprintf.h stdcheaders.h multi.h \
-  typecheck-gcc.h system.h urlapi.h options.h
+  typecheck-gcc.h system.h urlapi.h options.h header.h
 
 CHECKSRC = $(CS_$(V))
 CS_0 = @echo "  RUN     " $@;
@@ -701,7 +704,7 @@ uninstall-am: uninstall-pkgincludeHEADERS
 
 
 checksrc:
-	$(CHECKSRC)@PERL@ $(top_srcdir)/lib/checksrc.pl -D$(top_srcdir)/include/curl $(pkginclude_HEADERS)
+	$(CHECKSRC)@PERL@ $(top_srcdir)/scripts/checksrc.pl -D$(top_srcdir)/include/curl $(pkginclude_HEADERS)
 
 # for debug builds, we scan the sources on all regular make invokes
 @CURLDEBUG_TRUE@all-local: checksrc

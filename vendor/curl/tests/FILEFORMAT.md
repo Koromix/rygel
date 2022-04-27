@@ -56,7 +56,7 @@ For example, to insert the binary octets 0, 1 and 255 into the test file:
 ## Repeat content
 
 In the preprocess stage, a special instruction can be used to have runtests.pl
-generate a repetetive sequence of bytes.
+generate a repetitive sequence of bytes.
 
 To insert a sequence of repeat bytes, use this syntax to make the `<string>`
 get repeated `<number>` of times. The number has to be 1 or larger and the
@@ -79,7 +79,7 @@ outputs nothing, until a following else or endif clause. Like this:
     Accept-Encoding
     %endif
 
-It can also check for the inversed condition, so if the feature us *not* set by
+It can also check for the inverse condition, so if the feature is *not* set by
 the use of an exclamation mark:
 
     %if !brotli
@@ -376,6 +376,7 @@ SKIPPED.
 Features testable here are:
 
 - `alt-svc`
+- `bearssl`
 - `c-ares`
 - `cookies`
 - `crypto`
@@ -384,6 +385,7 @@ Features testable here are:
 - `getrlimit`
 - `GnuTLS`
 - `GSS-API`
+- `h2c`
 - `HSTS`
 - `HTTP-auth`
 - `http/2`
@@ -395,7 +397,7 @@ Features testable here are:
 - `ld_preload`
 - `libssh2`
 - `libssh`
-- `oldlibssh` (versions before 0.9.6)
+- `oldlibssh` (versions before 0.9.4)
 - `libz`
 - `manual`
 - `Mime`

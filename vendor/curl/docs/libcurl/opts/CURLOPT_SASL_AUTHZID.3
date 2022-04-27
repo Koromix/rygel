@@ -20,10 +20,10 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_SASL_AUTHZID 3 "January 10, 2022" "libcurl 7.82.0" "curl_easy_setopt options"
+.TH CURLOPT_SASL_AUTHZID 3 "April 05, 2022" "libcurl 7.83.0" "curl_easy_setopt options"
 
 .SH NAME
-CURLOPT_SASL_AUTHZID \- authorisation identity (identity to act as)
+CURLOPT_SASL_AUTHZID \- authorization identity (identity to act as)
 .SH SYNOPSIS
 .nf
 #include <curl/curl.h>
@@ -32,7 +32,7 @@ CURLcode curl_easy_setopt(CURL *handle, CURLOPT_SASL_AUTHZID, char *authzid);
 .fi
 .SH DESCRIPTION
 Pass a char * as parameter, which should be pointing to the null-terminated
-authorisation identity (authzid) for the transfer. Only applicable to the PLAIN
+authorization identity (authzid) for the transfer. Only applicable to the PLAIN
 SASL authentication mechanism where it is optional.
 
 When not specified only the authentication identity (authcid) as specified by

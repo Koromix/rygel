@@ -64,6 +64,7 @@
  4.1 HOST
  4.2 Alter passive/active on failure and retry
  4.3 Earlier bad letter detection
+ 4.4 Support CURLOPT_PREQUOTE for dir listings too
  4.5 ASCII support
  4.6 GSSAPI via Windows SSPI
  4.7 STAT for LIST without data connection
@@ -80,6 +81,7 @@
  6.1 ditch stdin
  6.2 ditch telnet-specific select
  6.3 feature negotiation debug data
+ 6.4 exit immediately upon connection if stdin is /dev/null
 
  7. SMTP
  7.1 Passing NOTIFY option to CURLOPT_MAIL_RCPT
@@ -136,13 +138,14 @@
  17. SSH protocols
  17.1 Multiplexing
  17.2 Handle growing SFTP files
+ 17.3 Read keys from ~/.ssh/id_ecdsa, id_ed25519
  17.4 Support CURLOPT_PREQUOTE
  17.5 SSH over HTTPS proxy with more backends
+ 17.6 SFTP with SCP://
 
  18. Command line tool
  18.1 sync
  18.2 glob posts
- 18.3 prevent file overwriting
  18.4 --proxycommand
  18.5 UTF-8 filenames in Content-Disposition
  18.6 Option to make -Z merge lined based outputs on stdout
@@ -181,7 +184,7 @@
  20.5 Add support for concurrent connections
  20.6 Use the RFC6265 test suite
  20.7 Support LD_PRELOAD on macOS
- 20.8 Run web-platform-tests url tests
+ 20.8 Run web-platform-tests URL tests
 
  21. MQTT
  21.1 Support rate-limiting
@@ -307,10 +310,11 @@
  reuse purpose it is verified that it is still alive.
 
  Those connections may get closed by the server side for idleness or they may
- get a HTTP/2 ping from the peer to verify that they are still alive. By adding
- monitoring of the connections while in the pool, libcurl can detect dead
- connections (and close them) better and earlier, and it can handle HTTP/2
- pings to keep such ones alive even when not actively doing transfers on them.
+ get an HTTP/2 ping from the peer to verify that they are still alive. By
+ adding monitoring of the connections while in the pool, libcurl can detect
+ dead connections (and close them) better and earlier, and it can handle
+ HTTP/2 pings to keep such ones alive even when not actively doing transfers
+ on them.
 
 1.16 Try to URL encode given URL
 
@@ -531,6 +535,13 @@
  Make the detection of (bad) %0d and %0a codes in FTP URL parts earlier in the
  process to avoid doing a resolve and connect in vain.
 
+4.4 Support CURLOPT_PREQUOTE for dir listings too
+
+ The lack of support is mostly an oversight and requires the FTP state machine
+ to get updated to get fixed.
+
+ https://github.com/curl/curl/issues/8602
+
 4.5 ASCII support
 
  FTP ASCII transfers do not follow RFC959. They do not convert the data
@@ -626,6 +637,13 @@
 
  Add telnet feature negotiation data to the debug callback as header data.
 
+6.4 exit immediately upon connection if stdin is /dev/null
+
+ If it did, curl could be used to probe if there's an server there listening
+ on a specific port. That is, the following command would exit immediately
+ after the connection is established with exit code 0:
+
+    curl -s --connect-timeout 2 telnet://example.com:80 </dev/null
 
 7. SMTP
 
@@ -912,6 +930,14 @@
 
  https://github.com/curl/curl/issues/4344
 
+17.3 Read keys from ~/.ssh/id_ecdsa, id_ed25519
+
+ The libssh2 backend in curl is limited to only reading keys from id_rsa and
+ id_dsa, which makes it fail connecting to servers that use more modern key
+ types.
+
+ https://github.com/curl/curl/issues/8586
+
 17.4 Support CURLOPT_PREQUOTE
 
  The two other QUOTE options are supported for SFTP, but this was left out for
@@ -923,6 +949,12 @@
  all until PR https://github.com/curl/curl/pull/6021 brought the
  functionality with the libssh2 backend. Presumably, this support
  can/could be added for the other backends as well.
+
+17.6 SFTP with SCP://
+
+ OpenSSH 9 switched their 'scp' tool to speak SFTP under the hood. Going
+ forward it might be worth having curl or libcurl attempt SFTP if SCP fails to
+ follow suite.
 
 18. Command line tool
 
@@ -939,14 +971,6 @@
 
  Globbing support for -d and -F, as in 'curl -d "name=foo[0-9]" URL'.
  This is easily scripted though.
-
-18.3 prevent file overwriting
-
- Add an option that prevents curl from overwriting existing local files. When
- used, and there already is an existing file with the target file name
- (either -O or -o), a number should be appended (and increased if already
- existing). So that index.html becomes first index.html.1 and then
- index.html.2 etc.
 
 18.4 --proxycommand
 
@@ -1117,9 +1141,9 @@
 18.21 retry on the redirected-to URL
 
  When curl is told to --retry a failed transfer and follows redirects, it
- might get a HTTP 429 response from the redirected-to URL and not the original
- one, which then could make curl decide to rather retry the transfer on that
- URL only instead of the original operation to the original URL.
+ might get an HTTP 429 response from the redirected-to URL and not the
+ original one, which then could make curl decide to rather retry the transfer
+ on that URL only instead of the original operation to the original URL.
 
  Perhaps extra emphasized if the original transfer is a large POST that
  redirects to a separate GET, and that GET is what gets the 529
@@ -1261,9 +1285,9 @@
  properly. Look into making the preload support in runtests.pl portable such
  that it uses DYLD_INSERT_LIBRARIES on macOS.
 
-20.8 Run web-platform-tests url tests
+20.8 Run web-platform-tests URL tests
 
- Run web-platform-tests url tests and compare results with browsers on wpt.fyi
+ Run web-platform-tests URL tests and compare results with browsers on wpt.fyi
 
  It would help us find issues to fix and help us document where our parser
  differs from the WHATWG URL spec parsers.

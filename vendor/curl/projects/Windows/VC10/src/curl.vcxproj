@@ -2632,6 +2632,7 @@
     <ClCompile Include="..\..\..\..\lib\dynbuf.c" />
     <ClCompile Include="..\..\..\..\lib\nonblock.c" />
     <ClCompile Include="..\..\..\..\lib\strtoofft.c" />
+    <ClCompile Include="..\..\..\..\lib\timediff.c" />
     <ClCompile Include="..\..\..\..\lib\version_win32.c" />
     <ClCompile Include="..\..\..\..\lib\warnless.c" />
     <ClCompile Include="..\..\..\..\src\slist_wc.c" />
@@ -2683,6 +2684,7 @@
     <ClInclude Include="..\..\..\..\lib\dynbuf.h" />
     <ClInclude Include="..\..\..\..\lib\nonblock.h" />
     <ClInclude Include="..\..\..\..\lib\strtoofft.h" />
+    <ClInclude Include="..\..\..\..\lib\timediff.h" />
     <ClInclude Include="..\..\..\..\lib\version_win32.h" />
     <ClInclude Include="..\..\..\..\lib\warnless.h" />
     <ClInclude Include="..\..\..\..\src\slist_wc.h" />

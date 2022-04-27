@@ -76,11 +76,13 @@ LIB_VTLS_HFILES =           \
   vtls/x509asn1.h
 
 LIB_VQUIC_CFILES = \
+  vquic/msh3.c   \
   vquic/ngtcp2.c   \
   vquic/quiche.c   \
   vquic/vquic.c
 
 LIB_VQUIC_HFILES = \
+  vquic/msh3.h   \
   vquic/ngtcp2.h   \
   vquic/quiche.h   \
   vquic/vquic.h
@@ -141,6 +143,7 @@ LIB_CFILES =         \
   gopher.c           \
   h2h3.c             \
   hash.c             \
+  headers.c          \
   hmac.c             \
   hostasyn.c         \
   hostip.c           \
@@ -204,6 +207,7 @@ LIB_CFILES =         \
   system_win32.c     \
   telnet.c           \
   tftp.c             \
+  timediff.c         \
   timeval.c          \
   transfer.c         \
   url.c              \
@@ -270,6 +274,7 @@ LIB_HFILES =         \
   gopher.h           \
   h2h3.h             \
   hash.h             \
+  headers.h          \
   hostip.h           \
   hsts.h             \
   http.h             \
@@ -323,6 +328,7 @@ LIB_HFILES =         \
   system_win32.h     \
   telnet.h           \
   tftp.h             \
+  timediff.h         \
   timeval.h          \
   transfer.h         \
   url.h              \

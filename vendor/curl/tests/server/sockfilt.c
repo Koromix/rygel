@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2021, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -107,6 +107,7 @@
 #include "inet_pton.h"
 #include "util.h"
 #include "server_sockaddr.h"
+#include "timediff.h"
 #include "warnless.h"
 
 /* include memdebug.h last */
@@ -639,7 +640,7 @@ static int select_ws(int nfds, fd_set *readfds, fd_set *writefds,
 
   /* convert struct timeval to milliseconds */
   if(tv) {
-    timeout_ms = (tv->tv_sec*1000) + (DWORD)(((double)tv->tv_usec)/1000.0);
+    timeout_ms = (DWORD)curlx_tvtoms(tv);
   }
   else {
     timeout_ms = INFINITE;

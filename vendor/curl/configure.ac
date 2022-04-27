@@ -31,7 +31,7 @@ XC_OVR_ZZ60
 CURL_OVERRIDE_AUTOCONF
 
 dnl configure script copyright
-AC_COPYRIGHT([Copyright (c) 1998 - 2021 Daniel Stenberg, <daniel@haxx.se>
+AC_COPYRIGHT([Copyright (c) 1998 - 2022 Daniel Stenberg, <daniel@haxx.se>
 This configure script may be copied, distributed and modified under the
 terms of the curl license; see COPYING for more details])
 
@@ -165,11 +165,12 @@ curl_verbose_msg="enabled (--disable-verbose)"
    curl_rtmp_msg="no      (--with-librtmp)"
     curl_psl_msg="no      (--with-libpsl)"
  curl_altsvc_msg="enabled (--disable-alt-svc)"
+ curl_headers_msg="no      (--enable-headers-api)"
    curl_hsts_msg="enabled (--disable-hsts)"
     ssl_backends=
      curl_h1_msg="enabled (internal)"
      curl_h2_msg="no      (--with-nghttp2, --with-hyper)"
-     curl_h3_msg="no      (--with-ngtcp2, --with-quiche)"
+     curl_h3_msg="no      (--with-ngtcp2, --with-quiche --with-msh3)"
 
 enable_altsvc="yes"
 hsts="yes"
@@ -2332,6 +2333,10 @@ AC_SUBST([CURL_LT_SHLIB_VERSIONED_FLAVOUR],
 AM_CONDITIONAL([CURL_LT_SHLIB_USE_VERSIONED_SYMBOLS],
   [test "x$versioned_symbols" = 'xyes'])
 
+dnl Update .plist file with current version
+AC_SUBST([CURL_PLIST_VERSION],
+  ["$CURLVERSION"])
+
 dnl -------------------------------------------------
 dnl check winidn option before other IDN libraries
 dnl -------------------------------------------------
@@ -3036,6 +3041,78 @@ AC_INCLUDES_DEFAULT
 fi
 
 dnl **********************************************************************
+dnl Check for msh3 (QUIC)
+dnl **********************************************************************
+
+OPT_MSH3="no"
+
+if test "x$disable_http" = "xyes" -o "x$USE_NGTCP" = "x1"; then
+  # without HTTP or with ngtcp2, msh3 is no use
+  OPT_MSH3="no"
+fi
+
+AC_ARG_WITH(msh3,
+AS_HELP_STRING([--with-msh3=PATH],[Enable msh3 usage])
+AS_HELP_STRING([--without-msh3],[Disable msh3 usage]),
+  [OPT_MSH3=$withval])
+case "$OPT_MSH3" in
+  no)
+    dnl --without-msh3 option used
+    want_msh3="no"
+    ;;
+  yes)
+    dnl --with-msh3 option used without path
+    want_msh3="default"
+    want_msh3_path=""
+    ;;
+  *)
+    dnl --with-msh3 option used with path
+    want_msh3="yes"
+    want_msh3_path="$withval"
+    ;;
+esac
+
+if test X"$want_msh3" != Xno; then
+
+  if test "$NGHTTP3_ENABLED" = 1; then
+    AC_MSG_ERROR([--with-msh3 and --with-ngtcp2 are mutually exclusive])
+  fi
+
+  dnl backup the pre-msh3 variables
+  CLEANLDFLAGS="$LDFLAGS"
+  CLEANCPPFLAGS="$CPPFLAGS"
+  CLEANLIBS="$LIBS"
+
+  if test -n "$want_msh3_path"; then
+    LD_MSH3="-L$want_msh3_path/lib"
+    CPP_MSH3="-I$want_msh3_path/include"
+    DIR_MSH3="$want_msh3_path/lib"
+    LDFLAGS="$LDFLAGS $LD_MSH3"
+    CPPFLAGS="$CPPFLAGS $CPP_MSH3"
+  fi
+  LIBS="-lmsh3 $LIBS"
+
+  AC_CHECK_LIB(msh3, MsH3ApiOpen,
+    [
+    AC_CHECK_HEADERS(msh3.h,
+        curl_h3_msg="enabled (msh3)"
+        MSH3_ENABLED=1
+        AC_DEFINE(USE_MSH3, 1, [if msh3 is in use])
+        AC_SUBST(USE_MSH3, [1])
+        CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_MSH3"
+        export CURL_LIBRARY_PATH
+        AC_MSG_NOTICE([Added $DIR_MSH3 to CURL_LIBRARY_PATH]),
+        experimental="$experimental HTTP3"
+     )
+    ],
+      dnl not found, revert back to clean variables
+      LDFLAGS=$CLEANLDFLAGS
+      CPPFLAGS=$CLEANCPPFLAGS
+      LIBS=$CLEANLIBS
+  )
+fi
+
+dnl **********************************************************************
 dnl Check for zsh completion path
 dnl **********************************************************************
 
@@ -3522,23 +3599,27 @@ if test "$want_pthreads" != "no"; then
          dnl it doesn't actually work without -lpthread
          USE_THREADS_POSIX=""
          ;;
-      *-ibm-aix*)
-         dnl Check if compiler is xlC
-         COMPILER_VERSION=`"$CC" -qversion 2>/dev/null`
-         if test x"$COMPILER_VERSION" = "x"; then
-           CFLAGS="$CFLAGS -pthread"
-         else
-           CFLAGS="$CFLAGS -qthreaded"
-         fi
-         ;;
       *)
-         CFLAGS="$CFLAGS -pthread"
          ;;
       esac
 
       dnl if it wasn't found without lib, search for it in pthread lib
       if test "$USE_THREADS_POSIX" != "1"
       then
+        case $host in
+        *-ibm-aix*)
+           dnl Check if compiler is xlC
+           COMPILER_VERSION=`"$CC" -qversion 2>/dev/null`
+           if test x"$COMPILER_VERSION" = "x"; then
+             CFLAGS="$CFLAGS -pthread"
+           else
+             CFLAGS="$CFLAGS -qthreaded"
+           fi
+           ;;
+        *)
+           CFLAGS="$CFLAGS -pthread"
+           ;;
+        esac
         # assign PTHREAD for pkg-config use
         PTHREAD=" -pthread"
         AC_CHECK_LIB(pthread, pthread_create,
@@ -3927,6 +4008,25 @@ AS_HELP_STRING([--disable-alt-svc],[Disable alt-svc support]),
        AC_MSG_RESULT(yes)
 )
 
+dnl ************************************************************
+dnl switch on/off headers-api
+dnl
+AC_MSG_CHECKING([whether to support headers-api])
+AC_ARG_ENABLE(headers-api,
+AS_HELP_STRING([--enable-headers-api],[Enable headers-api support])
+AS_HELP_STRING([--disable-headers-api],[Disable headers-api support]),
+[ case "$enableval" in
+  yes)
+       AC_MSG_RESULT(yes)
+       AC_DEFINE(USE_HEADERS_API, 1, [enable headers-api])
+       curl_headers_msg="enabled";
+       ;;
+  *) AC_MSG_RESULT(no)
+       ;;
+  esac ],
+       AC_MSG_RESULT(no)
+)
+
 dnl only check for HSTS if there's SSL present
 if test -n "$SSL_ENABLED"; then
 
@@ -4122,7 +4222,8 @@ if test "x$USE_NGHTTP2" = "x1" -o "x$USE_HYPER" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES HTTP2"
 fi
 
-if test "x$USE_NGTCP2" = "x1" -o "x$USE_QUICHE" = "x1"; then
+if test "x$USE_NGTCP2" = "x1" -o "x$USE_QUICHE" = "x1" \
+    -o "x$USE_MSH3" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES HTTP3"
 fi
 
@@ -4285,6 +4386,7 @@ AC_CONFIG_FILES([Makefile \
            lib/Makefile \
            scripts/Makefile \
            lib/libcurl.vers \
+           lib/libcurl.plist \
            tests/Makefile \
            tests/certs/Makefile \
            tests/certs/scripts/Makefile \
@@ -4341,6 +4443,7 @@ AC_MSG_NOTICE([Configured to build curl/libcurl:
   RTMP:             ${curl_rtmp_msg}
   PSL:              ${curl_psl_msg}
   Alt-svc:          ${curl_altsvc_msg}
+  Headers API:      ${curl_headers_msg}
   HSTS:             ${curl_hsts_msg}
   HTTP1:            ${curl_h1_msg}
   HTTP2:            ${curl_h2_msg}

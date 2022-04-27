@@ -140,7 +140,7 @@ check_PROGRAMS = 10-at-a-time$(EXEEXT) altsvc$(EXEEXT) \
 	ftpgetresp$(EXEEXT) ftpsget$(EXEEXT) ftpupload$(EXEEXT) \
 	ftpuploadfrommem$(EXEEXT) ftpuploadresume$(EXEEXT) \
 	getinfo$(EXEEXT) getinmemory$(EXEEXT) getredirect$(EXEEXT) \
-	getreferrer$(EXEEXT) http-post$(EXEEXT) \
+	getreferrer$(EXEEXT) headerapi$(EXEEXT) http-post$(EXEEXT) \
 	http2-download$(EXEEXT) http2-pushinmemory$(EXEEXT) \
 	http2-serverpush$(EXEEXT) http2-upload$(EXEEXT) http3$(EXEEXT) \
 	http3-present$(EXEEXT) httpcustomheader$(EXEEXT) \
@@ -359,6 +359,13 @@ getreferrer_LDADD = $(LDADD)
 @USE_EXPLICIT_LIB_DEPS_FALSE@getreferrer_DEPENDENCIES =  \
 @USE_EXPLICIT_LIB_DEPS_FALSE@	$(LIBDIR)/libcurl.la
 @USE_EXPLICIT_LIB_DEPS_TRUE@getreferrer_DEPENDENCIES =  \
+@USE_EXPLICIT_LIB_DEPS_TRUE@	$(LIBDIR)/libcurl.la
+headerapi_SOURCES = headerapi.c
+headerapi_OBJECTS = headerapi.$(OBJEXT)
+headerapi_LDADD = $(LDADD)
+@USE_EXPLICIT_LIB_DEPS_FALSE@headerapi_DEPENDENCIES =  \
+@USE_EXPLICIT_LIB_DEPS_FALSE@	$(LIBDIR)/libcurl.la
+@USE_EXPLICIT_LIB_DEPS_TRUE@headerapi_DEPENDENCIES =  \
 @USE_EXPLICIT_LIB_DEPS_TRUE@	$(LIBDIR)/libcurl.la
 http_post_SOURCES = http-post.c
 http_post_OBJECTS = http-post.$(OBJEXT)
@@ -886,8 +893,8 @@ am__depfiles_remade = ./$(DEPDIR)/10-at-a-time.Po \
 	./$(DEPDIR)/ftpupload.Po ./$(DEPDIR)/ftpuploadfrommem.Po \
 	./$(DEPDIR)/ftpuploadresume.Po ./$(DEPDIR)/getinfo.Po \
 	./$(DEPDIR)/getinmemory.Po ./$(DEPDIR)/getredirect.Po \
-	./$(DEPDIR)/getreferrer.Po ./$(DEPDIR)/http-post.Po \
-	./$(DEPDIR)/http2-download.Po \
+	./$(DEPDIR)/getreferrer.Po ./$(DEPDIR)/headerapi.Po \
+	./$(DEPDIR)/http-post.Po ./$(DEPDIR)/http2-download.Po \
 	./$(DEPDIR)/http2-pushinmemory.Po \
 	./$(DEPDIR)/http2-serverpush.Po ./$(DEPDIR)/http2-upload.Po \
 	./$(DEPDIR)/http3-present.Po ./$(DEPDIR)/http3.Po \
@@ -949,7 +956,7 @@ SOURCES = 10-at-a-time.c altsvc.c anyauthput.c certinfo.c chkspeed.c \
 	fopen.c ftp-wildcard.c ftpget.c ftpgetinfo.c ftpgetresp.c \
 	ftpsget.c ftpupload.c ftpuploadfrommem.c ftpuploadresume.c \
 	getinfo.c getinmemory.c getredirect.c getreferrer.c \
-	http-post.c http2-download.c http2-pushinmemory.c \
+	headerapi.c http-post.c http2-download.c http2-pushinmemory.c \
 	http2-serverpush.c http2-upload.c http3.c http3-present.c \
 	httpcustomheader.c httpput.c httpput-postfields.c https.c \
 	imap-append.c imap-authzid.c imap-copy.c imap-create.c \
@@ -971,7 +978,7 @@ DIST_SOURCES = 10-at-a-time.c altsvc.c anyauthput.c certinfo.c \
 	fileupload.c fopen.c ftp-wildcard.c ftpget.c ftpgetinfo.c \
 	ftpgetresp.c ftpsget.c ftpupload.c ftpuploadfrommem.c \
 	ftpuploadresume.c getinfo.c getinmemory.c getredirect.c \
-	getreferrer.c http-post.c http2-download.c \
+	getreferrer.c headerapi.c http-post.c http2-download.c \
 	http2-pushinmemory.c http2-serverpush.c http2-upload.c http3.c \
 	http3-present.c httpcustomheader.c httpput.c \
 	httpput-postfields.c https.c imap-append.c imap-authzid.c \
@@ -1059,6 +1066,7 @@ CURL_DISABLE_TFTP = @CURL_DISABLE_TFTP@
 CURL_LT_SHLIB_VERSIONED_FLAVOUR = @CURL_LT_SHLIB_VERSIONED_FLAVOUR@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
 CURL_NETWORK_LIBS = @CURL_NETWORK_LIBS@
+CURL_PLIST_VERSION = @CURL_PLIST_VERSION@
 CURL_WITH_MULTI_SSL = @CURL_WITH_MULTI_SSL@
 CYGPATH_W = @CYGPATH_W@
 DEFAULT_SSL_BACKEND = @DEFAULT_SSL_BACKEND@
@@ -1076,6 +1084,7 @@ ENABLE_STATIC = @ENABLE_STATIC@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FILECMD = @FILECMD@
 FISH_FUNCTIONS_DIR = @FISH_FUNCTIONS_DIR@
 GCOV = @GCOV@
 GREP = @GREP@
@@ -1153,6 +1162,7 @@ USE_LIBRTMP = @USE_LIBRTMP@
 USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
 USE_MBEDTLS = @USE_MBEDTLS@
+USE_MSH3 = @USE_MSH3@
 USE_NGHTTP2 = @USE_NGHTTP2@
 USE_NGHTTP3 = @USE_NGHTTP3@
 USE_NGTCP2 = @USE_NGTCP2@
@@ -1410,6 +1420,10 @@ getredirect$(EXEEXT): $(getredirect_OBJECTS) $(getredirect_DEPENDENCIES) $(EXTRA
 getreferrer$(EXEEXT): $(getreferrer_OBJECTS) $(getreferrer_DEPENDENCIES) $(EXTRA_getreferrer_DEPENDENCIES) 
 	@rm -f getreferrer$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(getreferrer_OBJECTS) $(getreferrer_LDADD) $(LIBS)
+
+headerapi$(EXEEXT): $(headerapi_OBJECTS) $(headerapi_DEPENDENCIES) $(EXTRA_headerapi_DEPENDENCIES) 
+	@rm -f headerapi$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(headerapi_OBJECTS) $(headerapi_LDADD) $(LIBS)
 
 http-post$(EXEEXT): $(http_post_OBJECTS) $(http_post_DEPENDENCIES) $(EXTRA_http_post_DEPENDENCIES) 
 	@rm -f http-post$(EXEEXT)
@@ -1727,6 +1741,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getinmemory.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getredirect.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getreferrer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/headerapi.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/http-post.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/http2-download.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/http2-pushinmemory.Po@am__quote@ # am--include-marker
@@ -1983,6 +1998,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/getinmemory.Po
 	-rm -f ./$(DEPDIR)/getredirect.Po
 	-rm -f ./$(DEPDIR)/getreferrer.Po
+	-rm -f ./$(DEPDIR)/headerapi.Po
 	-rm -f ./$(DEPDIR)/http-post.Po
 	-rm -f ./$(DEPDIR)/http2-download.Po
 	-rm -f ./$(DEPDIR)/http2-pushinmemory.Po
@@ -2122,6 +2138,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/getinmemory.Po
 	-rm -f ./$(DEPDIR)/getredirect.Po
 	-rm -f ./$(DEPDIR)/getreferrer.Po
+	-rm -f ./$(DEPDIR)/headerapi.Po
 	-rm -f ./$(DEPDIR)/http-post.Po
 	-rm -f ./$(DEPDIR)/http2-download.Po
 	-rm -f ./$(DEPDIR)/http2-pushinmemory.Po
@@ -2236,7 +2253,7 @@ uninstall-am:
 all: $(check_PROGRAMS)
 
 checksrc:
-	$(CHECKSRC)(@PERL@ $(top_srcdir)/lib/checksrc.pl -D$(srcdir) $(srcdir)/*.c)
+	$(CHECKSRC)(@PERL@ $(top_srcdir)/scripts/checksrc.pl -D$(srcdir) $(srcdir)/*.c)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
