@@ -384,7 +384,7 @@ public:
             Fmt(&buf, " -flto");
         }
         if (warnings) {
-            Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter");
+            Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unknown-warning-option");
         } else {
             Fmt(&buf, " -Wno-everything");
         }
@@ -397,7 +397,7 @@ public:
             case HostPlatform::Windows: {
                 Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
                           " -D_MT -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -D_VC_NODEFAULTLIB"
-                          " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
+                          " -Wno-unknown-pragmas -Wno-deprecated-declarations");
             } break;
 
             case HostPlatform::macOS: {
