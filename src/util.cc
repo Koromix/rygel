@@ -81,36 +81,32 @@ const char *CallData::PushString(const Napi::Value &value)
 {
     RG_ASSERT(value.IsString());
 
-    const Size SmallSize = 32;
-
     Napi::Env env = value.Env();
-    napi_status status;
 
     Span<char> buf;
     size_t len = 0;
+    napi_status status;
 
-    // Optimize for small strings
-    buf.len = SmallSize;
-    if (RG_UNLIKELY(!AllocHeap(buf.len, 1, &buf.ptr)))
-        return nullptr;
-    if (RG_UNLIKELY(napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len) != napi_ok)) {
-        ThrowError<Napi::Error>(env, "Failed to convert string to UTF-8");
-        return nullptr;
-    }
+    buf.ptr = (char *)heap_mem->ptr;
+    buf.len = std::max((Size)0, heap_mem->len - Kibibytes(32));
 
-    // Slow path for bigger strings
-    if (len >= SmallSize - 1) {
+    status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
+    RG_ASSERT(status == napi_ok);
+
+    len++;
+
+    if (RG_LIKELY(len < (size_t)buf.len)) {
+        heap_mem->ptr += (Size)len;
+        heap_mem->len -= (Size)len;
+    } else {
         status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
         RG_ASSERT(status == napi_ok);
-        RG_ASSERT(len >= SmallSize);
 
-        buf.len = (Size)len + 1;
-        if (RG_UNLIKELY(!AllocHeap(buf.len - SmallSize, 1)))
-            return nullptr;
-        if (RG_UNLIKELY(napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len) != napi_ok)) {
-            ThrowError<Napi::Error>(env, "Failed to convert string to UTF-8");
-            return nullptr;
-        }
+        buf.ptr = (char *)Allocator::Allocate(&big_alloc, (Size)len);
+        buf.len = (Size)len;
+
+        status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
+        RG_ASSERT(status == napi_ok);
     }
 
     return buf.ptr;
