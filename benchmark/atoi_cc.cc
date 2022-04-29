@@ -36,7 +36,7 @@ int Main(int argc, char **argv)
     int64_t start = GetMonotonicTime();
 
     for (int i = 0; i < iterations; i++) {
-        sum += (uint64_t)atoi(strings[i % RG_LEN(strings)]);
+        sum = sum + (uint64_t)atoi(strings[i % RG_LEN(strings)]);
     }
 
     // Help prevent optimisation of loop
