@@ -60,7 +60,8 @@ async function test() {
     const ConcatenateToStr1 = lib.cdecl('ConcatenateToStr1', 'string', [...Array(8).fill('int8_t'), koffi.struct('IJK1', {i: 'int8_t', j: 'int8_t', k: 'int8_t'}), 'int8_t']);
     const ConcatenateToStr4 = lib.cdecl('ConcatenateToStr4', 'string', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', {i: 'int32_t', j: 'int32_t', k: 'int32_t'})), 'int32_t']);
     const ConcatenateToStr8 = lib.cdecl('ConcatenateToStr8', 'string', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
-    const MakeBFG = lib.stdcall('MakeBFG', BFG, ['int', 'double', koffi.out(koffi.pointer(BFG))]);
+    const MakeBFG = lib.stdcall('MakeBFG', BFG, ['int', 'double', 'string', koffi.out(koffi.pointer(BFG))]);
+    const ReturnBigString = lib.stdcall('ReturnBigString', 'string', ['string']);
 
     let p = {};
 
@@ -81,7 +82,10 @@ async function test() {
     assert.equal(ConcatenateToStr8(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
 
     let out = {};
-    let bfg = MakeBFG(2, 7, out);
-    assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'Hello', e: 54, inner: { f: 14, g: 5 } });
+    let bfg = MakeBFG(2, 7, '__Hello123456789++++foobarFOOBAR!__', out);
+    assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'X/__Hello123456789++++foobarFOOBAR!__/X', e: 54, inner: { f: 14, g: 5 } });
     assert.deepEqual(out, bfg);
+
+    let str = 'fooBAR!'.repeat(1024 * 1024);
+    assert.equal(ReturnBigString(str), str);
 }

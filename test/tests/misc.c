@@ -135,18 +135,31 @@ EXPORT const char *ConcatenateToStr8(int64_t a, int64_t b, int64_t c, int64_t d,
     return buf;
 }
 
-EXPORT BFG STDCALL MakeBFG(int x, double y, BFG *p)
+EXPORT BFG STDCALL MakeBFG(int x, double y, const char *str, BFG *p)
 {
     BFG bfg;
+
+    char buf[64];
+    snprintf(buf, sizeof(buf), "X/%s/X", str);
 
     bfg.a = x;
     bfg.b = x * 2;
     bfg.c = x - 27;
-    bfg.d = "Hello";
+    bfg.d = buf;
     bfg.e = x * 27;
     bfg.inner.f = (float)y * x;
     bfg.inner.g = (double)y - x;
     *p = bfg;
 
     return bfg;
+}
+
+EXPORT const char *ReturnBigString(const char *str)
+{
+    static char buf[1 * 1024 * 1024];
+
+    size_t len = strlen(str);
+    memcpy(buf, str, len + 1);
+
+    return buf;
 }
