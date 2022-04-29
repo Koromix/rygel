@@ -29,7 +29,7 @@ const BFG = koffi.struct('BFG', {
     c: 'char',
     d: 'string',
     e: 'short',
-    inner: koffi.struct('BFG.inner', {
+    inner: koffi.struct({
         f: 'float',
         g: 'double'
     })
@@ -40,7 +40,7 @@ const PackedBFG = koffi.pack('PackedBFG', {
     c: 'char',
     d: 'string',
     e: 'short',
-    inner: koffi.pack('PackedBFG.inner', {
+    inner: koffi.pack({
         f: 'float',
         g: 'double'
     })
