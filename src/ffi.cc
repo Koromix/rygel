@@ -75,7 +75,7 @@ static const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value val
     }
 }
 
-static Napi::Value CreateStructType(const Napi::CallbackInfo &info)
+static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -116,8 +116,10 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info)
         if (!member.type)
             return env.Null();
 
-        type->size = (int16_t)(AlignLen(type->size, member.type->align) + member.type->size);
-        type->align = std::max(type->align, member.type->align);
+        member.align = pad ? member.type->align : 1;
+
+        type->size = (int16_t)(AlignLen(type->size, member.align) + member.type->size);
+        type->align = std::max(type->align, member.align);
 
         type->members.Append(member);
     }
@@ -135,6 +137,16 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info)
     SetValueTag(instance, external, &TypeInfoMarker);
 
     return external;
+}
+
+static Napi::Value CreatePaddedStructType(const Napi::CallbackInfo &info)
+{
+    return CreateStructType(info, true);
+}
+
+static Napi::Value CreatePackedStructType(const Napi::CallbackInfo &info)
+{
+    return CreateStructType(info, false);
 }
 
 static Napi::Value CreateHandleType(const Napi::CallbackInfo &info)
@@ -564,7 +576,8 @@ InstanceData::InstanceData()
 template <typename Func>
 static void SetExports(Napi::Env env, Func func)
 {
-    func("struct", Napi::Function::New(env, CreateStructType));
+    func("struct", Napi::Function::New(env, CreatePaddedStructType));
+    func("pack", Napi::Function::New(env, CreatePackedStructType));
     func("handle", Napi::Function::New(env, CreateHandleType));
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("load", Napi::Function::New(env, LoadSharedLibrary));

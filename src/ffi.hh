@@ -89,6 +89,7 @@ struct TypeInfo {
 struct RecordMember {
     const char *name;
     const TypeInfo *type;
+    int16_t align;
 };
 
 struct LibraryHolder {

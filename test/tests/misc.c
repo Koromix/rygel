@@ -53,6 +53,19 @@ typedef struct BFG {
         double g;
     } inner;
 } BFG;
+#pragma pack(push, 1)
+typedef struct PackedBFG {
+    int8_t a;
+    int64_t b;
+    signed char c;
+    const char *d;
+    short e;
+    struct {
+        float f;
+        double g;
+    } inner;
+} PackedBFG;
+#pragma pack(pop)
 
 EXPORT void FillPack3(int a, int b, int c, Pack3 *p)
 {
@@ -135,9 +148,28 @@ EXPORT const char *ConcatenateToStr8(int64_t a, int64_t b, int64_t c, int64_t d,
     return buf;
 }
 
-EXPORT BFG STDCALL MakeBFG(int x, double y, const char *str, BFG *p)
+EXPORT BFG STDCALL MakeBFG(BFG *p, int x, double y, const char *str)
 {
     BFG bfg;
+
+    char buf[64];
+    snprintf(buf, sizeof(buf), "X/%s/X", str);
+
+    bfg.a = x;
+    bfg.b = x * 2;
+    bfg.c = x - 27;
+    bfg.d = buf;
+    bfg.e = x * 27;
+    bfg.inner.f = (float)y * x;
+    bfg.inner.g = (double)y - x;
+    *p = bfg;
+
+    return bfg;
+}
+
+EXPORT PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const char *str)
+{
+    PackedBFG bfg;
 
     char buf[64];
     snprintf(buf, sizeof(buf), "X/%s/X", str);

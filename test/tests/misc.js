@@ -34,6 +34,17 @@ const BFG = koffi.struct('BFG', {
         g: 'double'
     })
 });
+const PackedBFG = koffi.pack('PackedBFG', {
+    a: 'int8_t',
+    b: 'int64_t',
+    c: 'char',
+    d: 'string',
+    e: 'short',
+    inner: koffi.pack('PackedBFG.inner', {
+        f: 'float',
+        g: 'double'
+    })
+});
 
 main();
 
@@ -60,32 +71,53 @@ async function test() {
     const ConcatenateToStr1 = lib.cdecl('ConcatenateToStr1', 'string', [...Array(8).fill('int8_t'), koffi.struct('IJK1', {i: 'int8_t', j: 'int8_t', k: 'int8_t'}), 'int8_t']);
     const ConcatenateToStr4 = lib.cdecl('ConcatenateToStr4', 'string', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', {i: 'int32_t', j: 'int32_t', k: 'int32_t'})), 'int32_t']);
     const ConcatenateToStr8 = lib.cdecl('ConcatenateToStr8', 'string', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
-    const MakeBFG = lib.stdcall('MakeBFG', BFG, ['int', 'double', 'string', koffi.out(koffi.pointer(BFG))]);
+    const MakeBFG = lib.stdcall('MakeBFG', BFG, [koffi.out(koffi.pointer(BFG)), 'int', 'double', 'string']);
+    const MakePackedBFG = lib.stdcall('MakePackedBFG', PackedBFG, ['int', 'double', koffi.out(koffi.pointer(PackedBFG)), 'string']);
     const ReturnBigString = lib.stdcall('ReturnBigString', 'string', ['string']);
 
-    let p = {};
+    // Simple tests
+    {
+        let p = {};
 
-    FillPack3(1, 2, 3, p);
-    assert.deepEqual(p, { a: 1, b: 2, c: 3 });
+        FillPack3(1, 2, 3, p);
+        assert.deepEqual(p, { a: 1, b: 2, c: 3 });
 
-    let q = RetPack3(6, 9, -12);
-    assert.deepEqual(q, { a: 6, b: 9, c: -12 });
+        let q = RetPack3(6, 9, -12);
+        assert.deepEqual(q, { a: 6, b: 9, c: -12 });
 
-    AddPack3(6, 9, -12, p);
-    assert.deepEqual(p, { a: 7, b: 11, c: -9 });
+        AddPack3(6, 9, -12, p);
+        assert.deepEqual(p, { a: 7, b: 11, c: -9 });
+    }
 
-    assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
-    assert.equal(ConcatenateToInt4(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
-    assert.equal(ConcatenateToInt8(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
-    assert.equal(ConcatenateToStr1(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
-    assert.equal(ConcatenateToStr4(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
-    assert.equal(ConcatenateToStr8(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
+    // Many parameters
+    {
+        assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
+        assert.equal(ConcatenateToInt4(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
+        assert.equal(ConcatenateToInt8(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
+        assert.equal(ConcatenateToStr1(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
+        assert.equal(ConcatenateToStr4(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
+        assert.equal(ConcatenateToStr8(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
+    }
 
-    let out = {};
-    let bfg = MakeBFG(2, 7, '__Hello123456789++++foobarFOOBAR!__', out);
-    assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'X/__Hello123456789++++foobarFOOBAR!__/X', e: 54, inner: { f: 14, g: 5 } });
-    assert.deepEqual(out, bfg);
+    // Big struct
+    {
+        let out = {};
+        let bfg = MakeBFG(out, 2, 7, '__Hello123456789++++foobarFOOBAR!__');
+        assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'X/__Hello123456789++++foobarFOOBAR!__/X', e: 54, inner: { f: 14, g: 5 } });
+        assert.deepEqual(out, bfg);
+    }
 
-    let str = 'fooBAR!'.repeat(1024 * 1024);
-    assert.equal(ReturnBigString(str), str);
+    // Packed struct
+    {
+        let out = {};
+        let bfg = MakePackedBFG(2, 7, out, '__Hello123456789++++foobarFOOBAR!__');
+        assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'X/__Hello123456789++++foobarFOOBAR!__/X', e: 54, inner: { f: 14, g: 5 } });
+        assert.deepEqual(out, bfg);
+    }
+
+    // Big string
+    {
+        let str = 'fooBAR!'.repeat(1024 * 1024);
+        assert.equal(ReturnBigString(str), str);
+    }
 }

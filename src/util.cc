@@ -128,7 +128,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
             return false;
         }
 
-        dest = AlignUp(dest, member.type->align);
+        dest = AlignUp(dest, member.align);
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -225,7 +225,7 @@ void PopObject(Napi::Object obj, const uint8_t *ptr, const TypeInfo *type)
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
     for (const RecordMember &member: type->members) {
-        ptr = AlignUp(ptr, member.type->align);
+        ptr = AlignUp(ptr, member.align);
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
