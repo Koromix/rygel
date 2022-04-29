@@ -233,9 +233,9 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
     // Return through registers unless it's too big
     if (RG_UNLIKELY(!call.AllocStack(func->args_size, 16, &args_ptr)))
         return env.Null();
-    if (RG_UNLIKELY(!call.AllocStack(4 * 4, 8, &gpr_ptr)))
-        return env.Null();
     if (RG_UNLIKELY(!call.AllocStack(8 * 8, 8, &vec_ptr)))
+        return env.Null();
+    if (RG_UNLIKELY(!call.AllocStack(4 * 4, 8, &gpr_ptr)))
         return env.Null();
     if (func->ret.use_memory) {
         if (RG_UNLIKELY(!call.AllocHeap(func->ret.type->size, 16, &return_ptr)))
