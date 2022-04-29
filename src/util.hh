@@ -101,8 +101,8 @@ public:
 
     template <typename T = void>
     bool AllocStack(Size size, Size align, T **out_ptr = nullptr);
-    template <typename T>
-    bool AllocHeap(Size size, Size align, T **out_ptr);
+    template <typename T = void>
+    bool AllocHeap(Size size, Size align, T **out_ptr = nullptr);
 
     const char *PushString(const Napi::Value &value);
     bool PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest);
@@ -151,7 +151,9 @@ bool CallData::AllocHeap(Size size, Size align, T **out_ptr)
     heap_mem->ptr += delta;
     heap_mem->len -= delta;
 
-    *out_ptr = (T *)ptr;
+    if (out_ptr) {
+        *out_ptr = (T *)ptr;
+    }
     return true;
 }
 

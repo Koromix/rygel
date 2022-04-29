@@ -105,7 +105,7 @@ const char *CallData::PushString(const Napi::Value &value)
         RG_ASSERT(len >= SmallSize);
 
         buf.len = (Size)len + 1;
-        if (RG_UNLIKELY(!AllocHeap(buf.len - SmallSize, 1, &buf.ptr)))
+        if (RG_UNLIKELY(!AllocHeap(buf.len - SmallSize, 1)))
             return nullptr;
         if (RG_UNLIKELY(napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len) != napi_ok)) {
             ThrowError<Napi::Error>(env, "Failed to convert string to UTF-8");
