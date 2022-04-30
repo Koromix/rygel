@@ -190,7 +190,7 @@ EXPORT PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const cha
 
 EXPORT const char *ReturnBigString(const char *str)
 {
-    static char buf[1 * 1024 * 1024];
+    static char buf[16 * 1024 * 1024];
 
     size_t len = strlen(str);
     memcpy(buf, str, len + 1);
