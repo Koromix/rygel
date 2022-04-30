@@ -242,7 +242,6 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
             return env.Null();
         *(uint8_t **)(gpr_ptr++) = return_ptr;
     }
-    RG_ASSERT((uint8_t *)gpr_ptr + 16 == args_ptr);
 
     LocalArray<OutObject, MaxOutParameters> out_objects;
 
@@ -469,8 +468,8 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 RG_ASSERT(return_ptr);
 
                 uint64_t ret = PERFORM_CALL(GG);
-                uint64_t r0 = (uint32_t)ret;
-                RG_ASSERT(r0 == (uint64_t)return_ptr);
+                uint32_t r0 = (uint32_t)ret;
+                RG_ASSERT(r0 == (uint32_t)return_ptr);
 
                 Napi::Object obj = PopObject(env, return_ptr, func->ret.type);
                 return obj;
