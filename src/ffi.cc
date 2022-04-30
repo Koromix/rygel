@@ -84,11 +84,14 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
         return env.Null();
     }
-    if (info.Length() > 1 && !info[0].IsString()) {
+
+    bool named = info.Length() > 1;
+
+    if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (!IsObject(info[info.Length() > 1])) {
+    if (!IsObject(info[named])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(instance, info[1]));
         return env.Null();
     }
@@ -96,8 +99,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     TypeInfo *type = instance->types.AppendDefault();
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
-    std::string name = info.Length() > 1 ? info[0].As<Napi::String>() : std::string("<anonymous>");
-    Napi::Object obj = info[info.Length() > 1].As<Napi::Object>();
+    std::string name = named ? info[0].As<Napi::String>() : std::string("<anonymous>");
+    Napi::Object obj = info[named].As<Napi::Object>();
     Napi::Array keys = obj.GetPropertyNames();
 
     type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
@@ -127,7 +130,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     type->size = (int16_t)AlignLen(type->size, type->align);
 
     // If the insert succeeds, we cannot fail anymore
-    if (info.Length() > 1 && !instance->types_map.TrySet(type).second) {
+    if (named && !instance->types_map.TrySet(type).second) {
         ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
         return env.Null();
     }
