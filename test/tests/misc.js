@@ -72,7 +72,7 @@ async function test() {
     const ConcatenateToStr4 = lib.cdecl('ConcatenateToStr4', 'string', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', {i: 'int32_t', j: 'int32_t', k: 'int32_t'})), 'int32_t']);
     const ConcatenateToStr8 = lib.cdecl('ConcatenateToStr8', 'string', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
     const MakeBFG = lib.stdcall('MakeBFG', BFG, [koffi.out(koffi.pointer(BFG)), 'int', 'double', 'string']);
-    const MakePackedBFG = lib.stdcall('MakePackedBFG', PackedBFG, ['int', 'double', koffi.out(koffi.pointer(PackedBFG)), 'string']);
+    const MakePackedBFG = lib.fastcall('MakePackedBFG', PackedBFG, ['int', 'double', koffi.out(koffi.pointer(PackedBFG)), 'string']);
     const ReturnBigString = lib.stdcall('ReturnBigString', 'string', ['string']);
 
     // Simple tests
