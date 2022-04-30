@@ -102,6 +102,8 @@ const char *CallData::PushString(const Napi::Value &value)
         status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
         RG_ASSERT(status == napi_ok);
 
+        len++;
+
         buf.ptr = (char *)Allocator::Allocate(&big_alloc, (Size)len);
         buf.len = (Size)len;
 
