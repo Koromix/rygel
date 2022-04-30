@@ -568,13 +568,21 @@ FunctionInfo::~FunctionInfo()
     }
 }
 
+static Span<uint8_t> AllocateAndAlign16(Allocator *alloc, Size size)
+{
+    RG_ASSERT(AlignLen(size, 16) == size);
+
+    uint8_t *ptr = (uint8_t *)Allocator::Allocate(alloc, size);
+    uint8_t *aligned = AlignUp(ptr, 16);
+    Size delta = AlignLen(aligned - ptr, 16);
+
+    return MakeSpan(aligned, size - delta);
+}
+
 InstanceData::InstanceData()
 {
-    stack_mem.len = Mebibytes(2);
-    stack_mem.ptr = (uint8_t *)Allocator::Allocate(&mem_alloc, stack_mem.len);
-
-    heap_mem.len = Mebibytes(4);
-    heap_mem.ptr = (uint8_t *)Allocator::Allocate(&mem_alloc, heap_mem.len);
+    stack_mem = AllocateAndAlign16(&mem_alloc, Mebibytes(2));
+    heap_mem = AllocateAndAlign16(&mem_alloc, Mebibytes(4));
 }
 
 template <typename Func>
