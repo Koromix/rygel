@@ -174,7 +174,7 @@ static Napi::Value CreateHandleType(const Napi::CallbackInfo &info)
     type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
 
     type->primitive = PrimitiveKind::Record;
-    type->align = RG_SIZE(void *);
+    type->align = alignof(void *);
     type->size = RG_SIZE(void *);
 
     // Add single handle member
@@ -184,6 +184,7 @@ static Napi::Value CreateHandleType(const Napi::CallbackInfo &info)
         member.name = "value";
         member.type = instance->types_map.FindValue("void *", nullptr);
         RG_ASSERT(member.type);
+        member.align = type->align;
 
         type->members.Append(member);
     }
