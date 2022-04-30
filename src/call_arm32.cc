@@ -230,12 +230,15 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
     uint32_t *gpr_ptr = nullptr;
     uint32_t *vec_ptr = nullptr;
 
-    // Return through registers unless it's too big
+    // Unlike other call conventions, here we put the general-purpose
+    // registers just before the stack (so behind the vector ones).
+    // In the armv7hf calling convention, some arguments can end up
+    // partially in GPR, partially in the stack.
     if (RG_UNLIKELY(!call.AllocStack(func->args_size, 16, &args_ptr)))
         return env.Null();
-    if (RG_UNLIKELY(!call.AllocStack(8 * 8, 8, &vec_ptr)))
-        return env.Null();
     if (RG_UNLIKELY(!call.AllocStack(4 * 4, 8, &gpr_ptr)))
+        return env.Null();
+    if (RG_UNLIKELY(!call.AllocStack(8 * 8, 8, &vec_ptr)))
         return env.Null();
     if (func->ret.use_memory) {
         if (RG_UNLIKELY(!call.AllocHeap(func->ret.type->size, 16, &return_ptr)))

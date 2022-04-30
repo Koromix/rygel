@@ -56,22 +56,22 @@
 
 // Prepare general purpose argument registers from array passed by caller.
 .macro forward_int
-    ldr r3, [r1, 12]
-    ldr r2, [r1, 8]
-    ldr r0, [r1, 0]
-    ldr r1, [r1, 4]
+    ldr r3, [r1, 76]
+    ldr r2, [r1, 72]
+    ldr r0, [r1, 64]
+    ldr r1, [r1, 68]
 .endm
 
 // Prepare vector argument registers from array passed by caller.
 .macro forward_vec
-    vldr d7, [r1, 72]
-    vldr d6, [r1, 64]
-    vldr d5, [r1, 56]
-    vldr d4, [r1, 48]
-    vldr d3, [r1, 40]
-    vldr d2, [r1, 32]
-    vldr d1, [r1, 24]
-    vldr d0, [r1, 16]
+    vldr d7, [r1, 56]
+    vldr d6, [r1, 48]
+    vldr d5, [r1, 40]
+    vldr d4, [r1, 32]
+    vldr d3, [r1, 24]
+    vldr d2, [r1, 16]
+    vldr d1, [r1, 8]
+    vldr d0, [r1, 0]
 .endm
 
 ForwardCallGG:
