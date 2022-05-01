@@ -327,7 +327,7 @@ static void DumpMemory(const char *type, Span<const uint8_t> bytes)
 
 void CallData::DumpDebug() const
 {
-    PrintLn(stderr, "%!..+---- %1 ----%!0", func->name);
+    PrintLn(stderr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
 
     if (func->parameters.len) {
         PrintLn(stderr, "Parameters:");

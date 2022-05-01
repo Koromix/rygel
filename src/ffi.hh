@@ -108,6 +108,11 @@ enum class CallConvention {
     Stdcall,
     Fastcall
 };
+static const char *const CallConventionNames[] = {
+    "Default",
+    "Stdcall",
+    "Fastcall"
+};
 
 struct ParameterInfo {
     const TypeInfo *type;
