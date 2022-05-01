@@ -276,7 +276,7 @@ async function test() {
                basename !== 'node_modules' &&
                basename !== 'node' &&
                basename !== 'build' &&
-               basename !== 'luigi';
+               basename !== 'luiggi';
     });
 
     success &= await start(false);
