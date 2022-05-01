@@ -34,7 +34,7 @@ endm
 fastcall macro
     mov ecx, dword ptr [esp+0]
     mov edx, dword ptr [esp+4]
-    add esp, 8
+    add esp, 16
 endm
 
 ; Call native function.

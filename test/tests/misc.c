@@ -169,7 +169,7 @@ EXPORT BFG STDCALL MakeBFG(BFG *p, int x, double y, const char *str)
     return bfg;
 }
 
-EXPORT PackedBFG MakePackedBFG(int x, double y, PackedBFG *p, const char *str)
+EXPORT PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const char *str)
 {
     PackedBFG bfg;
 

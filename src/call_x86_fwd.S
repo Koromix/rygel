@@ -35,7 +35,7 @@
 .macro fastcall
     movl 0(%esp), %ecx
     movl 4(%esp), %edx
-    add $8, %esp
+    addl $16, %esp
 .endm
 
 // Call native function.

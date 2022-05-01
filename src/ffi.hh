@@ -128,6 +128,7 @@ struct ParameterInfo {
     int8_t vec_count;
 #elif defined(__i386__) || defined(_M_IX86)
     bool trivial; // Only matters for return value
+    bool fast;
 #endif
 };
 
