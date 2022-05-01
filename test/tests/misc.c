@@ -34,6 +34,13 @@
     #define STDCALL
 #endif
 
+typedef struct Pack1 {
+    int a;
+} Pack1;
+typedef struct Pack2 {
+    int a;
+    int b;
+} Pack2;
 typedef struct Pack3 {
     int a;
     int b;
@@ -69,6 +76,47 @@ typedef struct PackedBFG {
 } PackedBFG;
 #pragma pack(pop)
 
+EXPORT void FillPack1(int a, Pack1 *p)
+{
+    p->a = a;
+}
+
+EXPORT Pack1 RetPack1(int a)
+{
+    Pack1 p;
+
+    p.a = a;
+
+    return p;
+}
+
+EXPORT void FASTCALL AddPack1(int a, Pack1 *p)
+{
+    p->a += a;
+}
+
+EXPORT void FillPack2(int a, int b, Pack2 *p)
+{
+    p->a = a;
+    p->b = b;
+}
+
+EXPORT Pack2 RetPack2(int a, int b)
+{
+    Pack2 p;
+
+    p.a = a;
+    p.b = b;
+
+    return p;
+}
+
+EXPORT void FASTCALL AddPack2(int a, int b, Pack2 *p)
+{
+    p->a += a;
+    p->b += b;
+}
+
 EXPORT void FillPack3(int a, int b, int c, Pack3 *p)
 {
     p->a = a;
@@ -79,7 +127,7 @@ EXPORT void FillPack3(int a, int b, int c, Pack3 *p)
 EXPORT Pack3 RetPack3(int a, int b, int c)
 {
     Pack3 p;
-    
+
     p.a = a;
     p.b = b;
     p.c = c;

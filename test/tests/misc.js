@@ -17,6 +17,13 @@ const koffi = require('../build/koffi.node');
 const assert = require('assert');
 const path = require('path');
 
+const Pack1 = koffi.struct('Pack1', {
+    a: 'int'
+});
+const Pack2 = koffi.struct('Pack2', {
+    a: 'int',
+    b: 'int'
+});
 const Pack3 = koffi.struct('Pack3', {
     a: 'int',
     b: 'int',
@@ -62,6 +69,12 @@ async function test() {
     let lib_filename = path.dirname(__filename) + '/../build/misc' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
+    const FillPack1 = lib.cdecl('FillPack1', 'void', ['int', koffi.out(koffi.pointer(Pack1))]);
+    const RetPack1 = lib.cdecl('RetPack1', Pack1, ['int']);
+    const AddPack1 = lib.fastcall('AddPack1', 'void', ['int', koffi.inout(koffi.pointer(Pack1))]);
+    const FillPack2 = lib.cdecl('FillPack2', 'void', ['int', 'int', koffi.out(koffi.pointer(Pack2))]);
+    const RetPack2 = lib.cdecl('RetPack2', Pack2, ['int', 'int']);
+    const AddPack2 = lib.fastcall('AddPack2', 'void', ['int', 'int', koffi.inout(koffi.pointer(Pack2))]);
     const FillPack3 = lib.cdecl('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
     const RetPack3 = lib.cdecl('RetPack3', Pack3, ['int', 'int', 'int']);
     const AddPack3 = lib.fastcall('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
@@ -75,7 +88,35 @@ async function test() {
     const MakePackedBFG = lib.fastcall('MakePackedBFG', PackedBFG, ['int', 'double', koffi.out(koffi.pointer(PackedBFG)), 'string']);
     const ReturnBigString = lib.stdcall('ReturnBigString', 'string', ['string']);
 
-    // Simple tests
+    // Simple tests with Pack1
+    {
+        let p = {};
+
+        FillPack1(777, p);
+        assert.deepEqual(p, { a: 777 });
+
+        let q = RetPack1(6);
+        assert.deepEqual(q, { a: 6 });
+
+        AddPack1(6, p);
+        assert.deepEqual(p, { a: 783 });
+    }
+
+    // Simple tests with Pack2
+    {
+        let p = {};
+
+        FillPack2(123, 456, p);
+        assert.deepEqual(p, { a: 123, b: 456 });
+
+        let q = RetPack2(6, 9);
+        assert.deepEqual(q, { a: 6, b: 9 });
+
+        AddPack2(6, 9, p);
+        assert.deepEqual(p, { a: 129, b: 465 });
+    }
+
+    // Simple tests with Pack3
     {
         let p = {};
 
