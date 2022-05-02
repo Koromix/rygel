@@ -63,12 +63,6 @@ static const char *const PrimitiveKindNames[] = {
     "Record"
 };
 
-static inline bool IsIntegral(PrimitiveKind primitive)
-{
-    bool integral = ((int)primitive <= (int)PrimitiveKind::Pointer);
-    return integral;
-}
-
 struct TypeInfo;
 struct RecordMember;
 

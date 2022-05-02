@@ -31,18 +31,21 @@ extern "C" double ForwardCallRD(const void *func, uint8_t *sp);
 
 static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
 
+static inline bool IsRegular(Size size)
+{
+    bool regular = (size <= 8 && !(size & (size - 1)));
+    return regular;
+}
+
 Napi::Function::Callback AnalyseFunction(InstanceData *instance, FunctionInfo *func)
 {
     int fast = (func->convention == CallConvention::Fastcall) ? 2 : 0;
 
-    if (IsIntegral(func->ret.type->primitive)) {
-        func->ret.trivial = true;
-    } else if (func->ret.type->members.len == 1 && IsIntegral(func->ret.type->members[0].type->primitive)) {
+    if (func->ret.type->primitive != PrimitiveKind::Record) {
         func->ret.trivial = true;
 #ifdef _WIN32
-    } else if (func->ret.type->members.len == 2 && IsIntegral(func->ret.type->members[0].type->primitive)
-                                                && IsIntegral(func->ret.type->members[1].type->primitive)) {
-        func->ret.trivial = true;
+    } else {
+        func->ret.trivial = IsRegular(func->ret.type->size);
 #endif
     }
 #ifndef _WIN32
