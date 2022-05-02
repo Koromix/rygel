@@ -63,8 +63,9 @@ Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
     if (IsHFA(func->ret.type)) {
         func->ret.vec_count = func->ret.type->members.len *
                               (func->ret.type->members[0].type->size / 4);
-    } else if (func->ret.type->primitive != PrimitiveKind::Record) {
-        func->ret.gpr_count = (func->ret.type->size >= 4) ? 2 : 1;
+    } else if (func->ret.type->primitive != PrimitiveKind::Record ||
+               func->ret.type->size <= 4) {
+        func->ret.gpr_count = (func->ret.type->size > 4) ? 2 : 1;
     } else {
         func->ret.use_memory = true;
     }
@@ -457,6 +458,8 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
         case PrimitiveKind::Record: {
             if (func->ret.gpr_count) {
+                RG_ASSERT(func->ret.gpr_count <= 1);
+
                 uint64_t ret = PERFORM_CALL(GG);
                 uint32_t r0 = (uint32_t)ret;
 
