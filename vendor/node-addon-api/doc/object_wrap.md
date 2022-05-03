@@ -16,6 +16,10 @@ be directly invoked from JavaScript. The **wrap** word refers to a way of
 grouping methods and state of the class because it will be necessary write
 custom code to bridge each of your C++ class methods.
 
+**Caution:** When the JavaScript object is garbage collected, the call to the
+C++ destructor may be deferred until a later time. Within that period,
+`Value()` will return an empty value.
+
 ## Example
 
 ```cpp
@@ -211,6 +215,29 @@ See: [`Class property and descriptor`](class_property_descriptor.md).
 property of the `Napi::CallbackInfo`.
 
 Returns a `Napi::Function` representing the constructor function for the class.
+
+### OnCalledAsFunction
+
+Provides an opportunity to customize the behavior when a `Napi::ObjectWrap<T>`
+class is called from JavaScript as a function (without the **new** operator).
+
+The default behavior in this scenario is to throw a `Napi::TypeError` with the
+message `Class constructors cannot be invoked without 'new'`.  Define this
+public method on your derived class to override that behavior.
+
+For example, you could internally re-call the JavaScript contstructor _with_
+the **new** operator (via
+`Napi::Function::New(const std::vector<napi_value> &args)`), and return the
+resulting object.  Or you might do something else entirely, such as the way
+[`Date()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#constructor)
+produces a string when called as a function.
+
+```cpp
+static Napi::Value OnCalledAsFunction(const Napi::CallbackInfo& callbackInfo);
+```
+
+- `[in] callbackInfo`: The object representing the components of the JavaScript
+request being made.
 
 ### Finalize
 

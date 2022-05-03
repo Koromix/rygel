@@ -66,6 +66,7 @@
         'typedarray.cc',
         'objectwrap.cc',
         'objectwrap_constructor_exception.cc',
+        'objectwrap_function.cc',
         'objectwrap_removewrap.cc',
         'objectwrap_multiple_inheritance.cc',
         'object_reference.cc',
@@ -112,6 +113,12 @@
       'includes': ['../noexcept.gypi'],
       'sources': ['>@(build_sources_swallowexcept)'],
       'defines': ['NODE_API_SWALLOW_UNTHROWABLE_EXCEPTIONS']
+    },
+    {
+      'target_name': 'binding_custom_namespace',
+      'includes': ['../noexcept.gypi'],
+      'sources': ['>@(build_sources)'],
+      'defines': ['NAPI_CPP_CUSTOM_NAMESPACE=cstm']
     },
   ],
 }
