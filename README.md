@@ -33,6 +33,7 @@ The following platforms will __soon be officially supported__:
 
 The following platforms __may be supported__ but are not tested:
 
+* Linux ARM32 (full software FP) Little Endian
 * NetBSD x86_64
 * NetBSD ARM64
 * OpenBSD x86_64
