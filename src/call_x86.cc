@@ -41,7 +41,7 @@ bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
 
     if (func->ret.type->primitive != PrimitiveKind::Record) {
         func->ret.trivial = true;
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
     } else {
         func->ret.trivial = IsRegular(func->ret.type->size);
 #endif
