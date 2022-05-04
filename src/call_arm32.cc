@@ -37,8 +37,6 @@ extern "C" uint64_t ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
-
 static bool IsHFA(const TypeInfo *type)
 {
     if (type->primitive != PrimitiveKind::Record)
@@ -58,7 +56,7 @@ static bool IsHFA(const TypeInfo *type)
     return true;
 }
 
-Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
+bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     if (IsHFA(func->ret.type)) {
         func->ret.vec_count = func->ret.type->members.len *
@@ -109,11 +107,20 @@ Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Float64: {
                 Size need = param.type->size / 4;
 
-                if (need <= vec_avail) {
-                    param.vec_count = need;
-                    vec_avail -= need;
+                if (param.variadic) {
+                    if (need <= gpr_avail) {
+                        param.gpr_count = need;
+                        gpr_avail -= need;
+                    } else {
+                        started_stack = true;
+                    }
                 } else {
-                    started_stack = true;
+                    if (need <= vec_avail) {
+                        param.vec_count = need;
+                        vec_avail -= need;
+                    } else {
+                        started_stack = true;
+                    }
                 }
             } break;
 
@@ -150,7 +157,7 @@ Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
 
     func->forward_fp = (vec_avail < 16);
 
-    return TranslateCall;
+    return true;
 }
 
 static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest)
@@ -212,12 +219,9 @@ static Napi::Object PopHFA(napi_env env, const uint8_t *ptr, const TypeInfo *typ
     return obj;
 }
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
+Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-    FunctionInfo *func = (FunctionInfo *)info.Data();
-
     CallData call(env, instance, func);
 
     // Sanity checks
@@ -254,7 +258,7 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         const ParameterInfo &param = func->parameters[i];
         RG_ASSERT(param.directions >= 1 && param.directions <= 3);
 
-        Napi::Value value = info[i];
+        Napi::Value value = info[param.offset];
 
         switch (param.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -322,6 +326,8 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
 
                 if (RG_LIKELY(param.vec_count)) {
                     memcpy(vec_ptr++, &f, 4);
+                } else if (param.gpr_count) {
+                    memcpy(gpr_ptr++, &f, 4);
                 } else {
                     memcpy(args_ptr, &f, 4);
                     args_ptr += 4;
@@ -338,6 +344,9 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.vec_count)) {
                     memcpy(vec_ptr, &d, 8);
                     vec_ptr += 2;
+                } else if (param.gpr_count) {
+                    memcpy(gpr_ptr, &d, 8);
+                    gpr_ptr += 2;
                 } else {
                     args_ptr = AlignUp(args_ptr, 8);
                     memcpy(args_ptr, &d, 8);

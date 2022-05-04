@@ -20,6 +20,40 @@
 
 namespace RG {
 
+const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_directions)
+{
+    if (value.IsString()) {
+        std::string str = value.As<Napi::String>();
+
+        const TypeInfo *type = instance->types_map.FindValue(str.c_str(), nullptr);
+
+        if (!type) {
+            ThrowError<Napi::TypeError>(value.Env(), "Unknown type string '%1'", str.c_str());
+            return nullptr;
+        }
+
+        if (out_directions) {
+            *out_directions = 1;
+        }
+        return type;
+    } else if (CheckValueTag(instance, value, &TypeInfoMarker)) {
+        Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
+
+        const TypeInfo *raw = external.Data();
+        const TypeInfo *type = AlignDown(raw, 4);
+        RG_ASSERT(type);
+
+        if (out_directions) {
+            Size delta = (uint8_t *)raw - (uint8_t *)type;
+            *out_directions = 1 + (int)delta;
+        }
+        return type;
+    } else {
+        ThrowError<Napi::TypeError>(value.Env(), "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
+        return nullptr;
+    }
+}
+
 const char *GetValueType(const InstanceData *instance, Napi::Value value)
 {
     for (const TypeInfo &type: instance->types) {

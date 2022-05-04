@@ -22,6 +22,7 @@ namespace RG {
 struct InstanceData;
 struct FunctionInfo;
 
-Napi::Function::Callback AnalyseFunction(InstanceData *instance, FunctionInfo *func);
+bool AnalyseFunction(InstanceData *instance, FunctionInfo *func);
+Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, const Napi::CallbackInfo &info);
 
 }

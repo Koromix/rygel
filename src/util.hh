@@ -51,6 +51,8 @@ static inline T *AlignDown(T *ptr, Size align)
     return (T *)aligned;
 }
 
+const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_directions = nullptr);
+
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);
 

@@ -32,13 +32,13 @@
 .global SYMBOL(ForwardCallXGD)
 .global SYMBOL(ForwardCallXDD)
 
-// Copy function pointer to RAX, in order to save it through argument forwarding.
+// Copy function pointer to R11, in order to save it through argument forwarding.
 // Save RSP in RBX (non-volatile), and use carefully assembled stack provided by caller.
 .macro prologue
     .cfi_startproc
     .cfi_def_cfa rsp, 8
     endbr64
-    movq %rdi, %rax
+    movq %rdi, %r11
     pushq %rbx
     .cfi_def_cfa rsp, 16
     movq %rsp, %rbx
@@ -50,7 +50,7 @@
 // Once done, restore normal stack pointer and return.
 // The return value is passed untouched through RAX or XMM0.
 .macro epilogue
-    call *%rax
+    call *%r11
     movq %rbx, %rsp
     popq %rbx
     .cfi_def_cfa rsp, 8
@@ -78,6 +78,7 @@
     movsd 64(%rsi), %xmm2
     movsd 56(%rsi), %xmm1
     movsd 48(%rsi), %xmm0
+    movb $8, %al
 .endm
 
 SYMBOL(ForwardCallGG):

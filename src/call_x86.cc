@@ -29,15 +29,13 @@ extern "C" uint64_t ForwardCallRG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallRF(const void *func, uint8_t *sp);
 extern "C" double ForwardCallRD(const void *func, uint8_t *sp);
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
-
 static inline bool IsRegular(Size size)
 {
     bool regular = (size <= 8 && !(size & (size - 1)));
     return regular;
 }
 
-Napi::Function::Callback AnalyseFunction(InstanceData *instance, FunctionInfo *func)
+bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
 {
     int fast = (func->convention == CallConvention::Fastcall) ? 2 : 0;
 
@@ -67,25 +65,26 @@ Napi::Function::Callback AnalyseFunction(InstanceData *instance, FunctionInfo *f
     func->args_size = params_size + 4 * !func->ret.trivial;
 
     switch (func->convention) {
-        case CallConvention::Default: {} break;
+        case CallConvention::Default: {
+            func->decorated_name = Fmt(&instance->str_alloc, "_%1", func->name).ptr;
+        } break;
         case CallConvention::Stdcall: {
+            RG_ASSERT(!func->variadic);
             func->decorated_name = Fmt(&instance->str_alloc, "_%1@%2", func->name, params_size).ptr;
         } break;
         case CallConvention::Fastcall: {
+            RG_ASSERT(!func->variadic);
             func->decorated_name = Fmt(&instance->str_alloc, "@%1@%2", func->name, params_size).ptr;
             func->args_size += 16;
         } break;
     }
 
-    return TranslateCall;
+    return true;
 }
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
+Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-    FunctionInfo *func = (FunctionInfo *)info.Data();
-
     CallData call(env, instance, func);
 
     // Sanity checks
@@ -118,7 +117,7 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         const ParameterInfo &param = func->parameters[i];
         RG_ASSERT(param.directions >= 1 && param.directions <= 3);
 
-        Napi::Value value = info[i];
+        Napi::Value value = info[param.offset];
 
         switch (param.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;

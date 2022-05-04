@@ -22,6 +22,8 @@ namespace RG {
 static const Size MaxParameters = 32;
 static const Size MaxOutParameters = 8;
 
+extern const int TypeInfoMarker;
+
 enum class PrimitiveKind {
     Void,
 
@@ -111,6 +113,8 @@ static const char *const CallConventionNames[] = {
 struct ParameterInfo {
     const TypeInfo *type;
     int directions;
+    bool variadic;
+    Size offset;
 
     // ABI-specific part
 
@@ -143,6 +147,8 @@ struct FunctionInfo {
 
     ParameterInfo ret;
     HeapArray<ParameterInfo> parameters;
+    Size out_parameters;
+    bool variadic;
 
     // ABI-specific part
 

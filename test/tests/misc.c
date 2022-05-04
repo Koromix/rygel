@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
+#include <stdarg.h>
 
 #ifdef _WIN32
     #define EXPORT __declspec(dllexport)
@@ -242,6 +243,18 @@ EXPORT const char *ReturnBigString(const char *str)
 
     size_t len = strlen(str);
     memcpy(buf, str, len + 1);
+
+    return buf;
+}
+
+EXPORT const char *PrintFmt(const char *fmt, ...)
+{
+    static char buf[256];
+
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
 
     return buf;
 }

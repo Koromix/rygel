@@ -58,8 +58,6 @@ extern "C" Xmm0RaxRet ForwardCallXDG(const void *func, uint8_t *sp);
 extern "C" RaxXmm0Ret ForwardCallXGD(const void *func, uint8_t *sp);
 extern "C" Xmm0Xmm1Ret ForwardCallXDD(const void *func, uint8_t *sp);
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
-
 static inline RegisterClass MergeClasses(RegisterClass cls1, RegisterClass cls2)
 {
     if (cls1 == cls2)
@@ -161,7 +159,7 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int xmm_avail)
     }
 }
 
-Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
+bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     AnalyseParameter(&func->ret, 2, 2);
 
@@ -179,15 +177,12 @@ Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
 
     func->forward_fp = (xmm_avail < 8);
 
-    return TranslateCall;
+    return true;
 }
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
+Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-    FunctionInfo *func = (FunctionInfo *)info.Data();
-
     CallData call(env, instance, func);
 
     // Sanity checks
@@ -221,7 +216,7 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         const ParameterInfo &param = func->parameters[i];
         RG_ASSERT(param.directions >= 1 && param.directions <= 3);
 
-        Napi::Value value = info[i];
+        Napi::Value value = info[param.offset];
 
         switch (param.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;

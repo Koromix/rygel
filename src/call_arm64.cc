@@ -41,8 +41,6 @@ extern "C" X0X1Ret ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
-
 static bool IsHFA(const TypeInfo *type)
 {
     if (type->primitive != PrimitiveKind::Record)
@@ -62,7 +60,7 @@ static bool IsHFA(const TypeInfo *type)
     return true;
 }
 
-Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
+bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     if (IsHFA(func->ret.type)) {
         func->ret.vec_count = func->ret.type->members.len;
@@ -138,7 +136,7 @@ Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
     func->args_size = 16 * func->parameters.len;
     func->forward_fp = (vec_avail < 8);
 
-    return TranslateCall;
+    return true;
 }
 
 static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest)
@@ -200,12 +198,9 @@ static Napi::Object PopHFA(napi_env env, const uint8_t *ptr, const TypeInfo *typ
     return obj;
 }
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
+Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-    FunctionInfo *func = (FunctionInfo *)info.Data();
-
     CallData call(env, instance, func);
 
     // Sanity checks
@@ -239,7 +234,7 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         const ParameterInfo &param = func->parameters[i];
         RG_ASSERT(param.directions >= 1 && param.directions <= 3);
 
-        Napi::Value value = info[i];
+        Napi::Value value = info[param.offset];
 
         switch (param.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;

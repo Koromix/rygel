@@ -29,15 +29,13 @@ extern "C" uint64_t ForwardCallXG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" double ForwardCallXD(const void *func, uint8_t *sp);
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info);
-
 static inline bool IsRegular(Size size)
 {
     bool regular = (size <= 8 && !(size & (size - 1)));
     return regular;
 }
 
-Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
+bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     func->ret.regular = IsRegular(func->ret.type->size);
 
@@ -50,15 +48,12 @@ Napi::Function::Callback AnalyseFunction(InstanceData *, FunctionInfo *func)
 
     func->args_size = AlignLen(8 * std::max((Size)4, func->parameters.len + !func->ret.regular), 16);
 
-    return TranslateCall;
+    return true;
 }
 
-static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
+Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-    FunctionInfo *func = (FunctionInfo *)info.Data();
-
     CallData call(env, instance, func);
 
     // Sanity checks
@@ -86,7 +81,7 @@ static Napi::Value TranslateCall(const Napi::CallbackInfo &info)
         const ParameterInfo &param = func->parameters[i];
         RG_ASSERT(param.directions >= 1 && param.directions <= 3);
 
-        Napi::Value value = info[i];
+        Napi::Value value = info[param.offset];
 
         switch (param.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;

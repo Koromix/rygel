@@ -87,6 +87,7 @@ async function test() {
     const MakeBFG = lib.stdcall('MakeBFG', BFG, [koffi.out(koffi.pointer(BFG)), 'int', 'double', 'string']);
     const MakePackedBFG = lib.fastcall('MakePackedBFG', PackedBFG, ['int', 'double', koffi.out(koffi.pointer(PackedBFG)), 'string']);
     const ReturnBigString = lib.stdcall('ReturnBigString', 'string', ['string']);
+    const PrintFmt = lib.cdecl('PrintFmt', 'string', ['string', '...']);
 
     // Simple tests with Pack1
     {
@@ -160,5 +161,11 @@ async function test() {
     {
         let str = 'fooBAR!'.repeat(1024 * 1024);
         assert.equal(ReturnBigString(str), str);
+    }
+
+    // Variadic
+    {
+        let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'string', 'BAR');
+        assert.equal(str, 'foo 200 1.5 BAR');
     }
 }
