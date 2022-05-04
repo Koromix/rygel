@@ -78,60 +78,69 @@
     movsd 64(%rsi), %xmm2
     movsd 56(%rsi), %xmm1
     movsd 48(%rsi), %xmm0
-    movb $8, %al
 .endm
 
 SYMBOL(ForwardCallGG):
     prologue
     forward_int
+    movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallF):
     prologue
     forward_int
+    movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallDG):
     prologue
     forward_int
+    movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallGD):
     prologue
     forward_int
+    movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallDD):
     prologue
     forward_int
+    movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallXGG):
     prologue
     forward_xmm
     forward_int
+    movb $8, %al
     epilogue
 
 SYMBOL(ForwardCallXF):
     prologue
     forward_xmm
     forward_int
+    movb $8, %al
     epilogue
 
 SYMBOL(ForwardCallXDG):
     prologue
     forward_xmm
     forward_int
+    movb $8, %al
     epilogue
 
 SYMBOL(ForwardCallXGD):
     prologue
     forward_xmm
     forward_int
+    movb $8, %al
     epilogue
 
 SYMBOL(ForwardCallXDD):
     prologue
     forward_xmm
     forward_int
+    movb $8, %al
     epilogue
