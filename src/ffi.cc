@@ -303,6 +303,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
             return env.Null();
         }
+
         param.variadic = true;
         param.offset = i + 1;
 
@@ -382,6 +383,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
             return env.Null();
         }
+
         param.offset = j;
 
         func->parameters.Append(param);
