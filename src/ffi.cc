@@ -284,7 +284,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    for (Size i = func.parameters.len; i < info.Length(); i += 2) {
+    for (Size i = func.parameters.len; i < (Size)info.Length(); i += 2) {
         ParameterInfo param = {};
 
         param.type = ResolveType(instance, info[i], &param.directions);
