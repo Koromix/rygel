@@ -1,14 +1,14 @@
 # Table of contents
 
 - [Introduction](#introduction)
+- [Benchmarks](#benchmarks)
+  * [atoi results](#atoi-results)
+  * [Raylib results](#raylib-results)
 - [Installation](#installation)
   * [Windows](#windows)
   * [Other platforms](#other-platforms)
 - [Get started](#get-started)
 - [Tests](#tests)
-- [Benchmarks](#benchmarks)
-  * [atoi results](#atoi-results)
-  * [Raylib results](#raylib-results)
 
 # Introduction
 
@@ -27,7 +27,7 @@ The following platforms __are officially supported and tested__ at the moment:
 * FreeBSD ARM64 Little Endian
 * macOS x86_64
 
-The following platforms will __soon be officially supported__:
+The following platforms will __soon be officially supported__, when I can get my hand on a machine...:
 
 * macOS ARM64
 
@@ -40,6 +40,65 @@ The following platforms __may be supported__ but are not tested:
 * OpenBSD ARM64
 
 This is still in development, bugs are to expected. More tests will come in the near future.
+
+# Benchmarks
+
+In order to run it, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` (or `node ..\..\cnoke\cnoke.js` on Windows) before doing anything else.
+
+Once this is done, you can execute each implementation, e.g. `build/atoi_cc` or `./atoi_koffi.js`. You can optionally define a custom number of iterations, e.g. `./atoi_koffi.js 10000000`.
+
+## atoi results
+
+This test is based around repeated calls to a simple standard C function atoi, and has three implementations:
+- the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js > C FFI implementation.
+- the second one calls atoi through Koffi
+- the third one uses the official Node.js FFI implementation, node-ffi-napi
+
+Because atoi is a small call, the FFI overhead is clearly visible.
+
+### Linux
+
+The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 5800H 16G):
+
+Benchmark     | Iterations | Total time  | Overhead
+------------- | ---------- | ----------- | ----------
+atoi_napi     | 20000000   | 1.10s       | (baseline)
+atoi_koffi    | 20000000   | 1.91s       | x1.73
+atoi_node_ffi | 20000000   | 640.49s     | x582
+
+### Windows
+
+The results below were measured on my x86_64 Windows machine (AMD® Ryzen™ 7 5800H 16G):
+
+Benchmark     | Iterations | Total time  | Overhead
+------------- | ---------- | ----------- | ----------
+atoi_napi     | 20000000   | 1.94s       | (baseline)
+atoi_koffi    | 20000000   | 3.15s       | x1.62
+atoi_node_ffi | 20000000   | 640.49s     | x242
+
+## Raylib results
+
+This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implemenetation, the baseline is a full C++ version of the code.
+
+### Linux
+
+The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 5800H 16G):
+
+Benchmark       | Iterations | Total time  | Overhead
+--------------- | ---------- | ----------- | ----------
+raylib_cc       | 100        | 4.14s       | (baseline)
+raylib_koffi    | 100        | 6.25s       | x1.51
+raylib_node_ffi | 100        | 27.13s      | x6.55
+
+### Windows
+
+The results below were measured on my x86_64 Windows machine (AMD® Ryzen™ 7 5800H 16G):
+
+Benchmark       | Iterations | Total time  | Overhead
+--------------- | ---------- | ----------- | ----------
+raylib_cc       | 100        | 8.39s       | (baseline)
+raylib_koffi    | 100        | 11.51s      | x1.37
+raylib_node_ffi | 100        | 31.47s      | x3.8
 
 # Installation
 
@@ -252,94 +311,4 @@ Each machine is configured to run a VNC server available locally, which you can 
 
 ```sh
 node test.js info debian_x64
-```
-
-# Benchmarks
-
-At this stage, two benchmarks are implemented:
-* The first one is based around repeated calls to atoi, and has four implementations: one in C++, one calling atoi through an NAPI module, one using Koffi, and one with node-ffi-napi. This is a simple function, thus the JS and FFI overhead is clearly visible.
-* The second one is based around Raylib, and will execute much more heavier functions repeatdly. Also in three versions: Koffi, node-ffi-napi and C code.
-
-In order to run it, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` (or `node ..\..\cnoke\cnoke.js` on Windows) before doing anything else.
-
-Once this is done, you can execute each implementation, e.g. `build/atoi_cc` or `./atoi_koffi.js`. You can optionally define a custom number of iterations, e.g. `./atoi_koffi.js 10000000`.
-
-## atoi results
-
-Here are some results from 2022-04-24 on Linux on my machine (AMD® Ryzen™ 7 5800H 16G):
-
-```sh
-$ build/atoi_cc
-Iterations: 20000000
-Time: 0.24s
-
-$ ./atoi_napi.js
-Iterations: 20000000
-Time: 1.10s
-
-$ ./atoi_koffi.js
-Iterations: 20000000
-Time: 1.91s
-
-# Note: the Node-FFI version does a few setTimeout calls to force the GC to run (around 20
-# for the example below), without which Node will consume all memory because the GC never appears
-# to run, or not enough. It's not ideal but on the other hand it counts as another limitation
-# to Node-FFI performance.
-$ ./atoi_node_ffi.js
-Iterations: 20000000
-Time: 640.49s
-```
-
-And on Windows on the same machine (AMD® Ryzen™ 7 5800H 16G):
-
-```sh
-$ build\atoi_cc.exe
-Iterations: 20000000
-Time: 0.25s
-
-$ node atoi_napi.js
-Iterations: 20000000
-Time: 1.94s
-
-$ node atoi_koffi.js
-Iterations: 20000000
-Time: 3.15s
-
-$ node atoi_node_ffi.js
-Iterations: 20000000
-Time: 267.20s
-```
-
-## Raylib results
-
-Here are some results from 2022-04-24 on Linux on my machine (AMD® Ryzen™ 7 5800H 16G):
-
-```sh
-$ build/raylib_cc
-Iterations: 100
-Time: 4.14s
-
-$ ./raylib_koffi.js
-Iterations: 100
-Time: 6.25s
-
-$ ./raylib_node_ffi.js
-Iterations: 100
-Time: 27.13s
-```
-
-And on Windows on the same machine (AMD® Ryzen™ 7 5800H 16G):
-
-```sh
-$ build\raylib_cc.exe
-Iterations: 100
-Time: 8.39s
-
-$ node raylib_koffi.js
-Iterations: 100
-Time: 11.51s
-
-$ node raylib_node_ffi.js
-Iterations: 100
-Time: 32.47s
 ```
