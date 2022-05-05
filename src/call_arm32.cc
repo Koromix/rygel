@@ -112,22 +112,22 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                 Size need = param.type->size / 4;
 
 #ifdef __ARM_PCS_VFP
-                bool soft = param.variadic;
+                bool vfp = !param.variadic;
 #else
-                bool soft = true;
+                bool vfp = false;
 #endif
 
-                if (soft) {
-                    if (need <= gpr_avail) {
-                        param.gpr_count = need;
-                        gpr_avail -= need;
+                if (vfp) {
+                    if (need <= vec_avail) {
+                        param.vec_count = need;
+                        vec_avail -= need;
                     } else {
                         started_stack = true;
                     }
                 } else {
-                    if (need <= vec_avail) {
-                        param.vec_count = need;
-                        vec_avail -= need;
+                    if (need <= gpr_avail) {
+                        param.gpr_count = need;
+                        gpr_avail -= need;
                     } else {
                         started_stack = true;
                     }
