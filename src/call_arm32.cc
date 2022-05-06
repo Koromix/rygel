@@ -394,8 +394,12 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
                     if (RG_UNLIKELY(!call.AllocHeap(param.type->ref->size, 16, &ptr)))
                         return env.Null();
 
-                    if ((param.directions & 1) && !call.PushObject(obj, param.type->ref, ptr))
-                        return env.Null();
+                    if (param.directions & 1) {
+                        if (!call.PushObject(obj, param.type->ref, ptr))
+                            return env.Null();
+                    } else {
+                        memset(ptr, 0, param.type->size);
+                    }
                     if (param.directions & 2) {
                         OutObject out = {obj, ptr, param.type->ref};
                         out_objects.Append(out);
