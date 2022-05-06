@@ -14,6 +14,7 @@
 #include "vendor/libcc/libcc.hh"
 #include "ffi.hh"
 #include "call.hh"
+#include "parser.hh"
 #include "util.hh"
 
 #ifdef _WIN32
@@ -182,23 +183,8 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     if (!ref)
         return env.Null();
 
-    char name_buf[256];
-    Fmt(name_buf, "%1%2*", ref->name, ref->primitive == PrimitiveKind::Pointer ? "" : " ");
-
-    TypeInfo *type = instance->types_map.FindValue(name_buf, nullptr);
-
-    if (!type) {
-        type = instance->types.AppendDefault();
-
-        type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
-
-        type->primitive = PrimitiveKind::Pointer;
-        type->size = RG_SIZE(void *);
-        type->align = RG_SIZE(void *);
-        type->ref = ref;
-
-        instance->types_map.Set(type);
-    }
+    TypeInfo *type = (TypeInfo *)GetPointerType(instance, ref);
+    RG_ASSERT(type);
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
     SetValueTag(instance, external, &TypeInfoMarker);
@@ -316,45 +302,33 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
     return TranslateCall(instance, &func, info);
 }
 
-static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConvention convention, bool variadic)
+static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value ret,
+                                 Napi::Array parameters, FunctionInfo *func)
 {
-    Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-    LibraryHolder *lib = (LibraryHolder *)info.Data();
 
-    if (info.Length() < 3) {
-        ThrowError<Napi::TypeError>(env, "Expected 3 or 4 arguments, not %1", info.Length());
-        return env.Null();
-    }
 #ifdef _WIN32
-    if (!info[0].IsString() && !info[0].IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, info[0]));
-        return env.Null();
+    if (!name.IsString() && !name.IsNumber()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
+        return false;
     }
 #else
-    if (!info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
-        return env.Null();
+    if (!name.IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, name));
+        return false;
     }
 #endif
 
-    FunctionInfo *func = new FunctionInfo();
-    RG_DEFER_N(func_guard) { delete func; };
+    func->name = DuplicateString(std::string(name).c_str(), &instance->str_alloc).ptr;
 
-    std::string name = ((Napi::Value)info[0u]).ToString();
-    func->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
-    func->lib = lib->Ref();
-    func->convention = convention;
-
-    func->ret.type = ResolveType(instance, info[1u]);
+    func->ret.type = ResolveType(instance, ret);
     if (!func->ret.type)
-        return env.Null();
-    if (!((Napi::Value)info[2u]).IsArray()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, (Napi::Value)info[1u]), func->name);
-        return env.Null();
+        return false;
+    if (!parameters.IsArray()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, parameters), func->name);
+        return false;
     }
 
-    Napi::Array parameters = ((Napi::Value)info[2u]).As<Napi::Array>();
     Size parameters_len = parameters.Length();
 
     if (parameters_len) {
@@ -364,11 +338,6 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
             func->variadic = true;
             parameters_len--;
         }
-
-        if (!variadic && func->variadic) {
-            LogError("Call convention '%1' does not support variadic functions, ignoring");
-            func->convention = CallConvention::Default;
-        }
     }
 
     for (uint32_t j = 0; j < parameters_len; j++) {
@@ -376,24 +345,58 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
 
         param.type = ResolveType(instance, parameters[j], &param.directions);
         if (!param.type)
-            return env.Null();
+            return false;
         if (param.type->primitive == PrimitiveKind::Void) {
             ThrowError<Napi::TypeError>(env, "Type void cannot be used as a parameter");
-            return env.Null();
+            return false;
         }
 
         if (func->parameters.len >= MaxParameters) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
-            return env.Null();
+            return false;
         }
         if ((param.directions & 2) && ++func->out_parameters >= MaxOutParameters) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
-            return env.Null();
+            return false;
         }
 
         param.offset = j;
 
         func->parameters.Append(param);
+    }
+
+    return true;
+}
+
+static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConvention convention)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    LibraryHolder *lib = (LibraryHolder *)info.Data();
+
+    FunctionInfo *func = new FunctionInfo();
+    RG_DEFER_N(func_guard) { delete func; };
+
+    func->lib = lib->Ref();
+    func->convention = convention;
+
+    if (info.Length() >= 3) {
+        if (!ParseClassicFunction(env, info[0u].As<Napi::String>(), info[1u], info[2u].As<Napi::Array>(), func))
+            return env.Null();
+    } else if (info.Length() >= 1) {
+        PrototypeParser parser(env);
+
+        if (!parser.Parse(info[0u].As<Napi::String>(), func))
+            return env.Null();
+    } else {
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, not %1", info.Length());
+        return env.Null();
+    }
+
+    if (func->convention != CallConvention::Cdecl && func->variadic) {
+        LogError("Call convention '%1' does not support variadic functions, ignoring",
+                 CallConventionNames[(int)func->convention]);
+        func->convention = CallConvention::Cdecl;
     }
 
     if (!AnalyseFunction(instance, func))
@@ -431,7 +434,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
     }
 
     Napi::Function::Callback call = func->variadic ? TranslateVariadicCall : TranslateNormalCall;
-    Napi::Function wrapper = Napi::Function::New(env, call, name.c_str(), (void *)func);
+    Napi::Function wrapper = Napi::Function::New(env, call, func->name, (void *)func);
     wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { delete func; }, func);
     func_guard.Disable();
 
@@ -495,17 +498,18 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     Napi::Object obj = Napi::Object::New(env);
 
-#define ADD_CONVENTION(Name, Value, Variadic) \
+#define ADD_CONVENTION(Name, Value) \
         do { \
-            const auto wrapper = [](const Napi::CallbackInfo &info) { return FindLibraryFunction(info, (Value), (Variadic)); }; \
+            const auto wrapper = [](const Napi::CallbackInfo &info) { return FindLibraryFunction(info, (Value)); }; \
             Napi::Function func = Napi::Function::New(env, wrapper, (Name), (void *)lib->Ref()); \
             func.AddFinalizer([](Napi::Env, LibraryHolder *lib) { lib->Unref(); }, lib); \
             obj.Set((Name), func); \
         } while (false)
 
-    ADD_CONVENTION("cdecl", CallConvention::Default, true);
-    ADD_CONVENTION("stdcall", CallConvention::Stdcall, false);
-    ADD_CONVENTION("fastcall", CallConvention::Fastcall, false);
+    ADD_CONVENTION("func", CallConvention::Cdecl);
+    ADD_CONVENTION("cdecl", CallConvention::Cdecl);
+    ADD_CONVENTION("stdcall", CallConvention::Stdcall);
+    ADD_CONVENTION("fastcall", CallConvention::Fastcall);
 
 #undef ADD_CONVENTION
 

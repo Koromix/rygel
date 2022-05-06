@@ -100,12 +100,12 @@ struct LibraryHolder {
 };
 
 enum class CallConvention {
-    Default,
+    Cdecl,
     Stdcall,
     Fastcall
 };
 static const char *const CallConventionNames[] = {
-    "Default",
+    "Cdecl",
     "Stdcall",
     "Fastcall"
 };

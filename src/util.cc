@@ -54,6 +54,29 @@ const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int
     }
 }
 
+const TypeInfo *GetPointerType(InstanceData *instance, const TypeInfo *ref)
+{
+    char name_buf[256];
+    Fmt(name_buf, "%1%2*", ref->name, ref->primitive == PrimitiveKind::Pointer ? "" : " ");
+
+    TypeInfo *type = instance->types_map.FindValue(name_buf, nullptr);
+
+    if (!type) {
+        type = instance->types.AppendDefault();
+
+        type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
+
+        type->primitive = PrimitiveKind::Pointer;
+        type->size = RG_SIZE(void *);
+        type->align = RG_SIZE(void *);
+        type->ref = ref;
+
+        instance->types_map.Set(type);
+    }
+
+    return type;
+}
+
 const char *GetValueType(const InstanceData *instance, Napi::Value value)
 {
     for (const TypeInfo &type: instance->types) {

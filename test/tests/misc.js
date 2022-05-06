@@ -69,25 +69,25 @@ async function test() {
     let lib_filename = path.dirname(__filename) + '/../build/misc' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
-    const FillPack1 = lib.cdecl('FillPack1', 'void', ['int', koffi.out(koffi.pointer(Pack1))]);
-    const RetPack1 = lib.cdecl('RetPack1', Pack1, ['int']);
+    const FillPack1 = lib.func('FillPack1', 'void', ['int', koffi.out(koffi.pointer(Pack1))]);
+    const RetPack1 = lib.func('RetPack1', Pack1, ['int']);
     const AddPack1 = lib.fastcall('AddPack1', 'void', ['int', koffi.inout(koffi.pointer(Pack1))]);
-    const FillPack2 = lib.cdecl('FillPack2', 'void', ['int', 'int', koffi.out(koffi.pointer(Pack2))]);
-    const RetPack2 = lib.cdecl('RetPack2', Pack2, ['int', 'int']);
+    const FillPack2 = lib.func('FillPack2', 'void', ['int', 'int', koffi.out(koffi.pointer(Pack2))]);
+    const RetPack2 = lib.func('RetPack2', Pack2, ['int', 'int']);
     const AddPack2 = lib.fastcall('AddPack2', 'void', ['int', 'int', koffi.inout(koffi.pointer(Pack2))]);
-    const FillPack3 = lib.cdecl('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
-    const RetPack3 = lib.cdecl('RetPack3', Pack3, ['int', 'int', 'int']);
+    const FillPack3 = lib.func('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
+    const RetPack3 = lib.func('RetPack3', Pack3, ['int', 'int', 'int']);
     const AddPack3 = lib.fastcall('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
-    const ConcatenateToInt1 = lib.cdecl('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
-    const ConcatenateToInt4 = lib.cdecl('ConcatenateToInt4', 'int64_t', Array(12).fill('int32_t'));
-    const ConcatenateToInt8 = lib.cdecl('ConcatenateToInt8', 'int64_t', Array(12).fill('int64_t'));
-    const ConcatenateToStr1 = lib.cdecl('ConcatenateToStr1', 'string', [...Array(8).fill('int8_t'), koffi.struct('IJK1', {i: 'int8_t', j: 'int8_t', k: 'int8_t'}), 'int8_t']);
-    const ConcatenateToStr4 = lib.cdecl('ConcatenateToStr4', 'string', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', {i: 'int32_t', j: 'int32_t', k: 'int32_t'})), 'int32_t']);
-    const ConcatenateToStr8 = lib.cdecl('ConcatenateToStr8', 'string', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
-    const MakeBFG = lib.stdcall('MakeBFG', BFG, [koffi.out(koffi.pointer(BFG)), 'int', 'double', 'string']);
-    const MakePackedBFG = lib.fastcall('MakePackedBFG', PackedBFG, ['int', 'double', koffi.out(koffi.pointer(PackedBFG)), 'string']);
-    const ReturnBigString = lib.stdcall('ReturnBigString', 'string', ['string']);
-    const PrintFmt = lib.cdecl('PrintFmt', 'string', ['string', '...']);
+    const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
+    const ConcatenateToInt4 = lib.func('ConcatenateToInt4', 'int64_t', Array(12).fill('int32_t'));
+    const ConcatenateToInt8 = lib.func('ConcatenateToInt8', 'int64_t', Array(12).fill('int64_t'));
+    const ConcatenateToStr1 = lib.func('ConcatenateToStr1', 'string', [...Array(8).fill('int8_t'), koffi.struct('IJK1', {i: 'int8_t', j: 'int8_t', k: 'int8_t'}), 'int8_t']);
+    const ConcatenateToStr4 = lib.func('ConcatenateToStr4', 'string', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', {i: 'int32_t', j: 'int32_t', k: 'int32_t'})), 'int32_t']);
+    const ConcatenateToStr8 = lib.func('ConcatenateToStr8', 'string', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
+    const MakeBFG = lib.func('BFG __stdcall MakeBFG(_Out_ BFG *p, int x, double y, const char *str)');
+    const MakePackedBFG = lib.func('PackedBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
+    const ReturnBigString = lib.func('const char * __stdcall ReturnBigString(const char *str)');
+    const PrintFmt = lib.func('const char *PrintFmt(const char *fmt, ...)');
 
     // Simple tests with Pack1
     {

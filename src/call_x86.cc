@@ -65,7 +65,7 @@ bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
     func->args_size = params_size + 4 * !func->ret.trivial;
 
     switch (func->convention) {
-        case CallConvention::Default: {
+        case CallConvention::Cdecl: {
             func->decorated_name = Fmt(&instance->str_alloc, "_%1", func->name).ptr;
         } break;
         case CallConvention::Stdcall: {

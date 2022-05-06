@@ -20,6 +20,8 @@
 namespace RG {
 
 struct InstanceData;
+struct TypeInfo;
+struct FunctionInfo;
 
 template <typename T, typename... Args>
 void ThrowError(Napi::Env env, const char *msg, Args... args)
@@ -52,6 +54,7 @@ static inline T *AlignDown(T *ptr, Size align)
 }
 
 const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_directions = nullptr);
+const TypeInfo *GetPointerType(InstanceData *instance, const TypeInfo *type);
 
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);

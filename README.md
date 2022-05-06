@@ -196,17 +196,20 @@ const Font = koffi.struct('Font', {
 // Fix the path to Raylib DLL if needed
 let lib = koffi.load('build/raylib' + koffi.extension);
 
-const InitWindow = lib.cdecl('InitWindow', 'void', ['int', 'int', 'string']);
-const SetTargetFPS = lib.cdecl('SetTargetFPS', 'void', ['int']);
-const GetScreenWidth = lib.cdecl('GetScreenWidth', 'int', []);
-const GetScreenHeight = lib.cdecl('GetScreenHeight', 'int', []);
-const ClearBackground = lib.cdecl('ClearBackground', 'void', [Color]);
-const BeginDrawing = lib.cdecl('BeginDrawing', 'void', []);
-const EndDrawing = lib.cdecl('EndDrawing', 'void', []);
-const WindowShouldClose = lib.cdecl('WindowShouldClose', 'bool', []);
-const GetFontDefault = lib.cdecl('GetFontDefault', Font, []);
-const MeasureTextEx = lib.cdecl('MeasureTextEx', Vector2, [Font, 'string', 'float', 'float']);
-const DrawTextEx = lib.cdecl('DrawTextEx', 'void', [Font, 'string', Vector2, 'float', 'float', Color]);
+// Classic function declaration
+const InitWindow = lib.func('InitWindow', 'void', ['int', 'int', 'string']);
+const SetTargetFPS = lib.func('SetTargetFPS', 'void', ['int']);
+const GetScreenWidth = lib.func('GetScreenWidth', 'int', []);
+const GetScreenHeight = lib.func('GetScreenHeight', 'int', []);
+const ClearBackground = lib.func('ClearBackground', 'void', [Color]);
+
+// Prototype parser
+const BeginDrawing = lib.func('void BeginDrawing()');
+const EndDrawing = lib.func('void EndDrawing()');
+const WindowShouldClose = lib.func('void WindowShouldClose(bool)');
+const GetFontDefault = lib.func('Font GetFontDefault()');
+const MeasureTextEx = lib.func('Vector2 MeasureTextEx(Font, const char *, float, float)');
+const DrawTextEx = lib.func('void DrawTextEx(Font font, const char *text, Vector2 pos, float size, float spacing, Color tint)');
 
 InitWindow(800, 600, 'Test Raylib');
 SetTargetFPS(60);

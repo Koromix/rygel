@@ -30,6 +30,7 @@ set(KOFFI_SRC
     src/call_x64_win.cc
     src/call_x86.cc
     src/ffi.cc
+    src/parser.cc
     src/util.cc
     vendor/libcc/libcc.cc
 )
