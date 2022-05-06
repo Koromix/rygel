@@ -326,15 +326,22 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
         ThrowError<Napi::TypeError>(env, "Expected 3 or 4 arguments, not %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string", GetValueType(instance, info[0]));
+#ifdef _WIN32
+    if (!info[0].IsString() && !info[0].IsNumber()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, info[0]));
         return env.Null();
     }
+#else
+    if (!info[0].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+#endif
 
     FunctionInfo *func = new FunctionInfo();
     RG_DEFER_N(func_guard) { delete func; };
 
-    std::string name = ((Napi::Value)info[0u]).As<Napi::String>();
+    std::string name = ((Napi::Value)info[0u]).ToString();
     func->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
     func->lib = lib->Ref();
     func->convention = convention;
@@ -397,11 +404,18 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
     }
 
 #ifdef _WIN32
-    if (func->decorated_name) {
-        func->func = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
-    }
-    if (!func->func) {
-        func->func = (void *)GetProcAddress((HMODULE)lib->module, func->name);
+    if (info[0].IsString()) {
+        if (func->decorated_name) {
+            func->func = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
+        }
+        if (!func->func) {
+            func->func = (void *)GetProcAddress((HMODULE)lib->module, func->name);
+        }
+    } else {
+        uint16_t ordinal = (uint16_t)info[0].As<Napi::Number>().Uint32Value();
+
+        func->decorated_name = nullptr;
+        func->func = (void *)GetProcAddress((HMODULE)lib->module, (LPCSTR)ordinal);
     }
 #else
     if (func->decorated_name) {
