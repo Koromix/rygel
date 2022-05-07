@@ -18,7 +18,7 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "src/index.js",
   "scripts": {
-    "install": "cnoke",
+    "install": "cnoke --prebuild https://koromix.dev/files/koffi/builds/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz",
     "test": "node test/test.js"
   },
   "license": "AGPL-3.0",
