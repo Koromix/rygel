@@ -55,7 +55,7 @@ endif()
 add_node_addon(NAME koffi SOURCES ${KOFFI_SRC})
 target_include_directories(koffi PRIVATE . vendor/node-addon-api)
 
-target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS)
+target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS NAPI_VERSION=8)
 if(WIN32)
     target_compile_definitions(koffi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
     target_link_libraries(koffi PRIVATE ws2_32)
