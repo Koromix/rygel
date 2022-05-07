@@ -95,7 +95,7 @@ static bool ReadCommandOutput(const char *cmd_line, Size max_len, HeapArray<char
     return true;
 }
 
-static int ParseMajorVersion(const char *cmd, Span<const char> output, const char *marker)
+static int ParseVersion(const char *cmd, Span<const char> output, const char *marker)
 {
     Span<const char> remain = output;
 
@@ -103,16 +103,19 @@ static int ParseMajorVersion(const char *cmd, Span<const char> output, const cha
         Span<const char> token = SplitStr(remain, ' ', &remain);
 
         if (token == marker) {
-            int version;
-            if (!ParseInt(remain, &version, 0, &remain)) {
+            int major = 0;
+            int minor = 0;
+
+            if (!ParseInt(remain, &major, 0, &remain)) {
                 LogError("Unexpected version format returned by '%1'", cmd);
                 return -1;
             }
-            if (!remain.len || remain[0] != '.') {
+            if(remain[0] == '.' && !ParseInt(remain, &minor, 0, &remain)) {
                 LogError("Unexpected version format returned by '%1'", cmd);
                 return -1;
             }
 
+            int version = major * 100 + minor;
             return version;
         }
     }
@@ -199,7 +202,7 @@ public:
 
             HeapArray<char> output;
             if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
-                compiler->clang_ver = ParseMajorVersion(cmd, output, "version");
+                compiler->clang_ver = ParseVersion(cmd, output, "version");
             }
 
             return true;
@@ -221,7 +224,7 @@ public:
 
                 HeapArray<char> output;
                 if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
-                    compiler->lld_ver = ParseMajorVersion(cmd, output, "LLD");
+                    compiler->lld_ver = ParseVersion(cmd, output, "LLD");
                 }
             }
 
@@ -286,7 +289,7 @@ public:
             LogError("Clang CFI feature requires LTO compilation");
             return false;
         }
-        if (lld_ver < 11 && (features & (int)CompileFeature::ShuffleCode)) {
+        if (lld_ver < 1100 && (features & (int)CompileFeature::ShuffleCode)) {
             LogError("ShuffleCode requires LLD >= 11, try --host option (e.g. --host=,clang-11 or --host=,clang-11,lld-11)");
             return false;
         }
@@ -402,14 +405,14 @@ public:
 
             case HostPlatform::macOS: {
                 Fmt(&buf, " -pthread -fPIC");
-                if (clang_ver >= 11) {
+                if (clang_ver >= 1100) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
             } break;
 
             default: {
                 Fmt(&buf, " -D_FILE_OFFSET_BITS=64 -pthread -fPIC");
-                if (clang_ver >= 11) {
+                if (clang_ver >= 1100) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
@@ -441,7 +444,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-        if (host == HostPlatform::Linux && (clang_ver >= 11)) {
+        if (host == HostPlatform::Linux && (clang_ver >= 1100)) {
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::SafeStack) {
@@ -460,7 +463,7 @@ public:
                 Fmt(&buf, " -fsanitize-cfi-icall-generalize-pointers");
             }
 
-            if (clang_ver >= 14) {
+            if (clang_ver >= 1400) {
                 Fmt(&buf, " -cfprotection=branch");
             }
         }
@@ -612,7 +615,7 @@ public:
             Fmt(&buf, " -fsanitize=cfi");
         }
         if (features & (int)CompileFeature::ShuffleCode) {
-            if (lld_ver >= 13) {
+            if (lld_ver >= 1300) {
                 Fmt(&buf, " -Wl,--shuffle-sections=*=0");
             } else {
                 Fmt(&buf, " -Wl,--shuffle-sections=0");
@@ -680,7 +683,7 @@ public:
 
             HeapArray<char> output;
             if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
-                compiler->gcc_ver = ParseMajorVersion(cmd, output, "version");
+                compiler->gcc_ver = ParseVersion(cmd, output, "version");
                 compiler->i686 = FindStr(output, "i686") >= 0;
             }
 
@@ -711,7 +714,7 @@ public:
             supported |= (int)CompileFeature::LTO;
         }
         supported |= (int)CompileFeature::ZeroInit;
-        if (gcc_ver >= 9) {
+        if (gcc_ver >= 900) {
             supported |= (int)CompileFeature::CFI;
         }
         supported |= (int)CompileFeature::Cxx17;
@@ -736,8 +739,8 @@ public:
             LogError("Cannot use ASan and TSan at the same time");
             return false;
         }
-        if (gcc_ver < 12 && (features & (int)CompileFeature::ZeroInit)) {
-            LogError("ZeroInit requires GCC >= 12, try --host option (e.g. --host=,gcc-12)");
+        if (gcc_ver < 1201 && (features & (int)CompileFeature::ZeroInit)) {
+            LogError("ZeroInit requires GCC >= 12.1, try --host option (e.g. --host=,gcc-12)");
             return false;
         }
 
