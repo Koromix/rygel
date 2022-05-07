@@ -28,6 +28,7 @@ const { spawnSync } = require('child_process');
 
 let app_dir = null;
 let project_dir = null;
+let package_dir = null;
 let cache_dir = null;
 let build_dir = null;
 let work_dir = null;
@@ -36,6 +37,7 @@ let version = null;
 let arch = null;
 let mode = 'RelWithDebInfo';
 let targets = [];
+let prebuild = null;
 
 let cmake_bin = null;
 
@@ -113,6 +115,11 @@ async function main() {
                         throw new Error(`Unknown value '${value}' for ${arg}`);
                     } break;
                 }
+            } else if (command == build && arg == '--prebuild') {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                prebuild = value;
             } else if (command == build && arg[0] != '-') {
                 targets.push(arg);
             } else {
@@ -134,6 +141,7 @@ async function main() {
     if (project_dir == null)
         project_dir = process.cwd();
     project_dir = project_dir.replace(/\\/g, '/');
+    package_dir = find_parent_directory(project_dir, 'package.json');
     cache_dir = get_cache_directory();
     build_dir = project_dir + '/build';
     work_dir = build_dir + `/${version}_${arch}`;
@@ -274,6 +282,38 @@ async function configure(retry = true) {
 }
 
 async function build() {
+    if (prebuild) {
+        let url = prebuild.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
+            switch (p1) {
+                case 'version': {
+                    let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
+                    let version = JSON.parse(json).version;
+
+                    return version;
+                } break;
+
+                case 'platform': return process.platform;
+                case 'arch': return arch;
+
+                default: return match;
+            }
+        });
+        let basename = path.basename(url);
+
+        let dest_filename = build_dir + '/' + basename;
+
+        try {
+            await download(url, dest_filename);
+
+            console.log('>> Extracting prebuilt binaries...');
+            extract_targz(dest_filename, build_dir, 2);
+
+            return;
+        } catch (err) {
+            console.error('Failed to find prebuilt binary for your platform, building manually');
+        }
+    }
+
     check_cmake();
 
     if (!fs.existsSync(work_dir + '/CMakeCache.txt'))
@@ -389,6 +429,13 @@ async function download(url, dest) {
     try {
         await new Promise((resolve, reject) => {
             let request = http.get(url, response => {
+                if (response.statusCode != 200) {
+                    let err = new Error(`Download failed: ${response.statusMessage} [${response.statusCode}]`);
+                    reject(err);
+
+                    return;
+                }
+
                 response.pipe(file);
 
                 file.on('finish', () => file.close(() => {
@@ -408,7 +455,13 @@ async function download(url, dest) {
         });
     } catch (err) {
         file.close();
-        fs.unlink(tmp_name);
+
+        try {
+            fs.unlinkSync(tmp_name);
+        } catch (err) {
+            if (err.code != 'ENOENT')
+                throw err;
+        }
 
         throw err;
     }
@@ -460,10 +513,11 @@ function extract_targz(filename, dest_dir, strip = 0) {
                         };
 
                         // UStar filename prefix
-                        if (buf.toString('ascii', 257, 263) == 'ustar\0') {
+                        /*if (buf.toString('ascii', 257, 263) == 'ustar\0') {
                             let prefix = buf.toString('utf-8', 345, 500).replace(/\0/g, '');
+                            console.log(prefix);
                             header.filename = prefix ? (prefix + '/' + header.filename) : header.filename;
-                        }
+                        }*/
 
                         Object.assign(header, extended);
                         extended = {};
@@ -555,4 +609,19 @@ function has_dotdot(path) {
     }
 
     return false;
+}
+
+function find_parent_directory(dirname, basename)
+{
+    if (process.platform == 'win32')
+        dirname = dirname.replaceAll('\\', '/');
+
+    do {
+        if (fs.existsSync(dirname + '/' + basename))
+            return dirname;
+
+        dirname = path.dirname(dirname);
+    } while (dirname.includes('/'));
+
+    return null;
 }
