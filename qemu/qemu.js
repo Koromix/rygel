@@ -330,7 +330,7 @@ async function pack() {
                 let arch = build.arch || machine.info.arch;
 
                 let src_dir = build.directory + '/koffi/build';
-                let dest_dir = root_dir + `/koffi/build/qemu/${version}/koffi_${platform}_${arch}`;
+                let dest_dir = root_dir + `/koffi/qemu/build/${version}/koffi_${platform}_${arch}`;
 
                 fs.mkdirSync(dest_dir + '/build', { mode: 0o755, recursive: true });
 
@@ -347,7 +347,6 @@ async function pack() {
                         cwd: dest_dir + '/..'
                     }, [path.basename(dest_dir)]);
                 } catch (err) {
-                    console.log(err);
                     ignore.add(machine);
                     success = false;
                     copied = false;
