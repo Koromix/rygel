@@ -21,6 +21,13 @@
             "shutdown": "sudo poweroff"
         },
 
+        "builds": {
+            "Linux ARM32": {
+                "directory": "/home/debian/luigi",
+                "build": "node ../cnoke/cnoke.js"
+            }
+        },
+
         "tests": {
             "Linux ARM32": {
                 "directory": "/home/debian/luigi",
@@ -56,6 +63,13 @@
             "password": "debian",
 
             "shutdown": "sudo poweroff"
+        },
+
+        "builds": {
+            "Linux ARM64": {
+                "directory": "/home/debian/luigi",
+                "build": "node ../cnoke/cnoke.js"
+            }
         },
 
         "tests": {
@@ -95,6 +109,13 @@
             "shutdown": "sudo poweroff"
         },
 
+        "builds": {
+            "Linux i386": {
+                "directory": "/home/debian/luigi",
+                "build": "node ../cnoke/cnoke.js"
+            }
+        },
+
         "tests": {
             "Linux i386": {
                 "directory": "/home/debian/luigi",
@@ -132,6 +153,13 @@
             "shutdown": "sudo poweroff"
         },
 
+        "builds": {
+            "Linux x64": {
+                "directory": "/home/debian/luigi",
+                "build": "node ../cnoke/cnoke.js"
+            }
+        },
+
         "tests": {
             "Linux x64": {
                 "directory": "/home/debian/luigi",
@@ -167,6 +195,20 @@
             "password": "windows",
 
             "shutdown": "shutdown -s -t 0"
+        },
+
+        "builds": {
+            "Windows i386": {
+                "arch": "ia32",
+                "directory": "C:/Users/windows/Desktop/luigi32",
+                "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js"
+            },
+
+            "Windows x64": {
+                "arch": "x64",
+                "directory": "C:/Users/windows/Desktop/luigi64",
+                "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js"
+            }
         },
 
         "tests": {
@@ -218,6 +260,13 @@
             "shutdown": "sudo poweroff"
         },
 
+        "builds": {
+            "FreeBSD x64": {
+                "directory": "/home/freebsd/luigi",
+                "build": "node ../cnoke/cnoke.js"
+            }
+        },
+
         "tests": {
             "FreeBSD x64": {
                 "directory": "/home/freebsd/luigi",
@@ -253,6 +302,13 @@
             "password": "freebsd",
 
             "shutdown": "sudo poweroff"
+        },
+
+        "builds": {
+            "FreeBSD i386": {
+                "directory": "/home/freebsd/luigi",
+                "build": "node ../cnoke/cnoke.js"
+            }
         },
 
         "tests": {
@@ -292,6 +348,13 @@
             "shutdown": "sudo poweroff"
         },
 
+        "builds": {
+            "FreeBSD ARM64": {
+                "directory": "/home/freebsd/luigi",
+                "build": "node ../cnoke/cnoke.js"
+            }
+        },
+
         "tests": {
             "FreeBSD ARM64": {
                 "directory": "/home/freebsd/luigi",
@@ -327,6 +390,13 @@
             "password": "macos",
 
             "shutdown": "sudo shutdown -h now"
+        },
+
+        "builds": {
+            "macOS x64": {
+                "directory": "/Users/macos/luigi",
+                "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js"
+            }
         },
 
         "tests": {

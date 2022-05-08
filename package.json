@@ -31,7 +31,8 @@
     "minimatch": "^5.0.1",
     "node-ssh": "^12.0.3",
     "ref-napi": "^3.0.3",
-    "ref-struct-di": "^1.1.1"
+    "ref-struct-di": "^1.1.1",
+    "tar": "^6.1.11"
   },
   "files": [
     "src",

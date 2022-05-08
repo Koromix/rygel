@@ -24,6 +24,7 @@ const { spawn, spawnSync } = require('child_process');
 const { NodeSSH } = require('node-ssh');
 const chalk = require('chalk');
 const minimatch = require('minimatch');
+const tar = require('tar');
 
 // Globals
 
@@ -56,6 +57,7 @@ async function main() {
 
         if (process.argv.length >= 3 && process.argv[2][0] != '-') {
             switch (process.argv[2]) {
+                case 'build': { command = build; i++ } break;
                 case 'test': { command = test; i++; } break;
                 case 'start': { command = start; i++; } break;
                 case 'stop': { command = stop; i++; } break;
@@ -261,10 +263,109 @@ async function start(detach = true) {
     return success;
 }
 
-async function test() {
+async function build() {
     let success = true;
 
-    let snapshot_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'luigi-'));
+    success &= await start(false);
+    success &= await copy(machine => Object.values(machine.builds).map(build => build.directory));
+
+    console.log('>> Run build commands...');
+    await Promise.all(machines.map(async machine => {
+        if (ignore.has(machine))
+            return;
+
+        await Promise.all(Object.keys(machine.builds).map(async suite => {
+            let build = machine.builds[suite];
+
+            let cmd = build.build;
+            let cwd = build.directory + '/koffi';
+
+            let start = process.hrtime.bigint();
+            let ret = await exec_remote(machine, cmd, cwd);
+            let time = Number((process.hrtime.bigint() - start) / 1000000n);
+
+            if (ret.code == 0) {
+                log(machine, `${suite} > Build`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
+            } else {
+                log(machine, `${suite} > Build`, chalk.bold.red('[error]'));
+
+                if (ret.stdout || ret.stderr)
+                    console.error('');
+
+                let align = log.align + 9;
+                if (ret.stdout) {
+                    let str = ' '.repeat(align) + 'Standard output:\n' +
+                              chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                    console.error(str);
+                }
+                if (ret.stderr) {
+                    let str = ' '.repeat(align) + 'Standard error:\n' +
+                              chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                    console.error(str);
+                }
+
+                success = false;
+            }
+        }));
+    }));
+
+    console.log('>> Get build artifacts');
+    {
+        let json = fs.readFileSync(root_dir + '/koffi/package.json', { encoding: 'utf-8' });
+        let version = JSON.parse(json).version;
+
+        await Promise.all(machines.map(async machine => {
+            if (ignore.has(machine))
+                return;
+
+            let copied = true;
+
+            await Promise.all(Object.keys(machine.builds).map(async suite => {
+                let build = machine.builds[suite];
+
+                let platform = build.platform || machine.info.platform;
+                let arch = build.arch || machine.info.arch;
+
+                let src_dir = build.directory + '/koffi/build';
+                let dest_dir = root_dir + `/koffi/build/qemu/${version}/koffi_${platform}_${arch}`;
+
+                fs.mkdirSync(dest_dir + '/build', { mode: 0o755, recursive: true });
+
+                try {
+                    await machine.ssh.getDirectory(dest_dir + '/build', src_dir, {
+                        recursive: false,
+                        concurrency: 4
+                    });
+
+                    tar.c({
+                        gzip: true,
+                        file: dest_dir + '.tar.gz',
+                        sync: true,
+                        cwd: dest_dir + '/..'
+                    }, [path.basename(dest_dir)]);
+                } catch (err) {
+                    console.log(err);
+                    ignore.add(machine);
+                    success = false;
+                    copied = false;
+                }
+            }));
+
+            let status = copied ? chalk.bold.green('[ok]') : chalk.bold.red('[error]');
+            log(machine, 'Download', status);
+        }));
+    }
+
+    if (machines.some(machine => machine.started))
+        success &= await stop(false);
+
+    return success;
+}
+
+async function copy(func) {
+    let success = true;
+
+    let snapshot_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'luigi_'));
     process.on('exit', () => unlink_recursive(snapshot_dir));
 
     console.log('>> Snapshot code...');
@@ -279,8 +380,6 @@ async function test() {
                basename !== 'luiggi';
     });
 
-    success &= await start(false);
-
     console.log('>> Copy source code...');
     await Promise.all(machines.map(async machine => {
         if (ignore.has(machine))
@@ -288,15 +387,15 @@ async function test() {
 
         let copied = true;
 
-        for (let test of Object.values(machine.tests)) {
+        for (let directory of func(machine)) {
             try {
-                await machine.ssh.exec('rm', ['-rf', test.directory]);
+                await machine.ssh.exec('rm', ['-rf', directory]);
             } catch (err) {
                 // Fails often on Windows (busy directory or whatever), but rarely a problem
             }
 
             try {
-                await machine.ssh.putDirectory(snapshot_dir, test.directory, {
+                await machine.ssh.putDirectory(snapshot_dir, directory, {
                     recursive: true,
                     concurrency: 4
                 });
@@ -310,6 +409,15 @@ async function test() {
         let status = copied ? chalk.bold.green('[ok]') : chalk.bold.red('[error]');
         log(machine, 'Copy', status);
     }));
+
+    return success;
+}
+
+async function test() {
+    let success = true;
+
+    success &= await start(false);
+    success &= await copy(machine => Object.values(machine.tests).map(test => test.directory));
 
     console.log('>> Run test commands...');
     await Promise.all(machines.map(async machine => {
