@@ -283,6 +283,8 @@ async function configure(retry = true) {
 
 async function build() {
     if (prebuild) {
+        fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
+
         let url = prebuild.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
             switch (p1) {
                 case 'version': {
