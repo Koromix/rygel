@@ -57,7 +57,7 @@ async function main() {
 
         if (process.argv.length >= 3 && process.argv[2][0] != '-') {
             switch (process.argv[2]) {
-                case 'build': { command = build; i++ } break;
+                case 'pack': { command = pack; i++ } break;
                 case 'test': { command = test; i++; } break;
                 case 'start': { command = start; i++; } break;
                 case 'stop': { command = stop; i++; } break;
@@ -191,6 +191,7 @@ function print_usage() {
 
 Commands:
     test                         Run the machines and perform the tests (default)
+    pack                         Use machines to package prebuilt Koffi binaries
     start                        Start the machines but don't run anythingh
     stop                         Stop running machines
     info                         Print basic information about machine
@@ -263,7 +264,7 @@ async function start(detach = true) {
     return success;
 }
 
-async function build() {
+async function pack() {
     let success = true;
 
     success &= await start(false);
