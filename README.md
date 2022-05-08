@@ -263,13 +263,13 @@ MessageBoxA(null, 'Hello', 'Foobar', MB_ICONINFORMATION);
 
 Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as `qemu-system` (or even `qemu-system-gui`) on Ubuntu.
 
-These machines are not included directly in this repository (for license and size reasons), but they are available here: https://koromix.dev/files/koffi/
+These machines are not included directly in this repository (for license and size reasons), but they are available here: https://koromix.dev/files/koffi/machines/
 
 For example, if you want to run the tests on Debian ARM64, run the following commands:
 
 ```sh
 cd luigi/koffi/test/
-wget -q -O- https://koromix.dev/files/koffi/qemu_debian_arm64.tar.zst | zstd -d | tar xv
+wget -q -O- https://koromix.dev/files/koffi/machines/qemu_debian_arm64.tar.zst | zstd -d | tar xv
 sha256sum -c --ignore-missing registry/sha256sum.txt
 ```
 
