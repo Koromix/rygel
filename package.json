@@ -48,6 +48,6 @@
     "LICENSE.txt",
     "README.md",
     "CMakeLists.txt",
-    "qemu/build/0.9.38/*.tar.gz"
+    "qemu/build/*/*.tar.gz"
   ]
 }

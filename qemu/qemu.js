@@ -329,6 +329,8 @@ async function pack() {
                 let platform = build.platform || machine.info.platform;
                 let arch = build.arch || machine.info.arch;
 
+                unlink_recursive(root_dir + '/koffi/qemu/build');
+
                 let src_dir = build.directory + '/koffi/build';
                 let dest_dir = root_dir + `/koffi/qemu/build/${version}/koffi_${platform}_${arch}`;
 
