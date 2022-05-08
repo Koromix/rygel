@@ -268,7 +268,7 @@ These machines are not included directly in this repository (for license and siz
 For example, if you want to run the tests on Debian ARM64, run the following commands:
 
 ```sh
-cd luigi/koffi/test/
+cd luigi/koffi/qemu/
 wget -q -O- https://koromix.dev/files/koffi/machines/qemu_debian_arm64.tar.zst | zstd -d | tar xv
 sha256sum -c --ignore-missing registry/sha256sum.txt
 ```
@@ -278,7 +278,7 @@ Note that the machine disk content may change each time the machine runs, so the
 And now you can run the tests with:
 
 ```sh
-node test.js # Several options are available, use --help
+node qemu.js # Several options are available, use --help
 ```
 
 And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.
@@ -286,32 +286,32 @@ And be patient, this can be pretty slow for emulated machines. The Linux machine
 By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:
 
 ```sh
-node test.js start # Start the machines
-node test.js # Test (without shutting down)
-node test.js # Test again
-node test.js stop # Stop everything
+node qemu.js start # Start the machines
+node qemu.js # Test (without shutting down)
+node qemu.js # Test again
+node qemu.js stop # Stop everything
 ```
 
 You can also restrict the test to a subset of machines:
 
 ```sh
 # Full test cycle
-node test.js test debian_x64 debian_i386
+node qemu.js test debian_x64 debian_i386
 
 # Separate start, test, shutdown
-node test.js start debian_x64 debian_i386
-node test.js test debian_x64 debian_i386
-node test.js stop
+node qemu.js start debian_x64 debian_i386
+node qemu.js test debian_x64 debian_i386
+node qemu.js stop
 ```
 
 Finally, you can join a running machine with SSH with the following shortcut, if you need to do some debugging or any other manual procedure:
 
 ```sh
-node test.js ssh debian_i386
+node qemu.js ssh debian_i386
 ```
 
 Each machine is configured to run a VNC server available locally, which you can use to access the display, using KRDC or any other compatible viewer. Use the `info` command to get the VNC port.
 
 ```sh
-node test.js info debian_x64
+node qemu.js info debian_x64
 ```

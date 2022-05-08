@@ -187,15 +187,17 @@ async function main() {
 }
 
 function print_usage() {
-    let help = `Usage: node test.js [command] [options...]
+    let help = `Usage: node qemu.js [command] [options...]
 
 Commands:
     test                         Run the machines and perform the tests (default)
     pack                         Use machines to package prebuilt Koffi binaries
+
     start                        Start the machines but don't run anythingh
     stop                         Stop running machines
     info                         Print basic information about machine
     ssh                          Start SSH session with specific machine
+
     reset                        Reset initial disk snapshot
 
 Options:

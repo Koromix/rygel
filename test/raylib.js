@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const koffi = require('../build/koffi.node');
+const koffi = require('./build/koffi.node');
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
@@ -83,7 +83,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.dirname(__filename) + '/../build/raylib' + koffi.extension;
+    let lib_filename = path.dirname(__filename) + '/build/raylib' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
     const InitWindow = lib.func('InitWindow', 'void', ['int', 'int', 'string']);

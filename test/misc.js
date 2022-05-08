@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const koffi = require('../build/koffi.node');
+const koffi = require('./build/koffi.node');
 const assert = require('assert');
 const path = require('path');
 
@@ -66,7 +66,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.dirname(__filename) + '/../build/misc' + koffi.extension;
+    let lib_filename = path.dirname(__filename) + '/build/misc' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
     const FillPack1 = lib.func('FillPack1', 'void', ['int', koffi.out(koffi.pointer(Pack1))]);

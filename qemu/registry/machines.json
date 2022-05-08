@@ -35,9 +35,9 @@
                     "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js",
-                    "Test SQLite": "node test/tests/sqlite.js"
+                    "Test Raylib": "xvfb-run node test/raylib.js",
+                    "Test Misc": "node test/misc.js",
+                    "Test SQLite": "node test/sqlite.js"
                 }
             }
         }
@@ -79,9 +79,9 @@
                     "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js",
-                    "Test SQLite": "node test/tests/sqlite.js"
+                    "Test Raylib": "xvfb-run node test/raylib.js",
+                    "Test Misc": "node test/misc.js",
+                    "Test SQLite": "node test/sqlite.js"
                 }
             }
         }
@@ -123,9 +123,9 @@
                     "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js",
-                    "Test SQLite": "node test/tests/sqlite.js"
+                    "Test Raylib": "xvfb-run node test/raylib.js",
+                    "Test Misc": "node test/misc.js",
+                    "Test SQLite": "node test/sqlite.js"
                 }
             }
         }
@@ -167,9 +167,9 @@
                     "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js",
-                    "Test SQLite": "node test/tests/sqlite.js"
+                    "Test Raylib": "xvfb-run node test/raylib.js",
+                    "Test Misc": "node test/misc.js",
+                    "Test SQLite": "node test/sqlite.js"
                 }
             }
         }
@@ -218,9 +218,9 @@
                     "Build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Raylib": "seatsh C:\\Node32\\node32.cmd node test/tests/raylib.js",
-                    "Test Misc": "C:\\Node32\\node32.cmd node test/tests/misc.js",
-                    "Test SQLite": "C:\\Node32\\node32.cmd node test/tests/sqlite.js"
+                    "Test Raylib": "seatsh C:\\Node32\\node32.cmd node test/raylib.js",
+                    "Test Misc": "C:\\Node32\\node32.cmd node test/misc.js",
+                    "Test SQLite": "C:\\Node32\\node32.cmd node test/sqlite.js"
                 }
             },
 
@@ -230,9 +230,9 @@
                     "Build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Raylib": "seatsh C:\\Node64\\node64.cmd node test/tests/raylib.js",
-                    "Test Misc": "C:\\Node64\\node64.cmd node test/tests/misc.js",
-                    "Test SQLite": "C:\\Node64\\node64.cmd node test/tests/sqlite.js"
+                    "Test Raylib": "seatsh C:\\Node64\\node64.cmd node test/raylib.js",
+                    "Test Misc": "C:\\Node64\\node64.cmd node test/misc.js",
+                    "Test SQLite": "C:\\Node64\\node64.cmd node test/sqlite.js"
                 }
             }
         }
@@ -274,9 +274,9 @@
                     "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js",
-                    "Test SQLite": "node test/tests/sqlite.js"
+                    "Test Raylib": "xvfb-run node test/raylib.js",
+                    "Test Misc": "node test/misc.js",
+                    "Test SQLite": "node test/sqlite.js"
                 }
             }
         }
@@ -318,9 +318,9 @@
                     "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js",
-                    "Test SQLite": "node test/tests/sqlite.js"
+                    "Test Raylib": "xvfb-run node test/raylib.js",
+                    "Test Misc": "node test/misc.js",
+                    "Test SQLite": "node test/sqlite.js"
                 }
             }
         }
@@ -362,9 +362,9 @@
                     "Build": "node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Raylib": "xvfb-run node test/tests/raylib.js",
-                    "Test Misc": "node test/tests/misc.js",
-                    "Test SQLite": "node test/tests/sqlite.js"
+                    "Test Raylib": "xvfb-run node test/raylib.js",
+                    "Test Misc": "node test/misc.js",
+                    "Test SQLite": "node test/sqlite.js"
                 }
             }
         }
@@ -406,8 +406,8 @@
                     "Build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
-                    "Test Misc": "PATH=/usr/local/bin:/usr/bin:/bin node test/tests/misc.js",
-                    "Test SQLite": "PATH=/usr/local/bin:/usr/bin:/bin node test/tests/sqlite.js"
+                    "Test Misc": "PATH=/usr/local/bin:/usr/bin:/bin node test/misc.js",
+                    "Test SQLite": "PATH=/usr/local/bin:/usr/bin:/bin node test/sqlite.js"
                 }
             }
         }

@@ -14,7 +14,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 const crypto = require('crypto');
-const koffi = require('../build/koffi.node');
+const koffi = require('./build/koffi.node');
 const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
@@ -36,7 +36,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.dirname(__filename) + '/../build/sqlite3' + koffi.extension;
+    let lib_filename = path.dirname(__filename) + '/build/sqlite3' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
     const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['string', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'string']);

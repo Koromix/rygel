@@ -107,7 +107,7 @@ endif()
 
 # ---- Misc ----
 
-add_library(misc SHARED tests/misc.c)
+add_library(misc SHARED misc.c)
 set_target_properties(misc PROPERTIES PREFIX "")
 
 if(MSVC)

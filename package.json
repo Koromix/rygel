@@ -19,7 +19,7 @@
   "main": "src/index.js",
   "scripts": {
     "install": "cnoke --prebuild https://koromix.dev/files/koffi/builds/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz",
-    "test": "node test/test.js"
+    "test": "node qemu/qemu.js"
   },
   "license": "AGPL-3.0",
   "dependencies": {
