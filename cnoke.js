@@ -312,7 +312,7 @@ async function build() {
                 archive_filename = build_dir + '/' + basename;
                 await download(url, archive_filename);
             } else {
-                archive_filename = url;
+                archive_filename = project_dir + '/' + url;
             }
 
             console.log('>> Extracting prebuilt binaries...');
