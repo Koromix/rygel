@@ -269,7 +269,7 @@ For example, if you want to run the tests on Debian ARM64, run the following com
 
 ```sh
 cd luigi/koffi/qemu/
-wget -q -O- https://koromix.dev/files/machines/emu_debian_arm64.tar.zst | zstd -d | tar xv
+wget -q -O- https://koromix.dev/files/machines/qemu_debian_arm64.tar.zst | zstd -d | tar xv
 sha256sum -c --ignore-missing registry/sha256sum.txt
 ```
 
