@@ -313,6 +313,8 @@ async function build() {
                 await download(url, archive_filename);
             } else {
                 archive_filename = project_dir + '/' + url;
+                if (!fs.existsSync(archive_filename))
+                    throw new Error('Cannot find local prebuilt archive');
             }
 
             console.log('>> Extracting prebuilt binaries...');
