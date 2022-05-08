@@ -305,13 +305,18 @@ async function build() {
         });
         let basename = path.basename(url);
 
-        let dest_filename = build_dir + '/' + basename;
-
         try {
-            await download(url, dest_filename);
+            let archive_filename = null;
+
+            if (url.match('^[a-z]+://')) {
+                archive_filename = build_dir + '/' + basename;
+                await download(url, archive_filename);
+            } else {
+                archive_filename = url;
+            }
 
             console.log('>> Extracting prebuilt binaries...');
-            extract_targz(dest_filename, build_dir, 2);
+            extract_targz(archive_filename, build_dir, 2);
 
             return;
         } catch (err) {
