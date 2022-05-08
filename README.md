@@ -73,6 +73,9 @@ Global options:
     -C, --directory <DIR>        Change project directory
                                  (default: current working directory)
 
+Build options:
+        --prebuild <URL>         Set URL template to download prebuilt binaries
+
 Configure options:
     -v, --version <VERSION>      Change node version
                                  (default: process.version)
