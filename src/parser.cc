@@ -26,11 +26,13 @@ bool PrototypeParser::Parse(Napi::String proto, FunctionInfo *func)
         return false;
     }
 
+    std::string hold = proto;
+
     tokens.Clear();
     offset = 0;
     valid = true;
 
-    Tokenize(std::string(proto).c_str());
+    Tokenize(hold.c_str());
 
     func->ret.type = ParseType();
     if (Match("__cdecl")) {
