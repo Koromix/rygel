@@ -16,28 +16,27 @@ Koffi is a fast and easy-to-use FFI module for Node.js, with support for complex
 
 The following platforms __are officially supported and tested__ at the moment:
 
-* Windows x86 *(cdecl, stdcall, fastcall)*
-* Windows x86_64
-* Linux x86
-* Linux x86_64
-* Linux ARM32+VFP Little Endian
-* Linux ARM64 Little Endian
-* FreeBSD x86
-* FreeBSD x86_64
-* FreeBSD ARM64 Little Endian
-* macOS x86_64
+Platoform | Architecture                     | JS to C | C to JS (callback)
+--------- | -------------------------------- | ------- | ------------------
+Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩      | 🟥
+Windows   | x86_64                           | 🟩      | 🟥
+Linux     | x86                              | 🟩      | 🟥
+Linux     | x86_64                           | 🟩      | 🟥
+Linux     | ARM32+VFP Little Endian          | 🟩      | 🟥
+Linux     | ARM64 Little Endian              | 🟩      | 🟥
+FreeBSD   | x86                              | 🟩      | 🟥
+FreeBSD   | x86_64                           | 🟩      | 🟥
+FreeBSD   | ARM64 Little Endian              | 🟩      | 🟥
+macOS     | x86_64                           | 🟩      | 🟥
+macOS     | ARM64 (M1) Little Endian         | 🟧      | 🟥
+NetBSD    | x86_64                           | 🟧      | 🟥
+NetBSD    | ARM64 Little Endian              | 🟧      | 🟥
+OpenBSD   | x86_64                           | 🟧      | 🟥
+OpenBSD   | ARM64 Little Endian              | 🟧      | 🟥
 
-The following platforms will __soon be officially supported__, when I can get my hand on a machine...:
-
-* macOS ARM64
-
-The following platforms __may be supported__ but are not tested:
-
-* Linux ARM32 (full software FP) Little Endian
-* NetBSD x86_64
-* NetBSD ARM64
-* OpenBSD x86_64
-* OpenBSD ARM64
+🟩 Tested, fully opertional
+🟧 May work, but not actively tested
+🟥 Does not work yet
 
 This is still in development, bugs are to expected. More tests will come in the near future.
 

@@ -39,7 +39,6 @@ extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
 static bool IsHFA(const TypeInfo *type)
 {
-#ifdef __ARM_PCS_VFP
     if (type->primitive != PrimitiveKind::Record)
         return false;
 
@@ -55,9 +54,6 @@ static bool IsHFA(const TypeInfo *type)
     }
 
     return true;
-#else
-    return false;
-#endif
 }
 
 bool AnalyseFunction(InstanceData *, FunctionInfo *func)
@@ -110,12 +106,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Float32:
             case PrimitiveKind::Float64: {
                 Size need = param.type->size / 4;
-
-#ifdef __ARM_PCS_VFP
                 bool vfp = !param.variadic;
-#else
-                bool vfp = false;
-#endif
 
                 if (vfp) {
                     if (need <= vec_avail) {
