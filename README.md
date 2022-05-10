@@ -16,23 +16,23 @@ Koffi is a fast and easy-to-use FFI module for Node.js, with support for complex
 
 The following platforms __are officially supported and tested__ at the moment:
 
-Platoform | Architecture                     | JS to C | C to JS (callback)
---------- | -------------------------------- | ------- | ------------------
-Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩      | 🟥
-Windows   | x86_64                           | 🟩      | 🟥
-Linux     | x86                              | 🟩      | 🟥
-Linux     | x86_64                           | 🟩      | 🟥
-Linux     | ARM32+VFP Little Endian          | 🟩      | 🟥
-Linux     | ARM64 Little Endian              | 🟩      | 🟥
-FreeBSD   | x86                              | 🟩      | 🟥
-FreeBSD   | x86_64                           | 🟩      | 🟥
-FreeBSD   | ARM64 Little Endian              | 🟩      | 🟥
-macOS     | x86_64                           | 🟩      | 🟥
-macOS     | ARM64 (M1) Little Endian         | 🟩      | 🟥
-NetBSD    | x86_64                           | 🟧      | 🟥
-NetBSD    | ARM64 Little Endian              | 🟧      | 🟥
-OpenBSD   | x86_64                           | 🟧      | 🟥
-OpenBSD   | ARM64 Little Endian              | 🟧      | 🟥
+Platoform | Architecture                     | JS to C | C to JS (callback) | Pre-built binary
+--------- | -------------------------------- | ------- | ------------------ | ----------------
+Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩      | 🟥                | Yes ✓
+Windows   | x86_64                           | 🟩      | 🟥                | Yes ✓
+Linux     | x86                              | 🟩      | 🟥                | Yes ✓
+Linux     | x86_64                           | 🟩      | 🟥                | Yes ✓
+Linux     | ARM32+VFP Little Endian          | 🟩      | 🟥                | Yes ✓
+Linux     | ARM64 Little Endian              | 🟩      | 🟥                | Yes ✓
+FreeBSD   | x86                              | 🟩      | 🟥                | No x
+FreeBSD   | x86_64                           | 🟩      | 🟥                | No x
+FreeBSD   | ARM64 Little Endian              | 🟩      | 🟥                | Yes ✓
+macOS     | x86_64                           | 🟩      | 🟥                | Yes ✓
+macOS     | ARM64 (M1) Little Endian         | 🟩      | 🟥                | Yes ✓
+NetBSD    | x86_64                           | 🟧      | 🟥                | No x
+NetBSD    | ARM64 Little Endian              | 🟧      | 🟥                | No x
+OpenBSD   | x86_64                           | 🟧      | 🟥                | No x
+OpenBSD   | ARM64 Little Endian              | 🟧      | 🟥                | No x
 
 🟩 Tested, fully opertional
 🟧 May work, but not actively tested
