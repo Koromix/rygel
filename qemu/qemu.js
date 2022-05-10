@@ -217,6 +217,9 @@ async function start(detach = true) {
 
     console.log('>> Starting up machines...');
     await Promise.all(machines.map(async machine => {
+        if (ignore.has(machine))
+            return;
+
         let dirname = `qemu/${machine.key}`;
 
         if (!fs.existsSync(dirname)) {
@@ -269,6 +272,33 @@ async function start(detach = true) {
 async function pack() {
     let success = true;
 
+    let json = fs.readFileSync(root_dir + '/koffi/package.json', { encoding: 'utf-8' });
+    let version = JSON.parse(json).version;
+
+    console.log('>> Checking build archives...');
+    for (let machine of machines) {
+        let needed = false;
+
+        for (let suite in machine.builds) {
+            let build = machine.builds[suite];
+
+            let platform = build.platform || machine.info.platform;
+            let arch = build.arch || machine.info.arch;
+
+            let archive_filename = root_dir + `/koffi/build/qemu/${version}/koffi_${platform}_${arch}.tar.gz`;
+
+            if (fs.existsSync(archive_filename)) {
+                log(machine, `${suite} > Status`, chalk.bold.green(`[ok]`));
+            } else {
+                log(machine, `${suite} > Status`, chalk.bold.red(`[build]`));
+                needed = true;
+            }
+        }
+
+        if (!needed)
+            ignore.add(machine);
+    }
+
     success &= await start(false);
     success &= await copy(machine => Object.values(machine.builds).map(build => build.directory));
 
@@ -314,8 +344,15 @@ async function pack() {
 
     console.log('>> Get build artifacts');
     {
-        let json = fs.readFileSync(root_dir + '/koffi/package.json', { encoding: 'utf-8' });
-        let version = JSON.parse(json).version;
+        let build_dir = root_dir + '/koffi/build/qemu';
+
+        // Clean up old files
+        if (fs.existsSync(build_dir)) {
+            for (let basename of fs.readdirSync(build_dir)) {
+                if (basename !== version)
+                    unlink_recursive(build_dir + '/' + basename);
+            }
+        }
 
         await Promise.all(machines.map(async machine => {
             if (ignore.has(machine))
@@ -330,20 +367,22 @@ async function pack() {
                 let arch = build.arch || machine.info.arch;
 
                 let src_dir = build.directory + '/koffi/build';
-                let dest_dir = root_dir + `/koffi/build/qemu/${version}/koffi_${platform}_${arch}`;
+                let dest_dir = build_dir + `/${version}/koffi_${platform}_${arch}`;
+                let dest_filename = dest_dir + '.tar.gz';
 
-                unlink_recursive(dest_dir + '/koffi/build/qemu');
+                unlink_recursive(dest_dir + '/build');
                 fs.mkdirSync(dest_dir + '/build', { mode: 0o755, recursive: true });
 
                 try {
                     await machine.ssh.getDirectory(dest_dir + '/build', src_dir, {
                         recursive: false,
-                        concurrency: 4
+                        concurrency: 4,
+                        validate: filename => !path.basename(filename).match(/^v[0-9]+/)
                     });
 
                     tar.c({
                         gzip: true,
-                        file: dest_dir + '.tar.gz',
+                        file: dest_filename,
                         sync: true,
                         cwd: dest_dir + '/..'
                     }, [path.basename(dest_dir)]);
