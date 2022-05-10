@@ -168,4 +168,46 @@ async function test() {
         let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'string', 'BAR');
         assert.equal(str, 'foo 200 1.5 BAR');
     }
+
+    // Ordinal function (Windows only)
+    if (process.platform == 'win32') {
+        let xinput = koffi.load('xinput1_4.dll');
+
+        const XINPUT_GAMEPAD = koffi.struct('XINPUT_GAMEPAD', {
+            buttons: 'uint16_t',
+            left_trigger: 'uint8_t',
+            right_trigger: 'uint8_t',
+            thumb_lx: 'uint16_t',
+            thumb_ly: 'uint16_t',
+            thumb_rx: 'uint16_t',
+            thumb_ry: 'uint16_t'
+        });
+
+        const XINPUT_VIBRATION = koffi.struct('XINPUT_VIBRATION', {
+            left_motor_speed: 'uint16_t',
+            right_motor_speed: 'uint16_t'
+        });
+
+        const XINPUT_CAPABILITIES = koffi.struct('XINPUT_CAPABILITIES', {
+            type: 'uint8_t',
+            subtype: 'uint8_t',
+            flags: 'uint16_t',
+            gamepad: XINPUT_GAMEPAD,
+            vibration: XINPUT_VIBRATION
+        });
+
+        const XINPUT_CAPABILITIES_EX = koffi.struct('XINPUT_CAPABILITIES_EX', {
+            capabilities: XINPUT_CAPABILITIES,
+            vendor_id: 'uint16_t',
+            product_id: 'uint16_t',
+            version_number: 'uint16_t',
+            unk1: 'uint32_t'
+        });
+
+        const XInputGetCapabilitiesEx = xinput.stdcall(108, 'uint32_t', ['uint32_t', 'uint32_t', 'uint32_t', koffi.out(koffi.pointer(XINPUT_CAPABILITIES_EX))]);
+
+        // Just make sure it does not crash
+        let caps = {};
+        XInputGetCapabilitiesEx(1, 0, 0, caps);
+    }
 }

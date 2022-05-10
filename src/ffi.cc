@@ -319,7 +319,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
     }
 #endif
 
-    func->name = DuplicateString(std::string(name).c_str(), &instance->str_alloc).ptr;
+    func->name = DuplicateString(name.ToString().Utf8Value().c_str(), &instance->str_alloc).ptr;
 
     func->ret.type = ResolveType(instance, ret);
     if (!func->ret.type)
