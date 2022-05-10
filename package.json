@@ -1,6 +1,6 @@
 {
   "name": "koffi",
-  "version": "0.9.48",
+  "version": "1.0.0",
   "description": "Fast and simple FFI (foreign function interface) for Node.js",
   "keywords": [
     "foreign",
