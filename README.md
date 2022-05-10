@@ -53,7 +53,7 @@ Once you have installed koffi with `npm install koffi`, you can start by loading
 const koffi = require('koffi');
 ```
 
-Below you can find two examples:
+Below you can find three examples:
 
 * The first one runs on Linux. The functions are declared with the C-like prototype language.
 * The second one runs on Windows, and uses the node-ffi like syntax to declare functions.
