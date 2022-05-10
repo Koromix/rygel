@@ -28,7 +28,7 @@ FreeBSD   | x86                              | 🟩      | 🟥
 FreeBSD   | x86_64                           | 🟩      | 🟥
 FreeBSD   | ARM64 Little Endian              | 🟩      | 🟥
 macOS     | x86_64                           | 🟩      | 🟥
-macOS     | ARM64 (M1) Little Endian         | 🟧      | 🟥
+macOS     | ARM64 (M1) Little Endian         | 🟩      | 🟥
 NetBSD    | x86_64                           | 🟧      | 🟥
 NetBSD    | ARM64 Little Endian              | 🟧      | 🟥
 OpenBSD   | x86_64                           | 🟧      | 🟥

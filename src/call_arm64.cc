@@ -88,6 +88,11 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             case PrimitiveKind::UInt64:
             case PrimitiveKind::String:
             case PrimitiveKind::Pointer: {
+#ifdef __APPLE__
+                if (param.variadic)
+                    break;
+#endif
+
                 if (gpr_avail) {
                     param.gpr_count = 1;
                     gpr_avail--;
@@ -96,6 +101,11 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 
             case PrimitiveKind::Float32:
             case PrimitiveKind::Float64: {
+#ifdef __APPLE__
+                if (param.variadic)
+                    break;
+#endif
+
                 if (vec_avail) {
                     param.vec_count = 1;
                     vec_avail--;
@@ -103,6 +113,13 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             } break;
 
             case PrimitiveKind::Record: {
+#ifdef __APPLE__
+                if (param.variadic) {
+                    param.use_memory = (param.type->size > 16);
+                    break;
+                }
+#endif
+
                 if (IsHFA(param.type)) {
                     int vec_count = (int)param.type->members.len;
 

@@ -37,7 +37,7 @@ set(KOFFI_SRC
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     if(WIN32)
         list(APPEND KOFFI_SRC src/call_x64_win_fwd.asm)
-    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL aarch64)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
         list(APPEND KOFFI_SRC src/call_arm64_fwd.S)
     else()
         list(APPEND KOFFI_SRC src/call_x64_sysv_fwd.S)
