@@ -136,14 +136,65 @@ npm install koffi
 
 # Get started
 
-This section assumes you know how to build C shared libraries.
-
-## Raylib example
-
-This examples illustrates how to use Koffi with a Raylib shared library:
+Once you have installed koffi with `npm install koffi`, you can start by loading it this way:
 
 ```js
 const koffi = require('koffi');
+```
+
+Below you can find two examples:
+
+* The first one runs on Linux. The functions are declared with the C-like prototype language.
+* The second one runs on Windows, and uses the node-ffi like syntax to declare functions.
+* The third one is more complex and uses Raylib to animate "Hello World" in a window.
+
+## Small Linux example
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('libc.so.6');
+
+// Declare types
+const timeval = koffi.struct('timeval', {
+    tv_sec: 'unsigned int',
+    tv_usec: 'unsigned int'
+});
+const timezone = koffi.struct('timezone', {
+    tz_minuteswest: 'int',
+    tz_dsttime: 'int'
+});
+
+// Declare functions
+const gettimeofday = lib.func('int gettimeofday(_Out_ timeval *tv, _Out_ timezone *tz)');
+const printf = lib.func('int printf(const char *format, ...)');
+
+let tv = {};
+let tz = {};
+gettimeofday(tv, tz);
+
+printf('Hello World!, it is: %d\n', 'int', tv.tv_sec);
+console.log(tz);
+```
+
+## Small Windows example
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('user32.dll');
+
+const MessageBoxA = lib.stdcall('MessageBoxA', 'int', ['void *', 'string', 'string', 'uint']);
+const MB_ICONINFORMATION = 0x40;
+
+MessageBoxA(null, 'Hello', 'Foobar', MB_ICONINFORMATION);
+```
+
+## Raylib example
+
+This section assumes you know how to build C shared libraries, such as Raylib. You may need to fix the URL to the library before you can do anything.
+
+```js
+const koffi = require('koffi');
+let lib = koffi.load('raylib.dll'); // Fix path if needed
 
 const Color = koffi.struct('Color', {
     r: 'uchar',
@@ -197,9 +248,6 @@ const Font = koffi.struct('Font', {
     glyphs: koffi.pointer(GlyphInfo)
 });
 
-// Fix the path to Raylib DLL if needed
-let lib = koffi.load('build/raylib' + koffi.extension);
-
 // Classic function declaration
 const InitWindow = lib.func('InitWindow', 'void', ['int', 'int', 'string']);
 const SetTargetFPS = lib.func('SetTargetFPS', 'void', ['int']);
@@ -250,18 +298,24 @@ while (!WindowShouldClose()) {
 
 ```
 
-## Win32 stdcall example
+# Extra features
+
+## Variadic functions
+
+Variadic functions are declared with an ellipsis as the last argument.
+
+In order to call a variadic function, you must provide two Javascript arguments for each C parameter,
+the first one is the expected type and the second one is the value.
 
 ```js
-const koffi = require('koffi');
+const printf = lib.func('printf', 'int', ['string', '...']);
 
-let lib = koffi.load('user32.dll');
-
-const MessageBoxA = lib.stdcall('MessageBoxA', 'int', ['void *', 'string', 'string', 'uint']);
-const MB_ICONINFORMATION = 0x40;
-
-MessageBoxA(null, 'Hello', 'Foobar', MB_ICONINFORMATION);
+printf('Integer %d, double %g, string %s', 'int', 6, 'double', 8.5, 'string', 'THE END');
 ```
+
+## Callbacks
+
+Koffi does not yet support passing JS functions as callbacks. This is planned for version 1.1.
 
 # Tests
 
