@@ -1,14 +1,14 @@
 # Table of contents
 
 - [Introduction](#introduction)
+- [Get started](#get-started)
 - [Benchmarks](#benchmarks)
   * [atoi results](#atoi-results)
   * [Raylib results](#raylib-results)
-- [Installation](#installation)
+- [Tests](#tests)
+- [Compilation](#compilation)
   * [Windows](#windows)
   * [Other platforms](#other-platforms)
-- [Get started](#get-started)
-- [Tests](#tests)
 
 # Introduction
 
@@ -44,95 +44,6 @@ OpenBSD   | ARM64 Little Endian              | 🟧      | 🟥                 
 🟥 Does not work yet
 
 This is still in development, bugs are to expected. More tests will come in the near future.
-
-# Benchmarks
-
-In order to run it, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` (or `node ..\..\cnoke\cnoke.js` on Windows) before doing anything else.
-
-Once this is done, you can execute each implementation, e.g. `build/atoi_cc` or `./atoi_koffi.js`. You can optionally define a custom number of iterations, e.g. `./atoi_koffi.js 10000000`.
-
-## atoi results
-
-This test is based around repeated calls to a simple standard C function atoi, and has three implementations:
-- the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js > C FFI implementation.
-- the second one calls atoi through Koffi
-- the third one uses the official Node.js FFI implementation, node-ffi-napi
-
-Because atoi is a small call, the FFI overhead is clearly visible.
-
-### Linux
-
-The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 5800H 16G):
-
-Benchmark     | Iterations | Total time  | Overhead
-------------- | ---------- | ----------- | ----------
-atoi_napi     | 20000000   | 1.10s       | (baseline)
-atoi_koffi    | 20000000   | 1.91s       | x1.73
-atoi_node_ffi | 20000000   | 640.49s     | x582
-
-### Windows
-
-The results below were measured on my x86_64 Windows machine (AMD® Ryzen™ 7 5800H 16G):
-
-Benchmark     | Iterations | Total time  | Overhead
-------------- | ---------- | ----------- | ----------
-atoi_napi     | 20000000   | 1.94s       | (baseline)
-atoi_koffi    | 20000000   | 3.15s       | x1.62
-atoi_node_ffi | 20000000   | 640.49s     | x242
-
-## Raylib results
-
-This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implemenetation, the baseline is a full C++ version of the code.
-
-### Linux
-
-The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 5800H 16G):
-
-Benchmark       | Iterations | Total time  | Overhead
---------------- | ---------- | ----------- | ----------
-raylib_cc       | 100        | 4.14s       | (baseline)
-raylib_koffi    | 100        | 6.25s       | x1.51
-raylib_node_ffi | 100        | 27.13s      | x6.55
-
-### Windows
-
-The results below were measured on my x86_64 Windows machine (AMD® Ryzen™ 7 5800H 16G):
-
-Benchmark       | Iterations | Total time  | Overhead
---------------- | ---------- | ----------- | ----------
-raylib_cc       | 100        | 8.39s       | (baseline)
-raylib_koffi    | 100        | 11.51s      | x1.37
-raylib_node_ffi | 100        | 31.47s      | x3.8
-
-# Installation
-
-## Windows
-
-First, make sure the following dependencies are met:
-
-* The "Desktop development with C++" workload from [Visual Studio 2022 or 2019](https://visualstudio.microsoft.com/downloads/) or the "C++ build tools" workload from the [Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022), with the default optional components.
-* [CMake meta build system](https://cmake.org/)
-* [Node 16 LTS](https://nodejs.org/), but a newer version should work too
-
-Once this is done, run this command from the project root:
-
-```sh
-npm install koffi
-```
-
-## Other platforms
-
-Make sure the following dependencies are met:
-
-* `gcc` and `g++` >= 8.3 or newer
-* GNU Make 3.81 or newer
-* [CMake meta build system](https://cmake.org/)
-
-Once these dependencies are met, simply run the follow command:
-
-```sh
-npm install koffi
-```
 
 # Get started
 
@@ -317,6 +228,65 @@ printf('Integer %d, double %g, string %s', 'int', 6, 'double', 8.5, 'string', 'T
 
 Koffi does not yet support passing JS functions as callbacks. This is planned for version 1.1.
 
+# Benchmarks
+
+In order to run it, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` (or `node ..\..\cnoke\cnoke.js` on Windows) before doing anything else.
+
+Once this is done, you can execute each implementation, e.g. `build/atoi_cc` or `./atoi_koffi.js`. You can optionally define a custom number of iterations, e.g. `./atoi_koffi.js 10000000`.
+
+## atoi results
+
+This test is based around repeated calls to a simple standard C function atoi, and has three implementations:
+- the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js > C FFI implementation.
+- the second one calls atoi through Koffi
+- the third one uses the official Node.js FFI implementation, node-ffi-napi
+
+Because atoi is a small call, the FFI overhead is clearly visible.
+
+### Linux
+
+The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 5800H 16G):
+
+Benchmark     | Iterations | Total time  | Overhead
+------------- | ---------- | ----------- | ----------
+atoi_napi     | 20000000   | 1.10s       | (baseline)
+atoi_koffi    | 20000000   | 1.91s       | x1.73
+atoi_node_ffi | 20000000   | 640.49s     | x582
+
+### Windows
+
+The results below were measured on my x86_64 Windows machine (AMD® Ryzen™ 7 5800H 16G):
+
+Benchmark     | Iterations | Total time  | Overhead
+------------- | ---------- | ----------- | ----------
+atoi_napi     | 20000000   | 1.94s       | (baseline)
+atoi_koffi    | 20000000   | 3.15s       | x1.62
+atoi_node_ffi | 20000000   | 640.49s     | x242
+
+## Raylib results
+
+This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implemenetation, the baseline is a full C++ version of the code.
+
+### Linux
+
+The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 5800H 16G):
+
+Benchmark       | Iterations | Total time  | Overhead
+--------------- | ---------- | ----------- | ----------
+raylib_cc       | 100        | 4.14s       | (baseline)
+raylib_koffi    | 100        | 6.25s       | x1.51
+raylib_node_ffi | 100        | 27.13s      | x6.55
+
+### Windows
+
+The results below were measured on my x86_64 Windows machine (AMD® Ryzen™ 7 5800H 16G):
+
+Benchmark       | Iterations | Total time  | Overhead
+--------------- | ---------- | ----------- | ----------
+raylib_cc       | 100        | 8.39s       | (baseline)
+raylib_koffi    | 100        | 11.51s      | x1.37
+raylib_node_ffi | 100        | 31.47s      | x3.8
+
 # Tests
 
 Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as `qemu-system` (or even `qemu-system-gui`) on Ubuntu.
@@ -372,4 +342,36 @@ Each machine is configured to run a VNC server available locally, which you can 
 
 ```sh
 node qemu.js info debian_x64
+```
+
+# Compilation
+
+We provide prebuilt binaries, packaged in the NPM archive, so in most cases it should be as simple as `npm install koffi`. If you want to hack Koffi or use a specific platform, follow the instructions below.
+
+## Windows
+
+First, make sure the following dependencies are met:
+
+* The "Desktop development with C++" workload from [Visual Studio 2022 or 2019](https://visualstudio.microsoft.com/downloads/) or the "C++ build tools" workload from the [Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022), with the default optional components.
+* [CMake meta build system](https://cmake.org/)
+* [Node 16 LTS](https://nodejs.org/), but a newer version should work too
+
+Once this is done, run this command from the project root:
+
+```sh
+npm install koffi
+```
+
+## Other platforms
+
+Make sure the following dependencies are met:
+
+* `gcc` and `g++` >= 8.3 or newer
+* GNU Make 3.81 or newer
+* [CMake meta build system](https://cmake.org/)
+
+Once these dependencies are met, simply run the follow command:
+
+```sh
+npm install koffi
 ```
