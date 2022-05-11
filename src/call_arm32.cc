@@ -375,7 +375,7 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
                     args_ptr += 4;
                 }
             } break;
-            case PrimitiveKind::String: {
+            case PrimitiveKind::String16: {
                 const char16_t *str16;
                 if (RG_LIKELY(value.IsString())) {
                     str16 = call.PushString16(value);
@@ -391,7 +391,7 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint64_t)str16;
                 } else {
-                    *(const char **)args_ptr = str16;
+                    *(const char16_t **)args_ptr = str16;
                     args_ptr += 4;
                 }
             } break;
