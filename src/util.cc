@@ -56,6 +56,10 @@ const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int
 
 const TypeInfo *GetPointerType(InstanceData *instance, const TypeInfo *ref)
 {
+    // Special cases
+    if (TestStr(ref->name, "char"))
+        return instance->types_map.FindValue("string", nullptr);
+
     char name_buf[256];
     Fmt(name_buf, "%1%2*", ref->name, ref->primitive == PrimitiveKind::Pointer ? "" : " ");
 
