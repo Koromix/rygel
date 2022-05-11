@@ -16,7 +16,12 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdarg.h>
-#include <uchar.h>
+#if __has_include(<uchar.h>)
+    #include <uchar.h>
+#else
+    typedef uint16_t char16_t;
+    typedef uint32_t char32_t;
+#endif
 
 #ifdef _WIN32
     #define EXPORT __declspec(dllexport)
