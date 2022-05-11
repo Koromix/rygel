@@ -112,4 +112,5 @@ set_target_properties(misc PROPERTIES PREFIX "")
 
 if(MSVC)
     target_compile_options(misc PRIVATE /wd4116)
+    target_link_options(misc PRIVATE "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/misc.def")
 endif()
