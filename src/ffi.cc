@@ -247,7 +247,8 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
     FunctionInfo *func = (FunctionInfo *)info.Data();
 
-    return TranslateCall(instance, func, info);
+    CallData call(env, instance, func);
+    return call.Execute(info);
 }
 
 static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
@@ -299,7 +300,8 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
     if (!AnalyseFunction(instance, &func))
         return env.Null();
 
-    return TranslateCall(instance, &func, info);
+    CallData call(env, instance, &func);
+    return call.Execute(info);
 }
 
 static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value ret,

@@ -24,11 +24,12 @@ endif()
 # ---- Koffi ----
 
 set(KOFFI_SRC
-    src/call_arm32.cc
-    src/call_arm64.cc
-    src/call_x64_sysv.cc
-    src/call_x64_win.cc
-    src/call_x86.cc
+    src/call.cc
+    src/abi_arm32.cc
+    src/abi_arm64.cc
+    src/abi_x64_sysv.cc
+    src/abi_x64_win.cc
+    src/abi_x86.cc
     src/ffi.cc
     src/parser.cc
     src/util.cc
@@ -36,19 +37,19 @@ set(KOFFI_SRC
 )
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     if(WIN32)
-        list(APPEND KOFFI_SRC src/call_x64_win_fwd.asm)
+        list(APPEND KOFFI_SRC src/abi_x64_win_fwd.asm)
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
-        list(APPEND KOFFI_SRC src/call_arm64_fwd.S)
+        list(APPEND KOFFI_SRC src/abi_arm64_fwd.S)
     else()
-        list(APPEND KOFFI_SRC src/call_x64_sysv_fwd.S)
+        list(APPEND KOFFI_SRC src/abi_x64_sysv_fwd.S)
     endif()
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     if(WIN32)
-        list(APPEND KOFFI_SRC src/call_x86_fwd.asm)
+        list(APPEND KOFFI_SRC src/abi_x86_fwd.asm)
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i[3456]86|x86|AMD64")
-        list(APPEND KOFFI_SRC src/call_x86_fwd.S)
+        list(APPEND KOFFI_SRC src/abi_x86_fwd.S)
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "armv[678]l")
-        list(APPEND KOFFI_SRC src/call_arm32_fwd.S)
+        list(APPEND KOFFI_SRC src/abi_arm32_fwd.S)
     endif()
 endif()
 

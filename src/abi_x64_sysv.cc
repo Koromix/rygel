@@ -181,11 +181,8 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
     return true;
 }
 
-Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, const Napi::CallbackInfo &info)
+Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
 {
-    Napi::Env env = info.Env();
-    CallData call(env, instance, func);
-
     // Sanity checks
     if (info.Length() < (uint32_t)func->parameters.len) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
@@ -198,14 +195,14 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
     uint64_t *xmm_ptr = nullptr;
 
     // Return through registers unless it's too big
-    if (RG_UNLIKELY(!call.AllocStack(func->args_size, 16, &args_ptr)))
+    if (RG_UNLIKELY(!AllocStack(func->args_size, 16, &args_ptr)))
         return env.Null();
-    if (RG_UNLIKELY(!call.AllocStack(8 * 8, 8, &xmm_ptr)))
+    if (RG_UNLIKELY(!AllocStack(8 * 8, 8, &xmm_ptr)))
         return env.Null();
-    if (RG_UNLIKELY(!call.AllocStack(6 * 8, 8, &gpr_ptr)))
+    if (RG_UNLIKELY(!AllocStack(6 * 8, 8, &gpr_ptr)))
         return env.Null();
     if (func->ret.use_memory) {
-        if (RG_UNLIKELY(!call.AllocHeap(func->ret.type->size, 16, &return_ptr)))
+        if (RG_UNLIKELY(!AllocHeap(func->ret.type->size, 16, &return_ptr)))
             return env.Null();
         *(uint8_t **)(gpr_ptr++) = return_ptr;
     }
@@ -295,7 +292,7 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
             case PrimitiveKind::String: {
                 const char *str;
                 if (RG_LIKELY(value.IsString())) {
-                    str = call.PushString(value);
+                    str = PushString(value);
                     if (RG_UNLIKELY(!str))
                         return env.Null();
                 } else if (IsNullOrUndefined(value)) {
@@ -316,7 +313,7 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
             case PrimitiveKind::String16: {
                 const char16_t *str16;
                 if (RG_LIKELY(value.IsString())) {
-                    str16 = call.PushString16(value);
+                    str16 = PushString16(value);
                     if (RG_UNLIKELY(!str16))
                         return env.Null();
                 } else if (IsNullOrUndefined(value)) {
@@ -342,11 +339,11 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
                 } else if (IsObject(value) && param.type->ref->primitive == PrimitiveKind::Record) {
                     Napi::Object obj = value.As<Napi::Object>();
 
-                    if (RG_UNLIKELY(!call.AllocHeap(param.type->ref->size, 16, &ptr)))
+                    if (RG_UNLIKELY(!AllocHeap(param.type->ref->size, 16, &ptr)))
                         return env.Null();
 
                     if (param.directions & 1) {
-                        if (!call.PushObject(obj, param.type->ref, ptr))
+                        if (!PushObject(obj, param.type->ref, ptr))
                             return env.Null();
                     } else {
                         memset(ptr, 0, param.type->size);
@@ -383,7 +380,7 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
                     RG_ASSERT(param.type->size <= 16);
 
                     uint64_t buf[2] = {};
-                    if (!call.PushObject(obj, param.type, (uint8_t *)buf))
+                    if (!PushObject(obj, param.type, (uint8_t *)buf))
                         return env.Null();
 
                     if (param.gpr_first) {
@@ -407,7 +404,7 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
                     }
                 } else if (param.use_memory) {
                     args_ptr = AlignUp(args_ptr, param.type->align);
-                    if (!call.PushObject(obj, param.type, args_ptr))
+                    if (!PushObject(obj, param.type, args_ptr))
                         return env.Null();
                     args_ptr += AlignLen(param.type->size, 8);
                 }
@@ -416,13 +413,13 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
     }
 
     if (instance->debug) {
-        call.DumpDebug();
+        DumpDebug();
     }
 
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, call.GetSP()) \
-                                         : ForwardCall ## Suffix(func->func, call.GetSP())); \
+            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, GetSP()) \
+                                         : ForwardCall ## Suffix(func->func, GetSP())); \
             PopOutArguments(out_objects); \
             return ret; \
         })()
