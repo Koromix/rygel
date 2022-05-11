@@ -93,6 +93,7 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
         case PrimitiveKind::Int64:
         case PrimitiveKind::UInt64:
         case PrimitiveKind::String:
+        case PrimitiveKind::String16:
         case PrimitiveKind::Pointer: {
             classes[0] = MergeClasses(classes[0], RegisterClass::Integer);
             return 1;

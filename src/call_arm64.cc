@@ -87,6 +87,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Int64:
             case PrimitiveKind::UInt64:
             case PrimitiveKind::String:
+            case PrimitiveKind::String16:
             case PrimitiveKind::Pointer: {
 #ifdef __APPLE__
                 if (param.variadic)

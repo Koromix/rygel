@@ -84,6 +84,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Int32:
             case PrimitiveKind::UInt32:
             case PrimitiveKind::String:
+            case PrimitiveKind::String16:
             case PrimitiveKind::Pointer: {
                 if (gpr_avail) {
                     param.gpr_count = 1;
