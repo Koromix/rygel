@@ -16,6 +16,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdarg.h>
+#include <uchar.h>
 
 #ifdef _WIN32
     #define EXPORT __declspec(dllexport)
@@ -255,6 +256,29 @@ EXPORT const char *PrintFmt(const char *fmt, ...)
     va_start(ap, fmt);
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
+
+    return buf;
+}
+
+size_t Length16(const char16_t *str)
+{
+    size_t len = 0;
+    while (str[len]) {
+        len++;
+    }
+    return len;
+}
+
+EXPORT const char16_t *Concat16(const char16_t *str1, const char16_t *str2)
+{
+    static char16_t buf[1024];
+
+    size_t len1 = Length16(str1);
+    size_t len2 = Length16(str2);
+
+    memcpy(buf, str1, len1 * 2);
+    memcpy(buf + len1, str2, len2 * 2);
+    buf[(len1 + len2) * 2] = 0;
 
     return buf;
 }

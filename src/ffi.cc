@@ -573,6 +573,8 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(instance, "char", PrimitiveKind::Int8, 1, 1);
     RegisterPrimitiveType(instance, "uchar", PrimitiveKind::UInt8, 1, 1);
     RegisterPrimitiveType(instance, "unsigned char", PrimitiveKind::UInt8, 1, 1);
+    RegisterPrimitiveType(instance, "char16", PrimitiveKind::Int16, 2, 2);
+    RegisterPrimitiveType(instance, "char16_t", PrimitiveKind::Int16, 2, 2);
     RegisterPrimitiveType(instance, "int16", PrimitiveKind::Int16, 2, 2);
     RegisterPrimitiveType(instance, "int16_t", PrimitiveKind::Int16, 2, 2);
     RegisterPrimitiveType(instance, "uint16", PrimitiveKind::UInt16, 2, 2);
@@ -603,6 +605,7 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(instance, "float", PrimitiveKind::Float32, 4, alignof(float));
     RegisterPrimitiveType(instance, "double", PrimitiveKind::Float64, 8, alignof(double));
     RegisterPrimitiveType(instance, "string", PrimitiveKind::String, RG_SIZE(void *), alignof(void *));
+    RegisterPrimitiveType(instance, "string16", PrimitiveKind::String16, RG_SIZE(void *), alignof(void *));
 
     Napi::Object types = Napi::Object::New(env);
     for (TypeInfo &type: instance->types) {

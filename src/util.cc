@@ -57,8 +57,11 @@ const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int
 const TypeInfo *GetPointerType(InstanceData *instance, const TypeInfo *ref)
 {
     // Special cases
-    if (TestStr(ref->name, "char"))
+    if (TestStr(ref->name, "char")) {
         return instance->types_map.FindValue("string", nullptr);
+    } else if (TestStr(ref->name, "char16") || TestStr(ref->name, "char16_t")) {
+        return instance->types_map.FindValue("string16", nullptr);
+    }
 
     char name_buf[256];
     Fmt(name_buf, "%1%2*", ref->name, ref->primitive == PrimitiveKind::Pointer ? "" : " ");
@@ -175,6 +178,43 @@ const char *CallData::PushString(const Napi::Value &value)
     return buf.ptr;
 }
 
+const char16_t *CallData::PushString16(const Napi::Value &value)
+{
+    RG_ASSERT(value.IsString());
+
+    Napi::Env env = value.Env();
+
+    Span<char16_t> buf;
+    size_t len = 0;
+    napi_status status;
+
+    buf.ptr = (char16_t *)heap_mem->ptr;
+    buf.len = std::max((Size)0, heap_mem->len - Kibibytes(32)) / 2;
+
+    status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
+    RG_ASSERT(status == napi_ok);
+
+    len++;
+
+    if (RG_LIKELY(len < (size_t)buf.len)) {
+        heap_mem->ptr += (Size)len * 2;
+        heap_mem->len -= (Size)len * 2;
+    } else {
+        status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
+        RG_ASSERT(status == napi_ok);
+
+        len++;
+
+        buf.ptr = (char16_t *)Allocator::Allocate(&big_alloc, (Size)len * 2);
+        buf.len = (Size)len;
+
+        status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
+        RG_ASSERT(status == napi_ok);
+    }
+
+    return buf.ptr;
+}
+
 bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest)
 {
     Napi::Env env = obj.Env();
@@ -250,6 +290,17 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                 if (RG_UNLIKELY(!str))
                     return false;
                 *(const char **)dest = str;
+            } break;
+            case PrimitiveKind::String16: {
+                if (RG_UNLIKELY(!value.IsString())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected string", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                const char16_t *str16 = PushString16(value);
+                if (RG_UNLIKELY(!str16))
+                    return false;
+                *(const char16_t **)dest = str16;
             } break;
             case PrimitiveKind::Pointer: {
                 if (RG_UNLIKELY(!CheckValueTag(instance, value, member.type))) {
@@ -342,6 +393,10 @@ void PopObject(Napi::Object obj, const uint8_t *ptr, const TypeInfo *type)
             case PrimitiveKind::String: {
                 const char *str = *(const char **)ptr;
                 obj.Set(member.name, Napi::String::New(env, str));
+            } break;
+            case PrimitiveKind::String16: {
+                const char16_t *str16 = *(const char16_t **)ptr;
+                obj.Set(member.name, Napi::String::New(env, str16));
             } break;
             case PrimitiveKind::Pointer: {
                 void *ptr2 = *(void **)ptr;

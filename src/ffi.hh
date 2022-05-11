@@ -39,6 +39,7 @@ enum class PrimitiveKind {
     Float32,
     Float64,
     String,
+    String16,
 
     Pointer,
 
@@ -59,6 +60,7 @@ static const char *const PrimitiveKindNames[] = {
     "Float32",
     "Float64",
     "String",
+    "String16",
 
     "Pointer",
 

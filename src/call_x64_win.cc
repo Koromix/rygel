@@ -145,7 +145,21 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
 
                 *(const char **)(args_ptr++) = str;
             } break;
+            case PrimitiveKind::String16: {
+                const char16_t *str16;
+                if (RG_LIKELY(value.IsString())) {
+                    str16 = call.PushString16(value);
+                    if (RG_UNLIKELY(!str16))
+                        return env.Null();
+                } else if (IsNullOrUndefined(value)) {
+                    str16 = nullptr;
+                } else {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected string", GetValueType(instance, value), i + 1);
+                    return env.Null();
+                }
 
+                *(const char16_t **)(args_ptr++) = str16;
+            } break;
             case PrimitiveKind::Pointer: {
                 uint8_t *ptr;
 
@@ -242,6 +256,7 @@ Napi::Value TranslateCall(InstanceData *instance, const FunctionInfo *func, cons
                 case PrimitiveKind::Float32: { RG_UNREACHABLE(); } break;
                 case PrimitiveKind::Float64: { RG_UNREACHABLE(); } break;
                 case PrimitiveKind::String: return Napi::String::New(env, (const char *)rax);
+                case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)rax);
                 case PrimitiveKind::Pointer: {
                     void *ptr = (void *)rax;
 

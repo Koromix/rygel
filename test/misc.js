@@ -90,6 +90,7 @@ async function test() {
                             lib.stdcall(1, 'string', ['string']) :
                             lib.func('const char * __stdcall ReturnBigString(const char *str)');
     const PrintFmt = lib.func('const char *PrintFmt(const char *fmt, ...)');
+    const Concat16 = lib.func('const char16_t *Concat16(const char16_t *str1, const char16_t *str2)')
 
     // Simple tests with Pack1
     {
@@ -169,5 +170,11 @@ async function test() {
     {
         let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'string', 'BAR');
         assert.equal(str, 'foo 200 1.5 BAR');
+    }
+
+    // UTF-16LE strings
+    {
+        let str = Concat16('Hello ', 'World!');
+        assert.equal(str, 'Hello World!');
     }
 }
