@@ -21,25 +21,25 @@ After the release of version 1.0, the following features are planned:
 
 The following platforms __are officially supported and tested__ at the moment:
 
-Platoform | Architecture                     | JS to C | C to JS (callback) | Pre-built binary
---------- | -------------------------------- | ------- | ------------------ | ----------------
-Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩      | 🟥                 | ✅ Yes
-Windows   | x86_64                           | 🟩      | 🟥                 | ✅ Yes
-Linux     | x86                              | 🟩      | 🟥                 | ✅ Yes
-Linux     | x86_64                           | 🟩      | 🟥                 | ✅ Yes
-Linux     | ARM32+VFP Little Endian          | 🟩      | 🟥                 | ✅ Yes
-Linux     | ARM64 Little Endian              | 🟩      | 🟥                 | ✅ Yes
-FreeBSD   | x86                              | 🟩      | 🟥                 | ✅ Yes
-FreeBSD   | x86_64                           | 🟩      | 🟥                 | ✅ Yes
-FreeBSD   | ARM64 Little Endian              | 🟩      | 🟥                 | ✅ Yes
-macOS     | x86_64                           | 🟩      | 🟥                 | ✅ Yes
-macOS     | ARM64 (M1) Little Endian         | 🟩      | 🟥                 | ❌ No
-OpenBSD   | x86_64                           | 🟧      | 🟥                 | ❌ No
-OpenBSD   | x86                              | 🟧      | 🟥                 | ❌ No
-OpenBSD   | ARM64 Little Endian              | 🟧      | 🟥                 | ❌ No
-NetBSD    | x86_64                           | 🟧      | 🟥                 | ❌ No
-NetBSD    | x86                              | 🟧      | 🟥                 | ❌ No
-NetBSD    | ARM64 Little Endian              | 🟧      | 🟥                 | ❌ No
+Platoform | Architecture                     | JS to C  | C to JS (callback) | Pre-built binary
+--------- | -------------------------------- | -------- | ------------------ | ----------------
+Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩 Yes   | 🟥 No              | 🟩 Yes
+Windows   | x86_64                           | 🟩 Yes   | 🟥 No              | 🟩 Yes
+Linux     | x86                              | 🟩 Yes   | 🟥 No              | 🟩 Yes
+Linux     | x86_64                           | 🟩 Yes   | 🟥 No              | 🟩 Yes
+Linux     | ARM32+VFP Little Endian          | 🟩 Yes   | 🟥 No              | 🟩 Yes
+Linux     | ARM64 Little Endian              | 🟩 Yes   | 🟥 No              | 🟩 Yes
+FreeBSD   | x86                              | 🟩 Yes   | 🟥 No              | 🟩 Yes
+FreeBSD   | x86_64                           | 🟩 Yes   | 🟥 No              | 🟩 Yes
+FreeBSD   | ARM64 Little Endian              | 🟩 Yes   | 🟥 No              | 🟩 Yes
+macOS     | x86_64                           | 🟩 Yes   | 🟥 No              | 🟩 Yes
+macOS     | ARM64 (M1) Little Endian         | 🟩 Yes   | 🟥 No              | 🟥 No
+OpenBSD   | x86_64                           | 🟧 Maybe | 🟥 No              | 🟥 No
+OpenBSD   | x86                              | 🟧 Maybe | 🟥 No              | 🟥 No
+OpenBSD   | ARM64 Little Endian              | 🟧 Maybe | 🟥 No              | 🟥 No
+NetBSD    | x86_64                           | 🟧 Maybe | 🟥 No              | 🟥 No
+NetBSD    | x86                              | 🟧 Maybe | 🟥 No              | 🟥 No
+NetBSD    | ARM64 Little Endian              | 🟧 Maybe | 🟥 No              | 🟥 No
 
 🟩 Tested, fully operational
 🟧 May work, but not actively tested
