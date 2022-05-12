@@ -477,16 +477,55 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {
+        case PrimitiveKind::Void: {
+            PERFORM_CALL(GG);
+            return env.Null();
+        } break;
+        case PrimitiveKind::Bool: {
+            X0X1Ret ret = PERFORM_CALL(GG);
+            return Napi::Boolean::New(env, ret.x0);
+        } break;
+        case PrimitiveKind::Int8:
+        case PrimitiveKind::UInt8:
+        case PrimitiveKind::Int16:
+        case PrimitiveKind::UInt16:
+        case PrimitiveKind::Int32:
+        case PrimitiveKind::UInt32: {
+            X0X1Ret ret = PERFORM_CALL(GG);
+            return Napi::Number::New(env, (double)ret.x0);
+        } break;
+        case PrimitiveKind::Int64: {
+            X0X1Ret ret = PERFORM_CALL(GG);
+            return Napi::BigInt::New(env, (int64_t)ret.x0);
+        } break;
+        case PrimitiveKind::UInt64: {
+            X0X1Ret ret = PERFORM_CALL(GG);
+            return Napi::BigInt::New(env, ret.x0);
+        } break;
         case PrimitiveKind::Float32: {
             float f = PERFORM_CALL(F);
-
             return Napi::Number::New(env, (double)f);
         } break;
-
         case PrimitiveKind::Float64: {
             HfaRet ret = PERFORM_CALL(DDDD);
-
             return Napi::Number::New(env, (double)ret.d0);
+        } break;
+        case PrimitiveKind::String: {
+            X0X1Ret ret = PERFORM_CALL(GG);
+            return Napi::String::New(env, (const char *)ret.x0);
+        } break;
+        case PrimitiveKind::String16: {
+            X0X1Ret ret = PERFORM_CALL(GG);
+            return Napi::String::New(env, (const char16_t *)ret.x0);
+        } break;
+        case PrimitiveKind::Pointer: {
+            X0X1Ret ret = PERFORM_CALL(GG);
+            void *ptr = (void *)ret.x0;
+
+            Napi::External<void> external = Napi::External<void>::New(env, ptr);
+            SetValueTag(instance, external, func->ret.type);
+
+            return external;
         } break;
 
         case PrimitiveKind::Record: {
@@ -513,37 +552,6 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
 
                 Napi::Object obj = Napi::Object::New(env);
                 return obj;
-            }
-        } break;
-
-        default: {
-            X0X1Ret ret = PERFORM_CALL(GG);
-
-            switch (func->ret.type->primitive) {
-                case PrimitiveKind::Void: return env.Null();
-                case PrimitiveKind::Bool: return Napi::Boolean::New(env, ret.x0);
-                case PrimitiveKind::Int8: return Napi::Number::New(env, (double)ret.x0);
-                case PrimitiveKind::UInt8: return Napi::Number::New(env, (double)ret.x0);
-                case PrimitiveKind::Int16: return Napi::Number::New(env, (double)ret.x0);
-                case PrimitiveKind::UInt16: return Napi::Number::New(env, (double)ret.x0);
-                case PrimitiveKind::Int32: return Napi::Number::New(env, (double)ret.x0);
-                case PrimitiveKind::UInt32: return Napi::Number::New(env, (double)ret.x0);
-                case PrimitiveKind::Int64: return Napi::BigInt::New(env, (int64_t)ret.x0);
-                case PrimitiveKind::UInt64: return Napi::BigInt::New(env, ret.x0);
-                case PrimitiveKind::Float32: { RG_UNREACHABLE(); } break;
-                case PrimitiveKind::Float64: { RG_UNREACHABLE(); } break;
-                case PrimitiveKind::String: return Napi::String::New(env, (const char *)ret.x0);
-                case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)ret.x0);
-                case PrimitiveKind::Pointer: {
-                    void *ptr = (void *)ret.x0;
-
-                    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-                    SetValueTag(instance, external, func->ret.type);
-
-                    return external;
-                } break;
-
-                case PrimitiveKind::Record: { RG_UNREACHABLE(); } break;
             }
         } break;
     }

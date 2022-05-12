@@ -224,51 +224,63 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {
+        case PrimitiveKind::Void: {
+            PERFORM_CALL(G);
+            return env.Null();
+        } break;
+        case PrimitiveKind::Bool: {
+            uint64_t rax = PERFORM_CALL(G);
+            return Napi::Boolean::New(env, rax);
+        } break;
+        case PrimitiveKind::Int8:
+        case PrimitiveKind::UInt8:
+        case PrimitiveKind::Int16:
+        case PrimitiveKind::UInt16:
+        case PrimitiveKind::Int32:
+        case PrimitiveKind::UInt32: {
+            uint64_t rax = PERFORM_CALL(G);
+            return Napi::Number::New(env, (double)rax);
+        } break;
+        case PrimitiveKind::Int64: {
+            uint64_t rax = PERFORM_CALL(G);
+            return Napi::BigInt::New(env, (int64_t)rax);
+        } break;
+        case PrimitiveKind::UInt64: {
+            uint64_t rax = PERFORM_CALL(G);
+            return Napi::BigInt::New(env, rax);
+        } break;
         case PrimitiveKind::Float32: {
             float f = PERFORM_CALL(F);
-
             return Napi::Number::New(env, (double)f);
         } break;
-
         case PrimitiveKind::Float64: {
             double d = PERFORM_CALL(D);
-
             return Napi::Number::New(env, d);
         } break;
-
-        default: {
+        case PrimitiveKind::String: {
             uint64_t rax = PERFORM_CALL(G);
+            return Napi::String::New(env, (const char *)rax);
+        } break;
+        case PrimitiveKind::String16: {
+            uint64_t rax = PERFORM_CALL(G);
+            return Napi::String::New(env, (const char16_t *)rax);
+        } break;
+        case PrimitiveKind::Pointer: {
+            uint64_t rax = PERFORM_CALL(G);
+            void *ptr = (void *)rax;
 
-            switch (func->ret.type->primitive) {
-                case PrimitiveKind::Void: return env.Null();
-                case PrimitiveKind::Bool: return Napi::Boolean::New(env, rax);
-                case PrimitiveKind::Int8: return Napi::Number::New(env, (double)rax);
-                case PrimitiveKind::UInt8: return Napi::Number::New(env, (double)rax);
-                case PrimitiveKind::Int16: return Napi::Number::New(env, (double)rax);
-                case PrimitiveKind::UInt16: return Napi::Number::New(env, (double)rax);
-                case PrimitiveKind::Int32: return Napi::Number::New(env, (double)rax);
-                case PrimitiveKind::UInt32: return Napi::Number::New(env, (double)rax);
-                case PrimitiveKind::Int64: return Napi::BigInt::New(env, (int64_t)rax);
-                case PrimitiveKind::UInt64: return Napi::BigInt::New(env, rax);
-                case PrimitiveKind::Float32: { RG_UNREACHABLE(); } break;
-                case PrimitiveKind::Float64: { RG_UNREACHABLE(); } break;
-                case PrimitiveKind::String: return Napi::String::New(env, (const char *)rax);
-                case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)rax);
-                case PrimitiveKind::Pointer: {
-                    void *ptr = (void *)rax;
+            Napi::External<void> external = Napi::External<void>::New(env, ptr);
+            SetValueTag(instance, external, func->ret.type);
 
-                    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-                    SetValueTag(instance, external, func->ret.type);
+            return external;
+        } break;
 
-                    return external;
-                } break;
+        case PrimitiveKind::Record: {
+            uint64_t rax = PERFORM_CALL(G);
+            const uint8_t *ptr = return_ptr ? return_ptr : (const uint8_t *)&rax;
 
-                case PrimitiveKind::Record: {
-                    const uint8_t *ptr = return_ptr ? return_ptr : (const uint8_t *)&rax;
-                    Napi::Object obj = PopObject(env, ptr, func->ret.type);
-                    return obj;
-                } break;
-            }
+            Napi::Object obj = PopObject(env, ptr, func->ret.type);
+            return obj;
         } break;
     }
 

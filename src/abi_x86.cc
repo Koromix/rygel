@@ -269,58 +269,63 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {
+        case PrimitiveKind::Void: {
+            PERFORM_CALL(G);
+            return env.Null();
+        } break;
+        case PrimitiveKind::Bool: {
+            uint32_t rax = (uint32_t)PERFORM_CALL(G);
+            return Napi::Boolean::New(env, rax);
+        } break;
+        case PrimitiveKind::Int8:
+        case PrimitiveKind::UInt8:
+        case PrimitiveKind::Int16:
+        case PrimitiveKind::UInt16:
+        case PrimitiveKind::Int32:
+        case PrimitiveKind::UInt32: {
+            uint32_t rax = (uint32_t)PERFORM_CALL(G);
+            return Napi::Number::New(env, (double)rax);
+        } break;
+        case PrimitiveKind::Int64: {
+            uint64_t ret = PERFORM_CALL(G);
+            return Napi::BigInt::New(env, (int64_t)ret);
+        } break;
+        case PrimitiveKind::UInt64: {
+            uint64_t ret = PERFORM_CALL(G);
+            return Napi::BigInt::New(env, ret);
+        } break;
         case PrimitiveKind::Float32: {
             float f = PERFORM_CALL(F);
-
             return Napi::Number::New(env, (double)f);
         } break;
-
         case PrimitiveKind::Float64: {
             double d = PERFORM_CALL(D);
-
             return Napi::Number::New(env, d);
         } break;
+        case PrimitiveKind::String: {
+            uint32_t rax = (uint32_t)PERFORM_CALL(G);
+            return Napi::String::New(env, (const char *)rax);
+        } break;
+        case PrimitiveKind::String16: {
+            uint32_t rax = (uint32_t)PERFORM_CALL(G);
+            return Napi::String::New(env, (const char16_t *)rax);
+        } break;
+        case PrimitiveKind::Pointer: {
+            uint32_t rax = (uint32_t)PERFORM_CALL(G);
+            void *ptr = (void *)rax;
 
-        default: {
-            // We can't directly use the struct as a return value, because not all platforms
-            // treat it the same: it is trivial only on Windows (see AnalyseFunction).
-            uint64_t raw = PERFORM_CALL(G);
-            struct {
-                uint32_t rax;
-                uint32_t rdx;
-            } ret;
-            memcpy(&ret, &raw, RG_SIZE(raw));
+            Napi::External<void> external = Napi::External<void>::New(env, ptr);
+            SetValueTag(instance, external, func->ret.type);
 
-            switch (func->ret.type->primitive) {
-                case PrimitiveKind::Void: return env.Null();
-                case PrimitiveKind::Bool: return Napi::Boolean::New(env, ret.rax);
-                case PrimitiveKind::Int8: return Napi::Number::New(env, (double)ret.rax);
-                case PrimitiveKind::UInt8: return Napi::Number::New(env, (double)ret.rax);
-                case PrimitiveKind::Int16: return Napi::Number::New(env, (double)ret.rax);
-                case PrimitiveKind::UInt16: return Napi::Number::New(env, (double)ret.rax);
-                case PrimitiveKind::Int32: return Napi::Number::New(env, (double)ret.rax);
-                case PrimitiveKind::UInt32: return Napi::Number::New(env, (double)ret.rax);
-                case PrimitiveKind::Int64: return Napi::BigInt::New(env, (int64_t)raw);
-                case PrimitiveKind::UInt64: return Napi::BigInt::New(env, raw);
-                case PrimitiveKind::Float32: { RG_UNREACHABLE(); } break;
-                case PrimitiveKind::Float64: { RG_UNREACHABLE(); } break;
-                case PrimitiveKind::String: return Napi::String::New(env, (const char *)ret.rax);
-                case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)ret.rax);
-                case PrimitiveKind::Pointer: {
-                    void *ptr = (void *)ret.rax;
+            return external;
+        } break;
 
-                    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-                    SetValueTag(instance, external, func->ret.type);
+        case PrimitiveKind::Record: {
+            uint64_t ret = PERFORM_CALL(G);
+            const uint8_t *ptr = return_ptr ? return_ptr : (const uint8_t *)&ret;
 
-                    return external;
-                } break;
-
-                case PrimitiveKind::Record: {
-                    const uint8_t *ptr = return_ptr ? return_ptr : (const uint8_t *)&ret;
-                    Napi::Object obj = PopObject(env, ptr, func->ret.type);
-                    return obj;
-                } break;
-            }
+            Napi::Object obj = PopObject(env, ptr, func->ret.type);
+            return obj;
         } break;
     }
 
