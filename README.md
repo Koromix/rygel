@@ -101,7 +101,7 @@ MessageBoxA(null, 'Hello', 'Foobar', MB_ICONINFORMATION);
 
 ## Raylib example
 
-This section assumes you know how to build C shared libraries, such as Raylib. You may need to fix the URL to the library before you can do anything.
+This section assumes you know how to build C shared libraries, such as Raylib. You may need to fix the path to the library before you can do anything.
 
 ```js
 const koffi = require('koffi');
