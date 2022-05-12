@@ -23,21 +23,23 @@ The following platforms __are officially supported and tested__ at the moment:
 
 Platoform | Architecture                     | JS to C | C to JS (callback) | Pre-built binary
 --------- | -------------------------------- | ------- | ------------------ | ----------------
-Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩      | 🟥                 | Yes ✓
-Windows   | x86_64                           | 🟩      | 🟥                 | Yes ✓
-Linux     | x86                              | 🟩      | 🟥                 | Yes ✓
-Linux     | x86_64                           | 🟩      | 🟥                 | Yes ✓
-Linux     | ARM32+VFP Little Endian          | 🟩      | 🟥                 | Yes ✓
-Linux     | ARM64 Little Endian              | 🟩      | 🟥                 | Yes ✓
-FreeBSD   | x86                              | 🟩      | 🟥                 | Yes ✓
-FreeBSD   | x86_64                           | 🟩      | 🟥                 | Yes ✓
-FreeBSD   | ARM64 Little Endian              | 🟩      | 🟥                 | Yes ✓
-macOS     | x86_64                           | 🟩      | 🟥                 | Yes ✓
-macOS     | ARM64 (M1) Little Endian         | 🟩      | 🟥                 | No x
-NetBSD    | x86_64                           | 🟧      | 🟥                 | No x
-NetBSD    | ARM64 Little Endian              | 🟧      | 🟥                 | No x
-OpenBSD   | x86_64                           | 🟧      | 🟥                 | No x
-OpenBSD   | ARM64 Little Endian              | 🟧      | 🟥                 | No x
+Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩      | 🟥                 | ✅ Yes
+Windows   | x86_64                           | 🟩      | 🟥                 | ✅ Yes
+Linux     | x86                              | 🟩      | 🟥                 | ✅ Yes
+Linux     | x86_64                           | 🟩      | 🟥                 | ✅ Yes
+Linux     | ARM32+VFP Little Endian          | 🟩      | 🟥                 | ✅ Yes
+Linux     | ARM64 Little Endian              | 🟩      | 🟥                 | ✅ Yes
+FreeBSD   | x86                              | 🟩      | 🟥                 | ✅ Yes
+FreeBSD   | x86_64                           | 🟩      | 🟥                 | ✅ Yes
+FreeBSD   | ARM64 Little Endian              | 🟩      | 🟥                 | ✅ Yes
+macOS     | x86_64                           | 🟩      | 🟥                 | ✅ Yes
+macOS     | ARM64 (M1) Little Endian         | 🟩      | 🟥                 | ❌ No
+OpenBSD   | x86_64                           | 🟧      | 🟥                 | ❌ No
+OpenBSD   | x86                              | 🟧      | 🟥                 | ❌ No
+OpenBSD   | ARM64 Little Endian              | 🟧      | 🟥                 | ❌ No
+NetBSD    | x86_64                           | 🟧      | 🟥                 | ❌ No
+NetBSD    | x86                              | 🟧      | 🟥                 | ❌ No
+NetBSD    | ARM64 Little Endian              | 🟧      | 🟥                 | ❌ No
 
 🟩 Tested, fully operational
 🟧 May work, but not actively tested
