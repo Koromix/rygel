@@ -175,16 +175,6 @@ void PopObject(Napi::Object obj, const uint8_t *ptr, const TypeInfo *type)
                 uint64_t v = *(uint64_t *)ptr;
                 obj.Set(member.name, Napi::BigInt::New(env, v));
             } break;
-            case PrimitiveKind::Float32: {
-                float f;
-                memcpy(&f, ptr, 4);
-                obj.Set(member.name, Napi::Number::New(env, (double)f));
-            } break;
-            case PrimitiveKind::Float64: {
-                double d;
-                memcpy(&d, ptr, 8);
-                obj.Set(member.name, Napi::Number::New(env, d));
-            } break;
             case PrimitiveKind::String: {
                 const char *str = *(const char **)ptr;
                 obj.Set(member.name, Napi::String::New(env, str));
@@ -201,21 +191,23 @@ void PopObject(Napi::Object obj, const uint8_t *ptr, const TypeInfo *type)
 
                 obj.Set(member.name, external);
             } break;
-
             case PrimitiveKind::Record: {
                 Napi::Object obj2 = PopObject(env, ptr, member.type);
                 obj.Set(member.name, obj2);
             } break;
+            case PrimitiveKind::Float32: {
+                float f;
+                memcpy(&f, ptr, 4);
+                obj.Set(member.name, Napi::Number::New(env, (double)f));
+            } break;
+            case PrimitiveKind::Float64: {
+                double d;
+                memcpy(&d, ptr, 8);
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
         }
 
         ptr += member.type->size;
-    }
-}
-
-void PopOutArguments(Span<const OutObject> objects)
-{
-    for (const OutObject &obj: objects) {
-        PopObject(obj.obj, obj.ptr, obj.type);
     }
 }
 

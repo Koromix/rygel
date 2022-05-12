@@ -82,32 +82,29 @@ bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
     return true;
 }
 
-Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
+bool CallData::Prepare(const Napi::CallbackInfo &info)
 {
     // Sanity checks
     if (info.Length() < (uint32_t)func->parameters.len) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
-        return env.Null();
+        return false;
     }
 
-    uint8_t *return_ptr = nullptr;
     uint32_t *args_ptr = nullptr;
     uint32_t *fast_ptr = nullptr;
 
     // Pass return value in register or through memory
     if (RG_UNLIKELY(!AllocStack(func->args_size, 16, &args_ptr)))
-        return env.Null();
+        return false;
     if (func->convention == CallConvention::Fastcall) {
         fast_ptr = args_ptr;
         args_ptr += 4;
     }
     if (!func->ret.trivial) {
         if (RG_UNLIKELY(!AllocHeap(func->ret.type->size, 16, &return_ptr)))
-            return env.Null();
+            return false;
         *((func->ret.fast ? fast_ptr : args_ptr)++) = (uint32_t)return_ptr;
     }
-
-    LocalArray<OutObject, MaxOutParameters> out_objects;
 
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
@@ -122,7 +119,7 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
             case PrimitiveKind::Bool: {
                 if (RG_UNLIKELY(!value.IsBoolean())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected boolean", GetValueType(instance, value), i + 1);
-                    return env.Null();
+                    return false;
                 }
 
                 bool b = value.As<Napi::Boolean>();
@@ -136,7 +133,7 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
             case PrimitiveKind::UInt32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
-                    return env.Null();
+                    return false;
                 }
 
                 int32_t v = CopyNumber<int32_t>(value);
@@ -146,30 +143,11 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
             case PrimitiveKind::UInt64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
-                    return env.Null();
+                    return false;
                 }
 
                 int64_t v = CopyNumber<int64_t>(value);
                 *(uint64_t *)args_ptr = (uint64_t)v;
-                args_ptr += 2;
-            } break;
-            case PrimitiveKind::Float32: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
-                    return env.Null();
-                }
-
-                float f = CopyNumber<float>(value);
-                *(float *)((param.fast ? fast_ptr : args_ptr)++) = f;
-            } break;
-            case PrimitiveKind::Float64: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
-                    return env.Null();
-                }
-
-                double d = CopyNumber<double>(value);
-                *(double *)args_ptr = d;
                 args_ptr += 2;
             } break;
             case PrimitiveKind::String: {
@@ -177,12 +155,12 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(value.IsString())) {
                     str = PushString(value);
                     if (RG_UNLIKELY(!str))
-                        return env.Null();
+                        return false;
                 } else if (IsNullOrUndefined(value)) {
                     str = nullptr;
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected string", GetValueType(instance, value), i + 1);
-                    return env.Null();
+                    return false;
                 }
 
                 *(const char **)((param.fast ? fast_ptr : args_ptr)++) = str;
@@ -192,12 +170,12 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(value.IsString())) {
                     str16 = PushString16(value);
                     if (RG_UNLIKELY(!str16))
-                        return env.Null();
+                        return false;
                 } else if (IsNullOrUndefined(value)) {
                     str16 = nullptr;
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected string", GetValueType(instance, value), i + 1);
-                    return env.Null();
+                    return false;
                 }
 
                 *(const char16_t **)((param.fast ? fast_ptr : args_ptr)++) = str16;
@@ -211,11 +189,11 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
                     Napi::Object obj = value.As<Napi::Object>();
 
                     if (RG_UNLIKELY(!AllocHeap(param.type->ref->size, 16, &ptr)))
-                        return env.Null();
+                        return false;
 
                     if (param.directions & 1) {
                         if (!PushObject(obj, param.type->ref, ptr))
-                            return env.Null();
+                            return false;
                     } else {
                         memset(ptr, 0, param.type->size);
                     }
@@ -227,16 +205,15 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
                     ptr = nullptr;
                 } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), i + 1, param.type->name);
-                    return env.Null();
+                    return false;
                 }
 
                 *(uint8_t **)((param.fast ? fast_ptr : args_ptr)++) = ptr;
             } break;
-
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected object", GetValueType(instance, value), i + 1);
-                    return env.Null();
+                    return false;
                 }
 
                 Napi::Object obj = value.As<Napi::Object>();
@@ -244,92 +221,104 @@ Napi::Value CallData::Execute(const Napi::CallbackInfo &info)
                 if (param.fast) {
                     uint8_t *ptr = (uint8_t *)(fast_ptr++);
                     if (!PushObject(obj, param.type, ptr))
-                        return env.Null();
+                        return false;
                 } else {
                     uint8_t *ptr = (uint8_t *)AlignUp(args_ptr, param.type->align);
                     if (!PushObject(obj, param.type, ptr))
-                        return env.Null();
+                        return false;
                     args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
                 }
+            } break;
+            case PrimitiveKind::Float32: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
+                    return false;
+                }
+
+                float f = CopyNumber<float>(value);
+                *(float *)((param.fast ? fast_ptr : args_ptr)++) = f;
+            } break;
+            case PrimitiveKind::Float64: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
+                    return false;
+                }
+
+                double d = CopyNumber<double>(value);
+                *(double *)args_ptr = d;
+                args_ptr += 2;
             } break;
         }
     }
 
-    if (instance->debug) {
-        DumpDebug();
-    }
+    return true;
+}
 
+void CallData::Execute()
+{
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
             auto ret = (func->convention == CallConvention::Fastcall ? ForwardCallR ## Suffix(func->func, GetSP()) \
                                                                      : ForwardCall ## Suffix(func->func, GetSP())); \
-            PopOutArguments(out_objects); \
             return ret; \
         })()
 
     // Execute and convert return value
     switch (func->ret.type->primitive) {
-        case PrimitiveKind::Void: {
-            PERFORM_CALL(G);
-            return env.Null();
-        } break;
-        case PrimitiveKind::Bool: {
-            uint32_t rax = (uint32_t)PERFORM_CALL(G);
-            return Napi::Boolean::New(env, rax);
-        } break;
+        case PrimitiveKind::Void:
+        case PrimitiveKind::Bool:
         case PrimitiveKind::Int8:
         case PrimitiveKind::UInt8:
         case PrimitiveKind::Int16:
         case PrimitiveKind::UInt16:
         case PrimitiveKind::Int32:
-        case PrimitiveKind::UInt32: {
-            uint32_t rax = (uint32_t)PERFORM_CALL(G);
-            return Napi::Number::New(env, (double)rax);
-        } break;
-        case PrimitiveKind::Int64: {
-            uint64_t ret = PERFORM_CALL(G);
-            return Napi::BigInt::New(env, (int64_t)ret);
-        } break;
-        case PrimitiveKind::UInt64: {
-            uint64_t ret = PERFORM_CALL(G);
-            return Napi::BigInt::New(env, ret);
-        } break;
-        case PrimitiveKind::Float32: {
-            float f = PERFORM_CALL(F);
-            return Napi::Number::New(env, (double)f);
-        } break;
-        case PrimitiveKind::Float64: {
-            double d = PERFORM_CALL(D);
-            return Napi::Number::New(env, d);
-        } break;
-        case PrimitiveKind::String: {
-            uint32_t rax = (uint32_t)PERFORM_CALL(G);
-            return Napi::String::New(env, (const char *)rax);
-        } break;
-        case PrimitiveKind::String16: {
-            uint32_t rax = (uint32_t)PERFORM_CALL(G);
-            return Napi::String::New(env, (const char16_t *)rax);
-        } break;
-        case PrimitiveKind::Pointer: {
-            uint32_t rax = (uint32_t)PERFORM_CALL(G);
-            void *ptr = (void *)rax;
+        case PrimitiveKind::UInt32:
+        case PrimitiveKind::Int64:
+        case PrimitiveKind::UInt64:
+        case PrimitiveKind::String:
+        case PrimitiveKind::String16:
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Record: { result.u64 = PERFORM_CALL(G); } break;
+        case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
+        case PrimitiveKind::Float64: { result.d = PERFORM_CALL(D); } break;
+    }
 
-            Napi::External<void> external = Napi::External<void>::New(env, ptr);
+#undef PERFORM_CALL
+}
+
+Napi::Value CallData::Complete()
+{
+    PopOutArguments();
+
+    switch (func->ret.type->primitive) {
+        case PrimitiveKind::Void: return env.Null();
+        case PrimitiveKind::Bool: return Napi::Boolean::New(env, result.u32);
+        case PrimitiveKind::Int8:
+        case PrimitiveKind::UInt8:
+        case PrimitiveKind::Int16:
+        case PrimitiveKind::UInt16:
+        case PrimitiveKind::Int32:
+        case PrimitiveKind::UInt32: return Napi::Number::New(env, (double)result.u32);
+        case PrimitiveKind::Int64: return Napi::BigInt::New(env, (int64_t)result.u64);
+        case PrimitiveKind::UInt64: return Napi::BigInt::New(env, result.u64);
+        case PrimitiveKind::String: return Napi::String::New(env, (const char *)result.ptr);
+        case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)result.ptr);
+        case PrimitiveKind::Pointer: {
+            Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
             SetValueTag(instance, external, func->ret.type);
 
             return external;
         } break;
-
         case PrimitiveKind::Record: {
-            uint64_t ret = PERFORM_CALL(G);
-            const uint8_t *ptr = return_ptr ? return_ptr : (const uint8_t *)&ret;
+            const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
+                                            : (const uint8_t *)&result.buf;
 
             Napi::Object obj = PopObject(env, ptr, func->ret.type);
             return obj;
         } break;
+        case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
+        case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
     }
-
-#undef PERFORM_CALL
 
     RG_UNREACHABLE();
 }

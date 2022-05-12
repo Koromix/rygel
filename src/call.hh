@@ -28,12 +28,29 @@ class CallData {
     InstanceData *instance;
     const FunctionInfo *func;
 
+    struct OutObject {
+        Napi::Object obj;
+        const uint8_t *ptr;
+        const TypeInfo *type;
+    };
+
     Span<uint8_t> *stack_mem;
     Span<uint8_t> *heap_mem;
+    LocalArray<OutObject, MaxOutParameters> out_objects;
     BlockAllocator big_alloc;
 
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
+
+    union {
+        uint32_t u32;
+        uint64_t u64;
+        float f;
+        double d;
+        void *ptr;
+        uint8_t buf[32];
+    } result;
+    uint8_t *return_ptr = nullptr;
 
 public:
     CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func);
@@ -56,6 +73,26 @@ public:
         return MakeSpan(ptr, len);
     }
 
+    void DumpDebug() const;
+
+    bool Prepare(const Napi::CallbackInfo &info);
+    void Execute();
+    Napi::Value Complete();
+
+    Napi::Value Run(const Napi::CallbackInfo &info)
+    {
+        if (!RG_UNLIKELY(Prepare(info)))
+            return env.Null();
+
+        if (instance->debug) {
+            DumpDebug();
+        }
+
+        Execute();
+        return Complete();
+    }
+
+private:
     template <typename T = void>
     bool AllocStack(Size size, Size align, T **out_ptr = nullptr);
     template <typename T = void>
@@ -65,9 +102,7 @@ public:
     const char16_t *PushString16(const Napi::Value &value);
     bool PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest);
 
-    void DumpDebug() const;
-
-    Napi::Value Execute(const Napi::CallbackInfo &info);
+    void PopOutArguments();
 };
 
 template <typename T>

@@ -26,7 +26,6 @@ extern const int TypeInfoMarker;
 
 enum class PrimitiveKind {
     Void,
-
     Bool,
     Int8,
     UInt8,
@@ -36,18 +35,15 @@ enum class PrimitiveKind {
     UInt32,
     Int64,
     UInt64,
-    Float32,
-    Float64,
     String,
     String16,
-
     Pointer,
-
-    Record
+    Record,
+    Float32,
+    Float64
 };
 static const char *const PrimitiveKindNames[] = {
     "Void",
-
     "Bool",
     "Int8",
     "UInt8",
@@ -57,14 +53,12 @@ static const char *const PrimitiveKindNames[] = {
     "UInt32",
     "Int64",
     "UInt64",
-    "Float32",
-    "Float64",
     "String",
     "String16",
-
     "Pointer",
-
-    "Record"
+    "Record",
+    "Float32",
+    "Float64"
 };
 
 struct TypeInfo;

@@ -97,12 +97,4 @@ static inline Napi::Object PopObject(Napi::Env env, const uint8_t *ptr, const Ty
     return obj;
 }
 
-struct OutObject {
-    Napi::Object obj;
-    const uint8_t *ptr;
-    const TypeInfo *type;
-};
-
-void PopOutArguments(Span<const OutObject> objects);
-
 }

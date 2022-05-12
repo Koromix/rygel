@@ -156,24 +156,6 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                 int64_t v = CopyNumber<int64_t>(value);
                 memcpy(dest, &v, member.type->size); // Little Endian
             } break;
-            case PrimitiveKind::Float32: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
-                    return false;
-                }
-
-                float f = CopyNumber<float>(value);
-                memcpy(dest, &f, 4);
-            } break;
-            case PrimitiveKind::Float64: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
-                    return false;
-                }
-
-                double d = CopyNumber<double>(value);
-                memcpy(dest, &d, 8);
-            } break;
             case PrimitiveKind::String: {
                 if (RG_UNLIKELY(!value.IsString())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected string", GetValueType(instance, value), member.name);
@@ -206,7 +188,6 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                 void *ptr = external.Data();
                 *(void **)dest = ptr;
             } break;
-
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
                     ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected object", GetValueType(instance, value), member.name);
@@ -217,6 +198,24 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                 if (!PushObject(obj, member.type, dest))
                     return false;
             } break;
+            case PrimitiveKind::Float32: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                float f = CopyNumber<float>(value);
+                memcpy(dest, &f, 4);
+            } break;
+            case PrimitiveKind::Float64: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                double d = CopyNumber<double>(value);
+                memcpy(dest, &d, 8);
+            } break;
         }
 
         dest += member.type->size;
@@ -224,5 +223,13 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
 
     return true;
 }
+
+void CallData::PopOutArguments()
+{
+    for (const OutObject &obj: out_objects) {
+        PopObject(obj.obj, obj.ptr, obj.type);
+    }
+}
+
 
 }
