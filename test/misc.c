@@ -54,6 +54,26 @@ typedef struct Pack3 {
     int c;
 } Pack3;
 
+typedef struct Float2 {
+    float a;
+    float b;
+} Float2;
+typedef struct Float3 {
+    float a;
+    float b;
+    float c;
+} Float3;
+
+typedef struct Double2 {
+    double a;
+    double b;
+} Double2;
+typedef struct Double3 {
+    double a;
+    double b;
+    double c;
+} Double3;
+
 typedef struct IJK1 { int8_t i; int8_t j; int8_t k; } IJK1;
 typedef struct IJK4 { int32_t i; int32_t j; int32_t k; } IJK4;
 typedef struct IJK8 { int64_t i; int64_t j; int64_t k; } IJK8;
@@ -147,6 +167,52 @@ EXPORT void FASTCALL AddPack3(int a, int b, int c, Pack3 *p)
     p->a += a;
     p->b += b;
     p->c += c;
+}
+
+EXPORT Float2 PackFloat2(float a, float b, Float2 *out)
+{
+    Float2 ret;
+
+    ret.a = a;
+    ret.b = b;
+    *out = ret;
+
+    return ret;
+}
+
+EXPORT Float3 PackFloat3(float a, float b, float c, Float3 *out)
+{
+    Float3 ret;
+
+    ret.a = a;
+    ret.b = b;
+    ret.c = c;
+    *out = ret;
+
+    return ret;
+}
+
+EXPORT Double2 PackDouble2(double a, double b, Double2 *out)
+{
+    Double2 ret;
+
+    ret.a = a;
+    ret.b = b;
+    *out = ret;
+
+    return ret;
+}
+
+EXPORT Double3 PackDouble3(double a, double b, double c, Double3 *out)
+{
+    Double3 ret;
+
+    ret.a = a;
+    ret.b = b;
+    ret.c = c;
+    *out = ret;
+
+    return ret;
 }
 
 EXPORT int64_t ConcatenateToInt1(int8_t a, int8_t b, int8_t c, int8_t d, int8_t e, int8_t f,

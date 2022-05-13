@@ -30,6 +30,26 @@ const Pack3 = koffi.struct('Pack3', {
     c: 'int'
 });
 
+const Float2 = koffi.struct('Float2', {
+    a: 'float',
+    b: 'float'
+});
+const Float3 = koffi.struct('Float3', {
+    a: 'float',
+    b: 'float',
+    c: 'float'
+});
+
+const Double2 = koffi.struct('Double2', {
+    a: 'double',
+    b: 'double'
+});
+const Double3 = koffi.struct('Double3', {
+    a: 'double',
+    b: 'double',
+    c: 'double'
+});
+
 const BFG = koffi.struct('BFG', {
     a: 'int8_t',
     b: 'int64_t',
@@ -78,6 +98,10 @@ async function test() {
     const FillPack3 = lib.func('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
     const RetPack3 = lib.func('RetPack3', Pack3, ['int', 'int', 'int']);
     const AddPack3 = lib.fastcall('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
+    const PackFloat2 = lib.func('Float2 PackFloat2(float a, float b, _Out_ Float2 *out)');
+    const PackFloat3 = lib.func('Float3 PackFloat3(float a, float b, float c, _Out_ Float3 *out)');
+    const PackDouble2 = lib.func('Double2 PackDouble2(double a, double b, _Out_ Double2 *out)');
+    const PackDouble3 = lib.func('Double3 PackDouble3(double a, double b, double c, _Out_ Double3 *out)');
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
     const ConcatenateToInt4 = lib.func('ConcatenateToInt4', 'int64_t', Array(12).fill('int32_t'));
     const ConcatenateToInt8 = lib.func('ConcatenateToInt8', 'int64_t', Array(12).fill('int64_t'));
@@ -132,6 +156,29 @@ async function test() {
 
         AddPack3(6, 9, -12, p);
         assert.deepEqual(p, { a: 7, b: 11, c: -9 });
+    }
+
+    // HFA tests
+    {
+        let f2p = {};
+        let f2 = PackFloat2(1.5, 3.0, f2p);
+        assert.deepEqual(f2, { a: 1.5, b: 3.0 });
+        assert.deepEqual(f2, f2p);
+
+        let f3p = {};
+        let f3 = PackFloat3(20.0, 30.0, 40.0, f3p);
+        assert.deepEqual(f3, { a: 20.0, b: 30.0, c: 40.0 });
+        assert.deepEqual(f3, f3p);
+
+        let d2p = {};
+        let d2 = PackDouble2(1.0, 2.0, d2p);
+        assert.deepEqual(d2, { a: 1.0, b: 2.0 });
+        assert.deepEqual(d2, d2p);
+
+        let d3p = {};
+        let d3 = PackDouble3(0.5, 10.0, 5.0, d3p);
+        assert.deepEqual(d3, { a: 0.5, b: 10.0, c: 5.0 });
+        assert.deepEqual(d3, d3p);
     }
 
     // Many parameters
