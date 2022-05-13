@@ -224,6 +224,98 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
     return true;
 }
 
+void CallData::PopObject(Napi::Object obj, const uint8_t *ptr, const TypeInfo *type)
+{
+    Napi::Env env = obj.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    RG_ASSERT(type->primitive == PrimitiveKind::Record);
+
+    for (const RecordMember &member: type->members) {
+        ptr = AlignUp(ptr, member.align);
+
+        switch (member.type->primitive) {
+            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+
+            case PrimitiveKind::Bool: {
+                bool b = *(bool *)ptr;
+                obj.Set(member.name, Napi::Boolean::New(env, b));
+            } break;
+            case PrimitiveKind::Int8: {
+                double d = (double)*(int8_t *)ptr;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt8: {
+                double d = (double)*(uint8_t *)ptr;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::Int16: {
+                double d = (double)*(int16_t *)ptr;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt16: {
+                double d = (double)*(uint16_t *)ptr;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::Int32: {
+                double d = (double)*(int32_t *)ptr;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt32: {
+                double d = (double)*(uint32_t *)ptr;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::Int64: {
+                int64_t v = *(int64_t *)ptr;
+                obj.Set(member.name, Napi::BigInt::New(env, v));
+            } break;
+            case PrimitiveKind::UInt64: {
+                uint64_t v = *(uint64_t *)ptr;
+                obj.Set(member.name, Napi::BigInt::New(env, v));
+            } break;
+            case PrimitiveKind::String: {
+                const char *str = *(const char **)ptr;
+                obj.Set(member.name, Napi::String::New(env, str));
+            } break;
+            case PrimitiveKind::String16: {
+                const char16_t *str16 = *(const char16_t **)ptr;
+                obj.Set(member.name, Napi::String::New(env, str16));
+            } break;
+            case PrimitiveKind::Pointer: {
+                void *ptr2 = *(void **)ptr;
+
+                Napi::External<void> external = Napi::External<void>::New(env, ptr2);
+                SetValueTag(instance, external, member.type);
+
+                obj.Set(member.name, external);
+            } break;
+            case PrimitiveKind::Record: {
+                Napi::Object obj2 = PopObject(ptr, member.type);
+                obj.Set(member.name, obj2);
+            } break;
+            case PrimitiveKind::Float32: {
+                float f;
+                memcpy(&f, ptr, 4);
+                obj.Set(member.name, Napi::Number::New(env, (double)f));
+            } break;
+            case PrimitiveKind::Float64: {
+                double d;
+                memcpy(&d, ptr, 8);
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+        }
+
+        ptr += member.type->size;
+    }
+}
+
+Napi::Object CallData::PopObject(const uint8_t *ptr, const TypeInfo *type)
+{
+    Napi::Object obj = Napi::Object::New(env);
+    PopObject(obj, ptr, type);
+    return obj;
+}
+
 Napi::Value CallData::Complete()
 {
     for (const OutObject &obj: out_objects) {
@@ -253,7 +345,7 @@ Napi::Value CallData::Complete()
             const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
                                             : (const uint8_t *)&result.buf;
 
-            Napi::Object obj = PopObject(env, ptr, func->ret.type);
+            Napi::Object obj = PopObject(ptr, func->ret.type);
             return obj;
         } break;
         case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
