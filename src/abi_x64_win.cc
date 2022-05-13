@@ -53,12 +53,6 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 
 bool CallData::Prepare(const Napi::CallbackInfo &info)
 {
-    // Sanity checks
-    if (info.Length() < (uint32_t)func->parameters.len) {
-        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
-        return false;
-    }
-
     uint64_t *args_ptr = nullptr;
 
     // Pass return value in register or through memory

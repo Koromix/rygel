@@ -196,12 +196,6 @@ static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest
 
 bool CallData::Prepare(const Napi::CallbackInfo &info)
 {
-    // Sanity checks
-    if (info.Length() < (uint32_t)func->parameters.len) {
-        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
-        return false;
-    }
-
     uint8_t *args_ptr = nullptr;
     uint32_t *gpr_ptr = nullptr;
     uint32_t *vec_ptr = nullptr;

@@ -247,6 +247,11 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
     FunctionInfo *func = (FunctionInfo *)info.Data();
 
+    if (info.Length() < (uint32_t)func->parameters.len) {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
+        return env.Null();
+    }
+
     CallData call(env, instance, func);
     return call.Run(info);
 }
@@ -266,6 +271,10 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         func.parameters.Leak();
     };
 
+    if (info.Length() < (uint32_t)func.parameters.len) {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", func.parameters.len, info.Length());
+        return env.Null();
+    }
     if ((info.Length() - func.parameters.len) % 2) {
         ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
         return env.Null();
