@@ -73,8 +73,6 @@ public:
         return MakeSpan(ptr, len);
     }
 
-    void DumpDebug() const;
-
     bool Prepare(const Napi::CallbackInfo &info);
     void Execute();
     Napi::Value Complete();
@@ -91,6 +89,8 @@ public:
         Execute();
         return Complete();
     }
+
+    void DumpDebug() const;
 
 private:
     template <typename T = void>

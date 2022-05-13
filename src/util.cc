@@ -126,38 +126,4 @@ bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *
     return match;
 }
 
-static void DumpMemory(const char *type, Span<const uint8_t> bytes)
-{
-    if (bytes.len) {
-        PrintLn(stderr, "%1 at 0x%2 (%3):", type, bytes.ptr, FmtMemSize(bytes.len));
-
-        for (const uint8_t *ptr = bytes.begin(); ptr < bytes.end();) {
-            Print(stderr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16),
-                                              FmtArg((ptr - bytes.begin()) / sizeof(void *)).Pad(-4),
-                                              FmtArg(ptr - bytes.begin()).Pad(-4));
-            for (int i = 0; ptr < bytes.end() && i < (int)sizeof(void *); i++, ptr++) {
-                Print(stderr, " %1", FmtHex(*ptr).Pad0(-2));
-            }
-            PrintLn(stderr);
-        }
-    }
-}
-
-void CallData::DumpDebug() const
-{
-    PrintLn(stderr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
-
-    if (func->parameters.len) {
-        PrintLn(stderr, "Parameters:");
-        for (Size i = 0; i < func->parameters.len; i++) {
-            const ParameterInfo &param = func->parameters[i];
-            PrintLn(stderr, "  %1 = %2 (%3)", i, param.type->name, FmtMemSize(param.type->size));
-        }
-    }
-    PrintLn(stderr, "Return: %1 (%2)", func->ret.type->name, FmtMemSize(func->ret.type->size));
-
-    DumpMemory("Stack", GetStack());
-    DumpMemory("Heap", GetHeap());
-}
-
 }
