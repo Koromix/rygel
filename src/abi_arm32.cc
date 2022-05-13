@@ -162,38 +162,6 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
     return true;
 }
 
-static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest)
-{
-    Napi::Env env = obj.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    RG_ASSERT(IsObject(obj));
-    RG_ASSERT(IsHFA(type));
-    RG_ASSERT(type->primitive == PrimitiveKind::Record);
-    RG_ASSERT(AlignUp(dest, type->members[0].type->size) == dest);
-
-    bool float32 = (type->members[0].type->primitive == PrimitiveKind::Float32);
-
-    for (const RecordMember &member: type->members) {
-        Napi::Value value = obj.Get(member.name);
-
-        if (!value.IsNumber() && !value.IsBigInt()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
-            return false;
-        }
-
-        if (float32) {
-            *(float *)dest = CopyNumber<float>(value);
-            dest += 4;
-        } else {
-            *(double *)dest = CopyNumber<double>(value);
-            dest += 8;
-        }
-    }
-
-    return true;
-}
-
 bool CallData::Prepare(const Napi::CallbackInfo &info)
 {
     uint8_t *args_ptr = nullptr;
@@ -363,26 +331,24 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 Napi::Object obj = value.As<Napi::Object>();
 
                 if (param.vec_count) {
-                    if (!PushHFA(obj, param.type, (uint8_t *)vec_ptr))
+                    if (!PushObject(obj, param.type, (uint8_t *)vec_ptr))
                         return false;
                     vec_ptr += param.vec_count;
-                } else {
-                    if (param.gpr_count) {
-                        RG_ASSERT(param.type->align <= 8);
+                } else if (param.gpr_count) {
+                    RG_ASSERT(param.type->align <= 8);
 
-                        if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
-                            return false;
+                    if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
+                        return false;
 
-                        gpr_ptr += param.gpr_count;
-                        args_ptr += AlignLen(param.type->size - param.gpr_count * 4, 4);
-                    } else if (param.type->size) {
-                        int16_t align = (param.type->align <= 4) ? 4 : 8;
+                    gpr_ptr += param.gpr_count;
+                    args_ptr += AlignLen(param.type->size - param.gpr_count * 4, 4);
+                } else if (param.type->size) {
+                    int16_t align = (param.type->align <= 4) ? 4 : 8;
 
-                        args_ptr = AlignUp(args_ptr, align);
-                        if (!PushObject(obj, param.type, args_ptr))
-                            return false;
-                        args_ptr += AlignLen(param.type->size, 4);
-                    }
+                    args_ptr = AlignUp(args_ptr, align);
+                    if (!PushObject(obj, param.type, args_ptr))
+                        return false;
+                    args_ptr += AlignLen(param.type->size, 4);
                 }
             } break;
             case PrimitiveKind::Float32: {
@@ -465,6 +431,45 @@ void CallData::Execute()
     }
 
 #undef PERFORM_CALL
+}
+
+Napi::Value CallData::Complete()
+{
+    for (const OutObject &obj: out_objects) {
+        PopObject(obj.obj, obj.ptr, obj.type);
+    }
+
+    switch (func->ret.type->primitive) {
+        case PrimitiveKind::Void: return env.Null();
+        case PrimitiveKind::Bool: return Napi::Boolean::New(env, result.u32);
+        case PrimitiveKind::Int8:
+        case PrimitiveKind::UInt8:
+        case PrimitiveKind::Int16:
+        case PrimitiveKind::UInt16:
+        case PrimitiveKind::Int32:
+        case PrimitiveKind::UInt32: return Napi::Number::New(env, (double)result.u32);
+        case PrimitiveKind::Int64: return Napi::BigInt::New(env, (int64_t)result.u64);
+        case PrimitiveKind::UInt64: return Napi::BigInt::New(env, result.u64);
+        case PrimitiveKind::String: return Napi::String::New(env, (const char *)result.ptr);
+        case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)result.ptr);
+        case PrimitiveKind::Pointer: {
+            Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
+            SetValueTag(instance, external, func->ret.type);
+
+            return external;
+        } break;
+        case PrimitiveKind::Record: {
+            const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
+                                            : (const uint8_t *)&result.buf;
+
+            Napi::Object obj = PopObject(ptr, func->ret.type);
+            return obj;
+        } break;
+        case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
+        case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
+    }
+
+    RG_UNREACHABLE();
 }
 
 }
