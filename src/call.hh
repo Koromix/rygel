@@ -24,23 +24,26 @@ namespace RG {
 bool AnalyseFunction(InstanceData *instance, FunctionInfo *func);
 
 class CallData {
-    Napi::Env env;
-    InstanceData *instance;
-    const FunctionInfo *func;
-
     struct OutObject {
-        Napi::Object obj;
+        Napi::ObjectReference ref;
         const uint8_t *ptr;
         const TypeInfo *type;
     };
 
-    Span<uint8_t> *stack_mem;
-    Span<uint8_t> *heap_mem;
-    LocalArray<OutObject, MaxOutParameters> out_objects;
-    BlockAllocator big_alloc;
+    Napi::Env env;
+    InstanceData *instance;
+    const FunctionInfo *func;
 
+    bool debug;
+
+    InstanceMemory *mem;
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
+
+    LocalArray<OutObject, MaxOutParameters> out_objects;
+
+    Span<uint8_t> heap;
+    Span<uint8_t> stack;
 
     union {
         uint32_t u32;
@@ -53,25 +56,8 @@ class CallData {
     uint8_t *return_ptr = nullptr;
 
 public:
-    CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func);
+    CallData(Napi::Env env, const FunctionInfo *func, InstanceMemory *mem, bool debug);
     ~CallData();
-
-    Span<uint8_t> GetStack() const
-    {
-        uint8_t *sp = stack_mem->end();
-        Size len = old_stack_mem.end() - sp;
-
-        return MakeSpan(sp, len);
-    }
-    uint8_t *GetSP() const { return stack_mem->end(); };
-
-    Span<uint8_t> GetHeap() const
-    {
-        uint8_t *ptr = old_heap_mem.ptr;
-        Size len = heap_mem->ptr - ptr;
-
-        return MakeSpan(ptr, len);
-    }
 
     bool Prepare(const Napi::CallbackInfo &info);
     void Execute();
@@ -82,11 +68,11 @@ public:
         if (!RG_UNLIKELY(Prepare(info)))
             return env.Null();
 
-        if (instance->debug) {
+        if (debug) {
             DumpDebug();
         }
-
         Execute();
+
         return Complete();
     }
 
@@ -109,19 +95,19 @@ private:
 template <typename T>
 bool CallData::AllocStack(Size size, Size align, T **out_ptr)
 {
-    uint8_t *ptr = AlignDown(stack_mem->end() - size, align);
-    Size delta = stack_mem->end() - ptr;
+    uint8_t *ptr = AlignDown(mem->stack.end() - size, align);
+    Size delta = mem->stack.end() - ptr;
 
-    if (RG_UNLIKELY(stack_mem->len < delta)) {
+    if (RG_UNLIKELY(mem->stack.len < delta)) {
         ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
         return false;
     }
 
-    if (instance->debug) {
+    if (debug) {
         memset(ptr, 0, delta);
     }
 
-    stack_mem->len -= delta;
+    mem->stack.len -= delta;
 
     if (out_ptr) {
         *out_ptr = (T *)ptr;
@@ -132,20 +118,20 @@ bool CallData::AllocStack(Size size, Size align, T **out_ptr)
 template <typename T>
 bool CallData::AllocHeap(Size size, Size align, T **out_ptr)
 {
-    uint8_t *ptr = AlignUp(heap_mem->ptr, align);
-    Size delta = size + (ptr - heap_mem->ptr);
+    uint8_t *ptr = AlignUp(mem->heap.ptr, align);
+    Size delta = size + (ptr - mem->heap.ptr);
 
-    if (RG_UNLIKELY(delta > heap_mem->len)) {
+    if (RG_UNLIKELY(delta > mem->heap.len)) {
         ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
         return false;
     }
 
-    if (instance->debug) {
-        memset(heap_mem->ptr, 0, (size_t)delta);
+    if (debug) {
+        memset(mem->heap.ptr, 0, (size_t)delta);
     }
 
-    heap_mem->ptr += delta;
-    heap_mem->len -= delta;
+    mem->heap.ptr += delta;
+    mem->heap.len -= delta;
 
     if (out_ptr) {
         *out_ptr = (T *)ptr;

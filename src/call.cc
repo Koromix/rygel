@@ -20,19 +20,24 @@
 
 namespace RG {
 
-CallData::CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func)
-    : env(env), instance(instance), func(func),
-      stack_mem(&instance->stack_mem), heap_mem(&instance->heap_mem),
-      old_stack_mem(instance->stack_mem), old_heap_mem(instance->heap_mem)
+CallData::CallData(Napi::Env env, const FunctionInfo *func, InstanceMemory *mem, bool debug)
+    : env(env), instance(env.GetInstanceData<InstanceData>()), func(func), debug(debug),
+      mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap)
 {
-    RG_ASSERT(AlignUp(stack_mem->ptr, 16) == stack_mem->ptr);
-    RG_ASSERT(AlignUp(stack_mem->end(), 16) == stack_mem->end());
+    mem->depth++;
+
+    RG_ASSERT(AlignUp(mem->stack.ptr, 16) == mem->stack.ptr);
+    RG_ASSERT(AlignUp(mem->stack.end(), 16) == mem->stack.end());
 }
 
 CallData::~CallData()
 {
-    instance->stack_mem = old_stack_mem;
-    instance->heap_mem = old_heap_mem;
+    mem->stack = old_stack_mem;
+    mem->heap = old_heap_mem;
+
+    if (!--mem->depth && mem->temporary) {
+        delete mem;
+    }
 }
 
 const char *CallData::PushString(const Napi::Value &value)
@@ -45,8 +50,8 @@ const char *CallData::PushString(const Napi::Value &value)
     size_t len = 0;
     napi_status status;
 
-    buf.ptr = (char *)heap_mem->ptr;
-    buf.len = std::max((Size)0, heap_mem->len - Kibibytes(32));
+    buf.ptr = (char *)mem->heap.ptr;
+    buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32));
 
     status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
     RG_ASSERT(status == napi_ok);
@@ -54,15 +59,15 @@ const char *CallData::PushString(const Napi::Value &value)
     len++;
 
     if (RG_LIKELY(len < (size_t)buf.len)) {
-        heap_mem->ptr += (Size)len;
-        heap_mem->len -= (Size)len;
+        mem->heap.ptr += (Size)len;
+        mem->heap.len -= (Size)len;
     } else {
         status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
         RG_ASSERT(status == napi_ok);
 
         len++;
 
-        buf.ptr = (char *)Allocator::Allocate(&big_alloc, (Size)len);
+        buf.ptr = (char *)Allocator::Allocate(&mem->big_alloc, (Size)len);
         buf.len = (Size)len;
 
         status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
@@ -82,8 +87,8 @@ const char16_t *CallData::PushString16(const Napi::Value &value)
     size_t len = 0;
     napi_status status;
 
-    buf.ptr = (char16_t *)heap_mem->ptr;
-    buf.len = std::max((Size)0, heap_mem->len - Kibibytes(32)) / 2;
+    buf.ptr = (char16_t *)mem->heap.ptr;
+    buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32)) / 2;
 
     status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
     RG_ASSERT(status == napi_ok);
@@ -91,15 +96,15 @@ const char16_t *CallData::PushString16(const Napi::Value &value)
     len++;
 
     if (RG_LIKELY(len < (size_t)buf.len)) {
-        heap_mem->ptr += (Size)len * 2;
-        heap_mem->len -= (Size)len * 2;
+        mem->heap.ptr += (Size)len * 2;
+        mem->heap.len -= (Size)len * 2;
     } else {
         status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
         RG_ASSERT(status == napi_ok);
 
         len++;
 
-        buf.ptr = (char16_t *)Allocator::Allocate(&big_alloc, (Size)len * 2);
+        buf.ptr = (char16_t *)Allocator::Allocate(&mem->big_alloc, (Size)len * 2);
         buf.len = (Size)len;
 
         status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
@@ -111,9 +116,6 @@ const char16_t *CallData::PushString16(const Napi::Value &value)
 
 bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest)
 {
-    Napi::Env env = obj.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
     RG_ASSERT(IsObject(obj));
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
@@ -226,9 +228,6 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
 
 void CallData::PopObject(Napi::Object obj, const uint8_t *ptr, const TypeInfo *type)
 {
-    Napi::Env env = obj.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
     for (const RecordMember &member: type->members) {
@@ -346,8 +345,8 @@ void CallData::DumpDebug() const
     }
     PrintLn(stderr, "Return: %1 (%2)", func->ret.type->name, FmtMemSize(func->ret.type->size));
 
-    DumpMemory("Stack", GetStack());
-    DumpMemory("Heap", GetHeap());
+    DumpMemory("Stack", stack);
+    DumpMemory("Heap", heap);
 }
 
 }

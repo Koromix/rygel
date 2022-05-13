@@ -86,13 +86,13 @@ struct RecordMember {
 
 struct LibraryHolder {
     void *module = nullptr; // HMODULE on Windows
-    std::atomic_int refcount {1};
+    mutable std::atomic_int refcount {1};
 
     LibraryHolder(void *module) : module(module) {}
     ~LibraryHolder();
 
-    LibraryHolder *Ref();
-    void Unref();
+    const LibraryHolder *Ref() const;
+    void Unref() const;
 };
 
 enum class CallConvention {
@@ -132,11 +132,11 @@ struct ParameterInfo {
 };
 
 struct FunctionInfo {
-    ~FunctionInfo();
+    mutable std::atomic_int refcount {1};
 
     const char *name;
     const char *decorated_name;
-    LibraryHolder *lib = nullptr;
+    const LibraryHolder *lib = nullptr;
 
     void *func;
     CallConvention convention;
@@ -152,10 +152,27 @@ struct FunctionInfo {
 #if defined(__arm__) || defined(__aarch64__) || defined(__x86_64__) || defined(_WIN64)
     bool forward_fp;
 #endif
+
+    ~FunctionInfo();
+
+    const FunctionInfo *Ref() const;
+    void Unref() const;
+};
+
+struct InstanceMemory {
+    LinkedAllocator mem_alloc;
+
+    Span<uint8_t> stack;
+    Span<uint8_t> heap;
+    IndirectBlockAllocator big_alloc { &mem_alloc };
+
+    int depth;
+    bool temporary;
 };
 
 struct InstanceData {
     InstanceData();
+    ~InstanceData();
 
     BucketArray<TypeInfo> types;
     HashTable<const char *, TypeInfo *> types_map;
@@ -163,12 +180,9 @@ struct InstanceData {
     bool debug;
     uint64_t tag_lower;
 
+    LocalArray<InstanceMemory *, 8> memories;
+
     BlockAllocator str_alloc;
-
-    Span<uint8_t> stack_mem;
-    Span<uint8_t> heap_mem;
-
-    LinkedAllocator mem_alloc;
 };
 
 }

@@ -148,8 +148,11 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                         memset(ptr, 0, param.type->size);
                     }
                     if (param.directions & 2) {
-                        OutObject out = {obj, ptr, param.type->ref};
-                        out_objects.Append(out);
+                        OutObject *out = out_objects.AppendDefault();
+
+                        out->ref.Reset(obj, 1);
+                        out->ptr = ptr;
+                        out->type = param.type->ref;
                     }
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
@@ -200,6 +203,9 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
         }
     }
 
+    stack = MakeSpan(mem->stack.end(), old_stack_mem.end() - mem->stack.end());
+    heap = MakeSpan(old_heap_mem.ptr, mem->heap.ptr - old_heap_mem.ptr);
+
     return true;
 }
 
@@ -207,8 +213,8 @@ void CallData::Execute()
 {
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, GetSP()) \
-                                         : ForwardCall ## Suffix(func->func, GetSP())); \
+            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, stack.ptr) \
+                                         : ForwardCall ## Suffix(func->func, stack.ptr)); \
             return ret; \
         })()
 
@@ -236,8 +242,9 @@ void CallData::Execute()
 
 Napi::Value CallData::Complete()
 {
-    for (const OutObject &obj: out_objects) {
-        PopObject(obj.obj, obj.ptr, obj.type);
+    for (const OutObject &out: out_objects) {
+        Napi::Object obj = out.ref.Value().As<Napi::Object>();
+        PopObject(obj, out.ptr, out.type);
     }
 
     switch (func->ret.type->primitive) {

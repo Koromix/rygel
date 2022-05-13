@@ -241,6 +241,42 @@ static Napi::Value MarkInOut(const Napi::CallbackInfo &info)
     return EncodePointerDirection(info, 3);
 }
 
+static Span<uint8_t> AllocateAndAlign16(Allocator *alloc, Size size)
+{
+    RG_ASSERT(AlignLen(size, 16) == size);
+    RG_ASSERT(size >= Kibibytes(1));
+
+    // Account for allocator overhead
+    size -= 256;
+
+    uint8_t *ptr = (uint8_t *)Allocator::Allocate(alloc, size);
+    uint8_t *aligned = AlignUp(ptr, 16);
+    Size delta = AlignLen(aligned - ptr, 16);
+
+    return MakeSpan(aligned, size - delta);
+}
+
+static InstanceMemory *AllocateCallMemory(InstanceData *instance)
+{
+    for (InstanceMemory *mem: instance->memories) {
+        if (!mem->depth)
+            return mem;
+    }
+
+    InstanceMemory *mem = new InstanceMemory();
+
+    mem->stack = AllocateAndAlign16(&mem->mem_alloc, Mebibytes(1));
+    mem->heap = AllocateAndAlign16(&mem->mem_alloc, Mebibytes(2));
+
+    if (instance->memories.Available()) {
+        instance->memories.Append(mem);
+    } else {
+        mem->temporary = true;
+    }
+
+    return mem;
+}
+
 static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -252,7 +288,9 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    CallData call(env, instance, func);
+    InstanceMemory *mem = AllocateCallMemory(instance);
+    CallData call(env, func, mem, instance->debug);
+
     return call.Run(info);
 }
 
@@ -309,8 +347,91 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
     if (!AnalyseFunction(instance, &func))
         return env.Null();
 
-    CallData call(env, instance, &func);
+    InstanceMemory *mem = AllocateCallMemory(instance);
+    CallData call(env, &func, mem, instance->debug);
+
     return call.Run(info);
+}
+
+class AsyncCall: public Napi::AsyncWorker {
+    Napi::Env env;
+    const FunctionInfo *func;
+
+    CallData call;
+    bool prepared = false;
+
+public:
+    AsyncCall(Napi::Env env, InstanceMemory *mem, FunctionInfo *func, bool debug,
+              Napi::Function &callback)
+        : Napi::AsyncWorker(callback), env(env), func(func->Ref()),
+          call(env, func, mem, debug) {}
+    ~AsyncCall() { func->Unref(); }
+
+    bool Prepare(const Napi::CallbackInfo &info) {
+        prepared = call.Prepare(info);
+
+        if (!prepared) {
+            Napi::Error err = env.GetAndClearPendingException();
+            SetError(err.Message());
+        }
+
+        return prepared;
+    }
+    void DumpDebug() { call.DumpDebug(); }
+
+    void Execute() override;
+    void OnOK() override;
+};
+
+void AsyncCall::Execute()
+{
+    if (prepared) {
+        call.Execute();
+    }
+}
+
+void AsyncCall::OnOK()
+{
+    RG_ASSERT(prepared);
+
+    Napi::FunctionReference &callback = Callback();
+
+    Napi::Value self = env.Null();
+    napi_value args[] = {
+        env.Null(),
+        call.Complete()
+    };
+
+    callback.Call(self, RG_LEN(args), args);
+}
+
+static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    FunctionInfo *func = (FunctionInfo *)info.Data();
+
+    if (info.Length() <= (uint32_t)func->parameters.len) {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len + 1, info.Length());
+        return env.Null();
+    }
+
+    Napi::Function callback = info[(uint32_t)func->parameters.len].As<Napi::Function>();
+
+    if (!callback.IsFunction()) {
+        ThrowError<Napi::TypeError>(env, "Expected callback function as last arguments, got %1", GetValueType(instance, callback));
+        return env.Null();
+    }
+
+    InstanceMemory *mem = AllocateCallMemory(instance);
+    AsyncCall *async = new AsyncCall(env, mem, func, instance->debug, callback);
+
+    if (async->Prepare(info) && instance->debug) {
+        async->DumpDebug();
+    }
+    async->Queue();
+
+    return env.Null();
 }
 
 static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value ret,
@@ -386,7 +507,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
     LibraryHolder *lib = (LibraryHolder *)info.Data();
 
     FunctionInfo *func = new FunctionInfo();
-    RG_DEFER_N(func_guard) { delete func; };
+    RG_DEFER { func->Unref(); };
 
     func->lib = lib->Ref();
     func->convention = convention;
@@ -445,9 +566,14 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
     }
 
     Napi::Function::Callback call = func->variadic ? TranslateVariadicCall : TranslateNormalCall;
-    Napi::Function wrapper = Napi::Function::New(env, call, func->name, (void *)func);
-    wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { delete func; }, func);
-    func_guard.Disable();
+    Napi::Function wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+    wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, func);
+
+    if (!func->variadic) {
+        Napi::Function async = Napi::Function::New(env, TranslateAsyncCall, func->name, (void *)func->Ref());
+        async.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, func);
+        wrapper.Set("async", async);
+    }
 
     return wrapper;
 }
@@ -540,13 +666,13 @@ LibraryHolder::~LibraryHolder()
 #endif
 }
 
-LibraryHolder *LibraryHolder::Ref()
+const LibraryHolder *LibraryHolder::Ref() const
 {
     refcount++;
     return this;
 }
 
-void LibraryHolder::Unref()
+void LibraryHolder::Unref() const
 {
     if (!--refcount) {
         delete this;
@@ -646,21 +772,30 @@ FunctionInfo::~FunctionInfo()
     }
 }
 
-static Span<uint8_t> AllocateAndAlign16(Allocator *alloc, Size size)
+const FunctionInfo *FunctionInfo::Ref() const
 {
-    RG_ASSERT(AlignLen(size, 16) == size);
+    refcount++;
+    return this;
+}
 
-    uint8_t *ptr = (uint8_t *)Allocator::Allocate(alloc, size);
-    uint8_t *aligned = AlignUp(ptr, 16);
-    Size delta = AlignLen(aligned - ptr, 16);
-
-    return MakeSpan(aligned, size - delta);
+void FunctionInfo::Unref() const
+{
+    if (!--refcount) {
+        delete this;
+    }
 }
 
 InstanceData::InstanceData()
 {
-    stack_mem = AllocateAndAlign16(&mem_alloc, Mebibytes(2));
-    heap_mem = AllocateAndAlign16(&mem_alloc, Mebibytes(4));
+    AllocateCallMemory(this);
+    RG_ASSERT(memories.len == 1);
+}
+
+InstanceData::~InstanceData()
+{
+    for (InstanceMemory *mem: memories) {
+        delete mem;
+    }
 }
 
 template <typename Func>

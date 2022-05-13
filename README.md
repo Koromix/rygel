@@ -22,25 +22,25 @@ After the release of version 1.0, the following features are planned:
 
 The following platforms __are officially supported and tested__ at the moment:
 
-Platform  | Architecture                     | JS to C  | C to JS (callback) | Pre-built binary
---------- | -------------------------------- | -------- | ------------------ | ----------------
-Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩 Yes   | 🟥 No              | 🟩 Yes
-Windows   | x86_64                           | 🟩 Yes   | 🟥 No              | 🟩 Yes
-Linux     | x86                              | 🟩 Yes   | 🟥 No              | 🟩 Yes
-Linux     | x86_64                           | 🟩 Yes   | 🟥 No              | 🟩 Yes
-Linux     | ARM32+VFP Little Endian          | 🟩 Yes   | 🟥 No              | 🟩 Yes
-Linux     | ARM64 Little Endian              | 🟩 Yes   | 🟥 No              | 🟩 Yes
-FreeBSD   | x86                              | 🟩 Yes   | 🟥 No              | 🟩 Yes
-FreeBSD   | x86_64                           | 🟩 Yes   | 🟥 No              | 🟩 Yes
-FreeBSD   | ARM64 Little Endian              | 🟩 Yes   | 🟥 No              | 🟩 Yes
-macOS     | x86_64                           | 🟩 Yes   | 🟥 No              | 🟩 Yes
-macOS     | ARM64 (M1) Little Endian         | 🟩 Yes   | 🟥 No              | 🟥 No
-OpenBSD   | x86_64                           | 🟧 Maybe | 🟥 No              | 🟥 No
-OpenBSD   | x86                              | 🟧 Maybe | 🟥 No              | 🟥 No
-OpenBSD   | ARM64 Little Endian              | 🟧 Maybe | 🟥 No              | 🟥 No
-NetBSD    | x86_64                           | 🟧 Maybe | 🟥 No              | 🟥 No
-NetBSD    | x86                              | 🟧 Maybe | 🟥 No              | 🟥 No
-NetBSD    | ARM64 Little Endian              | 🟧 Maybe | 🟥 No              | 🟥 No
+Platform  | Architecture                     | Sync calls | Async calls | Callbacks | Pre-built binary
+--------- | -------------------------------- | ---------- | ----------- | --------- | ----------------
+Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+Windows   | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+Linux     | x86                              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+Linux     | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+Linux     | ARM32+VFP Little Endian          | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+Linux     | ARM64 Little Endian              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+FreeBSD   | x86                              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+FreeBSD   | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+FreeBSD   | ARM64 Little Endian              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+macOS     | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+macOS     | ARM64 (M1) Little Endian         | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟥 No
+OpenBSD   | x86_64                           | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
+OpenBSD   | x86                              | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
+OpenBSD   | ARM64 Little Endian              | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
+NetBSD    | x86_64                           | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
+NetBSD    | x86                              | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
+NetBSD    | ARM64 Little Endian              | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
 
 🟩 Tested, fully operational
 🟧 May work, but not actively tested
@@ -226,6 +226,31 @@ const printf = lib.func('printf', 'int', ['string', '...']);
 
 printf('Integer %d, double %g, string %s', 'int', 6, 'double', 8.5, 'string', 'THE END');
 ```
+
+## Asynchronous calls
+
+You can issue asynchronous calls by calling the function through its async member.
+In this case, you need to provide a callback function as the last argument, with
+`(err, res)` parameters.
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('libc.so.6');
+
+const atoi = lib.func('int atoi(const char *str)');
+
+atoi.async('1257', (err, res) => {
+    console.log('Result:', res);
+})
+console.log('Hello World!');
+
+// This program will print "Hello World!", and then "Result: 1257"
+```
+
+You can easily convert this callback-style async function with `util.promisify()` from the
+Node.js standard library.
+
+Variadic functions do not support async.
 
 ## Callbacks
 
