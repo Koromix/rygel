@@ -22,7 +22,7 @@ After the release of version 1.0, the following features are planned:
 
 The following platforms __are officially supported and tested__ at the moment:
 
-Platoform | Architecture                     | JS to C  | C to JS (callback) | Pre-built binary
+Platform  | Architecture                     | JS to C  | C to JS (callback) | Pre-built binary
 --------- | -------------------------------- | -------- | ------------------ | ----------------
 Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩 Yes   | 🟥 No              | 🟩 Yes
 Windows   | x86_64                           | 🟩 Yes   | 🟥 No              | 🟩 Yes
@@ -46,7 +46,7 @@ NetBSD    | ARM64 Little Endian              | 🟧 Maybe | 🟥 No             
 🟧 May work, but not actively tested
 🟥 Does not work yet
 
-This is still in development, bugs are to expected. More tests will come in the near future.
+This is still in development, bugs are to be expected. More tests will come in the near future.
 
 # Get started
 
