@@ -168,57 +168,30 @@ static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     RG_ASSERT(IsObject(obj));
+    RG_ASSERT(IsHFA(type));
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
     RG_ASSERT(AlignUp(dest, type->members[0].type->size) == dest);
+
+    bool float32 = (type->members[0].type->primitive == PrimitiveKind::Float32);
 
     for (const RecordMember &member: type->members) {
         Napi::Value value = obj.Get(member.name);
 
-        if (member.type->primitive == PrimitiveKind::Float32) {
-            if (!value.IsNumber() && !value.IsBigInt()) {
-                ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
-                return false;
-            }
-
-            *(float *)dest = CopyNumber<float>(value);
-        } else if (member.type->primitive == PrimitiveKind::Float64) {
-            if (!value.IsNumber() && !value.IsBigInt()) {
-                ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
-                return false;
-            }
-
-            *(double *)dest = CopyNumber<double>(value);
-        } else {
-            RG_UNREACHABLE();
+        if (!value.IsNumber() && !value.IsBigInt()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
+            return false;
         }
 
-        dest += type->members[0].type->size;
+        if (float32) {
+            *(float *)dest = CopyNumber<float>(value);
+            dest += 4;
+        } else {
+            *(double *)dest = CopyNumber<double>(value);
+            dest += 8;
+        }
     }
 
     return true;
-}
-
-static Napi::Object PopHFA(napi_env env, const uint8_t *ptr, const TypeInfo *type)
-{
-    RG_ASSERT(type->primitive == PrimitiveKind::Record);
-
-    Napi::Object obj = Napi::Object::New(env);
-
-    for (const RecordMember &member: type->members) {
-        if (member.type->primitive == PrimitiveKind::Float32) {
-            float f = *(float *)ptr;
-            obj.Set(member.name, Napi::Number::New(env, (double)f));
-        } else if (member.type->primitive == PrimitiveKind::Float64) {
-            double d = *(double *)ptr;
-            obj.Set(member.name, Napi::Number::New(env, d));
-        } else {
-            RG_UNREACHABLE();
-        }
-
-        ptr += member.type->size;
-    }
-
-    return obj;
 }
 
 bool CallData::Prepare(const Napi::CallbackInfo &info)
