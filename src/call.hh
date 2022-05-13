@@ -101,8 +101,6 @@ private:
     const char *PushString(const Napi::Value &value);
     const char16_t *PushString16(const Napi::Value &value);
     bool PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest);
-
-    void PopOutArguments();
 };
 
 template <typename T>

@@ -456,44 +456,6 @@ void CallData::Execute()
 #undef PERFORM_CALL
 }
 
-Napi::Value CallData::Complete()
-{
-    PopOutArguments();
-
-    switch (func->ret.type->primitive) {
-        case PrimitiveKind::Void: return env.Null();
-        case PrimitiveKind::Bool: return Napi::Boolean::New(env, result.u32);
-        case PrimitiveKind::Int8:
-        case PrimitiveKind::UInt8:
-        case PrimitiveKind::Int16:
-        case PrimitiveKind::UInt16:
-        case PrimitiveKind::Int32:
-        case PrimitiveKind::UInt32: return Napi::Number::New(env, (double)result.u32);
-        case PrimitiveKind::Int64: return Napi::BigInt::New(env, (int64_t)result.u64);
-        case PrimitiveKind::UInt64: return Napi::BigInt::New(env, result.u64);
-        case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
-        case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
-        case PrimitiveKind::String: return Napi::String::New(env, (const char *)result.ptr);
-        case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)result.ptr);
-        case PrimitiveKind::Pointer: {
-            Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
-            SetValueTag(instance, external, func->ret.type);
-
-            return external;
-        } break;
-
-        case PrimitiveKind::Record: {
-            const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
-                                            : (const uint8_t *)&result.buf;
-
-            Napi::Object obj = PopObject(env, ptr, func->ret.type);
-            return obj;
-        } break;
-    }
-
-    RG_UNREACHABLE();
-}
-
 }
 
 #endif
