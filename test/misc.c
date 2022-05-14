@@ -275,7 +275,7 @@ EXPORT BFG STDCALL MakeBFG(BFG *p, int x, double y, const char *str)
 {
     BFG bfg;
 
-    char buf[64];
+    static char buf[64];
     snprintf(buf, sizeof(buf), "X/%s/X", str);
 
     bfg.a = x;
@@ -294,7 +294,7 @@ EXPORT PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const cha
 {
     PackedBFG bfg;
 
-    char buf[64];
+    static char buf[64];
     snprintf(buf, sizeof(buf), "X/%s/X", str);
 
     bfg.a = x;
