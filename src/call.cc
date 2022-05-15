@@ -134,7 +134,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
 
             case PrimitiveKind::Bool: {
                 if (RG_UNLIKELY(!value.IsBoolean())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected boolean", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected boolean", GetValueType(instance, value), member.name);
                     return false;
                 }
 
@@ -151,7 +151,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
             case PrimitiveKind::Int64:
             case PrimitiveKind::UInt64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
                     return false;
                 }
 
@@ -160,7 +160,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
             } break;
             case PrimitiveKind::String: {
                 if (RG_UNLIKELY(!value.IsString())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected string", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected string", GetValueType(instance, value), member.name);
                     return false;
                 }
 
@@ -171,7 +171,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
             } break;
             case PrimitiveKind::String16: {
                 if (RG_UNLIKELY(!value.IsString())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected string", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected string", GetValueType(instance, value), member.name);
                     return false;
                 }
 
@@ -192,7 +192,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
             } break;
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected object", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected object", GetValueType(instance, value), member.name);
                     return false;
                 }
 
@@ -202,7 +202,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
             } break;
             case PrimitiveKind::Float32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
                     return false;
                 }
 
@@ -211,7 +211,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
             } break;
             case PrimitiveKind::Float64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
                     return false;
                 }
 

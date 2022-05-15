@@ -173,7 +173,7 @@ static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest
         Napi::Value value = obj.Get(member.name);
 
         if (!value.IsNumber() && !value.IsBigInt()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected number", GetValueType(instance, value), member.name);
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
             return false;
         }
 
