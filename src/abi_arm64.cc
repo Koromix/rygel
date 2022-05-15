@@ -137,62 +137,6 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
     return true;
 }
 
-static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest)
-{
-    Napi::Env env = obj.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    RG_ASSERT(IsObject(obj));
-    RG_ASSERT(IsHFA(type, 1, 4));
-    RG_ASSERT(type->primitive == PrimitiveKind::Record);
-    RG_ASSERT(AlignUp(dest, type->members[0].type->size) == dest);
-
-    bool float32 = (type->members[0].type->primitive == PrimitiveKind::Float32);
-
-    for (const RecordMember &member: type->members) {
-        Napi::Value value = obj.Get(member.name);
-
-        if (!value.IsNumber() && !value.IsBigInt()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
-            return false;
-        }
-
-        if (float32) {
-            *(float *)dest = CopyNumber<float>(value);
-        } else {
-            *(double *)dest = CopyNumber<double>(value);
-        }
-
-        dest += 8;
-    }
-
-    return true;
-}
-
-static Napi::Object PopHFA(napi_env env, const uint8_t *ptr, const TypeInfo *type)
-{
-    RG_ASSERT(type->primitive == PrimitiveKind::Record);
-    RG_ASSERT(IsHFA(type, 1, 4));
-
-    Napi::Object obj = Napi::Object::New(env);
-
-    bool float32 = (type->members[0].type->primitive == PrimitiveKind::Float32);
-
-    for (const RecordMember &member: type->members) {
-        if (float32) {
-            float f = *(float *)ptr;
-            obj.Set(member.name, Napi::Number::New(env, (double)f));
-        } else {
-            double d = *(double *)ptr;
-            obj.Set(member.name, Napi::Number::New(env, d));
-        }
-
-        ptr += 8;
-    }
-
-    return obj;
-}
-
 bool CallData::Prepare(const Napi::CallbackInfo &info)
 {
     uint8_t *args_ptr = nullptr;
@@ -357,8 +301,8 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                 Napi::Object obj = value.As<Napi::Object>();
 
-                if (param.vec_count) {
-                    if (!PushHFA(obj, param.type, (uint8_t *)vec_ptr))
+                if (param.vec_count) { // HFA
+                    if (!PushObject(obj, param.type, (uint8_t *)vec_ptr, 8))
                         return false;
                     vec_ptr += param.vec_count;
                 } else if (!param.use_memory) {
@@ -510,8 +454,8 @@ Napi::Value CallData::Complete()
             return external;
         } break;
         case PrimitiveKind::Record: {
-            if (func->ret.vec_count) {
-                Napi::Object obj = PopHFA(env, (const uint8_t *)&result.buf, func->ret.type);
+            if (func->ret.vec_count) { // HFA
+                Napi::Object obj = PopObject((const uint8_t *)&result.buf, func->ret.type, 8);
                 return obj;
             } else {
                 const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
