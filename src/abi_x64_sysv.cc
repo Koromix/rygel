@@ -98,13 +98,6 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
             classes[0] = MergeClasses(classes[0], RegisterClass::Integer);
             return 1;
         } break;
-
-        case PrimitiveKind::Float32:
-        case PrimitiveKind::Float64: {
-            classes[0] = MergeClasses(classes[0], RegisterClass::SSE);
-            return 1;
-        } break;
-
         case PrimitiveKind::Record: {
             if (type->size > 64) {
                 classes[0] = MergeClasses(classes[0], RegisterClass::Memory);
@@ -118,6 +111,11 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
             }
 
             return (offset + 7) / 8;
+        } break;
+        case PrimitiveKind::Float32:
+        case PrimitiveKind::Float64: {
+            classes[0] = MergeClasses(classes[0], RegisterClass::SSE);
+            return 1;
         } break;
     }
 

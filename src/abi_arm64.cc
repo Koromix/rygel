@@ -99,20 +99,6 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                     gpr_avail--;
                 }
             } break;
-
-            case PrimitiveKind::Float32:
-            case PrimitiveKind::Float64: {
-#ifdef __APPLE__
-                if (param.variadic)
-                    break;
-#endif
-
-                if (vec_avail) {
-                    param.vec_count = 1;
-                    vec_avail--;
-                }
-            } break;
-
             case PrimitiveKind::Record: {
 #ifdef __APPLE__
                 if (param.variadic) {
@@ -146,6 +132,18 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                         gpr_avail -= 1;
                     }
                     param.use_memory = true;
+                }
+            } break;
+            case PrimitiveKind::Float32:
+            case PrimitiveKind::Float64: {
+#ifdef __APPLE__
+                if (param.variadic)
+                    break;
+#endif
+
+                if (vec_avail) {
+                    param.vec_count = 1;
+                    vec_avail--;
                 }
             } break;
         }
@@ -288,42 +286,6 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 #endif
                 }
             } break;
-            case PrimitiveKind::Float32: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
-                    return false;
-                }
-
-                float f = CopyNumber<float>(value);
-
-                if (RG_LIKELY(param.vec_count)) {
-                    memcpy(vec_ptr++, &f, 4);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 4);
-                    memcpy(args_ptr, &f, 4);
-#ifdef __APPLE__
-                    args_ptr += 4;
-#else
-                    args_ptr += 8;
-#endif
-                }
-            } break;
-            case PrimitiveKind::Float64: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
-                    return false;
-                }
-
-                double d = CopyNumber<double>(value);
-
-                if (RG_LIKELY(param.vec_count)) {
-                    memcpy(vec_ptr++, &d, 8);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 8);
-                    memcpy(args_ptr, &d, 8);
-                    args_ptr += 8;
-                }
-            } break;
             case PrimitiveKind::String: {
                 const char *str;
                 if (RG_LIKELY(value.IsString())) {
@@ -405,7 +367,6 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     args_ptr += 8;
                 }
             } break;
-
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected object", GetValueType(instance, value), i + 1);
@@ -449,6 +410,42 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                     if (!PushObject(obj, param.type, ptr))
                         return false;
+                }
+            } break;
+            case PrimitiveKind::Float32: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
+                    return false;
+                }
+
+                float f = CopyNumber<float>(value);
+
+                if (RG_LIKELY(param.vec_count)) {
+                    memcpy(vec_ptr++, &f, 4);
+                } else {
+                    args_ptr = AlignUp(args_ptr, 4);
+                    memcpy(args_ptr, &f, 4);
+#ifdef __APPLE__
+                    args_ptr += 4;
+#else
+                    args_ptr += 8;
+#endif
+                }
+            } break;
+            case PrimitiveKind::Float64: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
+                    return false;
+                }
+
+                double d = CopyNumber<double>(value);
+
+                if (RG_LIKELY(param.vec_count)) {
+                    memcpy(vec_ptr++, &d, 8);
+                } else {
+                    args_ptr = AlignUp(args_ptr, 8);
+                    memcpy(args_ptr, &d, 8);
+                    args_ptr += 8;
                 }
             } break;
         }

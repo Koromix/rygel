@@ -93,7 +93,6 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                     started_stack = true;
                 }
             } break;
-
             case PrimitiveKind::Int64:
             case PrimitiveKind::UInt64: {
                 if (gpr_avail >= 2) {
@@ -103,29 +102,6 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                     started_stack = true;
                 }
             } break;
-
-            case PrimitiveKind::Float32:
-            case PrimitiveKind::Float64: {
-                Size need = param.type->size / 4;
-                bool vfp = !param.variadic;
-
-                if (vfp) {
-                    if (need <= vec_avail) {
-                        param.vec_count = need;
-                        vec_avail -= need;
-                    } else {
-                        started_stack = true;
-                    }
-                } else {
-                    if (need <= gpr_avail) {
-                        param.gpr_count = need;
-                        gpr_avail -= need;
-                    } else {
-                        started_stack = true;
-                    }
-                }
-            } break;
-
             case PrimitiveKind::Record: {
                 if (IsHFA(param.type)) {
                     int vec_count = (int)(param.type->members.len *
@@ -148,6 +124,27 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                         param.gpr_count = gpr_avail;
                         gpr_avail = 0;
 
+                        started_stack = true;
+                    }
+                }
+            } break;
+            case PrimitiveKind::Float32:
+            case PrimitiveKind::Float64: {
+                Size need = param.type->size / 4;
+                bool vfp = !param.variadic;
+
+                if (vfp) {
+                    if (need <= vec_avail) {
+                        param.vec_count = need;
+                        vec_avail -= need;
+                    } else {
+                        started_stack = true;
+                    }
+                } else {
+                    if (need <= gpr_avail) {
+                        param.gpr_count = need;
+                        gpr_avail -= need;
+                    } else {
                         started_stack = true;
                     }
                 }
