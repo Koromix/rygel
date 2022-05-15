@@ -85,6 +85,10 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         member.type = ResolveType(instance, value);
         if (!member.type)
             return env.Null();
+        if (member.type->primitive == PrimitiveKind::Void) {
+            ThrowError<Napi::TypeError>(env, "Type Void cannot be used as a member");
+            return env.Null();
+        }
 
         member.align = pad ? member.type->align : 1;
 
