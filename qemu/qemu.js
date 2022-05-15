@@ -430,16 +430,22 @@ async function copy(func) {
         let copied = true;
 
         for (let directory of func(machine)) {
-            try {
-                await machine.ssh.exec('rm', ['-rf', directory]);
-            } catch (err) {
-                // Fails often on Windows (busy directory or whatever), but rarely a problem
+            for (let i = 0; i < 10; i++) {
+                try {
+                    await machine.ssh.exec('rm', ['-rf', directory]);
+                    break;
+                } catch (err) {
+                    // Fails often on Windows (busy directory or whatever), but rarely a problem
+
+                    await wait(1000);
+                    continue;
+                }
             }
 
             try {
                 await machine.ssh.putDirectory(snapshot_dir, directory, {
                     recursive: true,
-                    concurrency: 4
+                    concurrency: (process.platform != 'win32') ? 4 : 1
                 });
             } catch (err) {
                 ignore.add(machine);
