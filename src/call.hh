@@ -87,11 +87,11 @@ private:
     const char *PushString(const Napi::Value &value);
     const char16_t *PushString16(const Napi::Value &value);
     bool PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest, int16_t realign = 0);
-    bool PushArray(const Napi::Array &array, const TypeInfo *type, uint8_t *dest, int16_t realign = 0);
+    bool PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest, int16_t realign = 0);
 
     void PopObject(Napi::Object obj, const uint8_t *src, const TypeInfo *type, int16_t realign = 0);
     Napi::Object PopObject(const uint8_t *src, const TypeInfo *type, int16_t realign = 0);
-    Napi::Array PopArray(const uint8_t *src, const TypeInfo *type, int16_t realign = 0);
+    Napi::Object PopArray(const uint8_t *src, const TypeInfo *type, int16_t realign = 0);
 };
 
 template <typename T>

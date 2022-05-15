@@ -101,6 +101,7 @@ async function test() {
     const AddPack3 = lib.fastcall('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
     const PackFloat2 = lib.func('Float2 PackFloat2(float a, float b, _Out_ Float2 *out)');
     const PackFloat3 = lib.func('Float3 PackFloat3(float a, float b, float c, _Out_ Float3 *out)');
+    const ThroughFloat3 = lib.func('Float3 ThroughFloat3(Float3 f3)');
     const PackDouble2 = lib.func('Double2 PackDouble2(double a, double b, _Out_ Double2 *out)');
     const PackDouble3 = lib.func('Double3 PackDouble3(double a, double b, double c, _Out_ Double3 *out)');
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
@@ -168,8 +169,10 @@ async function test() {
 
         let f3p = {};
         let f3 = PackFloat3(20.0, 30.0, 40.0, f3p);
-        assert.deepEqual(f3, { a: 20.0, b: [30.0, 40.0] });
+        assert.deepEqual(f3, { a: 20.0, b: Float32Array.from([30.0, 40.0]) });
         assert.deepEqual(f3, f3p);
+        assert.deepEqual(ThroughFloat3({ a: 20.0, b: [30.0, 40.0] }), f3);
+        assert.deepEqual(ThroughFloat3(f3), f3);
 
         let d2p = {};
         let d2 = PackDouble2(1.0, 2.0, d2p);
