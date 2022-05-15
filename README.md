@@ -2,6 +2,10 @@
 
 - [Introduction](#introduction)
 - [Get started](#get-started)
+- [Extra features](#extra-features)
+  * [Variadic functions](#variadic-functions)
+  * [Asynchronous calls](#asynchronous-calls)
+  * [Callbacks](#callbacks)
 - [Benchmarks](#benchmarks)
   * [atoi results](#atoi-results)
   * [Raylib results](#raylib-results)
