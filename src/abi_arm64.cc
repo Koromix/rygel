@@ -41,28 +41,9 @@ extern "C" X0X1Ret ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
-static bool IsHFA(const TypeInfo *type)
-{
-    if (type->primitive != PrimitiveKind::Record)
-        return false;
-
-    if (type->members.len < 1 || type->members.len > 4)
-        return false;
-    if (type->members[0].type->primitive != PrimitiveKind::Float32 &&
-            type->members[0].type->primitive != PrimitiveKind::Float64)
-        return false;
-
-    for (Size i = 1; i < type->members.len; i++) {
-        if (type->members[i].type != type->members[0].type)
-            return false;
-    }
-
-    return true;
-}
-
 bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
-    if (IsHFA(func->ret.type)) {
+    if (IsHFA(func->ret.type, 1, 4)) {
         func->ret.vec_count = func->ret.type->members.len;
     } else if (func->ret.type->size <= 16) {
         func->ret.gpr_count = (func->ret.type->size + 7) / 8;
@@ -107,7 +88,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                 }
 #endif
 
-                if (IsHFA(param.type)) {
+                if (IsHFA(param.type, 1, 4)) {
                     int vec_count = (int)param.type->members.len;
 
                     if (vec_count <= vec_avail) {
@@ -162,7 +143,7 @@ static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     RG_ASSERT(IsObject(obj));
-    RG_ASSERT(IsHFA(type));
+    RG_ASSERT(IsHFA(type, 1, 4));
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
     RG_ASSERT(AlignUp(dest, type->members[0].type->size) == dest);
 
@@ -191,7 +172,7 @@ static bool PushHFA(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest
 static Napi::Object PopHFA(napi_env env, const uint8_t *ptr, const TypeInfo *type)
 {
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
-    RG_ASSERT(IsHFA(type));
+    RG_ASSERT(IsHFA(type, 1, 4));
 
     Napi::Object obj = Napi::Object::New(env);
 

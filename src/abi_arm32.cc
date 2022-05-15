@@ -37,28 +37,9 @@ extern "C" uint64_t ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
-static bool IsHFA(const TypeInfo *type)
-{
-    if (type->primitive != PrimitiveKind::Record)
-        return false;
-
-    if (type->members.len < 1 || type->members.len > 4)
-        return false;
-    if (type->members[0].type->primitive != PrimitiveKind::Float32 &&
-            type->members[0].type->primitive != PrimitiveKind::Float64)
-        return false;
-
-    for (Size i = 1; i < type->members.len; i++) {
-        if (type->members[i].type != type->members[0].type)
-            return false;
-    }
-
-    return true;
-}
-
 bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
-    if (IsHFA(func->ret.type)) {
+    if (IsHFA(func->ret.type, 1, 4)) {
         func->ret.vec_count = func->ret.type->members.len *
                               (func->ret.type->members[0].type->size / 4);
     } else if (func->ret.type->primitive != PrimitiveKind::Record ||
@@ -103,7 +84,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                 }
             } break;
             case PrimitiveKind::Record: {
-                if (IsHFA(param.type)) {
+                if (IsHFA(param.type, 1, 4)) {
                     int vec_count = (int)(param.type->members.len *
                                           param.type->members[0].type->size / 4);
 

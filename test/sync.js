@@ -36,18 +36,19 @@ const Float2 = koffi.struct('Float2', {
 });
 const Float3 = koffi.struct('Float3', {
     a: 'float',
-    b: 'float',
-    c: 'float'
+    b: koffi.array('float', 2)
 });
 
 const Double2 = koffi.struct('Double2', {
     a: 'double',
-    b: koffi.array('double', 2)
+    b: 'double'
 });
 const Double3 = koffi.struct('Double3', {
     a: 'double',
-    b: 'double',
-    c: 'double'
+    s: koffi.struct({
+        b: 'double',
+        c: 'double'
+    })
 });
 
 const BFG = koffi.struct('BFG', {
@@ -167,17 +168,17 @@ async function test() {
 
         let f3p = {};
         let f3 = PackFloat3(20.0, 30.0, 40.0, f3p);
-        assert.deepEqual(f3, { a: 20.0, b: 30.0, c: 40.0 });
+        assert.deepEqual(f3, { a: 20.0, b: [30.0, 40.0] });
         assert.deepEqual(f3, f3p);
 
         let d2p = {};
         let d2 = PackDouble2(1.0, 2.0, d2p);
-        assert.deepEqual(d2, { a: 1.0, b: [2.0, 2.5] });
+        assert.deepEqual(d2, { a: 1.0, b: 2.0 });
         assert.deepEqual(d2, d2p);
 
         let d3p = {};
         let d3 = PackDouble3(0.5, 10.0, 5.0, d3p);
-        assert.deepEqual(d3, { a: 0.5, b: 10.0, c: 5.0 });
+        assert.deepEqual(d3, { a: 0.5, s: { b: 10.0, c: 5.0 } });
         assert.deepEqual(d3, d3p);
     }
 

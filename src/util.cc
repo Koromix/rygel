@@ -126,4 +126,76 @@ bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *
     return match;
 }
 
+class HfaAnalyser {
+    uint32_t primitives;
+    Size count;
+
+public:
+    bool Analyse(const TypeInfo *type, int min, int max);
+
+private:
+    void AnalyseStruct(const TypeInfo *type);
+    void AnalyseArray(const TypeInfo *type);
+};
+
+bool HfaAnalyser::Analyse(const TypeInfo *type, int min, int max)
+{
+    primitives = 0;
+    count = 0;
+
+    if (type->primitive == PrimitiveKind::Record) {
+        AnalyseStruct(type);
+    } else if (type->primitive == PrimitiveKind::Array) {
+        AnalyseArray(type);
+    } else {
+        return false;
+    }
+
+    bool hfa = (count >= min && count <= max && PopCount(primitives) == 1);
+    return hfa;
+}
+
+void HfaAnalyser::AnalyseStruct(const TypeInfo *type)
+{
+    RG_ASSERT(type->primitive == PrimitiveKind::Record);
+
+    for (const RecordMember &member: type->members) {
+        if (member.type->primitive == PrimitiveKind::Record) {
+            AnalyseStruct(member.type);
+        } else if (member.type->primitive == PrimitiveKind::Array) {
+            AnalyseArray(member.type);
+        } else if (member.type->primitive == PrimitiveKind::Float32 ||
+                   member.type->primitive == PrimitiveKind::Float64) {
+            primitives |= 1u << (int)member.type->primitive;
+            count++;
+        } else {
+            primitives = UINT_MAX;
+            return;
+        }
+    }
+}
+
+void HfaAnalyser::AnalyseArray(const TypeInfo *type)
+{
+    RG_ASSERT(type->primitive == PrimitiveKind::Array);
+
+    if (type->ref->primitive == PrimitiveKind::Record) {
+        AnalyseStruct(type->ref);
+    } else if (type->ref->primitive == PrimitiveKind::Array) {
+        AnalyseArray(type->ref);
+    } else if (type->ref->primitive == PrimitiveKind::Float32 ||
+               type->ref->primitive == PrimitiveKind::Float64) {
+        primitives |= 1u << (int)type->ref->primitive;
+        count += type->size / type->ref->size;;
+    } else {
+        primitives = UINT_MAX;
+    }
+}
+
+bool IsHFA(const TypeInfo *type, int min, int max)
+{
+    HfaAnalyser analyser;
+    return analyser.Analyse(type, min, max);
+}
+
 }

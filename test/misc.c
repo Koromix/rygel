@@ -60,18 +60,19 @@ typedef struct Float2 {
 } Float2;
 typedef struct Float3 {
     float a;
-    float b;
-    float c;
+    float b[2];
 } Float3;
 
 typedef struct Double2 {
     double a;
-    double b[2];
+    double b;
 } Double2;
 typedef struct Double3 {
     double a;
-    double b;
-    double c;
+    struct {
+        double b;
+        double c;
+    } s;
 } Double3;
 
 typedef struct IJK1 { int8_t i; int8_t j; int8_t k; } IJK1;
@@ -185,8 +186,8 @@ EXPORT Float3 PackFloat3(float a, float b, float c, Float3 *out)
     Float3 ret;
 
     ret.a = a;
-    ret.b = b;
-    ret.c = c;
+    ret.b[0] = b;
+    ret.b[1] = c;
     *out = ret;
 
     return ret;
@@ -197,8 +198,7 @@ EXPORT Double2 PackDouble2(double a, double b, Double2 *out)
     Double2 ret;
 
     ret.a = a;
-    ret.b[0] = b;
-    ret.b[1] = b + 0.5;
+    ret.b = b;
     *out = ret;
 
     return ret;
@@ -209,8 +209,8 @@ EXPORT Double3 PackDouble3(double a, double b, double c, Double3 *out)
     Double3 ret;
 
     ret.a = a;
-    ret.b = b;
-    ret.c = c;
+    ret.s.b = b;
+    ret.s.c = c;
     *out = ret;
 
     return ret;
