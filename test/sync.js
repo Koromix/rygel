@@ -42,7 +42,7 @@ const Float3 = koffi.struct('Float3', {
 
 const Double2 = koffi.struct('Double2', {
     a: 'double',
-    b: 'double'
+    b: koffi.array('double', 2)
 });
 const Double3 = koffi.struct('Double3', {
     a: 'double',
@@ -172,7 +172,7 @@ async function test() {
 
         let d2p = {};
         let d2 = PackDouble2(1.0, 2.0, d2p);
-        assert.deepEqual(d2, { a: 1.0, b: 2.0 });
+        assert.deepEqual(d2, { a: 1.0, b: [2.0, 2.5] });
         assert.deepEqual(d2, d2p);
 
         let d3p = {};

@@ -245,6 +245,57 @@ static Napi::Value MarkInOut(const Napi::CallbackInfo &info)
     return EncodePointerDirection(info, 3);
 }
 
+static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+    if (!info[1].IsNumber()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+
+    const TypeInfo *ref = ResolveType(instance, info[0]);
+    int64_t len = (uint16_t)info[1].As<Napi::Number>().Int64Value();
+
+    if (!ref)
+        return env.Null();
+    if (len <= 0) {
+        ThrowError<Napi::TypeError>(env, "Array length must be non-zero positive");
+        return env.Null();
+    }
+    if (len > INT16_MAX / ref->size) {
+        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", INT16_MAX / ref->size);
+        return env.Null();
+    }
+
+    TypeInfo *type = instance->types.AppendDefault();
+    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
+
+    type->name = Fmt(&instance->str_alloc, "%1[%2]", ref->name, len).ptr;
+
+    type->primitive = PrimitiveKind::Array;
+    type->align = ref->align;
+    type->size = (int16_t)(len * ref->size);
+    type->ref = ref;
+
+    // If the insert succeeds, we cannot fail anymore
+    if (!instance->types_map.TrySet(type).second) {
+        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+        return env.Null();
+    }
+    err_guard.Disable();
+
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
+}
+
 static Span<uint8_t> AllocateAndAlign16(Allocator *alloc, Size size)
 {
     RG_ASSERT(AlignLen(size, 16) == size);
@@ -328,8 +379,9 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         param.type = ResolveType(instance, info[i], &param.directions);
         if (!param.type)
             return env.Null();
-        if (param.type->primitive == PrimitiveKind::Void) {
-            ThrowError<Napi::TypeError>(env, "Type void cannot be used as a parameter");
+        if (param.type->primitive == PrimitiveKind::Void ||
+                param.type->primitive == PrimitiveKind::Array) {
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", PrimitiveKindNames[(int)param.type->primitive]);
             return env.Null();
         }
 
@@ -460,6 +512,11 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
     func->ret.type = ResolveType(instance, ret);
     if (!func->ret.type)
         return false;
+    if (func->ret.type->primitive == PrimitiveKind::Array) {
+        ThrowError<Napi::Error>(env, "You are not allowed to directly return fixed-size arrays");
+        return false;
+    }
+
     if (!parameters.IsArray()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, parameters), func->name);
         return false;
@@ -811,6 +868,7 @@ static void SetExports(Napi::Env env, Func func)
     func("pack", Napi::Function::New(env, CreatePackedStructType));
     func("handle", Napi::Function::New(env, CreateHandleType));
     func("pointer", Napi::Function::New(env, CreatePointerType));
+    func("array", Napi::Function::New(env, CreateArrayType));
     func("load", Napi::Function::New(env, LoadSharedLibrary));
     func("in", Napi::Function::New(env, MarkIn));
     func("out", Napi::Function::New(env, MarkOut));

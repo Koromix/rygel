@@ -66,7 +66,7 @@ typedef struct Float3 {
 
 typedef struct Double2 {
     double a;
-    double b;
+    double b[2];
 } Double2;
 typedef struct Double3 {
     double a;
@@ -197,7 +197,8 @@ EXPORT Double2 PackDouble2(double a, double b, Double2 *out)
     Double2 ret;
 
     ret.a = a;
-    ret.b = b;
+    ret.b[0] = b;
+    ret.b[1] = b + 0.5;
     *out = ret;
 
     return ret;

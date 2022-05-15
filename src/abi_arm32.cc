@@ -128,6 +128,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                     }
                 }
             } break;
+            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32:
             case PrimitiveKind::Float64: {
                 Size need = param.type->size / 4;
@@ -351,6 +352,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     args_ptr += AlignLen(param.type->size, 4);
                 }
             } break;
+            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
@@ -429,6 +431,7 @@ void CallData::Execute()
                 result.u64 = PERFORM_CALL(GG);
             }
         } break;
+        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
         case PrimitiveKind::Float64: { result.d = PERFORM_CALL(DDDD).d0; } break;
     }
@@ -469,6 +472,7 @@ Napi::Value CallData::Complete()
             Napi::Object obj = PopObject(ptr, func->ret.type);
             return obj;
         } break;
+        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
         case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
     }

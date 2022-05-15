@@ -112,6 +112,22 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
 
             return (offset + 7) / 8;
         } break;
+        case PrimitiveKind::Array: {
+            if (type->size > 64) {
+                classes[0] = MergeClasses(classes[0], RegisterClass::Memory);
+                return 1;
+            }
+
+            Size len = type->size / type->ref->size;
+
+            for (Size i = 0; i < len; i++) {
+                Size start = offset / 8;
+                ClassifyType(type->ref, offset % 8, classes.Take(start, classes.len - start));
+                offset += type->ref->size;
+            }
+
+            return (offset + 7) / 8;
+        } break;
         case PrimitiveKind::Float32:
         case PrimitiveKind::Float64: {
             classes[0] = MergeClasses(classes[0], RegisterClass::SSE);
@@ -368,6 +384,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     args_ptr += AlignLen(param.type->size, 8);
                 }
             } break;
+            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
@@ -448,6 +465,7 @@ void CallData::Execute()
                 memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
             }
         } break;
+        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
         case PrimitiveKind::Float64: { result.d = PERFORM_CALL(DG).xmm0; } break;
     }
@@ -488,6 +506,7 @@ Napi::Value CallData::Complete()
             Napi::Object obj = PopObject(ptr, func->ret.type);
             return obj;
         } break;
+        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
         case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
     }

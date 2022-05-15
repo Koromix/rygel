@@ -35,6 +35,10 @@ bool PrototypeParser::Parse(Napi::String proto, FunctionInfo *func)
     Tokenize(hold.c_str());
 
     func->ret.type = ParseType();
+    if (func->ret.type->primitive == PrimitiveKind::Array) {
+        MarkError("You are not allowed to directly return fixed-size arrays");
+        return false;
+    }
     if (Match("__cdecl")) {
         func->convention = CallConvention::Cdecl;
     } else if (Match("__stdcall")) {

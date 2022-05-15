@@ -134,6 +134,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                     param.use_memory = true;
                 }
             } break;
+            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32:
             case PrimitiveKind::Float64: {
 #ifdef __APPLE__
@@ -412,6 +413,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                         return false;
                 }
             } break;
+            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
@@ -492,6 +494,7 @@ void CallData::Execute()
                 PERFORM_CALL(GG);
             }
         } break;
+        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
         case PrimitiveKind::Float64: { result.d = PERFORM_CALL(DDDD).d0; } break;
     }
@@ -537,6 +540,7 @@ Napi::Value CallData::Complete()
                 return obj;
             }
         } break;
+        case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
         case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
     }

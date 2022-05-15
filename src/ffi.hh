@@ -39,6 +39,7 @@ enum class PrimitiveKind {
     String16,
     Pointer,
     Record,
+    Array,
     Float32,
     Float64
 };
@@ -57,6 +58,7 @@ static const char *const PrimitiveKindNames[] = {
     "String16",
     "Pointer",
     "Record",
+    "Array",
     "Float32",
     "Float64"
 };
@@ -73,7 +75,7 @@ struct TypeInfo {
     int16_t align;
 
     HeapArray<RecordMember> members; // Record only
-    const TypeInfo *ref; // Pointer only
+    const TypeInfo *ref; // Pointer or array
 
     RG_HASHTABLE_HANDLER(TypeInfo, name);
 };
