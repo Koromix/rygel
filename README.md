@@ -222,8 +222,7 @@ while (!WindowShouldClose()) {
 
 Variadic functions are declared with an ellipsis as the last argument.
 
-In order to call a variadic function, you must provide two Javascript arguments for each C parameter,
-the first one is the expected type and the second one is the value.
+In order to call a variadic function, you must provide two Javascript arguments for each C parameter, the first one is the expected type and the second one is the value.
 
 ```js
 const printf = lib.func('printf', 'int', ['string', '...']);
@@ -233,9 +232,7 @@ printf('Integer %d, double %g, string %s', 'int', 6, 'double', 8.5, 'string', 'T
 
 ## Asynchronous calls
 
-You can issue asynchronous calls by calling the function through its async member.
-In this case, you need to provide a callback function as the last argument, with
-`(err, res)` parameters.
+You can issue asynchronous calls by calling the function through its async member. In this case, you need to provide a callback function as the last argument, with `(err, res)` parameters.
 
 ```js
 const koffi = require('koffi');
@@ -251,8 +248,7 @@ console.log('Hello World!');
 // This program will print "Hello World!", and then "Result: 1257"
 ```
 
-You can easily convert this callback-style async function with `util.promisify()` from the
-Node.js standard library.
+You can easily convert this callback-style async function to a promise-based version with `util.promisify()` from the Node.js standard library.
 
 Variadic functions do not support async.
 
