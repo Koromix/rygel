@@ -17,8 +17,8 @@ Koffi is a fast and easy-to-use FFI module for Node.js, with support for primiti
 After the release of version 1.0, the following features are planned:
 
 * 1.1: Asynchronous calls
-* 1.2: C to JS callbacks
-* 1.3: Unions and (fixed size) array types
+* 1.2: Fixed-size array types
+* 1.3: C to JS callbacks
 
 The following platforms __are officially supported and tested__ at the moment:
 
