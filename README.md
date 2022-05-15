@@ -254,7 +254,7 @@ Variadic functions do not support async.
 
 ## Callbacks
 
-Koffi does not yet support passing JS functions as callbacks. This is planned for version 1.1.
+Koffi does not yet support passing JS functions as callbacks. This is planned for version 1.3.
 
 # Benchmarks
 
