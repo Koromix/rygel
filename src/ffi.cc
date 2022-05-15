@@ -686,6 +686,8 @@ void LibraryHolder::Unref() const
 static void RegisterPrimitiveType(InstanceData *instance, const char *name, PrimitiveKind primitive,
                                   int16_t size, int16_t align)
 {
+    RG_ASSERT(align <= size);
+
     TypeInfo *type = instance->types.AppendDefault();
 
     type->name = name;
