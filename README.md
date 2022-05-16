@@ -223,7 +223,7 @@ while (!WindowShouldClose()) {
 
 Koffi exposes three functions to explore type information:
 - `koffi.sizeof(type)` to get the size of a type
-- `koffi.alignon(type)` to get the alignment of a type
+- `koffi.alignof(type)` to get the alignment of a type
 - `koffi.introspect(type)` to get the definition of a type (only for structs for now)
 
 ## C arrays
