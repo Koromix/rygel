@@ -231,11 +231,11 @@ Koffi exposes three functions to explore type information:
 Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C, they cannot be passed
 as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.
 
-Special rules apply for arrays of primitive integer and float types (int, int8_t, uint32_t, double, etc...):
-- When converting from JS to C, Koffi can take a normal Array (e.g. `[1, 2]`) or a TypedArray of the correct type (e.g. `Uint8Array` for an array of `int8_t` numbers)
-- When converting from C to JS (for return value or output parameters), Koffi will by default use a TypedArray. But you can change this behavior when you create the array type with the optional hint argument: `koffi.array('int8_t', 6, 'array')`
+Special rules apply for arrays of primitive integer and float types (uint32_t, double, etc...):
+- When converting from JS to C, Koffi can take a normal Array (e.g. `[1, 2]`) or a TypedArray of the correct type (e.g. `Uint8Array` for an array of `uint8_t` numbers)
+- When converting from C to JS (for return value or output parameters), Koffi will by default use a TypedArray. But you can change this behavior when you create the array type with the optional hint argument: `koffi.array('uint8_t', 64, 'array')`
 
-Example below:
+See the example below:
 
 ```js
 const koffi = require('koffi');
