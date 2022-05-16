@@ -252,8 +252,8 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                     return false;
                 }
 
-                Napi::Object obj = value.As<Napi::Object>();
-                if (!PushObject(obj, member.type, dest, realign))
+                Napi::Object obj2 = value.As<Napi::Object>();
+                if (!PushObject(obj2, member.type, dest, realign))
                     return false;
             } break;
             case PrimitiveKind::Array: {
@@ -292,15 +292,15 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
     return true;
 }
 
-bool CallData::PushArray(const Napi::Value &value, const TypeInfo *type, uint8_t *dest, int16_t realign)
+bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *dest, int16_t realign)
 {
-    RG_ASSERT(value.IsArray() || value.IsTypedArray() || value.IsString());
+    RG_ASSERT(obj.IsArray() || obj.IsTypedArray() || obj.IsString());
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
     uint32_t len = type->size / type->ref->size;
 
-    if (value.IsArray()) {
-        Napi::Array array = value.As<Napi::Array>();
+    if (obj.IsArray()) {
+        Napi::Array array = obj.As<Napi::Array>();
 
         if (RG_UNLIKELY(array.Length() != len)) {
             ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.Length());
@@ -407,15 +407,15 @@ bool CallData::PushArray(const Napi::Value &value, const TypeInfo *type, uint8_t
             } break;
             case PrimitiveKind::Record: {
                 PUSH_ARRAY(IsObject(value), "object", {
-                    Napi::Object obj = value.As<Napi::Object>();
-                    if (!PushObject(obj, type->ref, dest, realign))
+                    Napi::Object obj2 = value.As<Napi::Object>();
+                    if (!PushObject(obj2, type->ref, dest, realign))
                         return false;
                 });
             } break;
             case PrimitiveKind::Array: {
                 PUSH_ARRAY(value.IsArray() || value.IsTypedArray() || value.IsString(), "array", {
-                    Napi::Object array = value.As<Napi::Array>();
-                    if (!PushArray(array, type->ref, dest, realign))
+                    Napi::Object array2 = value.As<Napi::Array>();
+                    if (!PushArray(array2, type->ref, dest, realign))
                         return false;
                 });
             } break;
@@ -434,8 +434,8 @@ bool CallData::PushArray(const Napi::Value &value, const TypeInfo *type, uint8_t
         }
 
 #undef PUSH_ARRAY
-    } else if (value.IsTypedArray()) {
-        Napi::TypedArray array = value.As<Napi::TypedArray>();
+    } else if (obj.IsTypedArray()) {
+        Napi::TypedArray array = obj.As<Napi::TypedArray>();
         const uint8_t *buf = (const uint8_t *)array.ArrayBuffer().Data();
 
         if (RG_UNLIKELY(array.ElementLength() != len)) {
@@ -469,23 +469,23 @@ bool CallData::PushArray(const Napi::Value &value, const TypeInfo *type, uint8_t
 
             dest += type->ref->size;
         }
-    } else if (value.IsString()) {
-        size_t len = 0;
+    } else if (obj.IsString()) {
+        size_t encoded = 0;
 
         if (type->ref->primitive == PrimitiveKind::Int8 || type->ref->primitive == PrimitiveKind::UInt8) {
-            napi_status status = napi_get_value_string_utf8(env, value, (char *)dest, type->size, &len);
+            napi_status status = napi_get_value_string_utf8(env, obj, (char *)dest, type->size, &encoded);
             RG_ASSERT(status == napi_ok);
         } else if (type->ref->primitive == PrimitiveKind::Int16 || type->ref->primitive == PrimitiveKind::UInt16) {
-            napi_status status = napi_get_value_string_utf16(env, value, (char16_t *)dest, type->size / 2, &len);
+            napi_status status = napi_get_value_string_utf16(env, obj, (char16_t *)dest, type->size / 2, &encoded);
             RG_ASSERT(status == napi_ok);
 
-            len *= 2;
+            encoded *= 2;
         } else {
             ThrowError<Napi::TypeError>(env, "Strings cannot be converted to %1 array", type->ref->name);
             return false;
         }
 
-        memset_safe(dest + len, 0, type->size - len);
+        memset_safe(dest + encoded, 0, type->size - encoded);
     } else {
         RG_UNREACHABLE();
     }
