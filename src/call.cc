@@ -251,26 +251,33 @@ bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t 
             return false;
         }
 
+#define PUSH_ARRAY(Check, Expected, GetCode) \
+            do { \
+                for (uint32_t i = 0; i < len; i++) { \
+                    Napi::Value value = array[i]; \
+                     \
+                    int16_t align = std::max(type->ref->align, realign); \
+                    dest = AlignUp(dest, align); \
+                     \
+                    if (RG_UNLIKELY(!(Check))) { \
+                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected %2", GetValueType(instance, value), (Expected)); \
+                        return false; \
+                    } \
+                     \
+                    GetCode \
+                     \
+                    dest += type->ref->size; \
+                } \
+            } while (false)
+
         switch (type->ref->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-                for (uint32_t i = 0; i < len; i++) {
-                    Napi::Value value = array[i];
-
-                    int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
-
-                    if (RG_UNLIKELY(!value.IsBoolean())) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected boolean", GetValueType(instance, value));
-                        return false;
-                    }
-
+                PUSH_ARRAY(value.IsBoolean(), "boolean", {
                     bool b = value.As<Napi::Boolean>();
                     *(bool *)dest = b;
-
-                    dest += type->ref->size;
-                }
+                });
             } break;
             case PrimitiveKind::Int8:
             case PrimitiveKind::UInt8:
@@ -280,156 +287,62 @@ bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t 
             case PrimitiveKind::UInt32:
             case PrimitiveKind::Int64:
             case PrimitiveKind::UInt64: {
-                for (uint32_t i = 0; i < len; i++) {
-                    Napi::Value value = array[i];
-
-                    int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
-
-                    if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected number", GetValueType(instance, value));
-                        return false;
-                    }
-
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
                     int64_t v = CopyNumber<int64_t>(value);
                     memcpy(dest, &v, type->ref->size); // Little Endian
-
-                    dest += type->ref->size;
-                }
+                });
             } break;
             case PrimitiveKind::String: {
-                for (uint32_t i = 0; i < len; i++) {
-                    Napi::Value value = array[i];
-
-                    int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
-
-                    if (RG_UNLIKELY(!value.IsString())) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected string", GetValueType(instance, value));
-                        return false;
-                    }
-
+                PUSH_ARRAY(value.IsString(), "string", {
                     const char *str = PushString(value);
                     if (RG_UNLIKELY(!str))
                         return false;
                     *(const char **)dest = str;
-
-                    dest += type->ref->size;
-                }
+                });
             } break;
             case PrimitiveKind::String16: {
-                for (uint32_t i = 0; i < len; i++) {
-                    Napi::Value value = array[i];
-
-                    int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
-
-                    if (RG_UNLIKELY(!value.IsString())) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected string", GetValueType(instance, value));
-                        return false;
-                    }
-
+                PUSH_ARRAY(value.IsString(), "string", {
                     const char16_t *str16 = PushString16(value);
                     if (RG_UNLIKELY(!str16))
                         return false;
                     *(const char16_t **)dest = str16;
-
-                    dest += type->ref->size;
-                }
+                });
             } break;
             case PrimitiveKind::Pointer: {
-                for (uint32_t i = 0; i < len; i++) {
-                    Napi::Value value = array[i];
-
-                    int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
-
-                    if (RG_UNLIKELY(!CheckValueTag(instance, value, type->ref))) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected %2", GetValueType(instance, value), type->ref->name);
-                        return false;
-                    }
-
+                PUSH_ARRAY(CheckValueTag(instance, value, type->ref), type->ref->name, {
                     Napi::External external = value.As<Napi::External<void>>();
                     *(void **)dest = external.Data();
-
-                    dest += type->ref->size;
-                }
+                });
             } break;
             case PrimitiveKind::Record: {
-                for (uint32_t i = 0; i < len; i++) {
-                    Napi::Value value = array[i];
-
-                    int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
-
-                    if (RG_UNLIKELY(!IsObject(value))) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected object", GetValueType(instance, value));
-                        return false;
-                    }
-
+                PUSH_ARRAY(IsObject(value), "object", {
                     Napi::Object obj = value.As<Napi::Object>();
                     if (!PushObject(obj, type->ref, dest, realign))
                         return false;
-
-                    dest += type->ref->size;
-                }
+                });
             } break;
             case PrimitiveKind::Array: {
-                for (uint32_t i = 0; i < len; i++) {
-                    Napi::Value value = array[i];
-
-                    int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
-
-                    if (RG_UNLIKELY(!value.IsArray() && !value.IsTypedArray())) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected array", GetValueType(instance, value));
-                        return false;
-                    }
-
-                    Napi::Array array = value.As<Napi::Array>();
+                PUSH_ARRAY(value.IsArray() || value.IsTypedArray(), "array", {
+                    Napi::Object array = value.As<Napi::Array>();
                     if (!PushArray(array, type->ref, dest, realign))
                         return false;
-
-                    dest += type->ref->size;
-                }
+                });
             } break;
             case PrimitiveKind::Float32: {
-                for (uint32_t i = 0; i < len; i++) {
-                    Napi::Value value = array[i];
-
-                    int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
-
-                    if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected number", GetValueType(instance, value));
-                        return false;
-                    }
-
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
                     float f = CopyNumber<float>(value);
                     *(float *)dest = f;
-
-                    dest += type->ref->size;
-                }
+                });
             } break;
             case PrimitiveKind::Float64: {
-                for (uint32_t i = 0; i < len; i++) {
-                    Napi::Value value = array[i];
-
-                    int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
-
-                    if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected number", GetValueType(instance, value));
-                        return false;
-                    }
-
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
                     double d = CopyNumber<double>(value);
                     *(double *)dest = d;
-
-                    dest += type->ref->size;
-                }
+                });
             } break;
         }
+
+#undef PUSH_ARRAY
     } else {
         Napi::TypedArray array = obj.As<Napi::TypedArray>();
         const uint8_t *buf = (const uint8_t *)array.ArrayBuffer().Data();
