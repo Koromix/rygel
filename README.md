@@ -11,6 +11,7 @@
 | *mael*     | Mael robot code for 'Coupe de France de Robotique 2022' competition        | Work in progress |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
+| *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Good             |
 
 # How to build
 
