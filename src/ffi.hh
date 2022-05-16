@@ -67,6 +67,11 @@ struct TypeInfo;
 struct RecordMember;
 
 struct TypeInfo {
+    enum class ArrayHint {
+        Array,
+        TypedArray
+    };
+
     const char *name;
     napi_type_tag tag;
 
@@ -78,6 +83,7 @@ struct TypeInfo {
 
     HeapArray<RecordMember> members; // Record only
     const TypeInfo *ref; // Pointer or array
+    ArrayHint hint; // Array only
 
     RG_HASHTABLE_HANDLER(TypeInfo, name);
 };

@@ -261,6 +261,27 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
+    TypeInfo::ArrayHint hint;
+    if (info.Length() >= 3 && !IsNullOrUndefined(info[2])) {
+        if (!info[2].IsString()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(instance, info[2]));
+            return env.Null();
+        }
+
+        std::string to = info[2].As<Napi::String>();
+
+        if (to == "typed") {
+            hint = TypeInfo::ArrayHint::TypedArray;
+        } else if (to == "array") {
+            hint = TypeInfo::ArrayHint::Array;
+        } else {
+            ThrowError<Napi::Error>(env, "Array conversion hint must be 'typed' or 'array'");
+            return env.Null();
+        }
+    } else {
+        hint = TypeInfo::ArrayHint::TypedArray;
+    }
+
     const TypeInfo *ref = ResolveType(instance, info[0]);
     int64_t len = (uint16_t)info[1].As<Napi::Number>().Int64Value();
 
@@ -284,6 +305,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     type->align = ref->align;
     type->size = (int16_t)(len * ref->size);
     type->ref = ref;
+    type->hint = hint;
 
     // If the insert succeeds, we cannot fail anymore
     if (!instance->types_map.TrySet(type).second) {

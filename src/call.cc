@@ -589,94 +589,190 @@ Napi::Object CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_
             return array;
         } break;
         case PrimitiveKind::Int8: {
-            Napi::Int8Array array = Napi::Int8Array::New(env, len);
+            if (type->hint == TypeInfo::ArrayHint::TypedArray) {
+                Napi::Int8Array array = Napi::Int8Array::New(env, len);
 
-            for (uint32_t i = 0; i < len; i++) {
-                int16_t align = std::max(realign, type->ref->align);
-                src = AlignUp(src, align);
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
 
-                int8_t v = *(int8_t *)src;
-                array[i] = v;
+                    int8_t v = *(int8_t *)src;
+                    array[i] = v;
 
-                src += type->ref->size;
+                    src += type->ref->size;
+                }
+
+                return array;
+            } else {
+                Napi::Array array = Napi::Array::New(env);
+
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
+
+                    double d = (double)*(int8_t *)src;
+                    array.Set(i, Napi::Number::New(env, d));
+
+                    src += type->ref->size;
+                }
+
+                return array;
             }
-
-            return array;
         } break;
         case PrimitiveKind::UInt8: {
-            Napi::Uint8Array array = Napi::Uint8Array::New(env, len);
+            if (type->hint == TypeInfo::ArrayHint::TypedArray) {
+                Napi::Uint8Array array = Napi::Uint8Array::New(env, len);
 
-            for (uint32_t i = 0; i < len; i++) {
-                int16_t align = std::max(realign, type->ref->align);
-                src = AlignUp(src, align);
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
 
-                uint8_t v = *(uint8_t *)src;
-                array[i] = v;
+                    uint8_t v = *(uint8_t *)src;
+                    array[i] = v;
 
-                src += type->ref->size;
+                    src += type->ref->size;
+                }
+
+                return array;
+            } else {
+                Napi::Array array = Napi::Array::New(env);
+
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
+
+                    double d = (double)*(uint8_t *)src;
+                    array.Set(i, Napi::Number::New(env, d));
+
+                    src += type->ref->size;
+                }
+
+                return array;
             }
-
-            return array;
         } break;
         case PrimitiveKind::Int16: {
-            Napi::Int16Array array = Napi::Int16Array::New(env, len);
+            if (type->hint == TypeInfo::ArrayHint::TypedArray) {
+                Napi::Int16Array array = Napi::Int16Array::New(env, len);
 
-            for (uint32_t i = 0; i < len; i++) {
-                int16_t align = std::max(realign, type->ref->align);
-                src = AlignUp(src, align);
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
 
-                int16_t v = *(int16_t *)src;
-                array[i] = v;
+                    int16_t v = *(int16_t *)src;
+                    array[i] = v;
 
-                src += type->ref->size;
+                    src += type->ref->size;
+                }
+
+                return array;
+            } else {
+                Napi::Array array = Napi::Array::New(env);
+
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
+
+                    double d = (double)*(int16_t *)src;
+                    array.Set(i, Napi::Number::New(env, d));
+
+                    src += type->ref->size;
+                }
+
+                return array;
             }
-
-            return array;
         } break;
         case PrimitiveKind::UInt16: {
-            Napi::Uint16Array array = Napi::Uint16Array::New(env, len);
+            if (type->hint == TypeInfo::ArrayHint::TypedArray) {
+                Napi::Uint16Array array = Napi::Uint16Array::New(env, len);
 
-            for (uint32_t i = 0; i < len; i++) {
-                int16_t align = std::max(realign, type->ref->align);
-                src = AlignUp(src, align);
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
 
-                uint16_t v = *(uint16_t *)src;
-                array[i] = v;
+                    uint16_t v = *(uint16_t *)src;
+                    array[i] = v;
 
-                src += type->ref->size;
+                    src += type->ref->size;
+                }
+
+                return array;
+            } else {
+                Napi::Array array = Napi::Array::New(env);
+
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
+
+                    double d = (double)*(uint16_t *)src;
+                    array.Set(i, Napi::Number::New(env, d));
+
+                    src += type->ref->size;
+                }
+
+                return array;
             }
-
-            return array;
         } break;
         case PrimitiveKind::Int32: {
-            Napi::Int32Array array = Napi::Int32Array::New(env, len);
+            if (type->hint == TypeInfo::ArrayHint::TypedArray) {
+                Napi::Int32Array array = Napi::Int32Array::New(env, len);
 
-            for (uint32_t i = 0; i < len; i++) {
-                int16_t align = std::max(realign, type->ref->align);
-                src = AlignUp(src, align);
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
 
-                int32_t v = *(int32_t *)src;
-                array[i] = v;
+                    int32_t v = *(int32_t *)src;
+                    array[i] = v;
 
-                src += type->ref->size;
+                    src += type->ref->size;
+                }
+
+                return array;
+            } else {
+                Napi::Array array = Napi::Array::New(env);
+
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
+
+                    double d = (double)*(int32_t *)src;
+                    array.Set(i, Napi::Number::New(env, d));
+
+                    src += type->ref->size;
+                }
+
+                return array;
             }
-
-            return array;
         } break;
         case PrimitiveKind::UInt32: {
-            Napi::Uint32Array array = Napi::Uint32Array::New(env, len);
+            if (type->hint == TypeInfo::ArrayHint::TypedArray) {
+                Napi::Uint32Array array = Napi::Uint32Array::New(env, len);
 
-            for (uint32_t i = 0; i < len; i++) {
-                int16_t align = std::max(realign, type->ref->align);
-                src = AlignUp(src, align);
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
 
-                uint32_t v = *(uint32_t *)src;
-                array[i] = v;
+                    uint32_t v = *(uint32_t *)src;
+                    array[i] = v;
 
-                src += type->ref->size;
+                    src += type->ref->size;
+                }
+
+                return array;
+            } else {
+                Napi::Array array = Napi::Array::New(env);
+
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
+
+                    double d = (double)*(uint32_t *)src;
+                    array.Set(i, Napi::Number::New(env, d));
+
+                    src += type->ref->size;
+                }
+
+                return array;
             }
-
-            return array;
         } break;
         case PrimitiveKind::Int64: {
             Napi::Array array = Napi::Array::New(env);
@@ -788,34 +884,66 @@ Napi::Object CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_
             return array;
         } break;
         case PrimitiveKind::Float32: {
-            Napi::Float32Array array = Napi::Float32Array::New(env, len);
+            if (type->hint == TypeInfo::ArrayHint::TypedArray) {
+                Napi::Float32Array array = Napi::Float32Array::New(env, len);
 
-            for (uint32_t i = 0; i < len; i++) {
-                int16_t align = std::max(realign, type->ref->align);
-                src = AlignUp(src, align);
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
 
-                float f = *(float *)src;
-                array[i] = f;
+                    float f = *(float *)src;
+                    array[i] = f;
 
-                src += type->ref->size;
+                    src += type->ref->size;
+                }
+
+                return array;
+            } else {
+                Napi::Array array = Napi::Array::New(env);
+
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
+
+                    double d = (double)*(float *)src;
+                    array.Set(i, Napi::Number::New(env, d));
+
+                    src += type->ref->size;
+                }
+
+                return array;
             }
-
-            return array;
         } break;
         case PrimitiveKind::Float64: {
-            Napi::Float64Array array = Napi::Float64Array::New(env, len);
+            if (type->hint == TypeInfo::ArrayHint::TypedArray) {
+                Napi::Float64Array array = Napi::Float64Array::New(env, len);
 
-            for (uint32_t i = 0; i < len; i++) {
-                int16_t align = std::max(realign, type->ref->align);
-                src = AlignUp(src, align);
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
 
-                double d = *(double *)src;
-                array[i] = d;
+                    double d = *(double *)src;
+                    array[i] = d;
 
-                src += type->ref->size;
+                    src += type->ref->size;
+                }
+
+                return array;
+            } else {
+                Napi::Array array = Napi::Array::New(env);
+
+                for (uint32_t i = 0; i < len; i++) {
+                    int16_t align = std::max(realign, type->ref->align);
+                    src = AlignUp(src, align);
+
+                    double d = *(double *)src;
+                    array.Set(i, Napi::Number::New(env, d));
+
+                    src += type->ref->size;
+                }
+
+                return array;
             }
-
-            return array;
         } break;
     }
 
