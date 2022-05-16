@@ -168,7 +168,6 @@ struct InstanceMemory {
 
     Span<uint8_t> stack;
     Span<uint8_t> heap;
-    IndirectBlockAllocator big_alloc { &mem_alloc };
 
     int depth;
     bool temporary;

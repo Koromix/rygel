@@ -55,6 +55,8 @@ class CallData {
     } result;
     uint8_t *return_ptr = nullptr;
 
+    LinkedAllocator call_alloc;
+
 public:
     CallData(Napi::Env env, const FunctionInfo *func, InstanceMemory *mem, bool debug);
     ~CallData();

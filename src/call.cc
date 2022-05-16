@@ -67,7 +67,7 @@ const char *CallData::PushString(const Napi::Value &value)
 
         len++;
 
-        buf.ptr = (char *)Allocator::Allocate(&mem->big_alloc, (Size)len);
+        buf.ptr = (char *)Allocator::Allocate(&call_alloc, (Size)len);
         buf.len = (Size)len;
 
         status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
@@ -104,7 +104,7 @@ const char16_t *CallData::PushString16(const Napi::Value &value)
 
         len++;
 
-        buf.ptr = (char16_t *)Allocator::Allocate(&mem->big_alloc, (Size)len * 2);
+        buf.ptr = (char16_t *)Allocator::Allocate(&call_alloc, (Size)len * 2);
         buf.len = (Size)len;
 
         status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
