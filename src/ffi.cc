@@ -390,9 +390,11 @@ static Span<uint8_t> AllocateAndAlign16(Allocator *alloc, Size size)
     return MakeSpan(aligned, size - delta);
 }
 
-static InstanceMemory *AllocateCallMemory(InstanceData *instance)
+static InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
 {
-    for (InstanceMemory *mem: instance->memories) {
+    for (Size i = 1; i < instance->memories.len; i++) {
+        InstanceMemory *mem = instance->memories[i];
+
         if (!mem->depth)
             return mem;
     }
@@ -422,7 +424,7 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    InstanceMemory *mem = AllocateCallMemory(instance);
+    InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, func, mem);
 
     return call.Run(info);
@@ -482,7 +484,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
     if (RG_UNLIKELY(!AnalyseFunction(instance, &func)))
         return env.Null();
 
-    InstanceMemory *mem = AllocateCallMemory(instance);
+    InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, &func, mem);
 
     return call.Run(info);
@@ -558,7 +560,7 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    InstanceMemory *mem = AllocateCallMemory(instance);
+    InstanceMemory *mem = AllocateAsyncMemory(instance);
     AsyncCall *async = new AsyncCall(env, instance, func, mem, callback);
 
     if (async->Prepare(info) && instance->debug) {
@@ -930,8 +932,12 @@ void FunctionInfo::Unref() const
 
 InstanceData::InstanceData()
 {
-    AllocateCallMemory(this);
-    RG_ASSERT(memories.len == 1);
+    InstanceMemory *mem = new InstanceMemory();
+
+    mem->stack = AllocateAndAlign16(&mem->mem_alloc, Mebibytes(2));
+    mem->heap = AllocateAndAlign16(&mem->mem_alloc, Mebibytes(4));
+
+    memories.Append(mem);
 }
 
 InstanceData::~InstanceData()

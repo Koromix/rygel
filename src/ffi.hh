@@ -189,7 +189,7 @@ struct InstanceData {
     bool debug;
     uint64_t tag_lower;
 
-    LocalArray<InstanceMemory *, 8> memories;
+    LocalArray<InstanceMemory *, 6> memories;
 
     BlockAllocator str_alloc;
 };
