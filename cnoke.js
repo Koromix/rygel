@@ -37,6 +37,7 @@ let version = null;
 let arch = null;
 let mode = 'RelWithDebInfo';
 let targets = [];
+let verbose = false;
 let prebuild = null;
 
 let cmake_bin = null;
@@ -90,14 +91,14 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 project_dir = fs.realpathSync(value);
-            } else if ((command == build || command == configure) && (arg == '-v' || arg == '--version')) {
+            } else if ((command == build || command == configure) && arg == '--version') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 version = value;
                 if (!version.startsWith('v'))
                     version = 'v' + version;
-            } else if ((command == build || command == configure) && (arg == '-a' || arg == '--arch')) {
+            } else if ((command == build || command == configure) && arg == '--arch') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
@@ -115,6 +116,8 @@ async function main() {
                         throw new Error(`Unknown value '${value}' for ${arg}`);
                     } break;
                 }
+            } else if (command == build && (arg == '-v' || arg == '--verbose')) {
+                verbose = true;
             } else if (command == build && arg == '--prebuild') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -167,12 +170,14 @@ Global options:
                                  (default: current working directory)
 
 Build options:
+    -v, --verbose                Show build commands while building
+
         --prebuild <URL>         Set URL template to download prebuilt binaries
 
 Configure options:
-    -v, --version <VERSION>      Change node version
+        --version <VERSION>      Change node version
                                  (default: ${process.version})
-    -a, --arch <ARCH>            Change architecture
+        --arch <ARCH>            Change architecture
                                  (default: ${process.arch})
 
         --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
@@ -340,6 +345,8 @@ async function build() {
         '--config', mode
     ];
 
+    if (verbose)
+        args.push('--verbose');
     for (let target of targets)
         args.push('--target', target);
 
