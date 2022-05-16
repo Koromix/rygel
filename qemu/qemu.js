@@ -275,6 +275,7 @@ async function pack() {
     let json = fs.readFileSync(root_dir + '/koffi/package.json', { encoding: 'utf-8' });
     let version = JSON.parse(json).version;
 
+    console.log('>> Version:', version);
     console.log('>> Checking build archives...');
     for (let machine of machines) {
         let needed = false;
