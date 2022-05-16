@@ -72,6 +72,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
     type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
 
+    type->defn.Reset(obj, 1);
+
     type->primitive = PrimitiveKind::Record;
     type->align = 1;
 
@@ -294,6 +296,61 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     SetValueTag(instance, external, &TypeInfoMarker);
 
     return external;
+}
+
+static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(instance, info[0]);
+    if (!type)
+        return env.Null();
+
+    return Napi::Number::New(env, type->size);
+}
+
+static Napi::Value GetTypeAlign(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(instance, info[0]);
+    if (!type)
+        return env.Null();
+
+    return Napi::Number::New(env, type->align);
+}
+
+static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(instance, info[0]);
+    if (!type)
+        return env.Null();
+    if (type->defn.IsEmpty()) {
+        ThrowError<Napi::TypeError>(env, "Definition of type %1 is not available", type->name);
+        return env.Null();
+    }
+
+    return type->defn.Value();
 }
 
 static Span<uint8_t> AllocateAndAlign16(Allocator *alloc, Size size)
@@ -870,6 +927,9 @@ static void SetExports(Napi::Env env, Func func)
     func("handle", Napi::Function::New(env, CreateHandleType));
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("array", Napi::Function::New(env, CreateArrayType));
+    func("sizeof", Napi::Function::New(env, GetTypeSize));
+    func("alignof", Napi::Function::New(env, GetTypeAlign));
+    func("introspect", Napi::Function::New(env, GetTypeDefinition));
     func("load", Napi::Function::New(env, LoadSharedLibrary));
     func("in", Napi::Function::New(env, MarkIn));
     func("out", Napi::Function::New(env, MarkOut));

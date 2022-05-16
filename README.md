@@ -3,6 +3,7 @@
 - [Introduction](#introduction)
 - [Get started](#get-started)
 - [Extra features](#extra-features)
+  * [Type information](#type-information)
   * [C arrays](#c-arrays)
   * [Variadic functions](#variadic-functions)
   * [Asynchronous calls](#asynchronous-calls)
@@ -217,6 +218,13 @@ while (!WindowShouldClose()) {
 ```
 
 # Extra features
+
+## Type information
+
+Koffi exposes three functions to explore type information:
+- `koffi.sizeof(type)` to get the size of a type
+- `koffi.alignon(type)` to get the alignment of a type
+- `koffi.introspect(type)` to get the definition of a type (only for structs for now)
 
 ## C arrays
 

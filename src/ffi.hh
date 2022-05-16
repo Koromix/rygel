@@ -70,6 +70,8 @@ struct TypeInfo {
     const char *name;
     napi_type_tag tag;
 
+    Napi::ObjectReference defn;
+
     PrimitiveKind primitive;
     int16_t size;
     int16_t align;
