@@ -65,18 +65,7 @@ public:
     void Execute();
     Napi::Value Complete();
 
-    Napi::Value Run(const Napi::CallbackInfo &info)
-    {
-        if (!RG_UNLIKELY(Prepare(info)))
-            return env.Null();
-
-        if (debug) {
-            DumpDebug();
-        }
-        Execute();
-
-        return Complete();
-    }
+    Napi::Value Run(const Napi::CallbackInfo &info);
 
     void DumpDebug() const;
 

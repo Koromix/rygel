@@ -822,6 +822,19 @@ Napi::Object CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_
     RG_UNREACHABLE();
 }
 
+Napi::Value CallData::Run(const Napi::CallbackInfo &info)
+{
+    if (!RG_UNLIKELY(Prepare(info)))
+        return env.Null();
+
+    if (debug) {
+        DumpDebug();
+    }
+    Execute();
+
+    return Complete();
+}
+
 static void DumpMemory(const char *type, Span<const uint8_t> bytes)
 {
     if (bytes.len) {
