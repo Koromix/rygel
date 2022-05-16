@@ -105,17 +105,30 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
         if (token == marker) {
             int major = 0;
             int minor = 0;
+            int patch = 0;
 
             if (!ParseInt(remain, &major, 0, &remain)) {
                 LogError("Unexpected version format returned by '%1'", cmd);
                 return -1;
             }
-            if(remain[0] == '.' && !ParseInt(remain, &minor, 0, &remain)) {
-                LogError("Unexpected version format returned by '%1'", cmd);
-                return -1;
+            if(remain[0] == '.') {
+                remain = remain.Take(1, remain.len - 1);
+
+                if (!ParseInt(remain, &minor, 0, &remain)) {
+                    LogError("Unexpected version format returned by '%1'", cmd);
+                    return -1;
+                }
+            }
+            if(remain[0] == '.') {
+                remain = remain.Take(1, remain.len - 1);
+
+                if (!ParseInt(remain, &patch, 0, &remain)) {
+                    LogError("Unexpected version format returned by '%1'", cmd);
+                    return -1;
+                }
             }
 
-            int version = major * 100 + minor;
+            int version = major * 10000 + minor * 100 + patch;
             return version;
         }
     }
@@ -405,14 +418,14 @@ public:
 
             case HostPlatform::macOS: {
                 Fmt(&buf, " -pthread -fPIC");
-                if (clang_ver >= 1100) {
+                if (clang_ver >= 110000) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
             } break;
 
             default: {
                 Fmt(&buf, " -D_FILE_OFFSET_BITS=64 -pthread -fPIC");
-                if (clang_ver >= 1100) {
+                if (clang_ver >= 110000) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
@@ -444,7 +457,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-        if (host == HostPlatform::Linux && (clang_ver >= 1100)) {
+        if (host == HostPlatform::Linux && (clang_ver >= 110000)) {
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::SafeStack) {
@@ -463,7 +476,7 @@ public:
                 Fmt(&buf, " -fsanitize-cfi-icall-generalize-pointers");
             }
 
-            if (clang_ver >= 1400) {
+            if (clang_ver >= 140000) {
                 Fmt(&buf, " -cfprotection=branch");
             }
         }
@@ -714,7 +727,7 @@ public:
             supported |= (int)CompileFeature::LTO;
         }
         supported |= (int)CompileFeature::ZeroInit;
-        if (gcc_ver >= 900) {
+        if (gcc_ver >= 90000) {
             supported |= (int)CompileFeature::CFI;
         }
         supported |= (int)CompileFeature::Cxx17;
@@ -739,7 +752,7 @@ public:
             LogError("Cannot use ASan and TSan at the same time");
             return false;
         }
-        if (gcc_ver < 1201 && (features & (int)CompileFeature::ZeroInit)) {
+        if (gcc_ver < 120100 && (features & (int)CompileFeature::ZeroInit)) {
             LogError("ZeroInit requires GCC >= 12.1, try --host option (e.g. --host=,gcc-12)");
             return false;
         }
