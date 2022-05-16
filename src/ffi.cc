@@ -417,7 +417,7 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
     FunctionInfo *func = (FunctionInfo *)info.Data();
 
-    if (info.Length() < (uint32_t)func->parameters.len) {
+    if (RG_UNLIKELY(info.Length() < (uint32_t)func->parameters.len)) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
         return env.Null();
     }
@@ -443,11 +443,11 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         func.parameters.Leak();
     };
 
-    if (info.Length() < (uint32_t)func.parameters.len) {
+    if (RG_UNLIKELY(info.Length() < (uint32_t)func.parameters.len)) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", func.parameters.len, info.Length());
         return env.Null();
     }
-    if ((info.Length() - func.parameters.len) % 2) {
+    if (RG_UNLIKELY((info.Length() - func.parameters.len) % 2)) {
         ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
         return env.Null();
     }
@@ -456,19 +456,19 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         ParameterInfo param = {};
 
         param.type = ResolveType(instance, info[i], &param.directions);
-        if (!param.type)
+        if (RG_UNLIKELY(!param.type))
             return env.Null();
-        if (param.type->primitive == PrimitiveKind::Void ||
-                param.type->primitive == PrimitiveKind::Array) {
+        if (RG_UNLIKELY(param.type->primitive == PrimitiveKind::Void ||
+                        param.type->primitive == PrimitiveKind::Array)) {
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", PrimitiveKindNames[(int)param.type->primitive]);
             return env.Null();
         }
 
-        if (func.parameters.len >= MaxParameters) {
+        if (RG_UNLIKELY(func.parameters.len >= MaxParameters)) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
             return env.Null();
         }
-        if ((param.directions & 2) && ++func.out_parameters >= MaxOutParameters) {
+        if (RG_UNLIKELY((param.directions & 2) && ++func.out_parameters >= MaxOutParameters)) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
             return env.Null();
         }
@@ -479,7 +479,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         func.parameters.Append(param);
     }
 
-    if (!AnalyseFunction(instance, &func))
+    if (RG_UNLIKELY(!AnalyseFunction(instance, &func)))
         return env.Null();
 
     InstanceMemory *mem = AllocateCallMemory(instance);

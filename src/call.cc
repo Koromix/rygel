@@ -246,7 +246,7 @@ bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t 
     if (obj.IsArray()) {
         Napi::Array array = obj.As<Napi::Array>();
 
-        if (array.Length() != len) {
+        if (RG_UNLIKELY(array.Length() != len)) {
             ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.Length());
             return false;
         }
@@ -347,7 +347,7 @@ bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t 
         Napi::TypedArray array = obj.As<Napi::TypedArray>();
         const uint8_t *buf = (const uint8_t *)array.ArrayBuffer().Data();
 
-        if (array.ElementLength() != len) {
+        if (RG_UNLIKELY(array.ElementLength() != len)) {
             ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.ElementLength());
             return false;
         }
@@ -365,7 +365,7 @@ bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t 
 
             default: { match = false; } break;
         }
-        if (!match) {
+        if (RG_UNLIKELY(!match)) {
             ThrowError<Napi::TypeError>(env, "TypedArray is not approriate for %1 array", type->ref->name);
             return false;
         }
