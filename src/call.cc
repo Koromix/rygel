@@ -20,8 +20,8 @@
 
 namespace RG {
 
-CallData::CallData(Napi::Env env, const FunctionInfo *func, InstanceMemory *mem, bool debug)
-    : env(env), instance(env.GetInstanceData<InstanceData>()), func(func), debug(debug),
+CallData::CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem)
+    : env(env), instance(instance), func(func), debug(instance->debug),
       mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap)
 {
     mem->depth++;

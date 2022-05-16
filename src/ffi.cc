@@ -401,7 +401,7 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     }
 
     InstanceMemory *mem = AllocateCallMemory(instance);
-    CallData call(env, func, mem, instance->debug);
+    CallData call(env, instance, func, mem);
 
     return call.Run(info);
 }
@@ -461,7 +461,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         return env.Null();
 
     InstanceMemory *mem = AllocateCallMemory(instance);
-    CallData call(env, &func, mem, instance->debug);
+    CallData call(env, instance, &func, mem);
 
     return call.Run(info);
 }
@@ -474,10 +474,10 @@ class AsyncCall: public Napi::AsyncWorker {
     bool prepared = false;
 
 public:
-    AsyncCall(Napi::Env env, InstanceMemory *mem, FunctionInfo *func, bool debug,
-              Napi::Function &callback)
+    AsyncCall(Napi::Env env, InstanceData *instance, const FunctionInfo *func,
+              InstanceMemory *mem, Napi::Function &callback)
         : Napi::AsyncWorker(callback), env(env), func(func->Ref()),
-          call(env, func, mem, debug) {}
+          call(env, instance, func, mem) {}
     ~AsyncCall() { func->Unref(); }
 
     bool Prepare(const Napi::CallbackInfo &info) {
@@ -537,7 +537,7 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     }
 
     InstanceMemory *mem = AllocateCallMemory(instance);
-    AsyncCall *async = new AsyncCall(env, mem, func, instance->debug, callback);
+    AsyncCall *async = new AsyncCall(env, instance, func, mem, callback);
 
     if (async->Prepare(info) && instance->debug) {
         async->DumpDebug();

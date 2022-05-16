@@ -58,7 +58,7 @@ class CallData {
     LinkedAllocator call_alloc;
 
 public:
-    CallData(Napi::Env env, const FunctionInfo *func, InstanceMemory *mem, bool debug);
+    CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem);
     ~CallData();
 
     bool Prepare(const Napi::CallbackInfo &info);
