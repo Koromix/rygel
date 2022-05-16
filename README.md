@@ -3,6 +3,7 @@
 - [Introduction](#introduction)
 - [Get started](#get-started)
 - [Extra features](#extra-features)
+  * [C arrays](#c-arrays)
   * [Variadic functions](#variadic-functions)
   * [Asynchronous calls](#asynchronous-calls)
   * [Callbacks](#callbacks)
@@ -217,6 +218,11 @@ while (!WindowShouldClose()) {
 ```
 
 # Extra features
+
+## C arrays
+
+Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C, they cannot be passed
+as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.
 
 ## Variadic functions
 
