@@ -297,7 +297,6 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     }
 
     TypeInfo *type = instance->types.AppendDefault();
-    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     type->name = Fmt(&instance->str_alloc, "%1[%2]", ref->name, len).ptr;
 
@@ -306,13 +305,6 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     type->size = (int16_t)(len * ref->size);
     type->ref = ref;
     type->hint = hint;
-
-    // If the insert succeeds, we cannot fail anymore
-    if (!instance->types_map.TrySet(type).second) {
-        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
-        return env.Null();
-    }
-    err_guard.Disable();
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
     SetValueTag(instance, external, &TypeInfoMarker);
