@@ -1,6 +1,15 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see https://www.gnu.org/licenses/.
 
 function initMenuHighlight() {
     // Find all side menu items, and the pointed to elements
@@ -45,7 +54,7 @@ function initMenuHighlight() {
         let idx;
         for (idx = 0; idx < items.length; idx++) {
             let rect = items[idx][1].getBoundingClientRect();
-            if (rect.top >= 40)
+            if (rect.top >= 50)
                 break;
         }
         if (idx)

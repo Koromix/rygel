@@ -225,6 +225,8 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
         <title>%1</title>
 
         <link rel="stylesheet" href="static/webler.css">
+        <link rel="stylesheet" href="static/OpenSans.css">
+
         <script type="text/javascript" src="static/webler.js" async></script>
     </head>
     <body>
@@ -404,7 +406,7 @@ Options:
     // Output directory
     if (!MakeDirectory(output_dir, false))
         return 1;
-    LogInfo("Output directory: '%1'", output_dir);
+    LogInfo("Output directory: %!..+%1%!0", output_dir);
 
     // Output fully-formed pages
     for (Size i = 0; i < pages.len; i++) {

@@ -1,8 +1,21 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
-   License, v. 2.0. If a copy of the MPL was not distributed with this
-   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+/* This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Affero General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
-body { font: 1em / 1.3em sans-serif; }
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Affero General Public License for more details.
+
+   You should have received a copy of the GNU Affero General Public License
+   along with this program. If not, see https://www.gnu.org/licenses/. */
+
+body {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+}
 
 nav#top_menu ul {
     box-sizing: border-box;
@@ -11,6 +24,7 @@ nav#top_menu ul {
     padding: 0;
     background: #24579d;
     overflow: hidden;
+    z-index: 1;
 }
 nav#top_menu li {
     float: left;
@@ -32,9 +46,7 @@ nav#side_menu ul {
     margin: 0;
     padding: 0;
 }
-nav#side_menu li {
-    list-style-type: none;
-}
+nav#side_menu li { list-style-type: none; }
 nav#side_menu a {
     display: block;
     padding: 1px;
@@ -54,7 +66,7 @@ main {
     overflow: auto;
 }
 footer {
-    padding: 2px 6px 0 6px;
+    padding: 4px 6px 0 6px;
     flex: 0 0 auto;
     border-top: 1px solid #ebebeb;
     font-size: 0.75em;
@@ -64,9 +76,22 @@ footer {
     text-align: right;
 }
 
+h1, h2, h3 { margin-top: 0.3em; }
+* + h1, * + h2, * + h3 { margin: 0.8em 0 0 0; }
+h1 {
+    font-size: 1.5em;
+    font-variant: small-caps;
+}
+h2 { font-size: 1.2em; }
+h3 {
+    font-size: 1em;
+    font-style: italic;
+}
+
 a {
-    color: #24579d;
-    text-decoration: underline;
+    color: #ef6000;
+    cursor: pointer;
+    text-decoration: none;
 }
 
 table {
@@ -85,16 +110,20 @@ td {
 }
 
 pre {
-    max-height: 300px;
-    margin: 1em 30px;
+    position: relative;
+    max-height: 360px;
+    margin: 1em 20px;
     padding: 0;
     border: 1px solid #ebebeb;
     background: #ffffff;
     overflow: auto;
     counter-reset: line;
+    font-size: 12px;
 }
-pre span:before {
+pre .line:before {
     display: inline-block;
+    position: sticky;
+    left: 0;
     width: 2em;
     padding-left: 0.6em;
     margin-right: 0.6em;
@@ -106,16 +135,14 @@ pre span:before {
     -webkit-user-select: none;
 }
 code {
-    padding: 0.25em 0.5em;
+    padding: 0.1em 0.5em;
     background: #ebebeb;
     color: black;
 }
 
 @media screen and (min-width: 801px) {
-    html {
-        /* Fix stupid scrollbar behavior */
-        width: calc(100vw - 17px);
-    }
+    /* Fix stupid scrollbar behavior */
+    html { width: calc(100vw - 17px); }
     body {
         display: flex;
         flex-direction: column;
@@ -132,9 +159,8 @@ code {
         border-top: 8px solid white;
         border-bottom: 2px solid #f8f8f8;
     }
-    nav#top_menu a {
-        line-height: 32px;
-    }
+    nav#top_menu a { line-height: 32px; }
+    :target { scroll-margin-top: 48px; }
 
     div#content {
         display: flex;
@@ -152,6 +178,7 @@ code {
     }
     nav#side_menu a {
         text-decoration: none;
+        color: #24579d;
     }
     nav#side_menu a.active {
         background: #24579d;
@@ -172,16 +199,6 @@ code {
         box-sizing: border-box;
         width: 80vw;
         max-width: 800px;
-    }
-
-    /* Going to an anchored heading puts it at the top, behind the fixed header.
-       This fixes it, in addition to the hack just above for the first heading on
-       the page. */
-    h1:before, h2:before, h3:before, h4:before, h5:before, h6:before {
-        display: block;
-        height: 50px;
-        margin: -50px 0 0;
-        content: "";
     }
 }
 
@@ -207,14 +224,10 @@ code {
         padding-top: 20px;
         background: #f8f8f8;
     }
-    nav#side_menu.active {
-        display: block;
-    }
-    main {
-        /* Fill viewport, does not work on Android 2.3.7 but
-           this is a minor issue. */
-        min-height: calc(100vh - 40px);
-    }
+    nav#side_menu.active { display: block; }
+    /* Fill viewport, does not work on Android 2.3.7 but
+       this is a minor issue. */
+    main { min-height: calc(100vh - 40px); }
 }
 
 @media screen and (max-width: 580px) {
@@ -237,4 +250,6 @@ code {
     .js nav#top_menu a:not(.active) { display: none; }
     nav#top_menu ul { height: auto; }
     nav#top_menu.active a { display: block !important; }
+
+    pre { margin: 1em 0; }
 }
