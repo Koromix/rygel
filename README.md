@@ -231,6 +231,33 @@ Koffi exposes three functions to explore type information:
 Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C, they cannot be passed
 as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.
 
+Special rules apply for arrays of primitive integer and float types (int, int8_t, uint32_t, double, etc...):
+- When converting from JS to C, Koffi can take a normal Array (e.g. `[1, 2]`) or a TypedArray of the correct type (e.g. `Uint8Array` for an array of `int8_t` numbers)
+- When converting from C to JS (for return value or output parameters), Koffi will by default use a TypedArray. But you can change this behavior when you create the array type with the optional hint argument: `koffi.array('int8_t', 6, 'array')`
+
+Example below:
+
+```js
+const koffi = require('koffi');
+
+// Those two structs are exactly the same, only the array conversion hint is different
+const Foo1 = koffi.struct('Foo', {
+    i: 'int',
+    a16: koffi.array('int16_t', 8)
+});
+const Foo2 = koffi.struct('Foo', {
+    i: 'int',
+    a16: koffi.array('int16_t', 8, 'array')
+});
+
+// Uses an hypothetical C function that just returns the struct passed as a parameter
+const ReturnFoo1 = lib.func('Foo1 ReturnFoo(Foo1 p)');
+const ReturnFoo2 = lib.func('Foo2 ReturnFoo(Foo2 p)');
+
+console.log(ReturnFoo1({ i: 5, a16: [6, 8] })) // Prints { i: 5, a16: Int16Array(2) [6, 8] }
+console.log(ReturnFoo2({ i: 5, a16: [6, 8] })) // Prints { i: 5, a16: [6, 8] }
+```
+
 ## Variadic functions
 
 Variadic functions are declared with an ellipsis as the last argument.
