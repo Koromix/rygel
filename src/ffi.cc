@@ -274,6 +274,8 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
             hint = TypeInfo::ArrayHint::TypedArray;
         } else if (to == "array") {
             hint = TypeInfo::ArrayHint::Array;
+        } else if (to == "string") {
+            hint = TypeInfo::ArrayHint::String;
         } else {
             ThrowError<Napi::Error>(env, "Array conversion hint must be 'typed' or 'array'");
             return env.Null();

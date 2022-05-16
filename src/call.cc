@@ -257,7 +257,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                     return false;
             } break;
             case PrimitiveKind::Array: {
-                if (RG_UNLIKELY(!value.IsArray() && !value.IsTypedArray())) {
+                if (RG_UNLIKELY(!value.IsArray() && !value.IsTypedArray() && !value.IsString())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected array", GetValueType(instance, value), member.name);
                     return false;
                 }
@@ -292,15 +292,15 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
     return true;
 }
 
-bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest, int16_t realign)
+bool CallData::PushArray(const Napi::Value &value, const TypeInfo *type, uint8_t *dest, int16_t realign)
 {
-    RG_ASSERT(obj.IsArray() || obj.IsTypedArray());
+    RG_ASSERT(value.IsArray() || value.IsTypedArray() || value.IsString());
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
     uint32_t len = type->size / type->ref->size;
 
-    if (obj.IsArray()) {
-        Napi::Array array = obj.As<Napi::Array>();
+    if (value.IsArray()) {
+        Napi::Array array = value.As<Napi::Array>();
 
         if (RG_UNLIKELY(array.Length() != len)) {
             ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.Length());
@@ -413,7 +413,7 @@ bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t 
                 });
             } break;
             case PrimitiveKind::Array: {
-                PUSH_ARRAY(value.IsArray() || value.IsTypedArray(), "array", {
+                PUSH_ARRAY(value.IsArray() || value.IsTypedArray() || value.IsString(), "array", {
                     Napi::Object array = value.As<Napi::Array>();
                     if (!PushArray(array, type->ref, dest, realign))
                         return false;
@@ -434,8 +434,8 @@ bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t 
         }
 
 #undef PUSH_ARRAY
-    } else {
-        Napi::TypedArray array = obj.As<Napi::TypedArray>();
+    } else if (value.IsTypedArray()) {
+        Napi::TypedArray array = value.As<Napi::TypedArray>();
         const uint8_t *buf = (const uint8_t *)array.ArrayBuffer().Data();
 
         if (RG_UNLIKELY(array.ElementLength() != len)) {
@@ -469,6 +469,25 @@ bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t 
 
             dest += type->ref->size;
         }
+    } else if (value.IsString()) {
+        size_t len = 0;
+
+        if (type->ref->primitive == PrimitiveKind::Int8 || type->ref->primitive == PrimitiveKind::UInt8) {
+            napi_status status = napi_get_value_string_utf8(env, value, (char *)dest, type->size, &len);
+            RG_ASSERT(status == napi_ok);
+        } else if (type->ref->primitive == PrimitiveKind::Int16 || type->ref->primitive == PrimitiveKind::UInt16) {
+            napi_status status = napi_get_value_string_utf16(env, value, (char16_t *)dest, type->size / 2, &len);
+            RG_ASSERT(status == napi_ok);
+
+            len *= 2;
+        } else {
+            ThrowError<Napi::TypeError>(env, "Strings cannot be converted to %1 array", type->ref->name);
+            return false;
+        }
+
+        memset_safe(dest + len, 0, type->size - len);
+    } else {
+        RG_UNREACHABLE();
     }
 
     return true;
@@ -542,8 +561,8 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *src, const TypeInfo *t
                 obj.Set(member.name, obj2);
             } break;
             case PrimitiveKind::Array: {
-                Napi::Object obj2 = PopArray(src, member.type, realign);
-                obj.Set(member.name, obj2);
+                Napi::Value value = PopArray(src, member.type, realign);
+                obj.Set(member.name, value);
             } break;
             case PrimitiveKind::Float32: {
                 float f;
@@ -568,7 +587,18 @@ Napi::Object CallData::PopObject(const uint8_t *src, const TypeInfo *type, int16
     return obj;
 }
 
-Napi::Object CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t realign)
+Size WideStringLength(const char16_t *str16, Size max)
+{
+    Size len = 0;
+
+    while (len < max && str16[len]) {
+        len++;
+    }
+
+    return len;
+}
+
+Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t realign)
 {
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
@@ -591,7 +621,12 @@ Napi::Object CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_
         } while (false)
 #define POP_NUMBER_ARRAY(TypedArrayType, CType) \
         do { \
-            if (type->hint == TypeInfo::ArrayHint::TypedArray) { \
+            if (type->hint == TypeInfo::ArrayHint::Array) { \
+                POP_ARRAY({ \
+                    double d = (double)*(CType *)src; \
+                    array.Set(i, Napi::Number::New(env, d)); \
+                }); \
+            } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
                  \
                 for (uint32_t i = 0; i < len; i++) { \
@@ -605,11 +640,6 @@ Napi::Object CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_
                 } \
                  \
                 return array; \
-            } else { \
-                POP_ARRAY({ \
-                    double d = (double)*(CType *)src; \
-                    array.Set(i, Napi::Number::New(env, d)); \
-                }); \
             } \
         } while (false)
 
@@ -622,10 +652,58 @@ Napi::Object CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_
                 array.Set(i, Napi::Boolean::New(env, b));
             });
         } break;
-        case PrimitiveKind::Int8: { POP_NUMBER_ARRAY(Int8Array, int8_t); } break;
-        case PrimitiveKind::UInt8: { POP_NUMBER_ARRAY(Uint8Array, uint8_t); } break;
-        case PrimitiveKind::Int16: { POP_NUMBER_ARRAY(Int16Array, int16_t); } break;
-        case PrimitiveKind::UInt16: { POP_NUMBER_ARRAY(Uint16Array, uint16_t); } break;
+        case PrimitiveKind::Int8: {
+            if (type->hint == TypeInfo::ArrayHint::String) {
+                RG_ASSERT(!realign);
+
+                const char *ptr = (const char *)src;
+                size_t count = strnlen(ptr, (size_t)len);
+
+                Napi::String str = Napi::String::New(env, ptr, count);
+                return str;
+            }
+
+            POP_NUMBER_ARRAY(Int8Array, int8_t);
+        } break;
+        case PrimitiveKind::UInt8: {
+            if (type->hint == TypeInfo::ArrayHint::String) {
+                RG_ASSERT(!realign);
+
+                const char *ptr = (const char *)src;
+                size_t count = strnlen(ptr, (size_t)len);
+
+                Napi::String str = Napi::String::New(env, ptr, count);
+                return str;
+            }
+
+            POP_NUMBER_ARRAY(Uint8Array, uint8_t);
+        } break;
+        case PrimitiveKind::Int16: {
+            if (type->hint == TypeInfo::ArrayHint::String) {
+                RG_ASSERT(!realign);
+
+                const char16_t *ptr = (const char16_t *)src;
+                Size count = WideStringLength(ptr, len);
+
+                Napi::String str = Napi::String::New(env, ptr, count);
+                return str;
+            }
+
+            POP_NUMBER_ARRAY(Int16Array, int16_t);
+        } break;
+        case PrimitiveKind::UInt16: {
+            if (type->hint == TypeInfo::ArrayHint::String) {
+                RG_ASSERT(!realign);
+
+                const char16_t *ptr = (const char16_t *)src;
+                Size count = WideStringLength(ptr, len);
+
+                Napi::String str = Napi::String::New(env, ptr, count);
+                return str;
+            }
+
+            POP_NUMBER_ARRAY(Uint16Array, uint16_t);
+        } break;
         case PrimitiveKind::Int32: { POP_NUMBER_ARRAY(Int32Array, int32_t); } break;
         case PrimitiveKind::UInt32: { POP_NUMBER_ARRAY(Uint32Array, uint32_t); } break;
         case PrimitiveKind::Int64: {
@@ -670,8 +748,8 @@ Napi::Object CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_
         } break;
         case PrimitiveKind::Array: {
             POP_ARRAY({
-                Napi::Object obj = PopArray(src, type->ref, realign);
-                array.Set(i, obj);
+                Napi::Value value = PopArray(src, type->ref, realign);
+                array.Set(i, value);
             });
         } break;
         case PrimitiveKind::Float32: { POP_NUMBER_ARRAY(Float32Array, float); } break;

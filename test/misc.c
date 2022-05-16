@@ -104,6 +104,13 @@ typedef struct PackedBFG {
 } PackedBFG;
 #pragma pack(pop)
 
+typedef struct FixedString {
+    char buf[64];
+} FixedString;
+typedef struct FixedWide {
+    int16_t buf[64];
+} FixedWide;
+
 EXPORT void FillPack1(int a, Pack1 *p)
 {
     p->a = a;
@@ -358,4 +365,14 @@ EXPORT const char16_t *Concat16(const char16_t *str1, const char16_t *str2)
     buf[(len1 + len2) * 2] = 0;
 
     return buf;
+}
+
+EXPORT FixedString ReturnFixedStr(FixedString str)
+{
+    return str;
+}
+
+EXPORT FixedWide ReturnFixedWide(FixedWide str)
+{
+    return str;
 }

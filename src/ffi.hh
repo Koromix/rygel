@@ -69,7 +69,8 @@ struct RecordMember;
 struct TypeInfo {
     enum class ArrayHint {
         Array,
-        TypedArray
+        TypedArray,
+        String
     };
 
     const char *name;

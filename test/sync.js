@@ -74,6 +74,20 @@ const PackedBFG = koffi.pack('PackedBFG', {
     })
 });
 
+const FixedString = koffi.struct('FixedString', {
+    buf: koffi.array('char', 64)
+});
+const FixedString2 = koffi.struct('FixedString2', {
+    buf: koffi.array('char', 64, 'string')
+});
+
+const FixedWide = koffi.struct('FixedWide', {
+    buf: koffi.array('char16', 64)
+});
+const FixedWide2 = koffi.struct('FixedWide2', {
+    buf: koffi.array('char16', 64, 'string')
+});
+
 main();
 
 async function main() {
@@ -117,6 +131,10 @@ async function test() {
                             lib.func('const char * __stdcall ReturnBigString(const char *str)');
     const PrintFmt = lib.func('const char *PrintFmt(const char *fmt, ...)');
     const Concat16 = lib.func('const char16_t *Concat16(const char16_t *str1, const char16_t *str2)')
+    const ReturnFixedStr = lib.func('FixedString ReturnFixedStr(FixedString str)');
+    const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
+    const ReturnFixedWide = lib.func('FixedWide ReturnFixedWide(FixedWide str)');
+    const ReturnFixedWide2 = lib.func('FixedWide2 ReturnFixedWide(FixedWide2 str)');
 
     // Simple tests with Pack1
     {
@@ -227,5 +245,14 @@ async function test() {
     {
         let str = Concat16('Hello ', 'World!');
         assert.equal(str, 'Hello World!');
+    }
+
+    // String to/from fixed-size buffers
+    {
+        let str = { buf: 'Hello!' };
+        assert.deepEqual(ReturnFixedStr(str), { buf: Int8Array.from([72, 101, 108, 108, 111, 33, ...Array(58).fill(0)]) });
+        assert.deepEqual(ReturnFixedStr2(str), { buf: 'Hello!' });
+        assert.deepEqual(ReturnFixedWide(str), { buf: Int16Array.from([72, 101, 108, 108, 111, 33, ...Array(58).fill(0)]) });
+        assert.deepEqual(ReturnFixedWide2(str), { buf: 'Hello!' });
     }
 }
