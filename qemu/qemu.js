@@ -395,7 +395,7 @@ async function pack() {
             }));
 
             let status = copied ? chalk.bold.green('[ok]') : chalk.bold.red('[error]');
-            log(machine, 'Download', status);
+            log(machine, 'Pack', status);
         }));
     }
 
