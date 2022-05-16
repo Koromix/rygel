@@ -78,7 +78,7 @@ T CopyNumber(const Napi::Value &value)
     RG_ASSERT(value.IsNumber() || value.IsBigInt());
 
     if (RG_LIKELY(value.IsNumber())) {
-        return (T)value.As<Napi::Number>();
+        return (T)value.As<Napi::Number>().DoubleValue();
     } else if (value.IsBigInt()) {
         Napi::BigInt bigint = value.As<Napi::BigInt>();
 

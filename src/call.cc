@@ -142,21 +142,77 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                 bool b = value.As<Napi::Boolean>();
                 *(bool *)dest = b;
             } break;
-            case PrimitiveKind::Int8:
-            case PrimitiveKind::UInt8:
-            case PrimitiveKind::Int16:
-            case PrimitiveKind::UInt16:
-            case PrimitiveKind::Int32:
-            case PrimitiveKind::UInt32:
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::UInt64: {
+            case PrimitiveKind::Int8: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                int8_t v = CopyNumber<int8_t>(value);
+                *(int8_t *)dest = v;
+            } break;
+            case PrimitiveKind::UInt8: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                uint8_t v = CopyNumber<uint8_t>(value);
+                *(uint8_t *)dest = v;
+            } break;
+            case PrimitiveKind::Int16: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                int16_t v = CopyNumber<int16_t>(value);
+                *(int16_t *)dest = v;
+            } break;
+            case PrimitiveKind::UInt16: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                uint16_t v = CopyNumber<uint16_t>(value);
+                *(uint16_t *)dest = v;
+            } break;
+            case PrimitiveKind::Int32: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                int32_t v = CopyNumber<int32_t>(value);
+                *(int32_t *)dest = v;
+            } break;
+            case PrimitiveKind::UInt32: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                uint32_t v = CopyNumber<uint32_t>(value);
+                *(uint32_t *)dest = v;
+            } break;
+            case PrimitiveKind::Int64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
                     return false;
                 }
 
                 int64_t v = CopyNumber<int64_t>(value);
-                memcpy(dest, &v, member.type->size); // Little Endian
+                *(int64_t *)dest = v;
+            } break;
+            case PrimitiveKind::UInt64: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                uint64_t v = CopyNumber<uint64_t>(value);
+                *(uint64_t *)dest = v;
             } break;
             case PrimitiveKind::String: {
                 if (RG_UNLIKELY(!value.IsString())) {
@@ -279,17 +335,52 @@ bool CallData::PushArray(const Napi::Object &obj, const TypeInfo *type, uint8_t 
                     *(bool *)dest = b;
                 });
             } break;
-            case PrimitiveKind::Int8:
-            case PrimitiveKind::UInt8:
-            case PrimitiveKind::Int16:
-            case PrimitiveKind::UInt16:
-            case PrimitiveKind::Int32:
-            case PrimitiveKind::UInt32:
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::UInt64: {
+            case PrimitiveKind::Int8: {
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                    int8_t v = CopyNumber<int8_t>(value);
+                    *(int8_t *)dest = v;
+                });
+            } break;
+            case PrimitiveKind::UInt8: {
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                    uint8_t v = CopyNumber<uint8_t>(value);
+                    *(uint8_t *)dest = v;
+                });
+            } break;
+            case PrimitiveKind::Int16: {
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                    int16_t v = CopyNumber<int16_t>(value);
+                    *(int16_t *)dest = v;
+                });
+            } break;
+            case PrimitiveKind::UInt16: {
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                    uint16_t v = CopyNumber<uint16_t>(value);
+                    *(uint16_t *)dest = v;
+                });
+            } break;
+            case PrimitiveKind::Int32: {
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                    int32_t v = CopyNumber<int32_t>(value);
+                    *(int32_t *)dest = v;
+                });
+            } break;
+            case PrimitiveKind::UInt32: {
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                    uint32_t v = CopyNumber<uint32_t>(value);
+                    *(uint32_t *)dest = v;
+                });
+            } break;
+            case PrimitiveKind::Int64: {
                 PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
                     int64_t v = CopyNumber<int64_t>(value);
-                    memcpy(dest, &v, type->ref->size); // Little Endian
+                    *(int64_t *)dest = v;
+                });
+            } break;
+            case PrimitiveKind::UInt64: {
+                PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                    uint64_t v = CopyNumber<uint64_t>(value);
+                    *(uint64_t *)dest = v;
                 });
             } break;
             case PrimitiveKind::String: {
