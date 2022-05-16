@@ -267,6 +267,7 @@ In order to call a variadic function, you must provide two Javascript arguments 
 ```js
 const printf = lib.func('printf', 'int', ['string', '...']);
 
+// The variadic arguments are: 6 (int), 8.5 (double), 'THE END' (const char *) 
 printf('Integer %d, double %g, string %s', 'int', 6, 'double', 8.5, 'string', 'THE END');
 ```
 
