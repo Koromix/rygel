@@ -539,8 +539,9 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
         param.type = ResolveType(instance, parameters[j], &param.directions);
         if (!param.type)
             return false;
-        if (param.type->primitive == PrimitiveKind::Void) {
-            ThrowError<Napi::TypeError>(env, "Type void cannot be used as a parameter");
+        if (param.type->primitive == PrimitiveKind::Void ||
+                param.type->primitive == PrimitiveKind::Array) {
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
             return false;
         }
 

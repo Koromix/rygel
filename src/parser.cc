@@ -36,7 +36,7 @@ bool PrototypeParser::Parse(Napi::String proto, FunctionInfo *func)
 
     func->ret.type = ParseType();
     if (func->ret.type->primitive == PrimitiveKind::Array) {
-        MarkError("You are not allowed to directly return fixed-size arrays");
+        MarkError("You are not allowed to directly return C arrays");
         return false;
     }
     if (Match("__cdecl")) {
@@ -69,8 +69,9 @@ bool PrototypeParser::Parse(Napi::String proto, FunctionInfo *func)
             }
 
             param.type = ParseType();
-            if (param.type->primitive == PrimitiveKind::Void) {
-                MarkError("Type void cannot be used as a parameter");
+            if (param.type->primitive == PrimitiveKind::Void ||
+                    param.type->primitive == PrimitiveKind::Array) {
+                MarkError("Type %1 cannot be used as a parameter", param.type->name);
                 return false;
             }
 
