@@ -1,6 +1,6 @@
 {
   "name": "cnoke",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Build native Node addons based on CMake, without extra dependency",
   "keywords": [
     "native",
