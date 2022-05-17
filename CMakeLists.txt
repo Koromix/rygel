@@ -23,6 +23,9 @@ if(MSVC)
 else()
     add_compile_options(-Wall -Wextra -Wno-missing-field-initializers
                         -Wno-unused-parameter -Wno-class-memaccess)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-Wno-unknown-warning-option)
+    endif()
 endif()
 
 # ---- Koffi ----
