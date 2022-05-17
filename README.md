@@ -62,7 +62,7 @@ your dependency), add the following script to package.json:
 You can find the same help text by running `cnoke --help`:
 
 ```
-Usage: cnoke [command] [options...]
+Usage: cnoke [command] [options...] [targets...]
 
 Commands:
     configure                    Configure CMake build
@@ -74,13 +74,20 @@ Global options:
                                  (default: current working directory)
 
 Build options:
+    -v, --verbose                Show build commands while building
+
+        --rebuild                Perform clean step before build
+
         --prebuild <URL>         Set URL template to download prebuilt binaries
 
 Configure options:
-    -v, --version <VERSION>      Change node version
-                                 (default: process.version)
-    -a, --arch <ARCH>            Change architecture
-                                 (default: process.arch)
+        --version <VERSION>      Change node version
+                                 (default: v16.15.0)
+        --arch <ARCH>            Change architecture
+                                 (default: x64)
 
-        --debug                  Build in debug mode
+    -m, --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
+                                 (default: RelWithDebInfo)
+        --debug                  Shortcut for -m debug
+
 ```
