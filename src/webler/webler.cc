@@ -186,7 +186,7 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
                 if (end == text->size)
                     break;
 
-                BUFPUTSL(ob, "<span>");
+                BUFPUTSL(ob, "<span class=\"line\">");
                 lus_body_escape(ob, text->data + start, end - start);
                 BUFPUTSL(ob, "</span>\n");
 
