@@ -13,7 +13,7 @@
   * [Raylib results](#raylib-results)
 - [Tests](#tests)
 - [Compilation](#compilation)
-  * [Windows](#windows)
+  * [Windows](#windows-1)
   * [Other platforms](#other-platforms)
 
 # Introduction
