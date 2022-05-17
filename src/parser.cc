@@ -19,34 +19,27 @@
 
 namespace RG {
 
-bool PrototypeParser::Parse(Napi::String proto, FunctionInfo *func)
+bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
 {
-    if (!proto.IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for prototype, expected string", GetValueType(instance, proto));
-        return false;
-    }
-
-    std::string hold = proto;
-
     tokens.Clear();
     offset = 0;
     valid = true;
 
-    Tokenize(hold.c_str());
+    Tokenize(str);
 
-    func->ret.type = ParseType();
-    if (func->ret.type->primitive == PrimitiveKind::Array) {
+    out_func->ret.type = ParseType();
+    if (out_func->ret.type->primitive == PrimitiveKind::Array) {
         MarkError("You are not allowed to directly return C arrays");
         return false;
     }
     if (Match("__cdecl")) {
-        func->convention = CallConvention::Cdecl;
+        out_func->convention = CallConvention::Cdecl;
     } else if (Match("__stdcall")) {
-        func->convention = CallConvention::Stdcall;
+        out_func->convention = CallConvention::Stdcall;
     } else if (Match("__fastcall")) {
-        func->convention = CallConvention::Fastcall;
+        out_func->convention = CallConvention::Fastcall;
     }
-    func->name = ParseIdentifier();
+    out_func->name = ParseIdentifier();
 
     Consume("(");
     if (offset < tokens.len && tokens[offset] != ")") {
@@ -54,7 +47,7 @@ bool PrototypeParser::Parse(Napi::String proto, FunctionInfo *func)
             ParameterInfo param = {};
 
             if (Match("...")) {
-                func->variadic = true;
+                out_func->variadic = true;
                 break;
             }
 
@@ -83,18 +76,18 @@ bool PrototypeParser::Parse(Napi::String proto, FunctionInfo *func)
 
             offset += (offset < tokens.len && IsIdentifier(tokens[offset]));
 
-            if (func->parameters.len >= MaxParameters) {
+            if (out_func->parameters.len >= MaxParameters) {
                 MarkError("Functions cannot have more than %1 parameters", MaxParameters);
                 return false;
             }
-            if ((param.directions & 2) && ++func->out_parameters >= MaxOutParameters) {
+            if ((param.directions & 2) && ++out_func->out_parameters >= MaxOutParameters) {
                 MarkError("Functions cannot have more than out %1 parameters", MaxOutParameters);
                 return false;
             }
 
-            param.offset = func->parameters.len;
+            param.offset = out_func->parameters.len;
 
-            func->parameters.Append(param);
+            out_func->parameters.Append(param);
 
             if (offset >= tokens.len || tokens[offset] != ",")
                 break;
@@ -248,6 +241,12 @@ bool PrototypeParser::IsIdentifier(Span<const char> tok) const
 {
     RG_ASSERT(tok.len);
     return IsAsciiAlpha(tok[0]) || tok[0] == '_';
+}
+
+bool ParsePrototype(Napi::Env env, const char *str, FunctionInfo *out_func)
+{
+    PrototypeParser parser(env);
+    return parser.Parse(str, out_func);
 }
 
 }

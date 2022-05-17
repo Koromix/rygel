@@ -653,9 +653,13 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
         if (!ParseClassicFunction(env, info[0u].As<Napi::String>(), info[1u], info[2u].As<Napi::Array>(), func))
             return env.Null();
     } else if (info.Length() >= 1) {
-        PrototypeParser parser(env);
+        if (!info[0].IsString()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for prototype, expected string", GetValueType(instance, info[0]));
+            return env.Null();
+        }
 
-        if (!parser.Parse(info[0u].As<Napi::String>(), func))
+        std::string proto = info[0u].As<Napi::String>();
+        if (!ParsePrototype(env, proto.c_str(), func))
             return env.Null();
     } else {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, not %1", info.Length());
