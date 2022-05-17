@@ -104,7 +104,7 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 arch = value;
-            } else if ((command == build || command == configure) && arg == '--mode') {
+            } else if ((command == build || command == configure) && (arg == '-m' || arg == '--mode')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
@@ -117,6 +117,8 @@ async function main() {
                         throw new Error(`Unknown value '${value}' for ${arg}`);
                     } break;
                 }
+            } else if ((command == build || command == configure) && arg == '--debug') {
+                mode = 'Debug';
             } else if (command == build && (arg == '-v' || arg == '--verbose')) {
                 verbose = true;
             } else if (command == build && arg == '--rebuild') {
@@ -185,8 +187,9 @@ Configure options:
         --arch <ARCH>            Change architecture
                                  (default: ${process.arch})
 
-        --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
+    -m, --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
                                  (default: ${mode})
+        --debug                  Shortcut for -m debug
 `;
 
     console.log(help);
