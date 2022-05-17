@@ -41,9 +41,14 @@ extern "C" X0X1Ret ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
+static inline bool IsHFA(const TypeInfo *type)
+{
+    return IsHFA(type, 1, 4);
+}
+
 bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
-    if (IsHFA(func->ret.type, 1, 4)) {
+    if (IsHFA(func->ret.type)) {
         func->ret.vec_count = func->ret.type->members.len;
     } else if (func->ret.type->size <= 16) {
         func->ret.gpr_count = (func->ret.type->size + 7) / 8;
@@ -88,7 +93,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                 }
 #endif
 
-                if (IsHFA(param.type, 1, 4)) {
+                if (IsHFA(param.type)) {
                     int vec_count = (int)param.type->members.len;
 
                     if (vec_count <= vec_avail) {

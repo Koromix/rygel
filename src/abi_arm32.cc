@@ -19,6 +19,8 @@
 #include "util.hh"
 
 #include <napi.h>
+#include <signal.h>
+#include <setjmp.h>
 
 namespace RG {
 
@@ -37,9 +39,46 @@ extern "C" uint64_t ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
+static bool DetectVFP()
+{
+    // If anything fails, assume VFP is available (true for most Linux platforms)
+    static volatile bool vfp = true;
+    static jmp_buf env;
+
+    struct sigaction prev;
+    SetSignalHandler(SIGILL, [](int) {
+        vfp = false;
+        longjmp(env, 1);
+    }, &prev);
+
+    if (!setjmp(env)) {
+        __asm__ volatile("vmov.f64 d0, #1.0" ::: "d0");
+    }
+
+    return vfp;
+}
+
+static inline bool HasVFP()
+{
+    static bool init = false;
+    static bool vfp;
+
+    if (!init) {
+        vfp = DetectVFP();
+        init = true;
+    }
+
+    return vfp;
+}
+
+static inline bool IsHFA(const TypeInfo *type)
+{
+    return HasVFP() && IsHFA(type, 1, 4);
+}
+
 bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
-    if (IsHFA(func->ret.type, 1, 4)) {
+    if (IsHFA(func->ret.type)) {
         func->ret.vec_count = func->ret.type->members.len *
                               (func->ret.type->members[0].type->size / 4);
     } else if (func->ret.type->primitive != PrimitiveKind::Record ||
@@ -84,7 +123,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                 }
             } break;
             case PrimitiveKind::Record: {
-                if (IsHFA(param.type, 1, 4)) {
+                if (IsHFA(param.type)) {
                     int vec_count = (int)(param.type->members.len *
                                           param.type->members[0].type->size / 4);
 
@@ -112,8 +151,8 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32:
             case PrimitiveKind::Float64: {
+                bool vfp = HasVFP() && !param.variadic;
                 Size need = param.type->size / 4;
-                bool vfp = !param.variadic;
 
                 if (vfp) {
                     if (need <= vec_avail) {

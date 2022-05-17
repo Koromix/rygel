@@ -35,6 +35,7 @@ Windows   | x86_64                           | 🟩 Yes      | 🟩 Yes       | 
 Linux     | x86                              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
 Linux     | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
 Linux     | ARM32+VFP Little Endian          | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
+Linux     | ARM32 without VFP Little Endian  | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟩 Yes
 Linux     | ARM64 Little Endian              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
 FreeBSD   | x86                              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
 FreeBSD   | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
