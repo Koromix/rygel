@@ -119,6 +119,17 @@ void PrototypeParser::Tokenize(const char *str)
             tokens.Append(tok);
 
             i = j - 1;
+        } else if (IsAsciiDigit(c)) {
+            Size j = i;
+            while (str[++j] && IsAsciiDigit(str[j]));
+            if (str[j] == '.') {
+                while (str[++j] && IsAsciiDigit(str[j]));
+            }
+
+            Span<const char> tok = MakeSpan(str + i, j - i);
+            tokens.Append(tok);
+
+            i = j - 1;
         } else if (c == '.' && str[i + 1] == '.' && str[i + 2] == '.') {
             tokens.Append("...");
             i += 2;
