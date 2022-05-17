@@ -961,7 +961,6 @@ static void SetExports(Napi::Env env, Func func)
     func("out", Napi::Function::New(env, MarkOut));
     func("inout", Napi::Function::New(env, MarkInOut));
 
-    func("internal", Napi::Boolean::New(env, true));
 #if defined(_WIN32)
     func("extension", Napi::String::New(env, ".dll"));
 #elif defined(__APPLE__)
@@ -1013,6 +1012,7 @@ static void InitInternal(v8::Local<v8::Object> target, v8::Local<v8::Value>,
     FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
     SetExports(env_napi, [&](const char *name, Napi::Value value) { SetValue(env, target, name, value); });
+    SetValue(env, target, "internal", Napi::Boolean::New(env_cxx, true));
 }
 
 #else
@@ -1028,6 +1028,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
     SetExports(env, [&](const char *name, Napi::Value value) { exports.Set(name, value); });
+    exports.Set("internal", Napi::Boolean::New(env, false));
 
     return exports;
 }
