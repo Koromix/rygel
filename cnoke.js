@@ -38,6 +38,7 @@ let arch = null;
 let mode = 'RelWithDebInfo';
 let targets = [];
 let verbose = false;
+let rebuild = false;
 let prebuild = null;
 
 let cmake_bin = null;
@@ -118,6 +119,8 @@ async function main() {
                 }
             } else if (command == build && (arg == '-v' || arg == '--verbose')) {
                 verbose = true;
+            } else if (command == build && arg == '--rebuild') {
+                rebuild = true;
             } else if (command == build && arg == '--prebuild') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -171,6 +174,8 @@ Global options:
 
 Build options:
     -v, --verbose                Show build commands while building
+
+        --rebuild                Perform clean step before build
 
         --prebuild <URL>         Set URL template to download prebuilt binaries
 
@@ -347,6 +352,8 @@ async function build() {
 
     if (verbose)
         args.push('--verbose');
+    if (rebuild)
+        args.push('--clean-first');
     for (let target of targets)
         args.push('--target', target);
 
