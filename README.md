@@ -26,32 +26,19 @@ The following features are planned in the near future:
 * 1.3: RISC-V support (32 and 64 bit)
 * 1.4: Type parser
 
-The following platforms __are officially supported and tested__ at the moment:
+The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
-Platform  | Architecture                     | Sync calls | Async calls | Callbacks | Pre-built binary
---------- | -------------------------------- | ---------- | ----------- | --------- | ----------------
-Windows   | x86 (cdecl, stdcall, fastcall)   | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-Windows   | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-Linux     | x86                              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-Linux     | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-Linux     | ARM32+VFP Little Endian          | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-Linux     | ARM32 without VFP Little Endian  | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟩 Yes
-Linux     | ARM64 Little Endian              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-FreeBSD   | x86                              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-FreeBSD   | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-FreeBSD   | ARM64 Little Endian              | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-macOS     | x86_64                           | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟩 Yes
-macOS     | ARM64 (M1) Little Endian         | 🟩 Yes      | 🟩 Yes       | 🟥 No      | 🟥 No
-OpenBSD   | x86_64                           | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
-OpenBSD   | x86                              | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
-OpenBSD   | ARM64 Little Endian              | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
-NetBSD    | x86_64                           | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
-NetBSD    | x86                              | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
-NetBSD    | ARM64 Little Endian              | 🟧 Maybe    | 🟧 Maybe     | 🟥 No      | 🟥 No
+OS        | x86 (IA32) [^1] | x86_64 (AMD64) | ARM32 VFP LE | ARM32 (no VFP) LE | ARM64 (AArch64) LE
+--------- | --------------- | -------------- | ------------ | ----------------- | ------------------
+Windows   | 🟩 Yes          | 🟩 Yes         | 🟧 Maybe     | 🟧 Maybe          | 🟧 Maybe
+Linux     | 🟩 Yes          | 🟩 Yes         | 🟩 Yes       | 🟧 Maybe          | 🟩 Yes
+macOS     | ⬜️ N/A          | 🟩 Yes         | ⬜️ N/A       | ⬜️ N/A            | 🟩 Yes [^2]
+FreeBSD   | 🟩 Yes          | 🟩 Yes         | 🟨 Probably  | 🟧 Maybe          | 🟩 Yes
+OpenBSD   | 🟨 Probably     | 🟨 Probably    | 🟨 Probably  | 🟧 Maybe          | 🟨 Probably
+NetBSD    | 🟨 Probably     | 🟨 Probably    | 🟨 Probably  | 🟧 Maybe          | 🟨 Probably
 
-🟩 Tested, fully operational
-🟧 May work, but not actively tested
-🟥 Does not work yet
+[^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall
+[^2]: However, we don't provide prebuilt binaries for macOS on Apple M1
 
 This is still in development, bugs are to be expected. More tests will come in the near future.
 
