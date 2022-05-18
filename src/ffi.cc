@@ -788,6 +788,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     ADD_CONVENTION("cdecl", CallConvention::Cdecl);
     ADD_CONVENTION("stdcall", CallConvention::Stdcall);
     ADD_CONVENTION("fastcall", CallConvention::Fastcall);
+    ADD_CONVENTION("thiscall", CallConvention::Thiscall);
 
 #undef ADD_CONVENTION
 

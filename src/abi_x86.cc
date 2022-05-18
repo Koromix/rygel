@@ -37,7 +37,9 @@ static inline bool IsRegular(Size size)
 
 bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
 {
-    int fast = (func->convention == CallConvention::Fastcall) ? 2 : 0;
+    int fast = (func->convention == CallConvention::Fastcall) ? 2 :
+               (func->convention == CallConvention::Thiscall) ? 1 : 0;
+    func->fast = fast;
 
     if (func->ret.type->primitive != PrimitiveKind::Record) {
         func->ret.trivial = true;
@@ -77,6 +79,10 @@ bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
             func->decorated_name = Fmt(&instance->str_alloc, "@%1@%2", func->name, params_size).ptr;
             func->args_size += 16;
         } break;
+        case CallConvention::Thiscall: {
+            RG_ASSERT(!func->variadic);
+            func->args_size += 16;
+        } break;
     }
 
     return true;
@@ -90,7 +96,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
     // Pass return value in register or through memory
     if (RG_UNLIKELY(!AllocStack(func->args_size, 16, &args_ptr)))
         return false;
-    if (func->convention == CallConvention::Fastcall) {
+    if (func->fast) {
         fast_ptr = args_ptr;
         args_ptr += 4;
     }
@@ -259,8 +265,8 @@ void CallData::Execute()
 {
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = (func->convention == CallConvention::Fastcall ? ForwardCallR ## Suffix(func->func, stack.ptr) \
-                                                                     : ForwardCall ## Suffix(func->func, stack.ptr)); \
+            auto ret = (func->fast ? ForwardCallR ## Suffix(func->func, stack.ptr) \
+                                   : ForwardCall ## Suffix(func->func, stack.ptr)); \
             return ret; \
         })()
 

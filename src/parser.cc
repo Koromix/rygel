@@ -38,6 +38,8 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
         out_func->convention = CallConvention::Stdcall;
     } else if (Match("__fastcall")) {
         out_func->convention = CallConvention::Fastcall;
+    } else if (Match("__thiscall")) {
+        out_func->convention = CallConvention::Thiscall;
     }
     out_func->name = ParseIdentifier();
 

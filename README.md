@@ -38,7 +38,7 @@ ARM64 (AArch64) LE | 🟧 Maybe | 🟩 Yes   | 🟩 Yes [^2] | 🟩 Yes   | 🟧
 RISC-V 32          | ⬜️ N/A   | 🟥 No    | ⬜️ N/A      | 🟥 No    | 🟥 No
 RISC-V 64          | ⬜️ N/A   | 🟥 No    | ⬜️ N/A      | 🟥 No    | 🟥 No
 
-[^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall
+[^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall
 [^2]: However, we don't provide prebuilt binaries for macOS on Apple M1
 
 This is still in development, bugs are to be expected. More tests will come in the near future.

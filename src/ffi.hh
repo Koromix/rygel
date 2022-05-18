@@ -109,12 +109,14 @@ struct LibraryHolder {
 enum class CallConvention {
     Cdecl,
     Stdcall,
-    Fastcall
+    Fastcall,
+    Thiscall
 };
 static const char *const CallConventionNames[] = {
     "Cdecl",
     "Stdcall",
-    "Fastcall"
+    "Fastcall",
+    "Thiscall"
 };
 
 struct ParameterInfo {
@@ -162,6 +164,9 @@ struct FunctionInfo {
     Size args_size;
 #if defined(__arm__) || defined(__aarch64__) || defined(__x86_64__) || defined(_WIN64)
     bool forward_fp;
+#endif
+#if defined(__i386__) || defined(_M_IX86)
+    bool fast;
 #endif
 
     ~FunctionInfo();
