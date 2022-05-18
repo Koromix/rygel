@@ -597,10 +597,10 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
         return false;
     }
 
-    Size parameters_len = parameters.Length();
+    uint32_t parameters_len = parameters.Length();
 
     if (parameters_len) {
-        Napi::String str = ((Napi::Value)parameters[(uint32_t)(parameters_len - 1)]).As<Napi::String>();
+        Napi::String str = ((Napi::Value)parameters[parameters_len - 1]).As<Napi::String>();
 
         if (str.IsString() && str.Utf8Value() == "...") {
             func->variadic = true;
