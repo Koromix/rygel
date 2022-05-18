@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(_M_ARM64)
 
 #include "vendor/libcc/libcc.hh"
 #include "ffi.hh"
@@ -86,14 +86,18 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                 }
             } break;
             case PrimitiveKind::Record: {
-#ifdef __APPLE__
+                bool hfa = IsHFA(param.type);
+
+#if defined(_WIN32)
+                hfa &= !param.variadic;
+#elif defined(__APPLE__)
                 if (param.variadic) {
                     param.use_memory = (param.type->size > 16);
                     break;
                 }
 #endif
 
-                if (IsHFA(param.type)) {
+                if (hfa) {
                     int vec_count = (int)param.type->members.len;
 
                     if (vec_count <= vec_avail) {
@@ -123,7 +127,15 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32:
             case PrimitiveKind::Float64: {
-#ifdef __APPLE__
+#if defined(_WIN32)
+                if (param.variadic) {
+                    if (gpr_avail) {
+                        param.gpr_count = 1;
+                        gpr_avail--;
+                    }
+                    break;
+                }
+#elif defined(__APPLE__)
                 if (param.variadic)
                     break;
 #endif

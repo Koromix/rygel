@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#if defined(__arm__)
+#if defined(__arm__) || (defined(__M_ARM) && !defined(_M_ARM64))
 
 #include "vendor/libcc/libcc.hh"
 #include "ffi.hh"

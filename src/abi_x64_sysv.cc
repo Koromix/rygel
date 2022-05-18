@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#if defined(__x86_64__) && !defined(_WIN64)
+#if defined(__x86_64__) && !defined(_WIN32)
 
 #include "vendor/libcc/libcc.hh"
 #include "ffi.hh"
