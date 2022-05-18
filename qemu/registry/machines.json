@@ -253,7 +253,7 @@
         },
 
         "info": {
-            "version": 1,
+            "version": 2,
             "platform": "freebsd",
             "arch": "x64",
 
@@ -298,7 +298,7 @@
         },
 
         "info": {
-            "version": 1,
+            "version": 2,
             "platform": "freebsd",
             "arch": "ia32",
 
@@ -343,7 +343,7 @@
         },
 
         "info": {
-            "version": 1,
+            "version": 2,
             "platform": "freebsd",
             "arch": "arm64",
 
