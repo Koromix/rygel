@@ -42,6 +42,9 @@ else()
                                           -Wno-unused-function -Wno-missing-field-initializers
                                           -Wno-unused-value -Wno-implicit-fallthrough -Wno-stringop-overflow
                                           -Wno-unused-result)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(raylib PRIVATE -Wno-unknown-warning-option)
+    endif()
 endif()
 
 if(WIN32)
