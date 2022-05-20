@@ -141,19 +141,23 @@ async function main() {
 
         for (let pattern of patterns) {
             let re = minimatch.makeRe(pattern);
+            let match = false;
 
             for (let name in machines_map) {
                 let machine = machines_map[name];
 
-                if (name.match(re) || machine.name.match(re))
+                if (name.match(re) || machine.name.match(re)) {
                     machines.add(name);
+                    match = true;
+                }
+            }
+
+            if (!match) {
+                console.log(`Pattern '${pattern}' does not match any machine`);
+                process.exit(1);
             }
         }
 
-        if (!machines.size) {
-            console.log('Could not match any machine');
-            process.exit(1);
-        }
     } else {
         machines = new Set(Object.keys(machines_map));
 
