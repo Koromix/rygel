@@ -29,6 +29,7 @@
 #else
     #include <dlfcn.h>
     #include <unistd.h>
+    #include <sys/mman.h>
 #endif
 
 #include <napi.h>
@@ -38,6 +39,11 @@
 #endif
 
 namespace RG {
+
+const Size SyncStackSize = Mebibytes(2);
+const Size SyncHeapSize = Mebibytes(4);
+const Size AsyncStackSize = Mebibytes(1);
+const Size AsyncHeapSize = Mebibytes(2);
 
 // Value does not matter, the tag system uses memory addresses
 const int TypeInfoMarker = 0xDEADBEEF;
@@ -369,21 +375,6 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
     return type->defn.Value();
 }
 
-static Span<uint8_t> AllocateAndAlign16(Allocator *alloc, Size size)
-{
-    RG_ASSERT(AlignLen(size, 16) == size);
-    RG_ASSERT(size >= Kibibytes(1));
-
-    // Account for allocator overhead
-    size -= 256;
-
-    uint8_t *ptr = (uint8_t *)Allocator::Allocate(alloc, size);
-    uint8_t *aligned = AlignUp(ptr, 16);
-    Size delta = AlignLen(aligned - ptr, 16);
-
-    return MakeSpan(aligned, size - delta);
-}
-
 static InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
 {
     for (Size i = 1; i < instance->memories.len; i++) {
@@ -395,8 +386,23 @@ static InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
 
     InstanceMemory *mem = new InstanceMemory();
 
-    mem->stack = AllocateAndAlign16(&mem->mem_alloc, Mebibytes(1));
-    mem->heap = AllocateAndAlign16(&mem->mem_alloc, Mebibytes(2));
+    mem->stack.len = AsyncStackSize;
+#if defined(_WIN32)
+    mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#elif defined(__APPLE__)
+    mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+#else
+    mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
+#endif
+    RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
+
+    mem->heap.len = AsyncHeapSize;
+#ifdef _WIN32
+    mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+    mem->heap.ptr = (uint8_t *)mmap(nullptr, mem->heap.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+#endif
+    RG_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
 
     if (instance->memories.Available()) {
         instance->memories.Append(mem);
@@ -933,8 +939,23 @@ InstanceData::InstanceData()
 {
     InstanceMemory *mem = new InstanceMemory();
 
-    mem->stack = AllocateAndAlign16(&mem->mem_alloc, Mebibytes(2));
-    mem->heap = AllocateAndAlign16(&mem->mem_alloc, Mebibytes(4));
+    mem->stack.len = SyncStackSize;
+#if defined(_WIN32)
+    mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#elif defined(__APPLE__)
+    mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+#else
+    mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
+#endif
+    RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
+
+    mem->heap.len = SyncHeapSize;
+#ifdef _WIN32
+    mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+    mem->heap.ptr = (uint8_t *)mmap(nullptr, mem->heap.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+#endif
+    RG_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
 
     memories.Append(mem);
 }
