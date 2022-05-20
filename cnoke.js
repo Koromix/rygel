@@ -26,6 +26,8 @@ const { spawnSync } = require('child_process');
 
 // Globals
 
+const default_mode = 'RelWithDebInfo';
+
 let app_dir = null;
 let project_dir = null;
 let package_dir = null;
@@ -35,7 +37,7 @@ let work_dir = null;
 
 let version = null;
 let arch = null;
-let mode = 'RelWithDebInfo';
+let mode = default_mode;
 let targets = [];
 let verbose = false;
 let rebuild = false;
@@ -188,7 +190,7 @@ Configure options:
                                  (default: ${process.arch})
 
     -m, --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
-                                 (default: ${mode})
+                                 (default: ${default_mode})
         --debug                  Shortcut for -m debug
 `;
 
