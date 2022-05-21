@@ -466,5 +466,50 @@
                 }
             }
         }
+    },
+
+    "openbsd_i386": {
+        "name": "OpenBSD i386",
+
+        "qemu": {
+            "binary": "qemu-system-x86_64",
+            "arguments": ["-m", "1G", "-smp", 2, "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22211-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:21"]
+        },
+
+        "info": {
+            "version": 1,
+            "platform": "openbsd",
+            "arch": "ia32",
+
+            "ssh_port": 22211,
+            "vnc_port": 5921,
+
+            "username": "openbsd",
+            "password": "openbsd",
+
+            "shutdown": "sudo shutdown -p now"
+        },
+
+        "builds": {
+            "OpenBSD i386": {
+                "directory": "/home/openbsd/luigi",
+                "build": "node ../cnoke/cnoke.js"
+            }
+        },
+
+        "tests": {
+            "OpenBSD i386": {
+                "directory": "/home/openbsd/luigi",
+                "build": {
+                    "Build": "node ../cnoke/cnoke.js -C test"
+                },
+                "commands": {
+                    "Test Sync": "node test/sync.js",
+                    "Test Async": "node test/async.js",
+                    "Test Raylib": "xvfb-run node test/raylib.js",
+                    "Test SQLite": "node test/sqlite.js"
+                }
+            }
+        }
     }
 }

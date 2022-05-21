@@ -124,13 +124,11 @@ async function main() {
             machine.started = false;
 
             machine.qemu.accelerate = null;
-            if (accelerate) {
+            if (accelerate && machine.qemu.binary == 'qemu-system-x86_64') {
                 if (process.platform == 'linux') {
-                    if (process.arch == 'x64' && (machine.info.arch == 'x64' || machine.info.arch == 'ia32'))
-                        machine.qemu.accelerate = 'kvm';
+                    machine.qemu.accelerate = 'kvm';
                 } else if (process.platform == 'win32') {
-                    if (process.arch == 'x64' && machine.info.arch == 'x64')
-                        machine.qemu.accelerate = 'whpx';
+                    machine.qemu.accelerate = 'whpx';
                 }
             }
         }

@@ -30,7 +30,7 @@ The following combinations of OS and architectures __are officially supported an
 
 ISA / OS           | Windows  | Linux    | macOS       | FreeBSD  | OpenBSD
 ------------------ | -------- | -------- | ----------- | -------- | --------
-x86 (IA32) [^1]    | 🟩 Yes   | 🟩 Yes   | ⬜️ N/A      | 🟩 Yes   | 🟧 Maybe
+x86 (IA32) [^1]    | 🟩 Yes   | 🟩 Yes   | ⬜️ N/A      | 🟩 Yes   | 🟩 Yes
 x86_64 (AMD64)     | 🟩 Yes   | 🟩 Yes   | 🟩 Yes      | 🟩 Yes   | 🟩 Yes
 ARM32 VFP LE       | ⬜️ N/A   | 🟩 Yes   | ⬜️ N/A      | 🟧 Maybe | 🟧 Maybe
 ARM32 (no VFP) LE  | ⬜️ N/A   | 🟧 Maybe | ⬜️ N/A      | 🟧 Maybe | 🟧 Maybe
