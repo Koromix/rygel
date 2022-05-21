@@ -159,9 +159,9 @@ const TypeInfo *PrototypeParser::ParseType()
     }
     if (offset == start) {
         if (offset < tokens.len) {
-            MarkError("Unexpected token '%1', expected identifier", tokens[offset]);
+            MarkError("Unexpected token '%1', expected type", tokens[offset]);
         } else {
-            MarkError("Unexpected end of prototype, expected identifier");
+            MarkError("Unexpected end of prototype, expected type");
         }
         return instance->types_map.FindValue("void", nullptr);
     }
