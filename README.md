@@ -28,15 +28,15 @@ The following features are planned in the near future:
 
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
-ISA / OS           | Windows  | Linux    | macOS       | FreeBSD  | OpenBSD
------------------- | -------- | -------- | ----------- | -------- | --------
-x86 (IA32) [^1]    | 🟩 Yes   | 🟩 Yes   | ⬜️ N/A      | 🟩 Yes   | 🟩 Yes
-x86_64 (AMD64)     | 🟩 Yes   | 🟩 Yes   | 🟩 Yes      | 🟩 Yes   | 🟩 Yes
-ARM32 VFP LE       | ⬜️ N/A   | 🟩 Yes   | ⬜️ N/A      | 🟧 Maybe | 🟧 Maybe
-ARM32 (no VFP) LE  | ⬜️ N/A   | 🟧 Maybe | ⬜️ N/A      | 🟧 Maybe | 🟧 Maybe
-ARM64 (AArch64) LE | 🟧 Maybe | 🟩 Yes   | 🟩 Yes [^2] | 🟩 Yes   | 🟧 Maybe
-RISC-V 32          | ⬜️ N/A   | 🟥 No    | ⬜️ N/A      | 🟥 No    | 🟥 No
-RISC-V 64          | ⬜️ N/A   | 🟥 No    | ⬜️ N/A      | 🟥 No    | 🟥 No
+ISA / OS           | Windows     | Linux    | macOS       | FreeBSD     | OpenBSD
+------------------ | ----------- | -------- | ----------- | ----------- | --------
+x86 (IA32) [^1]    | 🟩 Yes      | 🟩 Yes   | ⬜️ N/A      | 🟩 Yes      | 🟩 Yes
+x86_64 (AMD64)     | 🟩 Yes      | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟩 Yes
+ARM32 VFP LE       | ⬜️ N/A      | 🟩 Yes   | ⬜️ N/A      | 🟨 Probably | 🟨 Probably
+ARM32 (no VFP) LE  | ⬜️ N/A      | 🟧 Maybe | ⬜️ N/A      | 🟧 Maybe    | 🟧 Maybe
+ARM64 (AArch64) LE | 🟨 Probably | 🟩 Yes   | 🟩 Yes [^2] | 🟩 Yes      | 🟨 Probably
+RISC-V 32          | ⬜️ N/A      | 🟥 No    | ⬜️ N/A      | 🟥 No       | 🟥 No
+RISC-V 64          | ⬜️ N/A      | 🟥 No    | ⬜️ N/A      | 🟥 No       | 🟥 No
 
 [^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall
 [^2]: However, we don't provide prebuilt binaries for macOS on Apple M1
