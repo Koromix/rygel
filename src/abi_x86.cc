@@ -255,8 +255,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
         }
     }
 
-    stack = MakeSpan(mem->stack.end(), old_stack_mem.end() - mem->stack.end());
-    heap = MakeSpan(old_heap_mem.ptr, mem->heap.ptr - old_heap_mem.ptr);
+    sp = mem->stack.end();
 
     return true;
 }
@@ -265,8 +264,8 @@ void CallData::Execute()
 {
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = (func->fast ? ForwardCallR ## Suffix(func->func, stack.ptr) \
-                                   : ForwardCall ## Suffix(func->func, stack.ptr)); \
+            auto ret = (func->fast ? ForwardCallR ## Suffix(func->func, sp) \
+                                   : ForwardCall ## Suffix(func->func, sp)); \
             return ret; \
         })()
 

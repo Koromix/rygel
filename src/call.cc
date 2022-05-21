@@ -21,7 +21,7 @@
 namespace RG {
 
 CallData::CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem)
-    : env(env), instance(instance), func(func), debug(instance->debug),
+    : env(env), instance(instance), func(func),
       mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap)
 {
     mem->depth++;
@@ -762,19 +762,6 @@ Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t
     RG_UNREACHABLE();
 }
 
-Napi::Value CallData::Run(const Napi::CallbackInfo &info)
-{
-    if (!RG_UNLIKELY(Prepare(info)))
-        return env.Null();
-
-    if (debug) {
-        DumpDebug();
-    }
-    Execute();
-
-    return Complete();
-}
-
 static void DumpMemory(const char *type, Span<const uint8_t> bytes)
 {
     if (bytes.len) {
@@ -804,6 +791,9 @@ void CallData::DumpDebug() const
         }
     }
     PrintLn(stderr, "Return: %1 (%2)", func->ret.type->name, FmtMemSize(func->ret.type->size));
+
+    Span<const uint8_t> stack = MakeSpan(mem->stack.end(), old_stack_mem.end() - mem->stack.end());
+    Span<const uint8_t> heap = MakeSpan(old_heap_mem.ptr, mem->heap.ptr - old_heap_mem.ptr);
 
     DumpMemory("Stack", stack);
     DumpMemory("Heap", heap);

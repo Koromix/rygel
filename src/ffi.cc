@@ -427,7 +427,15 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, func, mem);
 
-    return call.Run(info);
+    if (!RG_UNLIKELY(call.Prepare(info)))
+        return env.Null();
+
+    if (instance->debug) {
+        call.DumpDebug();
+    }
+    call.Execute();
+
+    return call.Complete();
 }
 
 static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
@@ -487,7 +495,15 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, &func, mem);
 
-    return call.Run(info);
+    if (!RG_UNLIKELY(call.Prepare(info)))
+        return env.Null();
+
+    if (instance->debug) {
+        call.DumpDebug();
+    }
+    call.Execute();
+
+    return call.Complete();
 }
 
 class AsyncCall: public Napi::AsyncWorker {

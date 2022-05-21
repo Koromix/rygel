@@ -34,16 +34,12 @@ class CallData {
     InstanceData *instance;
     const FunctionInfo *func;
 
-    bool debug;
-
     InstanceMemory *mem;
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
 
     LocalArray<OutObject, MaxOutParameters> out_objects;
-
-    Span<uint8_t> heap;
-    Span<uint8_t> stack;
+    uint8_t *sp;
 
     union {
         uint32_t u32;
@@ -65,15 +61,13 @@ public:
     void Execute();
     Napi::Value Complete();
 
-    Napi::Value Run(const Napi::CallbackInfo &info);
-
     void DumpDebug() const;
 
 private:
     template <typename T = void>
-    bool AllocStack(Size size, Size align, T **out_ptr = nullptr);
+    bool AllocStack(Size size, Size align, T **out_ptr);
     template <typename T = void>
-    bool AllocHeap(Size size, Size align, T **out_ptr = nullptr);
+    bool AllocHeap(Size size, Size align, T **out_ptr);
 
     const char *PushString(const Napi::Value &value);
     const char16_t *PushString16(const Napi::Value &value);
@@ -86,7 +80,7 @@ private:
 };
 
 template <typename T>
-bool CallData::AllocStack(Size size, Size align, T **out_ptr)
+inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
 {
     uint8_t *ptr = AlignDown(mem->stack.end() - size, align);
     Size delta = mem->stack.end() - ptr;
@@ -96,20 +90,14 @@ bool CallData::AllocStack(Size size, Size align, T **out_ptr)
         return false;
     }
 
-    if (debug) {
-        memset(ptr, 0, delta);
-    }
-
     mem->stack.len -= delta;
 
-    if (out_ptr) {
-        *out_ptr = (T *)ptr;
-    }
+    *out_ptr = (T *)ptr;
     return true;
 }
 
 template <typename T>
-bool CallData::AllocHeap(Size size, Size align, T **out_ptr)
+inline bool CallData::AllocHeap(Size size, Size align, T **out_ptr)
 {
     uint8_t *ptr = AlignUp(mem->heap.ptr, align);
     Size delta = size + (ptr - mem->heap.ptr);
@@ -119,16 +107,10 @@ bool CallData::AllocHeap(Size size, Size align, T **out_ptr)
         return false;
     }
 
-    if (debug) {
-        memset(mem->heap.ptr, 0, (size_t)delta);
-    }
-
     mem->heap.ptr += delta;
     mem->heap.len -= delta;
 
-    if (out_ptr) {
-        *out_ptr = (T *)ptr;
-    }
+    *out_ptr = (T *)ptr;
     return true;
 }
 
