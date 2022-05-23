@@ -128,17 +128,17 @@ bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *
 
 class HfaAnalyser {
     uint32_t primitives;
-    Size count;
+    int count;
 
 public:
-    bool Analyse(const TypeInfo *type, int min, int max);
+    int Analyse(const TypeInfo *type, int min, int max);
 
 private:
     void AnalyseStruct(const TypeInfo *type);
     void AnalyseArray(const TypeInfo *type);
 };
 
-bool HfaAnalyser::Analyse(const TypeInfo *type, int min, int max)
+int HfaAnalyser::Analyse(const TypeInfo *type, int min, int max)
 {
     primitives = 0;
     count = 0;
@@ -152,7 +152,7 @@ bool HfaAnalyser::Analyse(const TypeInfo *type, int min, int max)
     }
 
     bool hfa = (count >= min && count <= max && PopCount(primitives) == 1);
-    return hfa;
+    return hfa ? count : 0;
 }
 
 void HfaAnalyser::AnalyseStruct(const TypeInfo *type)
@@ -192,7 +192,7 @@ void HfaAnalyser::AnalyseArray(const TypeInfo *type)
     }
 }
 
-bool IsHFA(const TypeInfo *type, int min, int max)
+int IsHFA(const TypeInfo *type, int min, int max)
 {
     HfaAnalyser analyser;
     return analyser.Analyse(type, min, max);

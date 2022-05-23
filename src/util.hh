@@ -89,6 +89,6 @@ T CopyNumber(const Napi::Value &value)
     RG_UNREACHABLE();
 }
 
-bool IsHFA(const TypeInfo *type, int min, int max);
+int IsHFA(const TypeInfo *type, int min, int max);
 
 }

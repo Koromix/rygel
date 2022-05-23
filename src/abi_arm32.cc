@@ -71,16 +71,15 @@ static inline bool HasVFP()
     return vfp;
 }
 
-static inline bool IsHFA(const TypeInfo *type)
+static inline int IsHFA(const TypeInfo *type)
 {
-    return HasVFP() && IsHFA(type, 1, 4);
+    return HasVFP() ? IsHFA(type, 1, 4) : 0;
 }
 
 bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
-    if (IsHFA(func->ret.type)) {
-        func->ret.vec_count = func->ret.type->members.len *
-                              (func->ret.type->members[0].type->size / 4);
+    if (int hfa = IsHFA(func->ret.type); hfa) {
+        func->ret.vec_count = hfa;
     } else if (func->ret.type->primitive != PrimitiveKind::Record ||
                func->ret.type->size <= 4) {
         func->ret.gpr_count = (func->ret.type->size > 4) ? 2 : 1;
