@@ -32,14 +32,14 @@ ISA / OS           | Windows     | Linux    | macOS       | FreeBSD     | OpenBS
 ------------------ | ----------- | -------- | ----------- | ----------- | --------
 x86 (IA32) [^1]    | 🟩 Yes      | 🟩 Yes   | ⬜️ N/A      | 🟩 Yes      | 🟩 Yes
 x86_64 (AMD64)     | 🟩 Yes      | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟩 Yes
-ARM32 VFP LE       | ⬜️ N/A      | 🟩 Yes   | ⬜️ N/A      | 🟨 Probably | 🟨 Probably
-ARM32 (no VFP) LE  | ⬜️ N/A      | 🟧 Maybe | ⬜️ N/A      | 🟧 Maybe    | 🟧 Maybe
-ARM64 (AArch64) LE | 🟧 Maybe    | 🟩 Yes   | 🟩 Yes [^2] | 🟩 Yes      | 🟨 Probably
+ARM32 LE [^2]      | ⬜️ N/A      | 🟩 Yes   | ⬜️ N/A      | 🟨 Probably | 🟨 Probably
+ARM64 (AArch64) LE | 🟧 Maybe    | 🟩 Yes   | 🟩 Yes [^3] | 🟩 Yes      | 🟨 Probably
 RISC-V 32          | ⬜️ N/A      | 🟥 No    | ⬜️ N/A      | 🟥 No       | 🟥 No
 RISC-V 64          | ⬜️ N/A      | 🟥 No    | ⬜️ N/A      | 🟥 No       | 🟥 No
 
 [^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall
-[^2]: However, we don't provide prebuilt binaries for macOS on Apple M1
+[^2]: The test machines have a VFP coprocessor, but Koffi is theoretically able to detect and work with non-VFP CPUs (untested)
+[^3]: However, we don't provide prebuilt binaries for macOS on Apple M1
 
 This is still in development, bugs are to be expected. More tests will come in the near future.
 
