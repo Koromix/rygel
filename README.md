@@ -34,7 +34,7 @@ x86 (IA32) [^1]    | 🟩 Yes      | 🟩 Yes   | ⬜️ N/A      | 🟩 Yes    
 x86_64 (AMD64)     | 🟩 Yes      | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟩 Yes
 ARM32 VFP LE       | ⬜️ N/A      | 🟩 Yes   | ⬜️ N/A      | 🟨 Probably | 🟨 Probably
 ARM32 (no VFP) LE  | ⬜️ N/A      | 🟧 Maybe | ⬜️ N/A      | 🟧 Maybe    | 🟧 Maybe
-ARM64 (AArch64) LE | 🟨 Probably | 🟩 Yes   | 🟩 Yes [^2] | 🟩 Yes      | 🟨 Probably
+ARM64 (AArch64) LE | 🟧 Maybe    | 🟩 Yes   | 🟩 Yes [^2] | 🟩 Yes      | 🟨 Probably
 RISC-V 32          | ⬜️ N/A      | 🟥 No    | ⬜️ N/A      | 🟥 No       | 🟥 No
 RISC-V 64          | ⬜️ N/A      | 🟥 No    | ⬜️ N/A      | 🟥 No       | 🟥 No
 
