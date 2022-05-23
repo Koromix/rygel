@@ -93,7 +93,7 @@ extern "C" const char *FelixTarget;
 extern "C" const char *FelixVersion;
 extern "C" const char *FelixCompiler;
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || __riscv_xlen == 64
     typedef int64_t Size;
     #define RG_SIZE_MAX INT64_MAX
 #elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
@@ -195,6 +195,8 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
     #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xd4200000")
 #elif defined(__arm__)
     #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xe7f001f0")
+#elif defined(__riscv)
+    #define RG_DEBUG_BREAK() __asm__ __volatile__("ebreak")
 #endif
 
 #define RG_CRITICAL(Cond, ...) \
