@@ -3745,7 +3745,7 @@ static std::atomic_bool flag_interrupt = false;
 static std::atomic_bool explicit_interrupt = false;
 static int interrupt_pfd[2] = {-1, -1};
 
-static void SetSignalHandler(int signal, struct sigaction *prev, void (*func)(int))
+void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev)
 {
     struct sigaction action = {};
 
@@ -3786,10 +3786,10 @@ RG_INIT(SetupDefaultHandlers)
     int ret = setpgid(0, 0);
     RG_ASSERT(!ret);
 
-    SetSignalHandler(SIGINT, nullptr, DefaultSignalHandler);
-    SetSignalHandler(SIGTERM, nullptr, DefaultSignalHandler);
-    SetSignalHandler(SIGHUP, nullptr, DefaultSignalHandler);
-    SetSignalHandler(SIGPIPE, nullptr, [](int) {});
+    SetSignalHandler(SIGINT, DefaultSignalHandler);
+    SetSignalHandler(SIGTERM, DefaultSignalHandler);
+    SetSignalHandler(SIGHUP, DefaultSignalHandler);
+    SetSignalHandler(SIGPIPE, [](int) {});
 }
 
 RG_EXIT(TerminateChildren)
@@ -3797,7 +3797,7 @@ RG_EXIT(TerminateChildren)
     pid_t pid = getpid();
     RG_ASSERT(pid > 1);
 
-    SetSignalHandler(SIGTERM, nullptr, [](int) {});
+    SetSignalHandler(SIGTERM, [](int) {});
     kill(-pid, SIGTERM);
 }
 
@@ -4168,7 +4168,7 @@ WaitForResult WaitForInterrupt(int64_t timeout)
     static std::atomic_bool message = false;
 
     flag_interrupt = true;
-    SetSignalHandler(SIGUSR1, nullptr, [](int) { message = true; });
+    SetSignalHandler(SIGUSR1, [](int) { message = true; });
 
     if (timeout >= 0) {
         struct timespec ts;

@@ -54,6 +54,7 @@
     #pragma intrinsic(__rdtsc)
 #endif
 
+struct sigaction;
 struct BrotliEncoderStateStruct;
 
 namespace RG {
@@ -3931,6 +3932,8 @@ enum class PipeMode {
 bool CreateOverlappedPipe(bool overlap0, bool overlap1, PipeMode mode, void *out_handles[2]); // HANDLE
 void CloseHandleSafe(void **handle_ptr); // HANDLE
 #else
+void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev = nullptr);
+
 bool CreatePipe(int pfd[2]);
 void CloseDescriptorSafe(int *fd_ptr);
 #endif
