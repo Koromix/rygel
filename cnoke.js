@@ -321,7 +321,23 @@ async function build() {
         try {
             let archive_filename = null;
 
-            if (url.match('^[a-z]+://')) {
+            if (url.startsWith('file:/')) {
+                if (url.startsWith('file://localhost/')) {
+                    url = url.substr(16);
+                } else {
+                    let offset = 6;
+                    while (offset < 9 && url[offset] == '/')
+                        offset++;
+                    url = url.substr(offset - 1);
+                }
+
+                if (process.platform == 'win32' && url.match(/^\/[a-zA-Z]+:[\\\/]/))
+                    url = url.substr(1);
+            }
+
+            console.log(url);
+
+            if (url.match(/^[a-z]+:\/\//)) {
                 archive_filename = build_dir + '/' + basename;
                 await download(url, archive_filename);
             } else {
