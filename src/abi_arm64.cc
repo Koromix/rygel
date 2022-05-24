@@ -86,10 +86,12 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                 }
             } break;
             case PrimitiveKind::Record: {
-                bool hfa = IsHFA(param.type);
+                int hfa = IsHFA(param.type);
 
 #if defined(_WIN32)
-                hfa &= !param.variadic;
+                if (!param.variadic) {
+                    hfa = 0;
+                }
 #elif defined(__APPLE__)
                 if (param.variadic) {
                     param.use_memory = (param.type->size > 16);
@@ -98,11 +100,9 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 #endif
 
                 if (hfa) {
-                    int vec_count = (int)param.type->members.len;
-
-                    if (vec_count <= vec_avail) {
-                        param.vec_count = vec_count;
-                        vec_avail -= vec_count;
+                    if (hfa <= vec_avail) {
+                        param.vec_count = hfa;
+                        vec_avail -= hfa;
                     } else {
                         vec_avail = 0;
                     }

@@ -122,13 +122,12 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                 }
             } break;
             case PrimitiveKind::Record: {
-                if (IsHFA(param.type)) {
-                    int vec_count = (int)(param.type->members.len *
-                                          param.type->members[0].type->size / 4);
+                int hfa = IsHFA(param.type);
 
-                    if (vec_count <= vec_avail) {
-                        param.vec_count = vec_count;
-                        vec_avail -= vec_count;
+                if (hfa) {
+                    if (hfa <= vec_avail) {
+                        param.vec_count = hfa;
+                        vec_avail -= hfa;
                     } else {
                         vec_avail = 0;
                         started_stack = true;
