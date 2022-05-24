@@ -165,7 +165,7 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int xmm_avail)
         xmm_count += (cls == RegisterClass::SSE);
     }
 
-    if (gpr_count <= gpr_avail && xmm_count <= xmm_avail){
+    if (gpr_count <= gpr_avail && xmm_count <= xmm_avail) {
         param->gpr_count = (int8_t)gpr_count;
         param->xmm_count = (int8_t)xmm_count;
         param->gpr_first = (classes[0] == RegisterClass::Integer);
