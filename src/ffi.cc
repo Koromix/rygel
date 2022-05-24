@@ -106,6 +106,11 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         type->members.Append(member);
     }
 
+    if (!type->size) {
+        ThrowError<Napi::TypeError>(env, "Empty struct '%1' is not allowed in C", type->name);
+        return env.Null();
+    }
+
     type->size = (int16_t)AlignLen(type->size, type->align);
 
     // If the insert succeeds, we cannot fail anymore
@@ -296,7 +301,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     if (!ref)
         return env.Null();
     if (len <= 0) {
-        ThrowError<Napi::TypeError>(env, "Array length must be non-zero positive");
+        ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
         return env.Null();
     }
     if (len > INT16_MAX / ref->size) {
