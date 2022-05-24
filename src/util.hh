@@ -89,6 +89,8 @@ T CopyNumber(const Napi::Value &value)
     RG_UNREACHABLE();
 }
 
+int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
+
 int IsHFA(const TypeInfo *type, int min, int max);
 
 }

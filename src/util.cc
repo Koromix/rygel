@@ -126,76 +126,46 @@ bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *
     return match;
 }
 
-class HfaAnalyser {
-    uint32_t primitives;
-    int count;
-
-public:
-    int Analyse(const TypeInfo *type, int min, int max);
-
-private:
-    void AnalyseStruct(const TypeInfo *type);
-    void AnalyseArray(const TypeInfo *type);
-};
-
-int HfaAnalyser::Analyse(const TypeInfo *type, int min, int max)
+static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
 {
-    primitives = 0;
-    count = 0;
-
     if (type->primitive == PrimitiveKind::Record) {
-        AnalyseStruct(type);
-    } else if (type->primitive == PrimitiveKind::Array) {
-        AnalyseArray(type);
-    } else {
-        return false;
-    }
-
-    bool hfa = (count >= min && count <= max && PopCount(primitives) == 1);
-    return hfa ? count : 0;
-}
-
-void HfaAnalyser::AnalyseStruct(const TypeInfo *type)
-{
-    RG_ASSERT(type->primitive == PrimitiveKind::Record);
-
-    for (const RecordMember &member: type->members) {
-        if (member.type->primitive == PrimitiveKind::Record) {
-            AnalyseStruct(member.type);
-        } else if (member.type->primitive == PrimitiveKind::Array) {
-            AnalyseArray(member.type);
-        } else if (member.type->primitive == PrimitiveKind::Float32 ||
-                   member.type->primitive == PrimitiveKind::Float64) {
-            primitives |= 1u << (int)member.type->primitive;
-            count++;
-        } else {
-            primitives = UINT_MAX;
-            return;
+        for (int i = 0; i < count; i++) {
+            for (const RecordMember &member: type->members) {
+                offset = AnalyseFlatRec(member.type, offset, 1, func);
+            }
         }
+    } else if (type->primitive == PrimitiveKind::Array) {
+        count *= type->size / type->ref->size;
+        offset = AnalyseFlatRec(type->ref, offset, count, func);
+    } else {
+        func(type, offset, count);
+        offset += count;
     }
+
+    return offset;
 }
 
-void HfaAnalyser::AnalyseArray(const TypeInfo *type)
+int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
 {
-    RG_ASSERT(type->primitive == PrimitiveKind::Array);
-
-    if (type->ref->primitive == PrimitiveKind::Record) {
-        AnalyseStruct(type->ref);
-    } else if (type->ref->primitive == PrimitiveKind::Array) {
-        AnalyseArray(type->ref);
-    } else if (type->ref->primitive == PrimitiveKind::Float32 ||
-               type->ref->primitive == PrimitiveKind::Float64) {
-        primitives |= 1u << (int)type->ref->primitive;
-        count += type->size / type->ref->size;;
-    } else {
-        primitives = UINT_MAX;
-    }
+    return AnalyseFlatRec(type, 0, 1, func);
 }
 
 int IsHFA(const TypeInfo *type, int min, int max)
 {
-    HfaAnalyser analyser;
-    return analyser.Analyse(type, min, max);
+    uint32_t primitives = 0;
+    int count = 0;
+
+    count = AnalyseFlat(type, [&](const TypeInfo *type, int, int) {
+        if (type->primitive == PrimitiveKind::Float32 ||
+               type->primitive == PrimitiveKind::Float64) {
+            primitives |= 1u << (int)type->primitive;
+        } else {
+            primitives = UINT32_MAX;
+        }
+    });
+
+    bool hfa = (count >= min && count <= max && PopCount(primitives) == 1);
+    return hfa ? count : 0;
 }
 
 }
