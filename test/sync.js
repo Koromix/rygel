@@ -51,6 +51,15 @@ const Double3 = koffi.struct('Double3', {
     })
 });
 
+const FloatInt = koffi.struct('FloatInt', {
+    f: 'float',
+    i: 'int'
+});
+const IntFloat = koffi.struct('IntFloat', {
+    i: 'int',
+    f: 'float'
+});
+
 const BFG = koffi.struct('BFG', {
     a: 'int8_t',
     b: 'int64_t',
@@ -119,6 +128,8 @@ async function test() {
     const ThroughFloat3 = lib.func('Float3 ThroughFloat3(Float3 f3)');
     const PackDouble2 = lib.func('Double2 PackDouble2(double a, double b, _Out_ Double2 *out)');
     const PackDouble3 = lib.func('Double3 PackDouble3(double a, double b, double c, _Out_ Double3 *out)');
+    const ReverseFloatInt = lib.func('IntFloat ReverseFloatInt(FloatInt sfi)');
+    const ReverseIntFloat = lib.func('FloatInt ReverseIntFloat(IntFloat sif)');
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
     const ConcatenateToInt4 = lib.func('ConcatenateToInt4', 'int64_t', Array(12).fill('int32_t'));
     const ConcatenateToInt8 = lib.func('ConcatenateToInt8', 'int64_t', Array(12).fill('int64_t'));
@@ -204,6 +215,13 @@ async function test() {
         let d3 = PackDouble3(0.5, 10.0, 5.0, d3p);
         assert.deepEqual(d3, { a: 0.5, s: { b: 10.0, c: 5.0 } });
         assert.deepEqual(d3, d3p);
+    }
+
+    // Mixed int/float structs
+    {
+        let sif = { i: 4, f: 2.0 };
+        assert.deepEqual(ReverseIntFloat(sif), { i: 2, f: 4 });
+        assert.deepEqual(ReverseFloatInt(sif), { i: 2, f: 4 });
     }
 
     // Many parameters

@@ -75,6 +75,15 @@ typedef struct Double3 {
     } s;
 } Double3;
 
+typedef struct FloatInt {
+    float f;
+    int i;
+} FloatInt;
+typedef struct IntFloat {
+    int i;
+    float f;
+} IntFloat;
+
 typedef struct IJK1 { int8_t i; int8_t j; int8_t k; } IJK1;
 typedef struct IJK4 { int32_t i; int32_t j; int32_t k; } IJK4;
 typedef struct IJK8 { int64_t i; int64_t j; int64_t k; } IJK8;
@@ -231,6 +240,26 @@ EXPORT Double3 PackDouble3(double a, double b, double c, Double3 *out)
     *out = ret;
 
     return ret;
+}
+
+EXPORT IntFloat ReverseFloatInt(FloatInt sfi)
+{
+    IntFloat sif;
+
+    sif.i = (int)sfi.f;
+    sif.f = (float)sfi.i;
+
+    return sif;
+}
+
+EXPORT FloatInt ReverseIntFloat(IntFloat sif)
+{
+    FloatInt sfi;
+
+    sfi.i = (int)sif.f;
+    sfi.f = (float)sif.i;
+
+    return sfi;
 }
 
 EXPORT int64_t ConcatenateToInt1(int8_t a, int8_t b, int8_t c, int8_t d, int8_t e, int8_t f,
