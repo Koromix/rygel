@@ -90,6 +90,10 @@ inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
         return false;
     }
 
+#ifdef RG_DEBUG
+    memset(ptr, 0, delta);
+#endif
+
     mem->stack.len -= delta;
 
     *out_ptr = (T *)ptr;
@@ -106,6 +110,10 @@ inline bool CallData::AllocHeap(Size size, Size align, T **out_ptr)
         ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
         return false;
     }
+
+#ifdef RG_DEBUG
+    memset(mem->heap.ptr, 0, (size_t)delta);
+#endif
 
     mem->heap.ptr += delta;
     mem->heap.len -= delta;
