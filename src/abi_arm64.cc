@@ -427,10 +427,10 @@ void CallData::Execute()
         case PrimitiveKind::Record: {
             if (func->ret.gpr_count) {
                 X0X1Ret ret = PERFORM_CALL(GG);
-                memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.vec_count) {
                 HfaRet ret = PERFORM_CALL(DDDD);
-                memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
                 PERFORM_CALL(GG);
             }

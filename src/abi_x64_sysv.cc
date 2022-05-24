@@ -452,16 +452,16 @@ void CallData::Execute()
         case PrimitiveKind::Record: {
             if (func->ret.gpr_first && !func->ret.xmm_count) {
                 RaxRdxRet ret = PERFORM_CALL(GG);
-                memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.gpr_first) {
                 RaxXmm0Ret ret = PERFORM_CALL(GD);
-                memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.xmm_count == 2) {
                 Xmm0Xmm1Ret ret = PERFORM_CALL(DD);
-                memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
                 Xmm0RaxRet ret = PERFORM_CALL(DG);
-                memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;

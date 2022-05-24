@@ -443,7 +443,7 @@ void CallData::Execute()
         case PrimitiveKind::Record: {
             if (func->ret.vec_count) {
                 HfaRet ret = PERFORM_CALL(DDDD);
-                memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
                 result.u64 = PERFORM_CALL(GG);
             }

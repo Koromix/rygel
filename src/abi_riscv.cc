@@ -407,10 +407,10 @@ void CallData::Execute()
         case PrimitiveKind::Record: {
             if (func->ret.vec_count) {
                 Fa0Fa1Ret ret = PERFORM_CALL(DD);
-                memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
                 A0A1Ret ret = PERFORM_CALL(GG);
-                memcpy_safe(&result.buf, &ret, RG_SIZE(ret));
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
