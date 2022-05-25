@@ -303,6 +303,8 @@ async function pack() {
             ignore.add(machine);
     }
 
+    let ready = ignore.size;
+
     success &= await start(false);
     success &= await copy(machine => Object.values(machine.builds).map(build => build.directory));
 
@@ -404,6 +406,9 @@ async function pack() {
 
     if (machines.some(machine => machine.started))
         success &= await stop(false);
+
+    if (ignore.size > ready)
+        throw new Error('Some machines are missing, refusing to pack');
 
     return success;
 }
