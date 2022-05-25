@@ -39,41 +39,13 @@ extern "C" uint64_t ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
 extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp);
 
-static bool DetectVFP()
-{
-    // If anything fails, assume VFP is available (true for most Linux platforms)
-    static volatile bool vfp = true;
-    static jmp_buf env;
-
-    struct sigaction prev;
-    SetSignalHandler(SIGILL, [](int) {
-        vfp = false;
-        longjmp(env, 1);
-    }, &prev);
-
-    if (!setjmp(env)) {
-        __asm__ volatile("vmov.f64 d0, #1.0" ::: "d0");
-    }
-
-    return vfp;
-}
-
-static inline bool HasVFP()
-{
-    static bool init = false;
-    static bool vfp;
-
-    if (!init) {
-        vfp = DetectVFP();
-        init = true;
-    }
-
-    return vfp;
-}
-
 static inline int IsHFA(const TypeInfo *type)
 {
-    return HasVFP() ? IsHFA(type, 1, 4) : 0;
+#ifdef __ARM_PCS_VFP
+    return IsHFA(type, 1, 4);
+#else
+    return false;
+#endif
 }
 
 bool AnalyseFunction(InstanceData *, FunctionInfo *func)
@@ -149,7 +121,12 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32:
             case PrimitiveKind::Float64: {
-                bool vfp = HasVFP() && !param.variadic;
+#ifdef __ARM_PCS_VFP
+                bool vfp = !param.variadic;
+#else
+                bool vfp = false;
+#endif
+
                 Size need = param.type->size / 4;
 
                 if (vfp) {

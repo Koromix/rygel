@@ -35,9 +35,9 @@ ARM32 LE [^2]      | ⬜️ N/A      | 🟩 Yes   | ⬜️ N/A      | 🟨 Proba
 ARM64 (AArch64) LE | 🟧 Maybe    | 🟩 Yes   | 🟩 Yes [^3] | 🟩 Yes      | 🟨 Probably
 RISC-V 64 (LP64D)  | ⬜️ N/A      | 🟩 Yes   | ⬜️ N/A      | 🟨 Probably | 🟨 Probably
 
-[^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall
-[^2]: The test machines have a VFP coprocessor, but Koffi is theoretically able to detect and work with non-VFP CPUs (untested)
-[^3]: However, we don't provide prebuilt binaries for macOS on Apple M1
+[^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall.
+[^2]: The prebuilt binary uses the hard float ABI and expects a VFP coprocessor. Build from source to use Koffi with a different ABI (softfp, soft).
+[^3]: However, we don't provide prebuilt binaries for macOS on Apple M1.
 
 This is still in development, bugs are to be expected. More tests will come in the near future.
 
