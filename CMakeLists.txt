@@ -34,6 +34,7 @@ set(KOFFI_SRC
     src/call.cc
     src/abi_arm32.cc
     src/abi_arm64.cc
+    src/abi_riscv.cc
     src/abi_x64_sysv.cc
     src/abi_x64_win.cc
     src/abi_x86.cc
@@ -45,6 +46,8 @@ set(KOFFI_SRC
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm")
         list(APPEND KOFFI_SRC src/abi_arm64_fwd.S)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv")
+        list(APPEND KOFFI_SRC src/abi_riscv64_fwd.S)
     elseif(WIN32)
         list(APPEND KOFFI_SRC src/abi_x64_win_fwd.asm)
     else()
@@ -53,6 +56,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
         list(APPEND KOFFI_SRC src/abi_arm32_fwd.S)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv")
+        list(APPEND KOFFI_SRC src/abi_riscv32_fwd.S)
     elseif(WIN32)
         list(APPEND KOFFI_SRC src/abi_x86_fwd.asm)
     else()

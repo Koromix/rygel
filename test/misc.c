@@ -188,6 +188,11 @@ EXPORT Float2 PackFloat2(float a, float b, Float2 *out)
     return ret;
 }
 
+EXPORT Float2 ThroughFloat2(Float2 f2)
+{
+    return f2;
+}
+
 EXPORT Float3 PackFloat3(float a, float b, float c, Float3 *out)
 {
     Float3 ret;

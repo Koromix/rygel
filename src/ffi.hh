@@ -141,6 +141,10 @@ struct ParameterInfo {
 #elif defined(__i386__) || defined(_M_IX86)
     bool trivial; // Only matters for return value
     bool fast;
+#elif __riscv_xlen == 64
+    bool use_memory; // Only used for return value
+    int8_t gpr_count;
+    int8_t vec_count;
 #endif
 };
 
@@ -162,7 +166,7 @@ struct FunctionInfo {
     // ABI-specific part
 
     Size args_size;
-#if defined(__arm__) || defined(__aarch64__) || defined(__x86_64__) || defined(_WIN64)
+#if defined(__arm__) || defined(__aarch64__) || defined(__x86_64__) || defined(_WIN64) || defined(__riscv)
     bool forward_fp;
 #endif
 #if defined(__i386__) || defined(_M_IX86)

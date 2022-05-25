@@ -511,5 +511,50 @@
                 }
             }
         }
+    },
+
+    "debian_riscv64": {
+        "name": "Debian RISC-V 64",
+
+        "qemu": {
+            "binary": "qemu-system-riscv64",
+            "arguments": ["-machine", "virt", "-cpu", "rv64", "-m", "1G", "-smp", 2, "-device", "virtio-blk-device,drive=hd", "-drive", "file=disk.qcow2,if=none,id=hd", "-device", "virtio-net-device,netdev=net", "-netdev", "user,id=net,hostfwd=tcp::22212-:22", "-bios", "fw_jump.elf", "-kernel", "uboot.elf", "-append", "root=LABEL=rootfs console=ttyS0", "-vnc", "127.0.0.1:22"]
+        },
+
+        "info": {
+            "version": 1,
+            "platform": "linux",
+            "arch": "riscv64",
+
+            "ssh_port": 22212,
+            "vnc_port": 5912,
+
+            "username": "debian",
+            "password": "debian",
+
+            "shutdown": "sudo poweroff"
+        },
+
+        "builds": {
+            "Linux RISC-V 64": {
+                "directory": "/home/debian/luigi",
+                "build": "node ../cnoke/cnoke.js"
+            }
+        },
+
+        "tests": {
+            "Linux RISC-V 64": {
+                "directory": "/home/debian/luigi",
+                "build": {
+                    "Build": "node ../cnoke/cnoke.js -C test"
+                },
+                "commands": {
+                    "Test Sync": "node test/sync.js",
+                    "Test Async": "node test/async.js",
+                    "Test Raylib": "xvfb-run node test/raylib.js",
+                    "Test SQLite": "node test/sqlite.js"
+                }
+            }
+        }
     }
 }

@@ -23,8 +23,7 @@ Koffi is a fast and easy-to-use FFI module for Node.js, with support for primiti
 The following features are planned in the near future:
 
 * 1.2: C to JS callbacks
-* 1.3: RISC-V support (32 and 64 bit)
-* 1.4: Type parser
+* 1.3: Type parser
 
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
@@ -34,8 +33,8 @@ x86 (IA32) [^1]    | 🟩 Yes      | 🟩 Yes   | ⬜️ N/A      | 🟩 Yes    
 x86_64 (AMD64)     | 🟩 Yes      | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟩 Yes
 ARM32 LE [^2]      | ⬜️ N/A      | 🟩 Yes   | ⬜️ N/A      | 🟨 Probably | 🟨 Probably
 ARM64 (AArch64) LE | 🟧 Maybe    | 🟩 Yes   | 🟩 Yes [^3] | 🟩 Yes      | 🟨 Probably
-RISC-V 32          | ⬜️ N/A      | 🟥 No    | ⬜️ N/A      | 🟥 No       | 🟥 No
-RISC-V 64          | ⬜️ N/A      | 🟥 No    | ⬜️ N/A      | 🟥 No       | 🟥 No
+RISC-V 32          | ⬜️ N/A      | 🟥 WIP   | ⬜️ N/A      | 🟥 WIP      | 🟥 WIP
+RISC-V 64          | ⬜️ N/A      | 🟩 Yes   | ⬜️ N/A      | 🟨 Probably | 🟨 Probably
 
 [^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall
 [^2]: The test machines have a VFP coprocessor, but Koffi is theoretically able to detect and work with non-VFP CPUs (untested)

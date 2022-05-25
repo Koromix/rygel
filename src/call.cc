@@ -565,13 +565,11 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *src, const TypeInfo *t
                 obj.Set(member.name, value);
             } break;
             case PrimitiveKind::Float32: {
-                float f;
-                memcpy(&f, src, 4);
+                float f = *(float *)src;
                 obj.Set(member.name, Napi::Number::New(env, (double)f));
             } break;
             case PrimitiveKind::Float64: {
-                double d;
-                memcpy(&d, src, 8);
+                double d = *(double *)src;
                 obj.Set(member.name, Napi::Number::New(env, d));
             } break;
         }
