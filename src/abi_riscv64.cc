@@ -68,7 +68,15 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
     bool gpr_first = false;
 
     AnalyseFlat(param->type, [&](const TypeInfo *type, int offset, int count) {
-        if (IsFloat(type)) {
+#if defined(__riscv_float_abi_double)
+        bool fp = IsFloat(type);
+#elif defined(__riscv_float_abi_soft)
+        bool fp = false;
+#else
+        #error The RISC-V single-precision float ABI (LP64F) is not supported
+#endif
+
+        if (fp) {
             vec_count += count;
         } else {
             gpr_count += count;
