@@ -124,7 +124,8 @@ async function main() {
             machine.started = false;
 
             machine.qemu.accelerate = null;
-            if (accelerate && machine.qemu.binary == 'qemu-system-x86_64') {
+            if (accelerate && (machine.qemu.binary == 'qemu-system-x86_64' ||
+                               machine.qemu.binary == 'qemu-system-i386')) {
                 if (process.platform == 'linux') {
                     machine.qemu.accelerate = 'kvm';
                 } else if (process.platform == 'win32') {
