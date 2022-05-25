@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#ifdef __riscv
+#if __riscv_xlen == 64
 
 #include "vendor/libcc/libcc.hh"
 #include "ffi.hh"
@@ -90,8 +90,6 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
 
 bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
-    const int treshold = (__riscv_xlen / 4); // 8 for RV32, 16 for RV64
-
     AnalyseParameter(&func->ret, 2, 2);
 
     int gpr_avail = 8 - func->ret.use_memory;
@@ -104,7 +102,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
         vec_avail = std::max(0, vec_avail - param.vec_count);
     }
 
-    func->args_size = treshold * func->parameters.len;
+    func->args_size = 8 * func->parameters.len;
     func->forward_fp = (vec_avail < 8);
 
     return true;
@@ -113,18 +111,13 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 bool CallData::Prepare(const Napi::CallbackInfo &info)
 {
     uint8_t *args_ptr = nullptr;
-#if __riscv_xlen == 64
     uint64_t *gpr_ptr = nullptr;
     uint64_t *vec_ptr = nullptr;
-#else
-    uint32_t *gpr_ptr = nullptr;
-    uint32_t *vec_ptr = nullptr;
-#endif
 
     // Return through registers unless it's too big
     if (RG_UNLIKELY(!AllocStack(func->args_size, 16, &args_ptr)))
         return false;
-    if (RG_UNLIKELY(!AllocStack(8 * RG_SIZE(void *), 8, &gpr_ptr)))
+    if (RG_UNLIKELY(!AllocStack(8 * 8, 8, &gpr_ptr)))
         return false;
     if (RG_UNLIKELY(!AllocStack(8 * 8, 8, &vec_ptr)))
         return false;
