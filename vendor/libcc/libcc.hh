@@ -116,6 +116,7 @@ extern "C" const char *FelixCompiler;
 #if ULLONG_MAX != 0xFFFFFFFFFFFFFFFFull
     #error This code base is not designed to support non-64-bits long long types
 #endif
+static_assert(sizeof(double) == 8, "This code base is not designed to support single-precision double floats");
 
 #define RG_STRINGIFY_(a) #a
 #define RG_STRINGIFY(a) RG_STRINGIFY_(a)
