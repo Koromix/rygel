@@ -142,9 +142,10 @@ struct ParameterInfo {
     bool trivial; // Only matters for return value
     bool fast;
 #elif __riscv_xlen == 64
-    bool use_memory; // Only used for return value
+    bool use_memory;
     int8_t gpr_count;
     int8_t vec_count;
+    bool gpr_first; // Only for structs
 #endif
 };
 

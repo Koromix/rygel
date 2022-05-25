@@ -15,11 +15,15 @@
 // Unlike the three next functions, these ones don't forward FA argument registers.
 .global ForwardCallGG
 .global ForwardCallF
+.global ForwardCallDG
+.global ForwardCallGD
 .global ForwardCallDD
 
 // The X variants are slightly slower, and are used when FA arguments must be forwarded.
 .global ForwardCallXGG
 .global ForwardCallXF
+.global ForwardCallXDG
+.global ForwardCallXGD
 .global ForwardCallXDD
 
 // Copy function pointer to t0, in order to save it through argument forwarding.
@@ -79,6 +83,16 @@ ForwardCallF:
     forward_int
     epilogue
 
+ForwardCallDG:
+    prologue
+    forward_int
+    epilogue
+
+ForwardCallGD:
+    prologue
+    forward_int
+    epilogue
+
 ForwardCallDD:
     prologue
     forward_int
@@ -91,6 +105,18 @@ ForwardCallXGG:
     epilogue
 
 ForwardCallXF:
+    prologue
+    forward_vec
+    forward_int
+    epilogue
+
+ForwardCallXDG:
+    prologue
+    forward_vec
+    forward_int
+    epilogue
+
+ForwardCallXGD:
     prologue
     forward_vec
     forward_int

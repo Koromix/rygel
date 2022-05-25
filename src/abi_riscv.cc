@@ -26,6 +26,14 @@ struct A0A1Ret {
     uint64_t a0;
     uint64_t a1;
 };
+struct A0Fa0Ret {
+    uint64_t a0;
+    double fa0;
+};
+struct Fa0A0Ret {
+    double fa0;
+    uint64_t a0;
+};
 struct Fa0Fa1Ret {
     double fa0;
     double fa1;
@@ -33,90 +41,67 @@ struct Fa0Fa1Ret {
 
 extern "C" A0A1Ret ForwardCallGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallF(const void *func, uint8_t *sp);
+extern "C" Fa0A0Ret ForwardCallDG(const void *func, uint8_t *sp);
+extern "C" A0Fa0Ret ForwardCallGD(const void *func, uint8_t *sp);
 extern "C" Fa0Fa1Ret ForwardCallDD(const void *func, uint8_t *sp);
 
 extern "C" A0A1Ret ForwardCallXGG(const void *func, uint8_t *sp);
 extern "C" float ForwardCallXF(const void *func, uint8_t *sp);
+extern "C" Fa0A0Ret ForwardCallXDG(const void *func, uint8_t *sp);
+extern "C" A0Fa0Ret ForwardCallXGD(const void *func, uint8_t *sp);
 extern "C" Fa0Fa1Ret ForwardCallXDD(const void *func, uint8_t *sp);
 
-static int IsHFA(const TypeInfo *type)
+static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
 {
-    return IsHFA(type, 1, 2);
+    gpr_avail = std::min(2, gpr_avail);
+    vec_avail = std::min(2, vec_avail);
+
+    if (param->type->size > 16) {
+        param->gpr_count = gpr_avail ? 1 : 0;
+        param->use_memory = true;
+
+        return;
+    }
+
+    int gpr_count = 0;
+    int vec_count = 0;
+    bool gpr_first = false;
+
+    AnalyseFlat(param->type, [&](const TypeInfo *type, int offset, int count) {
+        if (IsFloat(type)) {
+            vec_count += count;
+        } else {
+            gpr_count += count;
+            gpr_first |= !vec_count;
+        }
+    });
+
+    if (gpr_count == 1 && vec_count == 1 && gpr_avail && vec_avail) {
+        param->gpr_count = 1;
+        param->vec_count = 1;
+        param->gpr_first = gpr_first;
+    } else if (vec_count && !gpr_count && vec_count <= vec_avail) {
+        param->vec_count = vec_count;
+    } else if (gpr_avail) {
+        param->gpr_count = (param->type->size + 7) / 8;
+        param->gpr_first = true;
+    }
 }
 
 bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     const int treshold = (__riscv_xlen / 4); // 8 for RV32, 16 for RV64
 
-    if (IsFloat(func->ret.type)) {
-        func->ret.vec_count = 1;
-    } else if (int hfa = IsHFA(func->ret.type); hfa) {
-        func->ret.vec_count = hfa;
-    } else {
-        func->ret.use_memory = (func->ret.type->size > treshold);
-    }
+    AnalyseParameter(&func->ret, 2, 2);
 
     int gpr_avail = 8 - func->ret.use_memory;
     int vec_avail = 8;
 
     for (ParameterInfo &param: func->parameters) {
-        switch (param.type->primitive) {
-            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+        AnalyseParameter(&param, gpr_avail, !param.variadic ? vec_avail : 0);
 
-            case PrimitiveKind::Bool:
-            case PrimitiveKind::Int8:
-            case PrimitiveKind::UInt8:
-            case PrimitiveKind::Int16:
-            case PrimitiveKind::UInt16:
-            case PrimitiveKind::Int32:
-            case PrimitiveKind::UInt32:
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::UInt64:
-            case PrimitiveKind::String:
-            case PrimitiveKind::String16:
-            case PrimitiveKind::Pointer: {
-                if (gpr_avail) {
-                    param.gpr_count = 1;
-                    gpr_avail--;
-                }
-            } break;
-            case PrimitiveKind::Record: {
-                int hfa = IsHFA(param.type);
-
-                if (hfa && hfa <= vec_avail) {
-                    param.vec_count = hfa;
-                    vec_avail -= hfa;
-                } else if (param.type->size <= treshold) {
-                    int need = (param.type->size + (RG_SIZE(void *) - 1)) / RG_SIZE(void *);
-
-                    if (need <= gpr_avail) {
-                        param.gpr_count = need;
-                        gpr_avail -= need;
-                    } else if (need == 2 && gpr_avail == 1) {
-                        param.gpr_count = 1;
-                        gpr_avail = 0;
-                    }
-                } else {
-                    // Big types are replaced by a pointer
-                    if (gpr_avail) {
-                        param.gpr_count = 1;
-                        gpr_avail--;
-                    }
-                    param.use_memory = true;
-                }
-            } break;
-            case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
-            case PrimitiveKind::Float32:
-            case PrimitiveKind::Float64: {
-                if (!param.variadic && vec_avail) {
-                    param.vec_count = 1;
-                    vec_avail--;
-                } else if (gpr_avail) {
-                    param.gpr_count = 1;
-                    gpr_avail--;
-                }
-            } break;
-        }
+        gpr_avail = std::max(0, gpr_avail - param.gpr_count);
+        vec_avail = std::max(0, vec_avail - param.vec_count);
     }
 
     func->args_size = treshold * func->parameters.len;
@@ -296,22 +281,28 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                 Napi::Object obj = value.As<Napi::Object>();
 
-                if (param.vec_count) { // HFA
-                    memset(vec_ptr, 0xFF, param.vec_count * 8);
-                    if (!PushObject(obj, param.type, (uint8_t *)vec_ptr, 8))
+                if (!param.use_memory) {
+                    RG_ASSERT(param.type->size <= 16);
+
+                    // Split float or mixed int-float structs to registers
+                    int realign = param.vec_count ? 8 : 0;
+
+                    uint64_t buf[2] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull };
+                    if (!PushObject(obj, param.type, (uint8_t *)buf, realign))
                         return false;
-                    vec_ptr += param.vec_count;
-                } else if (!param.use_memory) {
-                    if (param.gpr_count) {
+                    uint64_t *ptr = buf;
+
+                    if (param.gpr_first) {
+                        *(gpr_ptr++) = *(ptr++);
+                        *((param.vec_count ? vec_ptr : gpr_ptr)++) = *(ptr++);
+                        gpr_ptr -= (param.gpr_count == 1);
+                    } else if (param.vec_count) {
+                        *(vec_ptr++) = *(ptr++);
+                        *((param.gpr_count ? gpr_ptr : vec_ptr)++) = *(ptr++);
+                    } else {
                         RG_ASSERT(param.type->align <= 8);
 
-                        if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
-                            return false;
-                        gpr_ptr += param.gpr_count;
-                    } else if (param.type->size) {
-                        args_ptr = AlignUp(args_ptr, param.type->align);
-                        if (!PushObject(obj, param.type, args_ptr))
-                            return false;
+                        memcpy_safe(args_ptr, ptr, param.type->size);
                         args_ptr += AlignLen(param.type->size, 8);
                     }
                 } else {
@@ -325,7 +316,6 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                         *(uint8_t **)(gpr_ptr++) = ptr;
                     } else {
-                        args_ptr = AlignUp(args_ptr, 8);
                         *(uint8_t **)args_ptr = ptr;
                         args_ptr += 8;
                     }
@@ -404,11 +394,17 @@ void CallData::Execute()
         case PrimitiveKind::String16:
         case PrimitiveKind::Pointer: { result.u64 = PERFORM_CALL(GG).a0; } break;
         case PrimitiveKind::Record: {
-            if (func->ret.vec_count) {
+            if (func->ret.gpr_first && !func->ret.vec_count) {
+                A0A1Ret ret = PERFORM_CALL(GG);
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
+            } else if (func->ret.gpr_first) {
+                A0Fa0Ret ret = PERFORM_CALL(GD);
+                memcpy(&result.buf, &ret, RG_SIZE(ret));
+            } else if (func->ret.vec_count == 2) {
                 Fa0Fa1Ret ret = PERFORM_CALL(DD);
                 memcpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
-                A0A1Ret ret = PERFORM_CALL(GG);
+                Fa0A0Ret ret = PERFORM_CALL(DG);
                 memcpy(&result.buf, &ret, RG_SIZE(ret));
             }
         } break;
