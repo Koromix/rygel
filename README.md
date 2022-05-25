@@ -38,7 +38,7 @@ RISC-V 64 [^4]     | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Proba
 [^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall.
 [^2]: The prebuilt binary uses the hard float ABI and expects a VFP coprocessor. Build from source to use Koffi with a different ABI (softfp, soft).
 [^3]: However, we don't provide prebuilt binaries for macOS on Apple M1.
-[^4]: Only the LP64D (double-precision float) gets tested. The LP64 ABI is supported in theory (untested), the LP64F ABI is not supported.
+[^4]: Only the LP64D (double-precision float) ABI gets tested. The LP64 ABI is supported in theory (untested), the LP64F ABI is not supported.
 
 This is still in development, bugs are to be expected. More tests will come in the near future.
 
