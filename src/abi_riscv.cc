@@ -48,8 +48,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 {
     const int treshold = (__riscv_xlen / 4); // 8 for RV32, 16 for RV64
 
-    if (func->ret.type->primitive == PrimitiveKind::Float32 ||
-           func->ret.type->primitive == PrimitiveKind::Float64) {
+    if (IsFloat(func->ret.type)) {
         func->ret.vec_count = 1;
     } else if (int hfa = IsHFA(func->ret.type); hfa) {
         func->ret.vec_count = hfa;

@@ -156,8 +156,7 @@ int IsHFA(const TypeInfo *type, int min, int max)
     int count = 0;
 
     count = AnalyseFlat(type, [&](const TypeInfo *type, int, int) {
-        if (type->primitive == PrimitiveKind::Float32 ||
-               type->primitive == PrimitiveKind::Float64) {
+        if (IsFloat(type)) {
             primitives |= 1u << (int)type->primitive;
         } else {
             primitives = UINT32_MAX;

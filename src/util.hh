@@ -53,6 +53,20 @@ static inline T *AlignDown(T *ptr, Size align)
     return (T *)aligned;
 }
 
+static inline bool IsInteger(const TypeInfo *type)
+{
+    bool integer = ((int)type->primitive >= (int)PrimitiveKind::Int8 &&
+                    (int)type->primitive <= (int)PrimitiveKind::UInt64);
+    return integer;
+}
+
+static inline bool IsFloat(const TypeInfo *type)
+{
+    bool fp = (type->primitive == PrimitiveKind::Float32 ||
+               type->primitive == PrimitiveKind::Float64);
+    return fp;
+}
+
 const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_directions = nullptr);
 const TypeInfo *GetPointerType(InstanceData *instance, const TypeInfo *type);
 

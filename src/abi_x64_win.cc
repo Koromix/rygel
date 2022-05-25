@@ -41,9 +41,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 
     for (ParameterInfo &param: func->parameters) {
         param.regular = IsRegular(param.type->size);
-
-        func->forward_fp |= (param.type->primitive == PrimitiveKind::Float32 ||
-                             param.type->primitive == PrimitiveKind::Float64);
+        func->forward_fp |= IsFloat(param.type);
     }
 
     func->args_size = AlignLen(8 * std::max((Size)4, func->parameters.len + !func->ret.regular), 16);
