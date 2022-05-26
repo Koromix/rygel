@@ -40,30 +40,62 @@
 <h1 id="overview">Overview</h1>
 <p>Koffi is a fast and easy-to-use FFI module for <a href="https://nodejs.org/">Node.js</a>, with support for complex data types such as structs.</p>
 
-<p>The following platforms are <strong>officially supported and tested</strong> at the moment:</p>
+<p>The following combinations of OS and architectures <strong>are officially supported and tested</strong> at the moment:</p>
 
-<ul>
-<li>Windows x86 <em>(cdecl, stdcall, fastcall)</em></li>
-<li>Windows x86_64</li>
-<li>Linux x86</li>
-<li>Linux x86_64</li>
-<li>Linux ARM32+VFP Little Endian</li>
-<li>Linux ARM64 Little Endian</li>
-<li>FreeBSD x86</li>
-<li>FreeBSD x86_64</li>
-<li>FreeBSD ARM64 Little Endian</li>
-<li>macOS x86_64</li>
-<li>macOS ARM64 (M1) Little Endian</li>
-</ul>
-
-<p>The following platforms <strong>may be supported</strong> but are not tested:</p>
-
-<ul>
-<li>NetBSD x86_64</li>
-<li>NetBSD ARM64</li>
-<li>OpenBSD x86_64</li>
-<li>OpenBSD ARM64</li>
-</ul>
+<table>
+<thead>
+  <tr>
+    <th>ISA / OS</th>
+    <th>Windows</th>
+    <th>Linux</th>
+    <th>macOS</th>
+    <th>FreeBSD</th>
+    <th>OpenBSD</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>x86 (IA32)</td>
+    <td>🟩 Yes</td>
+    <td>🟩 Yes</td>
+    <td>⬜️ <em>N/A</em></td>
+    <td>🟩 Yes</td>
+    <td>🟩 Yes</td>
+  </tr>
+  <tr>
+    <td>x86_64 (AMD64)</td>
+    <td>🟩 Yes</td>
+    <td>🟩 Yes</td>
+    <td>🟩 Yes</td>
+    <td>🟩 Yes</td>
+    <td>🟩 Yes</td>
+  </tr>
+  <tr>
+    <td>ARM32 LE</td>
+    <td>⬜️ <em>N/A</em></td>
+    <td>🟩 Yes</td>
+    <td>⬜️ <em>N/A</em></td>
+    <td>🟨 Probably</td>
+    <td>🟨 Probably</td>
+  </tr>
+  <tr>
+    <td>ARM64 (AArch64) LE</td>
+    <td>🟧 Maybe</td>
+    <td>🟩 Yes</td>
+    <td>🟩 Yes</td>
+    <td>🟩 Yes</td>
+    <td>🟨 Probably</td>
+  </tr>
+  <tr>
+    <td>RISC-V 64</td>
+    <td>⬜️ <em>N/A</em></td>
+    <td>🟩 Yes</td>
+    <td>⬜️ <em>N/A</em></td>
+    <td>🟨 Probably</td>
+    <td>🟨 Probably</td>
+  </tr>
+</tbody>
+</table>
 
 <p>This is still in development, bugs are to expected. More tests will come in the near future.</p>
 
