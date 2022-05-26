@@ -17,7 +17,6 @@ prometheus_exporters:
   - node_exporter
   - nginx_exporter
   - systemd_exporter
-  - borg_exporter
 
 grafana_url: 'https://goupile.fr/pknet'
 grafana_default_password: !vault |
