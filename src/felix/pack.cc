@@ -320,6 +320,9 @@ static const char *MakeVariableName(const char *name, Allocator *alloc)
     HeapArray<char> buf(alloc);
     bool up = true;
 
+    if (!IsAsciiAlpha(name[0]) && name[0] != '_') {
+        buf.Append('_');
+    }
     for (Size i = 0; name[i]; i++) {
         int c = name[i];
 
