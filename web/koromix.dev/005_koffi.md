@@ -18,7 +18,7 @@ RISC-V 64          | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Proba
 
 This is still in development, bugs are to expected. More tests will come in the near future.
 
-You can find more information about Koffi (installation, tests, etc.) [in the official repository](https://github.com/Koromix/luigi/tree/master/koffi).
+You can find more information about Koffi (installation, tests, etc.) on [the NPM page](https://www.npmjs.com/package/koffi) or in [the official repository](https://github.com/Koromix/luigi/tree/master/koffi).
 
 #example# Example
 
