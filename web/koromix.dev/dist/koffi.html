@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" class="nojs">
+    <head>
+        <base href="/koffi"/>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>koromix.dev — Koffi</title>
+
+        <link rel="stylesheet" href="static/webler.css">
+        <link rel="stylesheet" href="static/OpenSans.css">
+
+        <script type="text/javascript" src="static/webler.js" async></script>
+    </head>
+    <body>
+        <div id="top">
+            <a id="top_deploy" href="#" onclick="toggleMenu('#top_menu'); return false;"></a>
+            <nav id="top_menu">
+                <ul>
+                    <li><a href="index">Home</a></li>
+                    <li><a href="goupile">Goupile</a></li>
+                    <li><a href="tytools">TyTools</a></li>
+                    <li><a href="libhs">libhs</a></li>
+                    <li><a href="koffi" class="active">Koffi</a></li>
+                    <li><a href="misc">Other</a></li>
+                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
+                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub Profile</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div id="content">
+            <a id="side_deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
+            <nav id="side_menu">
+                <ul>
+                    <li><a href="#overview" class="lv1">Overview</a></li>
+                    <li><a href="#example" class="lv1">Example</a></li>
+                </ul>
+            </nav>
+            <main>
+<h1 id="overview">Overview</h1>
+<p>Koffi is a fast and easy-to-use FFI module for <a href="https://nodejs.org/">Node.js</a>, with support for complex data types such as structs.</p>
+
+<p>The following platforms are <strong>officially supported and tested</strong> at the moment:</p>
+
+<ul>
+<li>Windows x86 <em>(cdecl, stdcall, fastcall)</em></li>
+<li>Windows x86_64</li>
+<li>Linux x86</li>
+<li>Linux x86_64</li>
+<li>Linux ARM32+VFP Little Endian</li>
+<li>Linux ARM64 Little Endian</li>
+<li>FreeBSD x86</li>
+<li>FreeBSD x86_64</li>
+<li>FreeBSD ARM64 Little Endian</li>
+<li>macOS x86_64</li>
+<li>macOS ARM64 (M1) Little Endian</li>
+</ul>
+
+<p>The following platforms <strong>may be supported</strong> but are not tested:</p>
+
+<ul>
+<li>NetBSD x86_64</li>
+<li>NetBSD ARM64</li>
+<li>OpenBSD x86_64</li>
+<li>OpenBSD ARM64</li>
+</ul>
+
+<p>This is still in development, bugs are to expected. More tests will come in the near future.</p>
+
+<p>You can find more information about Koffi (installation, tests, etc.) <a href="https://github.com/Koromix/luigi/tree/master/koffi">in the official repository</a>.</p>
+<h1 id="example">Example</h1>
+<p>This example illustrates how to use Koffi with a Raylib shared library:</p>
+
+<pre><span class="line">const koffi = require('koffi');</span>
+<span class="line"></span>
+<span class="line">const Color = koffi.struct('Color', {</span>
+<span class="line">    r: 'uchar',</span>
+<span class="line">    g: 'uchar',</span>
+<span class="line">    b: 'uchar',</span>
+<span class="line">    a: 'uchar'</span>
+<span class="line">});</span>
+<span class="line"></span>
+<span class="line">const Image = koffi.struct('Image', {</span>
+<span class="line">    data: koffi.pointer('void'),</span>
+<span class="line">    width: 'int',</span>
+<span class="line">    height: 'int',</span>
+<span class="line">    mipmaps: 'int',</span>
+<span class="line">    format: 'int'</span>
+<span class="line">});</span>
+<span class="line"></span>
+<span class="line">const GlyphInfo = koffi.struct('GlyphInfo', {</span>
+<span class="line">    value: 'int',</span>
+<span class="line">    offsetX: 'int',</span>
+<span class="line">    offsetY: 'int',</span>
+<span class="line">    advanceX: 'int',</span>
+<span class="line">    image: Image</span>
+<span class="line">});</span>
+<span class="line"></span>
+<span class="line">const Vector2 = koffi.struct('Vector2', {</span>
+<span class="line">    x: 'float',</span>
+<span class="line">    y: 'float'</span>
+<span class="line">});</span>
+<span class="line"></span>
+<span class="line">const Rectangle = koffi.struct('Rectangle', {</span>
+<span class="line">    x: 'float',</span>
+<span class="line">    y: 'float',</span>
+<span class="line">    width: 'float',</span>
+<span class="line">    height: 'float'</span>
+<span class="line">});</span>
+<span class="line"></span>
+<span class="line">const Texture = koffi.struct('Texture', {</span>
+<span class="line">    id: 'uint',</span>
+<span class="line">    width: 'int',</span>
+<span class="line">    height: 'int',</span>
+<span class="line">    mipmaps: 'int',</span>
+<span class="line">    format: 'int'</span>
+<span class="line">});</span>
+<span class="line"></span>
+<span class="line">const Font = koffi.struct('Font', {</span>
+<span class="line">    baseSize: 'int',</span>
+<span class="line">    glyphCount: 'int',</span>
+<span class="line">    glyphPadding: 'int',</span>
+<span class="line">    texture: Texture,</span>
+<span class="line">    recs: koffi.pointer(Rectangle),</span>
+<span class="line">    glyphs: koffi.pointer(GlyphInfo)</span>
+<span class="line">});</span>
+<span class="line"></span>
+<span class="line">// Fix the path to Raylib DLL if needed</span>
+<span class="line">let lib = koffi.load('build/raylib' + koffi.extension);</span>
+<span class="line"></span>
+<span class="line">const InitWindow = lib.cdecl('InitWindow', 'void', ['int', 'int', 'string']);</span>
+<span class="line">const SetTargetFPS = lib.cdecl('SetTargetFPS', 'void', ['int']);</span>
+<span class="line">const GetScreenWidth = lib.cdecl('GetScreenWidth', 'int', []);</span>
+<span class="line">const GetScreenHeight = lib.cdecl('GetScreenHeight', 'int', []);</span>
+<span class="line">const ClearBackground = lib.cdecl('ClearBackground', 'void', [Color]);</span>
+<span class="line">const BeginDrawing = lib.cdecl('BeginDrawing', 'void', []);</span>
+<span class="line">const EndDrawing = lib.cdecl('EndDrawing', 'void', []);</span>
+<span class="line">const WindowShouldClose = lib.cdecl('WindowShouldClose', 'bool', []);</span>
+<span class="line">const GetFontDefault = lib.cdecl('GetFontDefault', Font, []);</span>
+<span class="line">const MeasureTextEx = lib.cdecl('MeasureTextEx', Vector2, [Font, 'string', 'float', 'float']);</span>
+<span class="line">const DrawTextEx = lib.cdecl('DrawTextEx', 'void', [Font, 'string', Vector2, 'float', 'float', Color]);</span>
+<span class="line"></span>
+<span class="line">800, 600, 'Test Raylib');</span>
+<span class="line">60);</span>
+<span class="line"></span>
+<span class="line">let angle = 0;</span>
+<span class="line"></span>
+<span class="line">while (!WindowShouldClose()) {</span>
+<span class="line">    BeginDrawing();</span>
+<span class="line">    ClearBackground({ r: 0, g: 0, b: 0, a: 255 }); // black</span>
+<span class="line"></span>
+<span class="line">    let win_width = GetScreenWidth();</span>
+<span class="line">    let win_height = GetScreenHeight();</span>
+<span class="line"></span>
+<span class="line">    let text = 'Hello World!';</span>
+<span class="line">    let text_width = MeasureTextEx(GetFontDefault(), text, 32, 1).x;</span>
+<span class="line"></span>
+<span class="line">    let color = {</span>
+<span class="line">        r: 127.5 + 127.5 * Math.sin(angle),</span>
+<span class="line">        g: 127.5 + 127.5 * Math.sin(angle + Math.PI / 2),</span>
+<span class="line">        b: 127.5 + 127.5 * Math.sin(angle + Math.PI),</span>
+<span class="line">        a: 255</span>
+<span class="line">    };</span>
+<span class="line">    let pos = {</span>
+<span class="line">        x: (win_width / 2 - text_width / 2) + 120 * Math.cos(angle - Math.PI / 2),</span>
+<span class="line">        y: (win_height / 2 - 16) + 120 * Math.sin(angle - Math.PI / 2)</span>
+<span class="line">    };</span>
+<span class="line"></span>
+<span class="line">    DrawTextEx(GetFontDefault(), text, pos, 32, 1, color);</span>
+<span class="line"></span>
+<span class="line">    EndDrawing();</span>
+<span class="line"></span>
+<span class="line">    angle += Math.PI / 180;</span>
+<span class="line">}</span>
+</pre>
+
+            </main>
+        </div>
+        <footer>Niels Martignène&nbsp;&nbsp;&nbsp;<span style="opacity: 0.6;">Koromix<span></footer>
+    </body>
+</html>

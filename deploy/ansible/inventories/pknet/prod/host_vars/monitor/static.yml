@@ -19,6 +19,6 @@ static_deploys:
 
   - name: koromix.dev/www
     repo: https://github.com/Koromix/rygel.git
-    path: web/koromix.dev
+    path: web/koromix.dev/dist
   - name: koromix.dev/files
   - name: koromix.dev/test

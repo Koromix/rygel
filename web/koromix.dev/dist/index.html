@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" class="nojs">
+    <head>
+        <base href="/index"/>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>koromix.dev</title>
+
+        <link rel="stylesheet" href="static/webler.css">
+        <link rel="stylesheet" href="static/OpenSans.css">
+
+        <script type="text/javascript" src="static/webler.js" async></script>
+    </head>
+    <body>
+        <div id="top">
+            <a id="top_deploy" href="#" onclick="toggleMenu('#top_menu'); return false;"></a>
+            <nav id="top_menu">
+                <ul>
+                    <li><a href="index" class="active">Home</a></li>
+                    <li><a href="goupile">Goupile</a></li>
+                    <li><a href="tytools">TyTools</a></li>
+                    <li><a href="libhs">libhs</a></li>
+                    <li><a href="koffi">Koffi</a></li>
+                    <li><a href="misc">Other</a></li>
+                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
+                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub Profile</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div id="content">
+            <a id="side_deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
+            <nav id="side_menu">
+                <ul>
+                    <li><a href="#tytools" class="lv1">TyTools</a></li>
+                    <li><a href="#libhs" class="lv1">libhs</a></li>
+                    <li><a href="#koffi" class="lv1">Koffi</a></li>
+                    <li><a href="#misc" class="lv1">Other projects</a></li>
+                </ul>
+            </nav>
+            <main>
+<h1 id="tytools">TyTools</h1>
+<p>TyTools is a collection of <strong>independent tools</strong> and you only need one executable to use
+any of them. The Qt-based GUI tools are statically compiled to make that possible.</p>
+
+<table>
+<thead>
+  <tr>
+    <th>Tool</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>TyCommander</td>
+    <td>Qt GUI (static)</td>
+    <td>Upload, monitor and communicate with multiple boards</td>
+  </tr>
+  <tr>
+    <td>TyUpdater</td>
+    <td>Qt GUI (static)</td>
+    <td>Simple firmware / sketch uploader</td>
+  </tr>
+  <tr>
+    <td>tycmd</td>
+    <td>Command-line<br><em>No Qt !</em></td>
+    <td>Command-line tool to manage Teensy boards</td>
+  </tr>
+</tbody>
+</table>
+
+<p>Find out more on the <a href="tytools">page dedicated to TyTools</a>.</p>
+<h1 id="libhs">libhs</h1>
+<p>libhs is a cross-platform C library to enumerate <strong>HID and serial devices</strong> and interact with them.</p>
+
+<p>It is distributed as a <strong>single-file header</strong>. Drop the file in your project, add one define for the implementation and start to code without messing around with an arcane build system.</p>
+
+<p>Find out more on the <a href="libhs">page dedicated to libhs</a>.</p>
+<h1 id="koffi">Koffi</h1>
+<p>Koffi is a fast and easy-to-use FFI module for <a href="https://nodejs.org/">Node.js</a>, with support for complex data types such as structs.</p>
+
+<p>The following platforms <strong>are supported</strong> at the moment:</p>
+
+<ul>
+<li>Windows x86 <em>(cdecl, stdcall, fastcall)</em></li>
+<li>Windows x86_64</li>
+<li>Linux x86</li>
+<li>Linux x86_64</li>
+<li>Linux ARM32+VFP Little Endian</li>
+<li>Linux ARM64 Little Endian</li>
+<li>FreeBSD x86</li>
+<li>FreeBSD x86_64</li>
+<li>FreeBSD ARM64 Little Endian</li>
+<li>macOS x86_64</li>
+<li>macOS ARM64 (M1) Little Endian</li>
+</ul>
+
+<p>Find out more on the <a href="koffi">page dedicated to Koffi</a>.</p>
+<h1 id="misc">Other projects</h1>
+<p>The projects on this page are provided as-is, and are in <strong>various states of completion</strong>.</p>
+
+<table>
+<thead>
+  <tr>
+    <th>Project</th>
+    <th>Description</th>
+    <th>Language</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td><a href="https://github.com/Koromix/rygel/tree/master/src/blikk">blikk</a></td>
+    <td>Embeddable beginner-friendly programming language with static types, fast compilation</td>
+    <td>C++</td>
+  </tr>
+  <tr>
+    <td><a href="https://www.npmjs.com/package/cnoke">CNoke</a></td>
+    <td>Simple alternative to CMake.js, without any dependency, designed to build native Node addons based on CMake</td>
+    <td>Javascript</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/Koromix/rygel/tree/master/src/seatsh">SeatSH</a></td>
+    <td>SeatSH is a Windows service that enables you to launch graphical programs from an SSH connection on Windows 10, for automated test systems.</td>
+    <td>C++</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/Koromix/rygel/tree/master/src/drd">drd</a></td>
+    <td>Alternative french PMSI MCO classifier<br><em>Library (libdrd), command-line tool (drdc) and R package (drdR)</em></td>
+    <td>C++</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/Koromix/luigi">Luigi</a></td>
+    <td>Simple educational programming language implemented in JS</td>
+    <td>Javascript</td>
+  </tr>
+  <tr>
+    <td><a href="https://gist.github.com/Koromix/679c2e6336808f1e848f2e7f2e6c39cb">SaneBB</a></td>
+    <td>Small (single-file) and fast BBCode parser in Java</td>
+    <td>Java</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/Koromix/rygel/tree/master/src/meestic">Meestic</a></td>
+    <td>Small command-line utility to control MSI Delta 15 keyboard lighting (and other models?). Provided "as is", no guarantee.</td>
+    <td>C++</td>
+  </tr>
+</tbody>
+</table>
+
+            </main>
+        </div>
+        <footer>Niels Martignène&nbsp;&nbsp;&nbsp;<span style="opacity: 0.6;">Koromix<span></footer>
+    </body>
+</html>
