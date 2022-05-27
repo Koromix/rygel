@@ -12,11 +12,9 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 cmake_minimum_required(VERSION 3.12)
-project(koffi C CXX ASM)
+project(koffi_benchmark C CXX)
 
 find_package(CNoke)
-
-set(CMAKE_CXX_STANDARD 20)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -25,6 +23,17 @@ if(NOT TARGET koffi)
     add_subdirectory(.. koffi)
 endif()
 add_subdirectory(../test test)
+
+set(CMAKE_CXX_STANDARD 17)
+if(MSVC)
+    add_compile_options(/W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201)
+else()
+    add_compile_options(-Wall -Wextra -Wno-missing-field-initializers
+                        -Wno-unused-parameter -Wno-class-memaccess)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-Wno-unknown-warning-option)
+    endif()
+endif()
 
 # ---- atoi ----
 

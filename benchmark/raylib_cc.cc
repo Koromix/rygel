@@ -31,28 +31,28 @@ int Main(int argc, char **argv)
     SetWindowState(FLAG_WINDOW_HIDDEN);
     InitWindow(640, 480, "Raylib Test");
 
-    Image img = GenImageColor(800, 600, Color { .r = 0, .g = 0, .b = 0, .a = 255 });
+    Image img = GenImageColor(800, 600, Color { 0, 0, 0, 255 });
     Font font = GetFontDefault();
 
     int64_t start = GetMonotonicTime();
 
     for (int i = 0; i < iterations; i++) {
-        ImageClearBackground(&img, Color { .r = 0, .g = 0, .b = 0, .a = 255 });
+        ImageClearBackground(&img, Color { 0, 0, 0, 255 });
 
         for (int j = 0; j < 3600; j++) {
             const char *text = "Hello World!";
-            int text_width = MeasureTextEx(font, text, 10, 1).x;
+            float text_width = MeasureTextEx(font, text, 10, 1).x;
 
             double angle = (j * 7) * PI / 180;
             Color color = {
-                .r = (unsigned char)(127.5 + 127.5 * sin(angle)),
-                .g = (unsigned char)(127.5 + 127.5 * sin(angle + PI / 2)),
-                .b = (unsigned char)(127.5 + 127.5 * sin(angle + PI)),
-                .a = 255
+                (unsigned char)(127.5 + 127.5 * sin(angle)),
+                (unsigned char)(127.5 + 127.5 * sin(angle + PI / 2)),
+                (unsigned char)(127.5 + 127.5 * sin(angle + PI)),
+                255
             };
             Vector2 pos = {
-                .x = (float)((img.width / 2 - text_width / 2) + j * 0.1 * cos(angle - PI / 2)),
-                .y = (float)((img.height / 2 - 16) + j * 0.1 * sin(angle - PI / 2))
+                (float)((img.width / 2 - text_width / 2) + j * 0.1 * cos(angle - PI / 2)),
+                (float)((img.height / 2 - 16) + j * 0.1 * sin(angle - PI / 2))
             };
 
             ImageDrawTextEx(&img, font, text, pos, 10, 1, color);
