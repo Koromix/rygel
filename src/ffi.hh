@@ -181,6 +181,8 @@ struct FunctionInfo {
 };
 
 struct InstanceMemory {
+    ~InstanceMemory();
+
     Span<uint8_t> stack;
     Span<uint8_t> heap;
 

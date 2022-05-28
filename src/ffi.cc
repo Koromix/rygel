@@ -956,6 +956,25 @@ void FunctionInfo::Unref() const
     }
 }
 
+InstanceMemory::~InstanceMemory()
+{
+#ifdef _WIN32
+    if (stack.ptr) {
+        VirtualFree(stack.ptr, 0, MEM_RELEASE);
+    }
+    if (heap.ptr) {
+        VirtualFree(heap.ptr, 0, MEM_RELEASE);
+    }
+#else
+    if (stack.ptr) {
+        munmap(stack.ptr, stack.len);
+    }
+    if (heap.ptr) {
+        munmap(heap.ptr, heap.len);
+    }
+#endif
+}
+
 InstanceData::InstanceData()
 {
     InstanceMemory *mem = new InstanceMemory();
