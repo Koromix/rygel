@@ -449,7 +449,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     FunctionInfo func;
-    memcpy(&func, info.Data(), RG_SIZE(FunctionInfo));
+    memcpy((void *)&func, info.Data(), RG_SIZE(FunctionInfo));
     func.lib = nullptr;
 
     // This makes variadic calls non-reentrant
