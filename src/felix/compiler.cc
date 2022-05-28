@@ -848,7 +848,7 @@ public:
         if (warnings) {
             Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-cast-function-type");
             if (src_type == SourceType::CXX) {
-                Fmt(&buf, " -Wno-class-memaccess -Wno-init-list-lifetime");
+                Fmt(&buf, " -Wno-init-list-lifetime");
             }
         } else {
             Fmt(&buf, " -w");
