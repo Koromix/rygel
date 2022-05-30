@@ -158,3 +158,10 @@ nginx_domains:
       location / {
           return 301 https://koromix.dev$request_uri;
       }
+
+  - name: groupile.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          return 302 https://goupile.fr$request_uri;
+      }
