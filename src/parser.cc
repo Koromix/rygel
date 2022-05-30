@@ -87,7 +87,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
                 return false;
             }
 
-            param.offset = out_func->parameters.len;
+            param.offset = (int8_t)out_func->parameters.len;
 
             out_func->parameters.Append(param);
 

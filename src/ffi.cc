@@ -489,7 +489,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         }
 
         param.variadic = true;
-        param.offset = i + 1;
+        param.offset = (int8_t)(i + 1);
 
         func.parameters.Append(param);
     }
@@ -656,7 +656,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
             return false;
         }
 
-        param.offset = j;
+        param.offset = (int8_t)j;
 
         func->parameters.Append(param);
     }

@@ -123,7 +123,7 @@ struct ParameterInfo {
     const TypeInfo *type;
     int directions;
     bool variadic;
-    Size offset;
+    int8_t offset;
 
     // ABI-specific part
 
@@ -161,7 +161,7 @@ struct FunctionInfo {
 
     ParameterInfo ret;
     HeapArray<ParameterInfo> parameters;
-    Size out_parameters;
+    int8_t out_parameters;
     bool variadic;
 
     // ABI-specific part
