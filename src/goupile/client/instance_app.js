@@ -18,7 +18,7 @@ function ApplicationInfo() {
     this.home = null;
     this.panels = {
         editor: profile.develop,
-        data: !goupile.isLocked(),
+        data: profile.userid > 0 && profile.lock == null,
         view: true
     };
 }
