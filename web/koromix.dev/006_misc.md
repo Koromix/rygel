@@ -64,9 +64,9 @@ The classifier was carefully assembled from the documentation and through retro-
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/drd).
 
-#luigi# Luigi
+#luiggi# Luiggi
 
-Luigi is an **educational toy programming language** implemented in Javascript, with four main goals:
+Luiggi is an **educational toy programming language** implemented in Javascript, with four main goals:
 
 - Show a simple and relatively efficient implementation of a programming language:
     * Simple lexer (tokenizer) implemented directly in JS.
@@ -78,7 +78,7 @@ Luigi is an **educational toy programming language** implemented in Javascript, 
 
 The language uses dynamic typing for implementation simplicity.
 
-You can find out more [in the dedicated repository](https://github.com/Koromix/luigi).
+You can find out more [in the dedicated repository](https://github.com/Koromix/luigi/tree/master/luiggi).
 
 #sanebb# SaneBB
 
