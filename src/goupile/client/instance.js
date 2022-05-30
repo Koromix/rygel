@@ -47,8 +47,8 @@ function InstanceController() {
     let error_entries = {};
 
     let ignore_editor_change = false;
-    let ignore_editor_scroll = false;
-    let ignore_page_scroll = false;
+    let ignore_editor_scroll = 0;
+    let ignore_page_scroll = 0;
     let autosave_timer;
 
     let data_form;
@@ -1375,7 +1375,7 @@ function InstanceController() {
             });
             session.selection.on('changeSelection', () => {
                 syncFormHighlight(true);
-                ignore_editor_scroll = true;
+                ignore_editor_scroll = performance.now();
             });
 
             buffer.session = session;
@@ -1464,10 +1464,10 @@ function InstanceController() {
     function syncFormScroll() {
         if (!ui.isPanelActive('editor') || !ui.isPanelActive('view'))
             return;
-        if (ignore_editor_scroll) {
-            ignore_editor_scroll = false;
+        if (performance.now() - ignore_editor_scroll < 500)
             return;
-        }
+        if (!editor_ace.isFocused())
+            return;
 
         try {
             let panel_el = document.querySelector('#ins_page').parentNode;
@@ -1481,19 +1481,19 @@ function InstanceController() {
 
                 if (line >= editor_line) {
                     if (!i) {
-                        ignore_page_scroll = true;
+                        ignore_page_scroll = performance.now();
                         panel_el.scrollTop = 0;
                     } else if (i === widget_els.length - 1) {
                         let top = computeRelativeTop(panel_el, widget_els[i]);
 
-                        ignore_page_scroll = true;
+                        ignore_page_scroll = performance.now();
                         panel_el.scrollTop = top;
                     } else {
                         let top1 = computeRelativeTop(panel_el, widget_els[i - 1]);
                         let top2 = computeRelativeTop(panel_el, widget_els[i]);
                         let frac = (editor_line - prev_line) / (line - prev_line);
 
-                        ignore_page_scroll = true;
+                        ignore_page_scroll = performance.now();
                         panel_el.scrollTop = top1 + frac * (top2 - top1);
                     }
 
@@ -1571,10 +1571,10 @@ function InstanceController() {
                     let rect = el.getBoundingClientRect();
 
                     if (rect.top < 0) {
-                        ignore_page_scroll = true;
+                        ignore_page_scroll = performance.now();
                         panel_el.scrollTop += rect.top - 50;
                     } else if (rect.bottom >= window.innerHeight) {
-                        ignore_page_scroll = true;
+                        ignore_page_scroll = performance.now();
                         panel_el.scrollTop += rect.bottom - window.innerHeight + 30;
                     }
                 }
@@ -1592,10 +1592,8 @@ function InstanceController() {
     function syncEditorScroll() {
         if (!ui.isPanelActive('editor') || !ui.isPanelActive('view'))
             return;
-        if (ignore_page_scroll) {
-            ignore_page_scroll = false;
+        if (performance.now() - ignore_page_scroll < 500)
             return;
-        }
 
         try {
             let panel_el = document.querySelector('#ins_page').parentNode;
@@ -1611,13 +1609,13 @@ function InstanceController() {
 
                 if (top >= 0) {
                     if (!i) {
-                        ignore_editor_scroll = true;
+                        ignore_editor_scroll = performance.now();
                         editor_ace.renderer.scrollToLine(0);
                     } else {
                         let frac = -prev_top / (top - prev_top);
                         let line2 = Math.floor(prev_line + frac * (line - prev_line));
 
-                        ignore_editor_scroll = true;
+                        ignore_editor_scroll = performance.now();
                         editor_ace.renderer.scrollToLine(line2);
                     }
 
@@ -1996,14 +1994,9 @@ function InstanceController() {
             document.title = `${route.page.title} — ${ENV.title}`;
         }
 
-        try {
-            // Don't mess with the editor when render accidently triggers a scroll event!
-            ignore_page_scroll = true;
-
-            ui.render();
-        } finally {
-            ignore_page_scroll = false;
-        }
+        // Don't mess with the editor when render accidently triggers a scroll event!
+        ignore_page_scroll = performance.now();
+        ui.render();
     };
     this.run = util.serialize(this.run, mutex);
 
