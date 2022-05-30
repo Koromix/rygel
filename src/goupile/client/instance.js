@@ -313,7 +313,12 @@ function InstanceController() {
             });
 
             if (response.ok) {
-                await applyMainScript();
+                try {
+                    await applyMainScript();
+                } catch (err) {
+                    // We want to reload no matter what, because the mode has changed
+                    document.location.reload();
+                }
             } else {
                 let err = await net.readError(response);
                 throw new Error(err);
@@ -460,12 +465,12 @@ function InstanceController() {
             await runCodeAsync('Application', code, {
                 app: builder
             });
-            if (!new_app.pages.size)
-                throw new Error('Main script does not define any page');
         } catch (err) {
             // Don't log, because runCodeAsync does it already
             return;
         }
+        if (!new_app.pages.size)
+            throw new Error('Main script does not define any page');
 
         // It works! Refresh the page
         document.location.reload();

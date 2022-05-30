@@ -262,18 +262,20 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
             return false;
     }
 
+    // Use same modification time for all files
+    int64_t mtime = GetUnixTime();
+
+    if (!db.Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
+                   VALUES (1, ?1, 0, 'goupile', 1))", mtime))
+        return false;
+    if (!db.Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
+                   VALUES (0, ?1, 0, 'goupile', 0))", mtime))
+        return false;
+    if (!db.Run("UPDATE fs_settings SET value = 1 WHERE key = 'FsVersion'"))
+        return false;
+
     // Create default files
     if (demo) {
-        // Use same modification time for all files
-        int64_t mtime = GetUnixTime();
-
-        if (!db.Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
-                       VALUES (1, ?1, 0, 'goupile', 1))", mtime))
-            return false;
-        if (!db.Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
-                       VALUES (0, ?1, 0, 'goupile', 0))", mtime))
-            return false;
-
         sq_Statement stmt1;
         sq_Statement stmt2;
         if (!db.Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
@@ -339,8 +341,6 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         bool success = db.RunMany(R"(
             INSERT INTO fs_index (version, filename, sha256)
                 SELECT 0, filename, sha256 FROM fs_index WHERE version = 1;
-
-            UPDATE fs_settings SET value = 1 WHERE key = 'FsVersion';
         )");
         if (!success)
             return false;
