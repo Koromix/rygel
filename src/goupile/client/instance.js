@@ -2686,8 +2686,8 @@ function InstanceController() {
                     if (form_record != null) {
                         data_rows = null;
 
-                        let reload = !form_state.hasChanged();
-                        self.go(null, window.location.href, { reload: !form_state.hasChanged() });
+                        let reload = form_record.saved && !form_state.hasChanged();
+                        self.go(null, window.location.href, { reload: reload });
                     }
                 } else {
                     if (standalone)
