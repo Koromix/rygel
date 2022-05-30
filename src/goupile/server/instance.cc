@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 51;
+const int InstanceVersion = 52;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -1515,9 +1515,30 @@ bool MigrateInstance(sq_Database *db)
 
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('LockKey', ?1);", lock_key))
                     return false;
+            } [[fallthrough]];
+
+            case 51: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX ins_claims_uu;
+
+                    ALTER TABLE ins_claims RENAME TO ins_claims_BAK;
+
+                    CREATE TABLE ins_claims (
+                        userid INTEGER NOT NULL,
+                        ulid TEXT NOT NULL REFERENCES rec_entries (ulid) DEFERRABLE INITIALLY DEFERRED
+                    );
+                    CREATE UNIQUE INDEX ins_claims_uu ON ins_claims (userid, ulid);
+
+                    INSERT INTO ins_claims (userid, ulid)
+                        SELECT userid, ulid FROM ins_claims_BAK;
+
+                    DROP TABLE ins_claims_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 51);
+            RG_STATIC_ASSERT(InstanceVersion == 52);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
