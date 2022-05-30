@@ -1,15 +1,15 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see https://www.gnu.org/licenses/.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
 
 #ifdef __APPLE__
     #define SYMBOL(Symbol) _ ## Symbol
@@ -17,19 +17,19 @@
     #define SYMBOL(Symbol) Symbol
 #endif
 
-// These three are the same, but they differ (in the C side) by their return type.
-// Unlike the three next functions, these ones don't forward XMM argument registers.
+# These three are the same, but they differ (in the C side) by their return type.
+# Unlike the three next functions, these ones don't forward XMM argument registers.
 .global SYMBOL(ForwardCallGG)
 .global SYMBOL(ForwardCallF)
 .global SYMBOL(ForwardCallDDDD)
 
-// The X variants are slightly slower, and are used when XMM arguments must be forwarded.
+# The X variants are slightly slower, and are used when XMM arguments must be forwarded.
 .global SYMBOL(ForwardCallXGG)
 .global SYMBOL(ForwardCallXF)
 .global SYMBOL(ForwardCallXDDDD)
 
-// Copy function pointer to r9, in order to save it through argument forwarding.
-// Save RSP in r29 (non-volatile), and use carefully assembled stack provided by caller.
+# Copy function pointer to r9, in order to save it through argument forwarding.
+# Save RSP in r29 (non-volatile), and use carefully assembled stack provided by caller.
 .macro prologue
     .cfi_startproc
     stp x29, x30, [sp, -16]!
@@ -42,9 +42,9 @@
     add sp, x1, #136
 .endm
 
-// Call native function.
-// Once done, restore normal stack pointer and return.
-// The return value is passed untouched through r0, r1, v0 and/or v1.
+# Call native function.
+# Once done, restore normal stack pointer and return.
+# The return value is passed untouched through r0, r1, v0 and/or v1.
 .macro epilogue
     blr x9
     mov sp, x29
@@ -57,7 +57,7 @@
     .cfi_endproc
 .endm
 
-// Prepare general purpose argument registers from array passed by caller.
+# Prepare general purpose argument registers from array passed by caller.
 .macro forward_int
     ldr x8, [x1, 64]
     ldr x7, [x1, 56]
@@ -70,7 +70,7 @@
     ldr x1, [x1, 8]
 .endm
 
-// Prepare vector argument registers from array passed by caller.
+# Prepare vector argument registers from array passed by caller.
 .macro forward_vec
     ldr d7, [x1, 128]
     ldr d6, [x1, 120]

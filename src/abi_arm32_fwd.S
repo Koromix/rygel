@@ -1,31 +1,31 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see https://www.gnu.org/licenses/.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
 
 .syntax unified
 
-// These three are the same, but they differ (in the C side) by their return type.
-// Unlike the three next functions, these ones don't forward XMM argument registers.
+# These three are the same, but they differ (in the C side) by their return type.
+# Unlike the three next functions, these ones don't forward XMM argument registers.
 .global ForwardCallGG
 .global ForwardCallF
 .global ForwardCallDDDD
 
-// The X variants are slightly slower, and are used when XMM arguments must be forwarded.
+# The X variants are slightly slower, and are used when XMM arguments must be forwarded.
 .global ForwardCallXGG
 .global ForwardCallXF
 .global ForwardCallXDDDD
 
-// Copy function pointer to r12, in order to save it through argument forwarding.
-// Save RSP in fp (non-volatile), and use carefully assembled stack provided by caller.
+# Copy function pointer to r12, in order to save it through argument forwarding.
+# Save RSP in fp (non-volatile), and use carefully assembled stack provided by caller.
 .macro prologue
     .cfi_startproc
     push {fp, lr}
@@ -39,9 +39,9 @@
     add sp, sp, #80
 .endm
 
-// Call native function.
-// Once done, restore normal stack pointer and return.
-// The return value is passed untouched through r0, r1, and or FP registers
+# Call native function.
+# Once done, restore normal stack pointer and return.
+# The return value is passed untouched through r0, r1, and or FP registers
 .macro epilogue
     blx r12
     mov sp, fp
@@ -54,7 +54,7 @@
     .cfi_endproc
 .endm
 
-// Prepare general purpose argument registers from array passed by caller.
+# Prepare general purpose argument registers from array passed by caller.
 .macro forward_int
     ldr r3, [r1, 76]
     ldr r2, [r1, 72]
@@ -62,7 +62,7 @@
     ldr r1, [r1, 68]
 .endm
 
-// Prepare vector argument registers from array passed by caller.
+# Prepare vector argument registers from array passed by caller.
 .macro forward_vec
     vldr d7, [r1, 56]
     vldr d6, [r1, 48]
