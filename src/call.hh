@@ -85,7 +85,8 @@ inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
     uint8_t *ptr = AlignDown(mem->stack.end() - size, align);
     Size delta = mem->stack.end() - ptr;
 
-    if (RG_UNLIKELY(mem->stack.len < delta)) {
+    // Keep 512 bytes for redzone (required in some ABIs)
+    if (RG_UNLIKELY(mem->stack.len - 512 < delta)) {
         ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
         return false;
     }
