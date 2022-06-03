@@ -23,6 +23,7 @@ function FormState(values = {}) {
     this.invalid_numbers = new Set;
     this.take_delayed = new Set;
     this.follow_default = new Set;
+    this.just_changed = new Set;
     this.obj_caches = new WeakMap;
     this.explicitly_changed = false;
 
@@ -1664,6 +1665,7 @@ instead of:
             value: value,
 
             missing: !intf.options.disabled && value == null,
+            changed: state.just_changed.has(key.toString()),
 
             error: (msg, delay = false) => {
                 if (!delay || state.take_delayed.has(key.toString())) {
@@ -1676,6 +1678,8 @@ instead of:
                 return intf;
             }
         });
+
+        state.just_changed.delete(key.toString());
 
         if (props != null) {
             intf.props = props;
@@ -1776,6 +1780,7 @@ instead of:
 
         state.take_delayed.delete(key.toString());
         state.follow_default.delete(key.toString());
+        state.just_changed.add(key.toString());
 
         if (refresh) {
             state.markInteraction();
