@@ -343,6 +343,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else {
                     memset(args_ptr + 4, 0xFF, 4);
                     *(float *)args_ptr = f;
+                    args_ptr += 8;
                 }
             } break;
             case PrimitiveKind::Float64: {
