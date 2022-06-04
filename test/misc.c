@@ -416,3 +416,10 @@ EXPORT float CallSimpleJS(int i, float (*func)(int i, const char *str, double d)
     float f = func(i, "Hello!", 42.0);
     return f;
 }
+
+EXPORT int TransferToJS(const char *str, int (*cb)(const char *str))
+{
+    char buf[64];
+    snprintf(buf, sizeof(buf), "Hello %s!", str);
+    return cb(buf);
+}
