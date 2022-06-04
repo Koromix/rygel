@@ -23,7 +23,8 @@ Koffi is a fast and easy-to-use C FFI module for Node.js, with support for primi
 The following features are planned in the near future:
 
 * 1.2: C to JS callbacks (⚠️ partially available for some architectures in master branch)
-* 1.3: Type parser
+* 1.3: Optimize passing of structs and arrays
+* 1.4: Type parser, unions
 
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
