@@ -11,6 +11,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
+# Forward
+# ----------------------------
+
 # These three are the same, but they differ (in the C side) by their return type.
 # Unlike the three next functions, these ones don't forward FA argument registers.
 .global ForwardCallGG
@@ -34,6 +37,7 @@
     sd ra, 0(sp)
     sd s1, 8(sp)
     mv s1, sp
+    sd sp, 0(a2)
     addi sp, a1, 128
 .endm
 
@@ -127,3 +131,180 @@ ForwardCallXDD:
     forward_vec
     forward_int
     epilogue
+
+# Callback trampolines
+# ----------------------------
+
+.global Trampoline0
+.global Trampoline1
+.global Trampoline2
+.global Trampoline3
+.global Trampoline4
+.global Trampoline5
+.global Trampoline6
+.global Trampoline7
+.global Trampoline8
+.global Trampoline9
+.global Trampoline10
+.global Trampoline11
+.global Trampoline12
+.global Trampoline13
+.global Trampoline14
+.global Trampoline15
+.global TrampolineX0
+.global TrampolineX1
+.global TrampolineX2
+.global TrampolineX3
+.global TrampolineX4
+.global TrampolineX5
+.global TrampolineX6
+.global TrampolineX7
+.global TrampolineX8
+.global TrampolineX9
+.global TrampolineX10
+.global TrampolineX11
+.global TrampolineX12
+.global TrampolineX13
+.global TrampolineX14
+.global TrampolineX15
+.global RelayCallBack
+.global CallSwitchStack
+
+.macro trampoline id
+    addi sp, sp, -176
+    sd ra, 0(sp)
+    sd a0, 8(sp)
+    sd a1, 16(sp)
+    sd a2, 24(sp)
+    sd a3, 32(sp)
+    sd a4, 40(sp)
+    sd a5, 48(sp)
+    sd a6, 56(sp)
+    sd a7, 64(sp)
+    li a0, \id
+    addi a1, sp, 8
+    addi a2, sp, 176
+    addi a3, sp, 136
+    jal RelayCallBack
+    ld ra, 0(sp)
+    ld a0, 136(sp)
+    ld a1, 144(sp)
+    addi sp, sp, 176
+    ret
+.endm
+
+.macro trampoline_vec id
+    addi sp, sp, -176
+    sd ra, 0(sp)
+    sd a0, 8(sp)
+    sd a1, 16(sp)
+    sd a2, 24(sp)
+    sd a3, 32(sp)
+    sd a4, 40(sp)
+    sd a5, 48(sp)
+    sd a6, 56(sp)
+    sd a7, 64(sp)
+    fsd fa0, 72(sp)
+    fsd fa1, 80(sp)
+    fsd fa2, 88(sp)
+    fsd fa3, 96(sp)
+    fsd fa4, 104(sp)
+    fsd fa5, 112(sp)
+    fsd fa6, 120(sp)
+    fsd fa7, 128(sp)
+    li a0, \id
+    addi a1, sp, 8
+    addi a2, sp, 176
+    addi a3, sp, 136
+    jal RelayCallBack
+    ld ra, 0(sp)
+    ld a0, 136(sp)
+    ld a1, 144(sp)
+    fld fa0, 152(sp)
+    fld fa1, 160(sp)
+    addi sp, sp, 176
+    ret
+.endm
+
+Trampoline0:
+    trampoline 0
+Trampoline1:
+    trampoline 1
+Trampoline2:
+    trampoline 2
+Trampoline3:
+    trampoline 3
+Trampoline4:
+    trampoline 4
+Trampoline5:
+    trampoline 5
+Trampoline6:
+    trampoline 6
+Trampoline7:
+    trampoline 7
+Trampoline8:
+    trampoline 8
+Trampoline9:
+    trampoline 9
+Trampoline10:
+    trampoline 10
+Trampoline11:
+    trampoline 11
+Trampoline12:
+    trampoline 12
+Trampoline13:
+    trampoline 13
+Trampoline14:
+    trampoline 14
+Trampoline15:
+    trampoline 15
+
+TrampolineX0:
+    trampoline_vec 0
+TrampolineX1:
+    trampoline_vec 1
+TrampolineX2:
+    trampoline_vec 2
+TrampolineX3:
+    trampoline_vec 3
+TrampolineX4:
+    trampoline_vec 4
+TrampolineX5:
+    trampoline_vec 5
+TrampolineX6:
+    trampoline_vec 6
+TrampolineX7:
+    trampoline_vec 7
+TrampolineX8:
+    trampoline_vec 8
+TrampolineX9:
+    trampoline_vec 9
+TrampolineX10:
+    trampoline_vec 10
+TrampolineX11:
+    trampoline_vec 11
+TrampolineX12:
+    trampoline_vec 12
+TrampolineX13:
+    trampoline_vec 13
+TrampolineX14:
+    trampoline_vec 14
+TrampolineX15:
+    trampoline_vec 15
+
+CallSwitchStack:
+    addi sp, sp, -16
+    sd ra, 0(sp)
+    sd s1, 8(sp)
+    mv s1, sp
+    ld t0, 0(a4)
+    sub t0, sp, t0
+    andi t0, t0, -16
+    sd t0, 8(a4)
+    mv sp, a3
+    jalr a5
+    mv sp, s1
+    ld ra, 0(sp)
+    ld s1, 8(sp)
+    addi sp, sp, 16
+    ret
