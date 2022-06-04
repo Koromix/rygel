@@ -297,6 +297,7 @@ CallSwitchStack proc frame
     mov r10, rsp
     mov r11, qword ptr [rsp+48]
     sub r10, qword ptr [r11+0]
+    and r10, -16
     mov qword ptr [r11+8], r10
     lea rsp, [r9-32]
     call rax
