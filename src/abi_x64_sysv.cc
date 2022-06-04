@@ -290,15 +290,23 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
             case PrimitiveKind::UInt16:
             case PrimitiveKind::Int32:
             case PrimitiveKind::UInt32:
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::UInt64: {
+            case PrimitiveKind::Int64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
                     return false;
                 }
 
                 int64_t v = CopyNumber<int64_t>(value);
-                *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)v;
+                *(int64_t *)((param.gpr_count ? gpr_ptr : args_ptr)++) = v;
+            } break;
+            case PrimitiveKind::UInt64: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
+                    return false;
+                }
+
+                uint64_t v = CopyNumber<uint64_t>(value);
+                *((param.gpr_count ? gpr_ptr : args_ptr)++) = v;
             } break;
             case PrimitiveKind::String: {
                 const char *str;

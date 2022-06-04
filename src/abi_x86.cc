@@ -180,25 +180,42 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
             case PrimitiveKind::UInt8:
             case PrimitiveKind::Int16:
             case PrimitiveKind::UInt16:
-            case PrimitiveKind::Int32:
-            case PrimitiveKind::UInt32: {
+            case PrimitiveKind::Int32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
                     return false;
                 }
 
                 int32_t v = CopyNumber<int32_t>(value);
-                *((param.fast ? fast_ptr : args_ptr)++) = (uint32_t)v;
+                *(int32_t *)((param.fast ? fast_ptr : args_ptr)++) = v;
             } break;
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::UInt64: {
+            case PrimitiveKind::UInt32: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
+                    return false;
+                }
+
+                uint32_t v = CopyNumber<uint32_t>(value);
+                *((param.fast ? fast_ptr : args_ptr)++) = v;
+            } break;
+            case PrimitiveKind::Int64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
                     return false;
                 }
 
                 int64_t v = CopyNumber<int64_t>(value);
-                *(uint64_t *)args_ptr = (uint64_t)v;
+                *(int64_t *)args_ptr = v;
+                args_ptr += 2;
+            } break;
+            case PrimitiveKind::UInt64: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), i + 1);
+                    return false;
+                }
+
+                uint64_t v = CopyNumber<uint64_t>(value);
+                *(uint64_t *)args_ptr = v;
                 args_ptr += 2;
             } break;
             case PrimitiveKind::String: {
