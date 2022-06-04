@@ -206,8 +206,6 @@ SYMBOL(ForwardCallXDD):
     call SYMBOL(RelayCallBack)
     movq 112(%rsp), %rax
     movq 120(%rsp), %rdx
-    movsd 128(%rsp), %xmm0
-    movsd 136(%rsp), %xmm1
     addq $152, %rsp
     .cfi_def_cfa rsp, 8
     ret

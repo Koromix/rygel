@@ -859,8 +859,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
 void *GetTrampoline(Size idx, const FunctionInfo *proto)
 {
-    void *trampoline = Trampolines[idx][proto->forward_fp];
-    return trampoline;
+    bool xmm = proto->forward_fp || IsFloat(proto->ret.type);
+    return Trampolines[idx][xmm];
 }
 
 extern "C" void RelayCallBack(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
