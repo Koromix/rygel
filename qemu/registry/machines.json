@@ -424,7 +424,7 @@
                     "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js",
                     "Test Async": "PATH=/usr/local/bin:/usr/bin:/bin node test/async.js",
                     "Test SQLite": "PATH=/usr/local/bin:/usr/bin:/bin node test/sqlite.js",
-                    "Test Callbacks": "node test/callbacks.js"
+                    "Test Callbacks": "PATH=/usr/local/bin:/usr/bin:/bin node test/callbacks.js"
                 }
             }
         }
