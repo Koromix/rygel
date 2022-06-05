@@ -270,7 +270,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.gpr_count)) {
                     *(int32_t *)(gpr_ptr++) = v;
                 } else {
-                    memcpy(args_ptr, &v, param.type->size); // Little Endian
+                    *(int32_t *)args_ptr = v;
                     args_ptr += 4;
                 }
             } break;
@@ -285,7 +285,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = v;
                 } else {
-                    memcpy(args_ptr, &v, param.type->size); // Little Endian
+                    *(uint32_t *)args_ptr = v;
                     args_ptr += 4;
                 }
             } break;
@@ -302,7 +302,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     gpr_ptr += 2;
                 } else {
                     args_ptr = AlignUp(args_ptr, 8);
-                    memcpy(args_ptr, &v, param.type->size); // Little Endian
+                    *(int64_t *)args_ptr = v;
                     args_ptr += 8;
                 }
             } break;
@@ -319,7 +319,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     gpr_ptr += 2;
                 } else {
                     args_ptr = AlignUp(args_ptr, 8);
-                    memcpy(args_ptr, &v, param.type->size); // Little Endian
+                    *(uint64_t *)args_ptr = v;
                     args_ptr += 8;
                 }
             } break;
@@ -440,11 +440,11 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 float f = CopyNumber<float>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
-                    memcpy(vec_ptr++, &f, 4);
+                    *(float *)(vec_ptr++) = f;
                 } else if (param.gpr_count) {
-                    memcpy(gpr_ptr++, &f, 4);
+                    *(float *)(gpr_ptr++) = f;
                 } else {
-                    memcpy(args_ptr, &f, 4);
+                    *(float *)args_ptr = f;
                     args_ptr += 4;
                 }
             } break;
@@ -457,14 +457,14 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 double d = CopyNumber<double>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
-                    memcpy(vec_ptr, &d, 8);
+                    *(double *)vec_ptr = d;
                     vec_ptr += 2;
                 } else if (param.gpr_count) {
-                    memcpy(gpr_ptr, &d, 8);
+                    *(double *)gpr_ptr = d;
                     gpr_ptr += 2;
                 } else {
                     args_ptr = AlignUp(args_ptr, 8);
-                    memcpy(args_ptr, &d, 8);
+                    *(double *)args_ptr = d;
                     args_ptr += 8;
                 }
             } break;
