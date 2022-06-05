@@ -274,7 +274,7 @@ CallSwitchStack proc
     and eax, -16
     mov dword ptr [ecx+4], eax
     mov esp, dword ptr [esp+20]
-    sub esp, 16
+    sub esp, 28
     mov eax, dword ptr [ebx+8]
     mov dword ptr [esp+0], eax
     mov eax, dword ptr [ebx+12]
