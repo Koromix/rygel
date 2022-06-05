@@ -619,66 +619,156 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
+#ifdef __APPLE__
+                bool b;
+                if (param.gpr_count) {
+                    b = *(bool *)(gpr_ptr++);
+                } else {
+                    d = *(bool *)args_ptr;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
+                }
+#else
                 bool b = *(bool *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+#endif
 
                 Napi::Value arg = Napi::Boolean::New(env, b);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int8: {
+#ifdef __APPLE__
+                double d;
+                if (param.gpr_count) {
+                    d = (double)*(int8_t *)(gpr_ptr++);
+                } else {
+                    d = (double)*(int8_t *)args_ptr;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
+                }
+#else
                 double d = (double)*(int8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+#endif
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt8: {
+#ifdef __APPLE__
+                double d;
+                if (param.gpr_count) {
+                    d = (double)*(uint8_t *)(gpr_ptr++);
+                } else {
+                    d = (double)*(uint8_t *)args_ptr;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
+                }
+#else
                 double d = (double)*(uint8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+#endif
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int16: {
+#ifdef __APPLE__
+                double d;
+                if (param.gpr_count) {
+                    d = (double)*(int16_t *)(gpr_ptr++);
+                } else {
+                    args_ptr = AlignUp(args_ptr, 2);
+                    d = (double)*(int16_t *)args_ptr;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 2);
+                }
+#else
                 double d = (double)*(int16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+#endif
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt16: {
+#ifdef __APPLE__
+                double d;
+                if (param.gpr_count) {
+                    d = (double)*(uint16_t *)(gpr_ptr++);
+                } else {
+                    args_ptr = AlignUp(args_ptr, 2);
+                    d = (double)*(uint16_t *)args_ptr;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 2);
+                }
+#else
                 double d = (double)*(uint16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+#endif
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int32: {
+#ifdef __APPLE__
+                double d;
+                if (param.gpr_count) {
+                    d = (double)*(int32_t *)(gpr_ptr++);
+                } else {
+                    args_ptr = AlignUp(args_ptr, 4);
+                    d = (double)*(int32_t *)args_ptr;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
+                }
+#else
                 double d = (double)*(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+#endif
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32: {
-                double d = (double)*(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+#ifdef __APPLE__
+                double d;
+                if (param.gpr_count) {
+                    d = (double)*(uint32_t *)(gpr_ptr++);
+                } else {
+                    args_ptr = AlignUp(args_ptr, 4);
+                    d = (double)*(uint32_t *)args_ptr;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
+                }
+#else
+                double d = (double)*(uint32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+#endif
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64: {
+#ifdef __APPLE__
+                args_ptr = AlignUp(args_ptr, 8);
+#endif
+
                 int64_t v = *(int64_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
                 Napi::Value arg = Napi::BigInt::New(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64: {
+#ifdef __APPLE__
+                args_ptr = AlignUp(args_ptr, 8);
+#endif
+
                 uint64_t v = *(uint64_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
                 Napi::Value arg = Napi::BigInt::New(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::String: {
+#ifdef __APPLE__
+                args_ptr = AlignUp(args_ptr, 8);
+#endif
+
                 const char *str = *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
                 Napi::Value arg = Napi::String::New(env, str);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::String16: {
+#ifdef __APPLE__
+                args_ptr = AlignUp(args_ptr, 8);
+#endif
+
                 const char16_t *str16 = *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
                 Napi::Value arg = Napi::String::New(env, str16);
@@ -686,6 +776,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             } break;
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
+#ifdef __APPLE__
+                args_ptr = AlignUp(args_ptr, 8);
+#endif
+
                 void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
                 if (ptr2) {
@@ -712,12 +806,18 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
                         gpr_ptr += param.gpr_count;
                     } else if (param.type->size) {
+                        args_ptr = AlignUp(args_ptr, param.type->align);
+
                         Napi::Object obj = PopObject((uint8_t *)args_ptr, param.type);
                         arguments.Append(obj);
 
                         args_ptr += (param.type->size + 7) / 8;
                     }
                 } else {
+#ifdef __APPLE__
+                    args_ptr = AlignUp(args_ptr, 8);
+#endif
+
                     void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
                     Napi::Object obj = PopObject((uint8_t *)ptr2, param.type);
@@ -732,7 +832,13 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 } else if (param.gpr_count) {
                     f = *(float *)(gpr_ptr++);
                 } else {
+#ifdef __APPLE__
+                    args_ptr = AlignUp(args_ptr, 4);
+                    f = *(float *)args_ptr;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
+#else
                     f = *(float *)(args_ptr++);
+#endif
                 }
 
                 Napi::Value arg = Napi::Number::New(env, (double)f);
@@ -745,6 +851,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 } else if (param.gpr_count) {
                     d = *(double *)(gpr_ptr++);
                 } else {
+#ifdef __APPLE__
+                    args_ptr = AlignUp(args_ptr, 8);
+#endif
+
                     d = *(double *)(args_ptr++);
                 }
 
