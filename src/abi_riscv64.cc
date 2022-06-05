@@ -762,15 +762,21 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             out_reg->a0 = (uint64_t)ptr;
         } break;
         case PrimitiveKind::Record: {
+            if (RG_UNLIKELY(!IsObject(value))) {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected object", GetValueType(instance, value));
+                return;
+            }
+
+            Napi::Object obj = value.As<Napi::Object>();
+
             if (return_ptr) {
-                Napi::Object obj = PopObject(return_ptr, proto->ret.type);
-                arguments.Append(obj);
+                if (!PushObject(obj, type, return_ptr))
+                    return;
+                out_reg->a0 = (uint64_t)return_ptr;
             } else if (proto->ret.vec_count) { // HFA
-                Napi::Object obj = PopObject((const uint8_t *)&out_reg->fa0, proto->ret.type, 8);
-                arguments.Append(obj);
+                PushObject(obj, type, (uint8_t *)&out_reg->fa0, 8);
             } else {
-                Napi::Object obj = PopObject((const uint8_t *)&out_reg->a0, proto->ret.type);
-                arguments.Append(obj);
+                PushObject(obj, type, (uint8_t *)&out_reg->a0);
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
