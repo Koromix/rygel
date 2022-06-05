@@ -17,6 +17,9 @@
     #define SYMBOL(Symbol) Symbol
 #endif
 
+# Forward
+# ----------------------------
+
 # These three are the same, but they differ (in the C side) by their return type.
 # Unlike the three next functions, these ones don't forward XMM argument registers.
 .global SYMBOL(ForwardCallGG)
@@ -29,6 +32,7 @@
 .global SYMBOL(ForwardCallXDDDD)
 
 # Copy function pointer to r9, in order to save it through argument forwarding.
+# Also make a copy of the SP to CallData::old_sp because the callback system might need it.
 # Save RSP in r29 (non-volatile), and use carefully assembled stack provided by caller.
 .macro prologue
     .cfi_startproc
@@ -38,6 +42,7 @@
     .cfi_offset 30, 8
     mov x29, sp
     .cfi_def_cfa x29, 16
+    str x29, [x2, 0]
     mov x9, x0
     add sp, x1, #136
 .endm
@@ -114,3 +119,204 @@ SYMBOL(ForwardCallXDDDD):
     forward_vec
     forward_int
     epilogue
+
+# Callback trampolines
+# ----------------------------
+
+.global Trampoline0
+.global Trampoline1
+.global Trampoline2
+.global Trampoline3
+.global Trampoline4
+.global Trampoline5
+.global Trampoline6
+.global Trampoline7
+.global Trampoline8
+.global Trampoline9
+.global Trampoline10
+.global Trampoline11
+.global Trampoline12
+.global Trampoline13
+.global Trampoline14
+.global Trampoline15
+.global TrampolineX0
+.global TrampolineX1
+.global TrampolineX2
+.global TrampolineX3
+.global TrampolineX4
+.global TrampolineX5
+.global TrampolineX6
+.global TrampolineX7
+.global TrampolineX8
+.global TrampolineX9
+.global TrampolineX10
+.global TrampolineX11
+.global TrampolineX12
+.global TrampolineX13
+.global TrampolineX14
+.global TrampolineX15
+.global RelayCallBack
+.global CallSwitchStack
+
+# First, make a copy of the GPR argument registers (x0 to x7).
+# Then call the C function RelayCallBack with the following arguments:
+# static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
+# arguments of this call, and a pointer to a struct that will contain the result registers.
+# After the call, simply load these registers from the output struct.
+.macro trampoline id
+    .cfi_startproc
+    stp x29, x30, [sp, -16]!
+    .cfi_def_cfa sp, 16
+    .cfi_offset 29, 16
+    .cfi_offset 30, 8
+    sub sp, sp, #192
+    .cfi_def_cfa sp, 208
+    stp x0, x1, [sp, 0]
+    stp x2, x3, [sp, 16]
+    stp x4, x5, [sp, 32]
+    stp x6, x7, [sp, 48]
+    str x8, [sp, 64]
+    mov x0, \id
+    mov x1, sp
+    add x2, sp, #208
+    add x3, sp, #136
+    bl RelayCallBack
+    ldp x0, x1, [sp, 136]
+    add sp, sp, #192
+    .cfi_def_cfa sp, 16
+    ldp x29, x30, [sp], 16
+    .cfi_def_cfa sp, 0
+    .cfi_restore 30
+    .cfi_restore 29
+    ret
+    .cfi_endproc
+.endm
+
+# Same thing, but also forwards the floating-point argument registers and loads them at the end.
+.macro trampoline_vec id
+    .cfi_startproc
+    stp x29, x30, [sp, -16]!
+    .cfi_def_cfa sp, 16
+    .cfi_offset 29, 16
+    .cfi_offset 30, 8
+    sub sp, sp, #192
+    .cfi_def_cfa sp, 208
+    stp x0, x1, [sp, 0]
+    stp x2, x3, [sp, 16]
+    stp x4, x5, [sp, 32]
+    stp x6, x7, [sp, 48]
+    str x8, [sp, 64]
+    stp d0, d1, [sp, 72]
+    stp d2, d3, [sp, 88]
+    stp d4, d5, [sp, 104]
+    stp d6, d7, [sp, 120]
+    mov x0, \id
+    mov x1, sp
+    add x2, sp, #208
+    add x3, sp, #136
+    bl RelayCallBack
+    ldp x0, x1, [sp, 136]
+    ldp d0, d1, [sp, 152]
+    ldp d2, d3, [sp, 168]
+    add sp, sp, #192
+    .cfi_def_cfa sp, 16
+    ldp x29, x30, [sp], 16
+    .cfi_def_cfa sp, 0
+    .cfi_restore 30
+    .cfi_restore 29
+    ret
+    .cfi_endproc
+.endm
+
+Trampoline0:
+    trampoline 0
+Trampoline1:
+    trampoline 1
+Trampoline2:
+    trampoline 2
+Trampoline3:
+    trampoline 3
+Trampoline4:
+    trampoline 4
+Trampoline5:
+    trampoline 5
+Trampoline6:
+    trampoline 6
+Trampoline7:
+    trampoline 7
+Trampoline8:
+    trampoline 8
+Trampoline9:
+    trampoline 9
+Trampoline10:
+    trampoline 10
+Trampoline11:
+    trampoline 11
+Trampoline12:
+    trampoline 12
+Trampoline13:
+    trampoline 13
+Trampoline14:
+    trampoline 14
+Trampoline15:
+    trampoline 15
+
+TrampolineX0:
+    trampoline_vec 0
+TrampolineX1:
+    trampoline_vec 1
+TrampolineX2:
+    trampoline_vec 2
+TrampolineX3:
+    trampoline_vec 3
+TrampolineX4:
+    trampoline_vec 4
+TrampolineX5:
+    trampoline_vec 5
+TrampolineX6:
+    trampoline_vec 6
+TrampolineX7:
+    trampoline_vec 7
+TrampolineX8:
+    trampoline_vec 8
+TrampolineX9:
+    trampoline_vec 9
+TrampolineX10:
+    trampoline_vec 10
+TrampolineX11:
+    trampoline_vec 11
+TrampolineX12:
+    trampoline_vec 12
+TrampolineX13:
+    trampoline_vec 13
+TrampolineX14:
+    trampoline_vec 14
+TrampolineX15:
+    trampoline_vec 15
+
+# When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
+# The propblem is that we're still running on the separate Koffi stack, and V8 will
+# preobably misdetect this as a "stack overflow". We have to restore the old
+# stack pointer, call Node.js/V8 and go back to ours.
+# The first three parameters (x0, x1, x2) are passed through untouched.
+CallSwitchStack:
+    .cfi_startproc
+    stp x29, x30, [sp, -16]!
+    .cfi_def_cfa sp, 16
+    .cfi_offset 29, 16
+    .cfi_offset 30, 8
+    mov x29, sp
+    ldr x9, [x4, 0]
+    sub x9, sp, x9
+    and x9, x9, #-16
+    str x9, [x4, 8]
+    mov sp, x3
+    blr x5
+    mov sp, x29
+    .cfi_def_cfa sp, 16
+    ldp x29, x30, [sp], 16
+    .cfi_def_cfa sp, 0
+    .cfi_restore 30
+    .cfi_restore 29
+    ret
+    .cfi_endproc

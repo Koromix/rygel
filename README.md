@@ -22,7 +22,7 @@ Koffi is a fast and easy-to-use C FFI module for Node.js, with support for primi
 
 The following features are planned in the near future:
 
-* 1.2: C to JS callbacks (⚠️ partially available for some architectures in master branch)
+* 1.2: C to JS callbacks (⚠️ partially available for: x86, x64, ARM64, RISC-V 64)
 * 1.3: Optimize passing of structs and arrays
 * 1.4: Type parser, unions
 
@@ -295,7 +295,7 @@ Variadic functions do not support async.
 
 ## Callbacks
 
-⚠️ Support for callbacks **is in development, don't expect it to run reliably**. Only x64, x86 and RISC-V 64 platforms are supported at the moment.
+⚠️ Support for callbacks **is in development, don't expect it to run reliably**.
 
 In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.
 
