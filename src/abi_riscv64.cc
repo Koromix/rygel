@@ -168,7 +168,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 
 bool CallData::Prepare(const Napi::CallbackInfo &info)
 {
-    uint8_t *args_ptr = nullptr;
+    uint64_t *args_ptr = nullptr;
     uint64_t *gpr_ptr = nullptr;
     uint64_t *vec_ptr = nullptr;
 
@@ -202,13 +202,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 }
 
                 bool b = value.As<Napi::Boolean>();
-
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint64_t)b;
-                } else {
-                    *(uint64_t *)args_ptr = (uint64_t)b;
-                    args_ptr += 8;
-                }
+                *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)b;
             } break;
             case PrimitiveKind::Int8:
             case PrimitiveKind::Int16:
@@ -220,13 +214,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 }
 
                 int64_t v = CopyNumber<int64_t>(value);
-
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(int64_t *)(gpr_ptr++) = v;
-                } else {
-                    *(int64_t *)args_ptr = v;
-                    args_ptr += 8;
-                }
+                *(int64_t *)((param.gpr_count ? gpr_ptr : args_ptr)++) = v;
             } break;
             case PrimitiveKind::UInt8:
             case PrimitiveKind::UInt16:
@@ -238,13 +226,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 }
 
                 uint64_t v = CopyNumber<uint64_t>(value);
-
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(uint64_t *)(gpr_ptr++) = v;
-                } else {
-                    *(uint64_t *)args_ptr = v;
-                    args_ptr += 8;
-                }
+                *((param.gpr_count ? gpr_ptr : args_ptr)++) = v;
             } break;
             case PrimitiveKind::String: {
                 const char *str;
@@ -259,12 +241,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(const char **)(gpr_ptr++) = str;
-                } else {
-                    *(const char **)args_ptr = str;
-                    args_ptr += 8;
-                }
+                *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16;
@@ -279,12 +256,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(const char16_t **)(gpr_ptr++) = str16;
-                } else {
-                    *(const char16_t **)args_ptr = str16;
-                    args_ptr += 8;
-                }
+                *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
             } break;
             case PrimitiveKind::Pointer: {
                 uint8_t *ptr;
@@ -317,12 +289,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(uint8_t **)(gpr_ptr++) = ptr;
-                } else {
-                    *(uint8_t **)args_ptr = ptr;
-                    args_ptr += 8;
-                }
+                *(uint8_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
@@ -354,7 +321,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                         RG_ASSERT(param.type->align <= 8);
 
                         memcpy_safe(args_ptr, ptr, param.type->size);
-                        args_ptr += AlignLen(param.type->size, 8);
+                        args_ptr += (param.type->size + 7) / 8;
                     }
                 } else {
                     uint8_t *ptr;
@@ -367,8 +334,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                         *(uint8_t **)(gpr_ptr++) = ptr;
                     } else {
-                        *(uint8_t **)args_ptr = ptr;
-                        args_ptr += 8;
+                        *(uint8_t **)(args_ptr++) = ptr;
                     }
 
                     if (!PushObject(obj, param.type, ptr))
@@ -391,9 +357,8 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     memset((uint8_t *)gpr_ptr + 4, 0xFF, 4);
                     *(float *)(gpr_ptr++) = f;
                 } else {
-                    memset(args_ptr + 4, 0xFF, 4);
-                    *(float *)args_ptr = f;
-                    args_ptr += 8;
+                    memset(args_ptr, 0xFF, 8);
+                    *(float *)(args_ptr++) = f;
                 }
             } break;
             case PrimitiveKind::Float64: {
@@ -409,8 +374,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else if (param.gpr_count) {
                     *(double *)(gpr_ptr++) = d;
                 } else {
-                    *(double *)args_ptr = d;
-                    args_ptr += 8;
+                    *(double *)(args_ptr++) = d;
                 }
             } break;
             case PrimitiveKind::Callback: {
@@ -433,12 +397,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(void **)(gpr_ptr++) = ptr;
-                } else {
-                    *(void **)args_ptr = ptr;
-                    args_ptr += 8;
-                }
+                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
         }
     }
@@ -670,7 +629,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                         RG_ASSERT(param.type->align <= 8);
 
                         memcpy_safe(ptr, args_ptr, param.type->size);
-                        args_ptr += AlignLen(param.type->size, 8);
+                        args_ptr += (param.type->size + 7) / 8;
                     }
 
                     // Reassemble float or mixed int-float structs from registers
