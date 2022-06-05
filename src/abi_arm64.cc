@@ -270,10 +270,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 int64_t v = CopyNumber<int64_t>(value);
 
                 if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint64_t)v;
+                    *(int64_t *)(gpr_ptr++) = v;
                 } else {
                     args_ptr = AlignUp(args_ptr, param.type->align);
-                    memcpy(args_ptr, &v, param.type->size); // Little Endian
+                    *(int64_t *)args_ptr = v;
 #ifdef __APPLE__
                     args_ptr += param.type->size;
 #else
@@ -433,10 +433,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 float f = CopyNumber<float>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
-                    memcpy(vec_ptr++, &f, 4);
+                    *(float *)(vec_ptr++) = f;
                 } else {
                     args_ptr = AlignUp(args_ptr, 4);
-                    memcpy(args_ptr, &f, 4);
+                    *(float *)args_ptr = f;
 #ifdef __APPLE__
                     args_ptr += 4;
 #else
@@ -453,10 +453,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 double d = CopyNumber<double>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
-                    memcpy(vec_ptr++, &d, 8);
+                    *(double *)(vec_ptr++) = d;
                 } else {
                     args_ptr = AlignUp(args_ptr, 8);
-                    memcpy(args_ptr, &d, 8);
+                    *(double *)args_ptr = d;
                     args_ptr += 8;
                 }
             } break;
