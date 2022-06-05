@@ -437,12 +437,6 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
     const FunctionInfo *proto = instance->trampolines[idx].proto;
     Napi::Function func = instance->trampolines[idx].func;
 
-    if (RG_UNLIKELY(proto->convention != CallConvention::Cdecl &&
-                    proto->convention != CallConvention::Stdcall)) {
-        ThrowError<Napi::Error>(env, "Only Cdecl and Stdcall callbacks are supported on x86 platforms");
-        return;
-    }
-
     // Allow reuse of static trampoline
     instance->free_trampolines |= 1u << idx;
     used_trampolines &= ~(1u << idx);

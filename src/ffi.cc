@@ -421,6 +421,11 @@ static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
         LogError("Variadic callbacks are not supported");
         return env.Null();
     }
+    if (func->convention != CallConvention::Cdecl &&
+            func->convention != CallConvention::Stdcall) {
+        ThrowError<Napi::Error>(env, "Only Cdecl and Stdcall callbacks are supported");
+        return env.Null();
+    }
 
     if (!AnalyseFunction(instance, func))
         return env.Null();
