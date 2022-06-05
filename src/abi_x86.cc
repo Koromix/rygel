@@ -668,8 +668,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                     return;
                 out_reg->eax = (uint32_t)return_ptr;
             } else {
-                if (!PushObject(obj, type, (uint8_t *)&out_reg->eax))
-                    return;
+                PushObject(obj, type, (uint8_t *)&out_reg->eax);
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
