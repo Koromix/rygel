@@ -797,28 +797,37 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             out_reg->rax = (uint64_t)ptr;
         } break;
         case PrimitiveKind::Record: {
+            if (RG_UNLIKELY(!IsObject(value))) {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected object", GetValueType(instance, value));
+                return;
+            }
+
+            Napi::Object obj = value.As<Napi::Object>();
+
             if (return_ptr) {
-                Napi::Object obj = PopObject(return_ptr, proto->ret.type);
-                arguments.Append(obj);
+                if (!PushObject(obj, type, return_ptr))
+                    return;
+                out_reg->rax = (uint64_t)return_ptr;
             } else {
+                RG_ASSERT(type->size <= 16);
+
                 uint8_t buf[16] = {};
+                if (!PushObject(obj, type, buf))
+                    return;
 
                 if (proto->ret.gpr_first && !proto->ret.xmm_count) {
-                    memcpy(buf + 0, &out_reg->rax, 8);
-                    memcpy(buf + 8, &out_reg->rdx, 8);
+                    memcpy(&out_reg->rax, buf + 0, 8);
+                    memcpy(&out_reg->rdx, buf + 8, 8);
                 } else if (proto->ret.gpr_first) {
-                    memcpy(buf + 0, &out_reg->rax, 8);
-                    memcpy(buf + 8, &out_reg->xmm0, 8);
+                    memcpy(&out_reg->rax, buf + 0, 8);
+                    memcpy(&out_reg->xmm0, buf + 8, 8);
                 } else if (proto->ret.xmm_count == 2) {
-                    memcpy(buf + 0, &out_reg->xmm0, 8);
-                    memcpy(buf + 8, &out_reg->xmm1, 8);
+                    memcpy(&out_reg->xmm0, buf + 0, 8);
+                    memcpy(&out_reg->xmm1, buf + 8, 8);
                 } else {
-                    memcpy(buf + 0, &out_reg->xmm0, 8);
-                    memcpy(buf + 8, &out_reg->rax, 8);
+                    memcpy(&out_reg->xmm0, buf + 0, 8);
+                    memcpy(&out_reg->rax, buf + 8, 8);
                 }
-
-                Napi::Object obj = PopObject(buf, proto->ret.type);
-                arguments.Append(obj);
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
