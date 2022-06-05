@@ -38,7 +38,8 @@
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test Callbacks": "node test/callbacks.js"
                 }
             }
         }
