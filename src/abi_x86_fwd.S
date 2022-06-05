@@ -19,6 +19,7 @@
 .global ForwardCallRD
 
 # Copy function pointer to EAX, in order to save it through argument forwarding.
+# Also make a copy of the SP to CallData::old_sp because the callback system might need it.
 # Save ESP in EBX (non-volatile), and use carefully assembled stack provided by caller.
 .macro prologue
     .cfi_startproc
@@ -117,6 +118,10 @@ ForwardCallRD:
 .global RelayCallBack
 .global CallSwitchStack
 
+# Call the C function RelayCallBack with the following arguments:
+# static trampoline ID, the current stack pointer, a pointer to the stack arguments of this call,
+# and a pointer to a struct that will contain the result registers.
+# After the call, simply load these registers from the output struct.
 .macro trampoline id
     .cfi_startproc
     .cfi_def_cfa esp, 4
@@ -140,6 +145,8 @@ ForwardCallRD:
     .cfi_endproc
 .endm
 
+# This version also loads the x87 stack with the result, if need be.
+# We have to branch to avoid x87 stack imbalance.
 .macro trampoline_x87 id
     .cfi_startproc
     .cfi_def_cfa esp, 4
@@ -241,6 +248,10 @@ TrampolineX14:
 TrampolineX15:
     trampoline_x87 15
 
+# When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
+# The propblem is that we're still running on the separate Koffi stack, and V8 will
+# preobably misdetect this as a "stack overflow". We have to restore the old
+# stack pointer, call Node.js/V8 and go back to ours.
 CallSwitchStack:
     .cfi_startproc
     .cfi_def_cfa esp, 4

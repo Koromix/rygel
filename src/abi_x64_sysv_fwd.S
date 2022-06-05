@@ -36,6 +36,7 @@
 .global SYMBOL(ForwardCallXDD)
 
 # Copy function pointer to R11, in order to save it through argument forwarding.
+# Also make a copy of the SP to CallData::old_sp because the callback system might need it.
 # Save RSP in RBX (non-volatile), and use carefully assembled stack provided by caller.
 .macro prologue
     .cfi_startproc
@@ -187,6 +188,11 @@ SYMBOL(ForwardCallXDD):
 .global SYMBOL(RelayCallBack)
 .global SYMBOL(CallSwitchStack)
 
+# First, make a copy of the GPR argument registers (rdi, rsi, rdx, rcx, r8, r9).
+# Then call the C function RelayCallBack with the following arguments:
+# static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
+# arguments of this call, and a pointer to a struct that will contain the result registers.
+# After the call, simply load these registers from the output struct.
 .macro trampoline id
     .cfi_startproc
     .cfi_def_cfa rsp, 8
@@ -212,6 +218,7 @@ SYMBOL(ForwardCallXDD):
     .cfi_endproc
 .endm
 
+# Same thing, but also forward the XMM argument registers and load the XMM result registers.
 .macro trampoline_xmm id
     .cfi_startproc
     .cfi_def_cfa rsp, 8
@@ -313,6 +320,11 @@ SYMBOL(TrampolineX14):
 SYMBOL(TrampolineX15):
     trampoline_xmm 15
 
+# When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
+# The propblem is that we're still running on the separate Koffi stack, and V8 will
+# preobably misdetect this as a "stack overflow". We have to restore the old
+# stack pointer, call Node.js/V8 and go back to ours.
+# The first three parameters (rdi, rsi, rdx) are passed through untouched.
 SYMBOL(CallSwitchStack):
     .cfi_startproc
     .cfi_def_cfa rsp, 8

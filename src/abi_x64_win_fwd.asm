@@ -28,6 +28,7 @@ public ForwardCallXD
 .code
 
 ; Copy function pointer to RAX, in order to save it through argument forwarding.
+; Also make a copy of the SP to CallData::old_sp because the callback system might need it.
 ; Save RSP in RBX (non-volatile), and use carefully assembled stack provided by caller.
 prologue macro
     endbr64
@@ -144,6 +145,11 @@ public TrampolineX15
 extern RelayCallBack : PROC
 public CallSwitchStack
 
+; First, make a copy of the GPR argument registers (rcx, rdx, r8, r9).
+; Then call the C function RelayCallBack with the following arguments:
+; static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
+; arguments of this call, and a pointer to a struct that will contain the result registers.
+; After the call, simply load these registers from the output struct.
 trampoline macro ID
     endbr64
     sub rsp, 120
@@ -163,6 +169,7 @@ trampoline macro ID
     ret
 endm
 
+; Same thing, but also forward the XMM argument registers and load the XMM result registers.
 trampoline_xmm macro ID
     endbr64
     sub rsp, 120
@@ -285,6 +292,11 @@ TrampolineX15 proc frame
     trampoline_xmm 15
 TrampolineX15 endp
 
+; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
+; The propblem is that we're still running on the separate Koffi stack, and V8 will
+; preobably misdetect this as a "stack overflow". We have to restore the old
+; stack pointer, call Node.js/V8 and go back to ours.
+; The first three parameters (rcx, rdx, r8) are passed through untouched.
 CallSwitchStack proc frame
     endbr64
     push rbx

@@ -30,6 +30,7 @@
 .global ForwardCallXDD
 
 # Copy function pointer to t0, in order to save it through argument forwarding.
+# Also make a copy of the SP to CallData::old_sp because the callback system might need it.
 # Save SP in s1, and use carefully assembled stack provided by caller.
 .macro prologue
     addi sp, sp, -16
@@ -170,6 +171,11 @@ ForwardCallXDD:
 .global RelayCallBack
 .global CallSwitchStack
 
+# First, make a copy of the GPR argument registers (a0 to a7).
+# Then call the C function RelayCallBack with the following arguments:
+# static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
+# arguments of this call, and a pointer to a struct that will contain the result registers.
+# After the call, simply load these registers from the output struct.
 .macro trampoline id
     addi sp, sp, -176
     sd ra, 0(sp)
@@ -193,6 +199,7 @@ ForwardCallXDD:
     ret
 .endm
 
+# Same thing, but also forwards the floating-point argument registers and loads them at the end.
 .macro trampoline_vec id
     addi sp, sp, -176
     sd ra, 0(sp)
