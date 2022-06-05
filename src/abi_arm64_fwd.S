@@ -65,26 +65,18 @@
 # Prepare general purpose argument registers from array passed by caller.
 .macro forward_int
     ldr x8, [x1, 64]
-    ldr x7, [x1, 56]
-    ldr x6, [x1, 48]
-    ldr x5, [x1, 40]
-    ldr x4, [x1, 32]
-    ldr x3, [x1, 24]
-    ldr x2, [x1, 16]
-    ldr x0, [x1, 0]
-    ldr x1, [x1, 8]
+    ldp x6, x7, [x1, 48]
+    ldp x4, x5, [x1, 32]
+    ldp x2, x3, [x1, 16]
+    ldp x0, x1, [x1, 0]
 .endm
 
 # Prepare vector argument registers from array passed by caller.
 .macro forward_vec
-    ldr d7, [x1, 128]
-    ldr d6, [x1, 120]
-    ldr d5, [x1, 112]
-    ldr d4, [x1, 104]
-    ldr d3, [x1, 96]
-    ldr d2, [x1, 88]
-    ldr d1, [x1, 80]
-    ldr d0, [x1, 72]
+    ldp d6, d7, [x1, 120]
+    ldp d4, d5, [x1, 104]
+    ldp d2, d3, [x1, 88]
+    ldp d0, d1, [x1, 72]
 .endm
 
 SYMBOL(ForwardCallGG):
