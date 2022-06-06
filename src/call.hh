@@ -25,7 +25,9 @@ bool AnalyseFunction(InstanceData *instance, FunctionInfo *func);
 
 struct BackRegisters;
 
-class CallData {
+// I'm not sure why the alignas(8), because alignof(CallData) is 8 without it.
+// But on Windows i386, without it, the alignment may not be correct (compiler bug?).
+class alignas(8) CallData {
     struct OutObject {
         Napi::ObjectReference ref;
         const uint8_t *ptr;
