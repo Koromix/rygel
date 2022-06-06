@@ -2,10 +2,6 @@
      Menu: Other
      Created: 2022-05-16 -->
 
-#intro# Introduction
-
-The projects on this page are provided as-is, and are in *various states of completion*.
-
 #blikk# blikk
 
 blikk is an **embeddable beginner-friendly programming language** with static types, fast compilation.
