@@ -624,7 +624,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 if (param.gpr_count) {
                     b = *(bool *)(gpr_ptr++);
                 } else {
-                    d = *(bool *)args_ptr;
+                    b = *(bool *)args_ptr;
                     args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
                 }
 #else
