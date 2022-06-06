@@ -115,40 +115,40 @@ SYMBOL(ForwardCallXDDDD):
 # Callback trampolines
 # ----------------------------
 
-.global Trampoline0
-.global Trampoline1
-.global Trampoline2
-.global Trampoline3
-.global Trampoline4
-.global Trampoline5
-.global Trampoline6
-.global Trampoline7
-.global Trampoline8
-.global Trampoline9
-.global Trampoline10
-.global Trampoline11
-.global Trampoline12
-.global Trampoline13
-.global Trampoline14
-.global Trampoline15
-.global TrampolineX0
-.global TrampolineX1
-.global TrampolineX2
-.global TrampolineX3
-.global TrampolineX4
-.global TrampolineX5
-.global TrampolineX6
-.global TrampolineX7
-.global TrampolineX8
-.global TrampolineX9
-.global TrampolineX10
-.global TrampolineX11
-.global TrampolineX12
-.global TrampolineX13
-.global TrampolineX14
-.global TrampolineX15
-.global RelayCallBack
-.global CallSwitchStack
+.global SYMBOL(Trampoline0)
+.global SYMBOL(Trampoline1)
+.global SYMBOL(Trampoline2)
+.global SYMBOL(Trampoline3)
+.global SYMBOL(Trampoline4)
+.global SYMBOL(Trampoline5)
+.global SYMBOL(Trampoline6)
+.global SYMBOL(Trampoline7)
+.global SYMBOL(Trampoline8)
+.global SYMBOL(Trampoline9)
+.global SYMBOL(Trampoline10)
+.global SYMBOL(Trampoline11)
+.global SYMBOL(Trampoline12)
+.global SYMBOL(Trampoline13)
+.global SYMBOL(Trampoline14)
+.global SYMBOL(Trampoline15)
+.global SYMBOL(TrampolineX0)
+.global SYMBOL(TrampolineX1)
+.global SYMBOL(TrampolineX2)
+.global SYMBOL(TrampolineX3)
+.global SYMBOL(TrampolineX4)
+.global SYMBOL(TrampolineX5)
+.global SYMBOL(TrampolineX6)
+.global SYMBOL(TrampolineX7)
+.global SYMBOL(TrampolineX8)
+.global SYMBOL(TrampolineX9)
+.global SYMBOL(TrampolineX10)
+.global SYMBOL(TrampolineX11)
+.global SYMBOL(TrampolineX12)
+.global SYMBOL(TrampolineX13)
+.global SYMBOL(TrampolineX14)
+.global SYMBOL(TrampolineX15)
+.global SYMBOL(RelayCallBack)
+.global SYMBOL(CallSwitchStack)
 
 # First, make a copy of the GPR argument registers (x0 to x7).
 # Then call the C function RelayCallBack with the following arguments:
@@ -172,7 +172,7 @@ SYMBOL(ForwardCallXDDDD):
     mov x1, sp
     add x2, sp, #208
     add x3, sp, #136
-    bl RelayCallBack
+    bl SYMBOL(RelayCallBack)
     ldp x0, x1, [sp, 136]
     add sp, sp, #192
     .cfi_def_cfa sp, 16
@@ -206,7 +206,7 @@ SYMBOL(ForwardCallXDDDD):
     mov x1, sp
     add x2, sp, #208
     add x3, sp, #136
-    bl RelayCallBack
+    bl SYMBOL(RelayCallBack)
     ldp x0, x1, [sp, 136]
     ldp d0, d1, [sp, 152]
     ldp d2, d3, [sp, 168]
@@ -220,70 +220,70 @@ SYMBOL(ForwardCallXDDDD):
     .cfi_endproc
 .endm
 
-Trampoline0:
+SYMBOL(Trampoline0):
     trampoline 0
-Trampoline1:
+SYMBOL(Trampoline1):
     trampoline 1
-Trampoline2:
+SYMBOL(Trampoline2):
     trampoline 2
-Trampoline3:
+SYMBOL(Trampoline3):
     trampoline 3
-Trampoline4:
+SYMBOL(Trampoline4):
     trampoline 4
-Trampoline5:
+SYMBOL(Trampoline5):
     trampoline 5
-Trampoline6:
+SYMBOL(Trampoline6):
     trampoline 6
-Trampoline7:
+SYMBOL(Trampoline7):
     trampoline 7
-Trampoline8:
+SYMBOL(Trampoline8):
     trampoline 8
-Trampoline9:
+SYMBOL(Trampoline9):
     trampoline 9
-Trampoline10:
+SYMBOL(Trampoline10):
     trampoline 10
-Trampoline11:
+SYMBOL(Trampoline11):
     trampoline 11
-Trampoline12:
+SYMBOL(Trampoline12):
     trampoline 12
-Trampoline13:
+SYMBOL(Trampoline13):
     trampoline 13
-Trampoline14:
+SYMBOL(Trampoline14):
     trampoline 14
-Trampoline15:
+SYMBOL(Trampoline15):
     trampoline 15
 
-TrampolineX0:
+SYMBOL(TrampolineX0):
     trampoline_vec 0
-TrampolineX1:
+SYMBOL(TrampolineX1):
     trampoline_vec 1
-TrampolineX2:
+SYMBOL(TrampolineX2):
     trampoline_vec 2
-TrampolineX3:
+SYMBOL(TrampolineX3):
     trampoline_vec 3
-TrampolineX4:
+SYMBOL(TrampolineX4):
     trampoline_vec 4
-TrampolineX5:
+SYMBOL(TrampolineX5):
     trampoline_vec 5
-TrampolineX6:
+SYMBOL(TrampolineX6):
     trampoline_vec 6
-TrampolineX7:
+SYMBOL(TrampolineX7):
     trampoline_vec 7
-TrampolineX8:
+SYMBOL(TrampolineX8):
     trampoline_vec 8
-TrampolineX9:
+SYMBOL(TrampolineX9):
     trampoline_vec 9
-TrampolineX10:
+SYMBOL(TrampolineX10):
     trampoline_vec 10
-TrampolineX11:
+SYMBOL(TrampolineX11):
     trampoline_vec 11
-TrampolineX12:
+SYMBOL(TrampolineX12):
     trampoline_vec 12
-TrampolineX13:
+SYMBOL(TrampolineX13):
     trampoline_vec 13
-TrampolineX14:
+SYMBOL(TrampolineX14):
     trampoline_vec 14
-TrampolineX15:
+SYMBOL(TrampolineX15):
     trampoline_vec 15
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
@@ -291,7 +291,7 @@ TrampolineX15:
 # preobably misdetect this as a "stack overflow". We have to restore the old
 # stack pointer, call Node.js/V8 and go back to ours.
 # The first three parameters (x0, x1, x2) are passed through untouched.
-CallSwitchStack:
+SYMBOL(CallSwitchStack):
     .cfi_startproc
     stp x29, x30, [sp, -16]!
     .cfi_def_cfa sp, 16
