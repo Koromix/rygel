@@ -97,6 +97,10 @@ const FixedWide2 = koffi.struct('FixedWide2', {
     buf: koffi.array('char16', 64, 'string')
 });
 
+const SingleU32 = koffi.struct('SingleU32', { v: 'uint32_t' });
+const SingleU64 = koffi.struct('SingleU64', { v: 'uint64_t' });
+const SingleI64 = koffi.struct('SingleI64', { v: 'int64_t' });
+
 main();
 
 async function main() {
@@ -147,6 +151,18 @@ async function test() {
     const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
     const ReturnFixedWide = lib.func('FixedWide ReturnFixedWide(FixedWide str)');
     const ReturnFixedWide2 = lib.func('FixedWide2 ReturnFixedWide(FixedWide2 str)');
+    const ThroughUInt32UU = lib.func('uint32_t ThroughUInt32UU(uint32_t v)');
+    const ThroughUInt32SS = lib.func('SingleU32 ThroughUInt32SS(SingleU32 s)');
+    const ThroughUInt32SU = lib.func('SingleU32 ThroughUInt32SU(uint32_t v)');
+    const ThroughUInt32US = lib.func('uint32_t ThroughUInt32US(SingleU32 s)');
+    const ThroughUInt64UU = lib.func('uint64_t ThroughUInt64UU(uint64_t v)');
+    const ThroughUInt64SS = lib.func('SingleU64 ThroughUInt64SS(SingleU64 s)');
+    const ThroughUInt64SU = lib.func('SingleU64 ThroughUInt64SU(uint64_t v)');
+    const ThroughUInt64US = lib.func('uint64_t ThroughUInt64US(SingleU64 s)');
+    const ThroughInt64II = lib.func('int64_t ThroughInt64II(int64_t v)');
+    const ThroughInt64SS = lib.func('SingleI64 ThroughInt64SS(SingleI64 s)');
+    const ThroughInt64SI = lib.func('SingleI64 ThroughInt64SI(int64_t v)');
+    const ThroughInt64IS = lib.func('int64_t ThroughInt64IS(SingleI64 s)');
 
     // Simple tests with Pack1
     {
@@ -275,5 +291,33 @@ async function test() {
         assert.deepEqual(ReturnFixedStr2(str), { buf: 'Hello!' });
         assert.deepEqual(ReturnFixedWide(str), { buf: Int16Array.from([72, 101, 108, 108, 111, 33, ...Array(58).fill(0)]) });
         assert.deepEqual(ReturnFixedWide2(str), { buf: 'Hello!' });
+    }
+
+    // Big numbers
+    {
+        assert.equal(ThroughUInt32UU(4294967284), 4294967284);
+        assert.deepEqual(ThroughUInt32SS({ v: 4294967284 }), { v: 4294967284 });
+        assert.deepEqual(ThroughUInt32SU(4294967284), { v: 4294967284 });
+        assert.equal(ThroughUInt32US({ v: 4294967284 }), 4294967284);
+
+        assert.equal(ThroughUInt64UU(9007199254740989), 9007199254740989);
+        assert.deepEqual(ThroughUInt64SS({ v: 9007199254740989 }), { v: 9007199254740989 });
+        assert.deepEqual(ThroughUInt64SU(9007199254740989), { v: 9007199254740989 });
+        assert.equal(ThroughUInt64US({ v: 9007199254740989 }), 9007199254740989);
+
+        assert.equal(ThroughUInt64UU(18446744073709551598n), 18446744073709551598n);
+        assert.deepEqual(ThroughUInt64SS({ v: 18446744073709551598n }), { v: 18446744073709551598n });
+        assert.deepEqual(ThroughUInt64SU(18446744073709551598n), { v: 18446744073709551598n });
+        assert.equal(ThroughUInt64US({ v: 18446744073709551598n }), 18446744073709551598n);
+
+        assert.equal(ThroughInt64II(-9007199254740989), -9007199254740989);
+        assert.deepEqual(ThroughInt64SS({ v: -9007199254740989 }), { v: -9007199254740989 });
+        assert.deepEqual(ThroughInt64SI(-9007199254740989), { v: -9007199254740989 });
+        assert.equal(ThroughInt64IS({ v: -9007199254740989 }), -9007199254740989);
+
+        assert.equal(ThroughInt64II(-9223372036854775803n), -9223372036854775803n);
+        assert.deepEqual(ThroughInt64SS({ v: -9223372036854775803n }), { v: -9223372036854775803n });
+        assert.deepEqual(ThroughInt64SI(-9223372036854775803n), { v: -9223372036854775803n });
+        assert.equal(ThroughInt64IS({ v: -9223372036854775803n }), -9223372036854775803n);
     }
 }

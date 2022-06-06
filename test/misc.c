@@ -120,6 +120,10 @@ typedef struct FixedWide {
     int16_t buf[64];
 } FixedWide;
 
+typedef struct SingleU32 { uint32_t v; } SingleU32;
+typedef struct SingleU64 { uint64_t v; } SingleU64;
+typedef struct SingleI64 { int64_t v; } SingleI64;
+
 EXPORT void FillPack1(int a, Pack1 *p)
 {
     p->a = a;
@@ -409,6 +413,63 @@ EXPORT FixedString ReturnFixedStr(FixedString str)
 EXPORT FixedWide ReturnFixedWide(FixedWide str)
 {
     return str;
+}
+
+EXPORT uint32_t ThroughUInt32UU(uint32_t v)
+{
+    return v;
+}
+EXPORT SingleU32 ThroughUInt32SS(SingleU32 s)
+{
+    return s;
+}
+EXPORT SingleU32 ThroughUInt32SU(uint32_t v)
+{
+    SingleU32 s;
+    s.v = v;
+    return s;
+}
+EXPORT uint32_t ThroughUInt32US(SingleU32 s)
+{
+    return s.v;
+}
+
+EXPORT uint64_t ThroughUInt64UU(uint64_t v)
+{
+    return v;
+}
+EXPORT SingleU64 ThroughUInt64SS(SingleU64 s)
+{
+    return s;
+}
+EXPORT SingleU64 ThroughUInt64SU(uint64_t v)
+{
+    SingleU64 s;
+    s.v = v;
+    return s;
+}
+EXPORT uint64_t ThroughUInt64US(SingleU64 s)
+{
+    return s.v;
+}
+
+EXPORT int64_t ThroughInt64II(int64_t v)
+{
+    return v;
+}
+EXPORT SingleI64 ThroughInt64SS(SingleI64 s)
+{
+    return s;
+}
+EXPORT SingleI64 ThroughInt64SI(int64_t v)
+{
+    SingleI64 s;
+    s.v = v;
+    return s;
+}
+EXPORT int64_t ThroughInt64IS(SingleI64 s)
+{
+    return s.v;
 }
 
 EXPORT float CallSimpleJS(int i, float (*func)(int i, const char *str, double d))
