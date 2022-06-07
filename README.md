@@ -18,12 +18,12 @@
 
 # Introduction
 
-Koffi is a fast and easy-to-use C FFI module for Node.js, with support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value. C to JS callbacks are supported.
+Koffi is a fast and easy-to-use C FFI module for Node.js, featuring:
 
-The following features are planned in the near future:
-
-* 1.3: Real-world examples, optimize passing of structs and arrays
-* 1.4: Type parser, unions
+* Low-overhead and fast performance (see [benchmarks](#benchmarks))
+* Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
+* Javascript functions can be used as C callbacks (since 1.2.0)
+* Well-tested code base for popular OS/architecture combinations
 
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
@@ -40,7 +40,10 @@ RISC-V 64 [^4]     | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Proba
 [^3]: However, we don't provide prebuilt binaries for macOS on Apple M1.
 [^4]: Only the LP64D (double-precision float) ABI gets tested. The LP64 ABI is supported in theory (untested), the LP64F ABI is not supported.
 
-This is still in development, bugs are to be expected. More tests will come in the near future.
+The following features are planned in the near future:
+
+* 1.3: Real-world examples, optimize passing of structs and arrays
+* 1.4: Type parser, unions
 
 # Get started
 
