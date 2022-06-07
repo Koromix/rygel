@@ -99,6 +99,7 @@ async function test() {
         }
         if (sqlite3_step(stmt) != SQLITE_DONE)
             throw new Error('Unexpected end of statement');
+        sqlite3_finalize(stmt);
     } finally {
         sqlite3_close_v2(db);
         fs.unlinkSync(filename);
