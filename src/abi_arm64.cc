@@ -209,7 +209,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 
 bool CallData::Prepare(const Napi::CallbackInfo &info)
 {
-    uint8_t *args_ptr = nullptr;
+    uint64_t *args_ptr = nullptr;
     uint64_t *gpr_ptr = nullptr;
     uint64_t *vec_ptr = nullptr;
 
@@ -244,16 +244,16 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                 bool b = value.As<Napi::Boolean>();
 
+#ifdef __APPLE__
                 if (RG_LIKELY(param.gpr_count)) {
                     *(gpr_ptr++) = (uint64_t)b;
                 } else {
-                    *args_ptr = (uint8_t)b;
-#ifdef __APPLE__
-                    args_ptr++;
-#else
-                    args_ptr += 8;
-#endif
+                    *(uint8_t *)args_ptr = b;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
                 }
+#else
+                *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)b;
+#endif
             } break;
             case PrimitiveKind::Int8:
             case PrimitiveKind::UInt8:
@@ -269,17 +269,17 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                 int64_t v = CopyNumber<int64_t>(value);
 
+#ifdef __APPLE__
                 if (RG_LIKELY(param.gpr_count)) {
                     *(int64_t *)(gpr_ptr++) = v;
                 } else {
                     args_ptr = AlignUp(args_ptr, param.type->align);
                     *(int64_t *)args_ptr = v;
-#ifdef __APPLE__
-                    args_ptr += param.type->size;
-#else
-                    args_ptr += 8;
-#endif
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + param.type->size);
                 }
+#else
+                *(int64_t *)((param.gpr_count ? gpr_ptr : args_ptr)++) = v;
+#endif
             } break;
             case PrimitiveKind::UInt64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -289,13 +289,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                 uint64_t v = CopyNumber<uint64_t>(value);
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = v;
-                } else {
-                    args_ptr = AlignUp(args_ptr, param.type->align);
-                    *(uint64_t *)args_ptr = v;
-                    args_ptr += 8;
-                }
+#ifdef __APPLE__
+                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+#endif
+                *((param.gpr_count ? gpr_ptr : args_ptr)++) = v;
             } break;
             case PrimitiveKind::String: {
                 const char *str;
@@ -310,13 +307,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint64_t)str;
-                } else {
-                    args_ptr = AlignUp(args_ptr, 8);
-                    *(uint64_t *)args_ptr = (uint64_t)str;
-                    args_ptr += 8;
-                }
+#ifdef __APPLE__
+                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+#endif
+                *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16;
@@ -331,13 +325,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint64_t)str16;
-                } else {
-                    args_ptr = AlignUp(args_ptr, 8);
-                    *(uint64_t *)args_ptr = (uint64_t)str16;
-                    args_ptr += 8;
-                }
+#ifdef __APPLE__
+                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+#endif
+                *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
             } break;
             case PrimitiveKind::Pointer: {
                 uint8_t *ptr;
@@ -370,13 +361,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint64_t)ptr;
-                } else {
-                    args_ptr = AlignUp(args_ptr, 8);
-                    *(uint64_t *)args_ptr = (uint64_t)ptr;
-                    args_ptr += 8;
-                }
+#ifdef __APPLE__
+                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+#endif
+                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
@@ -398,10 +386,12 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                             return false;
                         gpr_ptr += param.gpr_count;
                     } else if (param.type->size) {
+#ifdef __APPLE__
                         args_ptr = AlignUp(args_ptr, 8);
-                        if (!PushObject(obj, param.type, args_ptr))
+#endif
+                        if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
                             return false;
-                        args_ptr += AlignLen(param.type->size, 8);
+                        args_ptr += (param.type->size + 7) / 8;
                     }
                 } else {
                     uint8_t *ptr;
@@ -412,11 +402,12 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                         RG_ASSERT(param.gpr_count == 1);
                         RG_ASSERT(param.vec_count == 0);
 
-                        *(gpr_ptr++) = (uint64_t)ptr;
+                        *(uint8_t **)(gpr_ptr++) = ptr;
                     } else {
+#ifdef __APPLE__
                         args_ptr = AlignUp(args_ptr, 8);
-                        *(uint8_t **)args_ptr = ptr;
-                        args_ptr += 8;
+#endif
+                        *(uint8_t **)(args_ptr++) = ptr;
                     }
 
                     if (!PushObject(obj, param.type, ptr))
@@ -436,13 +427,13 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     memset((uint8_t *)vec_ptr + 4, 0, 4);
                     *(float *)(vec_ptr++) = f;
                 } else {
+#ifdef __APPLE__
                     args_ptr = AlignUp(args_ptr, 4);
                     *(float *)args_ptr = f;
-#ifdef __APPLE__
-                    args_ptr += 4;
+                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
 #else
                     memset((uint8_t *)args_ptr + 4, 0, 4);
-                    args_ptr += 8;
+                    *(float *)(args_ptr++) = f;
 #endif
                 }
             } break;
@@ -457,9 +448,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.vec_count)) {
                     *(double *)(vec_ptr++) = d;
                 } else {
+#ifdef __APPLE__
                     args_ptr = AlignUp(args_ptr, 8);
-                    *(double *)args_ptr = d;
-                    args_ptr += 8;
+#endif
+                    *(double *)(args_ptr++) = d;
                 }
             } break;
             case PrimitiveKind::Callback: {
@@ -482,13 +474,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint64_t)ptr;
-                } else {
-                    args_ptr = AlignUp(args_ptr, 8);
-                    *(uint64_t *)args_ptr = (uint64_t)ptr;
-                    args_ptr += 8;
-                }
+#ifdef __APPLE__
+                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+#endif
+                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
         }
     }
