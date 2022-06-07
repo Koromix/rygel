@@ -45,12 +45,16 @@ async function test() {
     const sqlite3_reset = lib.func('sqlite3_reset', 'int', [sqlite3_stmt]);
     const sqlite3_bind_text = lib.func('sqlite3_bind_text', 'int', [sqlite3_stmt, 'int', 'string', 'int', 'void *']);
     const sqlite3_bind_int = lib.func('sqlite3_bind_int', 'int', [sqlite3_stmt, 'int', 'int']);
+    const sqlite3_column_text = lib.func('sqlite3_column_text', 'string', [sqlite3_stmt, 'int']);
+    const sqlite3_column_int = lib.func('sqlite3_column_int', 'int', [sqlite3_stmt, 'int']);
     const sqlite3_step = lib.func('sqlite3_step', 'int', [sqlite3_stmt]);
     const sqlite3_finalize = lib.func('sqlite3_finalize', 'int', [sqlite3_stmt]);
     const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [sqlite3_db]);
 
     let filename = await create_temporary_file(path.join(os.tmpdir(), 'test_sqlite'));
     let db = {};
+
+    let expected = Array.from(Array(200).keys()).map(i => [`TXT ${i}`, i % 7]);
 
     try {
         if (sqlite3_open_v2(filename, db, 0x2 | 0x4, null) != 0)
@@ -59,18 +63,37 @@ async function test() {
             throw new Error('Failed to create table');
 
         let stmt = {};
+
         if (sqlite3_prepare_v2(db, "INSERT INTO foo (bar, value) VALUES (?1, ?2)", -1, stmt, null) != 0)
             throw new Error('Failed to prepare insert statement for table foo');
-        for (let i = 0; i < 200; i++) {
+        for (let it of expected) {
             sqlite3_reset(stmt);
 
-            sqlite3_bind_text(stmt, 1, `TXT ${i}`, -1, null);
-            sqlite3_bind_int(stmt, 2, i * 2);
+            sqlite3_bind_text(stmt, 1, it[0], -1, null);
+            sqlite3_bind_int(stmt, 2, it[1]);
 
             if (sqlite3_step(stmt) != 101)
                 throw new Erorr('Failed to insert new test row');
         }
         sqlite3_finalize(stmt);
+
+        if (sqlite3_prepare_v2(db, "SELECT id, bar, value FROM foo ORDER BY id", -1, stmt, null) != 0)
+            throw new Error('Failed to prepare select statement for table foo');
+        for (let i = 0; i < expected.length; i++) {
+            let it = expected[i];
+
+            if (sqlite3_step(stmt) != 100)
+                throw new Error('Missing row');
+
+            if (sqlite3_column_int(stmt, 0) != i + 1)
+                throw new Error('Invalid data');
+            if (sqlite3_column_text(stmt, 1) != it[0])
+                throw new Error('Invalid data');
+            if (sqlite3_column_int(stmt, 2) != it[1])
+                throw new Error('Invalid data');
+        }
+        if (sqlite3_step(stmt) != 101)
+            throw new Error('Unexpected end of statement');
     } finally {
         sqlite3_close_v2(db);
         fs.unlinkSync(filename);
