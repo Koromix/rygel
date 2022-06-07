@@ -214,7 +214,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
 
 bool CallData::Prepare(const Napi::CallbackInfo &info)
 {
-    uint8_t *args_ptr = nullptr;
+    uint32_t *args_ptr = nullptr;
     uint32_t *gpr_ptr = nullptr;
     uint32_t *vec_ptr = nullptr;
 
@@ -251,13 +251,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 }
 
                 bool b = value.As<Napi::Boolean>();
-
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint32_t)b;
-                } else {
-                    *args_ptr = (uint8_t)b;
-                    args_ptr += 4;
-                }
+                *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)b;
             } break;
             case PrimitiveKind::Int8:
             case PrimitiveKind::UInt8:
@@ -270,13 +264,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 }
 
                 int32_t v = CopyNumber<int32_t>(value);
-
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(int32_t *)(gpr_ptr++) = v;
-                } else {
-                    *(int32_t *)args_ptr = v;
-                    args_ptr += 4;
-                }
+                *(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++) = v;
             } break;
             case PrimitiveKind::UInt32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -285,13 +273,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 }
 
                 uint32_t v = CopyNumber<uint32_t>(value);
-
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = v;
-                } else {
-                    *(uint32_t *)args_ptr = v;
-                    args_ptr += 4;
-                }
+                *((param.gpr_count ? gpr_ptr : args_ptr)++) = v;
             } break;
             case PrimitiveKind::Int64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -308,7 +290,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else {
                     args_ptr = AlignUp(args_ptr, 8);
                     *(int64_t *)args_ptr = v;
-                    args_ptr += 8;
+                    args_ptr += 2;
                 }
             } break;
             case PrimitiveKind::UInt64: {
@@ -326,7 +308,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else {
                     args_ptr = AlignUp(args_ptr, 8);
                     *(uint64_t *)args_ptr = v;
-                    args_ptr += 8;
+                    args_ptr += 2;
                 }
             } break;
             case PrimitiveKind::String: {
@@ -342,12 +324,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint64_t)str;
-                } else {
-                    *(const char **)args_ptr = str;
-                    args_ptr += 4;
-                }
+                *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16;
@@ -362,12 +339,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint64_t)str16;
-                } else {
-                    *(const char16_t **)args_ptr = str16;
-                    args_ptr += 4;
-                }
+                *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
             } break;
             case PrimitiveKind::Pointer: {
                 uint8_t *ptr;
@@ -400,12 +372,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint64_t)ptr;
-                } else {
-                    *(void **)args_ptr = ptr;
-                    args_ptr += 4;
-                }
+                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
@@ -426,14 +393,14 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                         return false;
 
                     gpr_ptr += param.gpr_count;
-                    args_ptr += AlignLen(param.type->size - param.gpr_count * 4, 4);
+                    args_ptr += (param.type->size - param.gpr_count * 4 + 3) / 4;
                 } else if (param.type->size) {
                     int16_t align = (param.type->align <= 4) ? 4 : 8;
 
                     args_ptr = AlignUp(args_ptr, align);
-                    if (!PushObject(obj, param.type, args_ptr))
+                    if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
                         return false;
-                    args_ptr += AlignLen(param.type->size, 4);
+                    args_ptr += (param.type->size + 3) / 4;
                 }
             } break;
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
@@ -450,8 +417,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else if (param.gpr_count) {
                     *(float *)(gpr_ptr++) = f;
                 } else {
-                    *(float *)args_ptr = f;
-                    args_ptr += 4;
+                    *(float *)(args_ptr++) = f;
                 }
             } break;
             case PrimitiveKind::Float64: {
@@ -472,7 +438,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else {
                     args_ptr = AlignUp(args_ptr, 8);
                     *(double *)args_ptr = d;
-                    args_ptr += 8;
+                    args_ptr += 2;
                 }
             } break;
             case PrimitiveKind::Callback: {
@@ -495,12 +461,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                if (RG_LIKELY(param.gpr_count)) {
-                    *(gpr_ptr++) = (uint32_t)ptr;
-                } else {
-                    *(void **)args_ptr = ptr;
-                    args_ptr += 4;
-                }
+                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
         }
     }
