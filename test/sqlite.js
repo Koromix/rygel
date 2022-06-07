@@ -51,13 +51,18 @@ async function test() {
     const sqlite3_finalize = lib.func('sqlite3_finalize', 'int', [sqlite3_stmt]);
     const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [sqlite3_db]);
 
+    const SQLITE_OPEN_READWRITE = 0x2;
+    const SQLITE_OPEN_CREATE = 0x4;
+    const SQLITE_ROW = 100;
+    const SQLITE_DONE = 101;
+
     let filename = await create_temporary_file(path.join(os.tmpdir(), 'test_sqlite'));
     let db = {};
 
     let expected = Array.from(Array(200).keys()).map(i => [`TXT ${i}`, i % 7]);
 
     try {
-        if (sqlite3_open_v2(filename, db, 0x2 | 0x4, null) != 0)
+        if (sqlite3_open_v2(filename, db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, null) != 0)
             throw new Error('Failed to open database');
         if (sqlite3_exec(db, 'CREATE TABLE foo (id INTEGER PRIMARY KEY, bar TEXT, value INT);', null, null, null) != 0)
             throw new Error('Failed to create table');
@@ -72,7 +77,7 @@ async function test() {
             sqlite3_bind_text(stmt, 1, it[0], -1, null);
             sqlite3_bind_int(stmt, 2, it[1]);
 
-            if (sqlite3_step(stmt) != 101)
+            if (sqlite3_step(stmt) != SQLITE_DONE)
                 throw new Erorr('Failed to insert new test row');
         }
         sqlite3_finalize(stmt);
@@ -82,7 +87,7 @@ async function test() {
         for (let i = 0; i < expected.length; i++) {
             let it = expected[i];
 
-            if (sqlite3_step(stmt) != 100)
+            if (sqlite3_step(stmt) != SQLITE_ROW)
                 throw new Error('Missing row');
 
             if (sqlite3_column_int(stmt, 0) != i + 1)
@@ -92,7 +97,7 @@ async function test() {
             if (sqlite3_column_int(stmt, 2) != it[1])
                 throw new Error('Invalid data');
         }
-        if (sqlite3_step(stmt) != 101)
+        if (sqlite3_step(stmt) != SQLITE_DONE)
             throw new Error('Unexpected end of statement');
     } finally {
         sqlite3_close_v2(db);
