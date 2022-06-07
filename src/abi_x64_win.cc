@@ -244,6 +244,8 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 }
 
                 float f = CopyNumber<float>(value);
+
+                memset((uint8_t *)args_ptr + 4, 0, 4);
                 *(float *)(args_ptr++) = f;
             } break;
             case PrimitiveKind::Float64: {
@@ -622,6 +624,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             }
 
             float f = CopyNumber<float>(value);
+
+            memset((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
             memcpy(&out_reg->xmm0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {

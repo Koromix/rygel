@@ -417,7 +417,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 }
 
                 float f = CopyNumber<float>(value);
-                *(float *)((param.xmm_count ? xmm_ptr : args_ptr)++) = f;
+                uint64_t *ptr = (param.xmm_count ? xmm_ptr : args_ptr)++;
+
+                memset((uint8_t *)ptr + 4, 0, 4);
+                *(float *)ptr = f;
             } break;
             case PrimitiveKind::Float64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -838,6 +841,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             }
 
             float f = CopyNumber<float>(value);
+
+            memset((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
             memcpy(&out_reg->xmm0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {

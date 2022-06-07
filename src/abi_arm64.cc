@@ -433,6 +433,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 float f = CopyNumber<float>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
+                    memset((uint8_t *)vec_ptr + 4, 0, 4);
                     *(float *)(vec_ptr++) = f;
                 } else {
                     args_ptr = AlignUp(args_ptr, 4);
@@ -440,6 +441,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 #ifdef __APPLE__
                     args_ptr += 4;
 #else
+                    memset((uint8_t *)args_ptr + 4, 0, 4);
                     args_ptr += 8;
 #endif
                 }
@@ -977,6 +979,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             }
 
             float f = CopyNumber<float>(value);
+
+            memset((uint8_t *)&out_reg->d0 + 4, 0, 4);
             memcpy(&out_reg->d0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {
