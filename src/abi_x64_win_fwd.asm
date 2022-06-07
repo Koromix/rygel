@@ -164,7 +164,7 @@ trampoline macro ID
     lea r8, qword ptr [rsp+128]
     lea r9, qword ptr [rsp+96]
     call RelayCallBack
-    mov qword ptr [rsp+96], rax
+    mov rax, qword ptr [rsp+96]
     add rsp, 120
     ret
 endm
@@ -188,8 +188,8 @@ trampoline_xmm macro ID
     lea r8, qword ptr [rsp+128]
     lea r9, qword ptr [rsp+96]
     call RelayCallBack
-    mov qword ptr [rsp+96], rax
-    movsd qword ptr [rsp+104], xmm0
+    mov rax, qword ptr [rsp+96]
+    movsd xmm0, qword ptr [rsp+104]
     add rsp, 120
     ret
 endm
