@@ -290,8 +290,8 @@ TrampolineX15:
     trampoline_vec 15
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
-# The propblem is that we're still running on the separate Koffi stack, and V8 will
-# preobably misdetect this as a "stack overflow". We have to restore the old
+# The problem is that we're still running on the separate Koffi stack, and V8 will
+# probably misdetect this as a "stack overflow". We have to restore the old
 # stack pointer, call Node.js/V8 and go back to ours.
 # The first three parameters (r0, r1, r2) are passed through untouched.
 CallSwitchStack:
