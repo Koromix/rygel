@@ -17,8 +17,21 @@ const koffi = require('./build/koffi.node');
 const assert = require('assert');
 const path = require('path');
 
-const TransferCallback = koffi.callback('int TransferCallback(const char *str)');
-const SimpleCallback = koffi.callback('SimpleCallback', 'float', ['int', 'string', 'double']);
+const BFG = koffi.struct('BFG', {
+    a: 'int8_t',
+    b: 'int64_t',
+    c: 'char',
+    d: 'string',
+    e: 'short',
+    inner: koffi.struct({
+        f: 'float',
+        g: 'double'
+    })
+});
+
+const SimpleCallback = koffi.callback('int SimpleCallback(const char *str)');
+const RecursiveCallback = koffi.callback('RecursiveCallback', 'float', ['int', 'string', 'double']);
+const BigCallback = koffi.callback('BFG BigCallback(BFG bfg)');
 
 main();
 
@@ -36,26 +49,39 @@ async function test() {
     const lib_filename = path.dirname(__filename) + '/build/misc' + koffi.extension;
     const lib = koffi.load(lib_filename);
 
-    const TransferToJS = lib.func('int TransferToJS(const char *str, TransferCallback cb)');
-    const CallSimpleJS = lib.func('float CallSimpleJS(int i, SimpleCallback func)');
+    const CallJS = lib.func('int CallJS(const char *str, SimpleCallback cb)');
+    const CallRecursiveJS = lib.func('float CallRecursiveJS(int i, RecursiveCallback func)');
+    const ModifyBFG = lib.func('BFG ModifyBFG(int x, double y, const char *str, BigCallback func, _Out_ BFG *p)');
 
     // Simple test similar to README example
     {
-        let ret = TransferToJS('Niels', (str) => {
+        let ret = CallJS('Niels', str => {
             assert.equal(str, 'Hello Niels!');
             return 42;
         });
         assert.equal(ret, 42);
     }
 
-    // Test CallSimpleJS (with recursion)
+    // Test with recursion
     {
         let recurse = (i, str, d) => {
             assert.equal(str, 'Hello!');
             assert.equal(d, 42.0);
-            return i + (i ? CallSimpleJS(i - 1, recurse) : 0);
+            return i + (i ? CallRecursiveJS(i - 1, recurse) : 0);
         };
-        let total = CallSimpleJS(9, recurse);
+        let total = CallRecursiveJS(9, recurse);
         assert.equal(total, 45);
+    }
+
+    // And now, with a complex struct
+    {
+        let out = {};
+        let bfg = ModifyBFG(2, 5, "Yo!", bfg => {
+            bfg.inner.f *= -1;
+            bfg.d = "New!";
+            return bfg;
+        }, out);
+        assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'New!', e: 54, inner: { f: -10, g: 3 } });
+        assert.deepEqual(out, { a: 2, b: 4, c: -25, d: 'X/Yo!/X', e: 54, inner: { f: 10, g: 3 } });
     }
 }

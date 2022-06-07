@@ -472,15 +472,35 @@ EXPORT int64_t ThroughInt64IS(SingleI64 s)
     return s.v;
 }
 
-EXPORT float CallSimpleJS(int i, float (*func)(int i, const char *str, double d))
+EXPORT int CallJS(const char *str, int (*cb)(const char *str))
+{
+    char buf[64];
+    snprintf(buf, sizeof(buf), "Hello %s!", str);
+    return cb(buf);
+}
+
+EXPORT float CallRecursiveJS(int i, float (*func)(int i, const char *str, double d))
 {
     float f = func(i, "Hello!", 42.0);
     return f;
 }
 
-EXPORT int TransferToJS(const char *str, int (*cb)(const char *str))
+EXPORT BFG ModifyBFG(int x, double y, const char *str, BFG (*func)(BFG bfg), BFG *p)
 {
-    char buf[64];
-    snprintf(buf, sizeof(buf), "Hello %s!", str);
-    return cb(buf);
+    BFG bfg;
+
+    static char buf[64];
+    snprintf(buf, sizeof(buf), "X/%s/X", str);
+
+    bfg.a = x;
+    bfg.b = x * 2;
+    bfg.c = x - 27;
+    bfg.d = buf;
+    bfg.e = x * 27;
+    bfg.inner.f = (float)y * x;
+    bfg.inner.g = (double)y - x;
+    *p = bfg;
+
+    bfg = func(bfg);
+    return bfg;
 }
