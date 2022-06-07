@@ -442,7 +442,9 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
     used_trampolines &= ~(1u << idx);
 
     uint32_t *args_ptr = (uint32_t *)caller_sp;
+
     uint8_t *return_ptr = !proto->ret.trivial ? (uint8_t *)args_ptr[0] : nullptr;
+    args_ptr += !proto->ret.trivial;
 
     LocalArray<napi_value, MaxParameters> arguments;
 
