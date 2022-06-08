@@ -19,8 +19,11 @@
 
 namespace RG {
 
-static const Size StackSize = Mebibytes(1);
-static const Size HeapSize = Mebibytes(2);
+static const Size DefaultSyncStackSize = Mebibytes(1);
+static const Size DefaultSyncHeapSize = Mebibytes(2);
+static const Size DefaultAsyncStackSize = Kibibytes(512);
+static const Size DefaultAsyncHeapSize = Mebibytes(1);
+static const int DefaultResidentAsyncPools = 2;
 
 static const Size MaxParameters = 32;
 static const Size MaxOutParameters = 8;
@@ -205,7 +208,6 @@ struct TrampolineInfo {
 };
 
 struct InstanceData {
-    InstanceData();
     ~InstanceData();
 
     BucketArray<TypeInfo> types;
@@ -215,12 +217,18 @@ struct InstanceData {
     bool debug;
     uint64_t tag_lower;
 
-    LocalArray<InstanceMemory *, 6> memories;
+    LocalArray<InstanceMemory *, 16> memories;
 
     TrampolineInfo trampolines[MaxTrampolines];
     uint32_t free_trampolines = UINT32_MAX;
 
     BlockAllocator str_alloc;
+
+    Size sync_stack_size = DefaultSyncStackSize;
+    Size sync_heap_size = DefaultSyncHeapSize;
+    Size async_stack_size = DefaultAsyncStackSize;
+    Size async_heap_size = DefaultAsyncHeapSize;
+    int resident_async_pools = DefaultResidentAsyncPools;
 };
 RG_STATIC_ASSERT(MaxTrampolines <= 32);
 

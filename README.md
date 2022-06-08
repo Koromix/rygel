@@ -8,6 +8,7 @@
   * [Variadic functions](#variadic-functions)
   * [Asynchronous calls](#asynchronous-calls)
   * [Callbacks](#callbacks)
+  * [Memory settings](#memory-settings)
 - [Benchmarks](#benchmarks)
   * [atoi results](#atoi-results)
   * [Raylib results](#raylib-results)
@@ -341,6 +342,27 @@ console.log(ret);
 
 // This example prints "Hello Niels!" first, and then prints 42
 ```
+
+## Memory settings
+
+For synchronous/normal calls, Koffi uses two preallocated memory blocks, one to construct the C stack and the other to allocate strings and big objects/structs. Unless very big strings or objects (at least more than one page of memory) are used, no extra allocation is needed during calls or callbacks.
+
+The size (in bytes) of these preallocated blocks can be changed. Use `koffi.config()` to get an object with the settings, and `koffi.config(obj)` to apply new settings.
+
+```js
+let config = koffi.config();
+console.log(config);
+
+// {
+//   sync_stack_size: 1048576,
+//   sync_heap_size: 2097152,
+//   async_stack_size: 524288,
+//   async_heap_size: 1048576,
+//   resident_async_pools: 2
+// }
+```
+
+The same is true for asynchronous calls. When an asynchronous call is made, Koffi will allocate new blocks unless there is an unused set of blocks still available. Once the asynchronous call is finished, these blocks are freed if there are more than `resident_async_pools` sets of blocks left around.
 
 # Benchmarks
 

@@ -43,6 +43,96 @@ namespace RG {
 // Value does not matter, the tag system uses memory addresses
 const int TypeInfoMarker = 0xDEADBEEF;
 
+static bool ChangeMemorySize(Napi::Value value, Size *out_size)
+{
+    const Size MinSize = Kibibytes(1);
+    const Size MaxSize = Mebibytes(16);
+
+    Napi::Env env = value.Env();
+
+    if (!value.IsNumber()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for memory size, expected number");
+        return env.Null();
+    }
+
+    int64_t size = value.As<Napi::Number>().Int64Value();
+
+    if (size < MinSize || size > MaxSize) {
+        ThrowError<Napi::Error>(env, "Memory size must be between %1 and %2", FmtMemSize(MinSize), FmtMemSize(MaxSize));
+        return false;
+    }
+
+    *out_size = (Size)size;
+    return true;
+}
+
+static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length()) {
+        if (instance->memories.len) {
+            ThrowError<Napi::Error>(env, "Cannot change Koffi configuration once a library has been loaded");
+            return env.Null();
+        }
+
+        if (!info[0].IsObject()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for config, expected object", GetValueType(instance, info[0]));
+            return env.Null();
+        }
+
+        Napi::Object obj = info[0].As<Napi::Object>();
+        Napi::Array keys = obj.GetPropertyNames();
+
+        for (uint32_t i = 0; i < keys.Length(); i++) {
+            std::string key = ((Napi::Value)keys[i]).As<Napi::String>();
+            Napi::Value value = obj[key];
+
+            if (key == "sync_stack_size") {
+                if (!ChangeMemorySize(value, &instance->sync_stack_size))
+                    return env.Null();
+            } else if (key == "sync_heap_size") {
+                if (!ChangeMemorySize(value, &instance->sync_heap_size))
+                    return env.Null();
+            } else if (key == "async_stack_size") {
+                if (!ChangeMemorySize(value, &instance->async_stack_size))
+                    return env.Null();
+            } else if (key == "async_heap_size") {
+                if (!ChangeMemorySize(value, &instance->async_heap_size))
+                    return env.Null();
+            } else if (key == "resident_async_pools") {
+                if (!value.IsNumber()) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for resident_async_pools, expected number");
+                    return env.Null();
+                }
+
+                int64_t n = value.As<Napi::Number>().Int64Value();
+
+                if (n < 0 || n > RG_LEN(instance->memories.data)) {
+                    ThrowError<Napi::Error>(env, "Parameter resident_async_pools must be between 0 and %1", RG_LEN(instance->memories.data));
+                    return env.Null();
+                }
+
+                RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(instance->memories.data));
+            } else {
+                ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
+                return env.Null();
+            }
+        }
+    }
+
+    Napi::Object obj = Napi::Object::New(env);
+
+    obj.Set("sync_stack_size", instance->sync_stack_size);
+    obj.Set("sync_heap_size", instance->sync_heap_size);
+    obj.Set("async_stack_size", instance->async_stack_size);
+    obj.Set("async_heap_size", instance->async_heap_size);
+    obj.Set("resident_async_pools", instance->resident_async_pools);
+
+    return obj;
+}
+
 static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 {
     Napi::Env env = info.Env();
@@ -509,7 +599,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
     return type->defn.Value();
 }
 
-static InstanceMemory *AllocateMemory(InstanceData *instance)
+static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
 {
     for (Size i = 1; i < instance->memories.len; i++) {
         InstanceMemory *mem = instance->memories[i];
@@ -520,7 +610,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance)
 
     InstanceMemory *mem = new InstanceMemory();
 
-    mem->stack.len = StackSize;
+    mem->stack.len = stack_size;
 #if defined(_WIN32)
     mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #elif defined(__APPLE__)
@@ -530,7 +620,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance)
 #endif
     RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 
-    mem->heap.len = HeapSize;
+    mem->heap.len = heap_size;
 #ifdef _WIN32
     mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
@@ -538,7 +628,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance)
 #endif
     RG_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
 
-    if (instance->memories.Available()) {
+    if (instance->memories.len <= instance->resident_async_pools) {
         instance->memories.Append(mem);
     } else {
         mem->temporary = true;
@@ -710,7 +800,7 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    InstanceMemory *mem = AllocateMemory(instance);
+    InstanceMemory *mem = AllocateMemory(instance, instance->async_stack_size, instance->async_heap_size);
     AsyncCall *async = new AsyncCall(env, instance, func, mem, callback);
 
     if (async->Prepare(info) && instance->debug) {
@@ -815,6 +905,10 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     if (!info[0].IsString() && !IsNullOrUndefined(info[0])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(instance, info[0]));
         return env.Null();
+    }
+
+    if (!instance->memories.len) {
+        AllocateMemory(instance, instance->sync_stack_size, instance->sync_heap_size);
     }
 
     // Load shared library
@@ -1032,12 +1126,6 @@ InstanceMemory::~InstanceMemory()
 #endif
 }
 
-InstanceData::InstanceData()
-{
-    AllocateMemory(this);
-    RG_ASSERT(memories.len == 1);
-}
-
 InstanceData::~InstanceData()
 {
     for (InstanceMemory *mem: memories) {
@@ -1048,6 +1136,7 @@ InstanceData::~InstanceData()
 template <typename Func>
 static void SetExports(Napi::Env env, Func func)
 {
+    func("config", Napi::Function::New(env, GetSetConfig));
     func("struct", Napi::Function::New(env, CreatePaddedStructType));
     func("pack", Napi::Function::New(env, CreatePackedStructType));
     func("handle", Napi::Function::New(env, CreateHandleType));
