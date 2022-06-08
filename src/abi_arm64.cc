@@ -221,8 +221,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
     if (RG_UNLIKELY(!AllocStack(9 * 8, 8, &gpr_ptr)))
         return false;
     if (func->ret.use_memory) {
-        if (RG_UNLIKELY(!AllocHeap(func->ret.type->size, 16, &return_ptr)))
-            return false;
+        return_ptr = AllocHeap(func->ret.type->size, 16);
         gpr_ptr[8] = (uint64_t)return_ptr;
     }
 
@@ -338,8 +337,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else if (IsObject(value) && param.type->ref->primitive == PrimitiveKind::Record) {
                     Napi::Object obj = value.As<Napi::Object>();
 
-                    if (RG_UNLIKELY(!AllocHeap(param.type->ref->size, 16, &ptr)))
-                        return false;
+                    ptr = AllocHeap(param.type->ref->size, 16);
 
                     if (param.directions & 1) {
                         if (!PushObject(obj, param.type->ref, ptr))
@@ -394,9 +392,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                         args_ptr += (param.type->size + 7) / 8;
                     }
                 } else {
-                    uint8_t *ptr;
-                    if (RG_UNLIKELY(!AllocHeap(param.type->size, 16, &ptr)))
-                        return false;
+                    uint8_t *ptr = AllocHeap(param.type->size, 16);
 
                     if (param.gpr_count) {
                         RG_ASSERT(param.gpr_count == 1);
@@ -928,8 +924,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             } else if (IsObject(value) && type->ref->primitive == PrimitiveKind::Record) {
                 Napi::Object obj = value.As<Napi::Object>();
 
-                if (RG_UNLIKELY(!AllocHeap(type->ref->size, 16, &ptr)))
-                    return;
+                ptr = AllocHeap(type->ref->size, 16);
 
                 if (!PushObject(obj, type->ref, ptr))
                     return;

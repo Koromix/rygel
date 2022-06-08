@@ -73,10 +73,10 @@ public:
     void DumpForward() const;
 
 private:
-    template <typename T = void>
+    template <typename T>
     bool AllocStack(Size size, Size align, T **out_ptr);
-    template <typename T = void>
-    bool AllocHeap(Size size, Size align, T **out_ptr);
+    template <typename T = uint8_t>
+    T *AllocHeap(Size size, Size align);
 
     const char *PushString(const Napi::Value &value);
     const char16_t *PushString16(const Napi::Value &value);
@@ -113,25 +113,32 @@ inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
 }
 
 template <typename T>
-inline bool CallData::AllocHeap(Size size, Size align, T **out_ptr)
+inline T *CallData::AllocHeap(Size size, Size align)
 {
     uint8_t *ptr = AlignUp(mem->heap.ptr, align);
     Size delta = size + (ptr - mem->heap.ptr);
 
-    if (RG_UNLIKELY(delta > mem->heap.len)) {
-        ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
-        return false;
-    }
-
+    if (RG_LIKELY(size < 4096 && delta <= mem->heap.len)) {
 #ifdef RG_DEBUG
-    memset(mem->heap.ptr, 0, (size_t)delta);
+        memset(mem->heap.ptr, 0, (size_t)delta);
 #endif
 
-    mem->heap.ptr += delta;
-    mem->heap.len -= delta;
+        mem->heap.ptr += delta;
+        mem->heap.len -= delta;
 
-    *out_ptr = (T *)ptr;
-    return true;
+        return ptr;
+    } else {
+#ifdef RG_DEBUG
+        int flags = (int)Allocator::Flag::Zero;
+#else
+        int flags = 0;
+#endif
+
+        ptr = (uint8_t *)Allocator::Allocate(&call_alloc, size + align, flags);
+        ptr = AlignUp(ptr, align);
+
+        return ptr;
+    }
 }
 
 void *GetTrampoline(Size idx, const FunctionInfo *proto);
