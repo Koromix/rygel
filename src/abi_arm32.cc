@@ -685,14 +685,32 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 } else if (param.gpr_count) {
                     RG_ASSERT(param.type->align <= 8);
 
+                    int16_t gpr_size = param.gpr_count * 4;
                     int16_t align = (param.type->align <= 4) ? 4 : 8;
                     gpr_ptr = AlignUp(gpr_ptr, align);
 
-                    Napi::Object obj = PopObject((const uint8_t *)gpr_ptr, param.type);
-                    arguments.Append(obj);
+                    if (param.type->size > gpr_size) {
+                        uint8_t *ptr;
 
-                    gpr_ptr += param.gpr_count;
-                    args_ptr += (param.type->size - param.gpr_count * 4 + 3) / 4;
+                        // XXX: Expensive, and error can't be managed by calling C code.
+                        // But the object is split between the GPRs and the caller stack.
+                        if (RG_UNLIKELY(!AllocHeap(param.type->size, 16, &ptr)))
+                            return;
+
+                        memcpy(ptr, gpr_ptr, gpr_size);
+                        memcpy(ptr + gpr_size, args_ptr, param.type->size - gpr_size);
+
+                        Napi::Object obj = PopObject(ptr, param.type);
+                        arguments.Append(obj);
+
+                        gpr_ptr += param.gpr_count;
+                        args_ptr += (param.type->size - gpr_size + 3) / 4;
+                    } else {
+                        Napi::Object obj = PopObject((const uint8_t *)gpr_ptr, param.type);
+                        arguments.Append(obj);
+
+                        gpr_ptr += param.gpr_count;
+                    }
                 } else if (param.type->size) {
                     int16_t align = (param.type->align <= 4) ? 4 : 8;
                     args_ptr = AlignUp(args_ptr, align);
