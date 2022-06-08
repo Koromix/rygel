@@ -674,7 +674,7 @@ Napi::Object CallData::PopObject(const uint8_t *src, const TypeInfo *type, int16
     return obj;
 }
 
-Size WideStringLength(const char16_t *str16, Size max)
+static Size WideStringLength(const char16_t *str16, Size max)
 {
     Size len = 0;
 
