@@ -876,24 +876,7 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
     RG_UNREACHABLE();
 }
 
-static void DumpMemory(const char *type, Span<const uint8_t> bytes)
-{
-    if (bytes.len) {
-        PrintLn(stderr, "%1 at 0x%2 (%3):", type, bytes.ptr, FmtMemSize(bytes.len));
-
-        for (const uint8_t *ptr = bytes.begin(); ptr < bytes.end();) {
-            Print(stderr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16),
-                                              FmtArg((ptr - bytes.begin()) / sizeof(void *)).Pad(-4),
-                                              FmtArg(ptr - bytes.begin()).Pad(-4));
-            for (int i = 0; ptr < bytes.end() && i < (int)sizeof(void *); i++, ptr++) {
-                Print(stderr, " %1", FmtHex(*ptr).Pad0(-2));
-            }
-            PrintLn(stderr);
-        }
-    }
-}
-
-void CallData::DumpDebug() const
+void CallData::DumpForward() const
 {
     PrintLn(stderr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
 

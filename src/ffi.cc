@@ -565,7 +565,7 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
         return env.Null();
 
     if (instance->debug) {
-        call.DumpDebug();
+        call.DumpForward();
     }
     call.Execute();
 
@@ -633,7 +633,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         return env.Null();
 
     if (instance->debug) {
-        call.DumpDebug();
+        call.DumpForward();
     }
     call.Execute();
 
@@ -664,7 +664,7 @@ public:
 
         return prepared;
     }
-    void DumpDebug() { call.DumpDebug(); }
+    void DumpForward() { call.DumpForward(); }
 
     void Execute() override;
     void OnOK() override;
@@ -714,7 +714,7 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     AsyncCall *async = new AsyncCall(env, instance, func, mem, callback);
 
     if (async->Prepare(info) && instance->debug) {
-        async->DumpDebug();
+        async->DumpForward();
     }
     async->Queue();
 

@@ -107,4 +107,6 @@ int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int
 
 int IsHFA(const TypeInfo *type, int min, int max);
 
+void DumpMemory(const char *type, Span<const uint8_t> bytes);
+
 }

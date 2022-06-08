@@ -70,7 +70,7 @@ public:
 
     void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg);
 
-    void DumpDebug() const;
+    void DumpForward() const;
 
 private:
     template <typename T = void>
