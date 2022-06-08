@@ -139,10 +139,11 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
             } break;
             case PrimitiveKind::Int64:
             case PrimitiveKind::UInt64: {
-                int need = 2 + (gpr_avail % 2);
+                bool realign = gpr_avail % 2;
+                int need = 2 + realign;
 
                 if (gpr_avail >= need) {
-                    param.gpr_count = need;
+                    param.gpr_count = 2;
                     gpr_avail -= need;
                 } else {
                     started_stack = true;
@@ -160,13 +161,14 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                         started_stack = true;
                     }
                 } else {
-                    int gpr_count = (param.type->size + 3) / 4;
+                    bool realign = (param.type->align == 8 && (gpr_avail % 2));
+                    int need = (param.type->size + 3) / 4 + realign;
 
-                    if (gpr_count <= gpr_avail) {
-                        param.gpr_count = gpr_count;
-                        gpr_avail -= gpr_count;
+                    if (need <= gpr_avail) {
+                        param.gpr_count = need - realign;
+                        gpr_avail -= need;
                     } else if (!started_stack) {
-                        param.gpr_count = gpr_avail;
+                        param.gpr_count = gpr_avail - realign;
                         gpr_avail = 0;
 
                         started_stack = true;
@@ -195,7 +197,7 @@ bool AnalyseFunction(InstanceData *, FunctionInfo *func)
                     need += (gpr_avail % 2);
 
                     if (need <= gpr_avail) {
-                        param.gpr_count = need;
+                        param.gpr_count = 2;
                         gpr_avail -= need;
                     } else {
                         started_stack = true;
@@ -284,7 +286,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 int64_t v = CopyNumber<int64_t>(value);
 
                 if (RG_LIKELY(param.gpr_count)) {
-                    gpr_ptr += param.gpr_count - 2;
+                    gpr_ptr = AlignUp(gpr_ptr, 8);
                     *(int64_t *)gpr_ptr = v;
                     gpr_ptr += param.gpr_count;
                 } else {
@@ -302,7 +304,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 uint64_t v = CopyNumber<uint64_t>(value);
 
                 if (RG_LIKELY(param.gpr_count)) {
-                    gpr_ptr += param.gpr_count - 2;
+                    gpr_ptr = AlignUp(gpr_ptr, 8);
                     *(uint64_t *)gpr_ptr = v;
                     gpr_ptr += param.gpr_count;
                 } else {
@@ -389,6 +391,9 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else if (param.gpr_count) {
                     RG_ASSERT(param.type->align <= 8);
 
+                    int16_t align = (param.type->align <= 4) ? 4 : 8;
+                    gpr_ptr = AlignUp(gpr_ptr, align);
+
                     if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
                         return false;
 
@@ -396,8 +401,8 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     args_ptr += (param.type->size - param.gpr_count * 4 + 3) / 4;
                 } else if (param.type->size) {
                     int16_t align = (param.type->align <= 4) ? 4 : 8;
-
                     args_ptr = AlignUp(args_ptr, align);
+
                     if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
                         return false;
                     args_ptr += (param.type->size + 3) / 4;
@@ -432,7 +437,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     *(double *)vec_ptr = d;
                     vec_ptr += 2;
                 } else if (param.gpr_count) {
-                    gpr_ptr += (param.gpr_count - 2);
+                    gpr_ptr = AlignUp(gpr_ptr, 8);
                     *(double *)gpr_ptr = d;
                     gpr_ptr += 2;
                 } else {
@@ -629,7 +634,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64: {
-                gpr_ptr += param.gpr_count - 2;
+                gpr_ptr = AlignUp(gpr_ptr, 8);
+
                 int64_t v = *(int64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
                 (param.gpr_count ? gpr_ptr : args_ptr) += 2;
 
@@ -637,7 +643,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64: {
-                gpr_ptr += param.gpr_count - 2;
+                gpr_ptr = AlignUp(gpr_ptr, 8);
+
                 uint64_t v = *(uint64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
                 (param.gpr_count ? gpr_ptr : args_ptr) += 2;
 
@@ -678,6 +685,9 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 } else if (param.gpr_count) {
                     RG_ASSERT(param.type->align <= 8);
 
+                    int16_t align = (param.type->align <= 4) ? 4 : 8;
+                    gpr_ptr = AlignUp(gpr_ptr, align);
+
                     Napi::Object obj = PopObject((const uint8_t *)gpr_ptr, param.type);
                     arguments.Append(obj);
 
@@ -713,10 +723,11 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                     d = *(double *)vec_ptr;
                     vec_ptr += 2;
                 } else if (param.gpr_count) {
-                    gpr_ptr += param.gpr_count - 2;
+                    gpr_ptr = AlignUp(gpr_ptr, 8);
                     d = *(double *)gpr_ptr;
                     gpr_ptr += 2;
                 } else {
+                    args_ptr = AlignUp(args_ptr, 8);
                     d = *(double *)args_ptr;
                     args_ptr += 2;
                 }
