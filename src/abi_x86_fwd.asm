@@ -158,8 +158,8 @@ trampoline_x87 macro ID
     lea eax, dword ptr [esp+16]
     mov dword ptr [esp+12], eax
     call RelayCallBack
-    cmp byte ptr[esp+36], 1
-    je l2
+    cmp byte ptr[esp+36], 0
+    jne l2
 l1:
     fld dword ptr [esp+32]
     jmp l3

@@ -162,8 +162,8 @@ ForwardCallRD:
     call GetEIP
     addl $_GLOBAL_OFFSET_TABLE_, %ecx
     call *RelayCallBack@GOT(%ecx)
-    cmpb $1, 36(%esp)
-    je 2f
+    cmpb $0, 36(%esp)
+    jne 2f
 1:
     flds 32(%esp)
     jmp 3f
