@@ -116,10 +116,12 @@ const char16_t *CallData::PushString16(const Napi::Value &value)
     return buf.ptr;
 }
 
-bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *dest, int16_t realign)
+bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *origin, int16_t realign)
 {
     RG_ASSERT(IsObject(obj));
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
+
+    Size offset = 0;
 
     for (const RecordMember &member: type->members) {
         Napi::Value value = obj.Get(member.name);
@@ -130,7 +132,9 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
         }
 
         int16_t align = std::max(member.align, realign);
-        dest = AlignUp(dest, align);
+        offset = AlignLen(offset, align);
+
+        uint8_t *dest = origin + offset;
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -313,18 +317,19 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
             } break;
         }
 
-        dest += member.type->size;
+        offset += member.type->size;
     }
 
     return true;
 }
 
-bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *dest, int16_t realign)
+bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *origin, int16_t realign)
 {
     RG_ASSERT(obj.IsArray() || obj.IsTypedArray() || obj.IsString());
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
     uint32_t len = type->size / type->ref->size;
+    Size offset = 0;
 
     if (obj.IsArray()) {
         Napi::Array array = obj.As<Napi::Array>();
@@ -340,7 +345,9 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
                     Napi::Value value = array[i]; \
                      \
                     int16_t align = std::max(type->ref->align, realign); \
-                    dest = AlignUp(dest, align); \
+                     \
+                    offset = AlignLen(offset, align); \
+                    uint8_t *dest = origin + offset; \
                      \
                     if (RG_UNLIKELY(!(Check))) { \
                         ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected %2", GetValueType(instance, value), (Expected)); \
@@ -349,7 +356,7 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
                      \
                     GetCode \
                      \
-                    dest += type->ref->size; \
+                    offset += type->ref->size; \
                 } \
             } while (false)
 
@@ -467,7 +474,9 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
                     Napi::Value value = array[i];
 
                     int16_t align = std::max(type->ref->align, realign);
-                    dest = AlignUp(dest, align);
+                    offset = AlignLen(offset, align);
+
+                    uint8_t *dest = origin + offset;
 
                     void *ptr;
 
@@ -491,7 +500,7 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
 
                     *(void **)dest = ptr;
 
-                    dest += type->ref->size;
+                    offset += type->ref->size;
                 }
             } break;
         }
@@ -526,20 +535,22 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
 
         for (uint32_t i = 0; i < len; i++) {
             int16_t align = std::max(type->ref->align, realign);
-            dest = AlignUp(dest, align);
+            offset = AlignLen(offset, align);
+
+            uint8_t *dest = origin + offset;
 
             memcpy(dest, buf + i * type->ref->size, type->ref->size);
 
-            dest += type->ref->size;
+            offset += type->ref->size;
         }
     } else if (obj.IsString()) {
         size_t encoded = 0;
 
         if (type->ref->primitive == PrimitiveKind::Int8 || type->ref->primitive == PrimitiveKind::UInt8) {
-            napi_status status = napi_get_value_string_utf8(env, obj, (char *)dest, type->size, &encoded);
+            napi_status status = napi_get_value_string_utf8(env, obj, (char *)origin, type->size, &encoded);
             RG_ASSERT(status == napi_ok);
         } else if (type->ref->primitive == PrimitiveKind::Int16 || type->ref->primitive == PrimitiveKind::UInt16) {
-            napi_status status = napi_get_value_string_utf16(env, obj, (char16_t *)dest, type->size / 2, &encoded);
+            napi_status status = napi_get_value_string_utf16(env, obj, (char16_t *)origin, type->size / 2, &encoded);
             RG_ASSERT(status == napi_ok);
 
             encoded *= 2;
@@ -548,7 +559,7 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
             return false;
         }
 
-        memset_safe(dest + encoded, 0, type->size - encoded);
+        memset_safe(origin + encoded, 0, type->size - encoded);
     } else {
         RG_UNREACHABLE();
     }
@@ -574,16 +585,20 @@ Size CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
     return idx;
 }
 
-void CallData::PopObject(Napi::Object obj, const uint8_t *src, const TypeInfo *type, int16_t realign)
+void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign)
 {
     Napi::Env env = obj.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
+    Size offset = 0;
+
     for (const RecordMember &member: type->members) {
         int16_t align = std::max(realign, member.align);
-        src = AlignUp(src, align);
+        offset = AlignLen(offset, align);
+
+        const uint8_t *src = origin + offset;
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -663,14 +678,14 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *src, const TypeInfo *t
             } break;
         }
 
-        src += member.type->size;
+        offset += member.type->size;
     }
 }
 
-Napi::Object CallData::PopObject(const uint8_t *src, const TypeInfo *type, int16_t realign)
+Napi::Object CallData::PopObject(const uint8_t *origin, const TypeInfo *type, int16_t realign)
 {
     Napi::Object obj = Napi::Object::New(env);
-    PopObject(obj, src, type, realign);
+    PopObject(obj, origin, type, realign);
     return obj;
 }
 
@@ -685,13 +700,14 @@ static Size WideStringLength(const char16_t *str16, Size max)
     return len;
 }
 
-Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t realign)
+Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int16_t realign)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
     uint32_t len = type->size / type->ref->size;
+    Size offset = 0;
 
 #define POP_ARRAY(SetCode) \
         do { \
@@ -699,11 +715,13 @@ Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t
              \
             for (uint32_t i = 0; i < len; i++) { \
                 int16_t align = std::max(realign, type->ref->align); \
-                src = AlignUp(src, align); \
+                offset = AlignLen(offset, align); \
+                 \
+                const uint8_t *src = origin + offset; \
                  \
                 SetCode \
                  \
-                src += type->ref->size; \
+                offset += type->ref->size; \
             } \
              \
             return array; \
@@ -720,12 +738,14 @@ Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t
                  \
                 for (uint32_t i = 0; i < len; i++) { \
                     int16_t align = std::max(realign, type->ref->align); \
-                    src = AlignUp(src, align); \
+                    offset = AlignLen(offset, align); \
+                     \
+                    const uint8_t *src = origin + offset; \
                      \
                     CType f = *(CType *)src; \
                     array[i] = f; \
                      \
-                    src += type->ref->size; \
+                    offset += type->ref->size; \
                 } \
                  \
                 return array; \
@@ -745,7 +765,7 @@ Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t
             if (type->hint == TypeInfo::ArrayHint::String) {
                 RG_ASSERT(!realign);
 
-                const char *ptr = (const char *)src;
+                const char *ptr = (const char *)origin;
                 size_t count = strnlen(ptr, (size_t)len);
 
                 Napi::String str = Napi::String::New(env, ptr, count);
@@ -758,7 +778,7 @@ Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t
             if (type->hint == TypeInfo::ArrayHint::String) {
                 RG_ASSERT(!realign);
 
-                const char *ptr = (const char *)src;
+                const char *ptr = (const char *)origin;
                 size_t count = strnlen(ptr, (size_t)len);
 
                 Napi::String str = Napi::String::New(env, ptr, count);
@@ -771,7 +791,7 @@ Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t
             if (type->hint == TypeInfo::ArrayHint::String) {
                 RG_ASSERT(!realign);
 
-                const char16_t *ptr = (const char16_t *)src;
+                const char16_t *ptr = (const char16_t *)origin;
                 Size count = WideStringLength(ptr, len);
 
                 Napi::String str = Napi::String::New(env, ptr, count);
@@ -784,7 +804,7 @@ Napi::Value CallData::PopArray(const uint8_t *src, const TypeInfo *type, int16_t
             if (type->hint == TypeInfo::ArrayHint::String) {
                 RG_ASSERT(!realign);
 
-                const char16_t *ptr = (const char16_t *)src;
+                const char16_t *ptr = (const char16_t *)origin;
                 Size count = WideStringLength(ptr, len);
 
                 Napi::String str = Napi::String::New(env, ptr, count);
