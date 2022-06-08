@@ -1137,16 +1137,20 @@ template <typename Func>
 static void SetExports(Napi::Env env, Func func)
 {
     func("config", Napi::Function::New(env, GetSetConfig));
+
     func("struct", Napi::Function::New(env, CreatePaddedStructType));
     func("pack", Napi::Function::New(env, CreatePackedStructType));
     func("handle", Napi::Function::New(env, CreateHandleType));
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("array", Napi::Function::New(env, CreateArrayType));
     func("callback", Napi::Function::New(env, CreateCallbackType));
+
     func("sizeof", Napi::Function::New(env, GetTypeSize));
     func("alignof", Napi::Function::New(env, GetTypeAlign));
     func("introspect", Napi::Function::New(env, GetTypeDefinition));
+
     func("load", Napi::Function::New(env, LoadSharedLibrary));
+
     func("in", Napi::Function::New(env, MarkIn));
     func("out", Napi::Function::New(env, MarkOut));
     func("inout", Napi::Function::New(env, MarkInOut));
