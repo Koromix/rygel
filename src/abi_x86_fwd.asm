@@ -162,12 +162,10 @@ trampoline_x87 macro ID
     jne l2
 l1:
     fld dword ptr [esp+32]
-    jmp l3
+    add esp, 44
+    ret
 l2:
     fld qword ptr [esp+24]
-l3:
-    mov eax, dword ptr[esp+16]
-    mov edx, dword ptr[esp+20]
     add esp, 44
     ret
 endm

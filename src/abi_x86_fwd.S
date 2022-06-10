@@ -166,12 +166,11 @@ ForwardCallRD:
     jne 2f
 1:
     flds 32(%esp)
-    jmp 3f
+    addl $44, %esp
+    .cfi_def_cfa esp, 4
+    ret
 2:
     fldl 24(%esp)
-3:
-    movl 16(%esp), %eax
-    movl 20(%esp), %edx
     addl $44, %esp
     .cfi_def_cfa esp, 4
     ret

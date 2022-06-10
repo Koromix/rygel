@@ -672,6 +672,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             }
 
             out_reg->f = CopyNumber<float>(value);
+            out_reg->is_double = false;
         } break;
         case PrimitiveKind::Float64: {
             if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
