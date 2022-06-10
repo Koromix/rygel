@@ -41,6 +41,7 @@ class alignas(8) CallData {
     InstanceMemory *mem;
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
+
     uint32_t used_trampolines = 0;
 
     LocalArray<OutObject, MaxOutParameters> out_objects;
@@ -87,7 +88,7 @@ private:
     Napi::Object PopObject(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
     Napi::Value PopArray(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
 
-    Size ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
+    void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 };
 
 template <typename T>

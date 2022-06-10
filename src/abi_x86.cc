@@ -324,11 +324,9 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    Size idx = ReserveTrampoline(param.type->proto, func);
-                    if (RG_UNLIKELY(idx < 0))
+                    ptr = ReserveTrampoline(param.type->proto, func);
+                    if (RG_UNLIKELY(!ptr))
                         return false;
-
-                    ptr = GetTrampoline(idx, param.type->proto);
                 } else if (CheckValueTag(instance, value, param.type)) {
                     ptr = value.As<Napi::External<uint8_t>>().Data();
                 } else if (IsNullOrUndefined(value)) {
@@ -434,10 +432,6 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 {
     const FunctionInfo *proto = instance->trampolines[idx].proto;
     Napi::Function func = instance->trampolines[idx].func;
-
-    // Allow reuse of static trampoline
-    instance->free_trampolines |= 1u << idx;
-    used_trampolines &= ~(1u << idx);
 
     uint32_t *args_ptr = (uint32_t *)caller_sp;
 
@@ -694,11 +688,9 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             if (value.IsFunction()) {
                 Napi::Function func = value.As<Napi::Function>();
 
-                Size idx = ReserveTrampoline(type->proto, func);
-                if (RG_UNLIKELY(idx < 0))
+                ptr = ReserveTrampoline(type->proto, func);
+                if (RG_UNLIKELY(!ptr))
                     return;
-
-                ptr = GetTrampoline(idx, type->proto);
             } else if (CheckValueTag(instance, value, type)) {
                 ptr = value.As<Napi::External<uint8_t>>().Data();
             } else if (IsNullOrUndefined(value)) {

@@ -298,11 +298,9 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    Size idx = ReserveTrampoline(member.type->proto, func);
-                    if (RG_UNLIKELY(idx < 0))
+                    ptr = ReserveTrampoline(type->proto, func);
+                    if (RG_UNLIKELY(!ptr))
                         return false;
-
-                    ptr = GetTrampoline(idx, member.type->proto);
                 } else if (CheckValueTag(instance, value, member.type)) {
                     Napi::External external = value.As<Napi::External<void>>();
                     ptr = external.Data();
@@ -483,11 +481,9 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
                     if (value.IsFunction()) {
                         Napi::Function func = value.As<Napi::Function>();
 
-                        Size idx = ReserveTrampoline(type->ref->proto, func);
-                        if (RG_UNLIKELY(idx < 0))
+                        ptr = ReserveTrampoline(type->proto, func);
+                        if (RG_UNLIKELY(!ptr))
                             return false;
-
-                        ptr = GetTrampoline(idx, type->ref->proto);
                     } else if (CheckValueTag(instance, value, type->ref)) {
                         Napi::External external = value.As<Napi::External<void>>();
                         ptr = external.Data();
@@ -567,13 +563,13 @@ bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *
     return true;
 }
 
-Size CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
+void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
 {
     uint32_t idx = CountTrailingZeros(instance->free_trampolines);
 
     if (RG_UNLIKELY(idx >= MaxTrampolines)) {
         ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
-        return -1;
+        return nullptr;
     }
 
     instance->free_trampolines &= ~(1u << idx);
@@ -582,7 +578,8 @@ Size CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
     instance->trampolines[idx].proto = proto;
     instance->trampolines[idx].func = func;
 
-    return idx;
+    void *trampoline = GetTrampoline(idx, proto);
+    return trampoline;
 }
 
 void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign)
