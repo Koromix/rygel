@@ -292,7 +292,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     if (!PushObject(obj, param.type, ptr))
                         return false;
                 } else {
-                    uint8_t *ptr = (uint8_t *)AlignUp(args_ptr, param.type->align);
+                    uint8_t *ptr = (uint8_t *)args_ptr;
                     if (!PushObject(obj, param.type, ptr))
                         return false;
                     args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
@@ -532,10 +532,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             case PrimitiveKind::Record: {
                 RG_ASSERT(!param.fast);
 
-                uint8_t *ptr = AlignUp((uint8_t *)args_ptr, param.type->align);
-                args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
+                uint8_t *ptr = (uint8_t *)args_ptr;
+
                 Napi::Object obj2 = PopObject(ptr, param.type);
                 arguments.Append(obj2);
+
+                args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
             } break;
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
