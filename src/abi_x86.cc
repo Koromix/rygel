@@ -28,6 +28,9 @@ struct BackRegisters {
     double d;
     float f;
     bool is_double;
+#ifndef _WIN32
+    bool ret4;
+#endif
 };
 
 extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
@@ -437,6 +440,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
     uint8_t *return_ptr = !proto->ret.trivial ? (uint8_t *)args_ptr[0] : nullptr;
     args_ptr += !proto->ret.trivial;
+
+#ifndef _WIN32
+    out_reg->ret4 = !!return_ptr;
+#endif
 
     LocalArray<napi_value, MaxParameters> arguments;
 

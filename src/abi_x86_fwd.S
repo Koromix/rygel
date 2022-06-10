@@ -139,9 +139,16 @@ ForwardCallRD:
     call *RelayCallBack@GOT(%ecx)
     movl 16(%esp), %eax
     movl 20(%esp), %edx
+    cmpb $0, 37(%esp)
+    jne 2f
+1:
     addl $44, %esp
     .cfi_def_cfa esp, 4
     ret
+2:
+    addl $44, %esp
+    .cfi_def_cfa esp, 4
+    ret $4
     .cfi_endproc
 .endm
 
@@ -266,7 +273,7 @@ CallSwitchStack:
     andl $-16, %eax
     movl %eax, 4(%ecx)
     movl 20(%esp), %esp
-    subl $16, %esp
+    subl $28, %esp
     movl 8(%ebx), %eax
     movl %eax, 0(%esp)
     movl 12(%ebx), %eax
