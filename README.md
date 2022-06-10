@@ -298,8 +298,6 @@ Variadic functions do not support async.
 
 ## Callbacks
 
-⚠️ Support for callbacks **is in development, don't expect it to run reliably**.
-
 In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.
 
 ```js
