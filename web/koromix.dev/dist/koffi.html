@@ -38,7 +38,14 @@
             </nav>
             <main>
 <h1 id="overview">Overview</h1>
-<p>Koffi is a fast and easy-to-use FFI module for <a href="https://nodejs.org/">Node.js</a>, with support for complex data types such as structs.</p>
+<p>Koffi is a fast and easy-to-use C FFI module for <a href="https://nodejs.org/">Node.js</a>, featuring:</p>
+
+<ul>
+<li>Low-overhead and fast performance (see <a href="https://github.com/Koromix/luigi/tree/master/koffi#benchmarks">benchmarks</a>)</li>
+<li>Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value</li>
+<li>Javascript functions can be used as C callbacks (since 1.2.0)</li>
+<li>Well-tested code base for popular OS/architecture combinations</li>
+</ul>
 
 <p>The following combinations of OS and architectures <strong>are officially supported and tested</strong> at the moment:</p>
 
@@ -96,8 +103,6 @@
   </tr>
 </tbody>
 </table>
-
-<p>This is still in development, bugs are to expected. More tests will come in the near future.</p>
 
 <p>You can find more information about Koffi (installation, tests, etc.) on <a href="https://www.npmjs.com/package/koffi">the NPM page</a> or in <a href="https://github.com/Koromix/luigi/tree/master/koffi">the official repository</a>.</p>
 <h1 id="example">Example</h1>
