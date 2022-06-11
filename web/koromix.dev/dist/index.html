@@ -19,9 +19,9 @@
                 <ul>
                     <li><a href="index" class="active">Home</a></li>
                     <li><a href="goupile">Goupile</a></li>
+                    <li><a href="koffi">Koffi</a></li>
                     <li><a href="tytools">TyTools</a></li>
                     <li><a href="libhs">libhs</a></li>
-                    <li><a href="koffi">Koffi</a></li>
                     <li><a href="misc">Other</a></li>
                     <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
                     <li style="float: right;"><a href="https://github.com/Koromix">GitHub Profile</a></li>
@@ -33,9 +33,9 @@
             <nav id="side_menu">
                 <ul>
                     <li><a href="#goupile" class="lv1">Goupile</a></li>
+                    <li><a href="#koffi" class="lv1">Koffi</a></li>
                     <li><a href="#tytools" class="lv1">TyTools</a></li>
                     <li><a href="#libhs" class="lv1">libhs</a></li>
-                    <li><a href="#koffi" class="lv1">Koffi</a></li>
                     <li><a href="#misc" class="lv1">Other projects</a></li>
                 </ul>
             </nav>
@@ -44,45 +44,15 @@
 <p>Goupile is a <strong>free and open-source electronic data capture</strong> application that strives to make form creation and data entry both powerful and easy.</p>
 
 <p>Find out more on the <a href="goupile">page dedicated to Goupile</a>.</p>
-<h1 id="tytools">TyTools</h1>
-<p>TyTools is a collection of <strong>independent tools</strong> and you only need one executable to use any of them. The Qt-based GUI tools are statically compiled to make that possible.</p>
-
-<table>
-<thead>
-  <tr>
-    <th>Tool</th>
-    <th>Type</th>
-    <th>Description</th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td>TyCommander</td>
-    <td>Qt GUI (static)</td>
-    <td>Upload, monitor and communicate with multiple boards</td>
-  </tr>
-  <tr>
-    <td>TyUpdater</td>
-    <td>Qt GUI (static)</td>
-    <td>Simple firmware / sketch uploader</td>
-  </tr>
-  <tr>
-    <td>tycmd</td>
-    <td>Command-line<br><em>No Qt !</em></td>
-    <td>Command-line tool to manage Teensy boards</td>
-  </tr>
-</tbody>
-</table>
-
-<p>Find out more on the <a href="tytools">page dedicated to TyTools</a>.</p>
-<h1 id="libhs">libhs</h1>
-<p>libhs is a cross-platform C library to enumerate <strong>HID and serial devices</strong> and interact with them.</p>
-
-<p>It is distributed as a <strong>single-file header</strong>. Drop the file in your project, add one define for the implementation and start to code without messing around with an arcane build system.</p>
-
-<p>Find out more on the <a href="libhs">page dedicated to libhs</a>.</p>
 <h1 id="koffi">Koffi</h1>
-<p>Koffi is a fast and easy-to-use FFI module for <a href="https://nodejs.org/">Node.js</a>, with support for complex data types such as structs.</p>
+<p>Koffi is a fast and easy-to-use C FFI module for <a href="https://nodejs.org/">Node.js</a>, featuring:</p>
+
+<ul>
+<li>Low-overhead and fast performance (see <a href="https://github.com/Koromix/luigi/tree/master/koffi#benchmarks">benchmarks</a>)</li>
+<li>Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value</li>
+<li>Javascript functions can be used as C callbacks (since 1.2.0)</li>
+<li>Well-tested code base for popular OS/architecture combinations</li>
+</ul>
 
 <p>The following combinations of OS and architectures <strong>are officially supported and tested</strong> at the moment:</p>
 
@@ -142,6 +112,43 @@
 </table>
 
 <p>Find out more on the <a href="koffi">page dedicated to Koffi</a>.</p>
+<h1 id="tytools">TyTools</h1>
+<p>TyTools is a collection of <strong>independent tools</strong> and you only need one executable to use any of them. The Qt-based GUI tools are statically compiled to make that possible.</p>
+
+<table>
+<thead>
+  <tr>
+    <th>Tool</th>
+    <th>Type</th>
+    <th>Description</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>TyCommander</td>
+    <td>Qt GUI (static)</td>
+    <td>Upload, monitor and communicate with multiple boards</td>
+  </tr>
+  <tr>
+    <td>TyUpdater</td>
+    <td>Qt GUI (static)</td>
+    <td>Simple firmware / sketch uploader</td>
+  </tr>
+  <tr>
+    <td>tycmd</td>
+    <td>Command-line<br><em>No Qt !</em></td>
+    <td>Command-line tool to manage Teensy boards</td>
+  </tr>
+</tbody>
+</table>
+
+<p>Find out more on the <a href="tytools">page dedicated to TyTools</a>.</p>
+<h1 id="libhs">libhs</h1>
+<p>libhs is a cross-platform C library to enumerate <strong>HID and serial devices</strong> and interact with them.</p>
+
+<p>It is distributed as a <strong>single-file header</strong>. Drop the file in your project, add one define for the implementation and start to code without messing around with an arcane build system.</p>
+
+<p>Find out more on the <a href="libhs">page dedicated to libhs</a>.</p>
 <h1 id="misc">Other projects</h1>
 <p>The projects on this page are provided as-is, and are in <strong>various states of completion</strong>.</p>
 

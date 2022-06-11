@@ -8,6 +8,27 @@ Goupile is a **free and open-source electronic data capture** application that s
 
 Find out more on the [page dedicated to Goupile](goupile).
 
+#koffi# Koffi
+
+Koffi is a fast and easy-to-use C FFI module for [Node.js](https://nodejs.org/), featuring:
+
+* Low-overhead and fast performance (see [benchmarks](https://github.com/Koromix/luigi/tree/master/koffi#benchmarks))
+* Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
+* Javascript functions can be used as C callbacks (since 1.2.0)
+* Well-tested code base for popular OS/architecture combinations
+
+The following combinations of OS and architectures __are officially supported and tested__ at the moment:
+
+ISA / OS           | Windows     | Linux    | macOS       | FreeBSD     | OpenBSD
+------------------ | ----------- | -------- | ----------- | ----------- | --------
+x86 (IA32)         | 🟩 Yes      | 🟩 Yes   | ⬜️ *N/A*    | 🟩 Yes      | 🟩 Yes
+x86_64 (AMD64)     | 🟩 Yes      | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟩 Yes
+ARM32 LE           | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
+ARM64 (AArch64) LE | 🟧 Maybe    | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟨 Probably
+RISC-V 64          | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
+
+Find out more on the [page dedicated to Koffi](koffi).
+
 #tytools# TyTools
 
 TyTools is a collection of **independent tools** and you only need one executable to use any of them. The Qt-based GUI tools are statically compiled to make that possible.
@@ -27,22 +48,6 @@ libhs is a cross-platform C library to enumerate **HID and serial devices** and 
 It is distributed as a **single-file header**. Drop the file in your project, add one define for the implementation and start to code without messing around with an arcane build system.
 
 Find out more on the [page dedicated to libhs](libhs).
-
-#koffi# Koffi
-
-Koffi is a fast and easy-to-use FFI module for [Node.js](https://nodejs.org/), with support for complex data types such as structs.
-
-The following combinations of OS and architectures __are officially supported and tested__ at the moment:
-
-ISA / OS           | Windows     | Linux    | macOS       | FreeBSD     | OpenBSD
------------------- | ----------- | -------- | ----------- | ----------- | --------
-x86 (IA32)         | 🟩 Yes      | 🟩 Yes   | ⬜️ *N/A*    | 🟩 Yes      | 🟩 Yes
-x86_64 (AMD64)     | 🟩 Yes      | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟩 Yes
-ARM32 LE           | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
-ARM64 (AArch64) LE | 🟧 Maybe    | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟨 Probably
-RISC-V 64          | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
-
-Find out more on the [page dedicated to Koffi](koffi).
 
 #misc# Other projects
 
