@@ -34,7 +34,7 @@ x86 (IA32) [^1]    | 🟩 Yes      | 🟩 Yes   | ⬜️ *N/A*    | 🟩 Yes    
 x86_64 (AMD64)     | 🟩 Yes      | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟩 Yes
 ARM32 LE [^2]      | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
 ARM64 (AArch64) LE | 🟧 Maybe    | 🟩 Yes   | 🟩 Yes      | 🟩 Yes      | 🟨 Probably
-RISC-V 64 [^4]     | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
+RISC-V 64 [^3]     | ⬜️ *N/A*    | 🟩 Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
 
 [^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall.
 [^2]: The prebuilt binary uses the hard float ABI and expects a VFP coprocessor. Build from source to use Koffi with a different ABI (softfp, soft).
