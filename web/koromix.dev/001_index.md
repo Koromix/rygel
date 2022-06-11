@@ -2,10 +2,15 @@
      Menu: Home
      Created: 2017-01-15 -->
 
+#goupile# Goupile
+
+Goupile is a **free and open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
+
+Find out more on the [page dedicated to Goupile](goupile).
+
 #tytools# TyTools
 
-TyTools is a collection of **independent tools** and you only need one executable to use
-any of them. The Qt-based GUI tools are statically compiled to make that possible.
+TyTools is a collection of **independent tools** and you only need one executable to use any of them. The Qt-based GUI tools are statically compiled to make that possible.
 
 Tool        | Type                      | Description
 ----------- | --------------------------------------------------------------------------------
