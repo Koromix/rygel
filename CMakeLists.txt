@@ -18,7 +18,7 @@ find_package(CNoke)
 
 set(CMAKE_CXX_STANDARD 17)
 if(MSVC)
-    add_compile_options(/W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201)
+    add_compile_options(/W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201 /wd4324)
     enable_language(ASM_MASM)
 else()
     add_compile_options(-Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter)
