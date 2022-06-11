@@ -100,7 +100,7 @@ static inline int IsHFA(const TypeInfo *type)
 #endif
 }
 
-bool AnalyseFunction(InstanceData *, FunctionInfo *func)
+bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
     if (int hfa = IsHFA(func->ret.type); hfa) {
         func->ret.vec_count = hfa;

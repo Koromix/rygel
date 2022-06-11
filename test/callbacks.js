@@ -32,6 +32,7 @@ const BFG = koffi.struct('BFG', {
 const SimpleCallback = koffi.callback('int SimpleCallback(const char *str)');
 const RecursiveCallback = koffi.callback('RecursiveCallback', 'float', ['int', 'string', 'double']);
 const BigCallback = koffi.callback('BFG BigCallback(BFG bfg)');
+const ApplyCallback = koffi.callback('int __stdcall ApplyCallback(int a, int b, int c)');
 
 main();
 
@@ -52,6 +53,7 @@ async function test() {
     const CallJS = lib.func('int CallJS(const char *str, SimpleCallback cb)');
     const CallRecursiveJS = lib.func('float CallRecursiveJS(int i, RecursiveCallback func)');
     const ModifyBFG = lib.func('BFG ModifyBFG(int x, double y, const char *str, BigCallback func, _Out_ BFG *p)');
+    const ApplyStd = lib.func('int ApplyStd(int a, int b, int c, ApplyCallback func)');
 
     // Simple test similar to README example
     {
@@ -83,5 +85,11 @@ async function test() {
         }, out);
         assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'New!', e: 54, inner: { f: -10, g: 3 } });
         assert.deepEqual(out, { a: 2, b: 4, c: -25, d: 'X/Yo!/X', e: 54, inner: { f: 10, g: 3 } });
+    }
+
+    // Stdcall callbacks
+    {
+        let ret = ApplyStd(1, 5, 9, (a, b, c) => a + b * c);
+        assert.equal(ret, 46);
     }
 }

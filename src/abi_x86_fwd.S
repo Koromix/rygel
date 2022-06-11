@@ -138,11 +138,11 @@ ForwardCallRD:
     addl $_GLOBAL_OFFSET_TABLE_, %ecx
     call *RelayCallback@GOT(%ecx)
     movl 44(%esp), %edx
-    movzbl 37(%esp), %ecx
-    movl %edx, 44(%esp, %ecx, 4)
+    movl 36(%esp), %ecx
+    movl %edx, 44(%esp, %ecx)
     movl 16(%esp), %eax
     movl 20(%esp), %edx
-    leal 44(%esp, %ecx, 4), %esp
+    leal 44(%esp, %ecx), %esp
     .cfi_def_cfa esp, 4
     ret
     .cfi_endproc
@@ -165,16 +165,19 @@ ForwardCallRD:
     call GetEIP
     addl $_GLOBAL_OFFSET_TABLE_, %ecx
     call *RelayCallback@GOT(%ecx)
-    cmpb $0, 36(%esp)
+    movl 44(%esp), %edx
+    movl 36(%esp), %ecx
+    movl %edx, 44(%esp, %ecx, 4)
+    cmpb $0, 32(%esp)
     jne 2f
 1:
-    flds 32(%esp)
-    addl $44, %esp
+    flds 24(%esp)
+    leal 44(%esp, %ecx), %esp
     .cfi_def_cfa esp, 4
     ret
 2:
     fldl 24(%esp)
-    addl $44, %esp
+    leal 44(%esp, %ecx), %esp
     .cfi_def_cfa esp, 4
     ret
     .cfi_endproc

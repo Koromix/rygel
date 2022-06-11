@@ -511,13 +511,8 @@ static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
         LogError("Variadic callbacks are not supported");
         return env.Null();
     }
-    if (func->convention != CallConvention::Cdecl &&
-            func->convention != CallConvention::Stdcall) {
-        ThrowError<Napi::Error>(env, "Only Cdecl and Stdcall callbacks are supported");
-        return env.Null();
-    }
 
-    if (!AnalyseFunction(instance, func))
+    if (!AnalyseFunction(env, instance, func))
         return env.Null();
 
     // We cannot fail after this check
@@ -713,7 +708,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         func.parameters.Append(param);
     }
 
-    if (RG_UNLIKELY(!AnalyseFunction(instance, &func)))
+    if (RG_UNLIKELY(!AnalyseFunction(env, instance, &func)))
         return env.Null();
 
     InstanceMemory *mem = instance->memories[0];
@@ -846,7 +841,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
         func->convention = CallConvention::Cdecl;
     }
 
-    if (!AnalyseFunction(instance, func))
+    if (!AnalyseFunction(env, instance, func))
         return env.Null();
     if (func->variadic) {
         // Minimize reallocations

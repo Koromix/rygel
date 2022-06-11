@@ -21,7 +21,7 @@
 
 namespace RG {
 
-bool AnalyseFunction(InstanceData *instance, FunctionInfo *func);
+bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func);
 
 struct BackRegisters;
 

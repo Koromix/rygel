@@ -138,9 +138,12 @@ trampoline macro ID
     lea eax, dword ptr [esp+16]
     mov dword ptr [esp+12], eax
     call RelayCallback
+    mov edx, dword ptr [esp+44]
+    mov ecx, dword ptr [esp+36]
+    mov dword ptr [esp+ecx+44], edx
     mov eax, dword ptr [esp+16]
     mov edx, dword ptr [esp+20]
-    add esp, 44
+    lea esp, [esp+ecx+44]
     ret
 endm
 
@@ -158,15 +161,18 @@ trampoline_x87 macro ID
     lea eax, dword ptr [esp+16]
     mov dword ptr [esp+12], eax
     call RelayCallback
-    cmp byte ptr [esp+36], 0
+    mov edx, dword ptr [esp+44]
+    mov ecx, dword ptr [esp+36]
+    mov dword ptr [esp+ecx+44], edx
+    cmp byte ptr [esp+32], 0
     jne l2
 l1:
-    fld dword ptr [esp+32]
-    add esp, 44
+    fld dword ptr [esp+24]
+    lea esp, dword ptr [esp+ecx+44]
     ret
 l2:
     fld qword ptr [esp+24]
-    add esp, 44
+    lea esp, dword ptr [esp+ecx+44]
     ret
 endm
 

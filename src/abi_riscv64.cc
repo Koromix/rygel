@@ -146,7 +146,7 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
     }
 }
 
-bool AnalyseFunction(InstanceData *, FunctionInfo *func)
+bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
     AnalyseParameter(&func->ret, 2, 2);
 

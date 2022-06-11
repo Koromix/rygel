@@ -341,6 +341,8 @@ console.log(ret);
 // This example prints "Hello Niels!" first, and then prints 42
 ```
 
+On x86 platforms, only Cdecl and Stdcall callbacks are supported.
+
 ## Memory settings
 
 For synchronous/normal calls, Koffi uses two preallocated memory blocks, one to construct the C stack and the other to allocate strings and big objects/structs. Unless very big strings or objects (at least more than one page of memory) are used, no extra allocation is needed during calls or callbacks.

@@ -504,3 +504,11 @@ EXPORT BFG ModifyBFG(int x, double y, const char *str, BFG (*func)(BFG bfg), BFG
     bfg = func(bfg);
     return bfg;
 }
+
+typedef int STDCALL ApplyCallback(int a, int b, int c);
+
+EXPORT int ApplyStd(int a, int b, int c, ApplyCallback *func)
+{
+    int ret = func(a, b, c);
+    return ret;
+}

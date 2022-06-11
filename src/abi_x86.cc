@@ -25,12 +25,12 @@ namespace RG {
 struct BackRegisters {
     uint32_t eax;
     uint32_t edx;
-    double d;
-    float f;
-    bool is_double;
-#ifndef _WIN32
-    bool ret4;
-#endif
+    union {
+        double d;
+        float f;
+    } x87;
+    bool x87_double;
+    int ret_pop;
 };
 
 extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
@@ -89,8 +89,14 @@ static inline bool IsRegular(Size size)
     return regular;
 }
 
-bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
+bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 {
+    if (!func->lib && func->convention != CallConvention::Cdecl &&
+                      func->convention != CallConvention::Stdcall) {
+        ThrowError<Napi::Error>(env, "Only Cdecl and Stdcall callbacks are supported");
+        return false;
+    }
+
     int fast = (func->convention == CallConvention::Fastcall) ? 2 :
                (func->convention == CallConvention::Thiscall) ? 1 : 0;
     func->fast = fast;
@@ -116,7 +122,7 @@ bool AnalyseFunction(InstanceData *instance, FunctionInfo *func)
             fast--;
         }
 
-        params_size += std::max((int16_t)4, param.type->size);
+        params_size += std::max(4, AlignLen(param.type->size, 4));
     }
     func->args_size = params_size + 4 * !func->ret.trivial;
 
@@ -441,9 +447,15 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
     uint8_t *return_ptr = !proto->ret.trivial ? (uint8_t *)args_ptr[0] : nullptr;
     args_ptr += !proto->ret.trivial;
 
+    if (proto->convention == CallConvention::Stdcall) {
+        out_reg->ret_pop = (int)proto->args_size;
 #ifndef _WIN32
-    out_reg->ret4 = !!return_ptr;
+    } else if (return_ptr) {
+        out_reg->ret_pop = 4;
 #endif
+    } else {
+        out_reg->ret_pop = 0;
+    }
 
     LocalArray<napi_value, MaxParameters> arguments;
 
@@ -680,8 +692,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            out_reg->f = CopyNumber<float>(value);
-            out_reg->is_double = false;
+            out_reg->x87.f = CopyNumber<float>(value);
+            out_reg->x87_double = false;
         } break;
         case PrimitiveKind::Float64: {
             if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -689,8 +701,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            out_reg->d = CopyNumber<double>(value);
-            out_reg->is_double = true;
+            out_reg->x87.d = CopyNumber<double>(value);
+            out_reg->x87_double = true;
         } break;
         case PrimitiveKind::Callback: {
             void *ptr;

@@ -83,7 +83,7 @@ static inline bool IsRegular(Size size)
     return regular;
 }
 
-bool AnalyseFunction(InstanceData *, FunctionInfo *func)
+bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
     func->ret.regular = IsRegular(func->ret.type->size);
 
