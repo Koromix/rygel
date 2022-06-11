@@ -137,18 +137,14 @@ ForwardCallRD:
     call GetEIP
     addl $_GLOBAL_OFFSET_TABLE_, %ecx
     call *RelayCallBack@GOT(%ecx)
+    movl 44(%esp), %edx
+    movzbl 37(%esp), %ecx
+    movl %edx, 44(%esp, %ecx, 4)
     movl 16(%esp), %eax
     movl 20(%esp), %edx
-    cmpb $0, 37(%esp)
-    jne 2f
-1:
-    addl $44, %esp
+    leal 44(%esp, %ecx, 4), %esp
     .cfi_def_cfa esp, 4
     ret
-2:
-    addl $44, %esp
-    .cfi_def_cfa esp, 4
-    ret $4
     .cfi_endproc
 .endm
 
