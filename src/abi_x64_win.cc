@@ -656,7 +656,7 @@ void *GetTrampoline(Size idx, const FunctionInfo *proto)
     return Trampolines[idx][xmm];
 }
 
-extern "C" void RelayCallBack(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
     exec_call->Relay(idx, own_sp, caller_sp, out_reg);
 }

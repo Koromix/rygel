@@ -185,11 +185,11 @@ SYMBOL(ForwardCallXDD):
 .global SYMBOL(TrampolineX13)
 .global SYMBOL(TrampolineX14)
 .global SYMBOL(TrampolineX15)
-.global SYMBOL(RelayCallBack)
+.global SYMBOL(RelayCallback)
 .global SYMBOL(CallSwitchStack)
 
 # First, make a copy of the GPR argument registers (rdi, rsi, rdx, rcx, r8, r9).
-# Then call the C function RelayCallBack with the following arguments:
+# Then call the C function RelayCallback with the following arguments:
 # static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
 # arguments of this call, and a pointer to a struct that will contain the result registers.
 # After the call, simply load these registers from the output struct.
@@ -209,7 +209,7 @@ SYMBOL(ForwardCallXDD):
     movq %rsp, %rsi
     leaq 160(%rsp), %rdx
     leaq 112(%rsp), %rcx
-    call SYMBOL(RelayCallBack)
+    call SYMBOL(RelayCallback)
     movq 112(%rsp), %rax
     movq 120(%rsp), %rdx
     addq $152, %rsp
@@ -243,7 +243,7 @@ SYMBOL(ForwardCallXDD):
     movq %rsp, %rsi
     leaq 160(%rsp), %rdx
     leaq 112(%rsp), %rcx
-    call SYMBOL(RelayCallBack)
+    call SYMBOL(RelayCallback)
     movq 112(%rsp), %rax
     movq 120(%rsp), %rdx
     movsd 128(%rsp), %xmm0

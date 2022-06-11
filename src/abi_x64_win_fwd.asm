@@ -142,11 +142,11 @@ public TrampolineX12
 public TrampolineX13
 public TrampolineX14
 public TrampolineX15
-extern RelayCallBack : PROC
+extern RelayCallback : PROC
 public CallSwitchStack
 
 ; First, make a copy of the GPR argument registers (rcx, rdx, r8, r9).
-; Then call the C function RelayCallBack with the following arguments:
+; Then call the C function RelayCallback with the following arguments:
 ; static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
 ; arguments of this call, and a pointer to a struct that will contain the result registers.
 ; After the call, simply load these registers from the output struct.
@@ -163,7 +163,7 @@ trampoline macro ID
     lea rdx, qword ptr [rsp+32]
     lea r8, qword ptr [rsp+128]
     lea r9, qword ptr [rsp+96]
-    call RelayCallBack
+    call RelayCallback
     mov rax, qword ptr [rsp+96]
     add rsp, 120
     ret
@@ -187,7 +187,7 @@ trampoline_xmm macro ID
     lea rdx, qword ptr [rsp+32]
     lea r8, qword ptr [rsp+128]
     lea r9, qword ptr [rsp+96]
-    call RelayCallBack
+    call RelayCallback
     mov rax, qword ptr [rsp+96]
     movsd xmm0, qword ptr [rsp+104]
     add rsp, 120

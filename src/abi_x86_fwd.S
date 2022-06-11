@@ -115,10 +115,10 @@ ForwardCallRD:
 .global TrampolineX13
 .global TrampolineX14
 .global TrampolineX15
-.global RelayCallBack
+.global RelayCallback
 .global CallSwitchStack
 
-# Call the C function RelayCallBack with the following arguments:
+# Call the C function RelayCallback with the following arguments:
 # static trampoline ID, the current stack pointer, a pointer to the stack arguments of this call,
 # and a pointer to a struct that will contain the result registers.
 # After the call, simply load these registers from the output struct.
@@ -136,7 +136,7 @@ ForwardCallRD:
     movl %eax, 12(%esp)
     call GetEIP
     addl $_GLOBAL_OFFSET_TABLE_, %ecx
-    call *RelayCallBack@GOT(%ecx)
+    call *RelayCallback@GOT(%ecx)
     movl 44(%esp), %edx
     movzbl 37(%esp), %ecx
     movl %edx, 44(%esp, %ecx, 4)
@@ -164,7 +164,7 @@ ForwardCallRD:
     movl %eax, 12(%esp)
     call GetEIP
     addl $_GLOBAL_OFFSET_TABLE_, %ecx
-    call *RelayCallBack@GOT(%ecx)
+    call *RelayCallback@GOT(%ecx)
     cmpb $0, 36(%esp)
     jne 2f
 1:

@@ -121,10 +121,10 @@ public TrampolineX12
 public TrampolineX13
 public TrampolineX14
 public TrampolineX15
-extern RelayCallBack : PROC
+extern RelayCallback : PROC
 public CallSwitchStack
 
-; Call the C function RelayCallBack with the following arguments:
+; Call the C function RelayCallback with the following arguments:
 ; static trampoline ID, the current stack pointer, a pointer to the stack arguments of this call,
 ; and a pointer to a struct that will contain the result registers.
 ; After the call, simply load these registers from the output struct.
@@ -137,7 +137,7 @@ trampoline macro ID
     mov dword ptr [esp+8], eax
     lea eax, dword ptr [esp+16]
     mov dword ptr [esp+12], eax
-    call RelayCallBack
+    call RelayCallback
     mov eax, dword ptr [esp+16]
     mov edx, dword ptr [esp+20]
     add esp, 44
@@ -157,7 +157,7 @@ trampoline_x87 macro ID
     mov dword ptr [esp+8], eax
     lea eax, dword ptr [esp+16]
     mov dword ptr [esp+12], eax
-    call RelayCallBack
+    call RelayCallback
     cmp byte ptr [esp+36], 0
     jne l2
 l1:

@@ -168,11 +168,11 @@ ForwardCallXDD:
 .global TrampolineX13
 .global TrampolineX14
 .global TrampolineX15
-.global RelayCallBack
+.global RelayCallback
 .global CallSwitchStack
 
 # First, make a copy of the GPR argument registers (a0 to a7).
-# Then call the C function RelayCallBack with the following arguments:
+# Then call the C function RelayCallback with the following arguments:
 # static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
 # arguments of this call, and a pointer to a struct that will contain the result registers.
 # After the call, simply load these registers from the output struct.
@@ -191,7 +191,7 @@ ForwardCallXDD:
     addi a1, sp, 8
     addi a2, sp, 176
     addi a3, sp, 136
-    jal RelayCallBack
+    jal RelayCallback
     ld ra, 0(sp)
     ld a0, 136(sp)
     ld a1, 144(sp)
@@ -223,7 +223,7 @@ ForwardCallXDD:
     addi a1, sp, 8
     addi a2, sp, 176
     addi a3, sp, 136
-    jal RelayCallBack
+    jal RelayCallback
     ld ra, 0(sp)
     ld a0, 136(sp)
     ld a1, 144(sp)

@@ -145,12 +145,12 @@ ForwardCallXDDDD PROC
     EXPORT TrampolineX13
     EXPORT TrampolineX14
     EXPORT TrampolineX15
-    EXPORT RelayCallBack
-    EXTERN RelayCallBack
+    EXPORT RelayCallback
+    EXTERN RelayCallback
     EXPORT CallSwitchStack
 
     ; First, make a copy of the GPR argument registers (x0 to x7).
-    ; Then call the C function RelayCallBack with the following arguments:
+    ; Then call the C function RelayCallback with the following arguments:
     ; static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
     ; arguments of this call, and a pointer to a struct that will contain the result registers.
     ; After the call, simply load these registers from the output struct.
@@ -168,7 +168,7 @@ ForwardCallXDDDD PROC
     mov x1, sp
     add x2, sp, #208
     add x3, sp, #136
-    bl RelayCallBack
+    bl RelayCallback
     ldp x0, x1, [sp, 136]
     add sp, sp, #192
     ldp x29, x30, [sp], 16
@@ -194,7 +194,7 @@ ForwardCallXDDDD PROC
     mov x1, sp
     add x2, sp, #208
     add x3, sp, #136
-    bl RelayCallBack
+    bl RelayCallback
     ldp x0, x1, [sp, 136]
     ldp d0, d1, [sp, 152]
     ldp d2, d3, [sp, 168]
