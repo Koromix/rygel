@@ -138,14 +138,14 @@ struct ParameterInfo {
 
     // ABI-specific part
 
-#if defined(_WIN64)
+#if defined(_M_X64)
     bool regular;
 #elif defined(__x86_64__)
     bool use_memory;
     int8_t gpr_count;
     int8_t xmm_count;
     bool gpr_first;
-#elif defined(__arm__) || defined(__aarch64__)
+#elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
     bool use_memory; // Only used for return value on ARM32
     int8_t gpr_count;
     int8_t vec_count;
@@ -179,11 +179,10 @@ struct FunctionInfo {
     // ABI-specific part
 
     Size args_size;
-#if defined(__arm__) || defined(__aarch64__) || defined(__x86_64__) || defined(_WIN64) || defined(__riscv)
-    bool forward_fp;
-#endif
 #if defined(__i386__) || defined(_M_IX86)
     bool fast;
+#else
+    bool forward_fp;
 #endif
 
     ~FunctionInfo();
