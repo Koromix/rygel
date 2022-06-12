@@ -422,6 +422,11 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 if (RG_LIKELY(param.vec_count)) {
                     memset((uint8_t *)vec_ptr + 4, 0, 4);
                     *(float *)(vec_ptr++) = f;
+#ifdef _WIN32
+                } else if (param.gpr_count) {
+                    memset((uint8_t *)gpr_ptr + 4, 0, 4);
+                    *(float *)(gpr_ptr++) = f;
+#endif
                 } else {
 #ifdef __APPLE__
                     args_ptr = AlignUp(args_ptr, 4);
@@ -443,6 +448,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                 if (RG_LIKELY(param.vec_count)) {
                     *(double *)(vec_ptr++) = d;
+#ifdef _WIN32
+                } else if (param.gpr_count) {
+                    *(double *)(gpr_ptr++) = d;
+#endif
                 } else {
 #ifdef __APPLE__
                     args_ptr = AlignUp(args_ptr, 8);
@@ -810,8 +819,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 float f;
                 if (RG_LIKELY(param.vec_count)) {
                     f = *(float *)(vec_ptr++);
+#ifdef _WIN32
                 } else if (param.gpr_count) {
                     f = *(float *)(gpr_ptr++);
+#endif
                 } else {
 #ifdef __APPLE__
                     args_ptr = AlignUp(args_ptr, 4);
@@ -829,8 +840,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 double d;
                 if (RG_LIKELY(param.vec_count)) {
                     d = *(double *)(vec_ptr++);
+#ifdef _WIN32
                 } else if (param.gpr_count) {
                     d = *(double *)(gpr_ptr++);
+#endif
                 } else {
 #ifdef __APPLE__
                     args_ptr = AlignUp(args_ptr, 8);
