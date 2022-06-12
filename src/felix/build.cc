@@ -972,14 +972,21 @@ static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<cons
         Span<const char> line = SplitStr(buf, '\n', &buf);
 
         // MS had the brilliant idea to localize inclusion notes.. In english it starts
-        // with 'Note: including file:  ' but it can basically be anything. We match
-        // lines that start with a non-space character, and which contain a colon
-        // followed by two spaces we take the line. Not pretty, hopefully it is alright.
+        // with 'Note: including file: ' but it can basically be anything. We match
+        // lines that start with a non-space character, with two pairs of ': ' not
+        // preceeded by any digit. Meh.
         Span<const char> dep = {};
         if (line.len && !IsAsciiWhite(line[0])) {
-            for (Size i = 0; i < line.len - 3; i++) {
-                if (line[i] == ':' && line[i + 1] == ' ' && line[i + 2] == ' ') {
-                    dep = TrimStr(line.Take(i + 3, line.len - i - 3));
+            int counter = 0;
+
+            for (Size i = 0; i < line.len - 2; i++) {
+                if (IsAsciiDigit(line[i]))
+                    break;
+
+                counter += (line[i] == ':' && line[i + 1] == ' ');
+
+                if (counter == 2) {
+                    dep = TrimStr(line.Take(i + 2, line.len - i - 2));
                     break;
                 }
             }
