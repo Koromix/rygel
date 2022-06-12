@@ -19,7 +19,11 @@ find_package(CNoke)
 set(CMAKE_CXX_STANDARD 17)
 if(MSVC)
     add_compile_options(/W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201 /wd4324)
-    enable_language(ASM_MASM)
+
+    # ASM_MASM does not (yet) work on Windows ARM64
+    if(NOT CMAKE_GENERATOR_PLATFORM MATCHES "ARM64")
+        enable_language(ASM_MASM)
+    endif()
 else()
     add_compile_options(-Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -37,9 +41,26 @@ set(KOFFI_SRC
     vendor/libcc/libcc.cc
 )
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm")
+    # CMAKE_SYSTEM_PROCESSOR is wrong on Windows ARM64
+
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm" OR CMAKE_GENERATOR_PLATFORM STREQUAL "ARM64")
         if(WIN32)
-            list(APPEND KOFFI_SRC src/abi_arm64.cc src/abi_arm64_fwd.asm)
+            get_filename_component(cl_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+            file(TO_CMAKE_PATH "${cl_dir}/armasm64.exe" asm_compiler)
+            message(STATUS "Using ARMASM64 compiler: ${asm_compiler}")
+
+            file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/abi_arm64_fwd.asm" asm_source)
+            file(TO_CMAKE_PATH "${CMAKE_CURRENT_BINARY_DIR}/abi_arm64_fwd.obj" asm_object)
+
+            add_custom_command(
+                OUTPUT "${asm_object}"
+                COMMAND "${asm_compiler}" ARGS /nologo /o "${asm_object}" "${asm_source}"
+                DEPENDS "${asm_source}"
+                COMMENT "Assembling ${asm_source}"
+            )
+            set_source_files_properties("${asm_object}" PROPERTIES EXTERNAL_OBJECT TRUE)
+
+            list(APPEND KOFFI_SRC src/abi_arm64.cc "${asm_object}")
         else()
             list(APPEND KOFFI_SRC src/abi_arm64.cc src/abi_arm64_fwd.S)
         endif()
