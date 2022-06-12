@@ -51,7 +51,9 @@
     #ifdef _WIN64
         #pragma intrinsic(_BitScanReverse64)
     #endif
-    #pragma intrinsic(__rdtsc)
+    #if defined(_M_IX86) || defined(_M_X64)
+        #pragma intrinsic(__rdtsc)
+    #endif
 #endif
 
 struct sigaction;
@@ -94,7 +96,7 @@ extern "C" const char *FelixTarget;
 extern "C" const char *FelixVersion;
 extern "C" const char *FelixCompiler;
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || __riscv_xlen == 64
+#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || __riscv_xlen == 64
     typedef int64_t Size;
     #define RG_SIZE_MAX INT64_MAX
 #elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
@@ -2562,7 +2564,7 @@ union Date {
 int64_t GetUnixTime();
 int64_t GetMonotonicTime();
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(_M_ARM64)
 static inline int64_t GetClockCounter()
 {
     return (int64_t)__rdtsc();
