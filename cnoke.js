@@ -214,11 +214,14 @@ async function configure(retry = true) {
     // Download Node headers
     {
         let basename = `node-${version}-headers.tar.gz`;
-        let url = `https://nodejs.org/dist/${version}/${basename}`;
+        let urls = [
+            `https://nodejs.org/dist/${version}/${basename}`,
+            `https://unofficial-builds.nodejs.org/download/release/${version}/${basename}`
+        ];
         let destname = `${cache_dir}/${basename}`;
 
         if (!fs.existsSync(destname))
-            await download(url, destname);
+            await download(urls, destname);
         await extract_targz(destname, work_dir + '/headers', 1);
     }
 
@@ -228,6 +231,7 @@ async function configure(retry = true) {
         switch (arch) {
             case 'ia32': { dirname = 'win-x86'; } break;
             case 'x64': { dirname = 'win-x64'; } break;
+            case 'arm64': { dirname = 'win-arm64'; } break;
 
             default: {
                 throw new Error(`Unsupported architecture '${arch}' for Node on Windows`);
@@ -237,8 +241,11 @@ async function configure(retry = true) {
         let destname = `${cache_dir}/node_${version}_${arch}.lib`;
 
         if (!fs.existsSync(destname)) {
-            let url = `https://nodejs.org/dist/${version}/${dirname}/node.lib`;
-            await download(url, destname);
+            let urls = [
+                `https://nodejs.org/dist/${version}/${dirname}/node.lib`,
+                `https://unofficial-builds.nodejs.org/download/release/${version}/${dirname}/node.lib`
+            ];
+            await download(urls, destname);
         }
 
         fs.copyFileSync(destname, work_dir + '/node.lib');
@@ -255,11 +262,18 @@ async function configure(retry = true) {
             args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
             args.push(`-DNODE_JS_LIBRARIES=${work_dir}/node.lib`);
 
-            if (arch === 'ia32') {
-                args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
-                args.push('-A', 'Win32');
-            } else {
-                args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
+            switch (arch) {
+                case 'ia32': {
+                    args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
+                    args.push('-A', 'Win32');
+                } break;
+                case 'arm64': {
+                    args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
+                    args.push('-A', 'ARM64');
+                } break;
+                default: {
+                    args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
+                } break;
             }
         } break;
 
@@ -469,6 +483,22 @@ function unlink_recursive(path) {
 }
 
 async function download(url, dest) {
+    if (Array.isArray(url)) {
+        let urls = url;
+
+        for (let url of urls) {
+            try {
+                await download(url, dest);
+                return;
+            } catch (err) {
+                if (err.code != 404)
+                    throw err;
+            }
+        }
+
+        throw new Error('All URLS returned error 404');
+    }
+
     console.log('>> Downloading ' + url);
 
     let [tmp_name, file] = open_temporary_stream(dest);
@@ -478,6 +508,8 @@ async function download(url, dest) {
             let request = http.get(url, response => {
                 if (response.statusCode != 200) {
                     let err = new Error(`Download failed: ${response.statusMessage} [${response.statusCode}]`);
+                    err.code = response.statusCode;
+
                     reject(err);
 
                     return;
