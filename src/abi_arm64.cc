@@ -142,7 +142,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                 int hfa = IsHFA(param.type);
 
 #if defined(_WIN32)
-                if (!param.variadic) {
+                if (param.variadic) {
                     hfa = 0;
                 }
 #elif defined(__APPLE__)
