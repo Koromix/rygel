@@ -101,9 +101,9 @@ static inline int IsHFA(const TypeInfo *type)
 bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
     if (int hfa = IsHFA(func->ret.type); hfa) {
-        func->ret.vec_count = hfa;
+        func->ret.vec_count = (int8_t)hfa;
     } else if (func->ret.type->size <= 16) {
-        func->ret.gpr_count = (func->ret.type->size + 7) / 8;
+        func->ret.gpr_count = (int8_t)((func->ret.type->size + 7) / 8);
     } else {
         func->ret.use_memory = true;
     }
@@ -154,7 +154,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                 if (hfa) {
                     if (hfa <= vec_avail) {
-                        param.vec_count = hfa;
+                        param.vec_count = (int8_t)hfa;
                         vec_avail -= hfa;
                     } else {
                         vec_avail = 0;
@@ -163,7 +163,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                     int gpr_count = (param.type->size + 7) / 8;
 
                     if (gpr_count <= gpr_avail) {
-                        param.gpr_count = gpr_count;
+                        param.gpr_count = (int8_t)gpr_count;
                         gpr_avail -= gpr_count;
                     } else {
                         gpr_avail = 0;
