@@ -34,6 +34,7 @@
 
     stp x29, x30, [sp, -16]!
     mov x29, sp
+    str x29, [x2, 0]
     mov x9, x0
     add sp, x1, #136
     MEND
