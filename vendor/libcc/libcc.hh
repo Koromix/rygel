@@ -420,14 +420,25 @@ constexpr T BigEndian(T v) { return ReverseBytes(v); }
 
     static inline int PopCount(uint32_t u)
     {
+    #ifdef _M_ARM64
+        uint32_t count;
+
+        u = u - ((u >> 1) & 0x55555555);
+        u = (u & 0x33333333) + ((u >> 2) & 0x33333333);
+        count = ((u + (u >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
+
+        return (int)count;
+    #else
         return __popcnt(u);
+    #endif
     }
     static inline int PopCount(uint64_t u)
     {
-    #ifdef _WIN64
+    #ifdef _M_X64
         return (int)__popcnt64(u);
     #else
-        return __popcnt(u >> 32) + __popcnt((uint32_t)u);
+        int count = PopCount((uint32_t)(u >> 32)) + PopCount((uint32_t)u);
+        return count;
     #endif
     }
 #else
