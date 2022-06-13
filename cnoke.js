@@ -23,6 +23,7 @@ const path = require('path');
 const process = require('process');
 const zlib = require('zlib');
 const { spawnSync } = require('child_process');
+const { Buffer } = require('buffer');
 
 // Globals
 
@@ -145,7 +146,7 @@ async function main() {
     if (version == null)
         version = process.version;
     if (arch == null)
-        arch = process.arch;
+        arch = determine_arch();
 
     app_dir = path.dirname(__filename);
     if (project_dir == null)
@@ -186,13 +187,18 @@ Build options:
 Configure options:
         --version <VERSION>      Change node version
                                  (default: ${process.version})
-        --arch <ARCH>            Change architecture
-                                 (default: ${process.arch})
+        --arch <ARCH>            Change architecture and ABI
+                                 (default: ${determine_arch()})
 
     -m, --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
                                  (default: ${default_mode})
         --debug                  Shortcut for -m debug
-`;
+
+The ARCH value is similar to process.arch, with the following differences:
+
+- arm is changed to arm32hf or arm32sf depending on the floating-point ABI used (hard-float, soft-float)
+- riscv32 is changed to riscv32sf, riscv32hf32, riscv32hf64 or riscv32hf128 depending on the floating-point ABI
+- riscv64 is changed to riscv64sf, riscv64hf32, riscv64hf64 or riscv64hf128 depending on the floating-point ABI`;
 
     console.log(help);
 }
@@ -203,6 +209,9 @@ async function configure(retry = true) {
     let args = [project_dir];
 
     check_cmake();
+
+    console.log('>> Platform:', process.platform);
+    console.log('>> Architecture:', arch);
 
     // Prepare build directory
     fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
@@ -565,6 +574,22 @@ function open_temporary_stream(prefix) {
     }
 }
 
+function read_file_header(filename, read) {
+    let fd = null;
+
+    try {
+        let fd = fs.openSync(filename);
+
+        let buf = Buffer.allocUnsafe(read);
+        let len = fs.readSync(fd, buf);
+
+        return buf.subarray(0, len);
+    } finally {
+        if (fd != null)
+            fs.closeSync(fd);
+    }
+}
+
 function extract_targz(filename, dest_dir, strip = 0) {
     let reader = fs.createReadStream(filename).pipe(zlib.createGunzip());
 
@@ -703,4 +728,87 @@ function find_parent_directory(dirname, basename)
     } while (dirname.includes('/'));
 
     return null;
+}
+
+function determine_arch() {
+    let arch = process.arch;
+
+    if (arch == 'riscv32' || arch == 'riscv64') {
+        let buf = read_file_header(process.execPath, 512);
+        let header = decode_elf_header(buf);
+        let float_abi = (header.e_flags & 0x6) >> 1;
+
+        switch (float_abi) {
+            case 0: { arch += 'sf'; } break;
+            case 1: { arch += 'hf32'; } break;
+            case 2: { arch += 'hf64'; } break;
+            case 3: { arch += 'hf128'; } break;
+        }
+    } else if (arch == 'arm') {
+        arch = 'arm32';
+
+        let buf = read_file_header(process.execPath, 512);
+        let header = decode_elf_header(buf);
+
+        if (header.e_flags & 0x400) {
+            arch += 'hf';
+        } else if (header.e_flags & 0x200) {
+            arch += 'sf';
+        } else {
+            throw new Error('Unknown ARM floating-point ABI');
+        }
+    }
+
+    return arch;
+}
+
+function decode_elf_header(buf) {
+    let header = {};
+
+    if (buf.length < 16)
+        throw new Error('Truncated header');
+    if (buf[0] != 0x7F || buf[1] != 69 || buf[2] != 76 || buf[3] != 70)
+        throw new Error('Invalid magic number');
+    if (buf[6] != 1)
+        throw new Error('Invalid ELF version');
+    if (buf[5] != 1)
+        throw new Error('Big-endian architectures are not supported');
+
+    let machine = buf.readUInt16LE(18);
+
+    switch (machine) {
+        case 3: { header.e_machine = 'ia32'; } break;
+        case 40: { header.e_machine = 'arm'; } break;
+        case 62: { header.e_machine = 'amd64'; } break;
+        case 183: { header.e_machine = 'arm64'; } break;
+        case 243: {
+            switch (buf[4]) {
+                case 1: { header.e_machine = 'riscv32'; } break;
+                case 2: { header.e_machine = 'riscv64'; } break;
+            }
+        } break;
+        default: throw new Error('Unknown ELF machine type');
+    }
+
+    switch (buf[4]) {
+        case 1: { // 32 bit
+            buf = buf.subarray(0, 68);
+            if (buf.length < 68)
+                throw new Error('Truncated ELF header');
+
+            header.ei_class = 32;
+            header.e_flags = buf.readUInt32LE(36);
+        } break;
+        case 2: { // 64 bit
+            buf = buf.subarray(0, 120);
+            if (buf.length < 120)
+                throw new Error('Truncated ELF header');
+
+            header.ei_class = 64;
+            header.e_flags = buf.readUInt32LE(48);
+        } break;
+        default: throw new Error('Invalid ELF class');
+    }
+
+    return header;
 }
