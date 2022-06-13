@@ -10,7 +10,7 @@
         "info": {
             "version": 3,
             "platform": "linux",
-            "arch": "arm",
+            "arch": "arm32hf",
 
             "ssh_port": 22201,
             "vnc_port": 5911,
@@ -536,7 +536,7 @@
         "info": {
             "version": 1,
             "platform": "linux",
-            "arch": "riscv64",
+            "arch": "riscv64hf64",
 
             "ssh_port": 22212,
             "vnc_port": 5912,
