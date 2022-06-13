@@ -90,10 +90,10 @@ Configure options:
                                  (default: RelWithDebInfo)
         --debug                  Shortcut for -m debug
 
+```
+
 The ARCH value is similar to process.arch, with the following differences:
 
 - arm is changed to arm32hf or arm32sf depending on the floating-point ABI used (hard-float, soft-float)
 - riscv32 is changed to riscv32sf, riscv32hf32, riscv32hf64 or riscv32hf128 depending on the floating-point ABI
 - riscv64 is changed to riscv64sf, riscv64hf32, riscv64hf64 or riscv64hf128 depending on the floating-point ABI
-
-```
