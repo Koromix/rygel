@@ -1,0 +1,672 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Function calls" href="calls.html" /><link rel="prev" title="Quick start" href="start.html" />
+
+    <meta name="generator" content="sphinx-5.0.1, furo 2022.06.04.1"/>
+        <title>Data types - Koffi documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=40978830699223671f4072448e654b5958f38b89" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">Koffi  documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  
+  <span class="sidebar-brand-text">Koffi  documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="support.html">Supported platforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="start.html">Quick start</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="calls.html">Function calls</a></li>
+<li class="toctree-l1"><a class="reference internal" href="callbacks.html">Callbacks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hack.html">Hacking Koffi</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <section id="data-types">
+<h1>Data types<a class="headerlink" href="#data-types" title="Permalink to this heading">#</a></h1>
+<section id="primitive-types">
+<h2>Primitive types<a class="headerlink" href="#primitive-types" title="Permalink to this heading">#</a></h2>
+<p>While the C standard allows for variation in the size of most integer types, Koffi enforces the same definition for most primitive types, listed below:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>JS type</p></th>
+<th class="head"><p>C type</p></th>
+<th class="head"><p>Bytes</p></th>
+<th class="head"><p>Signedness</p></th>
+<th class="head"><p>Note</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Null</p></td>
+<td><p>void</p></td>
+<td><p>0</p></td>
+<td><p></p></td>
+<td><p>Only valid as a return type</p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>int8</p></td>
+<td><p>1</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>int8_t</p></td>
+<td><p>1</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>uint8</p></td>
+<td><p>1</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>uint8_t</p></td>
+<td><p>1</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>char</p></td>
+<td><p>1</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>uchar</p></td>
+<td><p>1</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>unsigned char</p></td>
+<td><p>1</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>char16</p></td>
+<td><p>2</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>char16_t</p></td>
+<td><p>2</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>int16</p></td>
+<td><p>2</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>int16_t</p></td>
+<td><p>2</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>uint16</p></td>
+<td><p>2</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>uint16_t</p></td>
+<td><p>2</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>short</p></td>
+<td><p>2</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>unsigned short</p></td>
+<td><p>2</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>int32</p></td>
+<td><p>4</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>int32_t</p></td>
+<td><p>4</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>uint32</p></td>
+<td><p>4</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>uint32_t</p></td>
+<td><p>4</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>int</p></td>
+<td><p>4</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>uint</p></td>
+<td><p>4</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>unsigned int</p></td>
+<td><p>4</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>int64</p></td>
+<td><p>8</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>int64_t</p></td>
+<td><p>8</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>uint64</p></td>
+<td><p>8</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>uint64_t</p></td>
+<td><p>8</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>longlong</p></td>
+<td><p>8</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>long long</p></td>
+<td><p>8</p></td>
+<td><p>Signed</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>ulonglong</p></td>
+<td><p>8</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>unsigned long long</p></td>
+<td><p>8</p></td>
+<td><p>Unsigned</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (float)</p></td>
+<td><p>float32</p></td>
+<td><p>4</p></td>
+<td><p></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (float)</p></td>
+<td><p>float64</p></td>
+<td><p>8</p></td>
+<td><p></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (float)</p></td>
+<td><p>float</p></td>
+<td><p>4</p></td>
+<td><p></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>Number (float)</p></td>
+<td><p>double</p></td>
+<td><p>8</p></td>
+<td><p></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Koffi defines a few more types that can change size depending on the OS and the architecture:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>JS type</p></th>
+<th class="head"><p>C type</p></th>
+<th class="head"><p>Signedness</p></th>
+<th class="head"><p>Note</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Boolean</p></td>
+<td><p>bool</p></td>
+<td><p></p></td>
+<td><p>Usually one byte</p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>long</p></td>
+<td><p>Signed</p></td>
+<td><p>4 or 8 bytes depending on platform (LP64, LLP64)</p></td>
+</tr>
+<tr class="row-even"><td><p>Number (integer)</p></td>
+<td><p>ulong</p></td>
+<td><p>Unsigned</p></td>
+<td><p>4 or 8 bytes depending on platform (LP64, LLP64)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Number (integer)</p></td>
+<td><p>unsigned long</p></td>
+<td><p>Unsigned</p></td>
+<td><p>4 or 8 bytes depending on platform (LP64, LLP64)</p></td>
+</tr>
+<tr class="row-even"><td><p>String</p></td>
+<td><p>string</p></td>
+<td><p></p></td>
+<td><p>JS strings are converted to and from UTF-8</p></td>
+</tr>
+<tr class="row-odd"><td><p>String</p></td>
+<td><p>string16</p></td>
+<td><p></p></td>
+<td><p>JS strings are converted to and from UTF-16 (LE)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Primitive types can be specified by name (in a string) or through <code class="docutils literal notranslate"><span class="pre">koffi.types</span></code>:</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="c1">// These two lines do the same:</span><span class="w"></span>
+<span class="kd">let</span><span class="w"> </span><span class="nx">struct1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span><span class="w"> </span><span class="nx">dummy</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="w"> </span><span class="p">});</span><span class="w"></span>
+<span class="kd">let</span><span class="w"> </span><span class="nx">struct2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span><span class="w"> </span><span class="nx">dummy</span><span class="o">:</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">types</span><span class="p">.</span><span class="kr">long</span><span class="w"> </span><span class="p">});</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="struct-types">
+<h2>Struct types<a class="headerlink" href="#struct-types" title="Permalink to this heading">#</a></h2>
+<p>Koffi converts JS objects to C structs, and vice-versa.</p>
+<p>Unlike function declarations, as of now there is only one way to create a struct type, with the <code class="docutils literal notranslate"><span class="pre">koffi.struct()</span></code> function. This function takes two arguments: the first one is the name of the type, and the second one is an object containing the struct member names and types. You can omit the first argument to declare an anonymous struct.</p>
+<p>The following example illustrates how to declare the same struct in C and in JS with Koffi:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">A</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">c</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="kt">double</span><span class="w"> </span><span class="n">d1</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="kt">double</span><span class="w"> </span><span class="n">d2</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="n">d</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="n">A</span><span class="p">;</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">A</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">a</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nx">b</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;char&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nx">c</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;string&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nx">d</span><span class="o">:</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span><span class="w"></span>
+<span class="w">        </span><span class="nx">d1</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;double&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">d2</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;double&#39;</span><span class="w"></span>
+<span class="w">    </span><span class="p">})</span><span class="w"></span>
+<span class="p">});</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Koffi follows the C and ABI rules regarding struct alignment and padding.</p>
+<p>Once a struct is declared, you can use it by name (with a string, like you can do for primitive types) or the through the value returned by the call to <code class="docutils literal notranslate"><span class="pre">koffi.struct()</span></code>. Only the latter is possible when declaring an anonymous struct.</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="c1">// The following two function declarations are equivalent, and declare a function taking an A value and returning A</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">Function1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;A Function(A value)&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">Function2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;Function&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">A</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="nx">A</span><span class="p">]);</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="pointer-types">
+<h2>Pointer types<a class="headerlink" href="#pointer-types" title="Permalink to this heading">#</a></h2>
+<section id="struct-pointers">
+<h3>Struct pointers<a class="headerlink" href="#struct-pointers" title="Permalink to this heading">#</a></h3>
+</section>
+<section id="opaque-handles">
+<h3>Opaque handles<a class="headerlink" href="#opaque-handles" title="Permalink to this heading">#</a></h3>
+</section>
+<section id="pointers-to-primitive-types">
+<h3>Pointers to primitive types<a class="headerlink" href="#pointers-to-primitive-types" title="Permalink to this heading">#</a></h3>
+</section>
+</section>
+<section id="fixed-size-c-arrays">
+<h2>Fixed-size C arrays<a class="headerlink" href="#fixed-size-c-arrays" title="Permalink to this heading">#</a></h2>
+<p>Fixed-size arrays are declared with <code class="docutils literal notranslate"><span class="pre">koffi.array(type,</span> <span class="pre">length)</span></code>. Just like in C, they cannot be passed
+as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.</p>
+<p>Koffi applies the following conversion rules when passing arrays to/from C:</p>
+<ul class="simple">
+<li><p><strong>JS to C</strong>: Koffi can take a normal Array (e.g. <code class="docutils literal notranslate"><span class="pre">[1,</span> <span class="pre">2]</span></code>) or a TypedArray of the correct type (e.g. <code class="docutils literal notranslate"><span class="pre">Uint8Array</span></code> for an array of <code class="docutils literal notranslate"><span class="pre">uint8_t</span></code> numbers)</p></li>
+<li><p><strong>C to JS</strong> (return value, output parameters, callbacks): Koffi will use a TypedArray if possible. But you can change this behavior when you create the array type with the optional hint argument: <code class="docutils literal notranslate"><span class="pre">koffi.array('uint8_t',</span> <span class="pre">64,</span> <span class="pre">'array')</span></code>. For non-number types, such as arrays of strings or structs, Koffi creates normal arrays.</p></li>
+</ul>
+<p>See the example below:</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">// Those two structs are exactly the same, only the array conversion hint is different</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">Foo1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;Foo&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">i</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nx">a16</span><span class="o">:</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">array</span><span class="p">(</span><span class="s1">&#39;int16_t&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">8</span><span class="p">)</span><span class="w"></span>
+<span class="p">});</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">Foo2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;Foo&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">i</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nx">a16</span><span class="o">:</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">array</span><span class="p">(</span><span class="s1">&#39;int16_t&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">8</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;array&#39;</span><span class="p">)</span><span class="w"></span>
+<span class="p">});</span><span class="w"></span>
+
+<span class="c1">// Uses an hypothetical C function that just returns the struct passed as a parameter</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">ReturnFoo1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;Foo1 ReturnFoo(Foo1 p)&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">ReturnFoo2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;Foo2 ReturnFoo(Foo2 p)&#39;</span><span class="p">);</span><span class="w"></span>
+
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ReturnFoo1</span><span class="p">({</span><span class="w"> </span><span class="nx">i</span><span class="o">:</span><span class="w"> </span><span class="mf">5</span><span class="p">,</span><span class="w"> </span><span class="nx">a16</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">6</span><span class="p">,</span><span class="w"> </span><span class="mf">8</span><span class="p">]</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="c1">// Prints { i: 5, a16: Int16Array(2) [6, 8] }</span><span class="w"></span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ReturnFoo2</span><span class="p">({</span><span class="w"> </span><span class="nx">i</span><span class="o">:</span><span class="w"> </span><span class="mf">5</span><span class="p">,</span><span class="w"> </span><span class="nx">a16</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">6</span><span class="p">,</span><span class="w"> </span><span class="mf">8</span><span class="p">]</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="c1">// Prints { i: 5, a16: [6, 8] }</span><span class="w"></span>
+</pre></div>
+</div>
+<section id="handling-of-strings">
+<h3>Handling of strings<a class="headerlink" href="#handling-of-strings" title="Permalink to this heading">#</a></h3>
+<p>Koffi can also convert JS strings to fixed-sized arrays in the following cases:</p>
+<ul class="simple">
+<li><p><strong>char (or int8_t) arrays</strong> are filled with the UTF-8 encoded string, truncated if needed. The buffer is always NUL-terminated.</p></li>
+<li><p><strong>char16 (or int16_t) arrays</strong> are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.</p></li>
+</ul>
+<p>The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. Use the <code class="docutils literal notranslate"><span class="pre">string</span></code> array hint to do this (e.g. <code class="docutils literal notranslate"><span class="pre">koffi.array('char',</span> <span class="pre">8,</span> <span class="pre">'string')</span></code>).</p>
+</section>
+</section>
+<section id="type-introspection">
+<h2>Type introspection<a class="headerlink" href="#type-introspection" title="Permalink to this heading">#</a></h2>
+<p>Koffi exposes three functions to explore type information:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">koffi.sizeof(type)</span></code> to get the size of a type</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">koffi.alignof(type)</span></code> to get the alignment of a type</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">koffi.introspect(type)</span></code> to get the definition of a type (only for structs for now)</p></li>
+</ul>
+<p>Just like before, you can refer to primitive types by their name or through <code class="docutils literal notranslate"><span class="pre">koffi.types</span></code>:</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="c1">// These two lines do the same:</span><span class="w"></span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">sizeof</span><span class="p">(</span><span class="s1">&#39;long&#39;</span><span class="p">));</span><span class="w"></span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">sizeof</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">types</span><span class="p">.</span><span class="kr">long</span><span class="p">));</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="calls.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Function calls</div>
+              </div>
+              <svg><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="start.html">
+              <svg><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Quick start</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2022, Niels Martignène
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            <div class="icons">
+              
+            </div>
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            Contents
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Data types</a><ul>
+<li><a class="reference internal" href="#primitive-types">Primitive types</a></li>
+<li><a class="reference internal" href="#struct-types">Struct types</a></li>
+<li><a class="reference internal" href="#pointer-types">Pointer types</a><ul>
+<li><a class="reference internal" href="#struct-pointers">Struct pointers</a></li>
+<li><a class="reference internal" href="#opaque-handles">Opaque handles</a></li>
+<li><a class="reference internal" href="#pointers-to-primitive-types">Pointers to primitive types</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#fixed-size-c-arrays">Fixed-size C arrays</a><ul>
+<li><a class="reference internal" href="#handling-of-strings">Handling of strings</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#type-introspection">Type introspection</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/scripts/furo.js"></script>
+    </body>
+</html>
