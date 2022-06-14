@@ -36,15 +36,6 @@ endif()
 
 # ---- atoi ----
 
-add_executable(atoi_cc atoi_cc.cc ../vendor/libcc/libcc.cc)
-target_include_directories(atoi_cc PRIVATE ..)
-target_link_libraries(atoi_cc PRIVATE Threads::Threads)
-
-if(WIN32)
-    target_compile_definitions(atoi_cc PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
-    target_link_libraries(atoi_cc PRIVATE ws2_32)
-endif()
-
 add_node_addon(NAME atoi_napi SOURCES atoi_napi.cc ../vendor/libcc/libcc.cc)
 target_include_directories(atoi_napi PRIVATE .. ../vendor/node-addon-api)
 target_link_libraries(atoi_napi PRIVATE Threads::Threads)
