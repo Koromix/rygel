@@ -47,6 +47,19 @@ else()
     target_link_libraries(atoi_napi PRIVATE dl)
 endif()
 
+# ---- rand ----
+
+add_node_addon(NAME rand_napi SOURCES rand_napi.cc ../vendor/libcc/libcc.cc)
+target_include_directories(rand_napi PRIVATE .. ../vendor/node-addon-api)
+target_link_libraries(rand_napi PRIVATE Threads::Threads)
+
+if(WIN32)
+    target_compile_definitions(rand_napi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
+    target_link_libraries(rand_napi PRIVATE ws2_32)
+else()
+    target_link_libraries(rand_napi PRIVATE dl)
+endif()
+
 # ---- Raylib ----
 
 add_executable(raylib_cc raylib_cc.cc ../vendor/libcc/libcc.cc)
