@@ -32,8 +32,6 @@ extensions = [
     'sphinx.ext.autosectionlabel'
 ]
 
-myst_heading_anchors = 3
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -54,3 +52,19 @@ html_theme = 'furo'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+# -- My customizations -------------------------------------------------
+
+myst_heading_anchors = 3
+
+html_theme_options = {
+    "light_css_variables": {
+        "color-brand-primary": "#FF6600",
+        "color-brand-content": "#FF6600",
+    },
+    "dark_css_variables": {
+        "color-brand-primary": "#FF6600",
+        "color-brand-content": "#FF6600",
+    },
+}
