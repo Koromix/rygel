@@ -22,3 +22,7 @@ static_deploys:
     path: web/koromix.dev/dist
   - name: koromix.dev/files
   - name: koromix.dev/test
+
+  - name: koffi.dev/www
+    repo: https://github.com/Koromix/luigi.git
+    path: koffi/doc/dist/html

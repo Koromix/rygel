@@ -165,3 +165,17 @@ nginx_domains:
       location / {
           return 302 https://goupile.fr$request_uri;
       }
+
+  - name: koffi.dev
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          index index.html;
+
+          rewrite ^/en/$ /en/index.html;
+          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)$ $1.html;
+          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)/$ $1 permanent;
+          try_files $uri $uri/ =404;
+
+          root /opt/static/live/koffi.dev/www;
+      }
