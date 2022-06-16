@@ -1,3 +1,5 @@
+# Overview
+
 Koffi is a fast and easy-to-use C FFI module for Node.js, featuring:
 
 * Low-overhead and fast performance (see [benchmarks](https://koffi.dev/benchmarks))
@@ -20,3 +22,9 @@ RISC-V 64 [^3]     | ⬜️ *N/A*    | ✅ Yes   | ⬜️ *N/A*    | 🟨 Probab
 [^3]: The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64 ABI is supported in theory if you build Koffi from source (untested), the LP64F ABI is not supported.
 
 Go to the web site for more information: https://koffi.dev/
+
+# License
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+Find more information here: https://www.gnu.org/licenses/
