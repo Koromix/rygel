@@ -501,4 +501,6 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     #ui_panels > div.print { overflow: visible !important; }
 
     .ui_actions { display: none !important; }
+
+    #ui_log { display: none !important; }
 }
