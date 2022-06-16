@@ -42,7 +42,7 @@ CallData::~CallData()
     }
 }
 
-const char *CallData::PushString(const Napi::Value &value)
+const char *CallData::PushString(Napi::Value value)
 {
     RG_ASSERT(value.IsString());
 
@@ -79,7 +79,7 @@ const char *CallData::PushString(const Napi::Value &value)
     return buf.ptr;
 }
 
-const char16_t *CallData::PushString16(const Napi::Value &value)
+const char16_t *CallData::PushString16(Napi::Value value)
 {
     RG_ASSERT(value.IsString());
 
@@ -116,7 +116,7 @@ const char16_t *CallData::PushString16(const Napi::Value &value)
     return buf.ptr;
 }
 
-bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t *origin, int16_t realign)
+bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin, int16_t realign)
 {
     RG_ASSERT(IsObject(obj));
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
@@ -321,7 +321,7 @@ bool CallData::PushObject(const Napi::Object &obj, const TypeInfo *type, uint8_t
     return true;
 }
 
-bool CallData::PushArray(const Napi::Value &obj, const TypeInfo *type, uint8_t *origin, int16_t realign)
+bool CallData::PushArray(Napi::Value obj, const TypeInfo *type, uint8_t *origin, int16_t realign)
 {
     RG_ASSERT(obj.IsArray() || obj.IsTypedArray() || obj.IsString());
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
