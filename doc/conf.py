@@ -4,6 +4,7 @@ project = 'Koffi'
 copyright = '2022, Niels Martignène'
 author = 'Niels Martignène'
 version = '1.2.4'
+revision = '1.2.4'
 
 # -- General configuration ---------------------------------------------------
 
