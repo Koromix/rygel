@@ -563,6 +563,42 @@ bool CallData::PushArray(Napi::Value obj, const TypeInfo *type, uint8_t *origin,
     return true;
 }
 
+bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void **out_ptr)
+{
+    uint8_t *ptr = nullptr;
+
+    if (CheckValueTag(instance, value, param.type)) {
+        ptr = value.As<Napi::External<uint8_t>>().Data();
+    } else if (IsObject(value) && param.type->ref->primitive == PrimitiveKind::Record) {
+        Napi::Object obj = value.As<Napi::Object>();
+
+        ptr = AllocHeap(param.type->ref->size, 16);
+
+        if (param.directions & 1) {
+            if (!PushObject(obj, param.type->ref, ptr))
+                return false;
+        } else {
+            memset(ptr, 0, param.type->size);
+        }
+
+        if (param.directions & 2) {
+            OutObject *out = out_objects.AppendDefault();
+
+            out->ref.Reset(obj, 1);
+            out->ptr = ptr;
+            out->type = param.type->ref;
+        }
+    } else if (IsNullOrUndefined(value)) {
+        ptr = nullptr;
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), param.offset + 1, param.type->name);
+        return false;
+    }
+
+    *out_ptr = ptr;
+    return true;
+}
+
 void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
 {
     uint32_t idx = CountTrailingZeros(instance->free_trampolines);

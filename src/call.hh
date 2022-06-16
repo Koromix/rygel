@@ -83,6 +83,7 @@ private:
     const char16_t *PushString16(Napi::Value value);
     bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin, int16_t realign = 0);
     bool PushArray(Napi::Value obj, const TypeInfo *type, uint8_t *origin, int16_t realign = 0);
+    bool PushPointer(Napi::Value value, const ParameterInfo &param, void **out_ptr);
 
     void PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
     Napi::Object PopObject(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
