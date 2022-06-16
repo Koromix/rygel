@@ -33,7 +33,7 @@
             <nav id="side_menu">
                 <ul>
                     <li><a href="#overview" class="lv1">Overview</a></li>
-                    <li><a href="#example" class="lv1">Example</a></li>
+                    <li><a href="#license" class="lv1">License</a></li>
                 </ul>
             </nav>
             <main>
@@ -104,112 +104,11 @@
 </tbody>
 </table>
 
-<p>You can find more information about Koffi (installation, tests, etc.) on <a href="https://www.npmjs.com/package/koffi">the NPM page</a> or in <a href="https://github.com/Koromix/luigi/tree/master/koffi">the official repository</a>.</p>
-<h1 id="example">Example</h1>
-<p>This example illustrates how to use Koffi with a Raylib shared library:</p>
+<p>You can find more information about Koffi on the official web site: <a href="https://koffi.dev">https://koffi.dev/</a>.</p>
+<h1 id="license">License</h1>
+<p>This program is free software: you can redistribute it and/or modify it under the terms of the <strong>GNU Affero General Public License</strong> as published by the Free Software Foundation, either <strong>version 3 of the License</strong>, or (at your option) any later version.</p>
 
-<pre><span class="line">const koffi = require('koffi');</span>
-<span class="line"></span>
-<span class="line">const Color = koffi.struct('Color', {</span>
-<span class="line">    r: 'uchar',</span>
-<span class="line">    g: 'uchar',</span>
-<span class="line">    b: 'uchar',</span>
-<span class="line">    a: 'uchar'</span>
-<span class="line">});</span>
-<span class="line"></span>
-<span class="line">const Image = koffi.struct('Image', {</span>
-<span class="line">    data: koffi.pointer('void'),</span>
-<span class="line">    width: 'int',</span>
-<span class="line">    height: 'int',</span>
-<span class="line">    mipmaps: 'int',</span>
-<span class="line">    format: 'int'</span>
-<span class="line">});</span>
-<span class="line"></span>
-<span class="line">const GlyphInfo = koffi.struct('GlyphInfo', {</span>
-<span class="line">    value: 'int',</span>
-<span class="line">    offsetX: 'int',</span>
-<span class="line">    offsetY: 'int',</span>
-<span class="line">    advanceX: 'int',</span>
-<span class="line">    image: Image</span>
-<span class="line">});</span>
-<span class="line"></span>
-<span class="line">const Vector2 = koffi.struct('Vector2', {</span>
-<span class="line">    x: 'float',</span>
-<span class="line">    y: 'float'</span>
-<span class="line">});</span>
-<span class="line"></span>
-<span class="line">const Rectangle = koffi.struct('Rectangle', {</span>
-<span class="line">    x: 'float',</span>
-<span class="line">    y: 'float',</span>
-<span class="line">    width: 'float',</span>
-<span class="line">    height: 'float'</span>
-<span class="line">});</span>
-<span class="line"></span>
-<span class="line">const Texture = koffi.struct('Texture', {</span>
-<span class="line">    id: 'uint',</span>
-<span class="line">    width: 'int',</span>
-<span class="line">    height: 'int',</span>
-<span class="line">    mipmaps: 'int',</span>
-<span class="line">    format: 'int'</span>
-<span class="line">});</span>
-<span class="line"></span>
-<span class="line">const Font = koffi.struct('Font', {</span>
-<span class="line">    baseSize: 'int',</span>
-<span class="line">    glyphCount: 'int',</span>
-<span class="line">    glyphPadding: 'int',</span>
-<span class="line">    texture: Texture,</span>
-<span class="line">    recs: koffi.pointer(Rectangle),</span>
-<span class="line">    glyphs: koffi.pointer(GlyphInfo)</span>
-<span class="line">});</span>
-<span class="line"></span>
-<span class="line">// Fix the path to Raylib DLL if needed</span>
-<span class="line">let lib = koffi.load('build/raylib' + koffi.extension);</span>
-<span class="line"></span>
-<span class="line">const InitWindow = lib.cdecl('InitWindow', 'void', ['int', 'int', 'string']);</span>
-<span class="line">const SetTargetFPS = lib.cdecl('SetTargetFPS', 'void', ['int']);</span>
-<span class="line">const GetScreenWidth = lib.cdecl('GetScreenWidth', 'int', []);</span>
-<span class="line">const GetScreenHeight = lib.cdecl('GetScreenHeight', 'int', []);</span>
-<span class="line">const ClearBackground = lib.cdecl('ClearBackground', 'void', [Color]);</span>
-<span class="line">const BeginDrawing = lib.cdecl('BeginDrawing', 'void', []);</span>
-<span class="line">const EndDrawing = lib.cdecl('EndDrawing', 'void', []);</span>
-<span class="line">const WindowShouldClose = lib.cdecl('WindowShouldClose', 'bool', []);</span>
-<span class="line">const GetFontDefault = lib.cdecl('GetFontDefault', Font, []);</span>
-<span class="line">const MeasureTextEx = lib.cdecl('MeasureTextEx', Vector2, [Font, 'string', 'float', 'float']);</span>
-<span class="line">const DrawTextEx = lib.cdecl('DrawTextEx', 'void', [Font, 'string', Vector2, 'float', 'float', Color]);</span>
-<span class="line"></span>
-<span class="line">800, 600, 'Test Raylib');</span>
-<span class="line">60);</span>
-<span class="line"></span>
-<span class="line">let angle = 0;</span>
-<span class="line"></span>
-<span class="line">while (!WindowShouldClose()) {</span>
-<span class="line">    BeginDrawing();</span>
-<span class="line">    ClearBackground({ r: 0, g: 0, b: 0, a: 255 }); // black</span>
-<span class="line"></span>
-<span class="line">    let win_width = GetScreenWidth();</span>
-<span class="line">    let win_height = GetScreenHeight();</span>
-<span class="line"></span>
-<span class="line">    let text = 'Hello World!';</span>
-<span class="line">    let text_width = MeasureTextEx(GetFontDefault(), text, 32, 1).x;</span>
-<span class="line"></span>
-<span class="line">    let color = {</span>
-<span class="line">        r: 127.5 + 127.5 * Math.sin(angle),</span>
-<span class="line">        g: 127.5 + 127.5 * Math.sin(angle + Math.PI / 2),</span>
-<span class="line">        b: 127.5 + 127.5 * Math.sin(angle + Math.PI),</span>
-<span class="line">        a: 255</span>
-<span class="line">    };</span>
-<span class="line">    let pos = {</span>
-<span class="line">        x: (win_width / 2 - text_width / 2) + 120 * Math.cos(angle - Math.PI / 2),</span>
-<span class="line">        y: (win_height / 2 - 16) + 120 * Math.sin(angle - Math.PI / 2)</span>
-<span class="line">    };</span>
-<span class="line"></span>
-<span class="line">    DrawTextEx(GetFontDefault(), text, pos, 32, 1, color);</span>
-<span class="line"></span>
-<span class="line">    EndDrawing();</span>
-<span class="line"></span>
-<span class="line">    angle += Math.PI / 180;</span>
-<span class="line">}</span>
-</pre>
+<p>Find more information here: <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a></p>
 
             </main>
         </div>
