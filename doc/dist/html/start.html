@@ -3,7 +3,7 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
-<link rel="index" title="Index" href="genindex" /><link rel="search" title="Search" href="search" /><link rel="next" title="Data types" href="types" /><link rel="prev" title="Supported platforms" href="support" />
+<link rel="index" title="Index" href="genindex" /><link rel="search" title="Search" href="search" /><link rel="next" title="Data types" href="types" /><link rel="prev" title="Supported platforms" href="platforms" />
 
     <meta name="generator" content="sphinx-5.0.1, furo 2022.06.04.1"/>
         <title>Quick start - Koffi 1.2.4</title>
@@ -161,7 +161,7 @@
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="support">Supported platforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="platforms">Supported platforms</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Quick start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="types">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="functions">Function calls</a></li>
@@ -209,7 +209,7 @@
 </pre></div>
 </div>
 <p>Once you have installed Koffi, you can start by loading it this way:</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 <p>Below you can find three examples:</p>
@@ -221,31 +221,31 @@
 <h2>Small Linux example<a class="headerlink" href="#small-linux-example" title="Permalink to this heading">#</a></h2>
 <p>This is a small example for Linux systems, which uses <code class="docutils literal notranslate"><span class="pre">gettimeofday()</span></code> and <code class="docutils literal notranslate"><span class="pre">printf()</span></code> to print the current time and the timezone.</p>
 <p>It illustrates the use of output parameters.</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
 
-<span class="c1">// Load the shared library</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">lib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;libc.so.6&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// Load the shared library</span>
+<span class="kd">const</span> <span class="nx">lib</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;libc.so.6&#39;</span><span class="p">);</span>
 
-<span class="c1">// Declare struct types</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">timeval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;timeval&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">tv_sec</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;unsigned int&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nx">tv_usec</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;unsigned int&#39;</span><span class="w"></span>
-<span class="p">});</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">timezone</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;timezone&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">tz_minuteswest</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nx">tz_dsttime</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="w"></span>
-<span class="p">});</span><span class="w"></span>
+<span class="c1">// Declare struct types</span>
+<span class="kd">const</span> <span class="nx">timeval</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;timeval&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">tv_sec</span><span class="o">:</span> <span class="s1">&#39;unsigned int&#39;</span><span class="p">,</span>
+    <span class="nx">tv_usec</span><span class="o">:</span> <span class="s1">&#39;unsigned int&#39;</span>
+<span class="p">});</span>
+<span class="kd">const</span> <span class="nx">timezone</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;timezone&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">tz_minuteswest</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">tz_dsttime</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span>
+<span class="p">});</span>
 
-<span class="c1">// Find functions</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">gettimeofday</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int gettimeofday(_Out_ timeval *tv, _Out_ timezone *tz)&#39;</span><span class="p">);</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">printf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int printf(const char *format, ...)&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// Find functions</span>
+<span class="kd">const</span> <span class="nx">gettimeofday</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int gettimeofday(_Out_ timeval *tv, _Out_ timezone *tz)&#39;</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">printf</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int printf(const char *format, ...)&#39;</span><span class="p">);</span>
 
-<span class="kd">let</span><span class="w"> </span><span class="nx">tv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span><span class="w"></span>
-<span class="kd">let</span><span class="w"> </span><span class="nx">tz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span><span class="w"></span>
-<span class="nx">gettimeofday</span><span class="p">(</span><span class="nx">tv</span><span class="p">,</span><span class="w"> </span><span class="nx">tz</span><span class="p">);</span><span class="w"></span>
+<span class="kd">let</span> <span class="nx">tv</span> <span class="o">=</span> <span class="p">{};</span>
+<span class="kd">let</span> <span class="nx">tz</span> <span class="o">=</span> <span class="p">{};</span>
+<span class="nx">gettimeofday</span><span class="p">(</span><span class="nx">tv</span><span class="p">,</span> <span class="nx">tz</span><span class="p">);</span>
 
-<span class="nx">printf</span><span class="p">(</span><span class="s1">&#39;Hello World!, it is: %d\n&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">tv</span><span class="p">.</span><span class="nx">tv_sec</span><span class="p">);</span><span class="w"></span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">tz</span><span class="p">);</span><span class="w"></span>
+<span class="nx">printf</span><span class="p">(</span><span class="s1">&#39;Hello World!, it is: %d\n&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="nx">tv</span><span class="p">.</span><span class="nx">tv_sec</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">tz</span><span class="p">);</span>
 </pre></div>
 </div>
 </section>
@@ -253,18 +253,18 @@
 <h2>Small Windows example<a class="headerlink" href="#small-windows-example" title="Permalink to this heading">#</a></h2>
 <p>This is a small example targeting the Win32 API, using <code class="docutils literal notranslate"><span class="pre">MessageBox()</span></code> to show a Hello message to the user.</p>
 <p>It illustrates the use of the x86 stdcall calling convention.</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
 
-<span class="c1">// Load the shared library</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">lib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;user32.dll&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// Load the shared library</span>
+<span class="kd">const</span> <span class="nx">lib</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;user32.dll&#39;</span><span class="p">);</span>
 
-<span class="c1">// Declare constants</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">MB_ICONINFORMATION</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x40</span><span class="p">;</span><span class="w"></span>
+<span class="c1">// Declare constants</span>
+<span class="kd">const</span> <span class="nx">MB_ICONINFORMATION</span> <span class="o">=</span> <span class="mh">0x40</span><span class="p">;</span>
 
-<span class="c1">// Find functions</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">MessageBoxA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">stdcall</span><span class="p">(</span><span class="s1">&#39;MessageBoxA&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;void *&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;string&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;string&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;uint&#39;</span><span class="p">]);</span><span class="w"></span>
+<span class="c1">// Find functions</span>
+<span class="kd">const</span> <span class="nx">MessageBoxA</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">stdcall</span><span class="p">(</span><span class="s1">&#39;MessageBoxA&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;void *&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="s1">&#39;uint&#39;</span><span class="p">]);</span>
 
-<span class="nx">MessageBoxA</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Hello&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Foobar&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">MB_ICONINFORMATION</span><span class="p">);</span><span class="w"></span>
+<span class="nx">MessageBoxA</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="s1">&#39;Hello&#39;</span><span class="p">,</span> <span class="s1">&#39;Foobar&#39;</span><span class="p">,</span> <span class="nx">MB_ICONINFORMATION</span><span class="p">);</span>
 </pre></div>
 </div>
 </section>
@@ -284,7 +284,7 @@
               </div>
               <svg><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="support">
+          <a class="prev-page" href="platforms">
               <svg><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">

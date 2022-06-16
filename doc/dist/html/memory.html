@@ -161,7 +161,7 @@
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="support">Supported platforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="platforms">Supported platforms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="start">Quick start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="types">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="functions">Function calls</a></li>
@@ -213,8 +213,8 @@
 </ul>
 <p>Unless very big strings or objects (at least more than one page of memory) are used, no extra allocation ever happens during calls or callbacks.</p>
 <p>The size (in bytes) of these preallocated blocks can be changed. Use <code class="docutils literal notranslate"><span class="pre">koffi.config()</span></code> to get an object with the settings, and <code class="docutils literal notranslate"><span class="pre">koffi.config(obj)</span></code> to apply new settings.</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">let</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">config</span><span class="p">();</span><span class="w"></span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">config</span><span class="p">);</span><span class="w"></span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">let</span> <span class="nx">config</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">config</span><span class="p">();</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">config</span><span class="p">);</span>
 </pre></div>
 </div>
 <p>The same is true for asynchronous calls. When an asynchronous call is made, Koffi will allocate new blocks unless there is an unused (resident) set of blocks still available. Once the asynchronous call is finished, these blocks are freed if there are more than <code class="docutils literal notranslate"><span class="pre">resident_async_pools</span></code> sets of blocks left around.</p>
