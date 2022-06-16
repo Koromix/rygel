@@ -8,7 +8,7 @@ Goupile is a **free and open-source electronic data capture** application that s
 
 It is currently in development and there are no public builds yet.
 
-Find out more on the [dedicated website](https://goupile.fr/).
+Find out more on the official website: [https://goupile.fr/](https://goupile.fr/)
 
 #screenshots# Screenshots
 

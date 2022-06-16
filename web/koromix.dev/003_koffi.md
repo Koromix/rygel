@@ -21,7 +21,7 @@ ARM32 LE           | ⬜️ *N/A*    | ✅ Yes   | ⬜️ *N/A*    | 🟨 Probab
 ARM64 (AArch64) LE | 🟧 Maybe    | ✅ Yes   | ✅ Yes      | ✅ Yes      | 🟨 Probably
 RISC-V 64          | ⬜️ *N/A*    | ✅ Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
 
-You can find more information about Koffi on the official web site: [https://koffi.dev/](https://koffi.dev).
+You can find more information about Koffi on the official web site: [https://koffi.dev/](https://koffi.dev)
 
 #license# License
 
