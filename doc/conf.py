@@ -34,6 +34,8 @@ html_theme_options = {
     }
 }
 
+html_link_suffix = ''
+
 # -- MyST parser options -------------------------------------------------
 
 myst_heading_anchors = 3
