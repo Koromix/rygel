@@ -1,14 +1,14 @@
 Koffi
 =====
 
-Koffi is a fast and easy-to-use C FFI module for Node.js, featuring:
+Koffi is a **fast and easy-to-use C FFI module for Node.js**, featuring:
 
 * Low-overhead and fast performance (see :ref:`Benchmarks`)
 * Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
 * Javascript functions can be used as C callbacks (since 1.2.0)
 * Well-tested code base for :ref:`popular OS/architecture combinations<Supported platforms>`
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This program is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License** as published by the Free Software Foundation, either **version 3 of the License**, or (at your option) any later version.
 
 Find more information here: https://www.gnu.org/licenses/
 
