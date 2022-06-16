@@ -17,8 +17,8 @@ Documentation
    support
    start
    types
-   calls
+   functions
    callbacks
    memory
    benchmarks
-   hack
+   contribute

@@ -1,4 +1,4 @@
-# Hacking Koffi
+# Contributing
 
 ## Build from source
 
