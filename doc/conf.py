@@ -39,6 +39,8 @@ html_theme_options = {
 
 html_link_suffix = ''
 
+html_css_files = ['custom.css']
+
 # -- MyST parser options -------------------------------------------------
 
 myst_heading_anchors = 3
