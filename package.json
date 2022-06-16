@@ -15,6 +15,7 @@
     "type": "git",
     "url": "https://github.com/Koromix/luigi.git"
   },
+  "homepage": "https://koffi.dev/",
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "src/index.js",
   "scripts": {
