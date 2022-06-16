@@ -20,7 +20,7 @@ exclude_patterns = []
 
 # -- Options for HTML output -------------------------------------------------
 
-html_title = 'Koffi ' + revision
+html_title = 'Koffi'
 
 html_theme = 'furo'
 

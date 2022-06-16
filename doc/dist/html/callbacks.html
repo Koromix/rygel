@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="genindex" /><link rel="search" title="Search" href="search" /><link rel="next" title="Memory usage" href="memory" /><link rel="prev" title="Function calls" href="functions" />
 
     <meta name="generator" content="sphinx-5.0.1, furo 2022.06.04.1"/>
-        <title>Callbacks - Koffi 1.2.4</title>
+        <title>Callbacks - Koffi</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=40978830699223671f4072448e654b5958f38b89" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
@@ -130,7 +130,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index"><div class="brand">Koffi 1.2.4</div></a>
+      <a href="index"><div class="brand">Koffi</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -153,7 +153,7 @@
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index">
   
   
-  <span class="sidebar-brand-text">Koffi 1.2.4</span>
+  <span class="sidebar-brand-text">Koffi</span>
   
 </a><form class="sidebar-search-container" method="get" action="search" role="search">
   <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
@@ -208,13 +208,13 @@
 <section id="type-definition">
 <h2>Type definition<a class="headerlink" href="#type-definition" title="Permalink to this heading">#</a></h2>
 <p>In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
 
-<span class="c1">// With the classic syntax, this callback expects an integer and returns nothing</span>
-<span class="kd">const</span> <span class="nx">ExampleCallback</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="s1">&#39;ExampleCallback&#39;</span><span class="p">,</span> <span class="s1">&#39;void&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;int&#39;</span><span class="p">]);</span>
+<span class="c1">// With the classic syntax, this callback expects an integer and returns nothing</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">ExampleCallback</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="s1">&#39;ExampleCallback&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;void&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;int&#39;</span><span class="p">]);</span><span class="w"></span>
 
-<span class="c1">// With the prototype parser, this callback expects a double and float, and returns the sum as a double</span>
-<span class="kd">const</span> <span class="nx">AddDoubleFloat</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="s1">&#39;double AddDoubleFloat(double d, float f)&#39;</span><span class="p">);</span>
+<span class="c1">// With the prototype parser, this callback expects a double and float, and returns the sum as a double</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">AddDoubleFloat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="s1">&#39;double AddDoubleFloat(double d, float f)&#39;</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 <p>Once your callback type is declared, you can use them in struct definitions, or as function parameter and/or return type.</p>
@@ -233,23 +233,23 @@
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
 
-<span class="kd">const</span> <span class="nx">TransferCallback</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="s1">&#39;int TransferCallback(const char *str, int age)&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">TransferCallback</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="s1">&#39;int TransferCallback(const char *str, int age)&#39;</span><span class="p">);</span><span class="w"></span>
 
-<span class="kd">const</span> <span class="nx">TransferToJS</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int TransferToJS(const char *str, int age, TransferCallback cb)&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">TransferToJS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int TransferToJS(const char *str, int age, TransferCallback cb)&#39;</span><span class="p">);</span><span class="w"></span>
 
-<span class="kd">let</span> <span class="nx">ret</span> <span class="o">=</span> <span class="nx">TransferToJS</span><span class="p">(</span><span class="s1">&#39;Niels&#39;</span><span class="p">,</span> <span class="mf">27</span><span class="p">,</span> <span class="p">(</span><span class="nx">str</span><span class="p">,</span> <span class="nx">age</span><span class="p">)</span> <span class="p">=&gt;</span> <span class="p">{</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">str</span><span class="p">);</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Your age is:&#39;</span><span class="p">,</span> <span class="nx">age</span><span class="p">);</span>
-    <span class="k">return</span> <span class="mf">42</span><span class="p">;</span>
-<span class="p">});</span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ret</span><span class="p">);</span>
+<span class="kd">let</span><span class="w"> </span><span class="nx">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">TransferToJS</span><span class="p">(</span><span class="s1">&#39;Niels&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">27</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">str</span><span class="p">,</span><span class="w"> </span><span class="nx">age</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">str</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Your age is:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">age</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mf">42</span><span class="p">;</span><span class="w"></span>
+<span class="p">});</span><span class="w"></span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ret</span><span class="p">);</span><span class="w"></span>
 
-<span class="c1">// This example prints:</span>
-<span class="c1">//   Hello Niels!</span>
-<span class="c1">//   Your age is: 27</span>
-<span class="c1">//   42</span>
+<span class="c1">// This example prints:</span><span class="w"></span>
+<span class="c1">//   Hello Niels!</span><span class="w"></span>
+<span class="c1">//   Your age is: 27</span><span class="w"></span>
+<span class="c1">//   42</span><span class="w"></span>
 </pre></div>
 </div>
 </section>
