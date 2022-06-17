@@ -32,6 +32,10 @@ CallData::CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *fu
 
 CallData::~CallData()
 {
+    for (const OutObject &out: out_objects) {
+        napi_delete_reference(env, out.ref);
+    }
+
     mem->stack = old_stack_mem;
     mem->heap = old_heap_mem;
 
@@ -584,7 +588,9 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
         if (param.directions & 2) {
             OutObject *out = out_objects.AppendDefault();
 
-            out->ref.Reset(obj, 1);
+            napi_status status = napi_create_reference(env, value, 1, &out->ref);
+            RG_ASSERT(status == napi_ok);
+
             out->ptr = ptr;
             out->type = param.type->ref;
         }
@@ -597,6 +603,18 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
 
     *out_ptr = ptr;
     return true;
+}
+
+void CallData::PopOutObjects()
+{
+    for (const OutObject &out: out_objects) {
+        napi_value value;
+        napi_status status = napi_get_reference_value(env, out.ref, &value);
+        RG_ASSERT(status == napi_ok);
+
+        Napi::Object obj(env, value);
+        PopObject(obj, out.ptr, out.type);
+    }
 }
 
 void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)

@@ -368,10 +368,7 @@ void CallData::Execute()
 
 Napi::Value CallData::Complete()
 {
-    for (const OutObject &out: out_objects) {
-        Napi::Object obj = out.ref.Value().As<Napi::Object>();
-        PopObject(obj, out.ptr, out.type);
-    }
+    PopOutObjects();
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void: return env.Null();

@@ -29,7 +29,7 @@ struct BackRegisters;
 // But on Windows i386, without it, the alignment may not be correct (compiler bug?).
 class alignas(8) CallData {
     struct OutObject {
-        Napi::ObjectReference ref;
+        napi_ref ref;
         const uint8_t *ptr;
         const TypeInfo *type;
     };
@@ -88,6 +88,8 @@ private:
     void PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
     Napi::Object PopObject(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
     Napi::Value PopArray(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
+
+    void PopOutObjects();
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 };
