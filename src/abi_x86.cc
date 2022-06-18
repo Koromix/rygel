@@ -680,9 +680,9 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             void *ptr;
 
             if (value.IsFunction()) {
-                Napi::Function func = value.As<Napi::Function>();
+                Napi::Function func2 = value.As<Napi::Function>();
 
-                ptr = ReserveTrampoline(type->proto, func);
+                ptr = ReserveTrampoline(type->proto, func2);
                 if (RG_UNLIKELY(!ptr))
                     return;
             } else if (CheckValueTag(instance, value, type)) {
