@@ -82,8 +82,8 @@ private:
     const char *PushString(Napi::Value value);
     const char16_t *PushString16(Napi::Value value);
     bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin, int16_t realign = 0);
-    bool PushArray(Napi::Array array, const TypeInfo *type, uint8_t *origin, int16_t realign = 0);
-    bool PushTypedArray(Napi::TypedArray array, const TypeInfo *type, uint8_t *origin, int16_t realign = 0);
+    bool PushArray(Napi::Array array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);
+    bool PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);
     bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
     bool PushPointer(Napi::Value value, const ParameterInfo &param, void **out_ptr);
 

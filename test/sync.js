@@ -101,6 +101,11 @@ const SingleU32 = koffi.struct('SingleU32', { v: 'uint32_t' });
 const SingleU64 = koffi.struct('SingleU64', { v: 'uint64_t' });
 const SingleI64 = koffi.struct('SingleI64', { v: 'int64_t' });
 
+const IntContainer = koffi.struct('IntContainer', {
+    values: koffi.array('int', 16),
+    len: 'int'
+});
+
 main();
 
 async function main() {
@@ -163,6 +168,7 @@ async function test() {
     const ThroughInt64SS = lib.func('SingleI64 ThroughInt64SS(SingleI64 s)');
     const ThroughInt64SI = lib.func('SingleI64 ThroughInt64SI(int64_t v)');
     const ThroughInt64IS = lib.func('int64_t ThroughInt64IS(SingleI64 s)');
+    const ArrayToStruct = lib.func('IntContainer ArrayToStruct(int *ptr, int len)');
 
     // Simple tests with Pack1
     {
@@ -319,5 +325,16 @@ async function test() {
         assert.deepEqual(ThroughInt64SS({ v: -9223372036854775803n }), { v: -9223372036854775803n });
         assert.deepEqual(ThroughInt64SI(-9223372036854775803n), { v: -9223372036854775803n });
         assert.equal(ThroughInt64IS({ v: -9223372036854775803n }), -9223372036854775803n);
+    }
+
+    // Array pointers
+    {
+        let arr1 = [5, 7, 8, 4];
+        let arr2 = Int32Array.from([8, 454, 6, 3, 45]);
+
+        assert.deepEqual(ArrayToStruct(arr1, 0), { values: Int32Array.from(Array(16).fill(0)), len: 0 });
+        assert.deepEqual(ArrayToStruct(arr1, 3), { values: Int32Array.from([5, 7, 8, ...Array(13).fill(0)]), len: 3 });
+        assert.deepEqual(ArrayToStruct(arr2, 4), { values: Int32Array.from([8, 454, 6, 3, ...Array(12).fill(0)]), len: 4 });
+        assert.deepEqual(ArrayToStruct(arr2, 2), { values: Int32Array.from([8, 454, ...Array(14).fill(0)]), len: 2 });
     }
 }

@@ -124,6 +124,11 @@ typedef struct SingleU32 { uint32_t v; } SingleU32;
 typedef struct SingleU64 { uint64_t v; } SingleU64;
 typedef struct SingleI64 { int64_t v; } SingleI64;
 
+typedef struct IntContainer {
+    int values[16];
+    int len;
+} IntContainer;
+
 EXPORT void FillPack1(int a, Pack1 *p)
 {
     p->a = a;
@@ -511,4 +516,15 @@ EXPORT int ApplyStd(int a, int b, int c, ApplyCallback *func)
 {
     int ret = func(a, b, c);
     return ret;
+}
+
+EXPORT IntContainer ArrayToStruct(int *values, int len)
+{
+    IntContainer ic;
+
+    memset(&ic, 0, sizeof(ic));
+    memcpy(ic.values, values, len * sizeof(*values));
+    ic.len = len;
+
+    return ic;
 }
