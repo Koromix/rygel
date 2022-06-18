@@ -38,6 +38,7 @@
   },
   "files": [
     "src",
+    "doc",
     "benchmark/CMakeLists.txt",
     "benchmark/atoi_*",
     "benchmark/raylib_*",
