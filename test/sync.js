@@ -169,6 +169,8 @@ async function test() {
     const ThroughInt64SI = lib.func('SingleI64 ThroughInt64SI(int64_t v)');
     const ThroughInt64IS = lib.func('int64_t ThroughInt64IS(SingleI64 s)');
     const ArrayToStruct = lib.func('IntContainer ArrayToStruct(int *ptr, int len)');
+    const FillRange = lib.func('void FillRange(int init, int step, _Out_ int *out, int len)');
+    const MultiplyIntegers = lib.func('void MultiplyIntegers(int multiplier, _Inout_ int *values, int len)');
 
     // Simple tests with Pack1
     {
@@ -327,7 +329,7 @@ async function test() {
         assert.equal(ThroughInt64IS({ v: -9223372036854775803n }), -9223372036854775803n);
     }
 
-    // Array pointers
+    // Array pointers as input
     {
         let arr1 = [5, 7, 8, 4];
         let arr2 = Int32Array.from([8, 454, 6, 3, 45]);
@@ -336,5 +338,23 @@ async function test() {
         assert.deepEqual(ArrayToStruct(arr1, 3), { values: Int32Array.from([5, 7, 8, ...Array(13).fill(0)]), len: 3 });
         assert.deepEqual(ArrayToStruct(arr2, 4), { values: Int32Array.from([8, 454, 6, 3, ...Array(12).fill(0)]), len: 4 });
         assert.deepEqual(ArrayToStruct(arr2, 2), { values: Int32Array.from([8, 454, ...Array(14).fill(0)]), len: 2 });
+    }
+
+    // Array pointers as output
+    {
+        let out1 = Array(10);
+        let out2 = new Int32Array(10);
+        let mult = -3;
+
+        FillRange(2, 7, out1, out1.length);
+        FillRange(13, 3, out2, out2.length);
+
+        assert.deepEqual(out1, [2, 9, 16, 23, 30, 37, 44, 51, 58, 65]);
+        assert.deepEqual(out2, new Int32Array([13, 16, 19, 22, 25, 28, 31, 34, 37, 40]));
+
+        MultiplyIntegers(-1, out1, out1.length - 2);
+        MultiplyIntegers(3, out2, out2.length - 3);
+        assert.deepEqual(out1, [-2, -9, -16, -23, -30, -37, -44, -51, 58, 65]);
+        assert.deepEqual(out2, new Int32Array([3 * 13, 3 * 16, 3 * 19, 3 * 22, 3 * 25, 3 * 28, 3 * 31, 34, 37, 40]));
     }
 }

@@ -86,6 +86,8 @@ static inline bool IsObject(Napi::Value value)
     return value.IsObject() && !IsNullOrUndefined(value) && !value.IsArray();
 }
 
+int GetTypedArrayType(const TypeInfo *type);
+
 template <typename T>
 T CopyNumber(const Napi::Value &value)
 {

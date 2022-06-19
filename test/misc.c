@@ -528,3 +528,18 @@ EXPORT IntContainer ArrayToStruct(int *values, int len)
 
     return ic;
 }
+
+EXPORT void FillRange(int init, int step, int *out, int len)
+{
+    while (--len >= 0) {
+        *(out++) = init;
+        init += step;
+    }
+}
+
+EXPORT void MultiplyIntegers(int multiplier, int *values, int len)
+{
+    for (int i = 0; i < len; i++) {
+        values[i] *= multiplier;
+    }
+}

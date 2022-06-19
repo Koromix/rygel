@@ -91,6 +91,26 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
             return type.name;
     }
 
+    if (value.IsArray()) {
+        return "array";
+    } else if (value.IsTypedArray()) {
+        Napi::TypedArray array = value.As<Napi::TypedArray>();
+
+        switch (array.TypedArrayType()) {
+            case napi_int8_array: return "Int8Array";
+            case napi_uint8_array: return "Uint8Array";
+            case napi_uint8_clamped_array: return "Uint8ClampedArray";
+            case napi_int16_array: return "Int16Array";
+            case napi_uint16_array: return "Uint16Array";
+            case napi_int32_array: return "Int32Array";
+            case napi_uint32_array: return "Uint32Array";
+            case napi_float32_array: return "Float32Array";
+            case napi_float64_array: return "Float64Array";
+            case napi_bigint64_array: return "BigInt64Array";
+            case napi_biguint64_array: return "BigUint64Array";
+        }
+    }
+
     switch (value.Type()) {
         case napi_undefined: return "undefined";
         case napi_null: return "null";
@@ -124,6 +144,24 @@ bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *
     }
 
     return match;
+}
+
+int GetTypedArrayType(const TypeInfo *type)
+{
+    switch (type->primitive) {
+        case PrimitiveKind::Int8: return napi_int8_array;
+        case PrimitiveKind::UInt8: return napi_uint8_array;
+        case PrimitiveKind::Int16: return napi_int16_array;
+        case PrimitiveKind::UInt16: return napi_uint16_array;
+        case PrimitiveKind::Int32: return napi_int32_array;
+        case PrimitiveKind::UInt32: return napi_uint32_array;
+        case PrimitiveKind::Float32: return napi_float32_array;
+        case PrimitiveKind::Float64: return napi_float64_array;
+
+        default: return -1;
+    }
+
+    RG_UNREACHABLE();
 }
 
 static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)

@@ -314,10 +314,6 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
         ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", PrimitiveKindNames[(int)type->primitive]);
         return env.Null();
     }
-    if ((directions & 2) && type->ref->primitive != PrimitiveKind::Record) {
-        ThrowError<Napi::TypeError>(env, "Only objects can be used as out parameters (for now)");
-        return env.Null();
-    }
 
     // We need to lose the const for Napi::External to work
     TypeInfo *marked = (TypeInfo *)((uint8_t *)type + directions - 1);

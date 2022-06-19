@@ -513,7 +513,7 @@ void CallData::Execute()
 
 Napi::Value CallData::Complete()
 {
-    PopOutObjects();
+    PopOutArguments();
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void: return env.Null();

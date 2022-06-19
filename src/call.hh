@@ -28,7 +28,7 @@ struct BackRegisters;
 // I'm not sure why the alignas(8), because alignof(CallData) is 8 without it.
 // But on Windows i386, without it, the alignment may not be correct (compiler bug?).
 class alignas(8) CallData {
-    struct OutObject {
+    struct OutArgument {
         napi_ref ref;
         const uint8_t *ptr;
         const TypeInfo *type;
@@ -44,7 +44,7 @@ class alignas(8) CallData {
 
     uint32_t used_trampolines = 0;
 
-    LocalArray<OutObject, MaxOutParameters> out_objects;
+    LocalArray<OutArgument, MaxOutParameters> out_arguments;
 
     uint8_t *new_sp;
     uint8_t *old_sp;
@@ -82,16 +82,18 @@ private:
     const char *PushString(Napi::Value value);
     const char16_t *PushString16(Napi::Value value);
     bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin, int16_t realign = 0);
-    bool PushArray(Napi::Array array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);
+    bool PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);
     bool PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);
     bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
     bool PushPointer(Napi::Value value, const ParameterInfo &param, void **out_ptr);
 
     void PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
     Napi::Object PopObject(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
+    void PopNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
+    void PopTypedArray(Napi::TypedArray array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
     Napi::Value PopArray(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
 
-    void PopOutObjects();
+    void PopOutArguments();
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 };

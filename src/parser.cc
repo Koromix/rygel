@@ -70,9 +70,8 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
                 return false;
             }
 
-            if ((param.directions & 2) && (param.type->primitive != PrimitiveKind::Pointer ||
-                                           param.type->ref->primitive != PrimitiveKind::Record)) {
-                MarkError("Only object pointers can be used as out parameters (for now)");
+            if ((param.directions & 2) && param.type->primitive != PrimitiveKind::Pointer) {
+                MarkError("Only pointers can be used for output parameters");
                 return false;
             }
 
