@@ -171,23 +171,6 @@ const TypeInfo *PrototypeParser::ParseType()
     }
     buf.ptr[--buf.len] = 0;
 
-    if (indirect) {
-        const TypeInfo *type = instance->types_map.FindValue(buf.ptr, nullptr);
-        PrimitiveKind primitive = type ? type->primitive : PrimitiveKind::Void;
-
-        if (primitive == PrimitiveKind::Int8 || primitive == PrimitiveKind::UInt8) {
-            buf.RemoveFrom(0);
-            Fmt(&buf, "string");
-
-            indirect--;
-        } else if (primitive == PrimitiveKind::Int16 || primitive == PrimitiveKind::UInt16) {
-            buf.RemoveFrom(0);
-            Fmt(&buf, "string16");
-
-            indirect--;
-        }
-    }
-
     while (buf.len) {
         const TypeInfo *type = instance->types_map.FindValue(buf.ptr, nullptr);
 

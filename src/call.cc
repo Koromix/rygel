@@ -597,13 +597,11 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
     size_t encoded = 0;
 
     switch (type->ref->primitive) {
-        case PrimitiveKind::Int8:
-        case PrimitiveKind::UInt8: {
+        case PrimitiveKind::Int8: {
             napi_status status = napi_get_value_string_utf8(env, obj, (char *)origin, type->size, &encoded);
             RG_ASSERT(status == napi_ok);
         } break;
-        case PrimitiveKind::Int16:
-        case PrimitiveKind::UInt16: {
+        case PrimitiveKind::Int16: {
             napi_status status = napi_get_value_string_utf16(env, obj, (char16_t *)origin, type->size / 2, &encoded);
             RG_ASSERT(status == napi_ok);
 
@@ -910,19 +908,7 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
 
             POP_NUMBER_ARRAY(Int8Array, int8_t);
         } break;
-        case PrimitiveKind::UInt8: {
-            if (type->hint == TypeInfo::ArrayHint::String) {
-                RG_ASSERT(!realign);
-
-                const char *ptr = (const char *)origin;
-                size_t count = strnlen(ptr, (size_t)len);
-
-                Napi::String str = Napi::String::New(env, ptr, count);
-                return str;
-            }
-
-            POP_NUMBER_ARRAY(Uint8Array, uint8_t);
-        } break;
+        case PrimitiveKind::UInt8: { POP_NUMBER_ARRAY(Uint8Array, uint8_t); } break;
         case PrimitiveKind::Int16: {
             if (type->hint == TypeInfo::ArrayHint::String) {
                 RG_ASSERT(!realign);
@@ -936,19 +922,7 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
 
             POP_NUMBER_ARRAY(Int16Array, int16_t);
         } break;
-        case PrimitiveKind::UInt16: {
-            if (type->hint == TypeInfo::ArrayHint::String) {
-                RG_ASSERT(!realign);
-
-                const char16_t *ptr = (const char16_t *)origin;
-                Size count = WideStringLength(ptr, len);
-
-                Napi::String str = Napi::String::New(env, ptr, count);
-                return str;
-            }
-
-            POP_NUMBER_ARRAY(Uint16Array, uint16_t);
-        } break;
+        case PrimitiveKind::UInt16: { POP_NUMBER_ARRAY(Uint16Array, uint16_t); } break;
         case PrimitiveKind::Int32: { POP_NUMBER_ARRAY(Int32Array, int32_t); } break;
         case PrimitiveKind::UInt32: { POP_NUMBER_ARRAY(Uint32Array, uint32_t); } break;
         case PrimitiveKind::Int64: {
