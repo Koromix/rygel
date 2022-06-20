@@ -358,7 +358,11 @@
 </section>
 <section id="raylib-results">
 <h2>Raylib results<a class="headerlink" href="#raylib-results" title="Permalink to this heading">#</a></h2>
-<p>This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, the baseline is a full C++ version of the code.</p>
+<p>This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:</p>
+<ul class="simple">
+<li><p>Baseline: Full C++ version of the code (no JS)</p></li>
+<li><p>node-raylib: This is a native wrapper implemented with N-API</p></li>
+</ul>
 <section id="id3">
 <h3>Linux x86_64<a class="headerlink" href="#id3" title="Permalink to this heading">#</a></h3>
 <p>The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):</p>
@@ -377,12 +381,17 @@
 <td><p>9.31s</p></td>
 <td><p>(baseline)</p></td>
 </tr>
-<tr class="row-odd"><td><p>raylib_koffi</p></td>
+<tr class="row-odd"><td><p>raylib_node_raylib</p></td>
+<td><p>100</p></td>
+<td><p>10.90s</p></td>
+<td><p>x1.17</p></td>
+</tr>
+<tr class="row-even"><td><p>raylib_koffi</p></td>
 <td><p>100</p></td>
 <td><p>12.86s</p></td>
 <td><p>x1.38</p></td>
 </tr>
-<tr class="row-even"><td><p>raylib_node_ffi</p></td>
+<tr class="row-odd"><td><p>raylib_node_ffi</p></td>
 <td><p>100</p></td>
 <td><p>35.76s</p></td>
 <td><p>x3.84</p></td>

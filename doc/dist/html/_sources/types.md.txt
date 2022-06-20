@@ -156,8 +156,7 @@ XXX
 
 ## Fixed-size C arrays
 
-Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C, they cannot be passed
-as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.
+Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C, they cannot be passed as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.
 
 Koffi applies the following conversion rules when passing arrays to/from C:
 
@@ -191,10 +190,10 @@ console.log(ReturnFoo2({ i: 5, a16: [6, 8] })) // Prints { i: 5, a16: [6, 8] }
 
 Koffi can also convert JS strings to fixed-sized arrays in the following cases:
 
-- **char (or int8_t) arrays** are filled with the UTF-8 encoded string, truncated if needed. The buffer is always NUL-terminated.
-- **char16 (or int16_t) arrays** are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.
+- **char arrays** are filled with the UTF-8 encoded string, truncated if needed. The buffer is always NUL-terminated.
+- **char16 (or char16_t) arrays** are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.
 
-The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. Use the `string` array hint to do this (e.g. `koffi.array('char', 8, 'string')`).
+The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16 and char16_t arrays, but you can also explicitly ask for this with the `string` array hint (e.g. `koffi.array('char', 8, 'string')`).
 
 ## Type introspection
 

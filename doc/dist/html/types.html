@@ -568,8 +568,7 @@
 </section>
 <section id="fixed-size-c-arrays">
 <h2>Fixed-size C arrays<a class="headerlink" href="#fixed-size-c-arrays" title="Permalink to this heading">#</a></h2>
-<p>Fixed-size arrays are declared with <code class="docutils literal notranslate"><span class="pre">koffi.array(type,</span> <span class="pre">length)</span></code>. Just like in C, they cannot be passed
-as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.</p>
+<p>Fixed-size arrays are declared with <code class="docutils literal notranslate"><span class="pre">koffi.array(type,</span> <span class="pre">length)</span></code>. Just like in C, they cannot be passed as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.</p>
 <p>Koffi applies the following conversion rules when passing arrays to/from C:</p>
 <ul class="simple">
 <li><p><strong>JS to C</strong>: Koffi can take a normal Array (e.g. <code class="docutils literal notranslate"><span class="pre">[1,</span> <span class="pre">2]</span></code>) or a TypedArray of the correct type (e.g. <code class="docutils literal notranslate"><span class="pre">Uint8Array</span></code> for an array of <code class="docutils literal notranslate"><span class="pre">uint8_t</span></code> numbers)</p></li>
@@ -600,10 +599,10 @@ as functions parameters (they degenerate to pointers), or returned by value. You
 <h3>Handling of strings<a class="headerlink" href="#handling-of-strings" title="Permalink to this heading">#</a></h3>
 <p>Koffi can also convert JS strings to fixed-sized arrays in the following cases:</p>
 <ul class="simple">
-<li><p><strong>char (or int8_t) arrays</strong> are filled with the UTF-8 encoded string, truncated if needed. The buffer is always NUL-terminated.</p></li>
-<li><p><strong>char16 (or int16_t) arrays</strong> are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.</p></li>
+<li><p><strong>char arrays</strong> are filled with the UTF-8 encoded string, truncated if needed. The buffer is always NUL-terminated.</p></li>
+<li><p><strong>char16 (or char16_t) arrays</strong> are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.</p></li>
 </ul>
-<p>The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. Use the <code class="docutils literal notranslate"><span class="pre">string</span></code> array hint to do this (e.g. <code class="docutils literal notranslate"><span class="pre">koffi.array('char',</span> <span class="pre">8,</span> <span class="pre">'string')</span></code>).</p>
+<p>The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16 and char16_t arrays, but you can also explicitly ask for this with the <code class="docutils literal notranslate"><span class="pre">string</span></code> array hint (e.g. <code class="docutils literal notranslate"><span class="pre">koffi.array('char',</span> <span class="pre">8,</span> <span class="pre">'string')</span></code>).</p>
 </section>
 </section>
 <section id="type-introspection">
