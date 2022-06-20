@@ -148,11 +148,44 @@ XXX
 
 ### Array pointers
 
-XXX
+
 
 ### Pointers to primitive types
 
-XXX
+In javascript, it is not possible to pass a primitive value by reference to another function. This means that you cannot call a function and expect it to modify the value of one of its number or a string parameter.
+
+However, arrays and objects (among others) are reference type values. Affecting an array or an object from one variable to another does not invole any copy. Instead, as the following example illustrates, the new variable references the same list as the first:
+
+```js
+let list1 = [1, 2];
+let list2 = list1;
+
+list2[1] = 42;
+
+console.log(list1); // Prints [1, 42]
+```
+
+This means that C functions that are expected to modify their primitive output values (such as an `int *` parameter) cannot be used directly. However, thanks to transparent array support, you can use Javascript arrays to approximate reference semantics, with single-element arrays.
+
+Below, you can find an example of an addition function where the result is stored in an `int *` output parameter and how to use this function from Koffi.
+
+```c
+void AddInt(int *dest, int add)
+{
+    *dest += add;
+}
+```
+
+You can simply pass a single-element array as the third argument:
+
+```js
+const AddInt = lib.func('void AddInt(_Inout_ int *dest, int add)');
+
+let sum = [36];
+AddInt(sum, 6);
+
+console.log(sum[0]); // Prints 42
+```
 
 ## Fixed-size C arrays
 

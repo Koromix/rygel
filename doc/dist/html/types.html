@@ -559,11 +559,36 @@
 </section>
 <section id="array-pointers">
 <h3>Array pointers<a class="headerlink" href="#array-pointers" title="Permalink to this heading">#</a></h3>
-<p>XXX</p>
 </section>
 <section id="pointers-to-primitive-types">
 <h3>Pointers to primitive types<a class="headerlink" href="#pointers-to-primitive-types" title="Permalink to this heading">#</a></h3>
-<p>XXX</p>
+<p>In javascript, it is not possible to pass a primitive value by reference to another function. This means that you cannot call a function and expect it to modify the value of one of its number or a string parameter.</p>
+<p>However, arrays and objects (among others) are reference type values. Affecting an array or an object from one variable to another does not invole any copy. Instead, as the following example illustrates, the new variable references the same list as the first:</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">let</span> <span class="nx">list1</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1</span><span class="p">,</span> <span class="mf">2</span><span class="p">];</span>
+<span class="kd">let</span> <span class="nx">list2</span> <span class="o">=</span> <span class="nx">list1</span><span class="p">;</span>
+
+<span class="nx">list2</span><span class="p">[</span><span class="mf">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">42</span><span class="p">;</span>
+
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">list1</span><span class="p">);</span> <span class="c1">// Prints [1, 42]</span>
+</pre></div>
+</div>
+<p>This means that C functions that are expected to modify their primitive output values (such as an <code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">*</span></code> parameter) cannot be used directly. However, thanks to transparent array support, you can use Javascript arrays to approximate reference semantics, with single-element arrays.</p>
+<p>Below, you can find an example of an addition function where the result is stored in an <code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">*</span></code> output parameter and how to use this function from Koffi.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">AddInt</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">dest</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">add</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="o">*</span><span class="n">dest</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">add</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>You can simply pass a single-element array as the third argument:</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">AddInt</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;void AddInt(_Inout_ int *dest, int add)&#39;</span><span class="p">);</span>
+
+<span class="kd">let</span> <span class="nx">sum</span> <span class="o">=</span> <span class="p">[</span><span class="mf">36</span><span class="p">];</span>
+<span class="nx">AddInt</span><span class="p">(</span><span class="nx">sum</span><span class="p">,</span> <span class="mf">6</span><span class="p">);</span>
+
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">sum</span><span class="p">[</span><span class="mf">0</span><span class="p">]);</span> <span class="c1">// Prints 42</span>
+</pre></div>
+</div>
 </section>
 </section>
 <section id="fixed-size-c-arrays">
