@@ -520,14 +520,50 @@
 </section>
 <section id="pointer-types">
 <h2>Pointer types<a class="headerlink" href="#pointer-types" title="Permalink to this heading">#</a></h2>
+<p>In C, pointer arguments are used for differenty purposes. It is important to distinguish these use cases because Koffi provides different ways to deal with each of them:</p>
+<ul class="simple">
+<li><p><strong>Struct pointers</strong>: Use of struct pointers by C libraries fall in two cases: avoid (potentially) expensive copies, and to let the function change struct contents (output or input/output argument).</p></li>
+<li><p><strong>Opaque handles</strong>: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. <code class="docutils literal notranslate"><span class="pre">sqlite3_stmt</span></code>). Only the functions provided by the library can do something with this pointer, in Koffi we call this a handle. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.</p></li>
+<li><p><strong>Arrays</strong>: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated or with an additional length argument.</p></li>
+<li><p><strong>Pointers to primitive types</strong>: This is more rare, and generally used for output or input/output arguments. The Win32 API has a lot of these.</p></li>
+</ul>
 <section id="struct-pointers">
 <h3>Struct pointers<a class="headerlink" href="#struct-pointers" title="Permalink to this heading">#</a></h3>
+<p>The following Win32 example uses <code class="docutils literal notranslate"><span class="pre">GetCursorPos()</span></code> (with an output parameter) to retrieve and show the current cursor position.</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">lib</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;kernel32.dll&#39;</span><span class="p">);</span>
+
+<span class="c1">// Type declarations</span>
+<span class="kd">const</span> <span class="nx">POINT</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;POINT&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">x</span><span class="o">:</span> <span class="s1">&#39;long&#39;</span><span class="p">,</span>
+    <span class="nx">y</span><span class="o">:</span> <span class="s1">&#39;long&#39;</span>
+<span class="p">});</span>
+
+<span class="c1">// Functions declarations</span>
+<span class="kd">const</span> <span class="nx">GetCursorPos</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int __stdcall GetCursorPos(_Out_ POINT *pos)&#39;</span><span class="p">);</span>
+
+<span class="c1">// Get and show cursor position</span>
+<span class="kd">let</span> <span class="nx">pos</span> <span class="o">=</span> <span class="p">{};</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">GetCursorPos</span><span class="p">(</span><span class="nx">pos</span><span class="p">))</span>
+    <span class="k">throw</span> <span class="ow">new</span> <span class="ne">Error</span><span class="p">(</span><span class="s1">&#39;Failed to get cursor position&#39;</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">pos</span><span class="p">);</span>
+</pre></div>
+</div>
 </section>
 <section id="opaque-handles">
 <h3>Opaque handles<a class="headerlink" href="#opaque-handles" title="Permalink to this heading">#</a></h3>
+<p>Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque <code class="docutils literal notranslate"><span class="pre">FILE</span> <span class="pre">*</span></code> pointer. You can open and close files with <code class="docutils literal notranslate"><span class="pre">fopen()</span></code> and <code class="docutils literal notranslate"><span class="pre">fclose()</span></code>, and manipule the handle with other functions such as <code class="docutils literal notranslate"><span class="pre">fread()</span></code> or <code class="docutils literal notranslate"><span class="pre">ftell()</span></code>.</p>
+<p>In Koffi, you can manage this with opaque handles. Declare the handle type with <code class="docutils literal notranslate"><span class="pre">koffi.handle(name)</span></code>, and use this type either as a return type or some kind of <a class="reference internal" href="functions#output-parameters"><span class="std std-doc">output parameter</span></a> (with a pointer to the handle).</p>
+<p>The example below uses libc functions and the Win32 API to illustrate both use cases.</p>
+<p>XXX</p>
+</section>
+<section id="array-pointers">
+<h3>Array pointers<a class="headerlink" href="#array-pointers" title="Permalink to this heading">#</a></h3>
+<p>XXX</p>
 </section>
 <section id="pointers-to-primitive-types">
 <h3>Pointers to primitive types<a class="headerlink" href="#pointers-to-primitive-types" title="Permalink to this heading">#</a></h3>
+<p>XXX</p>
 </section>
 </section>
 <section id="fixed-size-c-arrays">
@@ -650,6 +686,7 @@ as functions parameters (they degenerate to pointers), or returned by value. You
 <li><a class="reference internal" href="#pointer-types">Pointer types</a><ul>
 <li><a class="reference internal" href="#struct-pointers">Struct pointers</a></li>
 <li><a class="reference internal" href="#opaque-handles">Opaque handles</a></li>
+<li><a class="reference internal" href="#array-pointers">Array pointers</a></li>
 <li><a class="reference internal" href="#pointers-to-primitive-types">Pointers to primitive types</a></li>
 </ul>
 </li>

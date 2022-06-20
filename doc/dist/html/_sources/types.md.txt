@@ -105,11 +105,54 @@ const Function2 = lib.func('Function', A, [A]);
 
 ## Pointer types
 
+In C, pointer arguments are used for differenty purposes. It is important to distinguish these use cases because Koffi provides different ways to deal with each of them:
+
+- **Struct pointers**: Use of struct pointers by C libraries fall in two cases: avoid (potentially) expensive copies, and to let the function change struct contents (output or input/output argument).
+- **Opaque handles**: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. `sqlite3_stmt`). Only the functions provided by the library can do something with this pointer, in Koffi we call this a handle. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.
+- **Arrays**: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated or with an additional length argument.
+- **Pointers to primitive types**: This is more rare, and generally used for output or input/output arguments. The Win32 API has a lot of these.
+
 ### Struct pointers
+
+The following Win32 example uses `GetCursorPos()` (with an output parameter) to retrieve and show the current cursor position.
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('kernel32.dll');
+
+// Type declarations
+const POINT = koffi.struct('POINT', {
+    x: 'long',
+    y: 'long'
+});
+
+// Functions declarations
+const GetCursorPos = lib.func('int __stdcall GetCursorPos(_Out_ POINT *pos)');
+
+// Get and show cursor position
+let pos = {};
+if (!GetCursorPos(pos))
+    throw new Error('Failed to get cursor position');
+console.log(pos);
+```
 
 ### Opaque handles
 
+Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque `FILE *` pointer. You can open and close files with `fopen()` and `fclose()`, and manipule the handle with other functions such as `fread()` or `ftell()`.
+
+In Koffi, you can manage this with opaque handles. Declare the handle type with `koffi.handle(name)`, and use this type either as a return type or some kind of [output parameter](functions.md#output-parameters) (with a pointer to the handle).
+
+The example below uses libc functions and the Win32 API to illustrate both use cases.
+
+XXX
+
+### Array pointers
+
+XXX
+
 ### Pointers to primitive types
+
+XXX
 
 ## Fixed-size C arrays
 
