@@ -107,3 +107,4 @@ The following features are planned in the (hopefully) near future:
 - Add simple struct type parser
 - Add support for unions
 - Better ways to automatically deal with caller/heap-allocated memory (strings, etc.)
+- PowerPC (POWER9+) port
