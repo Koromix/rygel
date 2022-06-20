@@ -353,6 +353,20 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
+    const TypeInfo *ref = ResolveType(instance, info[0]);
+    int64_t len = (uint16_t)info[1].As<Napi::Number>().Int64Value();
+
+    if (!ref)
+        return env.Null();
+    if (len <= 0) {
+        ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
+        return env.Null();
+    }
+    if (len > INT16_MAX / ref->size) {
+        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", INT16_MAX / ref->size);
+        return env.Null();
+    }
+
     TypeInfo::ArrayHint hint;
     if (info.Length() >= 3 && !IsNullOrUndefined(info[2])) {
         if (!info[2].IsString()) {
@@ -367,27 +381,21 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         } else if (to == "array") {
             hint = TypeInfo::ArrayHint::Array;
         } else if (to == "string") {
+            if (ref->primitive != PrimitiveKind::Int8 && ref->primitive != PrimitiveKind::Int16) {
+                ThrowError<Napi::Error>(env, "Array hint 'string' can only be used with 8 and 16-bit signed integer types");
+                return env.Null();
+            }
+
             hint = TypeInfo::ArrayHint::String;
         } else {
-            ThrowError<Napi::Error>(env, "Array conversion hint must be 'typed' or 'array'");
+            ThrowError<Napi::Error>(env, "Array conversion hint must be 'typed', 'array' or 'string'");
             return env.Null();
         }
+    } else if (TestStr(ref->name, "char") || TestStr(ref->name, "char16") ||
+                                             TestStr(ref->name, "char16_t")) {
+        hint = TypeInfo::ArrayHint::String;
     } else {
         hint = TypeInfo::ArrayHint::TypedArray;
-    }
-
-    const TypeInfo *ref = ResolveType(instance, info[0]);
-    int64_t len = (uint16_t)info[1].As<Napi::Number>().Int64Value();
-
-    if (!ref)
-        return env.Null();
-    if (len <= 0) {
-        ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
-        return env.Null();
-    }
-    if (len > INT16_MAX / ref->size) {
-        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", INT16_MAX / ref->size);
-        return env.Null();
     }
 
     TypeInfo *type = instance->types.AppendDefault();

@@ -84,17 +84,17 @@ const PackedBFG = koffi.pack('PackedBFG', {
 });
 
 const FixedString = koffi.struct('FixedString', {
-    buf: koffi.array('char', 64)
+    buf: koffi.array('int8', 64)
 });
 const FixedString2 = koffi.struct('FixedString2', {
-    buf: koffi.array('char', 64, 'string')
+    buf: koffi.array('char', 64)
 });
 
 const FixedWide = koffi.struct('FixedWide', {
-    buf: koffi.array('char16', 64)
+    buf: koffi.array('char16', 64, 'typed')
 });
 const FixedWide2 = koffi.struct('FixedWide2', {
-    buf: koffi.array('char16', 64, 'string')
+    buf: koffi.array('char16', 64)
 });
 
 const SingleU32 = koffi.struct('SingleU32', { v: 'uint32_t' });
