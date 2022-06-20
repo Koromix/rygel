@@ -205,6 +205,11 @@
         <article role="main">
           <section id="contributing">
 <h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this heading">#</a></h1>
+<section id="bugs-and-feature-requests">
+<h2>Bugs and feature requests<a class="headerlink" href="#bugs-and-feature-requests" title="Permalink to this heading">#</a></h2>
+<p>Use the official repository (named Luigi, because this is a monorepo containing multiple projects) for bugs, ideas and features requests.</p>
+<p>Go here: <a class="reference external" href="https://github.com/Koromix/luigi/issues">https://github.com/Koromix/luigi/issues</a></p>
+</section>
 <section id="build-from-source">
 <h2>Build from source<a class="headerlink" href="#build-from-source" title="Permalink to this heading">#</a></h2>
 <p>We provide prebuilt binaries, packaged in the NPM archive, so in most cases it should be as simple as <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">install</span> <span class="pre">koffi</span></code>. If you want to hack Koffi or use a specific platform, follow the instructions below.</p>
@@ -238,8 +243,8 @@ node ../../cnoke/cnoke.js
 </div>
 </section>
 </section>
-<section id="tests">
-<h2>Tests<a class="headerlink" href="#tests" title="Permalink to this heading">#</a></h2>
+<section id="running-tests">
+<h2>Running tests<a class="headerlink" href="#running-tests" title="Permalink to this heading">#</a></h2>
 <p>Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as <code class="docutils literal notranslate"><span class="pre">qemu-system</span></code> (or even <code class="docutils literal notranslate"><span class="pre">qemu-system-gui</span></code>) on Ubuntu.</p>
 <p>These machines are not included directly in this repository (for license and size reasons), but they are available here: https://koromix.dev/files/machines/</p>
 <p>For example, if you want to run the tests on Debian ARM64, run the following commands:</p>
@@ -284,11 +289,11 @@ node qemu.js stop
 <h2>Todo list<a class="headerlink" href="#todo-list" title="Permalink to this heading">#</a></h2>
 <p>The following features are planned in the (hopefully) near future:</p>
 <ul class="simple">
-<li><p>More real-world examples</p></li>
+<li><p>Add more real-world examples</p></li>
 <li><p>Optimize passing of structs and arrays</p></li>
-<li><p>Simple struct type parser</p></li>
-<li><p>Support for unions</p></li>
-<li><p>Better support for C-allocated strings</p></li>
+<li><p>Add simple struct type parser</p></li>
+<li><p>Add support for unions</p></li>
+<li><p>Better ways to automatically deal with caller/heap-allocated memory (strings, etc.)</p></li>
 </ul>
 </section>
 </section>
@@ -343,12 +348,13 @@ node qemu.js stop
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Contributing</a><ul>
+<li><a class="reference internal" href="#bugs-and-feature-requests">Bugs and feature requests</a></li>
 <li><a class="reference internal" href="#build-from-source">Build from source</a><ul>
 <li><a class="reference internal" href="#windows">Windows</a></li>
 <li><a class="reference internal" href="#other-platforms">Other platforms</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#tests">Tests</a></li>
+<li><a class="reference internal" href="#running-tests">Running tests</a></li>
 <li><a class="reference internal" href="#todo-list">Todo list</a></li>
 </ul>
 </li>

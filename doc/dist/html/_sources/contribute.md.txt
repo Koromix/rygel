@@ -1,5 +1,11 @@
 # Contributing
 
+## Bugs and feature requests
+
+Use the official repository (named Luigi, because this is a monorepo containing multiple projects) for bugs, ideas and features requests.
+
+Go here: [https://github.com/Koromix/luigi/issues](https://github.com/Koromix/luigi/issues)
+
 ## Build from source
 
 We provide prebuilt binaries, packaged in the NPM archive, so in most cases it should be as simple as `npm install koffi`. If you want to hack Koffi or use a specific platform, follow the instructions below.
@@ -35,7 +41,7 @@ cd koffi/test # or cd koffi/benchmark
 node ../../cnoke/cnoke.js
 ```
 
-## Tests
+## Running tests
 
 Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as `qemu-system` (or even `qemu-system-gui`) on Ubuntu.
 
@@ -96,8 +102,8 @@ node qemu.js info debian_x64
 
 The following features are planned in the (hopefully) near future:
 
-- More real-world examples
+- Add more real-world examples
 - Optimize passing of structs and arrays
-- Simple struct type parser
-- Support for unions
-- Better support for C-allocated strings
+- Add simple struct type parser
+- Add support for unions
+- Better ways to automatically deal with caller/heap-allocated memory (strings, etc.)

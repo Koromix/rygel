@@ -477,9 +477,9 @@
 </table>
 </div>
 <p>Primitive types can be specified by name (in a string) or through <code class="docutils literal notranslate"><span class="pre">koffi.types</span></code>:</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="c1">// These two lines do the same:</span><span class="w"></span>
-<span class="kd">let</span><span class="w"> </span><span class="nx">struct1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span><span class="w"> </span><span class="nx">dummy</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="w"> </span><span class="p">});</span><span class="w"></span>
-<span class="kd">let</span><span class="w"> </span><span class="nx">struct2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span><span class="w"> </span><span class="nx">dummy</span><span class="o">:</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">types</span><span class="p">.</span><span class="kr">long</span><span class="w"> </span><span class="p">});</span><span class="w"></span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="c1">// These two lines do the same:</span>
+<span class="kd">let</span> <span class="nx">struct1</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span> <span class="nx">dummy</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span> <span class="p">});</span>
+<span class="kd">let</span> <span class="nx">struct2</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span> <span class="nx">dummy</span><span class="o">:</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">types</span><span class="p">.</span><span class="kr">long</span> <span class="p">});</span>
 </pre></div>
 </div>
 </section>
@@ -499,22 +499,22 @@
 <span class="p">}</span><span class="w"> </span><span class="n">A</span><span class="p">;</span><span class="w"></span>
 </pre></div>
 </div>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">A</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">a</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nx">b</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;char&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nx">c</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;string&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nx">d</span><span class="o">:</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span><span class="w"></span>
-<span class="w">        </span><span class="nx">d1</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;double&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">d2</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;double&#39;</span><span class="w"></span>
-<span class="w">    </span><span class="p">})</span><span class="w"></span>
-<span class="p">});</span><span class="w"></span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">A</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">a</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">b</span><span class="o">:</span> <span class="s1">&#39;char&#39;</span><span class="p">,</span>
+    <span class="nx">c</span><span class="o">:</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span>
+    <span class="nx">d</span><span class="o">:</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span>
+        <span class="nx">d1</span><span class="o">:</span> <span class="s1">&#39;double&#39;</span><span class="p">,</span>
+        <span class="nx">d2</span><span class="o">:</span> <span class="s1">&#39;double&#39;</span>
+    <span class="p">})</span>
+<span class="p">});</span>
 </pre></div>
 </div>
 <p>Koffi follows the C and ABI rules regarding struct alignment and padding.</p>
 <p>Once a struct is declared, you can use it by name (with a string, like you can do for primitive types) or the through the value returned by the call to <code class="docutils literal notranslate"><span class="pre">koffi.struct()</span></code>. Only the latter is possible when declaring an anonymous struct.</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="c1">// The following two function declarations are equivalent, and declare a function taking an A value and returning A</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">Function1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;A Function(A value)&#39;</span><span class="p">);</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">Function2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;Function&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">A</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="nx">A</span><span class="p">]);</span><span class="w"></span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="c1">// The following two function declarations are equivalent, and declare a function taking an A value and returning A</span>
+<span class="kd">const</span> <span class="nx">Function1</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;A Function(A value)&#39;</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">Function2</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;Function&#39;</span><span class="p">,</span> <span class="nx">A</span><span class="p">,</span> <span class="p">[</span><span class="nx">A</span><span class="p">]);</span>
 </pre></div>
 </div>
 </section>
@@ -540,24 +540,24 @@ as functions parameters (they degenerate to pointers), or returned by value. You
 <li><p><strong>C to JS</strong> (return value, output parameters, callbacks): Koffi will use a TypedArray if possible. But you can change this behavior when you create the array type with the optional hint argument: <code class="docutils literal notranslate"><span class="pre">koffi.array('uint8_t',</span> <span class="pre">64,</span> <span class="pre">'array')</span></code>. For non-number types, such as arrays of strings or structs, Koffi creates normal arrays.</p></li>
 </ul>
 <p>See the example below:</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
 
-<span class="c1">// Those two structs are exactly the same, only the array conversion hint is different</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">Foo1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;Foo&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">i</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nx">a16</span><span class="o">:</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">array</span><span class="p">(</span><span class="s1">&#39;int16_t&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">8</span><span class="p">)</span><span class="w"></span>
-<span class="p">});</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">Foo2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;Foo&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">i</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nx">a16</span><span class="o">:</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">array</span><span class="p">(</span><span class="s1">&#39;int16_t&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">8</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;array&#39;</span><span class="p">)</span><span class="w"></span>
-<span class="p">});</span><span class="w"></span>
+<span class="c1">// Those two structs are exactly the same, only the array conversion hint is different</span>
+<span class="kd">const</span> <span class="nx">Foo1</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;Foo&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">i</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">a16</span><span class="o">:</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">array</span><span class="p">(</span><span class="s1">&#39;int16_t&#39;</span><span class="p">,</span> <span class="mf">8</span><span class="p">)</span>
+<span class="p">});</span>
+<span class="kd">const</span> <span class="nx">Foo2</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;Foo&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">i</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">a16</span><span class="o">:</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">array</span><span class="p">(</span><span class="s1">&#39;int16_t&#39;</span><span class="p">,</span> <span class="mf">8</span><span class="p">,</span> <span class="s1">&#39;array&#39;</span><span class="p">)</span>
+<span class="p">});</span>
 
-<span class="c1">// Uses an hypothetical C function that just returns the struct passed as a parameter</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">ReturnFoo1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;Foo1 ReturnFoo(Foo1 p)&#39;</span><span class="p">);</span><span class="w"></span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">ReturnFoo2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;Foo2 ReturnFoo(Foo2 p)&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// Uses an hypothetical C function that just returns the struct passed as a parameter</span>
+<span class="kd">const</span> <span class="nx">ReturnFoo1</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;Foo1 ReturnFoo(Foo1 p)&#39;</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">ReturnFoo2</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;Foo2 ReturnFoo(Foo2 p)&#39;</span><span class="p">);</span>
 
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ReturnFoo1</span><span class="p">({</span><span class="w"> </span><span class="nx">i</span><span class="o">:</span><span class="w"> </span><span class="mf">5</span><span class="p">,</span><span class="w"> </span><span class="nx">a16</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">6</span><span class="p">,</span><span class="w"> </span><span class="mf">8</span><span class="p">]</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="c1">// Prints { i: 5, a16: Int16Array(2) [6, 8] }</span><span class="w"></span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ReturnFoo2</span><span class="p">({</span><span class="w"> </span><span class="nx">i</span><span class="o">:</span><span class="w"> </span><span class="mf">5</span><span class="p">,</span><span class="w"> </span><span class="nx">a16</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">6</span><span class="p">,</span><span class="w"> </span><span class="mf">8</span><span class="p">]</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="c1">// Prints { i: 5, a16: [6, 8] }</span><span class="w"></span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ReturnFoo1</span><span class="p">({</span> <span class="nx">i</span><span class="o">:</span> <span class="mf">5</span><span class="p">,</span> <span class="nx">a16</span><span class="o">:</span> <span class="p">[</span><span class="mf">6</span><span class="p">,</span> <span class="mf">8</span><span class="p">]</span> <span class="p">}))</span> <span class="c1">// Prints { i: 5, a16: Int16Array(2) [6, 8] }</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ReturnFoo2</span><span class="p">({</span> <span class="nx">i</span><span class="o">:</span> <span class="mf">5</span><span class="p">,</span> <span class="nx">a16</span><span class="o">:</span> <span class="p">[</span><span class="mf">6</span><span class="p">,</span> <span class="mf">8</span><span class="p">]</span> <span class="p">}))</span> <span class="c1">// Prints { i: 5, a16: [6, 8] }</span>
 </pre></div>
 </div>
 <section id="handling-of-strings">
@@ -579,9 +579,9 @@ as functions parameters (they degenerate to pointers), or returned by value. You
 <li><p><code class="docutils literal notranslate"><span class="pre">koffi.introspect(type)</span></code> to get the definition of a type (only for structs for now)</p></li>
 </ul>
 <p>Just like before, you can refer to primitive types by their name or through <code class="docutils literal notranslate"><span class="pre">koffi.types</span></code>:</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="c1">// These two lines do the same:</span><span class="w"></span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">sizeof</span><span class="p">(</span><span class="s1">&#39;long&#39;</span><span class="p">));</span><span class="w"></span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">sizeof</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">types</span><span class="p">.</span><span class="kr">long</span><span class="p">));</span><span class="w"></span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="c1">// These two lines do the same:</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">sizeof</span><span class="p">(</span><span class="s1">&#39;long&#39;</span><span class="p">));</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">sizeof</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">types</span><span class="p">.</span><span class="kr">long</span><span class="p">));</span>
 </pre></div>
 </div>
 </section>
