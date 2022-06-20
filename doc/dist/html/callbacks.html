@@ -253,6 +253,11 @@
 </pre></div>
 </div>
 </section>
+<section id="thread-safety">
+<h2>Thread safety<a class="headerlink" href="#thread-safety" title="Permalink to this heading">#</a></h2>
+<p>The callback must be called from the main thread, or more precisely from the same thread as the V8 intepreter.</p>
+<p>Calling the callback from another thread is undefined behavior, and will likely lead to a mess.</p>
+</section>
 </section>
 
         </article>
@@ -315,6 +320,7 @@
 <li><a class="reference internal" href="#">Callbacks</a><ul>
 <li><a class="reference internal" href="#type-definition">Type definition</a></li>
 <li><a class="reference internal" href="#example">Example</a></li>
+<li><a class="reference internal" href="#thread-safety">Thread safety</a></li>
 </ul>
 </li>
 </ul>

@@ -52,3 +52,9 @@ console.log(ret);
 //   Your age is: 27
 //   42
 ```
+
+## Thread safety
+
+The callback must be called from the main thread, or more precisely from the same thread as the V8 intepreter.
+
+Calling the callback from another thread is undefined behavior, and will likely lead to a mess.
