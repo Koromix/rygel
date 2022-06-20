@@ -262,7 +262,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 if (RG_UNLIKELY(!PushPointer(value, param, &ptr)))
                     return false;
 
-                *(uint8_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
+                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
