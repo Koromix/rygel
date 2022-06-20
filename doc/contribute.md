@@ -4,7 +4,7 @@
 
 Use the official repository (named Luigi, because this is a monorepo containing multiple projects) for bugs, ideas and features requests.
 
-Go here: [https://github.com/Koromix/luigi/issues](https://github.com/Koromix/luigi/issues)
+Go here: https://github.com/Koromix/luigi/issues
 
 ## Build from source
 

@@ -43,4 +43,10 @@ html_css_files = ['custom.css']
 
 # -- MyST parser options -------------------------------------------------
 
+myst_enable_extensions = [
+    'linkify'
+]
+
 myst_heading_anchors = 3
+
+myst_linkify_fuzzy_links = False
