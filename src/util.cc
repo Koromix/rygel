@@ -112,19 +112,20 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
     }
 
     switch (value.Type()) {
-        case napi_undefined: return "undefined";
-        case napi_null: return "null";
-        case napi_boolean: return "boolean";
-        case napi_number: return "number";
-        case napi_string: return "string";
-        case napi_symbol: return "symbol";
-        case napi_object: return "object";
-        case napi_function: return "function";
-        case napi_external: return "external";
-        case napi_bigint: return "bigint";
+        case napi_undefined: return "Undefined";
+        case napi_null: return "Null";
+        case napi_boolean: return "Boolean";
+        case napi_number: return "Number";
+        case napi_string: return "String";
+        case napi_symbol: return "Symbol";
+        case napi_object: return "Oject";
+        case napi_function: return "Function";
+        case napi_external: return "External";
+        case napi_bigint: return "BigInt";
     }
 
-    return "unknown";
+    // This should not be possible, but who knows...
+    return "Unknown";
 }
 
 void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
