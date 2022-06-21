@@ -19,7 +19,7 @@ This test is based around repeated calls to a simple standard C function atoi, a
 - the second one calls atoi through Koffi
 - the third one uses the official Node.js FFI implementation, node-ffi-napi
 
-Because rand is a small call, the FFI overhead is clearly visible.
+Because rand is a pretty small function, the FFI overhead is clearly visible.
 
 ### Linux x86_64
 
@@ -45,7 +45,7 @@ rand_node_ffi | 20000000   | 87.84s      | x42
 
 This test is similar to the rand one, but it is based on atoi, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
-Because atoi is a small call, the FFI overhead is clearly visible.
+Because rand is a pretty small function, the FFI overhead is clearly visible.
 
 ### Linux x86_64
 

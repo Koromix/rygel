@@ -221,7 +221,7 @@
 <li><p>the second one calls atoi through Koffi</p></li>
 <li><p>the third one uses the official Node.js FFI implementation, node-ffi-napi</p></li>
 </ul>
-<p>Because rand is a small call, the FFI overhead is clearly visible.</p>
+<p>Because rand is a pretty small function, the FFI overhead is clearly visible.</p>
 <section id="linux-x86-64">
 <h3>Linux x86_64<a class="headerlink" href="#linux-x86-64" title="Permalink to this heading">#</a></h3>
 <p>The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):</p>
@@ -290,7 +290,7 @@
 <section id="atoi-results">
 <h2>atoi results<a class="headerlink" href="#atoi-results" title="Permalink to this heading">#</a></h2>
 <p>This test is similar to the rand one, but it is based on atoi, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.</p>
-<p>Because atoi is a small call, the FFI overhead is clearly visible.</p>
+<p>Because rand is a pretty small function, the FFI overhead is clearly visible.</p>
 <section id="id1">
 <h3>Linux x86_64<a class="headerlink" href="#id1" title="Permalink to this heading">#</a></h3>
 <p>The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):</p>
