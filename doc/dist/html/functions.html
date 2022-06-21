@@ -350,10 +350,10 @@
 <span class="c1">// The _Out_ qualifiers instruct Koffi to marshal out the values</span>
 <span class="kd">const</span> <span class="nx">gettimeofday</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int gettimeofday(_Out_ timeval *tv, _Out_ timezone *tz)&#39;</span><span class="p">);</span>
 
-<span class="kd">let</span> <span class="nx">tv</span> <span class="o">=</span> <span class="p">{},</span> <span class="nx">tz</span> <span class="o">=</span> <span class="p">{};</span>
-<span class="nx">gettimeofday</span><span class="p">(</span><span class="nx">tv</span><span class="p">,</span> <span class="nx">tz</span><span class="p">);</span>
+<span class="kd">let</span> <span class="nx">tv</span> <span class="o">=</span> <span class="p">{};</span>
+<span class="nx">gettimeofday</span><span class="p">(</span><span class="nx">tv</span><span class="p">,</span> <span class="kc">null</span><span class="p">);</span>
 
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">tv</span><span class="p">,</span> <span class="nx">tz</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">tv</span><span class="p">);</span>
 </pre></div>
 </div>
 </section>

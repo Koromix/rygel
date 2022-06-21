@@ -38,17 +38,33 @@ const timezone = koffi.struct('timezone', {
     tz_minuteswest: 'int',
     tz_dsttime: 'int'
 });
+const time_t = koffi.struct('time_t', { value: 'int64_t' });
+const tm = koffi.struct('tm', {
+    tm_sec: 'int',
+    tm_min: 'int',
+    tm_hour: 'int',
+    tm_mday: 'int',
+    tm_mon: 'int',
+    tm_year: 'int',
+    tm_wday: 'int',
+    tm_yday: 'int',
+    tm_isdst: 'int'
+});
 
 // Find functions
 const gettimeofday = lib.func('int gettimeofday(_Out_ timeval *tv, _Out_ timezone *tz)');
+const localtime_r = lib.func('tm *localtime_r(const time_t *timeval, _Out_ tm *result)');
 const printf = lib.func('int printf(const char *format, ...)');
 
+// Get local time
 let tv = {};
-let tz = {};
-gettimeofday(tv, tz);
+let now = {};
+gettimeofday(tv, null);
+localtime_r({ value: tv.tv_sec }, now);
 
-printf('Hello World!, it is: %d\n', 'int', tv.tv_sec);
-console.log(tz);
+// And format it with printf (variadic function)
+printf('Hello World!\n');
+printf('Local time: %02d:%02d:%02d\n', 'int', now.tm_hour, 'int', now.tm_min, 'int', now.tm_sec);
 ```
 
 ## Small Windows example

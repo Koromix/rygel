@@ -236,17 +236,33 @@
     <span class="nx">tz_minuteswest</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
     <span class="nx">tz_dsttime</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span>
 <span class="p">});</span>
+<span class="kd">const</span> <span class="nx">time_t</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;time_t&#39;</span><span class="p">,</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="s1">&#39;int64_t&#39;</span> <span class="p">});</span>
+<span class="kd">const</span> <span class="nx">tm</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;tm&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">tm_sec</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">tm_min</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">tm_hour</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">tm_mday</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">tm_mon</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">tm_year</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">tm_wday</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">tm_yday</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
+    <span class="nx">tm_isdst</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span>
+<span class="p">});</span>
 
 <span class="c1">// Find functions</span>
 <span class="kd">const</span> <span class="nx">gettimeofday</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int gettimeofday(_Out_ timeval *tv, _Out_ timezone *tz)&#39;</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">localtime_r</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;tm *localtime_r(const time_t *timeval, _Out_ tm *result)&#39;</span><span class="p">);</span>
 <span class="kd">const</span> <span class="nx">printf</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int printf(const char *format, ...)&#39;</span><span class="p">);</span>
 
+<span class="c1">// Get local time</span>
 <span class="kd">let</span> <span class="nx">tv</span> <span class="o">=</span> <span class="p">{};</span>
-<span class="kd">let</span> <span class="nx">tz</span> <span class="o">=</span> <span class="p">{};</span>
-<span class="nx">gettimeofday</span><span class="p">(</span><span class="nx">tv</span><span class="p">,</span> <span class="nx">tz</span><span class="p">);</span>
+<span class="kd">let</span> <span class="nx">now</span> <span class="o">=</span> <span class="p">{};</span>
+<span class="nx">gettimeofday</span><span class="p">(</span><span class="nx">tv</span><span class="p">,</span> <span class="kc">null</span><span class="p">);</span>
+<span class="nx">localtime_r</span><span class="p">({</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">tv</span><span class="p">.</span><span class="nx">tv_sec</span> <span class="p">},</span> <span class="nx">now</span><span class="p">);</span>
 
-<span class="nx">printf</span><span class="p">(</span><span class="s1">&#39;Hello World!, it is: %d\n&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="nx">tv</span><span class="p">.</span><span class="nx">tv_sec</span><span class="p">);</span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">tz</span><span class="p">);</span>
+<span class="c1">// And format it with printf (variadic function)</span>
+<span class="nx">printf</span><span class="p">(</span><span class="s1">&#39;Hello World!\n&#39;</span><span class="p">);</span>
+<span class="nx">printf</span><span class="p">(</span><span class="s1">&#39;Local time: %02d:%02d:%02d\n&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="nx">now</span><span class="p">.</span><span class="nx">tm_hour</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="nx">now</span><span class="p">.</span><span class="nx">tm_min</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="nx">now</span><span class="p">.</span><span class="nx">tm_sec</span><span class="p">);</span>
 </pre></div>
 </div>
 </section>

@@ -136,10 +136,10 @@ const timezone = koffi.struct('timezone', {
 // The _Out_ qualifiers instruct Koffi to marshal out the values
 const gettimeofday = lib.func('int gettimeofday(_Out_ timeval *tv, _Out_ timezone *tz)');
 
-let tv = {}, tz = {};
-gettimeofday(tv, tz);
+let tv = {};
+gettimeofday(tv, null);
 
-console.log(tv, tz);
+console.log(tv);
 ```
 
 ### Opaque handle example
