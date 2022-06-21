@@ -426,19 +426,27 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
             });
         } break;
         case PrimitiveKind::String: {
-            PUSH_ARRAY(value.IsString(), "string", {
-                const char *str = PushString(value);
-                if (RG_UNLIKELY(!str))
-                    return false;
-                *(const char **)dest = str;
+            PUSH_ARRAY(value.IsString() || IsNullOrUndefined(value), "string", {
+                if (!IsNullOrUndefined(value)) {
+                    const char *str = PushString(value);
+                    if (RG_UNLIKELY(!str))
+                        return false;
+                    *(const char **)dest = str;
+                } else {
+                    *(const char **)dest = nullptr;
+                }
             });
         } break;
         case PrimitiveKind::String16: {
-            PUSH_ARRAY(value.IsString(), "string", {
-                const char16_t *str16 = PushString16(value);
-                if (RG_UNLIKELY(!str16))
-                    return false;
-                *(const char16_t **)dest = str16;
+            PUSH_ARRAY(value.IsString() || IsNullOrUndefined(value), "string", {
+                if (!IsNullOrUndefined(value)) {
+                    const char16_t *str16 = PushString16(value);
+                    if (RG_UNLIKELY(!str16))
+                        return false;
+                    *(const char16_t **)dest = str16;
+                } else {
+                    *(const char16_t **)dest = nullptr;
+                }
             });
         } break;
         case PrimitiveKind::Pointer: {
