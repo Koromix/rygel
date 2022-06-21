@@ -92,7 +92,7 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
     }
 
     if (value.IsArray()) {
-        return "array";
+        return "Array";
     } else if (value.IsTypedArray()) {
         Napi::TypedArray array = value.As<Napi::TypedArray>();
 
@@ -118,7 +118,7 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
         case napi_number: return "Number";
         case napi_string: return "String";
         case napi_symbol: return "Symbol";
-        case napi_object: return "Oject";
+        case napi_object: return "Object";
         case napi_function: return "Function";
         case napi_external: return "External";
         case napi_bigint: return "BigInt";
