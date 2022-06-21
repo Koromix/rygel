@@ -100,11 +100,16 @@ node qemu.js info debian_x64
 
 ## Todo list
 
-The following features are planned in the (hopefully) near future:
+After the release of version 1.3.0, the current priorities for the next major release are:
 
-- Add more real-world examples
-- Optimize passing of structs and arrays
+- Automate Windows/AArch64 (qemu) and macOS/AArch64 (how?) tests and builds
+- Create a real-world example, using several libraries (Raylib, SQLite, libsodium) to illustrate how to work with various C API styles
+
+The following features are also planned eventually, not necessarily in that order:
+
+- Optimize passing of structs and arrays, with separate HFA-specific helper functions
 - Add simple struct type parser
+- Add more ways to manually encode and decode various types to and from byte arrays
 - Add support for unions
-- Better ways to automatically deal with caller/heap-allocated memory (strings, etc.)
-- PowerPC (POWER9+) port
+- Provide better ways to automatically deal with caller/heap-allocated memory (strings, etc.)
+- Port Koffi to PowerPC (POWER9+) ABI
