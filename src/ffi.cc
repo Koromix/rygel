@@ -168,6 +168,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     type->primitive = PrimitiveKind::Record;
     type->align = 1;
 
+    HashSet<const char *> members;
+
     for (uint32_t i = 0; i < keys.Length(); i++) {
         RecordMember member = {};
 
@@ -187,6 +189,11 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
         type->size = (int16_t)(AlignLen(type->size, member.align) + member.type->size);
         type->align = std::max(type->align, member.align);
+
+        if (!members.TrySet(member.name).second) {
+            ThrowError<Napi::Error>(env, "Duplicate member '%1' in struct '%2'", member.name, type->name);
+            return env.Null();
+        }
 
         type->members.Append(member);
     }
