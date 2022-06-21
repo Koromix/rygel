@@ -50,3 +50,5 @@ myst_enable_extensions = [
 myst_heading_anchors = 3
 
 myst_linkify_fuzzy_links = False
+
+myst_number_code_blocks = ['c', 'js']
