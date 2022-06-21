@@ -142,13 +142,182 @@ Many C libraries use some kind of object-oriented API, with a pair of functions 
 
 In Koffi, you can manage this with opaque handles. Declare the handle type with `koffi.handle(name)`, and use this type either as a return type or some kind of [output parameter](functions.md#output-parameters) (with a pointer to the handle).
 
-The example below uses libc functions and the Win32 API to illustrate both use cases.
+The full example below implements an iterative string builder (concatenator) in C, and uses it from Javascript to output a mix of Hello World and FizzBuzz. The builder is hidden behind an opaque handle, and is created and destroyed using a pair of C functions: `ConcatNew` (or `ConcatNewOut`) and `ConcatFree`.
 
-XXX
+```c
+// Build with: clang -fPIC -o handles.so -shared handles.c -Wall -O2
+
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+
+typedef struct Fragment {
+    struct Fragment *next;
+
+    size_t len;
+    char str[];
+} Fragment;
+
+typedef struct Concat {
+    Fragment *first;
+    Fragment *last;
+
+    size_t total;
+} Concat;
+
+bool ConcatNewOut(Concat **out)
+{
+    Concat *c = malloc(sizeof(*c));
+    if (!c) {
+        fprintf(stderr, "Failed to allocate memory: %s\n", strerror(errno));
+        return false;
+    }
+
+    c->first = NULL;
+    c->last = NULL;
+    c->total = 0;
+
+    *out = c;
+    return true;
+}
+
+Concat *ConcatNew()
+{
+    Concat *c = NULL;
+    ConcatNewOut(&c);
+    return c;
+}
+
+void ConcatFree(Concat *c)
+{
+    if (!c)
+        return;
+
+    Fragment *f = c->first;
+
+    while (f) {
+        Fragment *next = f->next;
+        free(f);
+        f = next;
+    }
+
+    free(c);
+}
+
+bool ConcatAppend(Concat *c, const char *frag)
+{
+    size_t len = strlen(frag);
+
+    Fragment *f = malloc(sizeof(*f) + len + 1);
+    if (!f) {
+        fprintf(stderr, "Failed to allocate memory: %s\n", strerror(errno));
+        return false;
+    }
+
+    f->next = NULL;
+    if (c->last) {
+        c->last->next = f;
+    } else {
+        c->first = f;
+    }
+    c->last = f;
+    c->total += len;
+
+    f->len = len;
+    memcpy(f->str, frag, len);
+    f->str[len] = 0;
+
+    return true;
+}
+
+const char *ConcatBuild(Concat *c)
+{
+    Fragment *r = malloc(sizeof(*r) + c->total + 1);
+    if (!r) {
+        fprintf(stderr, "Failed to allocate memory: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    r->next = NULL;
+    r->len = 0;
+
+    Fragment *f = c->first;
+
+    while (f) {
+        Fragment *next = f->next;
+
+        memcpy(r->str + r->len, f->str, f->len);
+        r->len += f->len;
+
+        free(f);
+        f = next;
+    }
+    r->str[r->len] = 0;
+
+    c->first = r;
+    c->last = r;
+
+    return r->str;
+}
+```
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('./handles.so');
+
+const Concat = koffi.handle('Concat');
+const ConcatNewOut = lib.func('bool ConcatNewOut(Concat *out)');
+const ConcatNew = lib.func('Concat ConcatNew()');
+const ConcatFree = lib.func('void ConcatFree(Concat c)');
+const ConcatAppend = lib.func('bool ConcatAppend(Concat c, const char *frag)');
+const ConcatBuild = lib.func('const char *ConcatBuild(Concat c)');
+
+let c = ConcatNew();
+if (!c) {
+    // This is stupid, it does the same, but try both versions (return value, output parameter)
+    if (!ConcatNewOut(c))
+        throw new Error('Allocation failure');
+}
+
+try {
+    if (!ConcatAppend(c, 'Hello... '))
+        throw new Error('Allocation failure');
+    if (!ConcatAppend(c, 'World!\n'))
+        throw new Error('Allocation failure');
+
+    for (let i = 1; i <= 30; i++) {
+        let frag;
+        if (i % 15 == 0) {
+            frag = 'FizzBuzz';
+        } else if (i % 5 == 0) {
+            frag = 'Buzz';
+        } else if (i % 3 == 0) {
+            frag = 'Fizz';
+        } else {
+            frag = String(i);
+        }
+
+        if (!ConcatAppend(c, frag))
+            throw new Error('Allocation failure');
+        if (!ConcatAppend(c, ' '))
+            throw new Error('Allocation failure');
+    }
+
+    let str = ConcatBuild(c);
+    if (str == null)
+        throw new Error('Allocation failure');
+    console.log(str);
+} finally {
+    ConcatFree(c);
+}
+```
 
 ### Array pointers
 
-
+```js
+```
 
 ### Pointers to primitive types
 
