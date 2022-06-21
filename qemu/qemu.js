@@ -239,7 +239,7 @@ async function start(detach = true) {
             let filename = dirname + '/VERSION';
             let version = fs.existsSync(filename) ? parseInt(fs.readFileSync(filename).toString(), 10) : 0;
 
-            if (version != machine.info.version) {
+            if (version != machine.qemu.version) {
                 log(machine, 'Download newer machine', chalk.bold.gray('[ignore]'));
 
                 ignore.add(machine);
@@ -286,8 +286,8 @@ async function pack() {
         for (let suite in machine.builds) {
             let build = machine.builds[suite];
 
-            let platform = build.platform || machine.info.platform;
-            let arch = build.arch || machine.info.arch;
+            let platform = build.platform || machine.qemu.platform;
+            let arch = build.arch || machine.qemu.arch;
 
             let archive_filename = root_dir + `/koffi/build/qemu/${version}/koffi_${platform}_${arch}.tar.gz`;
 
@@ -369,8 +369,8 @@ async function pack() {
             await Promise.all(Object.keys(machine.builds).map(async suite => {
                 let build = machine.builds[suite];
 
-                let platform = build.platform || machine.info.platform;
-                let arch = build.arch || machine.info.arch;
+                let platform = build.platform || machine.qemu.platform;
+                let arch = build.arch || machine.qemu.arch;
 
                 let src_dir = build.directory + '/koffi/build';
                 let dest_dir = build_dir + `/${version}/koffi_${platform}_${arch}`;
@@ -570,7 +570,7 @@ async function stop(all = true) {
                 machine.ssh.connection.on('end', resolve);
                 wait(60000).then(() => { reject(new Error('Timeout')) });
 
-                exec_remote(machine, machine.info.shutdown);
+                exec_remote(machine, machine.qemu.shutdown);
             });
 
             log(machine, 'Stop', chalk.bold.green('[ok]'));
@@ -586,10 +586,10 @@ async function stop(all = true) {
 async function info() {
     for (let machine of machines) {
         console.log(`>> ${machine.name} (${machine.key})`);
-        console.log(`  - SSH port: ${machine.info.ssh_port}`);
-        console.log(`  - VNC port: ${machine.info.vnc_port}`);
-        console.log(`  - Username: ${machine.info.username}`);
-        console.log(`  - Password: ${machine.info.password}`);
+        console.log(`  - SSH port: ${machine.qemu.ssh_port}`);
+        console.log(`  - VNC port: ${machine.qemu.vnc_port}`);
+        console.log(`  - Username: ${machine.qemu.username}`);
+        console.log(`  - Password: ${machine.qemu.password}`);
     }
 }
 
@@ -602,10 +602,10 @@ async function ssh() {
     let machine = machines[0];
 
     let args = [
-        '-p' + machine.info.password,
+        '-p' + machine.qemu.password,
         'ssh', '-o', 'StrictHostKeyChecking=no',
                '-o', 'UserKnownHostsFile=' + (process.platform == 'win32' ? '\\\\.\\NUL' : '/dev/null'),
-               '-p', machine.info.ssh_port, machine.info.username + '@127.0.0.1'
+               '-p', machine.qemu.ssh_port, machine.qemu.username + '@127.0.0.1'
     ];
 
     let proc = spawnSync('sshpass', args, { stdio: 'inherit' });
@@ -753,9 +753,9 @@ async function join(machine, tries) {
         try {
             await ssh.connect({
                 host: '127.0.0.1',
-                port: machine.info.ssh_port,
-                username: machine.info.username,
-                password: machine.info.password,
+                port: machine.qemu.ssh_port,
+                username: machine.qemu.username,
+                password: machine.qemu.password,
                 tryKeyboard: true
             });
 
@@ -790,7 +790,7 @@ function log(machine, action, status) {
 
 async function exec_remote(machine, cmd, cwd = null) {
     try {
-        if (machine.info.platform == 'win32') {
+        if (machine.qemu.platform == 'win32') {
             if (cwd != null) {
                 cwd = cwd.replaceAll('/', '\\');
                 cmd = `cd "${cwd}" && ${cmd}`;
