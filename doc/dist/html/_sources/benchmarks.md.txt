@@ -69,21 +69,17 @@ atoi_node_ffi | 20000000   | 479.34s     | x161
 
 ## Raylib results
 
-This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:
-
-- Baseline: Full C++ version of the code (no JS)
-- node-raylib: This is a native wrapper implemented with N-API
+This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, the baseline is a full C++ version of the code.
 
 ### Linux x86_64
 
 The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):
 
-Benchmark          | Iterations | Total time  | Overhead
----------------    | ---------- | ----------- | ----------
-raylib_cc          | 100        | 9.31s       | (baseline)
-raylib_node_raylib | 100        | 10.90s      | x1.17
-raylib_koffi       | 100        | 12.86s      | x1.38
-raylib_node_ffi    | 100        | 35.76s      | x3.84
+Benchmark       | Iterations | Total time  | Overhead
+--------------- | ---------- | ----------- | ----------
+raylib_cc       | 100        | 9.31s       | (baseline)
+raylib_koffi    | 100        | 12.86s      | x1.38
+raylib_node_ffi | 100        | 35.76s      | x3.84
 
 ### Windows x86_64
 
