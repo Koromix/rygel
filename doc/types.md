@@ -316,7 +316,107 @@ try {
 
 ### Array pointers
 
+In C, dynamically-sized arrays are usually passed around as pointers. The length is either passed as an additional argument, or inferred from the array content itself, for example with a terminating sentinel value (such as a NULL pointers in the case of an array of strings).
+
+Koffi can translate JS arrays and TypedArrays to pointer arguments. However, because C does not have a proper notion of dynamically-sized arrays (fat pointers), you need to provide the length or the sentinel value yourself depending on the API.
+
+Here is a simple example of a C function taking a NULL-terminated list of strings as input, to calculate the total length of all strings.
+
+```c
+// Build with: clang -fPIC -o length.so -shared length.c -Wall -O2
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+
+int64_t ComputeTotalLength(const char **strings)
+{
+    int64_t total = 0;
+
+    for (const char **ptr = strings; *ptr; ptr++) {
+        const char *str = *ptr;
+        total += strlen(str);
+    }
+
+    return total;
+}
+```
+
 ```js
+const koffi = require('koffi');
+const lib = koffi.load('./length.so');
+
+const ComputeTotalLength = lib.func('int64_t ComputeTotalLength(const char **strings)');
+
+let strings = ['Get', 'Total', 'Length', null];
+let total = ComputeTotalLength(strings);
+
+console.log(total); // Prints 14n (big int)
+```
+
+By default, just like for objects, array arguments are copied from JS to C but not vice-versa. You can however change the direction as documented in the section on [output parameters](functions.md#output-parameters).
+
+Here is an example based on the Win32 API, listing files in the current directory with `FindFirstFileW()` and `FindNextFileW()`:
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('kernel32.dll');
+
+const HANDLE = koffi.handle('HANDLE');
+const FILETIME = koffi.struct('FILETIME', {
+    dwLowDateTime: 'uint',
+    dwHighDateTime: 'uint'
+});
+const WIN32_FIND_DATA = koffi.struct('WIN32_FIND_DATA', {
+    dwFileAttributes: 'uint',
+    ftCreationTime: FILETIME,
+    ftLastAccessTime: FILETIME,
+    ftLastWriteTime: FILETIME,
+    nFileSizeHigh: 'uint',
+    nFileSizeLow: 'uint',
+    dwReserved0: 'uint',
+    dwReserved1: 'uint',
+    cFileName: koffi.array('char16', 260),
+    cAlternateFileName: koffi.array('char16', 14),
+    dwFileType: 'uint', // Obsolete. Do not use.
+    dwCreatorType: 'uint', // Obsolete. Do not use
+    wFinderFlags: 'ushort' // Obsolete. Do not use
+});
+
+const FindFirstFile = lib.func('HANDLE __stdcall FindFirstFileW(string16 path, _Out_ WIN32_FIND_DATA *data)');
+const FindNextFile = lib.func('bool __stdcall FindNextFileW(HANDLE h, _Out_ WIN32_FIND_DATA *data)');
+const FindClose = lib.func('bool __stdcall FindClose(HANDLE h)');
+const GetLastError = lib.func('uint GetLastError()');
+
+function list(dirname) {
+    let filenames = [];
+
+    let data = {};
+    let h = FindFirstFile(dirname + '\\*', data);
+
+    if (!h) {
+        if (GetLastError() == 2) // ERROR_FILE_NOT_FOUND
+            return filenames;
+        throw new Error('FindFirstFile() failed');
+    }
+
+    try {
+        do {
+            if (data.cFileName != '.' && data.cFileName != '..')
+                filenames.push(data.cFileName);
+        } while (FindNextFile(h, data));
+
+        if (GetLastError() != 18) // ERROR_NO_MORE_FILES
+            throw new Error('FindNextFile() failed');
+    } finally {
+        FindClose(h);
+    }
+
+    return filenames;
+}
+
+let filenames = list('.');
+console.log(filenames);
 ```
 
 ### Pointers to primitive types
