@@ -801,11 +801,11 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
             } break;
             case PrimitiveKind::String: {
                 const char *str = *(const char **)src;
-                obj.Set(member.name, Napi::String::New(env, str));
+                obj.Set(member.name, str ? Napi::String::New(env, str) : env.Null());
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16 = *(const char16_t **)src;
-                obj.Set(member.name, Napi::String::New(env, str16));
+                obj.Set(member.name, str16 ? Napi::String::New(env, str16) : env.Null());
             } break;
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
@@ -918,13 +918,13 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
         case PrimitiveKind::String: {
             POP_ARRAY({
                 const char *str = *(const char **)src;
-                array.Set(i, Napi::String::New(env, str));
+                array.Set(i, str ? Napi::String::New(env, str) : env.Null());
             });
         } break;
         case PrimitiveKind::String16: {
             POP_ARRAY({
                 const char16_t *str16 = *(const char16_t **)src;
-                array.Set(i, Napi::String::New(env, str16));
+                array.Set(i, str16 ? Napi::String::New(env, str16) : env.Null());
             });
         } break;
         case PrimitiveKind::Pointer:
@@ -1082,13 +1082,13 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
         case PrimitiveKind::String: {
             POP_ARRAY({
                 const char *str = *(const char **)src;
-                array.Set(i, Napi::String::New(env, str));
+                array.Set(i, str ? Napi::String::New(env, str) : env.Null());
             });
         } break;
         case PrimitiveKind::String16: {
             POP_ARRAY({
                 const char16_t *str16 = *(const char16_t **)src;
-                array.Set(i, Napi::String::New(env, str16));
+                array.Set(i, str16 ? Napi::String::New(env, str16) : env.Null());
             });
         } break;
         case PrimitiveKind::Pointer:

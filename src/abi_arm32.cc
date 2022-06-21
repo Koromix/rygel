@@ -505,8 +505,8 @@ Napi::Value CallData::Complete()
         case PrimitiveKind::UInt32: return Napi::Number::New(env, (double)result.u32);
         case PrimitiveKind::Int64: return Napi::BigInt::New(env, (int64_t)result.u64);
         case PrimitiveKind::UInt64: return Napi::BigInt::New(env, result.u64);
-        case PrimitiveKind::String: return Napi::String::New(env, (const char *)result.ptr);
-        case PrimitiveKind::String16: return Napi::String::New(env, (const char16_t *)result.ptr);
+        case PrimitiveKind::String: return result.ptr ? Napi::String::New(env, (const char *)result.ptr) : env.Null();
+        case PrimitiveKind::String16: return result.ptr ? Napi::String::New(env, (const char16_t *)result.ptr) : env.Null();
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
             if (result.ptr) {
@@ -618,13 +618,13 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             case PrimitiveKind::String: {
                 const char *str = *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = Napi::String::New(env, str);
+                Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16 = *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = Napi::String::New(env, str16);
+                Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Pointer:
