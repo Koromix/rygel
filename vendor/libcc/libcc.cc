@@ -20,7 +20,7 @@
     #include "vendor/brotli/c/include/brotli/decode.h"
     #include "vendor/brotli/c/include/brotli/encode.h"
 #endif
-#if __has_include("vendor/dragonbox/include/dragonbox/dragonbox.h")
+#if __has_include("vendor/dragonbox/include/dragonbox/dragonbox.h") && __cplusplus >= 201703L
     #include "vendor/dragonbox/include/dragonbox/dragonbox.h"
 #endif
 
@@ -3744,8 +3744,8 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 static const pthread_t main_thread = pthread_self();
 #endif
-static std::atomic_bool flag_interrupt = false;
-static std::atomic_bool explicit_interrupt = false;
+static std::atomic_bool flag_interrupt {false};
+static std::atomic_bool explicit_interrupt {false};
 static int interrupt_pfd[2] = {-1, -1};
 
 void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev)
@@ -4168,7 +4168,7 @@ void WaitDelay(int64_t delay)
 
 WaitForResult WaitForInterrupt(int64_t timeout)
 {
-    static std::atomic_bool message = false;
+    static std::atomic_bool message {false};
 
     flag_interrupt = true;
     SetSignalHandler(SIGUSR1, [](int) { message = true; });

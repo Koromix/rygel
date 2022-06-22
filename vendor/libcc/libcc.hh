@@ -1204,7 +1204,11 @@ public:
     {
         RemoveFrom(0);
         Grow(other.capacity);
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             for (Size i = 0; i < other.len; i++) {
                 ptr[i] = other.ptr[i];
             }
@@ -1308,7 +1312,11 @@ public:
         Grow(count);
 
         T *first = ptr + len;
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             for (Size i = 0; i < count; i++) {
                 new (ptr + len) T();
                 len++;
@@ -1325,7 +1333,11 @@ public:
         Grow();
 
         T *first = ptr + len;
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             new (ptr + len) T;
         }
         ptr[len++] = value;
@@ -1337,7 +1349,11 @@ public:
 
         T *first = ptr + len;
         for (const T &value: values) {
+#if __cplusplus >= 201703L
             if constexpr(!std::is_trivial<T>::value) {
+#else
+            if (true) {
+#endif
                 new (ptr + len) T;
             }
             ptr[len++] = value;
@@ -1349,7 +1365,11 @@ public:
     {
         RG_ASSERT(first >= 0 && first <= len);
 
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             for (Size i = first; i < len; i++) {
                 ptr[i].~T();
             }
@@ -1655,7 +1675,11 @@ private:
     void DeleteValues([[maybe_unused]] iterator_type begin,
                       [[maybe_unused]] iterator_type end)
     {
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             for (iterator_type it = begin; it != end; ++it) {
                 it->~T();
             }
@@ -1932,7 +1956,11 @@ public:
     }
     ~HashTable()
     {
+#if __cplusplus >= 201703L
         if constexpr(std::is_trivial<ValueType>::value) {
+#else
+        if (false) {
+#endif
             count = 0;
             Rehash(0);
         } else {
@@ -2102,7 +2130,11 @@ private:
         { return (ValueType *)((const HashTable *)this)->Find(idx, key); }
     const ValueType *Find(Size *idx, const KeyType &key) const
     {
+#if __cplusplus >= 201703L
         if constexpr(std::is_pointer<ValueType>::value) {
+#else
+        if (false) {
+#endif
             while (data[*idx]) {
                 const KeyType &it_key = Handler::GetKey(data[*idx]);
                 if (Handler::TestKeys(it_key, key))
