@@ -79,6 +79,7 @@ Build options:
         --rebuild                Perform clean step before build
 
         --prebuild <URL>         Set URL template to download prebuilt binaries
+        --require <PATH>         Require specified module, and drop prebuild if it fails
 
 Configure options:
         --version <VERSION>      Change node version

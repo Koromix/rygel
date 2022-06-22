@@ -43,6 +43,7 @@ let targets = [];
 let verbose = false;
 let rebuild = false;
 let prebuild = null;
+let prebuild_req = null;
 
 let cmake_bin = null;
 
@@ -131,6 +132,11 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 prebuild = value;
+            } else if (command == build && arg == '--require') {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                prebuild_req = value;
             } else if (command == build && arg[0] != '-') {
                 targets.push(arg);
             } else {
@@ -183,6 +189,7 @@ Build options:
         --rebuild                Perform clean step before build
 
         --prebuild <URL>         Set URL template to download prebuilt binaries
+        --require <PATH>         Require specified module, and drop prebuild if it fails
 
 Configure options:
         --version <VERSION>      Change node version
@@ -360,8 +367,6 @@ async function build() {
                     url = url.substr(1);
             }
 
-            console.log(url);
-
             if (url.match(/^[a-z]+:\/\//)) {
                 archive_filename = build_dir + '/' + basename;
                 await download(url, archive_filename);
@@ -372,9 +377,27 @@ async function build() {
             }
 
             console.log('>> Extracting prebuilt binaries...');
-            extract_targz(archive_filename, build_dir, 2);
+            await extract_targz(archive_filename, build_dir, 2);
 
-            return;
+            // Make sure the binary works
+            if (prebuild_req) {
+                let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', prebuild_req]);
+                if (proc.status === 0)
+                    return;
+            } else {
+                return;
+            }
+
+            // Clean it up if it does not, before source build. Only delete files, it is safer and it is enough!
+            let entries = fs.readdirSync(build_dir, { withFileTypes: true });
+            for (let entry of entries) {
+                if (!entry.isDirectory()) {
+                    let filename = path.join(build_dir, entry.name);
+                    fs.unlinkSync(filename);
+                }
+            }
+
+            console.error('Failed to load prebuilt binary, rebuilding from source');
         } catch (err) {
             console.error('Failed to find prebuilt binary for your platform, building manually');
         }
