@@ -1,3 +1,9 @@
+# Koffi 1.3.1
+
+## Main fixes
+
+- The prebuilt binary is tested when Koffi is installed, and a rebuild happens if it fails to laod
+
 # Koffi 1.3.0
 
 ## Major changes
