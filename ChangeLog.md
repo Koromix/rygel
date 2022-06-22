@@ -2,7 +2,7 @@
 
 ## Main fixes
 
-- The prebuilt binary is tested when Koffi is installed, and a rebuild happens if it fails to laod
+- The prebuilt binary is tested when Koffi is installed, and a rebuild happens if it fails to load
 
 # Koffi 1.3.0
 
