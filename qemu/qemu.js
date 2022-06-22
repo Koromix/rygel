@@ -123,13 +123,16 @@ async function main() {
             machine.key = key;
             machine.started = false;
 
-            machine.qemu.accelerate = null;
-            if (accelerate && (machine.qemu.binary == 'qemu-system-x86_64' ||
-                               machine.qemu.binary == 'qemu-system-i386')) {
-                if (process.platform == 'linux') {
-                    machine.qemu.accelerate = 'kvm';
-                } else if (process.platform == 'win32') {
-                    machine.qemu.accelerate = 'whpx';
+            if (machine.qemu != null) {
+                machine.qemu.accelerate = null;
+
+                if (accelerate && (machine.qemu.binary == 'qemu-system-x86_64' ||
+                                   machine.qemu.binary == 'qemu-system-i386')) {
+                    if (process.platform == 'linux') {
+                        machine.qemu.accelerate = 'kvm';
+                    } else if (process.platform == 'win32') {
+                        machine.qemu.accelerate = 'whpx';
+                    }
                 }
             }
         }
@@ -222,6 +225,12 @@ async function start(detach = true) {
     await Promise.all(machines.map(async machine => {
         if (ignore.has(machine))
             return;
+        if (machine.qemu == null) {
+            ignore.add(machine);
+            missing++;
+
+            return;
+        }
 
         let dirname = `qemu/${machine.key}`;
 
@@ -286,13 +295,13 @@ async function pack() {
         for (let suite in machine.builds) {
             let build = machine.builds[suite];
 
-            let platform = build.platform || machine.qemu.platform;
-            let arch = build.arch || machine.qemu.arch;
-
-            let archive_filename = root_dir + `/koffi/build/qemu/${version}/koffi_${platform}_${arch}.tar.gz`;
+            let archive_filename = root_dir + `/koffi/build/qemu/${version}/koffi_${machine.platform}_${build.arch}.tar.gz`;
 
             if (fs.existsSync(archive_filename)) {
                 log(machine, `${suite} > Status`, chalk.bold.green(`[ok]`));
+            } else if (machine.qemu == null) {
+                log(machine, `${suite} > Status`, chalk.bold.red(`[manual]`));
+                needed = true;
             } else {
                 log(machine, `${suite} > Status`, chalk.bold.red(`[build]`));
                 needed = true;
@@ -369,11 +378,8 @@ async function pack() {
             await Promise.all(Object.keys(machine.builds).map(async suite => {
                 let build = machine.builds[suite];
 
-                let platform = build.platform || machine.qemu.platform;
-                let arch = build.arch || machine.qemu.arch;
-
                 let src_dir = build.directory + '/koffi/build';
-                let dest_dir = build_dir + `/${version}/koffi_${platform}_${arch}`;
+                let dest_dir = build_dir + `/${version}/koffi_${machine.platform}_${build.arch}`;
                 let dest_filename = dest_dir + '.tar.gz';
 
                 unlink_recursive(dest_dir + '/build');
@@ -547,6 +553,8 @@ async function stop(all = true) {
     await Promise.all(machines.map(async machine => {
         if (ignore.has(machine))
             return;
+        if (machine.qemu == null)
+            return;
         if (!machine.started && !all)
             return;
 
@@ -585,6 +593,9 @@ async function stop(all = true) {
 
 async function info() {
     for (let machine of machines) {
+        if (machine.qemu == null)
+            continue;
+
         console.log(`>> ${machine.name} (${machine.key})`);
         console.log(`  - SSH port: ${machine.qemu.ssh_port}`);
         console.log(`  - VNC port: ${machine.qemu.vnc_port}`);
@@ -624,6 +635,9 @@ async function reset() {
 
     console.log('>> Restoring snapshots...')
     await Promise.all(machines.map(machine => {
+        if (machine.qemu == null)
+            return;
+
         let dirname = `qemu/${machine.key}`;
         let disk = dirname + '/disk.qcow2';
 
@@ -790,7 +804,7 @@ function log(machine, action, status) {
 
 async function exec_remote(machine, cmd, cwd = null) {
     try {
-        if (machine.qemu.platform == 'win32') {
+        if (machine.platform == 'win32') {
             if (cwd != null) {
                 cwd = cwd.replaceAll('/', '\\');
                 cmd = `cd "${cwd}" && ${cmd}`;
