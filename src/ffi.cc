@@ -102,6 +102,8 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
                 if (!ChangeMemorySize(value, &instance->async_heap_size))
                     return env.Null();
             } else if (key == "resident_async_pools") {
+                RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(instance->memories.data));
+
                 if (!value.IsNumber()) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for resident_async_pools, expected number");
                     return env.Null();
@@ -114,7 +116,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(instance->memories.data));
+                instance->resident_async_pools = n;
             } else {
                 ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
                 return env.Null();
