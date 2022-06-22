@@ -35,13 +35,15 @@
 .global SYMBOL(ForwardCallXGD)
 .global SYMBOL(ForwardCallXDD)
 
+#define ENDBR64 .byte 0xf3, 0x0f, 0x1e, 0xfa
+
 # Copy function pointer to R11, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
 # Save RSP in RBX (non-volatile), and use carefully assembled stack provided by caller.
 .macro prologue
     .cfi_startproc
     .cfi_def_cfa rsp, 8
-    endbr64
+    ENDBR64
     movq %rdi, %r11
     pushq %rbx
     .cfi_def_cfa rsp, 16
@@ -196,7 +198,7 @@ SYMBOL(ForwardCallXDD):
 .macro trampoline id
     .cfi_startproc
     .cfi_def_cfa rsp, 8
-    endbr64
+    ENDBR64
     subq $152, %rsp
     .cfi_def_cfa rsp, 160
     movq %rdi, 0(%rsp)
@@ -222,7 +224,7 @@ SYMBOL(ForwardCallXDD):
 .macro trampoline_xmm id
     .cfi_startproc
     .cfi_def_cfa rsp, 8
-    endbr64
+    ENDBR64
     subq $152, %rsp
     .cfi_def_cfa rsp, 160
     movq %rdi, 0(%rsp)
@@ -328,7 +330,7 @@ SYMBOL(TrampolineX15):
 SYMBOL(CallSwitchStack):
     .cfi_startproc
     .cfi_def_cfa rsp, 8
-    endbr64
+    ENDBR64
     push %rbx
     .cfi_def_cfa rsp, 16
     movq %rsp, %rbx

@@ -18,13 +18,15 @@
 .global ForwardCallRF
 .global ForwardCallRD
 
+#define ENDBR32 .byte 0xf3, 0x0f, 0x1e, 0xfb
+
 # Copy function pointer to EAX, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
 # Save ESP in EBX (non-volatile), and use carefully assembled stack provided by caller.
 .macro prologue
     .cfi_startproc
     .cfi_def_cfa esp, 4
-    endbr32
+    ENDBR32
     push %ebx
     .cfi_def_cfa esp, 8
     movl %esp, %ebx
@@ -125,7 +127,7 @@ ForwardCallRD:
 .macro trampoline id
     .cfi_startproc
     .cfi_def_cfa esp, 4
-    endbr32
+    ENDBR32
     sub $44, %esp
     .cfi_def_cfa esp, 48
     movl $\id, 0(%esp)
@@ -153,7 +155,7 @@ ForwardCallRD:
 .macro trampoline_x87 id
     .cfi_startproc
     .cfi_def_cfa esp, 4
-    endbr32
+    ENDBR32
     sub $44, %esp
     .cfi_def_cfa esp, 48
     movl $\id, 0(%esp)
@@ -260,7 +262,7 @@ TrampolineX15:
 CallSwitchStack:
     .cfi_startproc
     .cfi_def_cfa esp, 4
-    endbr32
+    ENDBR32
     push %ebx
     .cfi_def_cfa esp, 8
     movl %esp, %ebx
