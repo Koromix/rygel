@@ -20,6 +20,11 @@
 # Forward
 # ----------------------------
 
+#ifdef __APPLE__
+# Fix "arm64 function not 4-byte aligned" linker warnings
+.p2align 2
+#endif
+
 # These three are the same, but they differ (in the C side) by their return type.
 # Unlike the three next functions, these ones don't forward XMM argument registers.
 .global SYMBOL(ForwardCallGG)
