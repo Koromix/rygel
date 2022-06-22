@@ -211,7 +211,11 @@ SYMBOL(ForwardCallXDD):
     movq %rsp, %rsi
     leaq 160(%rsp), %rdx
     leaq 112(%rsp), %rcx
+#ifdef __linux__
+    call *RelayCallback@GOTPCREL(%rip)
+#else
     call SYMBOL(RelayCallback)
+#endif
     movq 112(%rsp), %rax
     movq 120(%rsp), %rdx
     addq $152, %rsp
@@ -245,7 +249,11 @@ SYMBOL(ForwardCallXDD):
     movq %rsp, %rsi
     leaq 160(%rsp), %rdx
     leaq 112(%rsp), %rcx
+#ifdef __linux__
+    call *RelayCallback@GOTPCREL(%rip)
+#else
     call SYMBOL(RelayCallback)
+#endif
     movq 112(%rsp), %rax
     movq 120(%rsp), %rdx
     movsd 128(%rsp), %xmm0
