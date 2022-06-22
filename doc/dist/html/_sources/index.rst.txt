@@ -1,5 +1,5 @@
-Koffi
-=====
+Koffi |version|
+===============
 
 Overview
 --------
