@@ -11,12 +11,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.6)
 project(koffi C CXX ASM)
 
 find_package(CNoke)
 
-set(CMAKE_CXX_STANDARD 17)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.8.0")
+    set(CMAKE_CXX_STANDARD 17)
+else()
+    set(CMAKE_CXX_STANDARD 14)
+endif()
 if(MSVC)
     add_compile_options(/W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201 /wd4324)
 
