@@ -249,7 +249,7 @@ async function start(detach = true) {
             let version = fs.existsSync(filename) ? parseInt(fs.readFileSync(filename).toString(), 10) : 0;
 
             if (version != machine.qemu.version) {
-                log(machine, 'Download newer machine', chalk.bold.gray('[ignore]'));
+                log(machine, 'Machine version mismatch', chalk.bold.gray('[ignore]'));
 
                 ignore.add(machine);
                 missing++;
