@@ -19,7 +19,7 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "src/index.js",
   "scripts": {
-    "install": "cnoke --prebuild build/qemu/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz",
+    "install": "cnoke --prebuild build/qemu/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz --require ./build/koffi.node",
     "test": "node qemu/qemu.js",
     "prepublishOnly": "node qemu/qemu.js pack"
   },
