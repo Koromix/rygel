@@ -116,7 +116,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
                     return env.Null();
                 }
 
-                instance->resident_async_pools = n;
+                instance->resident_async_pools = (int)n;
             } else {
                 ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
                 return env.Null();
