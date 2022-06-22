@@ -248,7 +248,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Pointer: {
                 if (CheckValueTag(instance, value, member.type)) {
-                    Napi::External external = value.As<Napi::External<void>>();
+                    Napi::External<void> external = value.As<Napi::External<void>>();
                     void *ptr = external.Data();
                     *(void **)dest = ptr;
                 } else if (IsNullOrUndefined(value)) {
@@ -317,7 +317,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     if (RG_UNLIKELY(!ptr))
                         return false;
                 } else if (CheckValueTag(instance, value, member.type)) {
-                    Napi::External external = value.As<Napi::External<void>>();
+                    Napi::External<void> external = value.As<Napi::External<void>>();
                     ptr = external.Data();
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
@@ -452,7 +452,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
         case PrimitiveKind::Pointer: {
             PUSH_ARRAY(CheckValueTag(instance, value, ref) || IsNullOrUndefined(value), ref->name, {
                 if (!IsNullOrUndefined(value)) {
-                    Napi::External external = value.As<Napi::External<void>>();
+                    Napi::External<void> external = value.As<Napi::External<void>>();
                     *(void **)dest = external.Data();
                 } else {
                     *(void **)dest = nullptr;
@@ -528,7 +528,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                     if (RG_UNLIKELY(!ptr))
                         return false;
                 } else if (CheckValueTag(instance, value, ref)) {
-                    Napi::External external = value.As<Napi::External<void>>();
+                    Napi::External<void> external = value.As<Napi::External<void>>();
                     ptr = external.Data();
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
