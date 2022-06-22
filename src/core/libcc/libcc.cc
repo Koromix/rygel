@@ -81,6 +81,9 @@
 
     extern char **environ;
 #endif
+#ifdef __linux__
+    #include <sys/syscall.h>
+#endif
 #ifdef __APPLE__
     #include <sys/random.h>
     #include <mach-o/dyld.h>
@@ -4755,8 +4758,17 @@ void FillRandomSafe(void *out_buf, Size len)
         struct { uint32_t key[8]; uint32_t iv[2]; } buf;
 
         memset(rnd_state, 0, RG_SIZE(rnd_state));
-#ifdef _WIN32
+#if defined(_WIN32)
         RG_CRITICAL(RtlGenRandom(&buf, RG_SIZE(buf)), "RtlGenRandom() failed: %s", GetWin32ErrorString());
+#elif defined(__linux__)
+        {
+restart:
+            int ret = syscall(SYS_getrandom, &buf, RG_SIZE(buf), 0);
+            RG_CRITICAL(ret >= 0, "getentropy() failed: %s", strerror(errno));
+
+            if (ret < RG_SIZE(buf))
+                goto restart;
+        }
 #else
         RG_CRITICAL(getentropy(&buf, RG_SIZE(buf)) == 0, "getentropy() failed: %s", strerror(errno));
 #endif
