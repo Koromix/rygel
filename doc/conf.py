@@ -3,8 +3,8 @@
 project = 'Koffi'
 copyright = '2022, Niels Martignène'
 author = 'Niels Martignène'
-version = '1.3.1'
-revision = '1.3.1'
+version = '1.3.2'
+revision = '1.3.2'
 
 # -- General configuration ---------------------------------------------------
 

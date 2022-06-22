@@ -1,3 +1,10 @@
+# Koffi 1.3.2
+
+## Main fixes
+
+- Support compilation in C++14 mode (graceful degradation)
+- Support older toolchains on Linux (tested on Debian 9)
+
 # Koffi 1.3.1
 
 ## Main fixes
