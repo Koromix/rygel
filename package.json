@@ -56,6 +56,7 @@
     "vendor",
     "LICENSE.txt",
     "README.md",
+    "ChangeLog.md",
     "CMakeLists.txt",
     "build/qemu/*/*.tar.gz"
   ]
