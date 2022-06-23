@@ -14,6 +14,12 @@
 cmake_minimum_required(VERSION 3.6)
 project(koffi C CXX ASM)
 
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.9.0")
+    cmake_policy(SET CMP0069 NEW)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT USE_LTO)
+endif()
+
 find_package(CNoke)
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.8.0")
@@ -105,4 +111,7 @@ if(WIN32)
 endif()
 if(NOT MSVC)
     target_compile_options(koffi PRIVATE -fno-exceptions -fno-strict-aliasing)
+endif()
+if(USE_LTO)
+    set_target_properties(koffi PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
