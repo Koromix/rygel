@@ -182,6 +182,12 @@ nginx_domains:
           expires 1h;
           add_header Cache-Control "public, no-transform";
 
+          gzip on;
+          gzip_vary on;
+          gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml;
+          gzip_proxied no-cache no-store private expired auth;
+          gzip_min_length 1000;
+
           location /_static/ {
               expires 1d;
           }
