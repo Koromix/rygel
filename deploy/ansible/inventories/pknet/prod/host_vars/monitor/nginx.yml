@@ -178,4 +178,11 @@ nginx_domains:
           try_files $uri $uri/ =404;
 
           root /opt/static/live/koffi.dev/www;
+
+          expires 1h;
+          add_header Cache-Control "public, no-transform";
+
+          location /_static/ {
+              expires 1d;
+          }
       }
