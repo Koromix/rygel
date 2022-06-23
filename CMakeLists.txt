@@ -51,6 +51,12 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         if(WIN32)
             get_filename_component(cl_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
             file(TO_CMAKE_PATH "${cl_dir}/armasm64.exe" asm_compiler)
+
+            # Work around missing ARM64-native ARMASM64 compiler (at least in VS 17.3 Preview 2)
+            if(NOT EXISTS "${asm_compiler}")
+                file(TO_CMAKE_PATH "${cl_dir}/../../Hostx64/arm64/armasm64.exe" asm_compiler)
+            endif()
+
             message(STATUS "Using ARMASM64 compiler: ${asm_compiler}")
 
             file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/abi_arm64_fwd.asm" asm_source)
