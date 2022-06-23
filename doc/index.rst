@@ -24,6 +24,7 @@ Table of contents
    memory
    benchmarks
    contribute
+   changes
 
 License
 -------

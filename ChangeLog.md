@@ -1,24 +1,26 @@
-# Koffi 1.3.2
+# Changelog
 
-## Main fixes
+## Koffi 1.3.2
+
+**Main fixes:**
 
 - Support compilation in C++14 mode (graceful degradation)
 - Support older toolchains on Linux (tested on Debian 9)
 
-# Koffi 1.3.1
+## Koffi 1.3.1
 
-## Main fixes
+**Main fixes:**
 
 - The prebuilt binary is tested when Koffi is installed, and a rebuild happens if it fails to load
 
-# Koffi 1.3.0
+## Koffi 1.3.0
 
-## Major changes
+**Major changes:**
 
 - Expand and move documentation to https://koffi.dev/
 - Support JS arrays and TypedArrays for pointer arguments (input, output and mixed)
 
-## Other changes
+**Other changes:**
 
 - Convert NULL string pointers to null instead of crashing (return values, struct and array members, callbacks)
 - Default to 'string' array hint for char, char16 and char16_t arrays
@@ -27,23 +29,23 @@
 - Detect floating-point ABI before using prebuilt binaries (ARM32, RISC-V)
 - Forbid duplicate member names in struct types
 
-# Koffi 1.2.4
+## Koffi 1.2.4
 
-## New features
+**New features:**
 
 - Windows ARM64 is now supported
 
-# Koffi 1.2.3
+## Koffi 1.2.3
 
-## New features
+**New features:**
 
 - A prebuilt binary for macOS ARM64 (M1) is now included
 
-# Koffi 1.2.1
+## Koffi 1.2.1
 
 This entry documents changes since version 1.1.0.
 
-## New features
+**New features:**
 
 - JS functions can be used as C callbacks (cdecl, stdcall) on all platforms
 - RISC-V 64 LP64D ABI is supported (LP64 is untested)
@@ -51,7 +53,7 @@ This entry documents changes since version 1.1.0.
 - Transparent conversion between C buffers and strings
 - Tentative support for Windows ARM64 (untested)
 
-## Main fixes
+**Main fixes:**
 
 - Fix excessive stack alignment of structs on x86 platforms
 - Fix potential problems with big int64_t/uint64_t values
