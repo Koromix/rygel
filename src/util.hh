@@ -89,7 +89,7 @@ static inline bool IsObject(Napi::Value value)
 int GetTypedArrayType(const TypeInfo *type);
 
 template <typename T>
-T CopyNumber(const Napi::Value &value)
+T CopyNumber(Napi::Value value)
 {
     RG_ASSERT(value.IsNumber() || value.IsBigInt());
 
