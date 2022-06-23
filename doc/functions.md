@@ -78,6 +78,8 @@ console.log('Hello World!');
 // This program will print "Hello World!", and then "Result: 1257"
 ```
 
+These calls are executed by worker threads. It is **your responsibility to deal with data sharing issues** in the native code that may be caused by multi-threading.
+
 You can easily convert this callback-style async function to a promise-based version with `util.promisify()` from the Node.js standard library.
 
 Variadic functions cannot be called asynchronously.
