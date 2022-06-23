@@ -22,7 +22,7 @@ else()
     set(CMAKE_CXX_STANDARD 14)
 endif()
 if(MSVC)
-    add_compile_options(/W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201 /wd4324)
+    add_compile_options(/Zc:__cplusplus /W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201 /wd4324)
 
     # ASM_MASM does not (yet) work on Windows ARM64
     if(NOT CMAKE_GENERATOR_PLATFORM MATCHES "ARM64")
