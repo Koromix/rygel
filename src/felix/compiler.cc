@@ -1179,7 +1179,7 @@ public:
             case SourceType::C: { Fmt(&buf, "\"%1\" /nologo", cl); } break;
             case SourceType::CXX: {
                 const char *std = (features & (int)CompileFeature::Cxx17) ? "17" : "latest";
-                Fmt(&buf, "\"%1\" /nologo /std:c++%2", cl, std);
+                Fmt(&buf, "\"%1\" /nologo /std:c++%2 /Zc:__cplusplus", cl, std);
             } break;
         }
         if (dest_filename) {
