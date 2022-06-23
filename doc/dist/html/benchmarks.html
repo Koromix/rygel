@@ -208,8 +208,8 @@
 <p>Here is a quick overview of the execution time of Koffi calls on three test cases (one based around rand, one based on atoi and one based on Raylib) compared to theoretical ideal implementations.</p>
 <table style="margin: 0 auto;">
     <tr>
-        <td><a href="_static/perf_linux_20220623.png" target="_blank"><img src="_static/perf_linux_20220623.png" alt="Linux performance" style="width: 350px;"/></a></td>
-        <td><a href="_static/perf_windows_20220623.png" target="_blank"><img src="_static/perf_windows_20220623.png" alt="Windows performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_linux_20220623_2.png" target="_blank"><img src="_static/perf_linux_20220623_2.png" alt="Linux performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_windows_20220623_2.png" target="_blank"><img src="_static/perf_windows_20220623_2.png" alt="Windows performance" style="width: 350px;"/></a></td>
     </tr>
 </table>
 <p>These results are detailed and explained below, and compared to node-ffi/node-ffi-napi.</p>
@@ -231,6 +231,7 @@
 <tr class="row-odd"><th class="head"><p>Benchmark</p></th>
 <th class="head"><p>Iterations</p></th>
 <th class="head"><p>Total time</p></th>
+<th class="head"><p>Relative performance</p></th>
 <th class="head"><p>Overhead</p></th>
 </tr>
 </thead>
@@ -239,16 +240,19 @@
 <td><p>20000000</p></td>
 <td><p>1.44s</p></td>
 <td><p>(baseline)</p></td>
+<td><p>(baseline)</p></td>
 </tr>
 <tr class="row-odd"><td><p>rand_koffi</p></td>
 <td><p>20000000</p></td>
 <td><p>2.60s</p></td>
-<td><p>x1.81</p></td>
+<td><p>x0.55</p></td>
+<td><p>+81%</p></td>
 </tr>
 <tr class="row-even"><td><p>rand_node_ffi</p></td>
 <td><p>20000000</p></td>
 <td><p>107.58s</p></td>
-<td><p>x75</p></td>
+<td><p>x0.01</p></td>
+<td><p>+7400%</p></td>
 </tr>
 </tbody>
 </table>
@@ -263,6 +267,7 @@
 <tr class="row-odd"><th class="head"><p>Benchmark</p></th>
 <th class="head"><p>Iterations</p></th>
 <th class="head"><p>Total time</p></th>
+<th class="head"><p>Relative performance</p></th>
 <th class="head"><p>Overhead</p></th>
 </tr>
 </thead>
@@ -271,16 +276,19 @@
 <td><p>20000000</p></td>
 <td><p>2.10s</p></td>
 <td><p>(baseline)</p></td>
+<td><p>(baseline)</p></td>
 </tr>
 <tr class="row-odd"><td><p>rand_koffi</p></td>
 <td><p>20000000</p></td>
 <td><p>3.87s</p></td>
-<td><p>x1.84</p></td>
+<td><p>x0.54</p></td>
+<td><p>+84%</p></td>
 </tr>
 <tr class="row-even"><td><p>rand_node_ffi</p></td>
 <td><p>20000000</p></td>
 <td><p>87.84s</p></td>
-<td><p>x42</p></td>
+<td><p>x0.02</p></td>
+<td><p>+4100%</p></td>
 </tr>
 </tbody>
 </table>
@@ -300,6 +308,7 @@
 <tr class="row-odd"><th class="head"><p>Benchmark</p></th>
 <th class="head"><p>Iterations</p></th>
 <th class="head"><p>Total time</p></th>
+<th class="head"><p>Relative performance</p></th>
 <th class="head"><p>Overhead</p></th>
 </tr>
 </thead>
@@ -308,16 +317,19 @@
 <td><p>20000000</p></td>
 <td><p>2.97s</p></td>
 <td><p>(baseline)</p></td>
+<td><p>(baseline)</p></td>
 </tr>
 <tr class="row-odd"><td><p>atoi_koffi</p></td>
 <td><p>20000000</p></td>
 <td><p>5.07s</p></td>
-<td><p>x1.71</p></td>
+<td><p>x0.58</p></td>
+<td><p>+71%</p></td>
 </tr>
 <tr class="row-even"><td><p>atoi_node_ffi</p></td>
 <td><p>20000000</p></td>
 <td><p>693.16s</p></td>
-<td><p>x233</p></td>
+<td><p>x0.005</p></td>
+<td><p>+23000%</p></td>
 </tr>
 </tbody>
 </table>
@@ -332,6 +344,7 @@
 <tr class="row-odd"><th class="head"><p>Benchmark</p></th>
 <th class="head"><p>Iterations</p></th>
 <th class="head"><p>Total time</p></th>
+<th class="head"><p>Relative performance</p></th>
 <th class="head"><p>Overhead</p></th>
 </tr>
 </thead>
@@ -340,16 +353,19 @@
 <td><p>20000000</p></td>
 <td><p>2.97s</p></td>
 <td><p>(baseline)</p></td>
+<td><p>(baseline)</p></td>
 </tr>
 <tr class="row-odd"><td><p>atoi_koffi</p></td>
 <td><p>20000000</p></td>
 <td><p>5.91s</p></td>
-<td><p>x1.99</p></td>
+<td><p>x0.50</p></td>
+<td><p>+99%</p></td>
 </tr>
 <tr class="row-even"><td><p>atoi_node_ffi</p></td>
 <td><p>20000000</p></td>
 <td><p>479.34s</p></td>
-<td><p>x161</p></td>
+<td><p>x0.006</p></td>
+<td><p>+16000%</p></td>
 </tr>
 </tbody>
 </table>
@@ -372,6 +388,7 @@
 <tr class="row-odd"><th class="head"><p>Benchmark</p></th>
 <th class="head"><p>Iterations</p></th>
 <th class="head"><p>Total time</p></th>
+<th class="head"><p>Relative performance</p></th>
 <th class="head"><p>Overhead</p></th>
 </tr>
 </thead>
@@ -379,22 +396,26 @@
 <tr class="row-even"><td><p>raylib_cc</p></td>
 <td><p>100</p></td>
 <td><p>9.31s</p></td>
-<td><p>x0.85</p></td>
+<td><p>x1.17</p></td>
+<td><p>-15%</p></td>
 </tr>
 <tr class="row-odd"><td><p>raylib_node_raylib</p></td>
 <td><p>100</p></td>
 <td><p>10.90s</p></td>
 <td><p>(baseline)</p></td>
+<td><p>(baseline)</p></td>
 </tr>
 <tr class="row-even"><td><p>raylib_koffi</p></td>
 <td><p>100</p></td>
 <td><p>12.86s</p></td>
-<td><p>x1.18</p></td>
+<td><p>x0.84</p></td>
+<td><p>+18%</p></td>
 </tr>
 <tr class="row-odd"><td><p>raylib_node_ffi</p></td>
 <td><p>100</p></td>
 <td><p>35.76s</p></td>
-<td><p>x3.28</p></td>
+<td><p>x0.30</p></td>
+<td><p>+228%</p></td>
 </tr>
 </tbody>
 </table>
@@ -409,6 +430,7 @@
 <tr class="row-odd"><th class="head"><p>Benchmark</p></th>
 <th class="head"><p>Iterations</p></th>
 <th class="head"><p>Total time</p></th>
+<th class="head"><p>Relative performance</p></th>
 <th class="head"><p>Overhead</p></th>
 </tr>
 </thead>
@@ -416,22 +438,26 @@
 <tr class="row-even"><td><p>raylib_cc</p></td>
 <td><p>100</p></td>
 <td><p>10.67s</p></td>
-<td><p>x0.88</p></td>
+<td><p>x1.17</p></td>
+<td><p>-12%</p></td>
 </tr>
 <tr class="row-odd"><td><p>raylib_node_raylib</p></td>
 <td><p>100</p></td>
 <td><p>12.05s</p></td>
 <td><p>(baseline)</p></td>
+<td><p>(baseline)</p></td>
 </tr>
 <tr class="row-even"><td><p>raylib_koffi</p></td>
 <td><p>100</p></td>
 <td><p>14.84s</p></td>
-<td><p>x1.23</p></td>
+<td><p>x0.81</p></td>
+<td><p>+23%</p></td>
 </tr>
 <tr class="row-odd"><td><p>raylib_node_ffi</p></td>
 <td><p>100</p></td>
 <td><p>44.63s</p></td>
-<td><p>x3.70</p></td>
+<td><p>x0.27</p></td>
+<td><p>+270%</p></td>
 </tr>
 </tbody>
 </table>

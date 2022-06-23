@@ -4,8 +4,8 @@ Here is a quick overview of the execution time of Koffi calls on three test case
 
 <table style="margin: 0 auto;">
     <tr>
-        <td><a href="_static/perf_linux_20220623.png" target="_blank"><img src="_static/perf_linux_20220623.png" alt="Linux performance" style="width: 350px;"/></a></td>
-        <td><a href="_static/perf_windows_20220623.png" target="_blank"><img src="_static/perf_windows_20220623.png" alt="Windows performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_linux_20220623_2.png" target="_blank"><img src="_static/perf_linux_20220623_2.png" alt="Linux performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_windows_20220623_2.png" target="_blank"><img src="_static/perf_windows_20220623_2.png" alt="Windows performance" style="width: 350px;"/></a></td>
     </tr>
 </table>
 
@@ -25,21 +25,21 @@ Because rand is a pretty small function, the FFI overhead is clearly visible.
 
 The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):
 
-Benchmark     | Iterations | Total time  | Overhead
-------------- | ---------- | ----------- | ----------
-rand_napi     | 20000000   | 1.44s       | (baseline)
-rand_koffi    | 20000000   | 2.60s       | x1.81
-rand_node_ffi | 20000000   | 107.58s     | x75
+Benchmark     | Iterations | Total time  | Relative performance | Overhead
+------------- | ---------- | ----------- | -------------------- | ----------
+rand_napi     | 20000000   | 1.44s       | (baseline)           | (baseline)
+rand_koffi    | 20000000   | 2.60s       | x0.55                | +81%
+rand_node_ffi | 20000000   | 107.58s     | x0.01                | +7400%
 
 ### Windows x86_64
 
 The results below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460):
 
-Benchmark     | Iterations | Total time  | Overhead
-------------- | ---------- | ----------- | ----------
-rand_napi     | 20000000   | 2.10s       | (baseline)
-rand_koffi    | 20000000   | 3.87s       | x1.84
-rand_node_ffi | 20000000   | 87.84s      | x42
+Benchmark     | Iterations | Total time  | Relative performance | Overhead
+------------- | ---------- | ----------- | -------------------- | ----------
+rand_napi     | 20000000   | 2.10s       | (baseline)           | (baseline)
+rand_koffi    | 20000000   | 3.87s       | x0.54                | +84%
+rand_node_ffi | 20000000   | 87.84s      | x0.02                | +4100%
 
 ## atoi results
 
@@ -51,21 +51,21 @@ Because rand is a pretty small function, the FFI overhead is clearly visible.
 
 The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):
 
-Benchmark     | Iterations | Total time  | Overhead
-------------- | ---------- | ----------- | ----------
-atoi_napi     | 20000000   | 2.97s       | (baseline)
-atoi_koffi    | 20000000   | 5.07s       | x1.71
-atoi_node_ffi | 20000000   | 693.16s     | x233
+Benchmark     | Iterations | Total time  | Relative performance | Overhead
+------------- | ---------- | ----------- | -------------------- | ----------
+atoi_napi     | 20000000   | 2.97s       | (baseline)           | (baseline)
+atoi_koffi    | 20000000   | 5.07s       | x0.58                | +71%
+atoi_node_ffi | 20000000   | 693.16s     | x0.005               | +23000%
 
 ### Windows x86_64
 
 The results below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460):
 
-Benchmark     | Iterations | Total time  | Overhead
-------------- | ---------- | ----------- | ----------
-atoi_napi     | 20000000   | 2.97s       | (baseline)
-atoi_koffi    | 20000000   | 5.91s       | x1.99
-atoi_node_ffi | 20000000   | 479.34s     | x161
+Benchmark     | Iterations | Total time  | Relative performance | Overhead
+------------- | ---------- | ----------- | -------------------- | ----------
+atoi_napi     | 20000000   | 2.97s       | (baseline)           | (baseline)
+atoi_koffi    | 20000000   | 5.91s       | x0.50                | +99%
+atoi_node_ffi | 20000000   | 479.34s     | x0.006               | +16000%
 
 ## Raylib results
 
@@ -78,23 +78,23 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 
 The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):
 
-Benchmark          | Iterations | Total time  | Overhead
----------------    | ---------- | ----------- | ----------
-raylib_cc          | 100        | 9.31s       | x0.85
-raylib_node_raylib | 100        | 10.90s      | (baseline)
-raylib_koffi       | 100        | 12.86s      | x1.18
-raylib_node_ffi    | 100        | 35.76s      | x3.28
+Benchmark          | Iterations | Total time  | Relative performance | Overhead
+---------------    | ---------- | ----------- | -------------------- | ----------
+raylib_cc          | 100        | 9.31s       | x1.17                | -15%
+raylib_node_raylib | 100        | 10.90s      | (baseline)           | (baseline)
+raylib_koffi       | 100        | 12.86s      | x0.84                | +18%
+raylib_node_ffi    | 100        | 35.76s      | x0.30                | +228%
 
 ### Windows x86_64
 
 The results below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460):
 
-Benchmark          | Iterations | Total time  | Overhead
----------------    | ---------- | ----------- | ----------
-raylib_cc          | 100        | 10.67s      | x0.88
-raylib_node_raylib | 100        | 12.05s      | (baseline)
-raylib_koffi       | 100        | 14.84s      | x1.23
-raylib_node_ffi    | 100        | 44.63s      | x3.70
+Benchmark          | Iterations | Total time  | Relative performance | Overhead
+---------------    | ---------- | ----------- | -------------------- | ----------
+raylib_cc          | 100        | 10.67s      | x1.17                | -12%
+raylib_node_raylib | 100        | 12.05s      | (baseline)           | (baseline)
+raylib_koffi       | 100        | 14.84s      | x0.81                | +23%
+raylib_node_ffi    | 100        | 44.63s      | x0.27                | +270%
 
 ## Running benchmarks
 
