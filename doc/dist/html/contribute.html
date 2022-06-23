@@ -210,6 +210,11 @@
 <p>Use the official repository (named Luigi, because this is a monorepo containing multiple projects) for bugs, ideas and features requests.</p>
 <p>Go here: <a class="reference external" href="https://github.com/Koromix/luigi/issues">https://github.com/Koromix/luigi/issues</a></p>
 </section>
+<section id="code-style">
+<h2>Code style<a class="headerlink" href="#code-style" title="Permalink to this heading">#</a></h2>
+<p>Koffi is programmed in a mix of C++ and assembly code (architecture-specific code). It uses <a class="reference external" href="https://github.com/nodejs/node-addon-api">node-addon-api</a> (C++ N-API wrapper) to interact with Node.js.</p>
+<p>My personal preference goes to a rather C-like C++ style, with careful use of templates (mainly) and little object-oriented programming. I strongly prefer tagged unions over inheritance and virtual methods. Exceptions are disabled.</p>
+</section>
 <section id="build-from-source">
 <h2>Build from source<a class="headerlink" href="#build-from-source" title="Permalink to this heading">#</a></h2>
 <p>We provide prebuilt binaries, packaged in the NPM archive, so in most cases it should be as simple as <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">install</span> <span class="pre">koffi</span></code>. If you want to hack Koffi or use a specific platform, follow the instructions below.</p>
@@ -363,6 +368,7 @@ node qemu.js stop
             <ul>
 <li><a class="reference internal" href="#">Contributing</a><ul>
 <li><a class="reference internal" href="#bugs-and-feature-requests">Bugs and feature requests</a></li>
+<li><a class="reference internal" href="#code-style">Code style</a></li>
 <li><a class="reference internal" href="#build-from-source">Build from source</a><ul>
 <li><a class="reference internal" href="#windows">Windows</a></li>
 <li><a class="reference internal" href="#other-platforms">Other platforms</a></li>

@@ -6,6 +6,12 @@ Use the official repository (named Luigi, because this is a monorepo containing 
 
 Go here: https://github.com/Koromix/luigi/issues
 
+## Code style
+
+Koffi is programmed in a mix of C++ and assembly code (architecture-specific code). It uses [node-addon-api](https://github.com/nodejs/node-addon-api) (C++ N-API wrapper) to interact with Node.js.
+
+My personal preference goes to a rather C-like C++ style, with careful use of templates (mainly) and little object-oriented programming. I strongly prefer tagged unions over inheritance and virtual methods. Exceptions are disabled.
+
 ## Build from source
 
 We provide prebuilt binaries, packaged in the NPM archive, so in most cases it should be as simple as `npm install koffi`. If you want to hack Koffi or use a specific platform, follow the instructions below.
