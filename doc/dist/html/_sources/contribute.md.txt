@@ -119,3 +119,4 @@ The following features are also planned eventually, not necessarily in that orde
 - Add support for unions
 - Provide better ways to automatically deal with caller/heap-allocated memory (strings, etc.)
 - Port Koffi to PowerPC (POWER9+) ABI
+- Fix assembly unwind and CFI directives for better debugging experience
