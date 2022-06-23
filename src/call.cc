@@ -801,11 +801,11 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
             } break;
             case PrimitiveKind::Int64: {
                 int64_t v = *(int64_t *)src;
-                obj.Set(member.name, Napi::BigInt::New(env, v));
+                obj.Set(member.name, NewBigInt(env, v));
             } break;
             case PrimitiveKind::UInt64: {
                 uint64_t v = *(uint64_t *)src;
-                obj.Set(member.name, Napi::BigInt::New(env, v));
+                obj.Set(member.name, NewBigInt(env, v));
             } break;
             case PrimitiveKind::String: {
                 const char *str = *(const char **)src;
@@ -914,13 +914,13 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
         case PrimitiveKind::Int64: {
             POP_ARRAY({
                 int64_t v = *(int64_t *)src;
-                array.Set(i, Napi::BigInt::New(env, v));
+                array.Set(i, NewBigInt(env, v));
             });
         } break;
         case PrimitiveKind::UInt64: {
             POP_ARRAY({
                 uint64_t v = *(uint64_t *)src;
-                array.Set(i, Napi::BigInt::New(env, v));
+                array.Set(i, NewBigInt(env, v));
             });
         } break;
         case PrimitiveKind::String: {
@@ -1078,13 +1078,13 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
         case PrimitiveKind::Int64: {
             POP_ARRAY({
                 int64_t v = *(int64_t *)src;
-                array.Set(i, Napi::BigInt::New(env, v));
+                array.Set(i, NewBigInt(env, v));
             });
         } break;
         case PrimitiveKind::UInt64: {
             POP_ARRAY({
                 uint64_t v = *(uint64_t *)src;
-                array.Set(i, Napi::BigInt::New(env, v));
+                array.Set(i, NewBigInt(env, v));
             });
         } break;
         case PrimitiveKind::String: {

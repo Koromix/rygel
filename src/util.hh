@@ -105,6 +105,26 @@ T CopyNumber(Napi::Value value)
     RG_UNREACHABLE();
 }
 
+static inline Napi::Value NewBigInt(Napi::Env env, int64_t value)
+{
+    if (value <= 9007199254740992ll && value >= -9007199254740992ll) {
+        double d = (double)value;
+        return Napi::Number::New(env, d);
+    } else {
+        return Napi::BigInt::New(env, value);
+    }
+}
+
+static inline Napi::Value NewBigInt(Napi::Env env, uint64_t value)
+{
+    if (value <= 9007199254740992ull) {
+        double d = (double)value;
+        return Napi::Number::New(env, d);
+    } else {
+        return Napi::BigInt::New(env, value);
+    }
+}
+
 int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
 
 int IsHFA(const TypeInfo *type, int min, int max);
