@@ -205,7 +205,12 @@
         <article role="main">
           <section id="benchmarks">
 <h1>Benchmarks<a class="headerlink" href="#benchmarks" title="Permalink to this heading">#</a></h1>
-<p>Here is a quick overview of the execution time of Koffi calls on three test cases (one based around rand, one based on atoi and one based on Raylib) compared to theoretical ideal implementations.</p>
+<p>Here is a quick overview of the execution time of Koffi calls on three benchmarks, where it is compared to a theoretical ideal FFI implementation (approximated with pre-compiled static N-API glue code):</p>
+<ul class="simple">
+<li><p>The first benchmark is based on <code class="docutils literal notranslate"><span class="pre">rand()</span></code> calls</p></li>
+<li><p>The second benchmark is based on <code class="docutils literal notranslate"><span class="pre">atoi()</span></code> calls</p></li>
+<li><p>The third benchmark is based on <a class="reference external" href="https://www.raylib.com/">Raylib</a></p></li>
+</ul>
 <table style="margin: 0 auto;">
     <tr>
         <td><a href="_static/perf_linux_20220623_2.png" target="_blank"><img src="_static/perf_linux_20220623_2.png" alt="Linux performance" style="width: 350px;"/></a></td>
@@ -217,7 +222,7 @@
 <h2>rand results<a class="headerlink" href="#rand-results" title="Permalink to this heading">#</a></h2>
 <p>This test is based around repeated calls to a simple standard C function atoi, and has three implementations:</p>
 <ul class="simple">
-<li><p>the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js &gt; C FFI implementation.</p></li>
+<li><p>the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js &gt; C FFI implementation (pre-compiled static glue code)</p></li>
 <li><p>the second one calls atoi through Koffi</p></li>
 <li><p>the third one uses the official Node.js FFI implementation, node-ffi-napi</p></li>
 </ul>

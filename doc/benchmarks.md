@@ -1,6 +1,10 @@
 # Benchmarks
 
-Here is a quick overview of the execution time of Koffi calls on three test cases (one based around rand, one based on atoi and one based on Raylib) compared to theoretical ideal implementations.
+Here is a quick overview of the execution time of Koffi calls on three benchmarks, where it is compared to a theoretical ideal FFI implementation (approximated with pre-compiled static N-API glue code):
+
+- The first benchmark is based on `rand()` calls
+- The second benchmark is based on `atoi()` calls
+- The third benchmark is based on [Raylib](https://www.raylib.com/)
 
 <table style="margin: 0 auto;">
     <tr>
@@ -15,7 +19,7 @@ These results are detailed and explained below, and compared to node-ffi/node-ff
 
 This test is based around repeated calls to a simple standard C function atoi, and has three implementations:
 
-- the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js > C FFI implementation.
+- the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js > C FFI implementation (pre-compiled static glue code)
 - the second one calls atoi through Koffi
 - the third one uses the official Node.js FFI implementation, node-ffi-napi
 
