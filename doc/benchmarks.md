@@ -4,8 +4,8 @@ Here is a quick overview of the execution time of Koffi calls on three test case
 
 <table style="margin: 0 auto;">
     <tr>
-        <td><img src="_static/bench_linux.png" alt="Linux performance" style="width: 350px;"/></td>
-        <td><img src="_static/bench_windows.png" alt="Windows performance" style="width: 350px;"/></td>
+        <td><a href="_static/perf_linux_20220623.png" target="_blank"><img src="_static/perf_linux_20220623.png" alt="Linux performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_windows_20220623.png" target="_blank"><img src="_static/perf_windows_20220623.png" alt="Windows performance" style="width: 350px;"/></a></td>
     </tr>
 </table>
 
@@ -80,10 +80,10 @@ The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 470
 
 Benchmark          | Iterations | Total time  | Overhead
 ---------------    | ---------- | ----------- | ----------
-raylib_cc          | 100        | 9.31s       | (baseline)
-raylib_node_raylib | 100        | 10.90s      | x1.17
-raylib_koffi       | 100        | 12.86s      | x1.38
-raylib_node_ffi    | 100        | 35.76s      | x3.84
+raylib_cc          | 100        | 9.31s       | x0.85
+raylib_node_raylib | 100        | 10.90s      | (baseline)
+raylib_koffi       | 100        | 12.86s      | x1.18
+raylib_node_ffi    | 100        | 35.76s      | x3.28
 
 ### Windows x86_64
 
@@ -91,10 +91,10 @@ The results below were measured on my x86_64 Windows machine (Intel® Core™ i5
 
 Benchmark          | Iterations | Total time  | Overhead
 ---------------    | ---------- | ----------- | ----------
-raylib_cc          | 100        | 10.67s      | (baseline)
-raylib_node_raylib | 100        | 12.05s      | x1.13
-raylib_koffi       | 100        | 14.84s      | x1.39
-raylib_node_ffi    | 100        | 44.63s      | x4.18
+raylib_cc          | 100        | 10.67s      | x0.88
+raylib_node_raylib | 100        | 12.05s      | (baseline)
+raylib_koffi       | 100        | 14.84s      | x1.23
+raylib_node_ffi    | 100        | 44.63s      | x3.70
 
 ## Running benchmarks
 
