@@ -3049,7 +3049,7 @@ public:
 
     int repeat = 1;
     int pad_len = 0;
-    char pad_char;
+    char pad_char = 0;
 
     FmtArg() = default;
     FmtArg(std::nullptr_t) : type(FmtType::Str1) { u.str1 = "(null)"; }
