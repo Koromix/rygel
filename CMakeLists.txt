@@ -110,7 +110,9 @@ if(WIN32)
     target_link_libraries(koffi PRIVATE ws2_32)
 endif()
 if(NOT MSVC)
-    target_compile_options(koffi PRIVATE -fno-exceptions -fno-strict-aliasing)
+    # Restore C/C++ compiler sanity
+    target_compile_options(koffi PRIVATE -fno-exceptions -fno-strict-aliasing -fwrapv
+                                         -fno-delete-null-pointer-checks -fno-finite-loops)
 endif()
 if(USE_LTO)
     set_target_properties(koffi PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
