@@ -836,14 +836,14 @@
 </pre></div>
 </div>
 <p>All of this means that C functions that are expected to modify their primitive output values (such as an <code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">*</span></code> parameter) cannot be used directly. However, thanks to Koffi’s transparent array support, you can use Javascript arrays to approximate reference semantics with single-element arrays.</p>
-<p>Below, you can find an example of an addition function where the result is stored in an <code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">*</span></code> output parameter and how to use this function from Koffi.</p>
+<p>Below, you can find an example of an addition function where the result is stored in an <code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">*</span></code> input/output parameter and how to use this function from Koffi.</p>
 <div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kt">void</span><span class="w"> </span><span class="nf">AddInt</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">dest</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">add</span><span class="p">)</span><span class="w"></span>
 <span class="linenos">2</span><span class="p">{</span><span class="w"></span>
 <span class="linenos">3</span><span class="w">    </span><span class="o">*</span><span class="n">dest</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">add</span><span class="p">;</span><span class="w"></span>
 <span class="linenos">4</span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>You can simply pass a single-element array as the third argument:</p>
+<p>You can simply pass a single-element array as the first argument:</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span> <span class="nx">AddInt</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;void AddInt(_Inout_ int *dest, int add)&#39;</span><span class="p">);</span>
 <span class="linenos">2</span>
 <span class="linenos">3</span><span class="kd">let</span> <span class="nx">sum</span> <span class="o">=</span> <span class="p">[</span><span class="mf">36</span><span class="p">];</span>

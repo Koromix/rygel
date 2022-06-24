@@ -438,7 +438,7 @@ console.log(list1); // Prints [1, 42]
 
 All of this means that C functions that are expected to modify their primitive output values (such as an `int *` parameter) cannot be used directly. However, thanks to Koffi's transparent array support, you can use Javascript arrays to approximate reference semantics with single-element arrays.
 
-Below, you can find an example of an addition function where the result is stored in an `int *` output parameter and how to use this function from Koffi.
+Below, you can find an example of an addition function where the result is stored in an `int *` input/output parameter and how to use this function from Koffi.
 
 ```c
 void AddInt(int *dest, int add)
@@ -447,7 +447,7 @@ void AddInt(int *dest, int add)
 }
 ```
 
-You can simply pass a single-element array as the third argument:
+You can simply pass a single-element array as the first argument:
 
 ```js
 const AddInt = lib.func('void AddInt(_Inout_ int *dest, int add)');
