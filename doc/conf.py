@@ -1,10 +1,17 @@
+import json
+import os
+
 # -- Project information -----------------------------------------------------
 
 project = 'Koffi'
 copyright = '2022, Niels Martignène'
 author = 'Niels Martignène'
-version = '1.3.2'
-revision = '1.3.2'
+
+with open(os.path.dirname(__file__) + '/../package.json') as f:
+    config = json.load(f)
+
+    version = config['version']
+    revision = config['version']
 
 # -- General configuration ---------------------------------------------------
 
@@ -20,7 +27,7 @@ exclude_patterns = []
 
 # -- Options for HTML output -------------------------------------------------
 
-html_title = 'Koffi'
+html_title = project
 
 html_theme = 'furo'
 
