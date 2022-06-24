@@ -636,6 +636,8 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 #endif
     RG_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
 
+    mem->depth = 0;
+
     if (instance->memories.len <= instance->resident_async_pools) {
         instance->memories.Append(mem);
     } else {
