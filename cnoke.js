@@ -287,8 +287,9 @@ async function configure(retry = true) {
                     args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
                     args.push('-A', 'ARM64');
                 } break;
-                default: {
+                case 'x64': {
                     args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
+                    args.push('-A', 'x64');
                 } break;
             }
         } break;
