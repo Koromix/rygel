@@ -97,7 +97,7 @@ const A = koffi.struct('A', {
 
 Koffi follows the C and ABI rules regarding struct alignment and padding.
 
-Once a struct is declared, you can use it by name (with a string, like you can do for primitive types) or the through the value returned by the call to `koffi.struct()`. Only the latter is possible when declaring an anonymous struct.
+Once a struct is declared, you can use it by name (with a string, like you can do for primitive types) or through the value returned by the call to `koffi.struct()`. Only the latter is possible when declaring an anonymous struct.
 
 ```js
 // The following two function declarations are equivalent, and declare a function taking an A value and returning A
@@ -109,9 +109,9 @@ const Function2 = lib.func('Function', A, [A]);
 
 In C, pointer arguments are used for differenty purposes. It is important to distinguish these use cases because Koffi provides different ways to deal with each of them:
 
-- **Struct pointers**: Use of struct pointers by C libraries fall in two cases: avoid (potentially) expensive copies, and to let the function change struct contents (output or input/output argument).
-- **Opaque handles**: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. `sqlite3_stmt`). Only the functions provided by the library can do something with this pointer, in Koffi we call this a handle. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.
-- **Arrays**: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated or with an additional length argument.
+- **Struct pointers**: Use of struct pointers by C libraries fall in two cases: avoid (potentially) expensive copies, and to let the function change struct contents (output or input/output arguments).
+- **Opaque handles**: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. `FILE *`). Only the functions provided by the library can do something with this pointer, in Koffi we call this a handle. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.
+- **Arrays**: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated (or any other sentinel value) or with an additional length argument.
 - **Pointers to primitive types**: This is more rare, and generally used for output or input/output arguments. The Win32 API has a lot of these.
 
 ### Struct pointers
@@ -425,7 +425,7 @@ console.log(filenames);
 
 In javascript, it is not possible to pass a primitive value by reference to another function. This means that you cannot call a function and expect it to modify the value of one of its number or string parameter.
 
-However, arrays and objects (among others) are reference type values. Assigning an array or an object from one variable to another does not invole any copy. Instead, as the following example illustrates, the new variable references the same list as the first:
+However, arrays and objects (among others) are reference type values. Assigning an array or an object from one variable to another does not invole any copy. Instead, as the following example illustrates, the new variable references the same array as the first:
 
 ```js
 let list1 = [1, 2];

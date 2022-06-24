@@ -2,16 +2,16 @@
 
 ## Function definitions
 
-To declare functions, start by loading the shared library with `koffi.load()`.
+To declare functions, start by loading the shared library with `koffi.load(filename)`.
 
 ```js
 const koffi = require('koffi');
 const lib = koffi.load('/path/to/shared/library'); // File extension depends on platforms: .so, .dll, .dylib, etc.
 ```
 
-You can use the returned object to load C functions from the library. Koffi supports two syntaxes:
+You can use the returned object to load C functions from the library. To do so, you can use two syntaxes:
 
-- Classic syntax, inspired by node-ffi
+- The classic syntax, inspired by node-ffi
 - C-like prototypes
 
 ### Classic syntax
@@ -27,18 +27,20 @@ Koffi automatically tries mangled names for non-standard x86 calling conventions
 
 ### C-like prototypes
 
-You can declare functions using simple C-like prototype strings, as shown below:
+If you prefer, you can declare functions using simple C-like prototype strings, as shown below:
 
 ```js
 const printf = lib.func('int printf(const char *fmt, ...)');
 const atoi = lib.func('int atoi(string)'); // The parameter name is not used by Koffi, and optional
 ```
 
+You can use `()` or `(void)` for functions that take no argument.
+
 ## Synchronous calls
 
 By default, calling a C function happens synchronously.
 
-Most architectures only support one procedure call standard per process. The 32-bit x86 platform is an exception to this, and Koffi support several standards:
+Most architectures only support one procedure call standard per process. The 32-bit x86 platform is an exception to this, and Koffi supports several x86 conventions:
 
  Convention   | Classic form                  | Prototype form | Description
 ------------- | ----------------------------- | -------------- | -------------------------------------------------------------------
@@ -49,7 +51,7 @@ Most architectures only support one procedure call standard per process. The 32-
 
 You can safely use these on non-x86 platforms, they are simply ignored.
 
-Below you can find a small example showing how to use a non-default calling convention:
+Below you can find a small example showing how to use a non-default calling convention, with the two syntaxes:
 
 ```js
 const koffi = require('koffi');
@@ -75,7 +77,9 @@ atoi.async('1257', (err, res) => {
 })
 console.log('Hello World!');
 
-// This program will print "Hello World!", and then "Result: 1257"
+// This program will print:
+//   Hello World!
+//   Result: 1257
 ```
 
 These calls are executed by worker threads. It is **your responsibility to deal with data sharing issues** in the native code that may be caused by multi-threading.
@@ -103,7 +107,7 @@ On x86 platforms, only the Cdecl convention can be used for variadic functions.
 
 By default, Koffi will only forward arguments from Javascript to C. However, many C functions use pointer arguments for output values, or input/output values.
 
-For simplicy, and because Javascript only has value semantics for primitive types, Koffi can marshal out (or in/out) two types of parameters:
+For simplicity, and because Javascript only has value semantics for primitive types, Koffi can marshal out (or in/out) two types of parameters:
 
 - [Structs](types.md#struct-types) (to/from JS objects)
 - [Opaque handles](types.md#opaque-handles)
@@ -180,7 +184,7 @@ const ExampleCallback = koffi.callback('ExampleCallback', 'void', ['int']);
 const AddDoubleFloat = koffi.callback('double AddDoubleFloat(double d, float f)');
 ```
 
-Once your callback type is declared, you can use them in struct definitions, or as function parameter and/or return type.
+Once your callback type is declared, you can use it in struct definitions, or as function parameter and/or return type.
 
 Here is a small example with the C part and the JS part.
 
@@ -221,4 +225,4 @@ On x86 platforms, only Cdecl and Stdcall callbacks are supported.
 
 Asynchronous functions run on worker threads. You need to deal with thread safety issues if you share data between threads.
 
-Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess.
+Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess. You've been warned!

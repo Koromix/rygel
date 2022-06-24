@@ -19,7 +19,7 @@ Below you can find three examples:
 
 ## Small Linux example
 
-This is a small example for Linux systems, which uses `gettimeofday()` and `printf()` to print the current time and the timezone.
+This is a small example for Linux systems, which uses `gettimeofday()`, `localtime_r()` and `printf()` to print the current time.
 
 It illustrates the use of output parameters.
 
@@ -69,7 +69,7 @@ printf('Local time: %02d:%02d:%02d\n', 'int', now.tm_hour, 'int', now.tm_min, 'i
 
 ## Small Windows example
 
-This is a small example targeting the Win32 API, using `MessageBox()` to show a Hello message to the user.
+This is a small example targeting the Win32 API, using `MessageBox()` to show a *Hello World!* message to the user.
 
 It illustrates the use of the x86 stdcall calling convention.
 
@@ -85,5 +85,5 @@ const MB_ICONINFORMATION = 0x40;
 // Find functions
 const MessageBoxA = lib.stdcall('MessageBoxA', 'int', ['void *', 'string', 'string', 'uint']);
 
-MessageBoxA(null, 'Hello', 'Foobar', MB_ICONINFORMATION);
+MessageBoxA(null, 'Hello World!', 'Koffi', MB_ICONINFORMATION);
 ```

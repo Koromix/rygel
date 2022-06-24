@@ -207,14 +207,14 @@
 <h1>Function calls<a class="headerlink" href="#function-calls" title="Permalink to this heading">#</a></h1>
 <section id="function-definitions">
 <h2>Function definitions<a class="headerlink" href="#function-definitions" title="Permalink to this heading">#</a></h2>
-<p>To declare functions, start by loading the shared library with <code class="docutils literal notranslate"><span class="pre">koffi.load()</span></code>.</p>
+<p>To declare functions, start by loading the shared library with <code class="docutils literal notranslate"><span class="pre">koffi.load(filename)</span></code>.</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
 <span class="linenos">2</span><span class="kd">const</span> <span class="nx">lib</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;/path/to/shared/library&#39;</span><span class="p">);</span> <span class="c1">// File extension depends on platforms: .so, .dll, .dylib, etc.</span>
 </pre></div>
 </div>
-<p>You can use the returned object to load C functions from the library. Koffi supports two syntaxes:</p>
+<p>You can use the returned object to load C functions from the library. To do so, you can use two syntaxes:</p>
 <ul class="simple">
-<li><p>Classic syntax, inspired by node-ffi</p></li>
+<li><p>The classic syntax, inspired by node-ffi</p></li>
 <li><p>C-like prototypes</p></li>
 </ul>
 <section id="classic-syntax">
@@ -228,17 +228,18 @@
 </section>
 <section id="c-like-prototypes">
 <h3>C-like prototypes<a class="headerlink" href="#c-like-prototypes" title="Permalink to this heading">#</a></h3>
-<p>You can declare functions using simple C-like prototype strings, as shown below:</p>
+<p>If you prefer, you can declare functions using simple C-like prototype strings, as shown below:</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span> <span class="nx">printf</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int printf(const char *fmt, ...)&#39;</span><span class="p">);</span>
 <span class="linenos">2</span><span class="kd">const</span> <span class="nx">atoi</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int atoi(string)&#39;</span><span class="p">);</span> <span class="c1">// The parameter name is not used by Koffi, and optional</span>
 </pre></div>
 </div>
+<p>You can use <code class="docutils literal notranslate"><span class="pre">()</span></code> or <code class="docutils literal notranslate"><span class="pre">(void)</span></code> for functions that take no argument.</p>
 </section>
 </section>
 <section id="synchronous-calls">
 <h2>Synchronous calls<a class="headerlink" href="#synchronous-calls" title="Permalink to this heading">#</a></h2>
 <p>By default, calling a C function happens synchronously.</p>
-<p>Most architectures only support one procedure call standard per process. The 32-bit x86 platform is an exception to this, and Koffi support several standards:</p>
+<p>Most architectures only support one procedure call standard per process. The 32-bit x86 platform is an exception to this, and Koffi supports several x86 conventions:</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
 <thead>
@@ -273,7 +274,7 @@
 </table>
 </div>
 <p>You can safely use these on non-x86 platforms, they are simply ignored.</p>
-<p>Below you can find a small example showing how to use a non-default calling convention:</p>
+<p>Below you can find a small example showing how to use a non-default calling convention, with the two syntaxes:</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
 <span class="linenos">2</span><span class="kd">const</span> <span class="nx">lib</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;user32.dll&#39;</span><span class="p">);</span>
 <span class="linenos">3</span>
@@ -296,7 +297,9 @@
 <span class="linenos"> 8</span><span class="p">})</span>
 <span class="linenos"> 9</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Hello World!&#39;</span><span class="p">);</span>
 <span class="linenos">10</span>
-<span class="linenos">11</span><span class="c1">// This program will print &quot;Hello World!&quot;, and then &quot;Result: 1257&quot;</span>
+<span class="linenos">11</span><span class="c1">// This program will print:</span>
+<span class="linenos">12</span><span class="c1">//   Hello World!</span>
+<span class="linenos">13</span><span class="c1">//   Result: 1257</span>
 </pre></div>
 </div>
 <p>These calls are executed by worker threads. It is <strong>your responsibility to deal with data sharing issues</strong> in the native code that may be caused by multi-threading.</p>
@@ -318,7 +321,7 @@
 <section id="output-parameters">
 <h2>Output parameters<a class="headerlink" href="#output-parameters" title="Permalink to this heading">#</a></h2>
 <p>By default, Koffi will only forward arguments from Javascript to C. However, many C functions use pointer arguments for output values, or input/output values.</p>
-<p>For simplicy, and because Javascript only has value semantics for primitive types, Koffi can marshal out (or in/out) two types of parameters:</p>
+<p>For simplicity, and because Javascript only has value semantics for primitive types, Koffi can marshal out (or in/out) two types of parameters:</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="types#struct-types"><span class="std std-doc">Structs</span></a> (to/from JS objects)</p></li>
 <li><p><a class="reference internal" href="types#opaque-handles"><span class="std std-doc">Opaque handles</span></a></p></li>
@@ -392,7 +395,7 @@
 <span class="linenos">7</span><span class="kd">const</span> <span class="nx">AddDoubleFloat</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="s1">&#39;double AddDoubleFloat(double d, float f)&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
-<p>Once your callback type is declared, you can use them in struct definitions, or as function parameter and/or return type.</p>
+<p>Once your callback type is declared, you can use it in struct definitions, or as function parameter and/or return type.</p>
 <p>Here is a small example with the C part and the JS part.</p>
 <div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;string.h&gt;</span><span class="cp"></span>
 <span class="linenos">2</span>
@@ -428,7 +431,7 @@
 <section id="thread-safety">
 <h2>Thread safety<a class="headerlink" href="#thread-safety" title="Permalink to this heading">#</a></h2>
 <p>Asynchronous functions run on worker threads. You need to deal with thread safety issues if you share data between threads.</p>
-<p>Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess.</p>
+<p>Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess. You’ve been warned!</p>
 </section>
 </section>
 

@@ -209,7 +209,7 @@
 <h2>How it works<a class="headerlink" href="#how-it-works" title="Permalink to this heading">#</a></h2>
 <p>For synchronous/normal calls, Koffi uses two preallocated memory blocks:</p>
 <ul class="simple">
-<li><p>One to construct to assign the C stack, subsequently used by the platform-specific assembly code (1 MiB by default)</p></li>
+<li><p>One to construct the C stack and assign registers, subsequently used by the platform-specific assembly code (1 MiB by default)</p></li>
 <li><p>One to allocate strings and big objects/structs (2 MiB by default)</p></li>
 </ul>
 <p>Unless very big strings or objects (at least more than one page of memory) are used, no extra allocation ever happens during calls or callbacks.</p>
