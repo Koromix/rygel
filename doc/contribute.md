@@ -16,6 +16,15 @@ My personal preference goes to a rather C-like C++ style, with careful use of te
 
 We provide prebuilt binaries, packaged in the NPM archive, so in most cases it should be as simple as `npm install koffi`. If you want to hack Koffi or use a specific platform, follow the instructions below.
 
+Start by cloning the repository with [Git](https://git-scm.com/):
+
+```sh
+git clone https://github.com/Koromix/luigi
+cd luigi/koffi
+```
+
+As said before, this is a monorepository containg multiple projects, hence the name.
+
 ### Windows
 
 First, make sure the following dependencies are met:
