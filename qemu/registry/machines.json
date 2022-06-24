@@ -392,6 +392,12 @@
                 "arch": "x64",
                 "directory": "/Users/macos/luigi",
                 "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js"
+            },
+
+            "macOS ARM64": {
+                "arch": "arm64",
+                "directory": "/Users/macos/luigi_arm64",
+                "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js --arch arm64"
             }
         },
 
@@ -536,17 +542,6 @@
                     "Test Raylib": "xvfb-run node test/raylib.js",
                     "Test SQLite": "node test/sqlite.js"
                 }
-            }
-        }
-    },
-
-    "macos_arm64": {
-        "name": "macOS ARM64",
-        "platform": "darwin",
-
-        "builds": {
-            "macOS ARM64": {
-                "arch": "arm64"
             }
         }
     }
