@@ -168,8 +168,6 @@ sqlite3_close_v2(db);
 
 ## Javascript callbacks
 
-### Using callbacks
-
 In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.
 
 ```js
@@ -219,8 +217,8 @@ console.log(ret);
 
 On x86 platforms, only Cdecl and Stdcall callbacks are supported.
 
-### Thread safety
+## Thread safety
 
-The callback must be called from the main thread, or more precisely from the same thread as the V8 intepreter.
+Asynchronous functions run on worker threads. You need to deal with thread safety issues if you share data between threads.
 
-Calling the callback from another thread is undefined behavior, and will likely lead to a mess.
+Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess.

@@ -382,8 +382,6 @@
 </section>
 <section id="javascript-callbacks">
 <h2>Javascript callbacks<a class="headerlink" href="#javascript-callbacks" title="Permalink to this heading">#</a></h2>
-<section id="using-callbacks">
-<h3>Using callbacks<a class="headerlink" href="#using-callbacks" title="Permalink to this heading">#</a></h3>
 <p>In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos">2</span>
@@ -428,10 +426,9 @@
 <p>On x86 platforms, only Cdecl and Stdcall callbacks are supported.</p>
 </section>
 <section id="thread-safety">
-<h3>Thread safety<a class="headerlink" href="#thread-safety" title="Permalink to this heading">#</a></h3>
-<p>The callback must be called from the main thread, or more precisely from the same thread as the V8 intepreter.</p>
-<p>Calling the callback from another thread is undefined behavior, and will likely lead to a mess.</p>
-</section>
+<h2>Thread safety<a class="headerlink" href="#thread-safety" title="Permalink to this heading">#</a></h2>
+<p>Asynchronous functions run on worker threads. You need to deal with thread safety issues if you share data between threads.</p>
+<p>Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess.</p>
 </section>
 </section>
 
@@ -506,11 +503,8 @@
 <li><a class="reference internal" href="#opaque-handle-example">Opaque handle example</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#javascript-callbacks">Javascript callbacks</a><ul>
-<li><a class="reference internal" href="#using-callbacks">Using callbacks</a></li>
+<li><a class="reference internal" href="#javascript-callbacks">Javascript callbacks</a></li>
 <li><a class="reference internal" href="#thread-safety">Thread safety</a></li>
-</ul>
-</li>
 </ul>
 </li>
 </ul>
