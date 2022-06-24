@@ -129,7 +129,22 @@ typedef struct IntContainer {
     int len;
 } IntContainer;
 
-EXPORT int GetMinusOne(void)
+EXPORT int8_t GetMinusOne1(void)
+{
+    return -1;
+}
+
+EXPORT int16_t GetMinusOne2(void)
+{
+    return -1;
+}
+
+EXPORT int32_t GetMinusOne4(void)
+{
+    return -1;
+}
+
+EXPORT int64_t GetMinusOne8(void)
 {
     return -1;
 }

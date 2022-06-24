@@ -122,7 +122,10 @@ async function test() {
     let lib_filename = path.dirname(__filename) + '/build/misc' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
-    const GetMinusOne = lib.func('int GetMinusOne(void)');
+    const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
+    const GetMinusOne2 = lib.func('int16_t GetMinusOne2(void)');
+    const GetMinusOne4 = lib.func('int32_t GetMinusOne4(void)');
+    const GetMinusOne8 = lib.func('int64_t GetMinusOne8(void)');
     const FillPack1 = lib.func('FillPack1', 'void', ['int', koffi.out(koffi.pointer(Pack1))]);
     const RetPack1 = lib.func('RetPack1', Pack1, ['int']);
     const AddPack1 = lib.fastcall('AddPack1', 'void', ['int', koffi.inout(koffi.pointer(Pack1))]);
@@ -172,6 +175,12 @@ async function test() {
     const ArrayToStruct = lib.func('IntContainer ArrayToStruct(int *ptr, int len)');
     const FillRange = lib.func('void FillRange(int init, int step, _Out_ int *out, int len)');
     const MultiplyIntegers = lib.func('void MultiplyIntegers(int multiplier, _Inout_ int *values, int len)');
+
+    // Simple signed value returns
+    assert.equal(GetMinusOne1(), -1);
+    assert.equal(GetMinusOne2(), -1);
+    assert.equal(GetMinusOne4(), -1);
+    assert.equal(GetMinusOne8(), -1);
 
     // Simple tests with Pack1
     {

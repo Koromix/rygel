@@ -518,13 +518,13 @@ Napi::Value CallData::Complete()
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void: return env.Null();
         case PrimitiveKind::Bool: return Napi::Boolean::New(env, result.u32);
-        case PrimitiveKind::Int8:
-        case PrimitiveKind::UInt8:
-        case PrimitiveKind::Int16:
-        case PrimitiveKind::UInt16:
-        case PrimitiveKind::Int32:
+        case PrimitiveKind::Int8: return Napi::Number::New(env, (double)result.i8);
+        case PrimitiveKind::UInt8: return Napi::Number::New(env, (double)result.u8);
+        case PrimitiveKind::Int16: return Napi::Number::New(env, (double)result.i16);
+        case PrimitiveKind::UInt16: return Napi::Number::New(env, (double)result.u16);
+        case PrimitiveKind::Int32: return Napi::Number::New(env, (double)result.i32);
         case PrimitiveKind::UInt32: return Napi::Number::New(env, (double)result.u32);
-        case PrimitiveKind::Int64: return NewBigInt(env, (int64_t)result.u64);
+        case PrimitiveKind::Int64: return NewBigInt(env, result.i64);
         case PrimitiveKind::UInt64: return NewBigInt(env, result.u64);
         case PrimitiveKind::String: return result.ptr ? Napi::String::New(env, (const char *)result.ptr) : env.Null();
         case PrimitiveKind::String16: return result.ptr ? Napi::String::New(env, (const char16_t *)result.ptr) : env.Null();
