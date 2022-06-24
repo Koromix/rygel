@@ -44,7 +44,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
     out_func->name = ParseIdentifier();
 
     Consume("(");
-    if (offset < tokens.len && tokens[offset] != ")") {
+    if (offset < tokens.len && tokens[offset] != ")" && !Match("void")) {
         for (;;) {
             ParameterInfo param = {};
 

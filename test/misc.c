@@ -129,6 +129,11 @@ typedef struct IntContainer {
     int len;
 } IntContainer;
 
+EXPORT int GetMinusOne(void)
+{
+    return -1;
+}
+
 EXPORT void FillPack1(int a, Pack1 *p)
 {
     p->a = a;

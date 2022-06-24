@@ -122,6 +122,7 @@ async function test() {
     let lib_filename = path.dirname(__filename) + '/build/misc' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
+    const GetMinusOne = lib.func('int GetMinusOne(void)');
     const FillPack1 = lib.func('FillPack1', 'void', ['int', koffi.out(koffi.pointer(Pack1))]);
     const RetPack1 = lib.func('RetPack1', Pack1, ['int']);
     const AddPack1 = lib.fastcall('AddPack1', 'void', ['int', koffi.inout(koffi.pointer(Pack1))]);
