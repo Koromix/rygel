@@ -1,5 +1,17 @@
 # Changelog
 
+## Koffi 1.3.3
+
+**Main fixes:**
+
+- Fix misconversion of signed integer return value as unsigned
+
+**Other changes:**
+
+- Support `(void)` (empty) function signatures
+- Disable unsafe compiler optimizations
+- Various documentation improvements
+
 ## Koffi 1.3.2
 
 **Main fixes:**
