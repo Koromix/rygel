@@ -14,6 +14,7 @@
 cmake_minimum_required(VERSION 3.6)
 project(koffi C CXX ASM)
 
+include(CheckCXXCompilerFlag)
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.9.0")
     cmake_policy(SET CMP0069 NEW)
     include(CheckIPOSupported)
@@ -111,8 +112,14 @@ if(WIN32)
 endif()
 if(NOT MSVC)
     # Restore C/C++ compiler sanity
+
     target_compile_options(koffi PRIVATE -fno-exceptions -fno-strict-aliasing -fwrapv
-                                         -fno-delete-null-pointer-checks -fno-finite-loops)
+                                         -fno-delete-null-pointer-checks)
+
+    check_cxx_compiler_flag(-fno-finite-loops use_no_finite_loops)
+    if(use_no_finite_loops)
+        target_compile_options(koffi PRIVATE -fno-finite-loops)
+    endif()
 endif()
 if(USE_LTO)
     set_target_properties(koffi PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
