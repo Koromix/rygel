@@ -42,6 +42,8 @@ Number (float)    | float64            | 8     |            |
 Number (float)    | float              | 4     |            |
 Number (float)    | double             | 8     |            |
 
+Koffi also accepts BigInt values when converting from JS to C integers. If the value exceeds the range of the C type, Koffi will convert the number to an undefined value. In the reverse direction, BigInt values are automatically used when needed for big 64-bit integers.
+
 Koffi defines a few more types that can change size depending on the OS and the architecture:
 
 JS type          | C type        | Signedness | Note
