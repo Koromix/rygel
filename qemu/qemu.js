@@ -352,6 +352,7 @@ async function pack() {
                     console.error(str);
                 }
 
+                ignore.add(machine);
                 success = false;
             }
         }));
