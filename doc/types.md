@@ -353,7 +353,7 @@ const ComputeTotalLength = lib.func('int64_t ComputeTotalLength(const char **str
 let strings = ['Get', 'Total', 'Length', null];
 let total = ComputeTotalLength(strings);
 
-console.log(total); // Prints 14n (big int)
+console.log(total); // Prints 14
 ```
 
 By default, just like for objects, array arguments are copied from JS to C but not vice-versa. You can however change the direction as documented in the section on [output parameters](functions.md#output-parameters).
