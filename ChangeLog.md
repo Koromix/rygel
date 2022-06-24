@@ -1,5 +1,11 @@
 # Changelog
 
+## Koffi 1.3.4
+
+**Main fixes:**
+
+- Fix possible OpenBSD i386 crash with (void) functions
+
 ## Koffi 1.3.3
 
 **Main fixes:**
