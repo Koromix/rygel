@@ -388,7 +388,10 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing");
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks");
+        if (clang_ver >= 120000) {
+            Fmt(&buf, " -fno-finite-loops");
+        }
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
@@ -834,7 +837,10 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing");
+        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks");
+        if (gcc_ver >= 100000) {
+            Fmt(&buf, " -fno-finite-loops");
+        }
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
@@ -1511,7 +1517,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing");
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
@@ -1814,7 +1820,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing");
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O1 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
