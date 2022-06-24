@@ -4,7 +4,7 @@
 
 **Main fixes:**
 
-- Fix possible OpenBSD i386 crash with (void) functions
+- Fix possible OpenBSD i386 crash with `(void)` functions
 
 ## Koffi 1.3.3
 
