@@ -296,6 +296,11 @@ async function configure(retry = true) {
 
         case 'darwin': {
             args.push('-DNODE_JS_LINK_FLAGS=-undefined;dynamic_lookup');
+
+            switch (arch) {
+                case 'arm64': { args.push('-DCMAKE_OSX_ARCHITECTURES=arm64'); } break;
+                case 'x64': { args.push('-DCMAKE_OSX_ARCHITECTURES=x86_64'); } break;
+            }
         } break;
     }
 
