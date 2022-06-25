@@ -57,7 +57,7 @@
 .endm
 
 # Prepare general purpose argument registers from array passed by caller.
-.macro forward_int
+.macro forward_gpr
     ldr r3, [r1, 76]
     ldr r2, [r1, 72]
     ldr r0, [r1, 64]
@@ -78,35 +78,35 @@
 
 ForwardCallGG:
     prologue
-    forward_int
+    forward_gpr
     epilogue
 
 ForwardCallF:
     prologue
-    forward_int
+    forward_gpr
     epilogue
 
 ForwardCallDDDD:
     prologue
-    forward_int
+    forward_gpr
     epilogue
 
 ForwardCallXGG:
     prologue
     forward_vec
-    forward_int
+    forward_gpr
     epilogue
 
 ForwardCallXF:
     prologue
     forward_vec
-    forward_int
+    forward_gpr
     epilogue
 
 ForwardCallXDDDD:
     prologue
     forward_vec
-    forward_int
+    forward_gpr
     epilogue
 
 # Callback trampolines

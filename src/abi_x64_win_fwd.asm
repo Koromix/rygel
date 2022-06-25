@@ -53,7 +53,7 @@ epilogue macro
 endm
 
 ; Prepare integer argument registers from array passed by caller.
-forward_int macro
+forward_gpr macro
     mov r9, qword ptr [rdx+24]
     mov r8, qword ptr [rdx+16]
     mov rcx, qword ptr [rdx+0]
@@ -70,40 +70,40 @@ endm
 
 ForwardCallG proc frame
     prologue
-    forward_int
+    forward_gpr
     epilogue
 ForwardCallG endp
 
 ForwardCallF proc frame
     prologue
-    forward_int
+    forward_gpr
     epilogue
 ForwardCallF endp
 
 ForwardCallD proc frame
     prologue
-    forward_int
+    forward_gpr
     epilogue
 ForwardCallD endp
 
 ForwardCallXG proc frame
     prologue
     forward_xmm
-    forward_int
+    forward_gpr
     epilogue
 ForwardCallXG endp
 
 ForwardCallXF proc frame
     prologue
     forward_xmm
-    forward_int
+    forward_gpr
     epilogue
 ForwardCallXF endp
 
 ForwardCallXD proc frame
     prologue
     forward_xmm
-    forward_int
+    forward_gpr
     epilogue
 ForwardCallXD endp
 

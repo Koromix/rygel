@@ -66,7 +66,7 @@
 .endm
 
 # Prepare integer argument registers from array passed by caller.
-.macro forward_int
+.macro forward_gpr
     movq 40(%rsi), %r9
     movq 32(%rsi), %r8
     movq 24(%rsi), %rcx
@@ -89,66 +89,66 @@
 
 SYMBOL(ForwardCallGG):
     prologue
-    forward_int
+    forward_gpr
     movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallF):
     prologue
-    forward_int
+    forward_gpr
     movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallDG):
     prologue
-    forward_int
+    forward_gpr
     movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallGD):
     prologue
-    forward_int
+    forward_gpr
     movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallDD):
     prologue
-    forward_int
+    forward_gpr
     movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallXGG):
     prologue
     forward_xmm
-    forward_int
+    forward_gpr
     movb $8, %al
     epilogue
 
 SYMBOL(ForwardCallXF):
     prologue
     forward_xmm
-    forward_int
+    forward_gpr
     movb $8, %al
     epilogue
 
 SYMBOL(ForwardCallXDG):
     prologue
     forward_xmm
-    forward_int
+    forward_gpr
     movb $8, %al
     epilogue
 
 SYMBOL(ForwardCallXGD):
     prologue
     forward_xmm
-    forward_int
+    forward_gpr
     movb $8, %al
     epilogue
 
 SYMBOL(ForwardCallXDD):
     prologue
     forward_xmm
-    forward_int
+    forward_gpr
     movb $8, %al
     epilogue
 

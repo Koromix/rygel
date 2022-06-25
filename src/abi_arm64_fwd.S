@@ -68,7 +68,7 @@
 .endm
 
 # Prepare general purpose argument registers from array passed by caller.
-.macro forward_int
+.macro forward_gpr
     ldr x8, [x1, 64]
     ldp x6, x7, [x1, 48]
     ldp x4, x5, [x1, 32]
@@ -86,35 +86,35 @@
 
 SYMBOL(ForwardCallGG):
     prologue
-    forward_int
+    forward_gpr
     epilogue
 
 SYMBOL(ForwardCallF):
     prologue
-    forward_int
+    forward_gpr
     epilogue
 
 SYMBOL(ForwardCallDDDD):
     prologue
-    forward_int
+    forward_gpr
     epilogue
 
 SYMBOL(ForwardCallXGG):
     prologue
     forward_vec
-    forward_int
+    forward_gpr
     epilogue
 
 SYMBOL(ForwardCallXF):
     prologue
     forward_vec
-    forward_int
+    forward_gpr
     epilogue
 
 SYMBOL(ForwardCallXDDDD):
     prologue
     forward_vec
-    forward_int
+    forward_gpr
     epilogue
 
 # Callback trampolines

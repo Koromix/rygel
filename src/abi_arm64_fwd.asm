@@ -53,7 +53,7 @@
 
     ; Prepare general purpose argument registers from array passed by caller.
     MACRO
-    forward_int
+    forward_gpr
 
     ldr x8, [x1, 64]
     ldp x6, x7, [x1, 48]
@@ -74,40 +74,40 @@
 
 ForwardCallGG PROC
     prologue
-    forward_int
+    forward_gpr
     epilogue
     ENDP
 
 ForwardCallF PROC
     prologue
-    forward_int
+    forward_gpr
     epilogue
     ENDP
 
 ForwardCallDDDD PROC
     prologue
-    forward_int
+    forward_gpr
     epilogue
     ENDP
 
 ForwardCallXGG PROC
     prologue
     forward_vec
-    forward_int
+    forward_gpr
     epilogue
     ENDP
 
 ForwardCallXF PROC
     prologue
     forward_vec
-    forward_int
+    forward_gpr
     epilogue
     ENDP
 
 ForwardCallXDDDD PROC
     prologue
     forward_vec
-    forward_int
+    forward_gpr
     epilogue
     ENDP
 
