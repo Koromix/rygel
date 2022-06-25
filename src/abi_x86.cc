@@ -145,11 +145,6 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
         } break;
     }
 
-#ifdef __OpenBSD__
-    // Make sure the SP points inside the MAP_STACK area, or (void) functions may crash on OpenBSD
-    func->args_size = std::max(4, func->args_size);
-#endif
-
     return true;
 }
 

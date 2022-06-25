@@ -665,6 +665,11 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 #endif
     RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 
+#ifdef __OpenBSD__
+    // Make sure the SP points inside the MAP_STACK area, or (void) functions may crash on OpenBSD i386
+    mem->stack.len -= 16;
+#endif
+
     mem->heap.len = heap_size;
 #ifdef _WIN32
     mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
