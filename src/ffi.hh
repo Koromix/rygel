@@ -229,6 +229,6 @@ struct InstanceData {
     Size async_heap_size = DefaultAsyncHeapSize;
     int resident_async_pools = DefaultResidentAsyncPools;
 };
-RG_STATIC_ASSERT(MaxTrampolines <= 32);
+RG_STATIC_ASSERT(MaxTrampolines <= 16);
 
 }
