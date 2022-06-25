@@ -806,7 +806,7 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     Napi::Function callback = info[(uint32_t)func->parameters.len].As<Napi::Function>();
 
     if (!callback.IsFunction()) {
-        ThrowError<Napi::TypeError>(env, "Expected callback function as last arguments, got %1", GetValueType(instance, callback));
+        ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, callback));
         return env.Null();
     }
 
