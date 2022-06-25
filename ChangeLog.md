@@ -1,5 +1,17 @@
 # Changelog
 
+## Koffi 1.3.5
+
+**Main changes:**
+
+- Fix memory leak when many async calls are running
+- Add configurable limit for maximum number of async calls (max_async_calls)
+
+**Other changes:**
+
+- Reduce default async memory stack and heap size
+- Various documentation improvements
+
 ## Koffi 1.3.4
 
 **Main fixes:**

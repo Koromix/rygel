@@ -210,7 +210,7 @@
 </pre></div>
 </div>
 <p>Once you have installed Koffi, you can start by loading it this way:</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 <p>Below you can find three examples:</p>
@@ -222,47 +222,47 @@
 <h2>Small Linux example<a class="headerlink" href="#small-linux-example" title="Permalink to this heading">#</a></h2>
 <p>This is a small example for Linux systems, which uses <code class="docutils literal notranslate"><span class="pre">gettimeofday()</span></code>, <code class="docutils literal notranslate"><span class="pre">localtime_r()</span></code> and <code class="docutils literal notranslate"><span class="pre">printf()</span></code> to print the current time.</p>
 <p>It illustrates the use of output parameters.</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos"> 2</span>
-<span class="linenos"> 3</span><span class="c1">// Load the shared library</span>
-<span class="linenos"> 4</span><span class="kd">const</span> <span class="nx">lib</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;libc.so.6&#39;</span><span class="p">);</span>
+<span class="linenos"> 3</span><span class="c1">// Load the shared library</span><span class="w"></span>
+<span class="linenos"> 4</span><span class="kd">const</span><span class="w"> </span><span class="nx">lib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;libc.so.6&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos"> 5</span>
-<span class="linenos"> 6</span><span class="c1">// Declare struct types</span>
-<span class="linenos"> 7</span><span class="kd">const</span> <span class="nx">timeval</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;timeval&#39;</span><span class="p">,</span> <span class="p">{</span>
-<span class="linenos"> 8</span>    <span class="nx">tv_sec</span><span class="o">:</span> <span class="s1">&#39;unsigned int&#39;</span><span class="p">,</span>
-<span class="linenos"> 9</span>    <span class="nx">tv_usec</span><span class="o">:</span> <span class="s1">&#39;unsigned int&#39;</span>
-<span class="linenos">10</span><span class="p">});</span>
-<span class="linenos">11</span><span class="kd">const</span> <span class="nx">timezone</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;timezone&#39;</span><span class="p">,</span> <span class="p">{</span>
-<span class="linenos">12</span>    <span class="nx">tz_minuteswest</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
-<span class="linenos">13</span>    <span class="nx">tz_dsttime</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span>
-<span class="linenos">14</span><span class="p">});</span>
-<span class="linenos">15</span><span class="kd">const</span> <span class="nx">time_t</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;time_t&#39;</span><span class="p">,</span> <span class="p">{</span> <span class="nx">value</span><span class="o">:</span> <span class="s1">&#39;int64_t&#39;</span> <span class="p">});</span>
-<span class="linenos">16</span><span class="kd">const</span> <span class="nx">tm</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;tm&#39;</span><span class="p">,</span> <span class="p">{</span>
-<span class="linenos">17</span>    <span class="nx">tm_sec</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
-<span class="linenos">18</span>    <span class="nx">tm_min</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
-<span class="linenos">19</span>    <span class="nx">tm_hour</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
-<span class="linenos">20</span>    <span class="nx">tm_mday</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
-<span class="linenos">21</span>    <span class="nx">tm_mon</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
-<span class="linenos">22</span>    <span class="nx">tm_year</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
-<span class="linenos">23</span>    <span class="nx">tm_wday</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
-<span class="linenos">24</span>    <span class="nx">tm_yday</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span>
-<span class="linenos">25</span>    <span class="nx">tm_isdst</span><span class="o">:</span> <span class="s1">&#39;int&#39;</span>
-<span class="linenos">26</span><span class="p">});</span>
+<span class="linenos"> 6</span><span class="c1">// Declare struct types</span><span class="w"></span>
+<span class="linenos"> 7</span><span class="kd">const</span><span class="w"> </span><span class="nx">timeval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;timeval&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="linenos"> 8</span><span class="w">    </span><span class="nx">tv_sec</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;unsigned int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos"> 9</span><span class="w">    </span><span class="nx">tv_usec</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;unsigned int&#39;</span><span class="w"></span>
+<span class="linenos">10</span><span class="p">});</span><span class="w"></span>
+<span class="linenos">11</span><span class="kd">const</span><span class="w"> </span><span class="nx">timezone</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;timezone&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="linenos">12</span><span class="w">    </span><span class="nx">tz_minuteswest</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">13</span><span class="w">    </span><span class="nx">tz_dsttime</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="w"></span>
+<span class="linenos">14</span><span class="p">});</span><span class="w"></span>
+<span class="linenos">15</span><span class="kd">const</span><span class="w"> </span><span class="nx">time_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;time_t&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int64_t&#39;</span><span class="w"> </span><span class="p">});</span><span class="w"></span>
+<span class="linenos">16</span><span class="kd">const</span><span class="w"> </span><span class="nx">tm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;tm&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="linenos">17</span><span class="w">    </span><span class="nx">tm_sec</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">18</span><span class="w">    </span><span class="nx">tm_min</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">19</span><span class="w">    </span><span class="nx">tm_hour</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">20</span><span class="w">    </span><span class="nx">tm_mday</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">21</span><span class="w">    </span><span class="nx">tm_mon</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">22</span><span class="w">    </span><span class="nx">tm_year</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">23</span><span class="w">    </span><span class="nx">tm_wday</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">24</span><span class="w">    </span><span class="nx">tm_yday</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">25</span><span class="w">    </span><span class="nx">tm_isdst</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="w"></span>
+<span class="linenos">26</span><span class="p">});</span><span class="w"></span>
 <span class="linenos">27</span>
-<span class="linenos">28</span><span class="c1">// Find functions</span>
-<span class="linenos">29</span><span class="kd">const</span> <span class="nx">gettimeofday</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int gettimeofday(_Out_ timeval *tv, _Out_ timezone *tz)&#39;</span><span class="p">);</span>
-<span class="linenos">30</span><span class="kd">const</span> <span class="nx">localtime_r</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;tm *localtime_r(const time_t *timeval, _Out_ tm *result)&#39;</span><span class="p">);</span>
-<span class="linenos">31</span><span class="kd">const</span> <span class="nx">printf</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int printf(const char *format, ...)&#39;</span><span class="p">);</span>
+<span class="linenos">28</span><span class="c1">// Find functions</span><span class="w"></span>
+<span class="linenos">29</span><span class="kd">const</span><span class="w"> </span><span class="nx">gettimeofday</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int gettimeofday(_Out_ timeval *tv, _Out_ timezone *tz)&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">30</span><span class="kd">const</span><span class="w"> </span><span class="nx">localtime_r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;tm *localtime_r(const time_t *timeval, _Out_ tm *result)&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">31</span><span class="kd">const</span><span class="w"> </span><span class="nx">printf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;int printf(const char *format, ...)&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos">32</span>
-<span class="linenos">33</span><span class="c1">// Get local time</span>
-<span class="linenos">34</span><span class="kd">let</span> <span class="nx">tv</span> <span class="o">=</span> <span class="p">{};</span>
-<span class="linenos">35</span><span class="kd">let</span> <span class="nx">now</span> <span class="o">=</span> <span class="p">{};</span>
-<span class="linenos">36</span><span class="nx">gettimeofday</span><span class="p">(</span><span class="nx">tv</span><span class="p">,</span> <span class="kc">null</span><span class="p">);</span>
-<span class="linenos">37</span><span class="nx">localtime_r</span><span class="p">({</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">tv</span><span class="p">.</span><span class="nx">tv_sec</span> <span class="p">},</span> <span class="nx">now</span><span class="p">);</span>
+<span class="linenos">33</span><span class="c1">// Get local time</span><span class="w"></span>
+<span class="linenos">34</span><span class="kd">let</span><span class="w"> </span><span class="nx">tv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span><span class="w"></span>
+<span class="linenos">35</span><span class="kd">let</span><span class="w"> </span><span class="nx">now</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span><span class="w"></span>
+<span class="linenos">36</span><span class="nx">gettimeofday</span><span class="p">(</span><span class="nx">tv</span><span class="p">,</span><span class="w"> </span><span class="kc">null</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">37</span><span class="nx">localtime_r</span><span class="p">({</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="nx">tv</span><span class="p">.</span><span class="nx">tv_sec</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">now</span><span class="p">);</span><span class="w"></span>
 <span class="linenos">38</span>
-<span class="linenos">39</span><span class="c1">// And format it with printf (variadic function)</span>
-<span class="linenos">40</span><span class="nx">printf</span><span class="p">(</span><span class="s1">&#39;Hello World!\n&#39;</span><span class="p">);</span>
-<span class="linenos">41</span><span class="nx">printf</span><span class="p">(</span><span class="s1">&#39;Local time: %02d:%02d:%02d\n&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="nx">now</span><span class="p">.</span><span class="nx">tm_hour</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="nx">now</span><span class="p">.</span><span class="nx">tm_min</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="nx">now</span><span class="p">.</span><span class="nx">tm_sec</span><span class="p">);</span>
+<span class="linenos">39</span><span class="c1">// And format it with printf (variadic function)</span><span class="w"></span>
+<span class="linenos">40</span><span class="nx">printf</span><span class="p">(</span><span class="s1">&#39;Hello World!\n&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">41</span><span class="nx">printf</span><span class="p">(</span><span class="s1">&#39;Local time: %02d:%02d:%02d\n&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">now</span><span class="p">.</span><span class="nx">tm_hour</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">now</span><span class="p">.</span><span class="nx">tm_min</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">now</span><span class="p">.</span><span class="nx">tm_sec</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 </section>
@@ -270,18 +270,18 @@
 <h2>Small Windows example<a class="headerlink" href="#small-windows-example" title="Permalink to this heading">#</a></h2>
 <p>This is a small example targeting the Win32 API, using <code class="docutils literal notranslate"><span class="pre">MessageBox()</span></code> to show a <em>Hello World!</em> message to the user.</p>
 <p>It illustrates the use of the x86 stdcall calling convention.</p>
-<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kd">const</span> <span class="nx">koffi</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos"> 2</span>
-<span class="linenos"> 3</span><span class="c1">// Load the shared library</span>
-<span class="linenos"> 4</span><span class="kd">const</span> <span class="nx">lib</span> <span class="o">=</span> <span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;user32.dll&#39;</span><span class="p">);</span>
+<span class="linenos"> 3</span><span class="c1">// Load the shared library</span><span class="w"></span>
+<span class="linenos"> 4</span><span class="kd">const</span><span class="w"> </span><span class="nx">lib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;user32.dll&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos"> 5</span>
-<span class="linenos"> 6</span><span class="c1">// Declare constants</span>
-<span class="linenos"> 7</span><span class="kd">const</span> <span class="nx">MB_ICONINFORMATION</span> <span class="o">=</span> <span class="mh">0x40</span><span class="p">;</span>
+<span class="linenos"> 6</span><span class="c1">// Declare constants</span><span class="w"></span>
+<span class="linenos"> 7</span><span class="kd">const</span><span class="w"> </span><span class="nx">MB_ICONINFORMATION</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x40</span><span class="p">;</span><span class="w"></span>
 <span class="linenos"> 8</span>
-<span class="linenos"> 9</span><span class="c1">// Find functions</span>
-<span class="linenos">10</span><span class="kd">const</span> <span class="nx">MessageBoxA</span> <span class="o">=</span> <span class="nx">lib</span><span class="p">.</span><span class="nx">stdcall</span><span class="p">(</span><span class="s1">&#39;MessageBoxA&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;void *&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="s1">&#39;uint&#39;</span><span class="p">]);</span>
+<span class="linenos"> 9</span><span class="c1">// Find functions</span><span class="w"></span>
+<span class="linenos">10</span><span class="kd">const</span><span class="w"> </span><span class="nx">MessageBoxA</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">stdcall</span><span class="p">(</span><span class="s1">&#39;MessageBoxA&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;void *&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;string&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;string&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;uint&#39;</span><span class="p">]);</span><span class="w"></span>
 <span class="linenos">11</span>
-<span class="linenos">12</span><span class="nx">MessageBoxA</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="s1">&#39;Hello World!&#39;</span><span class="p">,</span> <span class="s1">&#39;Koffi&#39;</span><span class="p">,</span> <span class="nx">MB_ICONINFORMATION</span><span class="p">);</span>
+<span class="linenos">12</span><span class="nx">MessageBoxA</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Hello World!&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Koffi&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">MB_ICONINFORMATION</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 </section>
