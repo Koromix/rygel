@@ -26,7 +26,7 @@ Setting              | Default | Description
 -------------------- | ------- | -----------------------------------------------
 sync_stack_size      | 1 MiB   | Stack size for synchronous calls
 sync_heap_size       | 2 MiB   | Heap size for synchronous calls
-async_stack_size     | 512 kiB | Stack size for asynchronous calls
-async_heap_size      | 1 MiB   | Heap size for asynchronous calls
+async_stack_size     | 256 kiB | Stack size for asynchronous calls
+async_heap_size      | 512 kiB | Heap size for asynchronous calls
 resident_async_pools | 2       | Number of resident pools for asynchronous calls
 max_async_calls      | 64      | Maximum number of ongoing asynchronous calls

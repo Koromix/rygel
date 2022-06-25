@@ -21,8 +21,8 @@ namespace RG {
 
 static const Size DefaultSyncStackSize = Mebibytes(1);
 static const Size DefaultSyncHeapSize = Mebibytes(2);
-static const Size DefaultAsyncStackSize = Kibibytes(512);
-static const Size DefaultAsyncHeapSize = Mebibytes(1);
+static const Size DefaultAsyncStackSize = Kibibytes(256);
+static const Size DefaultAsyncHeapSize = Kibibytes(512);
 static const int DefaultResidentAsyncPools = 2;
 static const int MaxAsyncCalls = 64;
 
