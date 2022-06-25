@@ -41,7 +41,7 @@ CallData::~CallData()
 
     instance->free_trampolines |= used_trampolines;
 
-    if (--mem->depth && mem->temporary) {
+    if (!--mem->depth && mem->temporary) {
         delete mem;
     }
 }
