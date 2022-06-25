@@ -43,7 +43,7 @@ namespace RG {
 // Value does not matter, the tag system uses memory addresses
 const int TypeInfoMarker = 0xDEADBEEF;
 
-static bool ChangeMemorySize(Napi::Value value, Size *out_size)
+static bool ChangeMemorySize(const char *name, Napi::Value value, Size *out_size)
 {
     const Size MinSize = Kibibytes(1);
     const Size MaxSize = Mebibytes(16);
@@ -51,18 +51,42 @@ static bool ChangeMemorySize(Napi::Value value, Size *out_size)
     Napi::Env env = value.Env();
 
     if (!value.IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for memory size, expected number");
-        return env.Null();
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected number", GetValueType(instance, value), name);
+        return false;
     }
 
     int64_t size = value.As<Napi::Number>().Int64Value();
 
     if (size < MinSize || size > MaxSize) {
-        ThrowError<Napi::Error>(env, "Memory size must be between %1 and %2", FmtMemSize(MinSize), FmtMemSize(MaxSize));
+        ThrowError<Napi::Error>(env, "Setting '%1' must be between %2 and %3", name, FmtMemSize(MinSize), FmtMemSize(MaxSize));
         return false;
     }
 
     *out_size = (Size)size;
+    return true;
+}
+
+static bool ChangeAsyncLimit(const char *name, Napi::Value value, int max, int *out_limit)
+{
+    Napi::Env env = value.Env();
+
+    if (!value.IsNumber()) {
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected number", GetValueType(instance, value), name);
+        return false;
+    }
+
+    int64_t n = value.As<Napi::Number>().Int64Value();
+
+    if (n < 0 || n > max) {
+        ThrowError<Napi::Error>(env, "Setting '%1' must be between 0 and %2", name, max);
+        return false;
+    }
+
+    *out_limit = (int)n;
     return true;
 }
 
@@ -82,6 +106,13 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             return env.Null();
         }
 
+        Size sync_stack_size = instance->sync_stack_size;
+        Size sync_heap_size = instance->sync_heap_size;
+        Size async_stack_size = instance->async_stack_size;
+        Size async_heap_size = instance->async_heap_size;
+        int resident_async_pools = instance->resident_async_pools;
+        int max_async_calls = resident_async_pools + instance->max_temporaries;
+
         Napi::Object obj = info[0].As<Napi::Object>();
         Napi::Array keys = obj.GetPropertyNames();
 
@@ -90,38 +121,40 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             Napi::Value value = obj[key];
 
             if (key == "sync_stack_size") {
-                if (!ChangeMemorySize(value, &instance->sync_stack_size))
+                if (!ChangeMemorySize(key.c_str(), value, &sync_stack_size))
                     return env.Null();
             } else if (key == "sync_heap_size") {
-                if (!ChangeMemorySize(value, &instance->sync_heap_size))
+                if (!ChangeMemorySize(key.c_str(), value, &sync_heap_size))
                     return env.Null();
             } else if (key == "async_stack_size") {
-                if (!ChangeMemorySize(value, &instance->async_stack_size))
+                if (!ChangeMemorySize(key.c_str(), value, &async_stack_size))
                     return env.Null();
             } else if (key == "async_heap_size") {
-                if (!ChangeMemorySize(value, &instance->async_heap_size))
+                if (!ChangeMemorySize(key.c_str(), value, &async_heap_size))
                     return env.Null();
             } else if (key == "resident_async_pools") {
-                RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(instance->memories.data));
-
-                if (!value.IsNumber()) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for resident_async_pools, expected number");
+                if (!ChangeAsyncLimit(key.c_str(), value, RG_LEN(instance->memories.data) - 1, &resident_async_pools))
                     return env.Null();
-                }
-
-                int64_t n = value.As<Napi::Number>().Int64Value();
-
-                if (n < 0 || n > RG_LEN(instance->memories.data)) {
-                    ThrowError<Napi::Error>(env, "Parameter resident_async_pools must be between 0 and %1", RG_LEN(instance->memories.data));
+            } else if (key == "max_async_calls") {
+                if (!ChangeAsyncLimit(key.c_str(), value, MaxAsyncCalls, &max_async_calls))
                     return env.Null();
-                }
-
-                instance->resident_async_pools = (int)n;
             } else {
                 ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
                 return env.Null();
             }
         }
+
+        if (max_async_calls < resident_async_pools) {
+            ThrowError<Napi::Error>(env, "Setting max_async_calls must be >= to resident_async_pools");
+            return env.Null();
+        }
+
+        instance->sync_stack_size = sync_stack_size;
+        instance->sync_heap_size = sync_heap_size;
+        instance->async_stack_size = async_stack_size;
+        instance->async_heap_size = async_heap_size;
+        instance->resident_async_pools = resident_async_pools;
+        instance->max_temporaries = max_async_calls - resident_async_pools;
     }
 
     Napi::Object obj = Napi::Object::New(env);
@@ -131,6 +164,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
     obj.Set("async_stack_size", instance->async_stack_size);
     obj.Set("async_heap_size", instance->async_heap_size);
     obj.Set("resident_async_pools", instance->resident_async_pools);
+    obj.Set("max_async_calls", instance->resident_async_pools + instance->max_temporaries);
 
     return obj;
 }
@@ -616,6 +650,9 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
             return mem;
     }
 
+    if (RG_UNLIKELY(instance->temporaries >= instance->max_temporaries))
+        return nullptr;
+
     InstanceMemory *mem = new InstanceMemory();
 
     mem->stack.len = stack_size;
@@ -640,7 +677,9 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 
     if (instance->memories.len <= instance->resident_async_pools) {
         instance->memories.Append(mem);
+        mem->temporary = false;
     } else {
+        instance->temporaries++;
         mem->temporary = true;
     }
 
@@ -811,6 +850,10 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     }
 
     InstanceMemory *mem = AllocateMemory(instance, instance->async_stack_size, instance->async_heap_size);
+    if (RG_UNLIKELY(!mem)) {
+        ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
+        return env.Null();
+    }
     AsyncCall *async = new AsyncCall(env, instance, func, mem, callback);
 
     if (async->Prepare(info) && instance->debug) {
@@ -919,6 +962,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     if (!instance->memories.len) {
         AllocateMemory(instance, instance->sync_stack_size, instance->sync_heap_size);
+        RG_ASSERT(instance->memories.len);
     }
 
     // Load shared library

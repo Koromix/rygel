@@ -18,6 +18,8 @@ console.log(config);
 
 The same is true for asynchronous calls. When an asynchronous call is made, Koffi will allocate new blocks unless there is an unused (resident) set of blocks still available. Once the asynchronous call is finished, these blocks are freed if there are more than `resident_async_pools` sets of blocks left around.
 
+There cannot be more than `max_async_calls` running at the same time.
+
 ## Default settings
 
 Setting              | Default | Description
@@ -27,3 +29,4 @@ sync_heap_size       | 2 MiB   | Heap size for synchronous calls
 async_stack_size     | 512 kiB | Stack size for asynchronous calls
 async_heap_size      | 1 MiB   | Heap size for asynchronous calls
 resident_async_pools | 2       | Number of resident pools for asynchronous calls
+max_async_calls      | 64      | Maximum number of ongoing asynchronous calls

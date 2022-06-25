@@ -40,6 +40,7 @@ CallData::~CallData()
     mem->heap = old_heap_mem;
 
     instance->free_trampolines |= used_trampolines;
+    instance->temporaries -= mem->temporary;
 
     if (!--mem->depth && mem->temporary) {
         delete mem;

@@ -219,6 +219,7 @@
 </pre></div>
 </div>
 <p>The same is true for asynchronous calls. When an asynchronous call is made, Koffi will allocate new blocks unless there is an unused (resident) set of blocks still available. Once the asynchronous call is finished, these blocks are freed if there are more than <code class="docutils literal notranslate"><span class="pre">resident_async_pools</span></code> sets of blocks left around.</p>
+<p>There cannot be more than <code class="docutils literal notranslate"><span class="pre">max_async_calls</span></code> running at the same time.</p>
 </section>
 <section id="default-settings">
 <h2>Default settings<a class="headerlink" href="#default-settings" title="Permalink to this heading">#</a></h2>
@@ -250,6 +251,10 @@
 <tr class="row-even"><td><p>resident_async_pools</p></td>
 <td><p>2</p></td>
 <td><p>Number of resident pools for asynchronous calls</p></td>
+</tr>
+<tr class="row-odd"><td><p>max_async_calls</p></td>
+<td><p>64</p></td>
+<td><p>Maximum number of ongoing asynchronous calls</p></td>
 </tr>
 </tbody>
 </table>

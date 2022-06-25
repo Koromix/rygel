@@ -51,7 +51,7 @@ async function test() {
     let promises = [];
 
     // Issue several async calls
-    for (let i = 0; i < 64; i++) {
+    for (let i = 0; i < 32; i++) {
         let p = new Promise((resolve, reject) => {
             try {
                 ConcatenateToInt1.async(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7, (err, res) => {
