@@ -205,6 +205,8 @@
         <article role="main">
           <section id="benchmarks">
 <h1>Benchmarks<a class="headerlink" href="#benchmarks" title="Permalink to this heading">#</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">#</a></h2>
 <p>Here is a quick overview of the execution time of Koffi calls on three benchmarks, where it is compared to a theoretical ideal FFI implementation (approximated with pre-compiled static N-API glue code):</p>
 <ul class="simple">
 <li><p>The first benchmark is based on <code class="docutils literal notranslate"><span class="pre">rand()</span></code> calls</p></li>
@@ -213,23 +215,23 @@
 </ul>
 <table style="margin: 0 auto;">
     <tr>
-        <td><a href="_static/perf_linux_20220623_2.png" target="_blank"><img src="_static/perf_linux_20220623_2.png" alt="Linux performance" style="width: 350px;"/></a></td>
-        <td><a href="_static/perf_windows_20220623_2.png" target="_blank"><img src="_static/perf_windows_20220623_2.png" alt="Windows performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_linux_20220627.png" target="_blank"><img src="_static/perf_linux_20220627.png" alt="Linux performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_windows_20220627.png" target="_blank"><img src="_static/perf_windows_20220627.png" alt="Windows performance" style="width: 350px;"/></a></td>
     </tr>
 </table>
 <p>These results are detailed and explained below, and compared to node-ffi/node-ffi-napi.</p>
+</section>
+<section id="linux-x86-64">
+<h2>Linux x86_64<a class="headerlink" href="#linux-x86-64" title="Permalink to this heading">#</a></h2>
+<p>The results presented below were measured on my x86_64 Linux machine (Intel® Core™ i5-4460).</p>
 <section id="rand-results">
-<h2>rand results<a class="headerlink" href="#rand-results" title="Permalink to this heading">#</a></h2>
+<h3>rand results<a class="headerlink" href="#rand-results" title="Permalink to this heading">#</a></h3>
 <p>This test is based around repeated calls to a simple standard C function atoi, and has three implementations:</p>
 <ul class="simple">
 <li><p>the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js &gt; C FFI implementation (pre-compiled static glue code)</p></li>
 <li><p>the second one calls atoi through Koffi</p></li>
 <li><p>the third one uses the official Node.js FFI implementation, node-ffi-napi</p></li>
 </ul>
-<p>Because rand is a pretty small function, the FFI overhead is clearly visible.</p>
-<section id="linux-x86-64">
-<h3>Linux x86_64<a class="headerlink" href="#linux-x86-64" title="Permalink to this heading">#</a></h3>
-<p>The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
 <thead>
@@ -243,105 +245,159 @@
 <tbody>
 <tr class="row-even"><td><p>rand_napi</p></td>
 <td><p>20000000</p></td>
-<td><p>1.44s</p></td>
+<td><p>1.29s</p></td>
+<td><p>(baseline)</p></td>
+<td><p>(baseline)</p></td>
+</tr>
+<tr class="row-odd"><td><p>rand_koffi</p></td>
+<td><p>20000000</p></td>
+<td><p>1.91s</p></td>
+<td><p>x0.68</p></td>
+<td><p>+48%</p></td>
+</tr>
+<tr class="row-even"><td><p>rand_node_ffi</p></td>
+<td><p>20000000</p></td>
+<td><p>71.59s</p></td>
+<td><p>x0.02</p></td>
+<td><p>+5400%</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Because rand is a pretty small function, the FFI overhead is clearly visible.</p>
+</section>
+<section id="atoi-results">
+<h3>atoi results<a class="headerlink" href="#atoi-results" title="Permalink to this heading">#</a></h3>
+<p>This test is similar to the rand one, but it is based on atoi, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Benchmark</p></th>
+<th class="head"><p>Iterations</p></th>
+<th class="head"><p>Total time</p></th>
+<th class="head"><p>Relative performance</p></th>
+<th class="head"><p>Overhead</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>atoi_napi</p></td>
+<td><p>20000000</p></td>
+<td><p>2.25s</p></td>
+<td><p>(baseline)</p></td>
+<td><p>(baseline)</p></td>
+</tr>
+<tr class="row-odd"><td><p>atoi_koffi</p></td>
+<td><p>20000000</p></td>
+<td><p>3.40s</p></td>
+<td><p>x0.66</p></td>
+<td><p>+51%</p></td>
+</tr>
+<tr class="row-even"><td><p>atoi_node_ffi</p></td>
+<td><p>20000000</p></td>
+<td><p>622.55s</p></td>
+<td><p>x0.004</p></td>
+<td><p>+27500%</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Because atoi is a pretty small function, the FFI overhead is clearly visible.</p>
+</section>
+<section id="raylib-results">
+<h3>Raylib results<a class="headerlink" href="#raylib-results" title="Permalink to this heading">#</a></h3>
+<p>This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:</p>
+<ul class="simple">
+<li><p>Baseline: Full C++ version of the code (no JS)</p></li>
+<li><p><a class="reference external" href="https://github.com/RobLoach/node-raylib">node-raylib</a>: This is a native wrapper implemented with N-API</p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Benchmark</p></th>
+<th class="head"><p>Iterations</p></th>
+<th class="head"><p>Total time</p></th>
+<th class="head"><p>Relative performance</p></th>
+<th class="head"><p>Overhead</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>raylib_cc</p></td>
+<td><p>100</p></td>
+<td><p>7.79s</p></td>
+<td><p>x1.18</p></td>
+<td><p>-16%</p></td>
+</tr>
+<tr class="row-odd"><td><p>raylib_node_raylib</p></td>
+<td><p>100</p></td>
+<td><p>9.26s</p></td>
+<td><p>(baseline)</p></td>
+<td><p>(baseline)</p></td>
+</tr>
+<tr class="row-even"><td><p>raylib_koffi</p></td>
+<td><p>100</p></td>
+<td><p>11.18s</p></td>
+<td><p>x0.83</p></td>
+<td><p>+21%</p></td>
+</tr>
+<tr class="row-odd"><td><p>raylib_node_ffi</p></td>
+<td><p>100</p></td>
+<td><p>34.91s</p></td>
+<td><p>x0.27</p></td>
+<td><p>+276%</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+<section id="windows-x86-64">
+<h2>Windows x86_64<a class="headerlink" href="#windows-x86-64" title="Permalink to this heading">#</a></h2>
+<p>The results presented below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460).</p>
+<section id="id1">
+<h3>rand results<a class="headerlink" href="#id1" title="Permalink to this heading">#</a></h3>
+<p>This test is based around repeated calls to a simple standard C function atoi, and has three implementations:</p>
+<ul class="simple">
+<li><p>the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js &gt; C FFI implementation (pre-compiled static glue code)</p></li>
+<li><p>the second one calls atoi through Koffi</p></li>
+<li><p>the third one uses the official Node.js FFI implementation, node-ffi-napi</p></li>
+</ul>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Benchmark</p></th>
+<th class="head"><p>Iterations</p></th>
+<th class="head"><p>Total time</p></th>
+<th class="head"><p>Relative performance</p></th>
+<th class="head"><p>Overhead</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>rand_napi</p></td>
+<td><p>20000000</p></td>
+<td><p>1.98s</p></td>
 <td><p>(baseline)</p></td>
 <td><p>(baseline)</p></td>
 </tr>
 <tr class="row-odd"><td><p>rand_koffi</p></td>
 <td><p>20000000</p></td>
 <td><p>2.60s</p></td>
-<td><p>x0.55</p></td>
-<td><p>+81%</p></td>
+<td><p>x0.76</p></td>
+<td><p>+31%</p></td>
 </tr>
 <tr class="row-even"><td><p>rand_node_ffi</p></td>
 <td><p>20000000</p></td>
-<td><p>107.58s</p></td>
-<td><p>x0.01</p></td>
-<td><p>+7400%</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="windows-x86-64">
-<h3>Windows x86_64<a class="headerlink" href="#windows-x86-64" title="Permalink to this heading">#</a></h3>
-<p>The results below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460):</p>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Benchmark</p></th>
-<th class="head"><p>Iterations</p></th>
-<th class="head"><p>Total time</p></th>
-<th class="head"><p>Relative performance</p></th>
-<th class="head"><p>Overhead</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>rand_napi</p></td>
-<td><p>20000000</p></td>
-<td><p>2.10s</p></td>
-<td><p>(baseline)</p></td>
-<td><p>(baseline)</p></td>
-</tr>
-<tr class="row-odd"><td><p>rand_koffi</p></td>
-<td><p>20000000</p></td>
-<td><p>3.87s</p></td>
-<td><p>x0.54</p></td>
-<td><p>+84%</p></td>
-</tr>
-<tr class="row-even"><td><p>rand_node_ffi</p></td>
-<td><p>20000000</p></td>
-<td><p>87.84s</p></td>
+<td><p>87.13s</p></td>
 <td><p>x0.02</p></td>
-<td><p>+4100%</p></td>
+<td><p>+4300%</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-</section>
-</section>
-<section id="atoi-results">
-<h2>atoi results<a class="headerlink" href="#atoi-results" title="Permalink to this heading">#</a></h2>
-<p>This test is similar to the rand one, but it is based on atoi, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.</p>
 <p>Because rand is a pretty small function, the FFI overhead is clearly visible.</p>
-<section id="id1">
-<h3>Linux x86_64<a class="headerlink" href="#id1" title="Permalink to this heading">#</a></h3>
-<p>The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):</p>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Benchmark</p></th>
-<th class="head"><p>Iterations</p></th>
-<th class="head"><p>Total time</p></th>
-<th class="head"><p>Relative performance</p></th>
-<th class="head"><p>Overhead</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>atoi_napi</p></td>
-<td><p>20000000</p></td>
-<td><p>2.97s</p></td>
-<td><p>(baseline)</p></td>
-<td><p>(baseline)</p></td>
-</tr>
-<tr class="row-odd"><td><p>atoi_koffi</p></td>
-<td><p>20000000</p></td>
-<td><p>5.07s</p></td>
-<td><p>x0.58</p></td>
-<td><p>+71%</p></td>
-</tr>
-<tr class="row-even"><td><p>atoi_node_ffi</p></td>
-<td><p>20000000</p></td>
-<td><p>693.16s</p></td>
-<td><p>x0.005</p></td>
-<td><p>+23000%</p></td>
-</tr>
-</tbody>
-</table>
-</div>
 </section>
 <section id="id2">
-<h3>Windows x86_64<a class="headerlink" href="#id2" title="Permalink to this heading">#</a></h3>
+<h3>atoi results<a class="headerlink" href="#id2" title="Permalink to this heading">#</a></h3>
+<p>This test is similar to the rand one, but it is based on atoi, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.</p>
 <p>The results below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460):</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
@@ -356,37 +412,34 @@
 <tbody>
 <tr class="row-even"><td><p>atoi_napi</p></td>
 <td><p>20000000</p></td>
-<td><p>2.97s</p></td>
+<td><p>2.80s</p></td>
 <td><p>(baseline)</p></td>
 <td><p>(baseline)</p></td>
 </tr>
 <tr class="row-odd"><td><p>atoi_koffi</p></td>
 <td><p>20000000</p></td>
-<td><p>5.91s</p></td>
-<td><p>x0.50</p></td>
-<td><p>+99%</p></td>
+<td><p>4.81s</p></td>
+<td><p>x0.58</p></td>
+<td><p>+72%</p></td>
 </tr>
 <tr class="row-even"><td><p>atoi_node_ffi</p></td>
 <td><p>20000000</p></td>
-<td><p>479.34s</p></td>
+<td><p>467.24s</p></td>
 <td><p>x0.006</p></td>
-<td><p>+16000%</p></td>
+<td><p>+16600%</p></td>
 </tr>
 </tbody>
 </table>
 </div>
+<p>Because atoi is a pretty small function, the FFI overhead is clearly visible.</p>
 </section>
-</section>
-<section id="raylib-results">
-<h2>Raylib results<a class="headerlink" href="#raylib-results" title="Permalink to this heading">#</a></h2>
+<section id="id3">
+<h3>Raylib results<a class="headerlink" href="#id3" title="Permalink to this heading">#</a></h3>
 <p>This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:</p>
 <ul class="simple">
 <li><p>Baseline: Full C++ version of the code (no JS)</p></li>
 <li><p><a class="reference external" href="https://github.com/RobLoach/node-raylib">node-raylib</a>: This is a native wrapper implemented with N-API</p></li>
 </ul>
-<section id="id3">
-<h3>Linux x86_64<a class="headerlink" href="#id3" title="Permalink to this heading">#</a></h3>
-<p>The results below were measured on my x86_64 Linux machine (AMD® Ryzen™ 7 4700U):</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
 <thead>
@@ -400,72 +453,36 @@
 <tbody>
 <tr class="row-even"><td><p>raylib_cc</p></td>
 <td><p>100</p></td>
-<td><p>9.31s</p></td>
-<td><p>x1.17</p></td>
-<td><p>-15%</p></td>
+<td><p>7.61s</p></td>
+<td><p>x1.25</p></td>
+<td><p>-20%</p></td>
 </tr>
 <tr class="row-odd"><td><p>raylib_node_raylib</p></td>
 <td><p>100</p></td>
-<td><p>10.90s</p></td>
+<td><p>9.61s</p></td>
 <td><p>(baseline)</p></td>
 <td><p>(baseline)</p></td>
 </tr>
 <tr class="row-even"><td><p>raylib_koffi</p></td>
 <td><p>100</p></td>
-<td><p>12.86s</p></td>
-<td><p>x0.84</p></td>
-<td><p>+18%</p></td>
+<td><p>11.65s</p></td>
+<td><p>x0.82</p></td>
+<td><p>+21%</p></td>
 </tr>
 <tr class="row-odd"><td><p>raylib_node_ffi</p></td>
 <td><p>100</p></td>
-<td><p>35.76s</p></td>
-<td><p>x0.30</p></td>
-<td><p>+228%</p></td>
+<td><p>42.02s</p></td>
+<td><p>x0.23</p></td>
+<td><p>+337%</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-</section>
-<section id="id4">
-<h3>Windows x86_64<a class="headerlink" href="#id4" title="Permalink to this heading">#</a></h3>
-<p>The results below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460):</p>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Benchmark</p></th>
-<th class="head"><p>Iterations</p></th>
-<th class="head"><p>Total time</p></th>
-<th class="head"><p>Relative performance</p></th>
-<th class="head"><p>Overhead</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>raylib_cc</p></td>
-<td><p>100</p></td>
-<td><p>10.67s</p></td>
-<td><p>x1.17</p></td>
-<td><p>-12%</p></td>
-</tr>
-<tr class="row-odd"><td><p>raylib_node_raylib</p></td>
-<td><p>100</p></td>
-<td><p>12.05s</p></td>
-<td><p>(baseline)</p></td>
-<td><p>(baseline)</p></td>
-</tr>
-<tr class="row-even"><td><p>raylib_koffi</p></td>
-<td><p>100</p></td>
-<td><p>14.84s</p></td>
-<td><p>x0.81</p></td>
-<td><p>+23%</p></td>
-</tr>
-<tr class="row-odd"><td><p>raylib_node_ffi</p></td>
-<td><p>100</p></td>
-<td><p>44.63s</p></td>
-<td><p>x0.27</p></td>
-<td><p>+270%</p></td>
-</tr>
-</tbody>
-</table>
+<p>Please note that in order to get fair numbers for raylib_node_raylib, it was recompiled with clang-cl before running the benchmark with the following commands:</p>
+<div class="highlight-batch notranslate"><div class="highlight"><pre><span></span><span class="k">cd</span> node_modules\raylib
+<span class="k">rmdir</span> /S /Q bin build
+npx cmake-js compile -t ClangCL
+</pre></div>
 </div>
 </section>
 </section>
@@ -542,19 +559,17 @@ node ./atoi_koffi.js
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Benchmarks</a><ul>
-<li><a class="reference internal" href="#rand-results">rand results</a><ul>
-<li><a class="reference internal" href="#linux-x86-64">Linux x86_64</a></li>
-<li><a class="reference internal" href="#windows-x86-64">Windows x86_64</a></li>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#linux-x86-64">Linux x86_64</a><ul>
+<li><a class="reference internal" href="#rand-results">rand results</a></li>
+<li><a class="reference internal" href="#atoi-results">atoi results</a></li>
+<li><a class="reference internal" href="#raylib-results">Raylib results</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#atoi-results">atoi results</a><ul>
-<li><a class="reference internal" href="#id1">Linux x86_64</a></li>
-<li><a class="reference internal" href="#id2">Windows x86_64</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#raylib-results">Raylib results</a><ul>
-<li><a class="reference internal" href="#id3">Linux x86_64</a></li>
-<li><a class="reference internal" href="#id4">Windows x86_64</a></li>
+<li><a class="reference internal" href="#windows-x86-64">Windows x86_64</a><ul>
+<li><a class="reference internal" href="#id1">rand results</a></li>
+<li><a class="reference internal" href="#id2">atoi results</a></li>
+<li><a class="reference internal" href="#id3">Raylib results</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#running-benchmarks">Running benchmarks</a></li>
