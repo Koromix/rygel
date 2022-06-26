@@ -1197,7 +1197,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " /I. /EHsc");
+        Fmt(&buf, " /I. /EHsc /utf-8");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " /O2 /DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
