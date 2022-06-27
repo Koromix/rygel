@@ -479,9 +479,9 @@
 </table>
 </div>
 <p>Please note that in order to get fair numbers for raylib_node_raylib, it was recompiled with clang-cl before running the benchmark with the following commands:</p>
-<div class="highlight-batch notranslate"><div class="highlight"><pre><span></span><span class="k">cd</span> node_modules\raylib
-<span class="k">rmdir</span> /S /Q bin build
-npx cmake-js compile -t ClangCL
+<div class="highlight-batch notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="k">cd</span> node_modules\raylib
+<span class="linenos">2</span><span class="k">rmdir</span> /S /Q bin build
+<span class="linenos">3</span>npx cmake-js compile -t ClangCL
 </pre></div>
 </div>
 </section>
@@ -489,13 +489,13 @@ npx cmake-js compile -t ClangCL
 <section id="running-benchmarks">
 <h2>Running benchmarks<a class="headerlink" href="#running-benchmarks" title="Permalink to this heading">#</a></h2>
 <p>Open a console, go to <code class="docutils literal notranslate"><span class="pre">koffi/benchmark</span></code> and run <code class="docutils literal notranslate"><span class="pre">../../cnoke/cnoke.js</span></code> (or <code class="docutils literal notranslate"><span class="pre">node</span> <span class="pre">..\..\cnoke\cnoke.js</span></code> on Windows) before doing anything else.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> koffi/benchmark
-node ../../cnoke/cnoke.js
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nb">cd</span> koffi/benchmark
+<span class="linenos">2</span>node ../../cnoke/cnoke.js
 </pre></div>
 </div>
 <p>Once this is done, you can execute each implementation, e.g. <code class="docutils literal notranslate"><span class="pre">build/raylib_cc</span></code> or <code class="docutils literal notranslate"><span class="pre">node</span> <span class="pre">./atoi_koffi.js</span></code>. You can optionally define a custom number of iterations, e.g. <code class="docutils literal notranslate"><span class="pre">node</span> <span class="pre">./atoi_koffi.js</span> <span class="pre">10000000</span></code>.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>node ./atoi_napi.js
-node ./atoi_koffi.js
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node ./atoi_napi.js
+<span class="linenos">2</span>node ./atoi_koffi.js
 </pre></div>
 </div>
 </section>

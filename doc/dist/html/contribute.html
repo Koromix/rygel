@@ -214,8 +214,8 @@
 <h2>Build from source<a class="headerlink" href="#build-from-source" title="Permalink to this heading">#</a></h2>
 <p>We provide prebuilt binaries, packaged in the NPM archive, so in most cases it should be as simple as <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">install</span> <span class="pre">koffi</span></code>. If you want to hack Koffi or use a specific platform, follow the instructions below.</p>
 <p>Start by cloning the repository with <a class="reference external" href="https://git-scm.com/">Git</a>:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/Koromix/luigi
-<span class="nb">cd</span> luigi/koffi
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>git clone https://github.com/Koromix/luigi
+<span class="linenos">2</span><span class="nb">cd</span> luigi/koffi
 </pre></div>
 </div>
 <p>As said before, this is a monorepository containg multiple projects, hence the name.</p>
@@ -228,8 +228,8 @@
 <li><p><a class="reference external" href="https://nodejs.org/">Node.js</a> 12 or later</p></li>
 </ul>
 <p>Once this is done, run this command <em>from the test or the benchmark directory</em> (depending on what you want to build):</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> koffi/test <span class="c1"># or cd koffi/benchmark</span>
-node ../../cnoke/cnoke.js
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nb">cd</span> koffi/test <span class="c1"># or cd koffi/benchmark</span>
+<span class="linenos">2</span>node ../../cnoke/cnoke.js
 </pre></div>
 </div>
 </section>
@@ -243,8 +243,8 @@ node ../../cnoke/cnoke.js
 <li><p><a class="reference external" href="https://nodejs.org/">Node.js</a> 12 or later</p></li>
 </ul>
 <p>Once this is done, run this command <em>from the test or the benchmark directory</em> (depending on what you want to build):</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> koffi/test <span class="c1"># or cd koffi/benchmark</span>
-node ../../cnoke/cnoke.js
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nb">cd</span> koffi/test <span class="c1"># or cd koffi/benchmark</span>
+<span class="linenos">2</span>node ../../cnoke/cnoke.js
 </pre></div>
 </div>
 </section>
@@ -254,40 +254,40 @@ node ../../cnoke/cnoke.js
 <p>Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as <code class="docutils literal notranslate"><span class="pre">qemu-system</span></code> (or even <code class="docutils literal notranslate"><span class="pre">qemu-system-gui</span></code>) on Ubuntu.</p>
 <p>These machines are not included directly in this repository (for license and size reasons), but they are available here: <a class="reference external" href="https://koromix.dev/files/machines/">https://koromix.dev/files/machines/</a></p>
 <p>For example, if you want to run the tests on Debian ARM64, run the following commands:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> luigi/koffi/qemu/
-wget -q -O- https://koromix.dev/files/machines/qemu_debian_arm64.tar.zst <span class="p">|</span> zstd -d <span class="p">|</span> tar xv
-sha256sum -c --ignore-missing registry/sha256sum.txt
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nb">cd</span> luigi/koffi/qemu/
+<span class="linenos">2</span>wget -q -O- https://koromix.dev/files/machines/qemu_debian_arm64.tar.zst <span class="p">|</span> zstd -d <span class="p">|</span> tar xv
+<span class="linenos">3</span>sha256sum -c --ignore-missing registry/sha256sum.txt
 </pre></div>
 </div>
 <p>Note that the machine disk content may change each time the machine runs, so the checksum test will fail once a machine has been used at least once.</p>
 <p>And now you can run the tests with:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>node qemu.js <span class="c1"># Several options are available, use --help</span>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node qemu.js <span class="c1"># Several options are available, use --help</span>
 </pre></div>
 </div>
 <p>And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.</p>
 <p>By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>node qemu.js start <span class="c1"># Start the machines</span>
-node qemu.js <span class="c1"># Test (without shutting down)</span>
-node qemu.js <span class="c1"># Test again</span>
-node qemu.js stop <span class="c1"># Stop everything</span>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node qemu.js start <span class="c1"># Start the machines</span>
+<span class="linenos">2</span>node qemu.js <span class="c1"># Test (without shutting down)</span>
+<span class="linenos">3</span>node qemu.js <span class="c1"># Test again</span>
+<span class="linenos">4</span>node qemu.js stop <span class="c1"># Stop everything</span>
 </pre></div>
 </div>
 <p>You can also restrict the test to a subset of machines:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># Full test cycle</span>
-node qemu.js <span class="nb">test</span> debian_x64 debian_i386
-
-<span class="c1"># Separate start, test, shutdown</span>
-node qemu.js start debian_x64 debian_i386
-node qemu.js <span class="nb">test</span> debian_x64 debian_i386
-node qemu.js stop
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="c1"># Full test cycle</span>
+<span class="linenos">2</span>node qemu.js <span class="nb">test</span> debian_x64 debian_i386
+<span class="linenos">3</span>
+<span class="linenos">4</span><span class="c1"># Separate start, test, shutdown</span>
+<span class="linenos">5</span>node qemu.js start debian_x64 debian_i386
+<span class="linenos">6</span>node qemu.js <span class="nb">test</span> debian_x64 debian_i386
+<span class="linenos">7</span>node qemu.js stop
 </pre></div>
 </div>
 <p>Finally, you can join a running machine with SSH with the following shortcut, if you need to do some debugging or any other manual procedure:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>node qemu.js ssh debian_i386
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node qemu.js ssh debian_i386
 </pre></div>
 </div>
 <p>Each machine is configured to run a VNC server available locally, which you can use to access the display, using KRDC or any other compatible viewer. Use the <code class="docutils literal notranslate"><span class="pre">info</span></code> command to get the VNC port.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>node qemu.js info debian_x64
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node qemu.js info debian_x64
 </pre></div>
 </div>
 </section>
