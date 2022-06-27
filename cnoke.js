@@ -38,6 +38,7 @@ let work_dir = null;
 
 let version = null;
 let arch = null;
+let toolset = null;
 let mode = default_mode;
 let targets = [];
 let verbose = false;
@@ -108,6 +109,11 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 arch = value;
+            } else if ((command == build || command == configure) && arg == '--toolset') {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                toolset = value;
             } else if ((command == build || command == configure) && (arg == '-m' || arg == '--mode')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -197,6 +203,7 @@ Configure options:
         --arch <ARCH>            Change architecture and ABI
                                  (default: ${determine_arch()})
 
+        --toolset <TOOLSET>      Change default CMake toolset
     -m, --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
                                  (default: ${default_mode})
         --debug                  Shortcut for -m debug
@@ -315,6 +322,9 @@ async function configure(retry = true) {
             args.push('-DCMAKE_CXX_COMPILER_LAUNCHER=ccache');
         }
     }
+
+    if (toolset != null)
+        args.push('-T', toolset);
 
     args.push(`-DCMAKE_BUILD_TYPE=${mode}`);
     for (let type of ['ARCHIVE', 'RUNTIME', 'LIBRARY']) {

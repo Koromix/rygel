@@ -87,6 +87,7 @@ Configure options:
         --arch <ARCH>            Change architecture
                                  (default: x64)
 
+        --toolset <TOOLSET>      Change default CMake toolset
     -m, --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
                                  (default: RelWithDebInfo)
         --debug                  Shortcut for -m debug
