@@ -73,7 +73,7 @@ printf('Local time: %02d:%02d:%02d\n', 'int', now.tm_hour, 'int', now.tm_min, 'i
 
 This is a small example targeting the Win32 API, using `MessageBox()` to show a *Hello World!* message to the user.
 
-It illustrates the use of the x86 stdcall calling convention.
+It illustrates the use of the x86 stdcall calling convention, and the use of UTF-8 and UTF-16 string arguments.
 
 ```js
 const koffi = require('koffi');
@@ -82,10 +82,19 @@ const koffi = require('koffi');
 const lib = koffi.load('user32.dll');
 
 // Declare constants
+const MB_OK = 0x0;
+const MB_YESNO = 0x4;
+const MB_ICONQUESTION = 0x20;
 const MB_ICONINFORMATION = 0x40;
+const IDOK = 1;
+const IDYES = 6;
+const IDNO = 7;
 
 // Find functions
 const MessageBoxA = lib.stdcall('MessageBoxA', 'int', ['void *', 'string', 'string', 'uint']);
+const MessageBoxW = lib.stdcall('MessageBoxW', 'int', ['void *', 'string16', 'string16', 'uint']);
 
-MessageBoxA(null, 'Hello World!', 'Koffi', MB_ICONINFORMATION);
+let ret = MessageBoxA(null, 'Do you want another message box?', 'Koffi', MB_YESNO | MB_ICONQUESTION);
+if (ret == IDYES)
+    MessageBoxW(null, 'Hello World!', 'Koffi', MB_ICONINFORMATION);
 ```
