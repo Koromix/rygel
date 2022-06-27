@@ -1,5 +1,7 @@
 # Quick start
 
+## Install Koffi
+
 You can install Koffi with npm:
 
 ```sh
