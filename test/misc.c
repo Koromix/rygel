@@ -385,7 +385,12 @@ EXPORT PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const cha
     return bfg;
 }
 
+#ifdef _WIN32
+// Exported by DEF file
+const char *ReturnBigString(const char *str)
+#else
 EXPORT const char *ReturnBigString(const char *str)
+#endif
 {
     static char buf[16 * 1024 * 1024];
 

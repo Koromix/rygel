@@ -21,7 +21,7 @@
             "Linux ARM32": {
                 "arch": "arm32hf",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js"
+                "build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js"
             }
         },
 
@@ -29,7 +29,7 @@
             "Linux ARM32": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Build": "node ../cnoke/cnoke.js -C test"
+                    "Build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Sync": "node test/sync.js",
@@ -64,7 +64,7 @@
             "Linux ARM64": {
                 "arch": "arm64",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js"
+                "build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js"
             }
         },
 
@@ -72,7 +72,7 @@
             "Linux ARM64": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Build": "node ../cnoke/cnoke.js -C test"
+                    "Build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Sync": "node test/sync.js",
@@ -107,7 +107,7 @@
             "Linux i386": {
                 "arch": "ia32",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js"
+                "build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js"
             }
         },
 
@@ -115,7 +115,7 @@
             "Linux i386": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Build": "node ../cnoke/cnoke.js -C test"
+                    "Build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Sync": "node test/sync.js",
@@ -150,7 +150,7 @@
             "Linux x64": {
                 "arch": "x64",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js"
+                "build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js"
             }
         },
 
@@ -158,7 +158,7 @@
             "Linux x64": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Build": "node ../cnoke/cnoke.js -C test"
+                    "Build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Sync": "node test/sync.js",
@@ -178,7 +178,7 @@
         "qemu": {
             "binary": "qemu-system-x86_64",
             "arguments": ["-m", "3G", "-smp", 4, "-rtc", "clock=host,base=localtime", "-bios", "bios.bin", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22205-:22", "-device", "e1000,netdev=mynet", "-vga", "std", "-device", "qemu-xhci", "-device", "usb-tablet", "-vnc", "127.0.0.1:15"],
-            "version": 9,
+            "version": 10,
 
             "ssh_port": 22205,
             "vnc_port": 5915,
@@ -193,13 +193,13 @@
             "Windows i386": {
                 "arch": "ia32",
                 "directory": "C:/Users/windows/Desktop/luigi_ia32",
-                "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js"
+                "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js --toolset ClangCL"
             },
 
             "Windows x64": {
                 "arch": "x64",
                 "directory": "C:/Users/windows/Desktop/luigi_x64",
-                "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js"
+                "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js --toolset ClangCL"
             },
 
             "Windows ARM64": {
@@ -213,7 +213,7 @@
             "Windows i386": {
                 "directory": "C:/Users/windows/Desktop/luigi_ia32",
                 "build": {
-                    "Build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -C test"
+                    "Build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -C test --toolset ClangCL"
                 },
                 "commands": {
                     "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
@@ -227,7 +227,7 @@
             "Windows x64": {
                 "directory": "C:/Users/windows/Desktop/luigi_x64",
                 "build": {
-                    "Build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -C test"
+                    "Build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -C test --toolset ClangCL"
                 },
                 "commands": {
                     "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
@@ -525,7 +525,7 @@
             "Linux RISC-V 64": {
                 "arch": "riscv64hf64",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js"
+                "build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js"
             }
         },
 
@@ -533,7 +533,7 @@
             "Linux RISC-V 64": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Build": "node ../cnoke/cnoke.js -C test"
+                    "Build": "CC=clang CXX=clang++ node ../cnoke/cnoke.js -C test"
                 },
                 "commands": {
                     "Test Sync": "node test/sync.js",

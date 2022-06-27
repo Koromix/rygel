@@ -110,7 +110,7 @@ if(WIN32)
     target_compile_definitions(koffi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
     target_link_libraries(koffi PRIVATE ws2_32)
 endif()
-if(NOT MSVC)
+if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     # Restore C/C++ compiler sanity
 
     target_compile_options(koffi PRIVATE -fno-exceptions -fno-strict-aliasing -fwrapv
