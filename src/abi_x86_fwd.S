@@ -124,6 +124,9 @@ ForwardCallRD:
 # static trampoline ID, the current stack pointer, a pointer to the stack arguments of this call,
 # and a pointer to a struct that will contain the result registers.
 # After the call, simply load these registers from the output struct.
+# Depending on ABI, call convention and return value size, we need to issue ret <something>. Since ret
+# only takes an immediate value, and I prefer not to branch, the return address is moved instead according
+# to BackRegisters::ret_pop before ret is issued.
 .macro trampoline id
     .cfi_startproc
     .cfi_def_cfa esp, 4
