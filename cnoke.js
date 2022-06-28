@@ -757,7 +757,7 @@ function has_dotdot(path) {
 function find_parent_directory(dirname, basename)
 {
     if (process.platform == 'win32')
-        dirname = dirname.replaceAll('\\', '/');
+        dirname = dirname.replace(/\\/g, '/');
 
     do {
         if (fs.existsSync(dirname + '/' + basename))
