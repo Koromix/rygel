@@ -13,31 +13,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const rand = require('./build/rand_napi.node');
-
-let sum = 0;
+const { spawnSync } = require('child_process');
+const path = require('path');
 
 main();
 
 function main() {
-    let iterations = 20000000;
+    let filename = path.join(__dirname, 'build/raylib_cc' + (process.platform == 'win32' ? '.exe' : ''));
+    let proc = spawnSync(filename, process.argv.slice(2), { stdio: 'inherit' });
 
-    if (process.argv.length >= 3) {
-        iterations = parseInt(process.argv[2], 10);
-        if (Number.isNaN(iterations))
-            throw new Error('Not a valid number');
-        if (iterations < 1)
-            throw new Error('Value must be positive');
+    if (proc.status == null) {
+        console.error(proc.error);
+        process.exit(1);
     }
 
-    rand.srand(42);
-
-    let start = performance.now();
-
-    for (let i = 0; i < iterations; i++) {
-        sum += rand.rand();
-    }
-
-    let time = performance.now() - start;
-    console.log(JSON.stringify({ iterations: iterations, time: Math.round(time) }));
+    process.exit(proc.status);
 }

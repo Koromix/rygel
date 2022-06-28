@@ -80,7 +80,6 @@ function main() {
         if (iterations < 1)
             throw new Error('Value must be positive');
     }
-    console.log('Iterations:', iterations);
 
     let lib_filename = path.dirname(__filename) + '/build/raylib' + koffi.extension;
     let lib = koffi.load(lib_filename);
@@ -128,6 +127,6 @@ function main() {
         }
     }
 
-    let time = performance.now()- start;
-    console.log('Time:', (time / 1000.0).toFixed(2) + 's');
+    let time = performance.now() - start;
+    console.log(JSON.stringify({ iterations: iterations, time: Math.round(time) }));
 }

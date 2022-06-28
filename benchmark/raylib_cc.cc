@@ -24,7 +24,6 @@ int Main(int argc, char **argv)
         if (!ParseInt(argv[1], &iterations))
             return 1;
     }
-    LogInfo("Iterations: %1", iterations);
 
     // We need to call InitWindow before using anything else (such as fonts)
     SetTraceLogLevel(LOG_WARNING);
@@ -60,7 +59,7 @@ int Main(int argc, char **argv)
     }
 
     int64_t time = GetMonotonicTime() - start;
-    LogInfo("Time: %1s", FmtDouble((double)time / 1000.0, 2));
+    PrintLn("{\"iterations\": %1,\"time\": %2}", iterations, time);
 
     return 0;
 }

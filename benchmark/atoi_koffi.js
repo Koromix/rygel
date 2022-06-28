@@ -35,7 +35,6 @@ function main() {
         if (iterations < 1)
             throw new Error('Value must be positive');
     }
-    console.log('Iterations:', iterations);
 
     let lib = koffi.load(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
@@ -47,6 +46,6 @@ function main() {
         sum += atoi(strings[i % strings.length]);
     }
 
-    let time = performance.now()- start;
-    console.log('Time:', (time / 1000.0).toFixed(2) + 's');
+    let time = performance.now() - start;
+    console.log(JSON.stringify({ iterations: iterations, time: Math.round(time) }));
 }

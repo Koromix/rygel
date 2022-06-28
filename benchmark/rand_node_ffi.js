@@ -22,7 +22,7 @@ let sum = 0;
 main();
 
 async function main() {
-    let iterations = 20000000;
+    let iterations = 200000;
 
     if (process.argv.length >= 3) {
         iterations = parseInt(process.argv[2], 10);
@@ -31,7 +31,6 @@ async function main() {
         if (iterations < 1)
             throw new Error('Value must be positive');
     }
-    console.log('Iterations:', iterations);
 
     const lib = ffi.Library(process.platform == 'win32' ? 'msvcrt.dll' : null, {
         srand: ['void', ['uint']],
@@ -49,7 +48,7 @@ async function main() {
         sum += lib.rand();
     }
 
-    let time = performance.now()- start;
-    console.log('Time:', (time / 1000.0).toFixed(2) + 's');
+    let time = performance.now() - start;
+    console.log(JSON.stringify({ iterations: iterations, time: Math.round(time) }));
 }
 

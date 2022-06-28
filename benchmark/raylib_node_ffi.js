@@ -87,7 +87,7 @@ const Font = struct({
 main();
 
 function main() {
-    let iterations = 100;
+    let iterations = 50;
 
     if (process.argv.length >= 3) {
         iterations = parseInt(process.argv[2], 10);
@@ -96,7 +96,6 @@ function main() {
         if (iterations < 1)
             throw new Error('Value must be positive');
     }
-    console.log('Iterations:', iterations);
 
     let lib_filename = path.dirname(__filename) + '/build/raylib' + koffi.extension;
 
@@ -146,6 +145,6 @@ function main() {
         }
     }
 
-    let time = performance.now()- start;
-    console.log('Time:', (time / 1000.0).toFixed(2) + 's');
+    let time = performance.now() - start;
+    console.log(JSON.stringify({ iterations: iterations, time: Math.round(time) }));
 }
