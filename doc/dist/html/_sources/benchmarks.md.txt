@@ -128,9 +128,15 @@ cd koffi/benchmark
 node ../../cnoke/cnoke.js
 ```
 
-Once this is done, you can execute each implementation, e.g. `build/raylib_cc` or `node ./atoi_koffi.js`. You can optionally define a custom number of iterations, e.g. `node ./atoi_koffi.js 10000000`.
+Please note that the *x86_64 Windows results above are measured with Clang*, which you can use too with the following commands:
+
+```batch
+cd koffi\benchmark
+node ..\..\cnoke\cnoke.js --toolset ClangCL
+```
+
+Once everything is built and ready, run:
 
 ```sh
-node ./atoi_napi.js
-node ./atoi_koffi.js
+node benchmark.js
 ```

@@ -467,9 +467,13 @@
 <span class="linenos">2</span>node ../../cnoke/cnoke.js
 </pre></div>
 </div>
-<p>Once this is done, you can execute each implementation, e.g. <code class="docutils literal notranslate"><span class="pre">build/raylib_cc</span></code> or <code class="docutils literal notranslate"><span class="pre">node</span> <span class="pre">./atoi_koffi.js</span></code>. You can optionally define a custom number of iterations, e.g. <code class="docutils literal notranslate"><span class="pre">node</span> <span class="pre">./atoi_koffi.js</span> <span class="pre">10000000</span></code>.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node ./atoi_napi.js
-<span class="linenos">2</span>node ./atoi_koffi.js
+<p>Please note that the <em>x86_64 Windows results above are measured with Clang</em>, which you can use too with the following commands:</p>
+<div class="highlight-batch notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="k">cd</span> koffi\benchmark
+<span class="linenos">2</span>node ..\..\cnoke\cnoke.js --toolset ClangCL
+</pre></div>
+</div>
+<p>Once everything is built and ready, run:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node benchmark.js
 </pre></div>
 </div>
 </section>
