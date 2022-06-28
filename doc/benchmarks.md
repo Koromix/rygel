@@ -10,8 +10,8 @@ Here is a quick overview of the execution time of Koffi calls on three benchmark
 
 <table style="margin: 0 auto;">
     <tr>
-        <td><a href="_static/perf_linux_20220627.png" target="_blank"><img src="_static/perf_linux_20220627.png" alt="Linux performance" style="width: 350px;"/></a></td>
-        <td><a href="_static/perf_windows_20220627.png" target="_blank"><img src="_static/perf_windows_20220627.png" alt="Windows performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_linux_20220628.png" target="_blank"><img src="_static/perf_linux_20220628.png" alt="Linux performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_windows_20220628.png" target="_blank"><img src="_static/perf_windows_20220628.png" alt="Windows performance" style="width: 350px;"/></a></td>
     </tr>
 </table>
 
@@ -29,11 +29,11 @@ This test is based around repeated calls to a simple standard C function atoi, a
 - the second one calls atoi through Koffi
 - the third one uses the official Node.js FFI implementation, node-ffi-napi
 
-Benchmark     | Iterations | Total time  | Relative performance | Overhead
-------------- | ---------- | ----------- | -------------------- | ----------
-rand_napi     | 20000000   | 1.29s       | (baseline)           | (baseline)
-rand_koffi    | 20000000   | 1.91s       | x0.68                | +48%
-rand_node_ffi | 20000000   | 71.59s      | x0.02                | +5400%
+Benchmark     | Iteration time | Relative performance | Overhead
+------------- | -------------- | -------------------- | --------
+rand_napi     | 644 ns         | x1.00                | (ref)
+rand_koffi    | 950 ns         | x0.68                | +48%
+rand_node_ffi | 30350 ns       | x0.02                | +4613%
 
 Because rand is a pretty small function, the FFI overhead is clearly visible.
 
@@ -41,11 +41,11 @@ Because rand is a pretty small function, the FFI overhead is clearly visible.
 
 This test is similar to the rand one, but it is based on atoi, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
-Benchmark     | Iterations | Total time  | Relative performance | Overhead
-------------- | ---------- | ----------- | -------------------- | ----------
-atoi_napi     | 20000000   | 2.25s       | (baseline)           | (baseline)
-atoi_koffi    | 20000000   | 3.40s       | x0.66                | +51%
-atoi_node_ffi | 20000000   | 622.55s     | x0.004               | +27500%
+Benchmark     | Iteration time | Relative performance | Overhead
+------------- | -------------- | -------------------- | --------
+atoi_napi     | 1104 ns        | x1.00                | (ref)
+atoi_koffi    | 1778 ns        | x0.62                | +61%
+atoi_node_ffi | 125300 ns      | x0.009               | +11250%
 
 Because atoi is a pretty small function, the FFI overhead is clearly visible.
 
@@ -56,12 +56,12 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 - Baseline: Full C++ version of the code (no JS)
 - [node-raylib](https://github.com/RobLoach/node-raylib): This is a native wrapper implemented with N-API
 
-Benchmark          | Iterations | Total time  | Relative performance | Overhead
----------------    | ---------- | ----------- | -------------------- | ----------
-raylib_cc          | 100        | 7.79s       | x1.18                | -16%
-raylib_node_raylib | 100        | 9.26s       | (baseline)           | (baseline)
-raylib_koffi       | 100        | 11.18s      | x0.83                | +21%
-raylib_node_ffi    | 100        | 34.91s      | x0.27                | +276%
+Benchmark          | Iteration time | Relative performance | Overhead
+------------------ | -------------- | -------------------- | --------
+raylib_cc          | 776400000 ns   | x1.20                | -17%
+raylib_node_raylib | 931900000 ns   | x1.00                | (ref)
+raylib_koffi       | 1121600000 ns  | x0.83                | +20%
+raylib_node_ffi    | 3342200000 ns  | x0.28                | +259%
 
 ## Windows x86_64
 
@@ -75,11 +75,11 @@ This test is based around repeated calls to a simple standard C function atoi, a
 - the second one calls atoi through Koffi
 - the third one uses the official Node.js FFI implementation, node-ffi-napi
 
-Benchmark     | Iterations | Total time  | Relative performance | Overhead
-------------- | ---------- | ----------- | -------------------- | ----------
-rand_napi     | 20000000   | 1.98s       | (baseline)           | (baseline)
-rand_koffi    | 20000000   | 2.60s       | x0.76                | +31%
-rand_node_ffi | 20000000   | 87.13s      | x0.02                | +4300%
+Benchmark     | Iteration time | Relative performance | Overhead
+------------- | -------------- | -------------------- | --------
+rand_napi     | 965 ns         | x1.00                | (ref)
+rand_koffi    | 1248 ns        | x0.77                | +29%
+rand_node_ffi | 41500 ns       | x0.02                | +4203%
 
 Because rand is a pretty small function, the FFI overhead is clearly visible.
 
@@ -89,11 +89,11 @@ This test is similar to the rand one, but it is based on atoi, which takes a str
 
 The results below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460):
 
-Benchmark     | Iterations | Total time  | Relative performance | Overhead
-------------- | ---------- | ----------- | -------------------- | ----------
-atoi_napi     | 20000000   | 2.80s       | (baseline)           | (baseline)
-atoi_koffi    | 20000000   | 4.81s       | x0.58                | +72%
-atoi_node_ffi | 20000000   | 467.24s     | x0.006               | +16600%
+Benchmark     | Iteration time | Relative performance | Overhead
+------------- | -------------- | -------------------- | --------
+atoi_napi     | 1393 ns        | x1.00                | (ref)
+atoi_koffi    | 2246 ns        | x0.62                | +61%
+atoi_node_ffi | 157550 ns      | x0.009               | +11210%
 
 Because atoi is a pretty small function, the FFI overhead is clearly visible.
 
@@ -104,12 +104,12 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 - Baseline: Full C++ version of the code (no JS)
 - [node-raylib](https://github.com/RobLoach/node-raylib): This is a native wrapper implemented with N-API
 
-Benchmark          | Iterations | Total time  | Relative performance | Overhead
----------------    | ---------- | ----------- | -------------------- | ----------
-raylib_cc          | 100        | 7.61s       | x1.25                | -20%
-raylib_node_raylib | 100        | 9.61s       | (baseline)           | (baseline)
-raylib_koffi       | 100        | 11.65s      | x0.82                | +21%
-raylib_node_ffi    | 100        | 42.02s      | x0.23                | +337%
+Benchmark          | Iteration time | Relative performance | Overhead
+------------------ | -------------- | -------------------- | --------
+raylib_cc          | 762500000 ns   | x1.25                | -20%
+raylib_node_raylib | 951900000 ns   | x1.00                | (ref)
+raylib_koffi       | 1147900000 ns  | x0.83                | +21%
+raylib_node_ffi    | 4126500000 ns  | x0.23                | +334%
 
 Please note that in order to get fair numbers for raylib_node_raylib, it was recompiled with clang-cl before running the benchmark with the following commands:
 

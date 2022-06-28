@@ -103,7 +103,7 @@ function format(tests) {
         let ratio = test.ratio.toFixed(test.ratio < 0.01 ? 3 : 2);
         let overhead = (typeof test.overhead == 'number') ? `${test.overhead >= 0 ? '+' : ''}${test.overhead}%` : test.overhead;
 
-        console.log(`${test.name.padEnd(len0, ' ')} | ${('' + time).padEnd(14, ' ')} | x${('' + ratio).padEnd(19, ' ')} | ${('' + overhead).padEnd(8, ' ')}`);
+        console.log(`${test.name.padEnd(len0, ' ')} | ${('' + time).padEnd(14, ' ')} | x${('' + ratio).padEnd(19, ' ')} | ${overhead}`);
     }
 
     console.log('');
