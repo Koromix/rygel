@@ -58,10 +58,10 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 
 Benchmark          | Iteration time | Relative performance | Overhead
 ------------------ | -------------- | -------------------- | --------
-raylib_cc          | 776400000 ns   | x1.20                | -17%
-raylib_node_raylib | 931900000 ns   | x1.00                | (ref)
-raylib_koffi       | 1121600000 ns  | x0.83                | +20%
-raylib_node_ffi    | 3342200000 ns  | x0.28                | +259%
+raylib_cc          | 215.7 µs       | x1.20                | -17%
+raylib_node_raylib | 258.9 µs       | x1.00                | (ref)
+raylib_koffi       | 311.6 µs       | x0.83                | +20%
+raylib_node_ffi    | 928.4 µs       | x0.28                | +259%
 
 ## Windows x86_64
 
@@ -106,10 +106,10 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 
 Benchmark          | Iteration time | Relative performance | Overhead
 ------------------ | -------------- | -------------------- | --------
-raylib_cc          | 762500000 ns   | x1.25                | -20%
-raylib_node_raylib | 951900000 ns   | x1.00                | (ref)
-raylib_koffi       | 1147900000 ns  | x0.83                | +21%
-raylib_node_ffi    | 4126500000 ns  | x0.23                | +334%
+raylib_cc          | 211.8 µs       | x1.25                | -20%
+raylib_node_raylib | 264.4 µs       | x1.00                | (ref)
+raylib_koffi       | 318.9 µs       | x0.83                | +21%
+raylib_node_ffi    | 1146.2 µs      | x0.23                | +334%
 
 Please note that in order to get fair numbers for raylib_node_raylib, it was recompiled with clang-cl before running the benchmark with the following commands:
 

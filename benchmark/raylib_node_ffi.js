@@ -87,7 +87,7 @@ const Font = struct({
 main();
 
 function main() {
-    let iterations = 50;
+    let iterations = 180000;
 
     if (process.argv.length >= 3) {
         iterations = parseInt(process.argv[2], 10);
@@ -122,7 +122,7 @@ function main() {
 
     let start = performance.now();
 
-    for (let i = 0; i < iterations; i++) {
+    for (let i = 0; i < iterations; i += 3600) {
         r.ImageClearBackground(imgp, new Color({ r: 0, g: 0, b: 0, a: 255 }));
 
         for (let j = 0; j < 3600; j++) {

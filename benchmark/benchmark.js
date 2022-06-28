@@ -32,11 +32,11 @@ function main() {
 
 function benchmark(select) {
     if (!select.length || select.includes('rand'))
-        format(run('rand', 'rand_napi'));
+        format(run('rand', 'rand_napi'), 'ns');
     if (!select.length || select.includes('atoi'))
-        format(run('atoi', 'atoi_napi'));
+        format(run('atoi', 'atoi_napi'), 'ns');
     if (!select.length || select.includes('raylib'))
-        format(run('raylib', 'raylib_node_raylib'));
+        format(run('raylib', 'raylib_node_raylib'), 'us');
 }
 
 function run(name, ref) {
@@ -93,13 +93,13 @@ function run(name, ref) {
     return tests;
 }
 
-function format(tests) {
+function format(tests, unit) {
     let len0 = tests.reduce((acc, test) => Math.max(acc, test.name.length), 0);
 
     console.log(`${'Benchmark'.padEnd(len0, ' ')} | Iteration time | Relative performance | Overhead`);
     console.log(`${'-'.padEnd(len0, '-')} | -------------- | -------------------- | --------`);
     for (let test of tests) {
-        let time = Math.round(test.time / test.iterations * 10000000) + ' ns';
+        let time = format_time(test.time / test.iterations, unit);
         let ratio = test.ratio.toFixed(test.ratio < 0.01 ? 3 : 2);
         let overhead = (typeof test.overhead == 'number') ? `${test.overhead >= 0 ? '+' : ''}${test.overhead}%` : test.overhead;
 
@@ -107,4 +107,12 @@ function format(tests) {
     }
 
     console.log('');
+}
+
+function format_time(time, unit) {
+    switch (unit) {
+        case 'ms': { return (time * 1).toFixed(1) + ' ms'; } break;
+        case 'us': { return (time * 1000).toFixed(1) + ' µs'; } break;
+        case 'ns': { return (time * 10000000).toFixed(0) + ' ns'; } break;
+    }
 }

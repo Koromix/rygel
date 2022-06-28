@@ -18,7 +18,7 @@ namespace RG {
 
 int Main(int argc, char **argv)
 {
-    int iterations = 100;
+    int iterations = 360000;
 
     if (argc >= 2) {
         if (!ParseInt(argv[1], &iterations))
@@ -35,7 +35,7 @@ int Main(int argc, char **argv)
 
     int64_t start = GetMonotonicTime();
 
-    for (int i = 0; i < iterations; i++) {
+    for (int i = 0; i < iterations; i += 3600) {
         ImageClearBackground(&img, Color { 0, 0, 0, 255 });
 
         for (int j = 0; j < 3600; j++) {
