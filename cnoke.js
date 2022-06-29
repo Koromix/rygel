@@ -733,7 +733,6 @@ function extract_targz(filename, dest_dir, strip = 0) {
     });
 }
 
-// Does not care about Windows separators, normalize first
 function has_dotdot(path) {
     let start = 0;
 
@@ -743,13 +742,22 @@ function has_dotdot(path) {
             break;
         start = offset + 2;
 
-        if (offset && path[offset - 1] != '/')
+        if (offset && !is_path_separator(path[offset - 1]))
             continue;
-        if (offset + 2 < path.length && path[offset + 2] != '/')
+        if (offset + 2 < path.length && !is_path_separator(path[offset + 2]))
             continue;
 
         return true;
     }
+
+    return false;
+}
+
+function is_path_separator(c) {
+    if (c == '/')
+        return true;
+    if (process.platform == 'win32' && c == '\\')
+        return true;
 
     return false;
 }
