@@ -416,8 +416,8 @@
 <h3>Raylib results<a class="headerlink" href="#id3" title="Permalink to this heading">#</a></h3>
 <p>This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:</p>
 <ul class="simple">
-<li><p>Baseline: Full C++ version of the code (no JS)</p></li>
-<li><p><a class="reference external" href="https://github.com/RobLoach/node-raylib">node-raylib</a>: This is a native wrapper implemented with N-API</p></li>
+<li><p><a class="reference external" href="https://github.com/RobLoach/node-raylib">node-raylib</a> (baseline): This is a native wrapper implemented with N-API</p></li>
+<li><p>raylib_cc: C++ implementation of the benchmark, without any Javascript</p></li>
 </ul>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">

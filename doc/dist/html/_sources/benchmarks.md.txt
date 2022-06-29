@@ -101,8 +101,8 @@ Because atoi is a pretty small function, the FFI overhead is clearly visible.
 
 This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:
 
-- Baseline: Full C++ version of the code (no JS)
-- [node-raylib](https://github.com/RobLoach/node-raylib): This is a native wrapper implemented with N-API
+- [node-raylib](https://github.com/RobLoach/node-raylib) (baseline): This is a native wrapper implemented with N-API
+- raylib_cc: C++ implementation of the benchmark, without any Javascript
 
 Benchmark          | Iteration time | Relative performance | Overhead
 ------------------ | -------------- | -------------------- | --------
