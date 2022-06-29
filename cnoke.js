@@ -229,12 +229,11 @@ async function configure(retry = true) {
 
     // Check Node.js compatibility
     {
-        let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
-        json = JSON.parse(json);
+        let pkg = read_package_json();
 
-        if (json.engines != null && json.engines.node != null) {
-            if (cmp_versions(version.substr(1), json.engines.node) < 0)
-                throw new Error(`Project ${json.name} requires Node.js >= ${json.engines.node}`);
+        if (pkg.engines != null && pkg.engines.node != null) {
+            if (cmp_versions(version.substr(1), pkg.engines.node) < 0)
+                throw new Error(`Project ${pkg.name} requires Node.js >= ${pkg.engines.node}`);
         }
     }
 
@@ -363,13 +362,9 @@ async function build() {
         let url = prebuild.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
             switch (p1) {
                 case 'version': {
-                    let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
-                    json = JSON.parse(json);
-
-                    let version = json.version;
-                    return version;
+                    let pkg = read_package_json();
+                    return pkg.version || '';
                 } break;
-
                 case 'platform': return process.platform;
                 case 'arch': return arch;
 
@@ -527,6 +522,22 @@ function check_cmake() {
     }
 
     console.log(`>> Using CMake binary: ${cmake_bin}`);
+}
+
+function read_package_json() {
+    if (package_dir == null)
+        return {};
+
+    try {
+        let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
+        let pkg = JSON.parse(json);
+
+        return pkg;
+    } catch (err) {
+        if (err.code === 'ENOENT')
+            return {};
+        throw err;
+    }
 }
 
 function unlink_recursive(path) {
