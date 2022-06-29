@@ -261,14 +261,14 @@
 </div>
 <p>Note that the machine disk content may change each time the machine runs, so the checksum test will fail once a machine has been used at least once.</p>
 <p>And now you can run the tests with:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node qemu.js <span class="c1"># Several options are available, use --help</span>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node qemu.js <span class="nb">test</span> <span class="c1"># Several options are available, use --help</span>
 </pre></div>
 </div>
 <p>And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.</p>
 <p>By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span>node qemu.js start <span class="c1"># Start the machines</span>
-<span class="linenos">2</span>node qemu.js <span class="c1"># Test (without shutting down)</span>
-<span class="linenos">3</span>node qemu.js <span class="c1"># Test again</span>
+<span class="linenos">2</span>node qemu.js <span class="nb">test</span> <span class="c1"># Test (without shutting down)</span>
+<span class="linenos">3</span>node qemu.js <span class="nb">test</span> <span class="c1"># Test again</span>
 <span class="linenos">4</span>node qemu.js stop <span class="c1"># Stop everything</span>
 </pre></div>
 </div>

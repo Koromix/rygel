@@ -69,7 +69,7 @@ Note that the machine disk content may change each time the machine runs, so the
 And now you can run the tests with:
 
 ```sh
-node qemu.js # Several options are available, use --help
+node qemu.js test # Several options are available, use --help
 ```
 
 And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.
@@ -78,8 +78,8 @@ By default, machines are started and stopped for each test. But you can start th
 
 ```sh
 node qemu.js start # Start the machines
-node qemu.js # Test (without shutting down)
-node qemu.js # Test again
+node qemu.js test # Test (without shutting down)
+node qemu.js test # Test again
 node qemu.js stop # Stop everything
 ```
 

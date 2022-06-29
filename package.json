@@ -20,7 +20,7 @@
   "main": "src/index.js",
   "scripts": {
     "install": "cnoke --prebuild build/qemu/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz --require ./build/koffi.node",
-    "test": "node qemu/qemu.js",
+    "test": "node qemu/qemu.js test",
     "prepublishOnly": "node qemu/qemu.js pack"
   },
   "license": "AGPL-3.0",

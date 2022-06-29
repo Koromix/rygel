@@ -53,21 +53,22 @@ async function main() {
 
     // Parse options
     {
-        let i = 2;
+        if (process.argv.length < 3 || process.argv[2][0] == '-')
+            throw new Error(`Missing command, use --help`);
 
-        if (process.argv.length >= 3 && process.argv[2][0] != '-') {
-            switch (process.argv[2]) {
-                case 'pack': { command = pack; i++ } break;
-                case 'test': { command = test; i++; } break;
-                case 'start': { command = start; i++; } break;
-                case 'stop': { command = stop; i++; } break;
-                case 'info': { command = info; i++; } break;
-                case 'ssh': { command = ssh; i++; } break;
-                case 'reset': { command = reset; i++; } break;
-            }
+        switch (process.argv[2]) {
+            case 'pack': { command = pack; } break;
+            case 'test': { command = test; } break;
+            case 'start': { command = start; } break;
+            case 'stop': { command = stop; } break;
+            case 'info': { command = info; } break;
+            case 'ssh': { command = ssh; } break;
+            case 'reset': { command = reset; } break;
+
+            default: { throw new Error(`Unknown command '${process.argv[2]}'`); } break;
         }
 
-        for (; i < process.argv.length; i++) {
+        for (let i = 3; i < process.argv.length; i++) {
             let arg = process.argv[i];
             let value = null;
 
@@ -193,7 +194,7 @@ async function main() {
 }
 
 function print_usage() {
-    let help = `Usage: node qemu.js [command] [options...]
+    let help = `Usage: node qemu.js <command> [options...]
 
 Commands:
     test                         Run the machines and perform the tests (default)
