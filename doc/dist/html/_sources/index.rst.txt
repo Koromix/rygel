@@ -11,6 +11,8 @@ Koffi is a **fast and easy-to-use C FFI module for Node.js**, featuring:
 * Javascript functions can be used as C callbacks (since 1.2.0)
 * Well-tested code base for :ref:`popular OS/architecture combinations<Supported platforms>`
 
+Koffi requires `Node.js <https://nodejs.org/>`_ version 14.17.0 or newer (with N-API version 8).
+
 Table of contents
 -----------------
 

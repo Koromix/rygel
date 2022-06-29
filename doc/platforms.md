@@ -12,7 +12,7 @@ RISC-V 64 [^3]     | ⬜️ *N/A*    | ✅ Yes   | ⬜️ *N/A*    | 🟨 Probab
 
 For all fully supported platforms (green check marks), a prebuilt binary is included in the NPM package which means you can install Koffi without a C++ compiler.
 
-Node 14.17.0 or later is required, earlier versions are not supported. Use [NVM](https://github.com/nvm-sh/nvm) to install recent Node versions on older Linux distributions.
+Koffi requires [Node.js](https://nodejs.org/) version 14.17.0 or newer (with [N-API](https://nodejs.org/api/n-api.html) version 8), earlier versions are not supported because N-API 7 and earlier lack several functions used by Koffi. Use [NVM](https://github.com/nvm-sh/nvm) to install more recent Node versions on older Linux distributions.
 
 [^1]: The following call conventions are supported for forward calls: cdecl, stdcall, MS fastcall, thiscall. Only cdecl and stdcall can be used for C to JS callbacks.
 [^2]: The prebuilt binary uses the hard float ABI and expects a VFP coprocessor. Build from source to use Koffi with a different ABI (softfp, soft).
