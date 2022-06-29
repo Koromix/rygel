@@ -61,6 +61,6 @@
     "build/qemu/*/*.tar.gz"
   ],
   "engines": {
-    "node": "14.17.0"
+    "napi": 8
   }
 }
