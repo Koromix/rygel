@@ -224,8 +224,19 @@ async function configure(retry = true) {
 
     check_cmake();
 
-    console.log('>> Platform:', process.platform);
-    console.log('>> Architecture:', arch);
+    console.log(`>> Node: ${version}`);
+    console.log(`>> Platform: ${process.platform}_${arch}`);
+
+    // Check Node.js compatibility
+    {
+        let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
+        json = JSON.parse(json);
+
+        if (json.engines != null && json.engines.node != null) {
+            if (cmp_versions(version.substr(1), json.engines.node) < 0)
+                throw new Error(`Project ${json.name} requires Node.js >= ${json.engines.node}`);
+        }
+    }
 
     // Prepare build directory
     fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
@@ -353,8 +364,9 @@ async function build() {
             switch (p1) {
                 case 'version': {
                     let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
-                    let version = JSON.parse(json).version;
+                    json = JSON.parse(json);
 
+                    let version = json.version;
                     return version;
                 } break;
 
@@ -858,4 +870,13 @@ function decode_elf_header(buf) {
     }
 
     return header;
+}
+
+// Ignores prerelease suffixes
+function cmp_versions(ver1, ver2) {
+    ver1 = ver1.replace(/-.*$/, '').split('.').reduce((acc, v, idx) => acc + parseInt(v, 10) * Math.pow(10, 2 * (5 - idx)), 0);
+    ver2 = ver2.replace(/-.*$/, '').split('.').reduce((acc, v, idx) => acc + parseInt(v, 10) * Math.pow(10, 2 * (5 - idx)), 0);
+
+    let cmp = Math.min(Math.max(ver1 - ver2, -1), 1);
+    return cmp;
 }
