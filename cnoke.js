@@ -102,8 +102,6 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 version = value;
-                if (!version.startsWith('v'))
-                    version = 'v' + version;
             } else if ((command == build || command == configure) && arg == '--arch') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -157,6 +155,8 @@ async function main() {
 
     if (version == null)
         version = process.version;
+    if (version.startsWith('v'))
+        version = version.substr(1);
     if (arch == null)
         arch = determine_arch();
 
@@ -167,7 +167,7 @@ async function main() {
     package_dir = find_parent_directory(project_dir, 'package.json');
     cache_dir = get_cache_directory();
     build_dir = project_dir + '/build';
-    work_dir = build_dir + `/${version}_${arch}`;
+    work_dir = build_dir + `/v${version}_${arch}`;
 
     try {
         await command();
@@ -231,9 +231,19 @@ async function configure(retry = true) {
     {
         let pkg = read_package_json();
 
-        if (pkg.engines != null && pkg.engines.node != null) {
-            if (cmp_versions(version.substr(1), pkg.engines.node) < 0)
+        if (pkg.engines != null) {
+            if (pkg.engines.node != null && cmp_version(version, pkg.engines.node) < 0)
                 throw new Error(`Project ${pkg.name} requires Node.js >= ${pkg.engines.node}`);
+
+            if (pkg.engines.napi != null) {
+                let major = parseInt(version, 10);
+                let required = get_napi_version(pkg.engines.napi, major);
+
+                if (required == null)
+                    throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (old or missing N-API)`);
+                if (cmp_version(version, required) < 0)
+                    throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${pkg.engines.napi})`);
+            }
         }
     }
 
@@ -246,10 +256,10 @@ async function configure(retry = true) {
 
     // Download Node headers
     {
-        let basename = `node-${version}-headers.tar.gz`;
+        let basename = `node-v${version}-headers.tar.gz`;
         let urls = [
-            `https://nodejs.org/dist/${version}/${basename}`,
-            `https://unofficial-builds.nodejs.org/download/release/${version}/${basename}`
+            `https://nodejs.org/dist/v${version}/${basename}`,
+            `https://unofficial-builds.nodejs.org/download/release/v${version}/${basename}`
         ];
         let destname = `${cache_dir}/${basename}`;
 
@@ -271,12 +281,12 @@ async function configure(retry = true) {
             } break;
         }
 
-        let destname = `${cache_dir}/node_${version}_${arch}.lib`;
+        let destname = `${cache_dir}/node_v${version}_${arch}.lib`;
 
         if (!fs.existsSync(destname)) {
             let urls = [
-                `https://nodejs.org/dist/${version}/${dirname}/node.lib`,
-                `https://unofficial-builds.nodejs.org/download/release/${version}/${dirname}/node.lib`
+                `https://nodejs.org/dist/v${version}/${dirname}/node.lib`,
+                `https://unofficial-builds.nodejs.org/download/release/v${version}/${dirname}/node.lib`
             ];
             await download(urls, destname);
         }
@@ -883,10 +893,36 @@ function decode_elf_header(buf) {
     return header;
 }
 
+// Versioning
+
+function get_napi_version(napi, major) {
+    // https://nodejs.org/api/n-api.html#node-api-version-matrix
+    const support = {
+        6:  ['6.14.2', '6.14.2', '6.14.2'],
+        8:  ['8.6.0',  '8.10.0', '8.11.2'],
+        9:  ['9.0.0',  '9.3.0',  '9.11.0'],
+        10: ['10.0.0', '10.0.0', '10.0.0', '10.16.0', '10.17.0', '10.20.0', '10.23.0'],
+        11: ['11.0.0', '11.0.0', '11.0.0', '11.8.0'],
+        12: ['12.0.0', '12.0.0', '12.0.0', '12.0.0',  '12.11.0', '12.17.0', '12.19.0', '12.22.0'],
+        13: ['13.0.0', '13.0.0', '13.0.0', '13.0.0',  '13.0.0'],
+        14: ['14.0.0', '14.0.0', '14.0.0', '14.0.0',  '14.0.0',  '14.0.0',  '14.12.0', '14.17.0'],
+        15: ['15.0.0', '15.0.0', '15.0.0', '15.0.0',  '15.0.0',  '15.0.0',  '15.0.0',  '15.12.0']
+    };
+    const max = Math.max(...Object.keys(support).map(k => parseInt(k, 10)));
+
+    if (major > max)
+        return major + '.0.0';
+    if (support[major] == null)
+        return null;
+
+    let required = support[major][napi - 1] || null;
+    return required;
+}
+
 // Ignores prerelease suffixes
-function cmp_versions(ver1, ver2) {
-    ver1 = ver1.replace(/-.*$/, '').split('.').reduce((acc, v, idx) => acc + parseInt(v, 10) * Math.pow(10, 2 * (5 - idx)), 0);
-    ver2 = ver2.replace(/-.*$/, '').split('.').reduce((acc, v, idx) => acc + parseInt(v, 10) * Math.pow(10, 2 * (5 - idx)), 0);
+function cmp_version(ver1, ver2) {
+    ver1 = String(ver1).replace(/-.*$/, '').split('.').reduce((acc, v, idx) => acc + parseInt(v, 10) * Math.pow(10, 2 * (5 - idx)), 0);
+    ver2 = String(ver2).replace(/-.*$/, '').split('.').reduce((acc, v, idx) => acc + parseInt(v, 10) * Math.pow(10, 2 * (5 - idx)), 0);
 
     let cmp = Math.min(Math.max(ver1 - ver2, -1), 1);
     return cmp;
