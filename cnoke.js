@@ -784,7 +784,7 @@ function find_parent_directory(dirname, basename)
             return dirname;
 
         dirname = path.dirname(dirname);
-    } while (dirname.includes('/'));
+    } while (!dirname.endsWith('/'));
 
     return null;
 }
