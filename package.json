@@ -59,5 +59,8 @@
     "ChangeLog.md",
     "CMakeLists.txt",
     "build/qemu/*/*.tar.gz"
-  ]
+  ],
+  "engines": {
+    "node": "14.17.0"
+  }
 }
