@@ -1,5 +1,17 @@
 # Changelog
 
+## Koffi 1.3.6
+
+**Main fixes:**
+
+- Fix install error with Node < 15 on Windows (build system bug)
+
+**Other changes:**
+
+- Detect incompatible Node.js versions when installing Koffi
+- Prebuild with Clang for Windows x64 and Linux x64 binaries
+- Various documentation improvements
+
 ## Koffi 1.3.5
 
 **Main changes:**
