@@ -351,8 +351,10 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     if (!stmt.Step()) {
                         if (stmt.IsValid()) {
                             LogError("Parent record '%1' does not exist", record.parent.ulid);
+                            continue;
+                        } else {
+                            return false;
                         }
-                        return false;
                     }
 
                     CopyString((const char *)sqlite3_column_text(stmt, 0), root_ulid);

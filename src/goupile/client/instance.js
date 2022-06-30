@@ -2597,8 +2597,6 @@ function InstanceController() {
                             let err = await net.readError(response);
                             throw new Error(err);
                         }
-
-                        changed = true;
                     }
                 }
 
