@@ -835,16 +835,13 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                             col->valued = true;
                         } break;
 
-                        default: {
-                            LogError("The exporter does not support arrays of objects");
-                            return false;
-                        } break;
+                        default: { parser->Skip(); } break;
                     }
                 }
             } break;
 
             case json_TokenType::StartObject: {
-                if (RG_UNLIKELY(depth >= 8)) {
+                if (RG_UNLIKELY(depth >= 16)) {
                     LogError("Excessive nesting of objects");
                     return false;
                 }
