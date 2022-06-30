@@ -141,7 +141,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -197,7 +197,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
@@ -205,6 +205,8 @@
         <article role="main">
           <section id="supported-platforms">
 <h1>Supported platforms<a class="headerlink" href="#supported-platforms" title="Permalink to this heading">#</a></h1>
+<section id="os-and-architectures">
+<h2>OS and architectures<a class="headerlink" href="#os-and-architectures" title="Permalink to this heading">#</a></h2>
 <p>The following combinations of OS and architectures <strong>are officially supported and tested</strong> at the moment:</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
@@ -257,7 +259,18 @@
 </table>
 </div>
 <p>For all fully supported platforms (green check marks), a prebuilt binary is included in the NPM package which means you can install Koffi without a C++ compiler.</p>
-<p>Koffi requires <a class="reference external" href="https://nodejs.org/">Node.js</a> version 14.17.0 or newer (with <a class="reference external" href="https://nodejs.org/api/n-api.html">N-API</a> version 8), earlier versions are not supported because N-API 7 and earlier lack several functions used by Koffi. Use <a class="reference external" href="https://github.com/nvm-sh/nvm">NVM</a> to install more recent Node versions on older Linux distributions.</p>
+</section>
+<section id="node-js">
+<h2>Node.js<a class="headerlink" href="#node-js" title="Permalink to this heading">#</a></h2>
+<p>Koffi requires a recent <a class="reference external" href="https://nodejs.org/">Node.js</a> version with <a class="reference external" href="https://nodejs.org/api/n-api.html">N-API</a> version 8 support:</p>
+<ul class="simple">
+<li><p>Node &lt; 12.22.0 is not supported</p></li>
+<li><p><em>Node 12.x</em>: Node 12.22.0 or newer</p></li>
+<li><p><em>Node 14.x</em>: Node 14.17.0 or newer</p></li>
+<li><p><em>Node 15.x</em>: Node 15.12.0 or newer</p></li>
+<li><p>Node 16.0.0 or later versions</p></li>
+</ul>
+<p>Use <a class="reference external" href="https://github.com/nvm-sh/nvm">NVM</a> to install more recent Node versions on older Linux distributions.</p>
 <hr class="footnotes docutils" />
 <aside class="footnote brackets" id="id4" role="note">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
@@ -271,6 +284,7 @@
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
 <p>The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64 ABI is supported in theory if you build Koffi from source (untested), the LP64F ABI is not supported.</p>
 </aside>
+</section>
 </section>
 
         </article>
@@ -318,8 +332,28 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            Contents
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Supported platforms</a><ul>
+<li><a class="reference internal" href="#os-and-architectures">OS and architectures</a></li>
+<li><a class="reference internal" href="#node-js">Node.js</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
