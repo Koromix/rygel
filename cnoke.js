@@ -411,7 +411,11 @@ async function build() {
                 archive_filename = build_dir + '/' + basename;
                 await download(url, archive_filename);
             } else {
-                archive_filename = project_dir + '/' + url;
+                if (path_is_absolute(url)) {
+                    archive_filename = url;
+                } else {
+                    archive_filename = project_dir + '/' + url;
+                }
                 if (!fs.existsSync(archive_filename))
                     throw new Error('Cannot find local prebuilt archive');
             }
@@ -709,7 +713,7 @@ function extract_targz(filename, dest_dir, strip = 0) {
                             throw new Error(`Insecure empty filename inside TAR archive`);
                         if (header.filename[0] == '/')
                             throw new Error(`Insecure filename starting with / inside TAR archive`);
-                        if (has_dotdot(header.filename))
+                        if (path_has_dotdot(header.filename))
                             throw new Error(`Insecure filename containing '..' inside TAR archive`);
 
                         for (let i = 0; i < strip; i++)
@@ -771,7 +775,13 @@ function extract_targz(filename, dest_dir, strip = 0) {
     });
 }
 
-function has_dotdot(path) {
+function path_is_absolute(path) {
+    if (process.platform == 'win32' && path.match(/^[a-zA-Z]:/))
+        path = path.substr(2);
+    return is_path_separator(path[0]);
+}
+
+function path_has_dotdot(path) {
     let start = 0;
 
     for (;;) {
