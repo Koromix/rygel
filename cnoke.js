@@ -224,7 +224,7 @@ async function configure(retry = true) {
     check_cmake();
 
     console.log(`>> Node: ${runtime_version}`);
-    console.log(`>> Platform: ${process.platform}_${arch}`);
+    console.log(`>> Target: ${process.platform}_${arch}`);
 
     // Check Node.js compatibility
     {
