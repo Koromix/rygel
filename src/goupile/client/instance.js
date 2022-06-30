@@ -288,7 +288,7 @@ function InstanceController() {
                                 <button @click=${e => window.open('/admin/')}>Administration</button>
                                 <hr/>
                             ` : ''}
-                            <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+                            <button @click=${ui.wrapAction(goupile.logout)}>${profile.userid ? 'Se déconnecter' : 'Se connecter'}</button>
                         </div>
                     </div>
                 ` : ''}
