@@ -417,7 +417,7 @@ async function build() {
             }
 
             console.log('>> Extracting prebuilt binaries...');
-            await extract_targz(archive_filename, build_dir, 2);
+            await extract_targz(archive_filename, build_dir, 1);
 
             // Make sure the binary works
             if (prebuild_req) {
