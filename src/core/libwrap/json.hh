@@ -185,6 +185,8 @@ public:
     bool ParseString(Span<const char> *out_str);
     bool ParseString(const char **out_str);
 
+    bool Skip();
+
     void PushLogFilter();
 
     json_TokenType PeekToken();

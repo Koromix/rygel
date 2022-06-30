@@ -254,6 +254,41 @@ bool json_Parser::ParseString(const char **out_str)
     }
 }
 
+bool json_Parser::Skip()
+{
+    switch (PeekToken()) {
+        case json_TokenType::Invalid: return false;
+
+        case json_TokenType::StartObject: {
+            ParseObject();
+            while (InObject()) {
+                Skip();
+            }
+        } break;
+        case json_TokenType::EndObject: { RG_ASSERT(error); } break;
+        case json_TokenType::StartArray: {
+            ParseArray();
+            while (InArray()) {
+                Skip();
+            }
+        } break;
+        case json_TokenType::EndArray: { RG_ASSERT(error); } break;
+
+        case json_TokenType::Null:
+        case json_TokenType::Bool:
+        case json_TokenType::Double:
+        case json_TokenType::Integer:
+        case json_TokenType::String: { handler.token = json_TokenType::Invalid; } break;
+
+        case json_TokenType::Key: {
+            handler.token = json_TokenType::Invalid;
+            Skip();
+        } break;
+    }
+
+    return IsValid();
+}
+
 void json_Parser::PushLogFilter()
 {
     RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
