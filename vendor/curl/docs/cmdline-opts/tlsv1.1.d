@@ -1,10 +1,12 @@
+c: Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+SPDX-License-Identifier: curl
 Long: tlsv1.1
 Help: Use TLSv1.1 or greater
 Protocols: TLS
 Added: 7.34.0
 Category: tls
 Example: --tlsv1.1 $URL
-See-also: tlsv1.3
+See-also: tlsv1.3 tls-max
 ---
 Forces curl to use TLS version 1.1 or later when connecting to a remote TLS server.
 

@@ -34,6 +34,8 @@
 # This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 # KIND, either express or implied.
 #
+# SPDX-License-Identifier: curl
+#
 ###########################################################################
 VPATH = @srcdir@
 am__is_gnu_make = { \
@@ -399,9 +401,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign scripts/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu scripts/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign scripts/Makefile
+	  $(AUTOMAKE) --gnu scripts/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \

@@ -1,3 +1,5 @@
+c: Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+SPDX-License-Identifier: curl
 Long: socks5
 Arg: <host[:port]>
 Help: SOCKS5 proxy on given host + port
@@ -8,6 +10,9 @@ See-also: socks5-hostname socks4a
 ---
 Use the specified SOCKS5 proxy - but resolve the host name locally. If the
 port number is not specified, it is assumed at port 1080.
+
+To specify proxy on a unix domain socket, use localhost for host, e.g.
+socks5://localhost/path/to/socket.sock
 
 This option overrides any previous use of --proxy, as they are mutually
 exclusive.

@@ -5585,6 +5585,45 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if _Atomic is available" >&5
+printf %s "checking if _Atomic is available... " >&6; }
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+      $curl_includes_unistd
+
+int main (void)
+{
+
+      _Atomic int i = 0;
+
+ ;
+ return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+printf "%s\n" "#define HAVE_ATOMIC 1" >>confdefs.h
+
+    tst_atomic="yes"
+
+else $as_nop
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+    tst_atomic="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for a sed that does not truncate output" >&5
 printf %s "checking for a sed that does not truncate output... " >&6; }
 if test ${ac_cv_path_SED+y}
@@ -6555,7 +6594,7 @@ curl_verbose_msg="enabled (--disable-verbose)"
    curl_rtmp_msg="no      (--with-librtmp)"
     curl_psl_msg="no      (--with-libpsl)"
  curl_altsvc_msg="enabled (--disable-alt-svc)"
- curl_headers_msg="no      (--enable-headers-api)"
+curl_headers_msg="enabled (--disable-headers-api)"
    curl_hsts_msg="enabled (--disable-hsts)"
     ssl_backends=
      curl_h1_msg="enabled (internal)"
@@ -6700,6 +6739,7 @@ else $as_nop
   }rustls"
 fi
 
+    experimental="$experimental rustls"
   fi
 
 OPT_NSS_AWARE=no
@@ -6844,7 +6884,6 @@ printf "%s\n" "#define OS \"${host}\"" >>confdefs.h
 
 # Silence warning: ar: 'u' modifier ignored since 'D' is the default
 AR_FLAGS=cr
-
 
 
 
@@ -7988,8 +8027,8 @@ esac
 
 
 
-macro_version='2.4.6'
-macro_revision='2.4.6'
+macro_version='2.4.7'
+macro_revision='2.4.7'
 
 
 
@@ -21439,7 +21478,7 @@ fi
 done
 
 else $as_nop
-  for d in `echo $DIR_HYPER | sed -e 's/:/ /'`; do
+  for d in `echo $DIR_HYPER | $SED -e 's/:/ /'`; do
         if test -f "$d/libhyper.a"; then
           as_fn_error $? "hyper was found in $d but was probably built with wrong flags. See docs/HYPER.md." "$LINENO" 5
         fi
@@ -27248,18 +27287,6 @@ then :
 
 printf "%s\n" "#define HAVE_WOLFSSL_DES_ECB_ENCRYPT 1" >>confdefs.h
 
-            if test -n "$addcflags"; then
-                            for f in $addcflags; do
-                CPPFLAGS="$f/wolfssl $CPPFLAGS"
-                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Add $f/wolfssl to CPPFLAGS" >&5
-printf "%s\n" "$as_me: Add $f/wolfssl to CPPFLAGS" >&6;}
-                break
-              done
-            else
-                                          CPPFLAGS="-I/usr/include/wolfssl $CPPFLAGS"
-              { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Add /usr/include/wolfssl to CPPFLAGS" >&5
-printf "%s\n" "$as_me: Add /usr/include/wolfssl to CPPFLAGS" >&6;}
-            fi
             WOLFSSL_NTLM=1
 
 
@@ -29539,31 +29566,37 @@ then :
   withval=$with_libidn2; OPT_IDN=$withval
 fi
 
-case "$OPT_IDN" in
-  no)
-        want_idn="no"
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+if test "x$tst_links_winidn" = "xyes"; then
+  want_idn="no"
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no (using winidn instead)" >&5
+printf "%s\n" "no (using winidn instead)" >&6; }
+else
+  case "$OPT_IDN" in
+    no)
+            want_idn="no"
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-    ;;
-  default)
-        want_idn="yes"
-    want_idn_path="default"
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: (assumed) yes" >&5
+      ;;
+    default)
+            want_idn="yes"
+      want_idn_path="default"
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: (assumed) yes" >&5
 printf "%s\n" "(assumed) yes" >&6; }
-    ;;
-  yes)
-        want_idn="yes"
-    want_idn_path="default"
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+      ;;
+    yes)
+            want_idn="yes"
+      want_idn_path="default"
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-    ;;
-  *)
-        want_idn="yes"
-    want_idn_path="$withval"
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes ($withval)" >&5
+      ;;
+    *)
+            want_idn="yes"
+      want_idn_path="$withval"
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes ($withval)" >&5
 printf "%s\n" "yes ($withval)" >&6; }
-    ;;
-esac
+      ;;
+  esac
+fi
 
 if test "$want_idn" = "yes"; then
     clean_CPPFLAGS="$CPPFLAGS"
@@ -32635,6 +32668,38 @@ ac_fn_c_check_header_compile "$LINENO" "netinet/tcp.h" "ac_cv_header_netinet_tcp
 if test "x$ac_cv_header_netinet_tcp_h" = xyes
 then :
   printf "%s\n" "#define HAVE_NETINET_TCP_H 1" >>confdefs.h
+
+fi
+ac_fn_c_check_header_compile "$LINENO" "netinet/udp.h" "ac_cv_header_netinet_udp_h" "
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>
+#elif defined(HAVE_UNISTD_H)
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_NETINET_IN6_H
+#include <netinet/in6.h>
+#endif
+#ifdef HAVE_SYS_UN_H
+#include <sys/un.h>
+#endif
+
+
+"
+if test "x$ac_cv_header_netinet_udp_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_NETINET_UDP_H 1" >>confdefs.h
 
 fi
 ac_fn_c_check_header_compile "$LINENO" "netdb.h" "ac_cv_header_netdb_h" "
@@ -44910,7 +44975,7 @@ fi
 
 
 
-  for ac_func in fnmatch geteuid getpass_r getppid getpwuid getpwuid_r getrlimit gettimeofday if_nametoindex mach_absolute_time pipe setlocale setmode setrlimit usleep utime utimes
+  for ac_func in fnmatch fchmod geteuid getpass_r getppid getpwuid getpwuid_r getrlimit gettimeofday if_nametoindex mach_absolute_time pipe sched_yield sendmsg setlocale setmode setrlimit usleep utime utimes
 do :
   as_ac_var=`printf "%s\n" "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -46302,21 +46367,21 @@ printf %s "checking whether to support headers-api... " >&6; }
 if test ${enable_headers_api+y}
 then :
   enableval=$enable_headers_api;  case "$enableval" in
-  yes)
+  *)
        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-
-printf "%s\n" "#define USE_HEADERS_API 1" >>confdefs.h
-
-       curl_headers_msg="enabled";
        ;;
-  *) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+  no) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
+       curl_headers_msg="no      (--enable-headers-api)"
+
+printf "%s\n" "#define CURL_DISABLE_HEADERS_API 1" >>confdefs.h
+
        ;;
   esac
 else $as_nop
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
 
 fi
 
@@ -46570,6 +46635,36 @@ if test ${ac_cv_sizeof_curl_off_t} -gt 4; then
      "$curl_win32_file_api" = "win32_large_files"; then
     SUPPORT_FEATURES="$SUPPORT_FEATURES Largefile"
   fi
+fi
+
+if test "$tst_atomic" = "yes"; then
+  SUPPORT_FEATURES="$SUPPORT_FEATURES threadsafe"
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+      #include <windows.h>
+
+int main (void)
+{
+
+      #if (WINVER < 0x600) && (_WIN32_WINNT < 0x600)
+      #error
+      #endif
+
+ ;
+ return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+     SUPPORT_FEATURES="$SUPPORT_FEATURES threadsafe"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
 SUPPORT_FEATURES=`echo $SUPPORT_FEATURES | tr ' ' '\012' | sort | tr '\012' ' '`

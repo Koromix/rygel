@@ -2398,6 +2398,7 @@
     <ClCompile Include="..\..\..\..\lib\escape.c" />
     <ClCompile Include="..\..\..\..\lib\file.c" />
     <ClCompile Include="..\..\..\..\lib\fileinfo.c" />
+    <ClCompile Include="..\..\..\..\lib\fopen.c" />
     <ClCompile Include="..\..\..\..\lib\formdata.c" />
     <ClCompile Include="..\..\..\..\lib\ftp.c" />
     <ClCompile Include="..\..\..\..\lib\ftplistparser.c" />
@@ -2563,10 +2564,12 @@
     <ClInclude Include="..\..\..\..\lib\dotdot.h" />
     <ClInclude Include="..\..\..\..\lib\dynbuf.h" />
     <ClInclude Include="..\..\..\..\lib\easyif.h" />
+    <ClInclude Include="..\..\..\..\lib\easy_lock.h" />
     <ClInclude Include="..\..\..\..\lib\easyoptions.h" />
     <ClInclude Include="..\..\..\..\lib\escape.h" />
     <ClInclude Include="..\..\..\..\lib\file.h" />
     <ClInclude Include="..\..\..\..\lib\fileinfo.h" />
+    <ClInclude Include="..\..\..\..\lib\fopen.h" />
     <ClInclude Include="..\..\..\..\lib\formdata.h" />
     <ClInclude Include="..\..\..\..\lib\ftp.h" />
     <ClInclude Include="..\..\..\..\lib\ftplistparser.h" />

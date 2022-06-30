@@ -18,6 +18,8 @@
 # This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 # KIND, either express or implied.
 #
+# SPDX-License-Identifier: curl
+#
 ###########################################################################
 # curl/libcurl CMake script
 # by Tetetest and Sukender (Benoit Neil)
@@ -65,7 +67,7 @@ message(STATUS "curl version=[${CURL_VERSION}]")
 # SET(PACKAGE_STRING "curl-")
 # SET(PACKAGE_BUGREPORT "a suitable curl mailing list => https://curl.se/mail/")
 set(OPERATING_SYSTEM "${CMAKE_SYSTEM_NAME}")
-set(OS "\"${CMAKE_SYSTEM_NAME}\"")
+set(OS "\"${CMAKE_SYSTEM_NAME}${CURL_OS_SUFFIX}\"")
 
 include_directories(${CURL_SOURCE_DIR}/include)
 
@@ -675,11 +677,12 @@ if(NOT CURL_DISABLE_LDAPS)
   check_include_file_concat("ldapssl.h"  HAVE_LDAPSSL_H)
 endif()
 
-# Check for idn
+# Check for idn2
 option(USE_LIBIDN2 "Use libidn2 for IDN support" ON)
-set(HAVE_LIBIDN2 OFF)
 if(USE_LIBIDN2)
   check_library_exists_concat("idn2" idn2_lookup_ul HAVE_LIBIDN2)
+else()
+  set(HAVE_LIBIDN2 OFF)
 endif()
 
 if(WIN32)
@@ -739,6 +742,31 @@ if(CURL_ZSTD)
     set(HAVE_ZSTD ON)
     list(APPEND CURL_LIBS ${Zstd_LIBRARIES})
     include_directories(${Zstd_INCLUDE_DIRS})
+  endif()
+endif()
+
+#libpsl
+option(CURL_USE_LIBPSL "Use libPSL" ON)
+mark_as_advanced(CURL_USE_LIBPSL)
+set(USE_LIBPSL OFF)
+set(HAVE_LIBPSL OFF)
+set(HAVE_LIBSPSL_H OFF)
+
+if(CURL_USE_LIBPSL)
+  find_package(LibPSL)
+  if(LIBPSL_FOUND)
+    list(APPEND CURL_LIBS ${LIBPSL_LIBRARY})
+    set(CMAKE_REQUIRED_LIBRARIES ${LIBPSL_LIBRARY})
+    list(APPEND CMAKE_REQUIRED_INCLUDES "${LIBPSL_INCLUDE_DIR}")
+    include_directories("${LIBPSL_INCLUDE_DIR}")
+    set(HAVE_LIBPSL ON)
+    set(USE_LIBPSL ON)
+
+    # find_package has already found the headers
+    set(HAVE_LIBPSL_H ON)
+    set(CURL_INCLUDES ${CURL_INCLUDES} "${LIBPSL_INCLUDE_DIR}/libpsl.h")
+    set(CURL_TEST_DEFINES "${CURL_TEST_DEFINES} -DHAVE_LIBPSL_H")
+    unset(CMAKE_REQUIRED_LIBRARIES)
   endif()
 endif()
 
@@ -1027,8 +1055,10 @@ if(HAVE_SIZEOF_LONG_LONG)
   set(HAVE_LL 1)
 endif()
 
-find_file(RANDOM_FILE urandom /dev)
-mark_as_advanced(RANDOM_FILE)
+if(NOT CMAKE_CROSSCOMPILING)
+  find_file(RANDOM_FILE urandom /dev)
+  mark_as_advanced(RANDOM_FILE)
+endif()
 
 # Check for some functions that are used
 if(HAVE_LIBWS2_32)
@@ -1037,6 +1067,7 @@ elseif(HAVE_LIBSOCKET)
   set(CMAKE_REQUIRED_LIBRARIES socket)
 endif()
 
+check_symbol_exists(fchmod        "${CURL_INCLUDES}" HAVE_FCHMOD)
 check_symbol_exists(basename      "${CURL_INCLUDES}" HAVE_BASENAME)
 check_symbol_exists(socket        "${CURL_INCLUDES}" HAVE_SOCKET)
 check_symbol_exists(select        "${CURL_INCLUDES}" HAVE_SELECT)

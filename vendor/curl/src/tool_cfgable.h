@@ -20,6 +20,8 @@
  * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
  * KIND, either express or implied.
  *
+ * SPDX-License-Identifier: curl
+ *
  ***************************************************************************/
 #include "tool_setup.h"
 #include "tool_sdecls.h"
@@ -50,8 +52,6 @@ struct State {
 
 struct OperationConfig {
   bool remote_time;
-  char *random_file;
-  char *egd_file;
   char *useragent;
   struct curl_slist *cookies;  /* cookies to serialize into a single line */
   char *cookiejar;          /* write to this file */
@@ -325,6 +325,8 @@ struct GlobalConfig {
   char *libcurl;                  /* Output libcurl code to this file name */
   bool fail_early;                /* exit on first transfer error */
   bool styled_output;             /* enable fancy output style detection */
+  long ms_per_transfer;           /* start next transfer after (at least) this
+                                     many milliseconds */
 #ifdef CURLDEBUG
   bool test_event_based;
 #endif

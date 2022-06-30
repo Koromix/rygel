@@ -18,9 +18,11 @@
 .\" * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 .\" * KIND, either express or implied.
 .\" *
+.\" * SPDX-License-Identifier: curl
+.\" *
 .\" **************************************************************************
 .\"
-.TH curl_easy_setopt 3 "April 05, 2022" "libcurl 7.83.1" "libcurl Manual"
+.TH curl_easy_setopt 3 "May 17, 2022" "libcurl 7.84.0" "libcurl Manual"
 
 .SH NAME
 curl_easy_setopt \- set options for a curl easy handle
@@ -665,6 +667,10 @@ File name with known hosts. See \fICURLOPT_SSH_KNOWNHOSTS(3)\fP
 Callback for known hosts handling. See \fICURLOPT_SSH_KEYFUNCTION(3)\fP
 .IP CURLOPT_SSH_KEYDATA
 Custom pointer to pass to ssh key callback. See \fICURLOPT_SSH_KEYDATA(3)\fP
+.IP CURLOPT_SSH_HOSTKEYFUNCTION
+Callback for checking host key handling. See \fICURLOPT_SSH_HOSTKEYFUNCTION(3)\fP
+.IP CURLOPT_SSH_HOSTKEYDATA
+Custom pointer to pass to ssh host key callback. See \fICURLOPT_SSH_HOSTKEYDATA(3)\fP
 .SH OTHER OPTIONS
 .IP CURLOPT_PRIVATE
 Private pointer to store. See \fICURLOPT_PRIVATE(3)\fP

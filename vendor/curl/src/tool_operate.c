@@ -18,6 +18,8 @@
  * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
  * KIND, either express or implied.
  *
+ * SPDX-License-Identifier: curl
+ *
  ***************************************************************************/
 #include "tool_setup.h"
 
@@ -435,7 +437,7 @@ static CURLcode post_per_transfer(struct GlobalConfig *global,
         retry = RETRY_CONNREFUSED;
     }
     else if((CURLE_OK == result) ||
-            (config->failonerror &&
+            ((config->failonerror || config->failwithbody) &&
              (CURLE_HTTP_RETURNED_ERROR == result))) {
       /* If it returned OK. _or_ failonerror was enabled and it
          returned due to such an error, check for HTTP transient
@@ -1824,8 +1826,6 @@ static CURLcode single_transfer(struct GlobalConfig *global,
         my_setopt_slist(curl, CURLOPT_TELNETOPTIONS, config->telnet_options);
 
         /* new in libcurl 7.7: */
-        my_setopt_str(curl, CURLOPT_RANDOM_FILE, config->random_file);
-        my_setopt_str(curl, CURLOPT_EGDSOCKET, config->egd_file);
         my_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS,
                   (long)(config->connecttimeout * 1000));
 
@@ -2142,6 +2142,7 @@ static CURLcode single_transfer(struct GlobalConfig *global,
     }
     break;
   }
+  Curl_safefree(state->outfiles);
 
   if(!*added || result) {
     *added = FALSE;
@@ -2361,8 +2362,9 @@ static CURLcode serial_transfers(struct GlobalConfig *global,
   }
   for(per = transfers; per;) {
     bool retry;
-    long delay;
+    long delay_ms;
     bool bailout = FALSE;
+    struct timeval start;
     result = pre_transfer(global, per);
     if(result)
       break;
@@ -2374,6 +2376,7 @@ static CURLcode serial_transfers(struct GlobalConfig *global,
         break;
     }
 #endif
+    start = tvnow();
 #ifdef CURLDEBUG
     if(global->test_event_based)
       result = curl_easy_perform_ev(per->curl);
@@ -2381,9 +2384,9 @@ static CURLcode serial_transfers(struct GlobalConfig *global,
 #endif
       result = curl_easy_perform(per->curl);
 
-    returncode = post_per_transfer(global, per, result, &retry, &delay);
+    returncode = post_per_transfer(global, per, result, &retry, &delay_ms);
     if(retry) {
-      tool_go_sleep(delay);
+      tool_go_sleep(delay_ms);
       continue;
     }
 
@@ -2401,6 +2404,18 @@ static CURLcode serial_transfers(struct GlobalConfig *global,
 
     if(bailout)
       break;
+
+    if(per && global->ms_per_transfer) {
+      /* how long time did the most recent transfer take in number of
+         milliseconds */
+      long milli = tvdiff(tvnow(), start);
+      if(milli < global->ms_per_transfer) {
+        notef(global, "Transfer took %ld ms, waits %ldms as set by --rate\n",
+              milli, global->ms_per_transfer - milli);
+        /* The transfer took less time than wanted. Wait a little. */
+        tool_go_sleep(global->ms_per_transfer - milli);
+      }
+    }
   }
   if(returncode)
     /* returncode errors have priority */

@@ -18,6 +18,8 @@
  * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
  * KIND, either express or implied.
  *
+ * SPDX-License-Identifier: curl
+ *
  ***************************************************************************/
 #include "tool_setup.h"
 #if defined(HAVE_STRCASECMP) && defined(HAVE_STRINGS_H)
@@ -110,6 +112,7 @@ static const struct feat feats[] = {
   {"alt-svc",        CURL_VERSION_ALTSVC},
   {"HSTS",           CURL_VERSION_HSTS},
   {"gsasl",          CURL_VERSION_GSASL},
+  {"threadsafe",     CURL_VERSION_THREADSAFE},
 };
 
 static void print_category(curlhelp_t category)
@@ -197,6 +200,8 @@ featcomp(const void *p1, const void *p2)
   return strcasecmp(* (char * const *) p1, * (char * const *) p2);
 #elif defined(HAVE_STRCMPI)
   return strcmpi(* (char * const *) p1, * (char * const *) p2);
+#elif defined(HAVE_STRICMP)
+  return stricmp(* (char * const *) p1, * (char * const *) p2);
 #else
   return strcmp(* (char * const *) p1, * (char * const *) p2);
 #endif

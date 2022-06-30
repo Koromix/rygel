@@ -18,6 +18,8 @@
  * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
  * KIND, either express or implied.
  *
+ * SPDX-License-Identifier: curl
+ *
  ***************************************************************************/
 #include "tool_setup.h"
 #include "tool_help.h"
@@ -559,6 +561,9 @@ const struct helptxt helptext[] = {
   {"-r, --range <range>",
    "Retrieve only the bytes within RANGE",
    CURLHELP_HTTP | CURLHELP_FTP | CURLHELP_SFTP | CURLHELP_FILE},
+  {"    --rate <max request rate>",
+   "Request rate for serial transfers",
+   CURLHELP_CONNECTION},
   {"    --raw",
    "Do HTTP \"raw\"; no transfer decoding",
    CURLHELP_HTTP},

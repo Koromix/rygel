@@ -19,6 +19,8 @@ rem * furnished to do so, under the terms of the COPYING file.
 rem *
 rem * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 rem * KIND, either express or implied.
+rem * 
+rem * SPDX-License-Identifier: curl
 rem *
 rem ***************************************************************************
 
@@ -76,7 +78,7 @@ rem ***************************************************************************
     set "VC_PATH=Microsoft Visual Studio 14.0\VC"
   ) else if /i "%~1" == "vc14.1" (
     set VC_VER=14.1
-    set VC_DESC=VC14.1
+    set VC_DESC=VC14.10
     set VC_TOOLSET=v141
 
     rem Determine the VC14.1 path based on the installed edition in descending
@@ -90,7 +92,7 @@ rem ***************************************************************************
     )
   ) else if /i "%~1" == "vc14.2" (
     set VC_VER=14.2
-    set VC_DESC=VC14.2
+    set VC_DESC=VC14.20
     set VC_TOOLSET=v142
 
     rem Determine the VC14.2 path based on the installed edition in descending
@@ -104,7 +106,7 @@ rem ***************************************************************************
     )
   ) else if /i "%~1" == "vc14.3" (
     set VC_VER=14.3
-    set VC_DESC=VC14.3
+    set VC_DESC=VC14.30
     set VC_TOOLSET=v143
 
     rem Determine the VC14.3 path based on the installed edition in descending

@@ -5,7 +5,7 @@
 .\" *                            | (__| |_| |  _ <| |___
 .\" *                             \___|\___/|_| \_\_____|
 .\" *
-.\" * Copyright (C) 2015 - 2021, Daniel Stenberg, <daniel@haxx.se>, et al.
+.\" * Copyright (C) 2015 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
 .\" *
 .\" * This software is licensed as described in the file COPYING, which
 .\" * you should have received as part of this distribution. The terms
@@ -18,9 +18,11 @@
 .\" * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 .\" * KIND, either express or implied.
 .\" *
+.\" * SPDX-License-Identifier: curl
+.\" *
 .\" **************************************************************************
 .\"
-.TH libcurl-thread 3 "November 26, 2021" "libcurl 7.83.1" "libcurl thread safety"
+.TH libcurl-thread 3 "June 15, 2022" "libcurl 7.84.0" "libcurl thread safety"
 
 .SH NAME
 libcurl-thread \- libcurl thread safety
@@ -93,7 +95,11 @@ problem reports on *BSD (at least in the past, they may be working fine these
 days). Some operating systems that are known to have solid and working thread
 support are Linux, Solaris and Windows.
 .IP "curl_global_* functions"
-These functions are not thread safe. If you are using libcurl with multiple
+These functions are thread-safe since libcurl 7.84.0 if
+\fIcurl_version_info(3)\fP has the CURL_VERSION_THREADSAFE feature bit set
+(most platforms).
+
+If these functions are not thread-safe and you are using libcurl with multiple
 threads it is especially important that before use you call
 \fIcurl_global_init(3)\fP or \fIcurl_global_init_mem(3)\fP to explicitly
 initialize the library and its dependents, rather than rely on the "lazy"

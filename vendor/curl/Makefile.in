@@ -34,27 +34,7 @@
 # This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 # KIND, either express or implied.
 #
-###########################################################################
-
-#***************************************************************************
-#                                  _   _ ____  _
-#  Project                     ___| | | |  _ \| |
-#                             / __| | | | |_) | |
-#                            | (__| |_| |  _ <| |___
-#                             \___|\___/|_| \_\_____|
-#
-# Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
-#
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution. The terms
-# are also available at https://curl.se/docs/copyright.html.
-#
-# You may opt to use, copy, modify, merge, publish, distribute and/or sell
-# copies of the Software, and permit persons to whom the Software is
-# furnished to do so, under the terms of the COPYING file.
-#
-# This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
-# KIND, either express or implied.
+# SPDX-License-Identifier: curl
 #
 ###########################################################################
 
@@ -77,6 +57,32 @@
 #
 # This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 # KIND, either express or implied.
+#
+# SPDX-License-Identifier: curl
+#
+###########################################################################
+
+#***************************************************************************
+#                                  _   _ ____  _
+#  Project                     ___| | | |  _ \| |
+#                             / __| | | | |_) | |
+#                            | (__| |_| |  _ <| |___
+#                             \___|\___/|_| \_\_____|
+#
+# Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution. The terms
+# are also available at https://curl.se/docs/copyright.html.
+#
+# You may opt to use, copy, modify, merge, publish, distribute and/or sell
+# copies of the Software, and permit persons to whom the Software is
+# furnished to do so, under the terms of the COPYING file.
+#
+# This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
+# KIND, either express or implied.
+#
+# SPDX-License-Identifier: curl
 #
 ###########################################################################
 # ./src/Makefile.inc
@@ -557,6 +563,7 @@ CMAKE_DIST = \
  CMake/FindBrotli.cmake                         \
  CMake/FindCARES.cmake                          \
  CMake/FindGSS.cmake                            \
+ CMake/FindLibPSL.cmake                         \
  CMake/FindLibSSH2.cmake                        \
  CMake/FindMbedTLS.cmake                        \
  CMake/FindMSH3.cmake                           \
@@ -789,6 +796,7 @@ LIB_CFILES = \
   escape.c           \
   file.c             \
   fileinfo.c         \
+  fopen.c            \
   formdata.c         \
   ftp.c              \
   ftplistparser.c    \
@@ -916,11 +924,13 @@ LIB_HFILES = \
   doh.h              \
   dotdot.h           \
   dynbuf.h           \
+  easy_lock.h        \
   easyif.h           \
   easyoptions.h      \
   escape.h           \
   file.h             \
   fileinfo.h         \
+  fopen.h            \
   formdata.h         \
   ftp.h              \
   ftplistparser.h    \
@@ -1768,13 +1778,13 @@ uninstall-hook:
 	(cd docs && $(MAKE) uninstall)
 	(cd docs/libcurl && $(MAKE) uninstall)
 
-ca-bundle: scripts/mk-ca-bundle.pl
+ca-bundle: $(srcdir)/scripts/mk-ca-bundle.pl
 	@echo "generating a fresh ca-bundle.crt"
-	@perl $< -b -l -u lib/ca-bundle.crt
+	@perl $(srcdir)/scripts/mk-ca-bundle.pl -b -l -u lib/ca-bundle.crt
 
-ca-firefox: scripts/firefox-db2pem.sh
+ca-firefox: $(srcdir)/scripts/firefox-db2pem.sh
 	@echo "generating a fresh ca-bundle.crt"
-	$< lib/ca-bundle.crt
+	$(srcdir)/scripts/firefox-db2pem.sh lib/ca-bundle.crt
 
 checksrc:
 	(cd lib && $(MAKE) checksrc)

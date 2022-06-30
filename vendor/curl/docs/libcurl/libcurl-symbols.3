@@ -18,8 +18,10 @@
 .\" * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 .\" * KIND, either express or implied.
 .\" *
+.\" * SPDX-License-Identifier: curl
+.\" *
 .\" **************************************************************************
-.TH libcurl-symbols 3 "May 11, 2022" "libcurl 7.41.0" "libcurl symbols"
+.TH libcurl-symbols 3 "Jun 27, 2022" "libcurl 7.41.0" "libcurl symbols"
 .SH NAME
 libcurl-symbols \- libcurl symbol version information
 .SH "libcurl symbols"
@@ -365,6 +367,8 @@ Introduced in 7.10.8
 Introduced in 7.10
 .IP CURL_VERSION_SSPI
 Introduced in 7.13.2
+.IP CURL_VERSION_THREADSAFE
+Introduced in 7.84.0
 .IP CURL_VERSION_TLSAUTH_SRP
 Introduced in 7.21.4
 .IP CURL_VERSION_UNICODE
@@ -691,6 +695,8 @@ Introduced in 7.21.5
 .IP CURLE_UNKNOWN_TELNET_OPTION
 Introduced in 7.7
 Deprecated since 7.21.5
+.IP CURLE_UNRECOVERABLE_POLL
+Introduced in 7.84.0
 .IP CURLE_UNSUPPORTED_PROTOCOL
 Introduced in 7.1
 .IP CURLE_UPLOAD_FAILED
@@ -889,6 +895,10 @@ Introduced in 7.45.0
 Introduced in 7.19.0
 .IP CURLINFO_APPCONNECT_TIME_T
 Introduced in 7.61.0
+.IP CURLINFO_CAPATH
+Introduced in 7.84.0
+.IP CURLINFO_CAINFO
+Introduced in 7.84.0
 .IP CURLINFO_CERTINFO
 Introduced in 7.19.1
 .IP CURLINFO_CONDITION_UNMET
@@ -1123,6 +1133,8 @@ Introduced in 7.9.6
 Introduced in 7.59.0
 .IP CURLM_UNKNOWN_OPTION
 Introduced in 7.15.4
+.IP CURLM_UNRECOVERABLE_POLL
+Introduced in 7.84.0
 .IP CURLM_WAKEUP_FAILURE
 Introduced in 7.68.0
 .IP CURLMIMEOPT_FORMESCAPE
@@ -1706,6 +1718,10 @@ Introduced in 7.80.0
 Introduced in 7.19.6
 .IP CURLOPT_SSH_KEYFUNCTION
 Introduced in 7.19.6
+.IP CURLOPT_SSH_HOSTKEYFUNCTION
+Introduced in 7.84.0
+.IP CURLOPT_SSH_HOSTKEYDATA
+Introduced in 7.84.0
 .IP CURLOPT_SSH_KNOWNHOSTS
 Introduced in 7.19.6
 .IP CURLOPT_SSH_PRIVATE_KEYFILE

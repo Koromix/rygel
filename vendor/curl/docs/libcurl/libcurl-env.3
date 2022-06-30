@@ -18,8 +18,10 @@
 .\" * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 .\" * KIND, either express or implied.
 .\" *
+.\" * SPDX-License-Identifier: curl
+.\" *
 .\" **************************************************************************
-.TH libcurl-env 3 "January 09, 2022" "libcurl 7.83.1" "libcurl environment variables"
+.TH libcurl-env 3 "May 17, 2022" "libcurl 7.84.0" "libcurl environment variables"
 
 .SH NAME
 libcurl-env \- environment variables libcurl understands
@@ -55,6 +57,10 @@ nss, openssl, rustls, schannel, secure-transport, wolfssl
 When the netrc feature is used (\fICURLOPT_NETRC(3)\fP), this variable is
 checked as the primary way to find the "current" home directory in which
 the .netrc file is likely to exist.
+.IP USERPROFILE
+When the netrc feature is used (\fICURLOPT_NETRC(3)\fP), this variable is
+checked as the secondary way to find the "current" home directory (on Windows
+only) in which the .netrc file is likely to exist.
 .IP LOGNAME
 User name to use when invoking the ntlm-wb tool, if NTLMUSER was not set.
 .IP NO_PROXY

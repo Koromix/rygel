@@ -18,8 +18,10 @@
 .\" * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 .\" * KIND, either express or implied.
 .\" *
+.\" * SPDX-License-Identifier: curl
+.\" *
 .\" **************************************************************************
-.TH curl_easy_nextheader 3 "March 22, 2022" "libcurl 7.83.1" "libcurl Manual"
+.TH curl_easy_nextheader 3 "May 17, 2022" "libcurl 7.84.0" "libcurl Manual"
 
 .SH NAME
 curl_easy_nextheader - get the next HTTP header
@@ -33,8 +35,6 @@ struct curl_header *curl_easy_nextheader(CURL *easy,
                                          struct curl_header *prev);
 .fi
 .SH DESCRIPTION
-EXPERIMENTAL feature!
-
 This function lets an application iterate over all previously received HTTP
 headers.
 
@@ -86,7 +86,7 @@ while((h = curl_easy_nextheader(easy, origin, -1, prev))) {
 }
 .fi
 .SH AVAILABILITY
-Added in 7.83.0
+Added in 7.83.0. Officially supported since 7.84.0.
 .SH RETURN VALUE
 This function returns the next header, or NULL when there are no more
 (matching) headers or an error occurred.

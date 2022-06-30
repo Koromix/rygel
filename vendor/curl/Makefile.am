@@ -18,6 +18,8 @@
 # This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 # KIND, either express or implied.
 #
+# SPDX-License-Identifier: curl
+#
 ###########################################################################
 
 AUTOMAKE_OPTIONS = foreign
@@ -34,6 +36,7 @@ CMAKE_DIST =                                    \
  CMake/FindBrotli.cmake                         \
  CMake/FindCARES.cmake                          \
  CMake/FindGSS.cmake                            \
+ CMake/FindLibPSL.cmake                         \
  CMake/FindLibSSH2.cmake                        \
  CMake/FindMbedTLS.cmake                        \
  CMake/FindMSH3.cmake                           \
@@ -278,13 +281,13 @@ uninstall-hook:
 	(cd docs && $(MAKE) uninstall)
 	(cd docs/libcurl && $(MAKE) uninstall)
 
-ca-bundle: scripts/mk-ca-bundle.pl
+ca-bundle: $(srcdir)/scripts/mk-ca-bundle.pl
 	@echo "generating a fresh ca-bundle.crt"
-	@perl $< -b -l -u lib/ca-bundle.crt
+	@perl $(srcdir)/scripts/mk-ca-bundle.pl -b -l -u lib/ca-bundle.crt
 
-ca-firefox: scripts/firefox-db2pem.sh
+ca-firefox: $(srcdir)/scripts/firefox-db2pem.sh
 	@echo "generating a fresh ca-bundle.crt"
-	$< lib/ca-bundle.crt
+	$(srcdir)/scripts/firefox-db2pem.sh lib/ca-bundle.crt
 
 checksrc:
 	(cd lib && $(MAKE) checksrc)

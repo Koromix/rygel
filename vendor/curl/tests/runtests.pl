@@ -19,6 +19,8 @@
 # This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 # KIND, either express or implied.
 #
+# SPDX-License-Identifier: curl
+#
 ###########################################################################
 
 # Experimental hooks are available to run tests remotely on machines that
@@ -162,6 +164,7 @@ my $SMBPORT=$noport;     # SMB server port
 my $SMBSPORT=$noport;    # SMBS server port
 my $TELNETPORT=$noport;  # TELNET server port with negotiation
 my $HTTPUNIXPATH;        # HTTP server Unix domain socket path
+my $SOCKSUNIXPATH;       # socks server Unix domain socket path
 
 my $use_external_proxy = 0;
 my $proxy_address;
@@ -275,6 +278,7 @@ my $has_libssh;     # set if built with libssh
 my $has_oldlibssh;  # set if built with libssh < 0.9.4
 my $has_wolfssh;    # set if built with wolfssh
 my $has_unicode;    # set if libcurl is built with Unicode support
+my $has_threadsafe; # set if libcurl is built with thread-safety support
 
 # this version is decided by the particular nghttp2 library that is being used
 my $h2cver = "h2c";
@@ -1435,6 +1439,7 @@ my %protofunc = ('http' => \&verifyhttp,
                  'tftp' => \&verifyftp,
                  'ssh' => \&verifyssh,
                  'socks' => \&verifysocks,
+                 'socks5unix' => \&verifysocks,
                  'gopher' => \&verifyhttp,
                  'httptls' => \&verifyhttptls,
                  'dict' => \&verifyftp,
@@ -2191,6 +2196,11 @@ sub runsshserver {
     my $logfile;
     my $port = 20000; # no lower port
 
+    if(!$USER) {
+        logmsg "Can't start ssh server due to lack of USER name";
+        return (0,0,0);
+    }
+
     $server = servername_id($proto, $ipvnum, $idnum);
 
     $pidfile = $serverpidfile{$server};
@@ -2379,7 +2389,7 @@ sub runmqttserver {
 # Start the socks server
 #
 sub runsocksserver {
-    my ($id, $verbose, $ipv6) = @_;
+    my ($id, $verbose, $ipv6, $is_unix) = @_;
     my $ip=$HOSTIP;
     my $proto = 'socks';
     my $ipvnum = 4;
@@ -2411,12 +2421,21 @@ sub runsocksserver {
     $logfile = server_logfilename($LOGDIR, $proto, $ipvnum, $idnum);
 
     # start our socks server, get commands from the FTP cmd file
-    my $cmd="server/socksd".exe_ext('SRV').
-        " --port 0 ".
-        " --pidfile $pidfile".
-        " --portfile $portfile".
-        " --backend $HOSTIP".
-        " --config $FTPDCMD";
+    my $cmd="";
+    if($is_unix) {
+        $cmd="server/socksd".exe_ext('SRV').
+            " --pidfile $pidfile".
+            " --unix-socket $SOCKSUNIXPATH".
+            " --backend $HOSTIP".
+            " --config $FTPDCMD";
+    } else {
+        $cmd="server/socksd".exe_ext('SRV').
+            " --port 0 ".
+            " --pidfile $pidfile".
+            " --portfile $portfile".
+            " --backend $HOSTIP".
+            " --config $FTPDCMD";
+    }
     my ($sockspid, $pid2) = startnew($cmd, $pidfile, 30, 0);
 
     if($sockspid <= 0 || !pidexists($sockspid)) {
@@ -2905,6 +2924,7 @@ sub setupfeatures {
     $feature{"SSLpinning"} = $has_sslpinning;
     $feature{"SSPI"} = $has_sspi;
     $feature{"threaded-resolver"} = $has_threadedres;
+    $feature{"threadsafe"} = $has_threadsafe;
     $feature{"TLS-SRP"} = $has_tls_srp;
     $feature{"TrackMemory"} = $has_memory_tracking;
     $feature{"Unicode"} = $has_unicode;
@@ -3200,6 +3220,9 @@ sub checksystem {
             if($feat =~ /Unicode/i) {
                 $has_unicode = 1;
             }
+            if($feat =~ /threadsafe/i) {
+                $has_threadsafe = 1;
+            }
         }
         #
         # Test harness currently uses a non-stunnel server in order to
@@ -3337,6 +3360,7 @@ sub checksystem {
             logmsg "* Unix socket paths:\n";
             if($http_unix) {
                 logmsg sprintf("*   HTTP-Unix:%s\n", $HTTPUNIXPATH);
+                logmsg sprintf("*   Socks-Unix:%s\n", $SOCKSUNIXPATH);
             }
         }
     }
@@ -3397,6 +3421,7 @@ sub subVariables {
 
     # server Unix domain socket paths
     $$thing =~ s/${prefix}HTTPUNIXPATH/$HTTPUNIXPATH/g;
+    $$thing =~ s/${prefix}SOCKSUNIXPATH/$SOCKSUNIXPATH/g;
 
     # client IP addresses
     $$thing =~ s/${prefix}CLIENT6IP/$CLIENT6IP/g;
@@ -4128,16 +4153,17 @@ sub singletest {
         $DBGCURL=$CMDLINE;
     }
 
+    if($fail_due_event_based) {
+        logmsg "This test cannot run event based\n";
+        timestampskippedevents($testnum);
+        return -1;
+    }
+
     if($gdbthis) {
         # gdb is incompatible with valgrind, so disable it when debugging
         # Perhaps a better approach would be to run it under valgrind anyway
         # with --db-attach=yes or --vgdb=yes.
         $disablevalgrind=1;
-    }
-
-    if($fail_due_event_based) {
-        logmsg "This test cannot run event based\n";
-        return -1;
     }
 
     my @stdintest = getpart("client", "stdin");
@@ -5273,6 +5299,16 @@ sub startservers {
                 $run{'socks'}="$pid $pid2";
             }
         }
+        elsif($what eq "socks5unix") {
+            if(!$run{'socks5unix'}) {
+                ($pid, $pid2) = runsocksserver("2", $verbose, "", "unix");
+                if($pid <= 0) {
+                    return "failed starting socks5unix server";
+                }
+                printf ("* pid socks5unix => %d %d\n", $pid, $pid2) if($verbose);
+                $run{'socks5unix'}="$pid $pid2";
+            }
+        }
         elsif($what eq "mqtt" ) {
             if(!$run{'mqtt'}) {
                 ($pid, $pid2) = runmqttserver("", $verbose);
@@ -5740,6 +5776,7 @@ Usage: runtests.pl [options] [test selection(s)]
   -r       run time statistics
   -rf      full run time statistics
   -rm      force removal of files by killing locking processes (Windows only)
+  --repeat=[num] run the given tests this many times
   -s       short output
   --seed=[num] set the random seed to a fixed number
   --shallow=[num] randomly makes the torture tests "thinner"
@@ -5867,6 +5904,7 @@ if ($gdbthis) {
 }
 
 $HTTPUNIXPATH    = "http$$.sock"; # HTTP server Unix domain socket path
+$SOCKSUNIXPATH    = $pwd."/socks$$.sock"; # HTTP server Unix domain socket path, absolute path
 
 #######################################################################
 # clear and create logging directory:
