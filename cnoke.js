@@ -36,13 +36,12 @@ let cache_dir = null;
 let build_dir = null;
 let work_dir = null;
 
-let version = null;
+let runtime_version = null;
 let arch = null;
 let toolset = null;
 let mode = default_mode;
 let targets = [];
 let verbose = false;
-let rebuild = false;
 let prebuild = null;
 let prebuild_req = null;
 
@@ -92,27 +91,29 @@ async function main() {
             if (arg == '--help') {
                 print_usage();
                 return;
-            } else if (arg == '-C' || arg == '--directory') {
+            } else if (arg == '-d' || arg == '--directory') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 project_dir = fs.realpathSync(value);
-            } else if ((command == build || command == configure) && arg == '--version') {
+            } else if ((command == build || command == configure) && (arg == '-v' || arg == '--runtime-version')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
+                if (!value.match(/^[0-9]+\.[0-9]+\.[0-9]+$/))
+                    throw new Error(`Malformed runtime version '${value}'`);
 
-                version = value;
-            } else if ((command == build || command == configure) && arg == '--arch') {
+                runtime_version = value;
+            } else if ((command == build || command == configure) && (arg == '-a' || arg == '--arch')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 arch = value;
-            } else if ((command == build || command == configure) && arg == '--toolset') {
+            } else if ((command == build || command == configure) && (arg == '-t' || arg == '--toolset')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 toolset = value;
-            } else if ((command == build || command == configure) && (arg == '-m' || arg == '--mode')) {
+            } else if ((command == build || command == configure) && (arg == '-B' || arg == '--config')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
@@ -125,12 +126,10 @@ async function main() {
                         throw new Error(`Unknown value '${value}' for ${arg}`);
                     } break;
                 }
-            } else if ((command == build || command == configure) && arg == '--debug') {
+            } else if ((command == build || command == configure) && (arg == '-D' || arg == '--debug')) {
                 mode = 'Debug';
-            } else if (command == build && (arg == '-v' || arg == '--verbose')) {
+            } else if (command == build && arg == '--verbose') {
                 verbose = true;
-            } else if (command == build && arg == '--rebuild') {
-                rebuild = true;
             } else if (command == build && arg == '--prebuild') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -153,10 +152,10 @@ async function main() {
         }
     }
 
-    if (version == null)
-        version = process.version;
-    if (version.startsWith('v'))
-        version = version.substr(1);
+    if (runtime_version == null)
+        runtime_version = process.version;
+    if (runtime_version.startsWith('v'))
+        runtime_version = runtime_version.substr(1);
     if (arch == null)
         arch = determine_arch();
 
@@ -167,7 +166,7 @@ async function main() {
     package_dir = find_parent_directory(project_dir, 'package.json');
     cache_dir = get_cache_directory();
     build_dir = project_dir + '/build';
-    work_dir = build_dir + `/v${version}_${arch}`;
+    work_dir = build_dir + `/v${runtime_version}_${arch}`;
 
     try {
         await command();
@@ -181,32 +180,28 @@ function print_usage() {
     let help = `Usage: cnoke [command] [options...] [targets...]
 
 Commands:
-    configure                    Configure CMake build
-    build                        Build project (configure if needed)
-    clean                        Clean build files
+    configure                            Configure CMake build
+    build                                Build project (configure if needed)
+    clean                                Clean build files
 
-Global options:
-    -C, --directory <DIR>        Change project directory
-                                 (default: current working directory)
+Options:
+    -d, --directory <DIR>                Change project directory
+                                         (default: current working directory)
 
-Build options:
-    -v, --verbose                Show build commands while building
+    -B, --config <CONFIG>                Change build type: RelWithDebInfo, Debug, Release
+                                         (default: ${default_mode})
+    -D, --debug                          Shortcut for --config Debug
 
-        --rebuild                Perform clean step before build
+        --prebuild <URL>                 Set URL template to download prebuilt binaries
+        --require <PATH>                 Require specified module, drop prebuild if it fails
 
-        --prebuild <URL>         Set URL template to download prebuilt binaries
-        --require <PATH>         Require specified module, and drop prebuild if it fails
+    -a, --arch <ARCH>                    Change architecture and ABI
+                                         (default: ${determine_arch()})
+    -v, --runtime-version <VERSION>      Change node version
+                                         (default: ${process.version})
+    -t, --toolset <TOOLSET>              Change default CMake toolset
 
-Configure options:
-        --version <VERSION>      Change node version
-                                 (default: ${process.version})
-        --arch <ARCH>            Change architecture and ABI
-                                 (default: ${determine_arch()})
-
-        --toolset <TOOLSET>      Change default CMake toolset
-    -m, --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
-                                 (default: ${default_mode})
-        --debug                  Shortcut for -m debug
+        --verbose                        Show build commands while building
 
 The ARCH value is similar to process.arch, with the following differences:
 
@@ -224,7 +219,7 @@ async function configure(retry = true) {
 
     check_cmake();
 
-    console.log(`>> Node: ${version}`);
+    console.log(`>> Node: ${runtime_version}`);
     console.log(`>> Platform: ${process.platform}_${arch}`);
 
     // Check Node.js compatibility
@@ -232,16 +227,16 @@ async function configure(retry = true) {
         let pkg = read_package_json();
 
         if (pkg.engines != null) {
-            if (pkg.engines.node != null && cmp_version(version, pkg.engines.node) < 0)
+            if (pkg.engines.node != null && cmp_version(runtime_version, pkg.engines.node) < 0)
                 throw new Error(`Project ${pkg.name} requires Node.js >= ${pkg.engines.node}`);
 
             if (pkg.engines.napi != null) {
-                let major = parseInt(version, 10);
+                let major = parseInt(runtime_version, 10);
                 let required = get_napi_version(pkg.engines.napi, major);
 
                 if (required == null)
                     throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (old or missing N-API)`);
-                if (cmp_version(version, required) < 0)
+                if (cmp_version(runtime_version, required) < 0)
                     throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${pkg.engines.napi})`);
             }
         }
@@ -256,10 +251,10 @@ async function configure(retry = true) {
 
     // Download Node headers
     {
-        let basename = `node-v${version}-headers.tar.gz`;
+        let basename = `node-v${runtime_version}-headers.tar.gz`;
         let urls = [
-            `https://nodejs.org/dist/v${version}/${basename}`,
-            `https://unofficial-builds.nodejs.org/download/release/v${version}/${basename}`
+            `https://nodejs.org/dist/v${runtime_version}/${basename}`,
+            `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${basename}`
         ];
         let destname = `${cache_dir}/${basename}`;
 
@@ -281,12 +276,12 @@ async function configure(retry = true) {
             } break;
         }
 
-        let destname = `${cache_dir}/node_v${version}_${arch}.lib`;
+        let destname = `${cache_dir}/node_v${runtime_version}_${arch}.lib`;
 
         if (!fs.existsSync(destname)) {
             let urls = [
-                `https://nodejs.org/dist/v${version}/${dirname}/node.lib`,
-                `https://unofficial-builds.nodejs.org/download/release/v${version}/${dirname}/node.lib`
+                `https://nodejs.org/dist/v${runtime_version}/${dirname}/node.lib`,
+                `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${dirname}/node.lib`
             ];
             await download(urls, destname);
         }
@@ -452,8 +447,6 @@ async function build() {
 
     if (verbose)
         args.push('--verbose');
-    if (rebuild)
-        args.push('--clean-first');
     for (let target of targets)
         args.push('--target', target);
 
@@ -577,7 +570,7 @@ async function download(url, dest) {
             }
         }
 
-        throw new Error('All URLS returned error 404');
+        throw new Error('All URLs returned error 404');
     }
 
     console.log('>> Downloading ' + url);

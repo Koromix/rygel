@@ -65,33 +65,28 @@ You can find the same help text by running `cnoke --help`:
 Usage: cnoke [command] [options...] [targets...]
 
 Commands:
-    configure                    Configure CMake build
-    build                        Build project (configure if needed)
-    clean                        Clean build files
+    configure                            Configure CMake build
+    build                                Build project (configure if needed)
+    clean                                Clean build files
 
-Global options:
-    -C, --directory <DIR>        Change project directory
-                                 (default: current working directory)
+Options:
+    -d, --directory <DIR>                Change project directory
+                                         (default: current working directory)
 
-Build options:
-    -v, --verbose                Show build commands while building
+    -B, --config <CONFIG>                Change build type: RelWithDebInfo, Debug, Release
+                                         (default: RelWithDebInfo)
+    -D, --debug                          Shortcut for --config Debug
 
-        --rebuild                Perform clean step before build
+        --prebuild <URL>                 Set URL template to download prebuilt binaries
+        --require <PATH>                 Require specified module, drop prebuild if it fails
 
-        --prebuild <URL>         Set URL template to download prebuilt binaries
-        --require <PATH>         Require specified module, and drop prebuild if it fails
+    -a, --arch <ARCH>                    Change architecture and ABI
+                                         (default: x64)
+    -v, --runtime-version <VERSION>      Change node version
+                                         (default: v16.14.0)
+    -t, --toolset <TOOLSET>              Change default CMake toolset
 
-Configure options:
-        --version <VERSION>      Change node version
-                                 (default: v16.15.0)
-        --arch <ARCH>            Change architecture
-                                 (default: x64)
-
-        --toolset <TOOLSET>      Change default CMake toolset
-    -m, --mode <MODE>            Change build type: RelWithDebInfo, Debug, Release
-                                 (default: RelWithDebInfo)
-        --debug                  Shortcut for -m debug
-
+        --verbose                        Show build commands while building
 ```
 
 The ARCH value is similar to process.arch, with the following differences:
