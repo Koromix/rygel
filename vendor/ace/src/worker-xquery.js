@@ -21,11 +21,11 @@ window.ace = window;
 window.onerror = function(message, file, line, col, err) {
     postMessage({type: "error", data: {
         message: message,
-        data: err.data,
+        data: err && err.data,
         file: file,
         line: line, 
         col: col,
-        stack: err.stack
+        stack: err && err.stack
     }});
 };
 
@@ -153,10 +153,10 @@ window.define = function(id, deps, factory) {
     };
 };
 window.define.amd = {};
-require.tlns = {};
+window.require.tlns = {};
 window.initBaseUrls  = function initBaseUrls(topLevelNamespaces) {
     for (var i in topLevelNamespaces)
-        require.tlns[i] = topLevelNamespaces[i];
+        this.require.tlns[i] = topLevelNamespaces[i];
 };
 
 window.initSender = function initSender() {
@@ -210,7 +210,7 @@ window.onmessage = function(e) {
     else if (msg.init) {
         window.initBaseUrls(msg.tlns);
         sender = window.sender = window.initSender();
-        var clazz = require(msg.module)[msg.classname];
+        var clazz = this.require(msg.module)[msg.classname];
         main = window.main = new clazz(sender);
     }
 };
