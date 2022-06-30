@@ -384,11 +384,11 @@ async function pack() {
                 let dest_dir = build_dir + `/${version}/koffi_${machine.platform}_${build.arch}`;
                 let dest_filename = dest_dir + '.tar.gz';
 
-                unlink_recursive(dest_dir + '/build');
-                fs.mkdirSync(dest_dir + '/build', { mode: 0o755, recursive: true });
+                unlink_recursive(dest_dir);
+                fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
 
                 try {
-                    await machine.ssh.getDirectory(dest_dir + '/build', src_dir, {
+                    await machine.ssh.getDirectory(dest_dir, src_dir, {
                         recursive: false,
                         concurrency: 4,
                         validate: filename => !path.basename(filename).match(/^v[0-9]+/)
