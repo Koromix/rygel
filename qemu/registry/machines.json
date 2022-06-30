@@ -21,7 +21,7 @@
             "Linux ARM32": {
                 "arch": "arm32hf",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js --prefer-clang"
+                "build": "node ../cnoke/cnoke.js"
             }
         },
 
@@ -29,7 +29,7 @@
             "Linux ARM32": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test --prefer-clang"
+                    "Build": "node ../cnoke/cnoke.js -d test"
                 },
                 "commands": {
                     "Test Sync": "node test/sync.js",
@@ -64,7 +64,7 @@
             "Linux ARM64": {
                 "arch": "arm64",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js --prefer-clang"
+                "build": "node ../cnoke/cnoke.js"
             }
         },
 
@@ -72,7 +72,7 @@
             "Linux ARM64": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test --prefer-clang"
+                    "Build": "node ../cnoke/cnoke.js -d test"
                 },
                 "commands": {
                     "Test Sync": "node test/sync.js",
@@ -107,7 +107,7 @@
             "Linux i386": {
                 "arch": "ia32",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js --prefer-clang"
+                "build": "node ../cnoke/cnoke.js"
             }
         },
 
@@ -115,7 +115,7 @@
             "Linux i386": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test --prefer-clang"
+                    "Build": "node ../cnoke/cnoke.js -d test"
                 },
                 "commands": {
                     "Test Sync": "node test/sync.js",
@@ -525,7 +525,7 @@
             "Linux RISC-V 64": {
                 "arch": "riscv64hf64",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js --prefer-clang"
+                "build": "node ../cnoke/cnoke.js"
             }
         },
 
@@ -533,7 +533,7 @@
             "Linux RISC-V 64": {
                 "directory": "/home/debian/luigi",
                 "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test --prefer-clang"
+                    "Build": "node ../cnoke/cnoke.js -d test"
                 },
                 "commands": {
                     "Test Sync": "node test/sync.js",
