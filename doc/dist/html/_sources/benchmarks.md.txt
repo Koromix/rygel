@@ -123,16 +123,11 @@ npx cmake-js compile -t ClangCL
 
 Open a console, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` (or `node ..\..\cnoke\cnoke.js` on Windows) before doing anything else.
 
+Please note that all benchmark results are made with Clang-built binaries.
+
 ```sh
 cd koffi/benchmark
-node ../../cnoke/cnoke.js
-```
-
-Please note that the *x86_64 Windows results above are measured with Clang*, which you can use too with the following commands:
-
-```batch
-cd koffi\benchmark
-node ..\..\cnoke\cnoke.js --toolset ClangCL
+node ../../cnoke/cnoke.js --prefer-clang
 ```
 
 Once everything is built and ready, run:

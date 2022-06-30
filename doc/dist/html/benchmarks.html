@@ -463,13 +463,9 @@
 <section id="running-benchmarks">
 <h2>Running benchmarks<a class="headerlink" href="#running-benchmarks" title="Permalink to this heading">#</a></h2>
 <p>Open a console, go to <code class="docutils literal notranslate"><span class="pre">koffi/benchmark</span></code> and run <code class="docutils literal notranslate"><span class="pre">../../cnoke/cnoke.js</span></code> (or <code class="docutils literal notranslate"><span class="pre">node</span> <span class="pre">..\..\cnoke\cnoke.js</span></code> on Windows) before doing anything else.</p>
+<p>Please note that all benchmark results are made with Clang-built binaries.</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nb">cd</span> koffi/benchmark
-<span class="linenos">2</span>node ../../cnoke/cnoke.js
-</pre></div>
-</div>
-<p>Please note that the <em>x86_64 Windows results above are measured with Clang</em>, which you can use too with the following commands:</p>
-<div class="highlight-batch notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="k">cd</span> koffi\benchmark
-<span class="linenos">2</span>node ..\..\cnoke\cnoke.js --toolset ClangCL
+<span class="linenos">2</span>node ../../cnoke/cnoke.js --prefer-clang
 </pre></div>
 </div>
 <p>Once everything is built and ready, run:</p>
