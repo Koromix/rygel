@@ -85,6 +85,7 @@ Options:
     -v, --runtime-version <VERSION>      Change node version
                                          (default: v16.14.0)
     -t, --toolset <TOOLSET>              Change default CMake toolset
+    -C, --prefer-clang                   Use Clang instead of default CMake compiler
 
         --verbose                        Show build commands while building
 ```

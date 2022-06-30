@@ -39,6 +39,7 @@ let work_dir = null;
 let runtime_version = null;
 let arch = null;
 let toolset = null;
+let prefer_clang = false;
 let mode = default_mode;
 let targets = [];
 let verbose = false;
@@ -113,6 +114,8 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 toolset = value;
+            } else if ((command == build || command == configure) && (arg == '-C' || arg == '--prefer-clang')) {
+                prefer_clang = true;
             } else if ((command == build || command == configure) && (arg == '-B' || arg == '--config')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -200,6 +203,7 @@ Options:
     -v, --runtime-version <VERSION>      Change node version
                                          (default: ${process.version})
     -t, --toolset <TOOLSET>              Change default CMake toolset
+    -C, --prefer-clang                   Use Clang instead of default CMake compiler
 
         --verbose                        Show build commands while building
 
@@ -338,6 +342,14 @@ async function configure(retry = true) {
         }
     }
 
+    if (prefer_clang) {
+        if (process.platform == 'win32') {
+            args.push('-T', 'ClangCL');
+        } else {
+            args.push('-DCMAKE_C_COMPILER=clang');
+            args.push('-DCMAKE_CXX_COMPILER=clang++');
+        }
+    }
     if (toolset != null)
         args.push('-T', toolset);
 
