@@ -193,7 +193,7 @@
             "Windows i386": {
                 "arch": "ia32",
                 "directory": "C:/Users/windows/Desktop/luigi_ia32",
-                "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js --prefer-clang"
+                "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js"
             },
 
             "Windows x64": {
@@ -213,7 +213,7 @@
             "Windows i386": {
                 "directory": "C:/Users/windows/Desktop/luigi_ia32",
                 "build": {
-                    "Build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -d test --prefer-clang"
+                    "Build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -d test"
                 },
                 "commands": {
                     "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
