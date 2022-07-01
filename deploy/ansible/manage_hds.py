@@ -73,7 +73,8 @@ def add_goupile(path, vault, domain):
             '\n' +
             '    proxy_pass http://unix:/run/goupile/' + domain + '.sock:;\n' +
             '}\n'
-        )
+        ),
+        'ssl_certbot_email': 'interhop@riseup.net'
     })
     goupile['goupile_domains'].append({
         'name': domain,
@@ -127,7 +128,7 @@ if __name__ == "__main__":
 
     subparsers = parser.add_subparsers(title = 'Commands', dest = 'command')
     parser.add_argument('-e', '--environment', type = str, help = 'change environment (defaults to prod)',
-                        default = 'prod', choices = ['prod', 'preprod', 'vagrant'])
+                        default = 'prod', choices = ['prod', 'preprod'])
 
     sub = subparsers.add_parser('add_goupile', help = 'add goupile domain')
     sub.add_argument('domain', type = str, help = 'domain name')

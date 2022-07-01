@@ -73,7 +73,8 @@ def add_goupile(path, vault, domain):
             '\n' +
             '    proxy_pass http://unix:/run/goupile/' + domain + '.sock:;\n' +
             '}\n'
-        )
+        ),
+        'ssl_certbot_email': 'niels.martignene@protonmail.com'
     })
     goupile['goupile_domains'].append({
         'name': domain,
@@ -126,8 +127,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers(title = 'Commands', dest = 'command')
-    parser.add_argument('-e', '--environment', type = str, help = 'change environment (defaults to prod)',
-                        default = 'prod', choices = ['prod', 'vagrant'])
 
     sub = subparsers.add_parser('add_goupile', help = 'add goupile domain')
     sub.add_argument('domain', type = str, help = 'domain name')
@@ -138,7 +137,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(script_dir, 'inventories/pknet/' + args.environment)
+    path = os.path.join(script_dir, 'inventories/pknet/prod')
 
     if args.command is None:
         parser.print_help()
