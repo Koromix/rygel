@@ -302,7 +302,7 @@ public:
             LogError("Clang CFI feature requires LTO compilation");
             return false;
         }
-        if (lld_ver < 1100 && (features & (int)CompileFeature::ShuffleCode)) {
+        if (lld_ver < 110000 && (features & (int)CompileFeature::ShuffleCode)) {
             LogError("ShuffleCode requires LLD >= 11, try --host option (e.g. --host=,clang-11 or --host=,clang-11,lld-11)");
             return false;
         }
@@ -631,7 +631,7 @@ public:
             Fmt(&buf, " -fsanitize=cfi");
         }
         if (features & (int)CompileFeature::ShuffleCode) {
-            if (lld_ver >= 1300) {
+            if (lld_ver >= 130000) {
                 Fmt(&buf, " -Wl,--shuffle-sections=*=0");
             } else {
                 Fmt(&buf, " -Wl,--shuffle-sections=0");
