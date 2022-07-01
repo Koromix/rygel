@@ -136,7 +136,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(script_dir, 'inventories/hds/prod')
+    path = os.path.join(script_dir, 'inventories/hds/' + args.environment)
 
     if args.command is None:
         parser.print_help()
