@@ -315,6 +315,11 @@ async function pack() {
 
     let ready = ignore.size;
 
+    if (ready >= machines.length) {
+        console.log('>> Nothing to do!');
+        return true;
+    }
+
     success &= await start(false);
     success &= await copy(machine => Object.values(machine.builds).map(build => build.directory));
 
@@ -414,9 +419,14 @@ async function pack() {
 
     if (machines.some(machine => machine.started))
         success &= await stop(false);
+    success &= (ignore.size == ready);
 
-    if (ignore.size > ready)
-        throw new Error('Some machines are missing, refusing to pack');
+    console.log('');
+    if (success) {
+        console.log('>> Status: ' + chalk.bold.green('SUCCESS'));
+    } else {
+        console.log('>> Status: ' + chalk.bold.red('FAILED'));
+    }
 
     return success;
 }
