@@ -19,8 +19,8 @@ You can use the returned object to load C functions from the library. To do so, 
 To declare a function, you need to specify its non-mangled name, its return type, and its parameters. Use an ellipsis as the last parameter for variadic functions.
 
 ```js
-const printf = lib.func('printf', 'int', ['string', '...']);
-const atoi = lib.func('atoi', 'int', ['string']);
+const printf = lib.func('printf', 'int', ['str', '...']);
+const atoi = lib.func('atoi', 'int', ['str']);
 ```
 
 Koffi automatically tries mangled names for non-standard x86 calling conventions. See the section [on standard calls](#synchronous-calls) for more information on this subject.
@@ -31,7 +31,7 @@ If you prefer, you can declare functions using simple C-like prototype strings, 
 
 ```js
 const printf = lib.func('int printf(const char *fmt, ...)');
-const atoi = lib.func('int atoi(string)'); // The parameter name is not used by Koffi, and optional
+const atoi = lib.func('int atoi(str)'); // The parameter name is not used by Koffi, and optional
 ```
 
 You can use `()` or `(void)` for functions that take no argument.
@@ -58,8 +58,8 @@ const koffi = require('koffi');
 const lib = koffi.load('user32.dll');
 
 // The following two declarations are equivalent, and use Stdcall
-const MessageBoxA_1 = lib.stdcall('MessageBoxA', 'int', ['void *', 'string', 'string', 'uint']);
-const MessageBoxA_2 = lib.func('int __stdcall MessageBoxA(void *hwnd, string text, string caption, uint type)');
+const MessageBoxA_1 = lib.stdcall('MessageBoxA', 'int', ['void *', 'str', 'str', 'uint']);
+const MessageBoxA_2 = lib.func('int __stdcall MessageBoxA(void *hwnd, str text, str caption, uint type)');
 ```
 
 ## Asynchronous calls
@@ -95,10 +95,10 @@ Variadic functions are declared with an ellipsis as the last argument.
 In order to call a variadic function, you must provide two Javascript arguments for each additional C parameter, the first one is the expected type and the second one is the value.
 
 ```js
-const printf = lib.func('printf', 'int', ['string', '...']);
+const printf = lib.func('printf', 'int', ['str', '...']);
 
 // The variadic arguments are: 6 (int), 8.5 (double), 'THE END' (const char *)
-printf('Integer %d, double %g, string %s', 'int', 6, 'double', 8.5, 'string', 'THE END');
+printf('Integer %d, double %g, str %s', 'int', 6, 'double', 8.5, 'str', 'THE END');
 ```
 
 On x86 platforms, only the Cdecl convention can be used for variadic functions.
@@ -159,7 +159,7 @@ const lib = koffi.load('sqlite.so');
 const sqlite3_db = koffi.handle('sqlite3_db');
 
 // Use koffi.out() on a pointer to copy out (from C to JS) after the call
-const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['string', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'string']);
+const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'str']);
 
 const SQLITE_OPEN_READWRITE = 0x2;
 const SQLITE_OPEN_CREATE = 0x4;

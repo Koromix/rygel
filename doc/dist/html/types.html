@@ -465,12 +465,12 @@
 <td><p>4 or 8 bytes depending on platform (LP64, LLP64)</p></td>
 </tr>
 <tr class="row-even"><td><p>String</p></td>
-<td><p>string</p></td>
+<td><p>str (string)</p></td>
 <td><p></p></td>
 <td><p>JS strings are converted to and from UTF-8</p></td>
 </tr>
 <tr class="row-odd"><td><p>String</p></td>
-<td><p>string16</p></td>
+<td><p>str16 (string16)</p></td>
 <td><p></p></td>
 <td><p>JS strings are converted to and from UTF-16 (LE)</p></td>
 </tr>
@@ -503,7 +503,7 @@
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span><span class="w"> </span><span class="nx">A</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="linenos">2</span><span class="w">    </span><span class="nx">a</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="linenos">3</span><span class="w">    </span><span class="nx">b</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;char&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="linenos">4</span><span class="w">    </span><span class="nx">c</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;string&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="linenos">4</span><span class="w">    </span><span class="nx">c</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;str&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="linenos">5</span><span class="w">    </span><span class="nx">d</span><span class="o">:</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">struct</span><span class="p">({</span><span class="w"></span>
 <span class="linenos">6</span><span class="w">        </span><span class="nx">d1</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;double&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="linenos">7</span><span class="w">        </span><span class="nx">d2</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;double&#39;</span><span class="w"></span>
@@ -786,7 +786,7 @@
 <span class="linenos">22</span><span class="w">    </span><span class="nx">wFinderFlags</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;ushort&#39;</span><span class="w"> </span><span class="c1">// Obsolete. Do not use</span><span class="w"></span>
 <span class="linenos">23</span><span class="p">});</span><span class="w"></span>
 <span class="linenos">24</span>
-<span class="linenos">25</span><span class="kd">const</span><span class="w"> </span><span class="nx">FindFirstFile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;HANDLE __stdcall FindFirstFileW(string16 path, _Out_ WIN32_FIND_DATA *data)&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">25</span><span class="kd">const</span><span class="w"> </span><span class="nx">FindFirstFile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;HANDLE __stdcall FindFirstFileW(str16 path, _Out_ WIN32_FIND_DATA *data)&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos">26</span><span class="kd">const</span><span class="w"> </span><span class="nx">FindNextFile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;bool __stdcall FindNextFileW(HANDLE h, _Out_ WIN32_FIND_DATA *data)&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos">27</span><span class="kd">const</span><span class="w"> </span><span class="nx">FindClose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;bool __stdcall FindClose(HANDLE h)&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos">28</span><span class="kd">const</span><span class="w"> </span><span class="nx">GetLastError</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;uint GetLastError()&#39;</span><span class="p">);</span><span class="w"></span>

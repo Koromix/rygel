@@ -1134,6 +1134,8 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(instance, "double", PrimitiveKind::Float64, 8, alignof(double));
     RegisterPrimitiveType(instance, "string", PrimitiveKind::String, RG_SIZE(void *), alignof(void *));
     RegisterPrimitiveType(instance, "string16", PrimitiveKind::String16, RG_SIZE(void *), alignof(void *));
+    RegisterPrimitiveType(instance, "str", PrimitiveKind::String, RG_SIZE(void *), alignof(void *));
+    RegisterPrimitiveType(instance, "str16", PrimitiveKind::String16, RG_SIZE(void *), alignof(void *));
 
     Napi::Object types = Napi::Object::New(env);
     for (TypeInfo &type: instance->types) {

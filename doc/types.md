@@ -46,14 +46,14 @@ Koffi also accepts BigInt values when converting from JS to C integers. If the v
 
 Koffi defines a few more types that can change size depending on the OS and the architecture:
 
-JS type          | C type        | Signedness | Note
----------------- | ------------- | ---------- | ------------------------------------------------
-Boolean          | bool          |            | Usually one byte
-Number (integer) | long          | Signed     | 4 or 8 bytes depending on platform (LP64, LLP64)
-Number (integer) | ulong         | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
-Number (integer) | unsigned long | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
-String           | string        |            | JS strings are converted to and from UTF-8
-String           | string16      |            | JS strings are converted to and from UTF-16 (LE)
+JS type          | C type           | Signedness | Note
+---------------- | ---------------- | ---------- | ------------------------------------------------
+Boolean          | bool             |            | Usually one byte
+Number (integer) | long             | Signed     | 4 or 8 bytes depending on platform (LP64, LLP64)
+Number (integer) | ulong            | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
+Number (integer) | unsigned long    | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
+String           | str (string)     |            | JS strings are converted to and from UTF-8
+String           | str16 (string16) |            | JS strings are converted to and from UTF-16 (LE)
 
 Primitive types can be specified by name (in a string) or through `koffi.types`:
 
@@ -87,7 +87,7 @@ typedef struct A {
 const A = koffi.struct('A', {
     a: 'int',
     b: 'char',
-    c: 'string',
+    c: 'str',
     d: koffi.struct({
         d1: 'double',
         d2: 'double'
@@ -385,7 +385,7 @@ const WIN32_FIND_DATA = koffi.struct('WIN32_FIND_DATA', {
     wFinderFlags: 'ushort' // Obsolete. Do not use
 });
 
-const FindFirstFile = lib.func('HANDLE __stdcall FindFirstFileW(string16 path, _Out_ WIN32_FIND_DATA *data)');
+const FindFirstFile = lib.func('HANDLE __stdcall FindFirstFileW(str16 path, _Out_ WIN32_FIND_DATA *data)');
 const FindNextFile = lib.func('bool __stdcall FindNextFileW(HANDLE h, _Out_ WIN32_FIND_DATA *data)');
 const FindClose = lib.func('bool __stdcall FindClose(HANDLE h)');
 const GetLastError = lib.func('uint GetLastError()');
