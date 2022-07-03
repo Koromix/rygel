@@ -28,7 +28,7 @@ const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int
         const TypeInfo *type = instance->types_map.FindValue(str.c_str(), nullptr);
 
         if (!type) {
-            ThrowError<Napi::TypeError>(value.Env(), "Unknown type string '%1'", str.c_str());
+            ThrowError<Napi::TypeError>(value.Env(), "Unknown type name '%1'", str.c_str());
             return nullptr;
         }
 
