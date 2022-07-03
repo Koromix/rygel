@@ -38,7 +38,7 @@ function main() {
 
     let lib = koffi.load(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
-    const atoi = lib.cdecl('atoi', 'int', ['string']);
+    const atoi = lib.cdecl('atoi', 'int', ['str']);
 
     let start = performance.now();
 

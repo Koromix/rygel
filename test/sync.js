@@ -64,7 +64,7 @@ const BFG = koffi.struct('BFG', {
     a: 'int8_t',
     b: 'int64_t',
     c: 'char',
-    d: 'string',
+    d: 'str',
     e: 'short',
     inner: koffi.struct({
         f: 'float',
@@ -75,7 +75,7 @@ const PackedBFG = koffi.pack('PackedBFG', {
     a: 'int8_t',
     b: 'int64_t',
     c: 'char',
-    d: 'string',
+    d: 'str',
     e: 'short',
     inner: koffi.pack({
         f: 'float',
@@ -146,13 +146,13 @@ async function test() {
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
     const ConcatenateToInt4 = lib.func('ConcatenateToInt4', 'int64_t', Array(12).fill('int32_t'));
     const ConcatenateToInt8 = lib.func('ConcatenateToInt8', 'int64_t', Array(12).fill('int64_t'));
-    const ConcatenateToStr1 = lib.func('ConcatenateToStr1', 'string', [...Array(8).fill('int8_t'), koffi.struct('IJK1', {i: 'int8_t', j: 'int8_t', k: 'int8_t'}), 'int8_t']);
-    const ConcatenateToStr4 = lib.func('ConcatenateToStr4', 'string', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', {i: 'int32_t', j: 'int32_t', k: 'int32_t'})), 'int32_t']);
-    const ConcatenateToStr8 = lib.func('ConcatenateToStr8', 'string', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
+    const ConcatenateToStr1 = lib.func('ConcatenateToStr1', 'str', [...Array(8).fill('int8_t'), koffi.struct('IJK1', {i: 'int8_t', j: 'int8_t', k: 'int8_t'}), 'int8_t']);
+    const ConcatenateToStr4 = lib.func('ConcatenateToStr4', 'str', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', {i: 'int32_t', j: 'int32_t', k: 'int32_t'})), 'int32_t']);
+    const ConcatenateToStr8 = lib.func('ConcatenateToStr8', 'str', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
     const MakeBFG = lib.func('BFG __stdcall MakeBFG(_Out_ BFG *p, int x, double y, const char *str)');
     const MakePackedBFG = lib.func('PackedBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const ReturnBigString = process.platform == 'win32' ?
-                            lib.stdcall(1, 'string', ['string']) :
+                            lib.stdcall(1, 'str', ['str']) :
                             lib.func('const char * __stdcall ReturnBigString(const char *str)');
     const PrintFmt = lib.func('const char *PrintFmt(const char *fmt, ...)');
     const Concat16 = lib.func('const char16_t *Concat16(const char16_t *str1, const char16_t *str2)')
@@ -292,7 +292,7 @@ async function test() {
 
     // Variadic
     {
-        let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'string', 'BAR');
+        let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'str', 'BAR');
         assert.equal(str, 'foo 200 1.5 BAR');
     }
 

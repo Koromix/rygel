@@ -84,15 +84,15 @@ function main() {
     let lib_filename = path.dirname(__filename) + '/build/raylib' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
-    const InitWindow = lib.cdecl('InitWindow', 'void', ['int', 'int', 'string']);
+    const InitWindow = lib.cdecl('InitWindow', 'void', ['int', 'int', 'str']);
     const SetTraceLogLevel = lib.cdecl('SetTraceLogLevel', 'void', ['int']);
     const SetWindowState = lib.cdecl('SetWindowState', 'void', ['uint']);
     const GenImageColor = lib.cdecl('GenImageColor', Image, ['int', 'int', Color]);
     const GetFontDefault = lib.cdecl('GetFontDefault', Font, []);
-    const MeasureTextEx = lib.cdecl('MeasureTextEx', Vector2, [Font, 'string', 'float', 'float']);
+    const MeasureTextEx = lib.cdecl('MeasureTextEx', Vector2, [Font, 'str', 'float', 'float']);
     const ImageClearBackground = lib.cdecl('ImageClearBackground', 'void', [koffi.pointer(Image), Color]);
-    const ImageDrawTextEx = lib.cdecl('ImageDrawTextEx', 'void', [koffi.pointer(Image), Font, 'string', Vector2, 'float', 'float', Color]);
-    const ExportImage = lib.cdecl('ExportImage', 'bool', [Image, 'string']);
+    const ImageDrawTextEx = lib.cdecl('ImageDrawTextEx', 'void', [koffi.pointer(Image), Font, 'str', Vector2, 'float', 'float', Color]);
+    const ExportImage = lib.cdecl('ExportImage', 'bool', [Image, 'str']);
 
     // We need to call InitWindow before using anything else (such as fonts)
     SetTraceLogLevel(4); // Warnings

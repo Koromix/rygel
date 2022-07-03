@@ -21,7 +21,7 @@ const BFG = koffi.struct('BFG', {
     a: 'int8_t',
     b: 'int64_t',
     c: 'char',
-    d: 'string',
+    d: 'str',
     e: 'short',
     inner: koffi.struct({
         f: 'float',
@@ -30,7 +30,7 @@ const BFG = koffi.struct('BFG', {
 });
 
 const SimpleCallback = koffi.callback('int SimpleCallback(const char *str)');
-const RecursiveCallback = koffi.callback('RecursiveCallback', 'float', ['int', 'string', 'double']);
+const RecursiveCallback = koffi.callback('RecursiveCallback', 'float', ['int', 'str', 'double']);
 const BigCallback = koffi.callback('BFG BigCallback(BFG bfg)');
 const ApplyCallback = koffi.callback('int __stdcall ApplyCallback(int a, int b, int c)');
 

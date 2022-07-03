@@ -21,7 +21,7 @@ const PackedBFG = koffi.pack('PackedBFG', {
     a: 'int8_t',
     b: 'int64_t',
     c: 'char',
-    d: 'string',
+    d: 'str',
     e: 'short',
     inner: koffi.pack({
         f: 'float',

@@ -39,13 +39,13 @@ async function test() {
     let lib_filename = path.dirname(__filename) + '/build/sqlite3' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
-    const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['string', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'string']);
-    const sqlite3_exec = lib.func('sqlite3_exec', 'int', [sqlite3_db, 'string', 'void *', 'void *', 'void *']);
-    const sqlite3_prepare_v2 = lib.func('sqlite3_prepare_v2', 'int', [sqlite3_db, 'string', 'int', koffi.out(koffi.pointer(sqlite3_stmt)), 'string']);
+    const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'str']);
+    const sqlite3_exec = lib.func('sqlite3_exec', 'int', [sqlite3_db, 'str', 'void *', 'void *', 'void *']);
+    const sqlite3_prepare_v2 = lib.func('sqlite3_prepare_v2', 'int', [sqlite3_db, 'str', 'int', koffi.out(koffi.pointer(sqlite3_stmt)), 'string']);
     const sqlite3_reset = lib.func('sqlite3_reset', 'int', [sqlite3_stmt]);
-    const sqlite3_bind_text = lib.func('sqlite3_bind_text', 'int', [sqlite3_stmt, 'int', 'string', 'int', 'void *']);
+    const sqlite3_bind_text = lib.func('sqlite3_bind_text', 'int', [sqlite3_stmt, 'int', 'str', 'int', 'void *']);
     const sqlite3_bind_int = lib.func('sqlite3_bind_int', 'int', [sqlite3_stmt, 'int', 'int']);
-    const sqlite3_column_text = lib.func('sqlite3_column_text', 'string', [sqlite3_stmt, 'int']);
+    const sqlite3_column_text = lib.func('sqlite3_column_text', 'str', [sqlite3_stmt, 'int']);
     const sqlite3_column_int = lib.func('sqlite3_column_int', 'int', [sqlite3_stmt, 'int']);
     const sqlite3_step = lib.func('sqlite3_step', 'int', [sqlite3_stmt]);
     const sqlite3_finalize = lib.func('sqlite3_finalize', 'int', [sqlite3_stmt]);
