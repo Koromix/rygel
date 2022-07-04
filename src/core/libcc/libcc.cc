@@ -174,9 +174,9 @@ protected:
 
 class NullAllocator: public Allocator {
 protected:
-    void *Allocate(Size size, unsigned int flags) override { RG_UNREACHABLE(); }
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags) override { RG_UNREACHABLE(); }
-    void Release(void *ptr, Size) override {}
+    void *Allocate(Size, unsigned int) override { RG_UNREACHABLE(); }
+    void Resize(void **, Size, Size, unsigned int) override { RG_UNREACHABLE(); }
+    void Release(void *, Size) override {}
 };
 
 Allocator *GetDefaultAllocator()
@@ -652,13 +652,13 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode)
 #ifdef _WIN32
     __time64_t time64 = time / 1000;
 
-    struct tm ti = {0};
+    struct tm ti = {};
     int offset = INT_MAX;
     switch (mode) {
         case TimeMode::Local: {
             _localtime64_s(&ti, &time64);
 
-            struct tm utc = {0};
+            struct tm utc = {};
             _gmtime64_s(&utc, &time64);
 
             offset = (int)(_mktime64(&ti) - _mktime64(&utc) + (3600 * ti.tm_isdst));
@@ -673,7 +673,7 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode)
 #else
     time_t time64 = time / 1000;
 
-    struct tm ti = {0};
+    struct tm ti = {};
     int offset = 0;
     switch (mode) {
         case TimeMode::Local: {
