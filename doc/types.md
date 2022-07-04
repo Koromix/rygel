@@ -270,11 +270,11 @@ const koffi = require('koffi');
 const lib = koffi.load('./handles.so');
 
 const Concat = koffi.handle('Concat');
-const ConcatNewOut = lib.func('bool ConcatNewOut(Concat *out)');
 const ConcatNew = lib.func('Concat ConcatNew()');
 const ConcatFree = lib.func('void ConcatFree(Concat c)');
 const ConcatAppend = lib.func('bool ConcatAppend(Concat c, const char *frag)');
 const ConcatBuild = lib.func('const char *ConcatBuild(Concat c)');
+const ConcatNewOut = lib.func('bool ConcatNewOut(_Out_ Concat *out)');
 
 let c = ConcatNew();
 if (!c) {
