@@ -773,6 +773,22 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
         defn.Set("alignment", Napi::Number::New(env, (double)type->align));
 
         switch (type->primitive) {
+            case PrimitiveKind::Void:
+            case PrimitiveKind::Bool:
+            case PrimitiveKind::Int8:
+            case PrimitiveKind::UInt8:
+            case PrimitiveKind::Int16:
+            case PrimitiveKind::UInt16:
+            case PrimitiveKind::Int32:
+            case PrimitiveKind::UInt32:
+            case PrimitiveKind::Int64:
+            case PrimitiveKind::UInt64:
+            case PrimitiveKind::String:
+            case PrimitiveKind::String16:
+            case PrimitiveKind::Float32:
+            case PrimitiveKind::Float64:
+            case PrimitiveKind::Callback: {} break;
+
             case PrimitiveKind::Array: {
                 uint32_t len = type->size / type->ref->size;
                 defn.Set("length", Napi::Number::New(env, (double)len));
@@ -1086,7 +1102,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
         uint16_t ordinal = (uint16_t)info[0].As<Napi::Number>().Uint32Value();
 
         func->decorated_name = nullptr;
-        func->func = (void *)GetProcAddress((HMODULE)lib->module, (LPCSTR)ordinal);
+        func->func = (void *)GetProcAddress((HMODULE)lib->module, (LPCSTR)(size_t)ordinal);
     }
 #else
     if (func->decorated_name) {
