@@ -218,7 +218,9 @@ console.log(copy); // Prints World!
 
 Disposable types can only be created from pointer or string types.
 
-You must be careful on Windows, if your shared library uses a different CRT (such as msvcrt), the memory could have been allocated by a different malloc/free implementation or heap, resulting in undefined behavior if you use `koffi.free()`.
+```{warning}
+Be careful on Windows: if your shared library uses a different CRT (such as msvcrt), the memory could have been allocated by a different malloc/free implementation or heap, resulting in undefined behavior if you use `koffi.free()`.
+```
 
 ## Javascript callbacks
 

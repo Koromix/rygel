@@ -423,7 +423,10 @@
 </pre></div>
 </div>
 <p>Disposable types can only be created from pointer or string types.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
 <p>You must be careful on Windows, if your shared library uses a different CRT (such as msvcrt), the memory could have been allocated by a different malloc/free implementation or heap, resulting in undefined behavior if you use <code class="docutils literal notranslate"><span class="pre">koffi.free()</span></code>.</p>
+</div>
 </section>
 </section>
 <section id="javascript-callbacks">
