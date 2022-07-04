@@ -199,8 +199,6 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
     type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
 
-    type->defn.Reset(obj, 1);
-
     type->primitive = PrimitiveKind::Record;
     type->align = 1;
 
@@ -240,6 +238,15 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     }
 
     type->size = (int16_t)AlignLen(type->size, type->align);
+
+    Napi::Object defn = Napi::Object::New(env);
+    for (const RecordMember &member: type->members) {
+        Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)member.type);
+        SetValueTag(instance, external, &TypeInfoMarker);
+
+        defn.Set(member.name, external);
+    }
+    type->defn.Reset(defn, 1);
 
     // If the insert succeeds, we cannot fail anymore
     if (named && !instance->types_map.TrySet(type).second) {
