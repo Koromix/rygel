@@ -327,8 +327,12 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     const TypeInfo *ref = ResolveType(instance, info[0]);
     if (!ref)
         return env.Null();
+    if (ref->dispose) {
+        ThrowError<Napi::TypeError>(env, "Cannot create pointer to disposable type '%1'", ref->name);
+        return env.Null();
+    }
 
-    TypeInfo *type = (TypeInfo *)GetPointerType(instance, ref);
+    TypeInfo *type = (TypeInfo *)MakePointerType(instance, ref);
     RG_ASSERT(type);
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
@@ -380,6 +384,112 @@ static Napi::Value MarkOut(const Napi::CallbackInfo &info)
 static Napi::Value MarkInOut(const Napi::CallbackInfo &info)
 {
     return EncodePointerDirection(info, 3);
+}
+
+static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    bool named = (info.Length() >= 2 && !info[1].IsFunction());
+
+    if (named && !info[0].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    std::string name = named ? info[0].As<Napi::String>() : std::string("<anonymous>");
+
+    const TypeInfo *src = ResolveType(instance, info[named]);
+    if (!src)
+        return env.Null();
+    if (src->primitive != PrimitiveKind::String &&
+            src->primitive != PrimitiveKind::String16 &&
+            src->primitive != PrimitiveKind::Pointer) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", PrimitiveKindNames[(int)src->primitive]);
+        return env.Null();
+    }
+    if (src->dispose) {
+        ThrowError<Napi::TypeError>(env, "Cannot use disposable type '%1' to create new disposable", src->name);
+        return env.Null();
+    }
+
+    DisposeFunc *dispose;
+    Napi::Function dispose_func;
+    if (info.Length() >= 2 + named && !IsNullOrUndefined(info[1 + named])) {
+        Napi::Function func = info[1 + named].As<Napi::Function>();
+
+        if (!func.IsFunction()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, func));
+            return env.Null();
+        }
+
+        dispose = [](Napi::Env env, const TypeInfo *type, const void *ptr) {
+            InstanceData *instance = env.GetInstanceData<InstanceData>();
+            const Napi::FunctionReference &ref = type->dispose_ref;
+
+            Napi::External<void> external = Napi::External<void>::New(env, (void *)ptr);
+            SetValueTag(instance, external, type);
+
+            Napi::Value self = env.Null();
+            napi_value args[] = {
+                external
+            };
+
+            ref.Call(self, RG_LEN(args), args);
+        };
+        dispose_func = func;
+    } else {
+        dispose = [](Napi::Env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
+    }
+
+    TypeInfo *type = instance->types.AppendDefault();
+    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
+
+    memcpy(type, src, RG_SIZE(*src));
+    type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+    type->members.allocator = GetNullAllocator();
+    type->dispose = dispose;
+    type->dispose_ref = Napi::Persistent(dispose_func);
+
+    // If the insert succeeds, we cannot fail anymore
+    if (named && !instance->types_map.TrySet(type).second) {
+        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+        return env.Null();
+    }
+    err_guard.Disable();
+
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
+}
+
+static Napi::Value CallFree(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+    if (!info[0].IsExternal() || CheckValueTag(instance, info[0], &TypeInfoMarker)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected external", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    Napi::External<void> external = info[0].As<Napi::External<void>>();
+    void *ptr = external.Data();
+
+    free(ptr);
+
+    return env.Null();
 }
 
 static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
@@ -1225,6 +1335,9 @@ static void SetExports(Napi::Env env, Func func)
     func("in", Napi::Function::New(env, MarkIn));
     func("out", Napi::Function::New(env, MarkOut));
     func("inout", Napi::Function::New(env, MarkInOut));
+
+    func("disposable", Napi::Function::New(env, CreateDisposableType));
+    func("free", Napi::Function::New(env, CallFree));
 
 #if defined(_WIN32)
     func("extension", Napi::String::New(env, ".dll"));

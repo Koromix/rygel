@@ -106,6 +106,9 @@ const IntContainer = koffi.struct('IntContainer', {
     len: 'int'
 });
 
+const StrFree = koffi.disposable('str_free', 'str', koffi.free);
+const Str16Free = koffi.disposable('str16_free', 'str16');
+
 main();
 
 async function main() {
@@ -152,10 +155,10 @@ async function test() {
     const MakeBFG = lib.func('BFG __stdcall MakeBFG(_Out_ BFG *p, int x, double y, const char *str)');
     const MakePackedBFG = lib.func('PackedBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const ReturnBigString = process.platform == 'win32' ?
-                            lib.stdcall(1, 'str', ['str']) :
+                            lib.stdcall(1, koffi.disposable('str', koffi.free), ['str']) :
                             lib.func('const char * __stdcall ReturnBigString(const char *str)');
-    const PrintFmt = lib.func('const char *PrintFmt(const char *fmt, ...)');
-    const Concat16 = lib.func('const char16_t *Concat16(const char16_t *str1, const char16_t *str2)')
+    const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
+    const Concat16 = lib.func('_Free_ const char16_t *Concat16(const char16_t *str1, const char16_t *str2)')
     const ReturnFixedStr = lib.func('FixedString ReturnFixedStr(FixedString str)');
     const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
     const ReturnFixedWide = lib.func('FixedWide ReturnFixedWide(FixedWide str)');

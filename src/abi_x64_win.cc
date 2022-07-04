@@ -294,7 +294,13 @@ void CallData::Execute()
 
 Napi::Value CallData::Complete()
 {
-    PopOutArguments();
+    RG_DEFER {
+       PopOutArguments();
+
+        if (func->ret.type->dispose) {
+            func->ret.type->dispose(env, func->ret.type, result.ptr);
+        }
+    };
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void: return env.Null();
@@ -425,6 +431,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
                 Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
                 arguments.Append(arg);
+
+                if (param.type->dispose) {
+                    param.type->dispose(env, param.type, str);
+                }
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16 = *(const char16_t **)(j < 4 ? gpr_ptr + j : args_ptr);
@@ -432,6 +442,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
                 arguments.Append(arg);
+
+                if (param.type->dispose) {
+                    param.type->dispose(env, param.type, str16);
+                }
             } break;
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
@@ -445,6 +459,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                     arguments.Append(external);
                 } else {
                     arguments.Append(env.Null());
+                }
+
+                if (param.type->dispose) {
+                    param.type->dispose(env, param.type, ptr2);
                 }
             } break;
             case PrimitiveKind::Record: {

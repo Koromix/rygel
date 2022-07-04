@@ -78,6 +78,8 @@ struct TypeInfo;
 struct RecordMember;
 struct FunctionInfo;
 
+typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
+
 struct TypeInfo {
     enum class ArrayHint {
         Array,
@@ -87,16 +89,19 @@ struct TypeInfo {
 
     const char *name;
 
-    Napi::ObjectReference defn;
-
     PrimitiveKind primitive;
     int16_t size;
     int16_t align;
+
+    DisposeFunc *dispose;
+    Napi::FunctionReference dispose_ref;
 
     HeapArray<RecordMember> members; // Record only
     const TypeInfo *ref; // Pointer or array
     ArrayHint hint; // Array only
     const FunctionInfo *proto; // Callback only
+
+    Napi::ObjectReference defn;
 
     RG_HASHTABLE_HANDLER(TypeInfo, name);
 };

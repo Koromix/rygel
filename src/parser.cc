@@ -27,7 +27,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
 
     Tokenize(str);
 
-    out_func->ret.type = ParseType();
+    out_func->ret.type = ParseType(false);
     if (out_func->ret.type->primitive == PrimitiveKind::Array) {
         MarkError("You are not allowed to directly return C arrays");
         return false;
@@ -53,6 +53,8 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
                 break;
             }
 
+            bool dispose = Match("_Free_");
+
             if (Match("_In_")) {
                 param.directions = 1;
             } else if (Match("_Out_")) {
@@ -63,7 +65,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
                 param.directions = 1;
             }
 
-            param.type = ParseType();
+            param.type = ParseType(dispose);
             if (param.type->primitive == PrimitiveKind::Void ||
                     param.type->primitive == PrimitiveKind::Array) {
                 MarkError("Type %1 cannot be used as a parameter", param.type->name);
@@ -141,9 +143,11 @@ void PrototypeParser::Tokenize(const char *str)
     }
 }
 
-const TypeInfo *PrototypeParser::ParseType()
+const TypeInfo *PrototypeParser::ParseType(bool dispose)
 {
     HeapArray<char> buf(&instance->str_alloc);
+
+    dispose = dispose || Match("_Free_");
 
     Size indirect = 0;
 
@@ -174,10 +178,38 @@ const TypeInfo *PrototypeParser::ParseType()
         const TypeInfo *type = instance->types_map.FindValue(buf.ptr, nullptr);
 
         if (type) {
+            if (type->dispose && indirect) {
+                MarkError("Cannot create pointer to disposable type '%1'", type->name);
+                break;
+            }
+            if (type->dispose && dispose) {
+                MarkError("Cannot use _Free_ with disposable type '%1'", type->name);
+                break;
+            }
+
             for (Size i = 0; i < indirect; i++) {
-                type = GetPointerType(instance, type);
+                type = MakePointerType(instance, type);
                 RG_ASSERT(type);
             }
+
+            if (dispose) {
+                if (type->primitive != PrimitiveKind::String &&
+                        type->primitive != PrimitiveKind::String16 &&
+                        indirect != 1) {
+                    MarkError("Cannot use _Free_ with type '%1'", type->name);
+                    break;
+                }
+
+                TypeInfo *copy = instance->types.AppendDefault();
+
+                memcpy(copy, type, RG_SIZE(*type));
+                copy->name = "<anonymous>";
+                copy->members.allocator = GetNullAllocator();
+                copy->dispose = [](Napi::Env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
+
+                type = copy;
+            }
+
             return type;
         }
 

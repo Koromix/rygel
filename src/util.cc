@@ -54,7 +54,7 @@ const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int
     }
 }
 
-const TypeInfo *GetPointerType(InstanceData *instance, const TypeInfo *ref)
+const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref)
 {
     // Special cases
     if (TestStr(ref->name, "char")) {

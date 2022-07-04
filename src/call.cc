@@ -732,6 +732,10 @@ void CallData::PopOutArguments()
             Napi::Object obj(env, value);
             PopObject(obj, out.ptr, out.type);
         }
+
+        if (out.type->dispose) {
+            out.type->dispose(env, out.type, out.ptr);
+        }
     }
 }
 
@@ -811,10 +815,18 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
             case PrimitiveKind::String: {
                 const char *str = *(const char **)src;
                 obj.Set(member.name, str ? Napi::String::New(env, str) : env.Null());
+
+                if (member.type->dispose) {
+                    member.type->dispose(env, member.type, str);
+                }
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16 = *(const char16_t **)src;
                 obj.Set(member.name, str16 ? Napi::String::New(env, str16) : env.Null());
+
+                if (member.type->dispose) {
+                    member.type->dispose(env, member.type, str16);
+                }
             } break;
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
@@ -827,6 +839,10 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
                     obj.Set(member.name, external);
                 } else {
                     obj.Set(member.name, env.Null());
+                }
+
+                if (member.type->dispose) {
+                    member.type->dispose(env, member.type, ptr2);
                 }
             } break;
             case PrimitiveKind::Record: {
@@ -928,12 +944,20 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
             POP_ARRAY({
                 const char *str = *(const char **)src;
                 array.Set(i, str ? Napi::String::New(env, str) : env.Null());
+
+                if (ref->dispose) {
+                    ref->dispose(env, ref, str);
+                }
             });
         } break;
         case PrimitiveKind::String16: {
             POP_ARRAY({
                 const char16_t *str16 = *(const char16_t **)src;
                 array.Set(i, str16 ? Napi::String::New(env, str16) : env.Null());
+
+                if (ref->dispose) {
+                    ref->dispose(env, ref, str16);
+                }
             });
         } break;
         case PrimitiveKind::Pointer:
@@ -948,6 +972,10 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
                     array.Set(i, external);
                 } else {
                     array.Set(i, env.Null());
+                }
+
+                if (ref->dispose) {
+                    ref->dispose(env, ref, ptr2);
                 }
             });
         } break;

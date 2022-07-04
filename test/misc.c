@@ -392,24 +392,21 @@ const char *ReturnBigString(const char *str)
 EXPORT const char *ReturnBigString(const char *str)
 #endif
 {
-    static char buf[16 * 1024 * 1024];
-
-    size_t len = strlen(str);
-    memcpy(buf, str, len + 1);
-
-    return buf;
+    const char *copy = strdup(str);
+    return copy;
 }
 
 EXPORT const char *PrintFmt(const char *fmt, ...)
 {
-    static char buf[256];
+    const int size = 256;
+    char *ptr = malloc(size);
 
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
+    vsnprintf(ptr, size, fmt, ap);
     va_end(ap);
 
-    return buf;
+    return ptr;
 }
 
 size_t Length16(const char16_t *str)
@@ -423,16 +420,17 @@ size_t Length16(const char16_t *str)
 
 EXPORT const char16_t *Concat16(const char16_t *str1, const char16_t *str2)
 {
-    static char16_t buf[1024];
+    const int size = 1024;
+    char16_t *ptr = malloc(size * 2);
 
     size_t len1 = Length16(str1);
     size_t len2 = Length16(str2);
 
-    memcpy(buf, str1, len1 * 2);
-    memcpy(buf + len1, str2, len2 * 2);
-    buf[(len1 + len2) * 2] = 0;
+    memcpy(ptr, str1, len1 * 2);
+    memcpy(ptr + len1, str2, len2 * 2);
+    ptr[len1 + len2] = 0;
 
-    return buf;
+    return ptr;
 }
 
 EXPORT FixedString ReturnFixedStr(FixedString str)
