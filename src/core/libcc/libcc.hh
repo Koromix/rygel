@@ -622,6 +622,7 @@ struct Vec3 {
 class Allocator;
 
 Allocator *GetDefaultAllocator();
+Allocator *GetNullAllocator();
 
 class Allocator {
     RG_DELETE_COPY(Allocator)
@@ -696,8 +697,8 @@ public:
     void ReleaseAll();
 
 protected:
-    void *Allocate(Size size, unsigned int flags = 0) override;
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void *Allocate(Size size, unsigned int flags) override;
+    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags) override;
     void Release(void *ptr, Size size) override;
 
 private:
@@ -724,8 +725,8 @@ public:
     }
 
 protected:
-    void *Allocate(Size size, unsigned int flags = 0) override;
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void *Allocate(Size size, unsigned int flags) override;
+    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags) override;
     void Release(void *ptr, Size size) override;
 
     void CopyFrom(BlockAllocatorBase *other);

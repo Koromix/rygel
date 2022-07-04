@@ -136,7 +136,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond)
 
 class MallocAllocator: public Allocator {
 protected:
-    void *Allocate(Size size, unsigned int flags = 0) override
+    void *Allocate(Size size, unsigned int flags) override
     {
         void *ptr = malloc((size_t)size);
         RG_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
@@ -148,7 +148,7 @@ protected:
         return ptr;
     }
 
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override
+    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags) override
     {
         if (!new_size) {
             Release(*ptr, old_size);
@@ -172,10 +172,23 @@ protected:
     }
 };
 
+class NullAllocator: public Allocator {
+protected:
+    void *Allocate(Size size, unsigned int flags) override { RG_UNREACHABLE(); }
+    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags) override { RG_UNREACHABLE(); }
+    void Release(void *ptr, Size) override {}
+};
+
 Allocator *GetDefaultAllocator()
 {
     static Allocator *default_allocator = new RG_DEFAULT_ALLOCATOR;
     return default_allocator;
+}
+
+Allocator *GetNullAllocator()
+{
+    static Allocator *null_allocator = new NullAllocator;
+    return null_allocator;
 }
 
 LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)
