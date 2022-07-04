@@ -246,6 +246,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
         defn.Set(member.name, external);
     }
+    defn.Freeze();
+
     type->defn.Reset(defn, 1);
 
     // If the insert succeeds, we cannot fail anymore
@@ -576,6 +578,8 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         defn.Set(0u, external);
         defn.Set(1u, Napi::Number::New(env, (double)len));
     }
+    defn.Freeze();
+
     type->defn.Reset(defn, 1);
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
