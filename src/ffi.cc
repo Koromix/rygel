@@ -568,6 +568,16 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     type->ref = ref;
     type->hint = hint;
 
+    Napi::Array defn = Napi::Array::New(env);
+    {
+        Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)ref);
+        SetValueTag(instance, external, &TypeInfoMarker);
+
+        defn.Set(0u, external);
+        defn.Set(1u, Napi::Number::New(env, (double)len));
+    }
+    type->defn.Reset(defn, 1);
+
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
     SetValueTag(instance, external, &TypeInfoMarker);
 
