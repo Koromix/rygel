@@ -149,7 +149,7 @@ const TypeInfo *PrototypeParser::ParseType(bool dispose)
 
     dispose = dispose || Match("_Free_");
 
-    Size indirect = 0;
+    int indirect = 0;
 
     Size start = offset;
     while (offset < tokens.len && IsIdentifier(tokens[offset])) {
@@ -168,7 +168,7 @@ const TypeInfo *PrototypeParser::ParseType(bool dispose)
         }
         return instance->types_map.FindValue("void", nullptr);
     }
-    while (offset < tokens.len && tokens[offset] == "*") {
+    while (offset < tokens.len && tokens[offset] == "*" && indirect < 4) {
         offset++;
         indirect++;
     }
@@ -187,8 +187,8 @@ const TypeInfo *PrototypeParser::ParseType(bool dispose)
                 break;
             }
 
-            for (Size i = 0; i < indirect; i++) {
-                type = MakePointerType(instance, type);
+            if (indirect) {
+                type = MakePointerType(instance, type, indirect);
                 RG_ASSERT(type);
             }
 

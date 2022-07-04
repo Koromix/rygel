@@ -68,7 +68,7 @@ static inline bool IsFloat(const TypeInfo *type)
 }
 
 const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_directions = nullptr);
-const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *type);
+const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *type, int count = 1);
 
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);

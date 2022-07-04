@@ -54,34 +54,42 @@ const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int
     }
 }
 
-const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref)
+const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count)
 {
+    RG_ASSERT(count >= 1);
+
     // Special cases
     if (TestStr(ref->name, "char")) {
-        return instance->types_map.FindValue("string", nullptr);
+        ref = instance->types_map.FindValue("string", nullptr);
+        count--;
     } else if (TestStr(ref->name, "char16") || TestStr(ref->name, "char16_t")) {
-        return instance->types_map.FindValue("string16", nullptr);
+        ref = instance->types_map.FindValue("string16", nullptr);
+        count--;
     }
 
-    char name_buf[256];
-    Fmt(name_buf, "%1%2*", ref->name, ref->primitive == PrimitiveKind::Pointer ? "" : " ");
+    for (int i = 0; i < count; i++) {
+        char name_buf[256];
+        Fmt(name_buf, "%1%2*", ref->name, ref->primitive == PrimitiveKind::Pointer ? "" : " ");
 
-    TypeInfo *type = instance->types_map.FindValue(name_buf, nullptr);
+        TypeInfo *type = instance->types_map.FindValue(name_buf, nullptr);
 
-    if (!type) {
-        type = instance->types.AppendDefault();
+        if (!type) {
+            type = instance->types.AppendDefault();
 
-        type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
+            type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
 
-        type->primitive = PrimitiveKind::Pointer;
-        type->size = RG_SIZE(void *);
-        type->align = RG_SIZE(void *);
-        type->ref = ref;
+            type->primitive = PrimitiveKind::Pointer;
+            type->size = RG_SIZE(void *);
+            type->align = RG_SIZE(void *);
+            type->ref = ref;
 
-        instance->types_map.Set(type);
+            instance->types_map.Set(type);
+        }
+
+        ref = type;
     }
 
-    return type;
+    return ref;
 }
 
 const char *GetValueType(const InstanceData *instance, Napi::Value value)

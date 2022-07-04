@@ -317,22 +317,39 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
         return env.Null();
     }
 
-    const TypeInfo *ref = ResolveType(instance, info[0]);
-    if (!ref)
+    const TypeInfo *type = ResolveType(instance, info[0]);
+    if (!type)
         return env.Null();
-    if (ref->dispose) {
-        ThrowError<Napi::TypeError>(env, "Cannot create pointer to disposable type '%1'", ref->name);
+    if (type->dispose) {
+        ThrowError<Napi::TypeError>(env, "Cannot create pointer to disposable type '%1'", type->name);
         return env.Null();
     }
 
-    TypeInfo *type = (TypeInfo *)MakePointerType(instance, ref);
+    int count = 0;
+    if (info.Length() >= 2) {
+        if (!info[1].IsNumber()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for count, expected number", GetValueType(instance, info[1]));
+            return env.Null();
+        }
+
+        count = info[1].As<Napi::Number>();
+
+        if (count < 1 || count > 4) {
+            ThrowError<Napi::TypeError>(env, "Value of count must be between 1 and 4");
+            return env.Null();
+        }
+    } else {
+        count = 1;
+    }
+
+    type = MakePointerType(instance, type, count);
     RG_ASSERT(type);
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
     SetValueTag(instance, external, &TypeInfoMarker);
 
     return external;
