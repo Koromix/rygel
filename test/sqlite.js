@@ -39,17 +39,17 @@ async function test() {
     let lib_filename = path.dirname(__filename) + '/build/sqlite3' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
-    const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'str']);
-    const sqlite3_exec = lib.func('sqlite3_exec', 'int', [sqlite3_db, 'str', 'void *', 'void *', 'void *']);
-    const sqlite3_prepare_v2 = lib.func('sqlite3_prepare_v2', 'int', [sqlite3_db, 'str', 'int', koffi.out(koffi.pointer(sqlite3_stmt)), 'string']);
-    const sqlite3_reset = lib.func('sqlite3_reset', 'int', [sqlite3_stmt]);
-    const sqlite3_bind_text = lib.func('sqlite3_bind_text', 'int', [sqlite3_stmt, 'int', 'str', 'int', 'void *']);
-    const sqlite3_bind_int = lib.func('sqlite3_bind_int', 'int', [sqlite3_stmt, 'int', 'int']);
-    const sqlite3_column_text = lib.func('sqlite3_column_text', 'str', [sqlite3_stmt, 'int']);
-    const sqlite3_column_int = lib.func('sqlite3_column_int', 'int', [sqlite3_stmt, 'int']);
-    const sqlite3_step = lib.func('sqlite3_step', 'int', [sqlite3_stmt]);
-    const sqlite3_finalize = lib.func('sqlite3_finalize', 'int', [sqlite3_stmt]);
-    const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [sqlite3_db]);
+    const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(koffi.pointer(sqlite3_db))), 'int', 'str']);
+    const sqlite3_exec = lib.func('sqlite3_exec', 'int', [koffi.pointer(sqlite3_db), 'str', 'void *', 'void *', 'void *']);
+    const sqlite3_prepare_v2 = lib.func('sqlite3_prepare_v2', 'int', [koffi.pointer(sqlite3_db), 'str', 'int', koffi.out(koffi.pointer(koffi.pointer(sqlite3_stmt))), 'string']);
+    const sqlite3_reset = lib.func('sqlite3_reset', 'int', [koffi.pointer(sqlite3_stmt)]);
+    const sqlite3_bind_text = lib.func('sqlite3_bind_text', 'int', [koffi.pointer(sqlite3_stmt), 'int', 'str', 'int', 'void *']);
+    const sqlite3_bind_int = lib.func('sqlite3_bind_int', 'int', [koffi.pointer(sqlite3_stmt), 'int', 'int']);
+    const sqlite3_column_text = lib.func('sqlite3_column_text', 'str', [koffi.pointer(sqlite3_stmt), 'int']);
+    const sqlite3_column_int = lib.func('sqlite3_column_int', 'int', [koffi.pointer(sqlite3_stmt), 'int']);
+    const sqlite3_step = lib.func('sqlite3_step', 'int', [koffi.pointer(sqlite3_stmt)]);
+    const sqlite3_finalize = lib.func('sqlite3_finalize', 'int', [koffi.pointer(sqlite3_stmt)]);
+    const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [koffi.pointer(sqlite3_db)]);
 
     const SQLITE_OPEN_READWRITE = 0x2;
     const SQLITE_OPEN_CREATE = 0x4;
@@ -57,20 +57,27 @@ async function test() {
     const SQLITE_DONE = 101;
 
     let filename = await create_temporary_file(path.join(os.tmpdir(), 'test_sqlite'));
-    let db = {};
+    let db = null;
 
     let expected = Array.from(Array(200).keys()).map(i => [`TXT ${i}`, i % 7]);
 
     try {
-        if (sqlite3_open_v2(filename, db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, null) != 0)
+        let ptr = [null];
+
+        // Open database
+        if (sqlite3_open_v2(filename, ptr, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, null) != 0)
             throw new Error('Failed to open database');
+        db = ptr[0];
+
         if (sqlite3_exec(db, 'CREATE TABLE foo (id INTEGER PRIMARY KEY, bar TEXT, value INT);', null, null, null) != 0)
             throw new Error('Failed to create table');
 
-        let stmt = {};
+        let stmt = null;
 
-        if (sqlite3_prepare_v2(db, "INSERT INTO foo (bar, value) VALUES (?1, ?2)", -1, stmt, null) != 0)
+        if (sqlite3_prepare_v2(db, "INSERT INTO foo (bar, value) VALUES (?1, ?2)", -1, ptr, null) != 0)
             throw new Error('Failed to prepare insert statement for table foo');
+        stmt = ptr[0];
+
         for (let it of expected) {
             sqlite3_reset(stmt);
 
@@ -82,8 +89,9 @@ async function test() {
         }
         sqlite3_finalize(stmt);
 
-        if (sqlite3_prepare_v2(db, "SELECT id, bar, value FROM foo ORDER BY id", -1, stmt, null) != 0)
+        if (sqlite3_prepare_v2(db, "SELECT id, bar, value FROM foo ORDER BY id", -1, ptr, null) != 0)
             throw new Error('Failed to prepare select statement for table foo');
+        stmt = ptr[0];
         for (let i = 0; i < expected.length; i++) {
             let it = expected[i];
 

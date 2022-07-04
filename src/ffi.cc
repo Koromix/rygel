@@ -215,7 +215,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         if (!member.type)
             return env.Null();
         if (member.type->primitive == PrimitiveKind::Void) {
-            ThrowError<Napi::TypeError>(env, "Type Void cannot be used as a member");
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a member (try %1*?)", member.type->name);
             return env.Null();
         }
 
@@ -294,21 +294,9 @@ static Napi::Value CreateHandleType(const Napi::CallbackInfo &info)
 
     type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
 
-    type->primitive = PrimitiveKind::Record;
-    type->align = alignof(void *);
-    type->size = RG_SIZE(void *);
-
-    // Add single handle member
-    {
-        RecordMember member = {};
-
-        member.name = "value";
-        member.type = instance->types_map.FindValue("void *", nullptr);
-        RG_ASSERT(member.type);
-        member.align = type->align;
-
-        type->members.Append(member);
-    }
+    type->primitive = PrimitiveKind::Void;
+    type->size = 0;
+    type->align = 0;
 
     // If the insert succeeds, we cannot fail anymore
     if (!instance->types_map.TrySet(type).second) {
@@ -639,7 +627,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
             return false;
         if (param.type->primitive == PrimitiveKind::Void ||
                 param.type->primitive == PrimitiveKind::Array) {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (try %1*?)", param.type->name);
             return false;
         }
 
@@ -879,7 +867,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
             return env.Null();
         if (RG_UNLIKELY(param.type->primitive == PrimitiveKind::Void ||
                         param.type->primitive == PrimitiveKind::Array)) {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", PrimitiveKindNames[(int)param.type->primitive]);
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (try %1*?)", PrimitiveKindNames[(int)param.type->primitive]);
             return env.Null();
         }
 

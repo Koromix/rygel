@@ -158,9 +158,9 @@ const lib = koffi.load('sqlite.so');
 
 const sqlite3_db = koffi.handle('sqlite3_db');
 
-// Use koffi.out() on a pointer to copy out (from C to JS) after the call
-const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3_db)), 'int', 'str']);
-const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [sqlite3_db]);
+// Use koffi.out() on a double pointer to copy out (from C to JS) after the call
+const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(koffi.pointer(sqlite3_db))), 'int', 'str']);
+const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [koffi.pointer(sqlite3_db)]);
 
 const SQLITE_OPEN_READWRITE = 0x2;
 const SQLITE_OPEN_CREATE = 0x4;

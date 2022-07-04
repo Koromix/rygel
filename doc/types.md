@@ -142,7 +142,7 @@ console.log(pos);
 
 Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque `FILE *` pointer. You can open and close files with `fopen()` and `fclose()`, and manipule the handle with other functions such as `fread()` or `ftell()`.
 
-In Koffi, you can manage this with opaque handles. Declare the handle type with `koffi.handle(name)`, and use this type either as a return type or some kind of [output parameter](functions.md#output-parameters) (with a pointer to the handle).
+In Koffi, you can manage this with opaque handles. Declare the handle type with `koffi.handle(name)`, and use a pointer to this type either as a return type or some kind of [output parameter](functions.md#output-parameters) (with a double pointer).
 
 The full example below implements an iterative string builder (concatenator) in C, and uses it from Javascript to output a mix of Hello World and FizzBuzz. The builder is hidden behind an opaque handle, and is created and destroyed using a pair of C functions: `ConcatNew` (or `ConcatNewOut`) and `ConcatFree`.
 
@@ -270,17 +270,19 @@ const koffi = require('koffi');
 const lib = koffi.load('./handles.so');
 
 const Concat = koffi.handle('Concat');
-const ConcatNew = lib.func('Concat ConcatNew()');
-const ConcatFree = lib.func('void ConcatFree(Concat c)');
-const ConcatAppend = lib.func('bool ConcatAppend(Concat c, const char *frag)');
-const ConcatBuild = lib.func('const char *ConcatBuild(Concat c)');
-const ConcatNewOut = lib.func('bool ConcatNewOut(_Out_ Concat *out)');
+const ConcatNewOut = lib.func('bool ConcatNewOut(_Out_ Concat **out)');
+const ConcatNew = lib.func('Concat *ConcatNew()');
+const ConcatFree = lib.func('void ConcatFree(Concat *c)');
+const ConcatAppend = lib.func('bool ConcatAppend(Concat *c, const char *frag)');
+const ConcatBuild = lib.func('const char *ConcatBuild(Concat *c)');
 
 let c = ConcatNew();
 if (!c) {
     // This is stupid, it does the same, but try both versions (return value, output parameter)
-    if (!ConcatNewOut(c))
+    let ptr = [null];
+    if (!ConcatNewOut(ptr))
         throw new Error('Allocation failure');
+    c = ptr[0];
 }
 
 try {
@@ -385,9 +387,9 @@ const WIN32_FIND_DATA = koffi.struct('WIN32_FIND_DATA', {
     wFinderFlags: 'ushort' // Obsolete. Do not use
 });
 
-const FindFirstFile = lib.func('HANDLE __stdcall FindFirstFileW(str16 path, _Out_ WIN32_FIND_DATA *data)');
-const FindNextFile = lib.func('bool __stdcall FindNextFileW(HANDLE h, _Out_ WIN32_FIND_DATA *data)');
-const FindClose = lib.func('bool __stdcall FindClose(HANDLE h)');
+const FindFirstFile = lib.func('HANDLE *__stdcall FindFirstFileW(str16 path, _Out_ WIN32_FIND_DATA *data)');
+const FindNextFile = lib.func('bool __stdcall FindNextFileW(HANDLE *h, _Out_ WIN32_FIND_DATA *data)');
+const FindClose = lib.func('bool __stdcall FindClose(HANDLE *h)');
 const GetLastError = lib.func('uint GetLastError()');
 
 function list(dirname) {
