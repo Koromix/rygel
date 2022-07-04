@@ -36,7 +36,9 @@ const atoi = lib.func('int atoi(str)'); // The parameter name is not used by Kof
 
 You can use `()` or `(void)` for functions that take no argument.
 
-## Synchronous calls
+## Calling functions
+
+### Synchronous calls
 
 By default, calling a C function happens synchronously.
 
@@ -62,7 +64,7 @@ const MessageBoxA_1 = lib.stdcall('MessageBoxA', 'int', ['void *', 'str', 'str',
 const MessageBoxA_2 = lib.func('int __stdcall MessageBoxA(void *hwnd, str text, str caption, uint type)');
 ```
 
-## Asynchronous calls
+### Asynchronous calls
 
 You can issue asynchronous calls by calling the function through its async member. In this case, you need to provide a callback function as the last argument, with `(err, res)` parameters.
 
@@ -88,7 +90,7 @@ You can easily convert this callback-style async function to a promise-based ver
 
 Variadic functions cannot be called asynchronously.
 
-## Variadic functions
+### Variadic functions
 
 Variadic functions are declared with an ellipsis as the last argument.
 
@@ -103,7 +105,9 @@ printf('Integer %d, double %g, str %s', 'int', 6, 'double', 8.5, 'str', 'THE END
 
 On x86 platforms, only the Cdecl convention can be used for variadic functions.
 
-## Output parameters
+## C to JS conversion gotchas
+
+### Output parameters
 
 By default, Koffi will only forward arguments from Javascript to C. However, many C functions use pointer arguments for output values, or input/output values.
 
@@ -122,7 +126,7 @@ The same can be done when declaring a function with a C-like prototype string, w
 - `_Out_` for output parameters
 - `_Inout_` for dual input/output parameters
 
-### Struct example
+#### Struct example
 
 This example calls the POSIX function `gettimeofday()`, and uses the prototype-like syntax.
 
@@ -148,7 +152,7 @@ gettimeofday(tv, null);
 console.log(tv);
 ```
 
-### Opaque handle example
+#### Opaque handle example
 
 This example opens an in-memory SQLite database, and uses the node-ffi-style function declaration syntax.
 
@@ -170,6 +174,51 @@ if (sqlite3_open_v2(':memory:', db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 
     throw new Error('Failed to open database');
 sqlite3_close_v2(db);
 ```
+
+### Heap-allocated values
+
+Some C functions return heap-allocated values directly or through output parameters. While Koffi automatically converts values from C to JS (to a string or an object), it does not know when something needs to be freed, or how.
+
+For opaque handles, such as FILE, this does not matter because you will explicitly call `fclose()` on them. But some values (such as strings) get implicitly converted by Koffi, and you lose access to the original pointer. This creates a leak if the string is heap-allocated.
+
+To avoid this, you can instruct Koffi to call a function on the original pointer once the conversion is done, by creating a disposable type with `koffi.dispose(name, type, func)`. This creates a type derived from another type, the only difference being that *func* gets called with the original pointer once the value has been converted and is not needed anymore. The *name* can be omitted to create an anonymous disposable type. If *func* is omitted or is null, Koffi will use `koffi.free(ptr)` (which calls the standard C library *free* function under the hood).
+
+```js
+const AnonHeapStr = koffi.disposable('str'); // Anonymous type (cannot be used in function prototypes)
+const NamedHeapStr = koffi.disposable('HeapStr', 'str'); // Same thing, but named so usable in function prototypes
+const ExplicitFree = koffi.disposable('HeapStr16', 'str16', koffi.free); // You can specify any other JS function
+```
+
+The following example illustrates the use of a disposable type derived from *str*.
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('libc.so.6');
+
+// You can also use: const strdup = lib.func('const char *! asprintf(const char *str)')
+const HeapStr = koffi.disposable('str');
+const strdup = lib.cdecl('strdup', HeapStr, ['str']);
+
+let copy = strdup('Hello!');
+console.log(copy); // Prints Hello!
+```
+
+When you declare functions with the [prototype-like syntax](#c-like-prototypes), you can either use named disposables types or use the '!' shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls `koffi.free(ptr)`.
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('libc.so.6');
+
+// You can also use: const strdup = lib.func('const char *! strdup(const char *str)')
+const strdup = lib.func('str! strdup(const char *str)');
+
+let copy = strdup('World!');
+console.log(copy); // Prints World!
+```
+
+Disposable types can only be created from pointer or string types.
+
+You must be careful on Windows, if your shared library uses a different CRT (such as msvcrt), the memory could have been allocated by a different malloc/free implementation or heap, resulting in undefined behavior if you use `koffi.free()`.
 
 ## Javascript callbacks
 

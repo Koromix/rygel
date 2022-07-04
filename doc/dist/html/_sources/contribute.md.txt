@@ -111,7 +111,6 @@ node qemu.js info debian_x64
 
 The following features and improvements are planned, not necessarily in that order:
 
-- Provide better ways to automatically deal with caller/heap-allocated memory (strings, etc.)
 - Optimize passing of structs and arrays (avoid setting named properties one by one? separate HFA-specific helper functions?)
 - Automate Windows/AArch64 (qemu) and macOS/AArch64 (how? ... thanks Apple) tests
 - Create a real-world example, using several libraries (Raylib, SQLite, libsodium) to illustrate various C API styles

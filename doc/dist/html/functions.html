@@ -236,8 +236,10 @@
 <p>You can use <code class="docutils literal notranslate"><span class="pre">()</span></code> or <code class="docutils literal notranslate"><span class="pre">(void)</span></code> for functions that take no argument.</p>
 </section>
 </section>
+<section id="calling-functions">
+<h2>Calling functions<a class="headerlink" href="#calling-functions" title="Permalink to this heading">#</a></h2>
 <section id="synchronous-calls">
-<h2>Synchronous calls<a class="headerlink" href="#synchronous-calls" title="Permalink to this heading">#</a></h2>
+<h3>Synchronous calls<a class="headerlink" href="#synchronous-calls" title="Permalink to this heading">#</a></h3>
 <p>By default, calling a C function happens synchronously.</p>
 <p>Most architectures only support one procedure call standard per process. The 32-bit x86 platform is an exception to this, and Koffi supports several x86 conventions:</p>
 <div class="table-wrapper colwidths-auto docutils container">
@@ -285,7 +287,7 @@
 </div>
 </section>
 <section id="asynchronous-calls">
-<h2>Asynchronous calls<a class="headerlink" href="#asynchronous-calls" title="Permalink to this heading">#</a></h2>
+<h3>Asynchronous calls<a class="headerlink" href="#asynchronous-calls" title="Permalink to this heading">#</a></h3>
 <p>You can issue asynchronous calls by calling the function through its async member. In this case, you need to provide a callback function as the last argument, with <code class="docutils literal notranslate"><span class="pre">(err,</span> <span class="pre">res)</span></code> parameters.</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos"> 2</span><span class="kd">const</span><span class="w"> </span><span class="nx">lib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;libc.so.6&#39;</span><span class="p">);</span><span class="w"></span>
@@ -307,7 +309,7 @@
 <p>Variadic functions cannot be called asynchronously.</p>
 </section>
 <section id="variadic-functions">
-<h2>Variadic functions<a class="headerlink" href="#variadic-functions" title="Permalink to this heading">#</a></h2>
+<h3>Variadic functions<a class="headerlink" href="#variadic-functions" title="Permalink to this heading">#</a></h3>
 <p>Variadic functions are declared with an ellipsis as the last argument.</p>
 <p>In order to call a variadic function, you must provide two Javascript arguments for each additional C parameter, the first one is the expected type and the second one is the value.</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span><span class="w"> </span><span class="nx">printf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;printf&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;int&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;str&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;...&#39;</span><span class="p">]);</span><span class="w"></span>
@@ -318,8 +320,11 @@
 </div>
 <p>On x86 platforms, only the Cdecl convention can be used for variadic functions.</p>
 </section>
+</section>
+<section id="c-to-js-conversion-gotchas">
+<h2>C to JS conversion gotchas<a class="headerlink" href="#c-to-js-conversion-gotchas" title="Permalink to this heading">#</a></h2>
 <section id="output-parameters">
-<h2>Output parameters<a class="headerlink" href="#output-parameters" title="Permalink to this heading">#</a></h2>
+<h3>Output parameters<a class="headerlink" href="#output-parameters" title="Permalink to this heading">#</a></h3>
 <p>By default, Koffi will only forward arguments from Javascript to C. However, many C functions use pointer arguments for output values, or input/output values.</p>
 <p>For simplicity, and because Javascript only has value semantics for primitive types, Koffi can marshal out (or in/out) two types of parameters:</p>
 <ul class="simple">
@@ -337,7 +342,7 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">_Inout_</span></code> for dual input/output parameters</p></li>
 </ul>
 <section id="struct-example">
-<h3>Struct example<a class="headerlink" href="#struct-example" title="Permalink to this heading">#</a></h3>
+<h4>Struct example<a class="headerlink" href="#struct-example" title="Permalink to this heading">#</a></h4>
 <p>This example calls the POSIX function <code class="docutils literal notranslate"><span class="pre">gettimeofday()</span></code>, and uses the prototype-like syntax.</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos"> 2</span><span class="kd">const</span><span class="w"> </span><span class="nx">lib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;libc.so.6&#39;</span><span class="p">);</span><span class="w"></span>
@@ -362,7 +367,7 @@
 </div>
 </section>
 <section id="opaque-handle-example">
-<h3>Opaque handle example<a class="headerlink" href="#opaque-handle-example" title="Permalink to this heading">#</a></h3>
+<h4>Opaque handle example<a class="headerlink" href="#opaque-handle-example" title="Permalink to this heading">#</a></h4>
 <p>This example opens an in-memory SQLite database, and uses the node-ffi-style function declaration syntax.</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
 <span class="linenos"> 2</span><span class="kd">const</span><span class="w"> </span><span class="nx">lib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;sqlite.so&#39;</span><span class="p">);</span><span class="w"></span>
@@ -382,6 +387,43 @@
 <span class="linenos">16</span><span class="nx">sqlite3_close_v2</span><span class="p">(</span><span class="nx">db</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
+</section>
+</section>
+<section id="heap-allocated-values">
+<h3>Heap-allocated values<a class="headerlink" href="#heap-allocated-values" title="Permalink to this heading">#</a></h3>
+<p>Some C functions return heap-allocated values directly or through output parameters. While Koffi automatically converts values from C to JS (to a string or an object), it does not know when something needs to be freed, or how.</p>
+<p>For opaque handles, such as FILE, this does not matter because you will explicitly call <code class="docutils literal notranslate"><span class="pre">fclose()</span></code> on them. But some values (such as strings) get implicitly converted by Koffi, and you lose access to the original pointer. This creates a leak if the string is heap-allocated.</p>
+<p>To avoid this, you can instruct Koffi to call a function on the original pointer once the conversion is done, by creating a disposable type with <code class="docutils literal notranslate"><span class="pre">koffi.dispose(name,</span> <span class="pre">type,</span> <span class="pre">func)</span></code>. This creates a type derived from another type, the only difference being that <em>func</em> gets called with the original pointer once the value has been converted and is not needed anymore. The <em>name</em> can be omitted to create an anonymous disposable type. If <em>func</em> is omitted or is null, Koffi will use <code class="docutils literal notranslate"><span class="pre">koffi.free(ptr)</span></code> (which calls the standard C library <em>free</em> function under the hood).</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span><span class="w"> </span><span class="nx">AnonHeapStr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">disposable</span><span class="p">(</span><span class="s1">&#39;str&#39;</span><span class="p">);</span><span class="w"> </span><span class="c1">// Anonymous type (cannot be used in function prototypes)</span><span class="w"></span>
+<span class="linenos">2</span><span class="kd">const</span><span class="w"> </span><span class="nx">NamedHeapStr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">disposable</span><span class="p">(</span><span class="s1">&#39;HeapStr&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;str&#39;</span><span class="p">);</span><span class="w"> </span><span class="c1">// Same thing, but named so usable in function prototypes</span><span class="w"></span>
+<span class="linenos">3</span><span class="kd">const</span><span class="w"> </span><span class="nx">ExplicitFree</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">disposable</span><span class="p">(</span><span class="s1">&#39;HeapStr16&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;str16&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">free</span><span class="p">);</span><span class="w"> </span><span class="c1">// You can specify any other JS function</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The following example illustrates the use of a disposable type derived from <em>str</em>.</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">2</span><span class="kd">const</span><span class="w"> </span><span class="nx">lib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;libc.so.6&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">3</span>
+<span class="linenos">4</span><span class="c1">// You can also use: const strdup = lib.func(&#39;const char *! asprintf(const char *str)&#39;)</span><span class="w"></span>
+<span class="linenos">5</span><span class="kd">const</span><span class="w"> </span><span class="nx">HeapStr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">disposable</span><span class="p">(</span><span class="s1">&#39;str&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">6</span><span class="kd">const</span><span class="w"> </span><span class="nx">strdup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">cdecl</span><span class="p">(</span><span class="s1">&#39;strdup&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">HeapStr</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;str&#39;</span><span class="p">]);</span><span class="w"></span>
+<span class="linenos">7</span>
+<span class="linenos">8</span><span class="kd">let</span><span class="w"> </span><span class="nx">copy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">strdup</span><span class="p">(</span><span class="s1">&#39;Hello!&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">9</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">copy</span><span class="p">);</span><span class="w"> </span><span class="c1">// Prints Hello!</span><span class="w"></span>
+</pre></div>
+</div>
+<p>When you declare functions with the <a class="reference internal" href="#c-like-prototypes"><span class="std std-doc">prototype-like syntax</span></a>, you can either use named disposables types or use the ‘!’ shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls <code class="docutils literal notranslate"><span class="pre">koffi.free(ptr)</span></code>.</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">const</span><span class="w"> </span><span class="nx">koffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;koffi&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">2</span><span class="kd">const</span><span class="w"> </span><span class="nx">lib</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">koffi</span><span class="p">.</span><span class="nx">load</span><span class="p">(</span><span class="s1">&#39;libc.so.6&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">3</span>
+<span class="linenos">4</span><span class="c1">// You can also use: const strdup = lib.func(&#39;const char *! strdup(const char *str)&#39;)</span><span class="w"></span>
+<span class="linenos">5</span><span class="kd">const</span><span class="w"> </span><span class="nx">strdup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lib</span><span class="p">.</span><span class="nx">func</span><span class="p">(</span><span class="s1">&#39;str! strdup(const char *str)&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">6</span>
+<span class="linenos">7</span><span class="kd">let</span><span class="w"> </span><span class="nx">copy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">strdup</span><span class="p">(</span><span class="s1">&#39;World!&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="linenos">8</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">copy</span><span class="p">);</span><span class="w"> </span><span class="c1">// Prints World!</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Disposable types can only be created from pointer or string types.</p>
+<p>You must be careful on Windows, if your shared library uses a different CRT (such as msvcrt), the memory could have been allocated by a different malloc/free implementation or heap, resulting in undefined behavior if you use <code class="docutils literal notranslate"><span class="pre">koffi.free()</span></code>.</p>
 </section>
 </section>
 <section id="javascript-callbacks">
@@ -499,12 +541,19 @@
 <li><a class="reference internal" href="#c-like-prototypes">C-like prototypes</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#calling-functions">Calling functions</a><ul>
 <li><a class="reference internal" href="#synchronous-calls">Synchronous calls</a></li>
 <li><a class="reference internal" href="#asynchronous-calls">Asynchronous calls</a></li>
 <li><a class="reference internal" href="#variadic-functions">Variadic functions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#c-to-js-conversion-gotchas">C to JS conversion gotchas</a><ul>
 <li><a class="reference internal" href="#output-parameters">Output parameters</a><ul>
 <li><a class="reference internal" href="#struct-example">Struct example</a></li>
 <li><a class="reference internal" href="#opaque-handle-example">Opaque handle example</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#heap-allocated-values">Heap-allocated values</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#javascript-callbacks">Javascript callbacks</a></li>
