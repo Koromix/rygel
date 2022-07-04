@@ -71,7 +71,7 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
         char name_buf[256];
         Fmt(name_buf, "%1%2*", ref->name, ref->primitive == PrimitiveKind::Pointer ? "" : " ");
 
-        TypeInfo *type = instance->types_map.FindValue(name_buf, nullptr);
+        TypeInfo *type = (TypeInfo *)instance->types_map.FindValue(name_buf, nullptr);
 
         if (!type) {
             type = instance->types.AppendDefault();
@@ -83,7 +83,7 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
             type->align = RG_SIZE(void *);
             type->ref = ref;
 
-            instance->types_map.Set(type);
+            instance->types_map.Set(type->name, type);
         }
 
         ref = type;

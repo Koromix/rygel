@@ -366,7 +366,7 @@ Here is an example based on the Win32 API, listing files in the current director
 const koffi = require('koffi');
 const lib = koffi.load('kernel32.dll');
 
-const HANDLE = koffi.handle('HANDLE');
+const HANDLE = koffi.pointer('HANDLE', koffi.handle());
 const FILETIME = koffi.struct('FILETIME', {
     dwLowDateTime: 'uint',
     dwHighDateTime: 'uint'
@@ -387,9 +387,9 @@ const WIN32_FIND_DATA = koffi.struct('WIN32_FIND_DATA', {
     wFinderFlags: 'ushort' // Obsolete. Do not use
 });
 
-const FindFirstFile = lib.func('HANDLE *__stdcall FindFirstFileW(str16 path, _Out_ WIN32_FIND_DATA *data)');
-const FindNextFile = lib.func('bool __stdcall FindNextFileW(HANDLE *h, _Out_ WIN32_FIND_DATA *data)');
-const FindClose = lib.func('bool __stdcall FindClose(HANDLE *h)');
+const FindFirstFile = lib.func('HANDLE __stdcall FindFirstFileW(str16 path, _Out_ WIN32_FIND_DATA *data)');
+const FindNextFile = lib.func('bool __stdcall FindNextFileW(HANDLE h, _Out_ WIN32_FIND_DATA *data)');
+const FindClose = lib.func('bool __stdcall FindClose(HANDLE h)');
 const GetLastError = lib.func('uint GetLastError()');
 
 function list(dirname) {

@@ -216,7 +216,7 @@ struct InstanceData {
     ~InstanceData();
 
     BucketArray<TypeInfo> types;
-    HashTable<const char *, TypeInfo *> types_map;
+    HashMap<const char *, const TypeInfo *> types_map;
     BucketArray<FunctionInfo> callbacks;
 
     bool debug;

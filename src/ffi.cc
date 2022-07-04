@@ -251,7 +251,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     type->defn.Reset(defn, 1);
 
     // If the insert succeeds, we cannot fail anymore
-    if (named && !instance->types_map.TrySet(type).second) {
+    if (named && !instance->types_map.TrySet(type->name, type).second) {
         ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
         return env.Null();
     }
@@ -278,19 +278,17 @@ static Napi::Value CreateHandleType(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
-        return env.Null();
-    }
-    if (!info[0].IsString()) {
+    bool named = (info.Length() >= 1);
+
+    if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
         return env.Null();
     }
 
+    std::string name = named ? info[0].As<Napi::String>() : std::string("<anonymous>");
+
     TypeInfo *type = instance->types.AppendDefault();
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
-
-    std::string name = info[0].As<Napi::String>();
 
     type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
 
@@ -299,7 +297,7 @@ static Napi::Value CreateHandleType(const Napi::CallbackInfo &info)
     type->align = 0;
 
     // If the insert succeeds, we cannot fail anymore
-    if (!instance->types_map.TrySet(type).second) {
+    if (named && !instance->types_map.TrySet(type->name, type).second) {
         ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
         return env.Null();
     }
@@ -317,11 +315,20 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 1 to 3 arguments, got %1", info.Length());
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(instance, info[0]);
+    bool named = (info.Length() >= 2 && !info[1].IsNumber());
+
+    if (named && !info[0].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    std::string name = named ? info[0].As<Napi::String>() : std::string();
+
+    const TypeInfo *type = ResolveType(instance, info[named]);
     if (!type)
         return env.Null();
     if (type->dispose) {
@@ -330,13 +337,13 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     }
 
     int count = 0;
-    if (info.Length() >= 2) {
-        if (!info[1].IsNumber()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for count, expected number", GetValueType(instance, info[1]));
+    if (info.Length() >= 2 + named) {
+        if (!info[1 + named].IsNumber()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for count, expected number", GetValueType(instance, info[1 + named]));
             return env.Null();
         }
 
-        count = info[1].As<Napi::Number>();
+        count = info[1 + named].As<Napi::Number>();
 
         if (count < 1 || count > 4) {
             ThrowError<Napi::TypeError>(env, "Value of count must be between 1 and 4");
@@ -348,6 +355,16 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 
     type = MakePointerType(instance, type, count);
     RG_ASSERT(type);
+
+    if (named) {
+        const char *alias = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+
+        // If the insert succeeds, we cannot fail anymore
+        if (!instance->types_map.TrySet(alias, type).second) {
+            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", alias);
+            return env.Null();
+        }
+    }
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
     SetValueTag(instance, external, &TypeInfoMarker);
@@ -472,7 +489,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     type->dispose_ref = Napi::Persistent(dispose_func);
 
     // If the insert succeeds, we cannot fail anymore
-    if (named && !instance->types_map.TrySet(type).second) {
+    if (named && !instance->types_map.TrySet(type->name, type).second) {
         ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
         return env.Null();
     }
@@ -714,7 +731,7 @@ static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
     type->size = RG_SIZE(void *);
     type->proto = func;
 
-    instance->types_map.Set(type);
+    instance->types_map.Set(type->name, type);
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
     SetValueTag(instance, external, &TypeInfoMarker);
@@ -1208,7 +1225,7 @@ static void RegisterPrimitiveType(InstanceData *instance, const char *name, Prim
     type->align = align;
 
     RG_ASSERT(!instance->types_map.Find(name));
-    instance->types_map.Set(type);
+    instance->types_map.Set(type->name, type);
 }
 
 static inline PrimitiveKind GetLongPrimitive(bool sign)
