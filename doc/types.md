@@ -144,6 +144,14 @@ Many C libraries use some kind of object-oriented API, with a pair of functions 
 
 In Koffi, you can manage this with opaque handles. Declare the handle type with `koffi.handle(name)`, and use a pointer to this type either as a return type or some kind of [output parameter](functions.md#output-parameters) (with a double pointer).
 
+```{note}
+Opaque handles **have changed in version 2.0**.
+
+In Koffi 1.x, opaque handle were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
+
+Now, you must use them through a pointer, and use an array for output parameters. This is shown in the example below (look for the call to `ConcatNewOut` in the JS part), and is described in the section on [output parameters](functions.md#output-parameters).
+```
+
 The full example below implements an iterative string builder (concatenator) in C, and uses it from Javascript to output a mix of Hello World and FizzBuzz. The builder is hidden behind an opaque handle, and is created and destroyed using a pair of C functions: `ConcatNew` (or `ConcatNewOut`) and `ConcatFree`.
 
 ```c
