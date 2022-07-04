@@ -101,7 +101,7 @@ struct TypeInfo {
     ArrayHint hint; // Array only
     const FunctionInfo *proto; // Callback only
 
-    Napi::ObjectReference defn;
+    mutable Napi::ObjectReference defn;
 
     RG_HASHTABLE_HANDLER(TypeInfo, name);
 };

@@ -901,8 +901,13 @@
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">koffi.sizeof(type)</span></code> to get the size of a type</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">koffi.alignof(type)</span></code> to get the alignment of a type</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">koffi.introspect(type)</span></code> to get the definition of a type (only structs and arrays)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">koffi.introspect(type)</span></code> to get the definition of a type in an object containing: name, primitive, size, alignment, members (structs), reference (array, pointer) and length (array)</p></li>
 </ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The value returned by <code class="docutils literal notranslate"><span class="pre">introspect()</span></code> has <strong>changed in version 2.0</strong>.</p>
+<p>In Koffi 1.x, it could only be used with struct types and returned the object passed to koffi.struct() with the member names and types.</p>
+</div>
 <p>Just like before, you can refer to primitive types by their name or through <code class="docutils literal notranslate"><span class="pre">koffi.types</span></code>:</p>
 <div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="c1">// These two lines do the same:</span><span class="w"></span>
 <span class="linenos">2</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">koffi</span><span class="p">.</span><span class="nx">sizeof</span><span class="p">(</span><span class="s1">&#39;long&#39;</span><span class="p">));</span><span class="w"></span>

@@ -507,7 +507,13 @@ Koffi exposes three functions to explore type information:
 
 - `koffi.sizeof(type)` to get the size of a type
 - `koffi.alignof(type)` to get the alignment of a type
-- `koffi.introspect(type)` to get the definition of a type (only structs and arrays)
+- `koffi.introspect(type)` to get the definition of a type in an object containing: name, primitive, size, alignment, members (structs), reference (array, pointer) and length (array)
+
+```{note}
+The value returned by `introspect()` has **changed in version 2.0**.
+
+In Koffi 1.x, it could only be used with struct types and returned the object passed to koffi.struct() with the member names and types.
+```
 
 Just like before, you can refer to primitive types by their name or through `koffi.types`:
 

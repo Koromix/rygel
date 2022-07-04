@@ -239,17 +239,6 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
     type->size = (int16_t)AlignLen(type->size, type->align);
 
-    Napi::Object defn = Napi::Object::New(env);
-    for (const RecordMember &member: type->members) {
-        Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)member.type);
-        SetValueTag(instance, external, &TypeInfoMarker);
-
-        defn.Set(member.name, external);
-    }
-    defn.Freeze();
-
-    type->defn.Reset(defn, 1);
-
     // If the insert succeeds, we cannot fail anymore
     if (named && !instance->types_map.TrySet(type->name, type).second) {
         ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
@@ -592,18 +581,6 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     type->ref = ref;
     type->hint = hint;
 
-    Napi::Array defn = Napi::Array::New(env);
-    {
-        Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)ref);
-        SetValueTag(instance, external, &TypeInfoMarker);
-
-        defn.Set(0u, external);
-        defn.Set(1u, Napi::Number::New(env, (double)len));
-    }
-    defn.Freeze();
-
-    type->defn.Reset(defn, 1);
-
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
     SetValueTag(instance, external, &TypeInfoMarker);
 
@@ -786,9 +763,42 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
     const TypeInfo *type = ResolveType(instance, info[0]);
     if (!type)
         return env.Null();
+
     if (type->defn.IsEmpty()) {
-        ThrowError<Napi::TypeError>(env, "Definition of type %1 is not available", type->name);
-        return env.Null();
+        Napi::Object defn = Napi::Object::New(env);
+
+        defn.Set("name", Napi::String::New(env, type->name));
+        defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
+        defn.Set("size", Napi::Number::New(env, (double)type->size));
+        defn.Set("alignment", Napi::Number::New(env, (double)type->align));
+
+        switch (type->primitive) {
+            case PrimitiveKind::Array: {
+                uint32_t len = type->size / type->ref->size;
+                defn.Set("length", Napi::Number::New(env, (double)len));
+            } [[fallthrough]];
+            case PrimitiveKind::Pointer: {
+                Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type->ref);
+                SetValueTag(instance, external, &TypeInfoMarker);
+
+                defn.Set("ref", external);
+            } break;
+            case PrimitiveKind::Record: {
+                Napi::Object members = Napi::Object::New(env);
+
+                for (const RecordMember &member: type->members) {
+                    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)member.type);
+                    SetValueTag(instance, external, &TypeInfoMarker);
+
+                    members.Set(member.name, external);
+                }
+
+                defn.Set("members", members);
+            } break;
+        }
+
+        defn.Freeze();
+        type->defn.Reset(defn, 1);
     }
 
     return type->defn.Value();
