@@ -41,7 +41,7 @@ public:
 private:
     void Tokenize(const char *str);
 
-    const TypeInfo *ParseType(bool dispose);
+    const TypeInfo *ParseType();
     const char *ParseIdentifier();
 
     bool Consume(const char *expect);

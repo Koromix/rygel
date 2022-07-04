@@ -27,7 +27,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
 
     Tokenize(str);
 
-    out_func->ret.type = ParseType(false);
+    out_func->ret.type = ParseType();
     if (out_func->ret.type->primitive == PrimitiveKind::Array) {
         MarkError("You are not allowed to directly return C arrays");
         return false;
@@ -53,8 +53,6 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
                 break;
             }
 
-            bool dispose = Match("_Free_");
-
             if (Match("_In_")) {
                 param.directions = 1;
             } else if (Match("_Out_")) {
@@ -65,7 +63,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
                 param.directions = 1;
             }
 
-            param.type = ParseType(dispose);
+            param.type = ParseType();
             if (param.type->primitive == PrimitiveKind::Void ||
                     param.type->primitive == PrimitiveKind::Array) {
                 MarkError("Type %1 cannot be used as a parameter (try %1*?)", param.type->name);
@@ -143,13 +141,12 @@ void PrototypeParser::Tokenize(const char *str)
     }
 }
 
-const TypeInfo *PrototypeParser::ParseType(bool dispose)
+const TypeInfo *PrototypeParser::ParseType()
 {
     HeapArray<char> buf(&instance->str_alloc);
 
-    dispose = dispose || Match("_Free_");
-
     int indirect = 0;
+    bool dispose = false;
 
     Size start = offset;
     while (offset < tokens.len && IsIdentifier(tokens[offset])) {
@@ -172,6 +169,10 @@ const TypeInfo *PrototypeParser::ParseType(bool dispose)
         offset++;
         indirect++;
     }
+    if (offset < tokens.len && tokens[offset] == "!") {
+        offset++;
+        dispose = true;
+    }
     buf.ptr[--buf.len] = 0;
 
     while (buf.len) {
@@ -183,7 +184,7 @@ const TypeInfo *PrototypeParser::ParseType(bool dispose)
                 break;
             }
             if (type->dispose && dispose) {
-                MarkError("Cannot use _Free_ with disposable type '%1'", type->name);
+                MarkError("Cannot use disposable qualifier '!' with disposable type '%1'", type->name);
                 break;
             }
 
@@ -196,7 +197,7 @@ const TypeInfo *PrototypeParser::ParseType(bool dispose)
                 if (type->primitive != PrimitiveKind::String &&
                         type->primitive != PrimitiveKind::String16 &&
                         indirect != 1) {
-                    MarkError("Cannot use _Free_ with type '%1'", type->name);
+                    MarkError("Cannot use disposable qualifier '!' with type '%1'", type->name);
                     break;
                 }
 
