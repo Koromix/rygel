@@ -86,7 +86,6 @@ struct TypeInfo {
     };
 
     const char *name;
-    napi_type_tag tag;
 
     Napi::ObjectReference defn;
 
