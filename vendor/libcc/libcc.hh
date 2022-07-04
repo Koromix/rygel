@@ -235,7 +235,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
             RG_DEBUG_BREAK(); \
             abort(); \
         } while (false)
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__clang__)
     #define RG_UNREACHABLE() __builtin_unreachable()
 #else
     #define RG_UNREACHABLE() __assume(0)
