@@ -52,6 +52,10 @@ Boolean          | bool             |            | Usually one byte
 Number (integer) | long             | Signed     | 4 or 8 bytes depending on platform (LP64, LLP64)
 Number (integer) | ulong            | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
 Number (integer) | unsigned long    | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
+Number (integer) | intptr           | Signed     | 4 or 8 bytes depending on register width
+Number (integer) | intptr_t         | Signed     | 4 or 8 bytes depending on register width
+Number (integer) | uintptr          | Unsigned   | 4 or 8 bytes depending on register width
+Number (integer) | uintptr_t        | Unsigned   | 4 or 8 bytes depending on register width
 String           | str (string)     |            | JS strings are converted to and from UTF-8
 String           | str16 (string16) |            | JS strings are converted to and from UTF-16 (LE)
 
