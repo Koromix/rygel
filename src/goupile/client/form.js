@@ -1587,6 +1587,8 @@ instead of:
 
         if (options.wide)
             style += 'width: 100%;';
+        if (options.style)
+            style += options.style;
 
         return style;
     }
