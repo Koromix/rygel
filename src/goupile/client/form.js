@@ -121,13 +121,23 @@ function FormModel() {
 function FormBuilder(state, model, readonly = false) {
     let self = this;
 
-    // XXX: Temporary workaround for lack of date and time inputs in Safari
+    // Workaround for lack of some date inputs (Firefox, Safari)
     let has_input_date = (() => {
         if (typeof document !== 'undefined') {
             let el = document.createElement('input');
             el.setAttribute('type', 'date');
             el.value = '1900-01-01';
-            return el.valueAsDate != null;
+            return (el.valueAsDate != null);
+        } else {
+            return false;
+        }
+    })();
+    let has_input_month = (() => {
+        if (typeof document !== 'undefined') {
+            let el = document.createElement('input');
+            el.setAttribute('type', 'month');
+            el.value = '1900-01';
+            return (el.valueAsDate != null);
         } else {
             return false;
         }
@@ -915,6 +925,66 @@ function FormBuilder(state, model, readonly = false) {
             return;
 
         if (has_input_date) {
+            let date = dates.parse(e.target.value || null);
+            updateValue(key, date || undefined);
+        } else {
+            try {
+                let date = dates.parse(e.target.value || null);
+
+                e.target.setCustomValidity('');
+                updateValue(key, date || undefined);
+            } catch (err) {
+                e.target.setCustomValidity('Date malformée ou ambiguë');
+            }
+        }
+    }
+
+    this.month = function(key, label, options = {}) {
+        options = expandOptions(options);
+        key = decodeKey(key, options);
+
+        if (options.value != null)
+            options.value = options.value.toString();
+
+        let value = readValue(key, options, value => {
+            if (typeof value === 'string') {
+                value = dates.parseSafe(value);
+            } else if (value != null && value.constructor.name !== 'LocalDate') {
+                value = undefined;
+            }
+
+            return value;
+        });
+        if (value != null)
+            value.day = null;
+
+        let id = makeID(key);
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
+            <input id=${id} type=${has_input_month ? 'month' : 'text'}
+                   class="fm_input" style=${makeInputStyle(options)}
+                   .value=${value ? (has_input_month ? value.toString() : value.toLocaleString()) : ''}
+                   placeholder=${!has_input_month ? 'MM/YYYY' : ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   @input=${e => handleMonthInput(e, key)}/>
+            ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
+        `);
+
+        let intf = makeWidget('date', label, render, options);
+        fillVariableInfo(intf, key, value);
+        addWidget(intf);
+
+        validateMinMax(intf, dates.parse);
+
+        return intf;
+    };
+
+    function handleMonthInput(e, key) {
+        if (!isModifiable(variables_map[key]))
+            return;
+
+        if (has_input_month) {
             let date = dates.parse(e.target.value || null);
             updateValue(key, date || undefined);
         } else {

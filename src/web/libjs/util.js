@@ -1204,6 +1204,9 @@ function BTree(order = 64) {
 const dates = new function() {
     let self = this;
 
+    let fmt_crazy = (new Date(2222, 4, 2)).toLocaleDateString().endsWith('2222');
+    let fmt_sep = (new Date(2222, 4, 2)).toLocaleDateString().includes('/') ? '/' : '-';
+
     this.isLeapYear = function(year) {
         return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
     };
@@ -1228,11 +1231,12 @@ const dates = new function() {
                 return false;
             if (this.month == null || this.month < 1 || this.month > 12)
                 return false;
-            if (this.day == null || this.day < 1 || this.day > dates.daysInMonth(this.year, this.month))
+            if (this.day != null && (this.day < 1 || this.day > dates.daysInMonth(this.year, this.month)))
                 return false;
 
             return true;
         };
+        LocalDate.prototype.isComplete = function() { return this.isValid() && this.day != null; };
 
         LocalDate.prototype.equals = function(other) { return +this === +other; };
 
@@ -1244,7 +1248,7 @@ const dates = new function() {
             let year = this.year + 4800 - adjust;
             let month = this.month + 12 * adjust - 3;
 
-            let julian_days = this.day + Math.floor((153 * month + 2) / 5) + 365 * year - 32045 +
+            let julian_days = (this.day || 1) + Math.floor((153 * month + 2) / 5) + 365 * year - 32045 +
                               Math.floor(year / 4) - Math.floor(year / 100) + Math.floor(year / 400);
 
             return julian_days;
@@ -1273,7 +1277,7 @@ const dates = new function() {
             let century = Math.floor(year / 100);
             year %= 100;
 
-            let week_day = (this.day + Math.floor(13 * (month + 1) / 5) + year + Math.floor(year / 4) +
+            let week_day = ((this.day || 1) + Math.floor(13 * (month + 1) / 5) + year + Math.floor(year / 4) +
                             Math.floor(century / 4) + 5 * century + 5) % 7;
 
             return week_day;
@@ -1296,7 +1300,7 @@ const dates = new function() {
 
                 let year = this.year + Math.floor(m / 12);
                 let month = 1 + (m % 12);
-                let day = Math.min(this.day, dates.daysInMonth(year, month));
+                let day = Math.min(this.day || 1, dates.daysInMonth(year, month));
 
                 return dates.create(year, month, day);
             } else {
@@ -1304,7 +1308,7 @@ const dates = new function() {
 
                 let year = this.year - Math.floor(m / 12);
                 let month = 12 - (m % 12);
-                let day = Math.min(this.day, dates.daysInMonth(year, month));
+                let day = Math.min(this.day || 1, dates.daysInMonth(year, month));
 
                 return dates.create(year, month, day);
             }
@@ -1314,18 +1318,36 @@ const dates = new function() {
         LocalDate.prototype.valueOf = LocalDate.prototype.toJulianDays;
 
         LocalDate.prototype.toString = function() {
-            let year_str = ('' + this.year).padStart(4, '0');
-            let month_str = ('' + this.month).padStart(2, '0');
-            let day_str = ('' + this.day).padStart(2, '0');
+            if (this.day != null) {
+                let year_str = ('' + this.year).padStart(4, '0');
+                let month_str = ('' + this.month).padStart(2, '0');
+                let day_str = ('' + this.day).padStart(2, '0');
 
-            let str = `${year_str}-${month_str}-${day_str}`;
-            return str;
+                let str = `${year_str}-${month_str}-${day_str}`;
+                return str;
+            } else {
+                let year_str = ('' + this.year).padStart(4, '0');
+                let month_str = ('' + this.month).padStart(2, '0');
+
+                let str = `${year_str}-${month_str}`;
+                return str;
+            }
         };
         LocalDate.prototype.toJSON = LocalDate.prototype.toString;
 
         LocalDate.prototype.toLocaleString = function() {
-            let js_date = new Date(this.year, this.month - 1, this.day);
-            return js_date.toLocaleDateString(undefined, {month: '2-digit', day: '2-digit', year: 'numeric'});
+            if (this.day != null) {
+                let js_date = new Date(this.year, this.month - 1, this.day);
+                let str = js_date.toLocaleDateString(undefined, {month: '2-digit', day: '2-digit', year: 'numeric'});
+
+                return str;
+            } else {
+                let year_str = ('' + this.year).padStart(4, '0');
+                let month_str = ('' + this.month).padStart(2, '0');
+
+                let str = fmt_crazy ? `${month_str}${fmt_sep}${year_str}` : `${year_str}${fmt_sep}${month_str}`;
+                return str;
+            }
         };
     }
 
@@ -1343,6 +1365,16 @@ const dates = new function() {
         let date;
         {
             let parts = str.split(/[\-\/]/);
+
+            // Support imprecise dates (month and year)
+            if (parts.length === 2) {
+                if (parts[0].length > parts[1].length) {
+                    parts.push('00');
+                } else {
+                    parts.unshift('00');
+                }
+            }
+
             if (parts.length !== 3) {
                 throw new Error(`Date '${str}' is malformed`);
             } else if (parts[0].length < 4 && parts[2].length < 4) {
@@ -1357,6 +1389,8 @@ const dates = new function() {
                     throw new Error(`Date '${str}' is malformed`);
                 return value;
             });
+            if (!parts[2])
+                parts[2] = null;
 
             date = dates.create(...parts);
         }
