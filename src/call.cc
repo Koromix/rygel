@@ -322,7 +322,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    ptr = ReserveTrampoline(type->proto, func);
+                    ptr = ReserveTrampoline(member.type->proto, func);
                     if (RG_UNLIKELY(!ptr))
                         return false;
                 } else if (CheckValueTag(instance, value, member.type)) {
