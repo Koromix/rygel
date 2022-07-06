@@ -1,5 +1,17 @@
 # Changelog
 
+## Koffi 1.3.7
+
+**Main fixes:**
+
+- Fix crash when using callbacks inside structs
+- Support for null strings in record members
+
+**Other changes:**
+
+- Add intptr_t and uintptr_t primitive types
+- Various documentation fixes and improvements
+
 ## Koffi 1.3.6
 
 **Main fixes:**
