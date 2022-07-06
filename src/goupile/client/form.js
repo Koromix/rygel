@@ -549,12 +549,14 @@ function FormBuilder(state, model, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
+                ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  .className=${value === p.value ? 'active' : ''}
                                  ?disabled=${options.disabled}
                                  @click=${e => handleEnumChange(e, key, options.untoggle)}
                                  @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
+                ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
             </div>
         `);
 
@@ -714,12 +716,14 @@ function FormBuilder(state, model, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
+                ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  .className=${value != null && value.includes(p.value) ? 'active' : ''}
                                  ?disabled=${options.disabled}
                                  @click=${e => handleMultiChange(e, key)}
                                  @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
+                ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
             </div>
         `);
 
