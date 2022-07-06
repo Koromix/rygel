@@ -1703,7 +1703,7 @@ function InstanceController() {
             if (!ulid && !app.panels.data) {
                 if (profile.lock != null) {
                     ulid = profile.lock.ulid;
-                } else {
+                } else if (profile.userid) {
                     let range = IDBKeyRange.only(profile.namespaces.records + `/${new_route.form.key}`);
                     let keys = await db.list('rec_records/form', range);
 
