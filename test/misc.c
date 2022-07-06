@@ -134,6 +134,15 @@ typedef struct StrStruct {
     const char16_t *str16;
 } StrStruct;
 
+typedef int STDCALL ApplyCallback(int a, int b, int c);
+typedef int IntCallback(int x);
+
+typedef struct StructCallbacks {
+    IntCallback *first;
+    IntCallback *second;
+    IntCallback *third;
+} StructCallbacks;
+
 EXPORT int8_t GetMinusOne1(void)
 {
     return -1;
@@ -538,8 +547,6 @@ EXPORT BFG ModifyBFG(int x, double y, const char *str, BFG (*func)(BFG bfg), BFG
     return bfg;
 }
 
-typedef int STDCALL ApplyCallback(int a, int b, int c);
-
 EXPORT int ApplyStd(int a, int b, int c, ApplyCallback *func)
 {
     int ret = func(a, b, c);
@@ -590,4 +597,22 @@ EXPORT const char *ThroughStrStar(StrStruct *s)
 EXPORT const char16_t *ThroughStrStar16(StrStruct *s)
 {
     return s->str16;
+}
+
+EXPORT int ApplyMany(int x, IntCallback **callbacks, int length)
+{
+    for (int i = 0; i < length; i++) {
+        x = (callbacks[i])(x);
+    }
+
+    return x;
+}
+
+EXPORT int ApplyStruct(int x, StructCallbacks callbacks)
+{
+    x = callbacks.first(x);
+    x = callbacks.second(x);
+    x = callbacks.third(x);
+
+    return x;
 }

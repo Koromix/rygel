@@ -33,6 +33,13 @@ const SimpleCallback = koffi.callback('int SimpleCallback(const char *str)');
 const RecursiveCallback = koffi.callback('RecursiveCallback', 'float', ['int', 'str', 'double']);
 const BigCallback = koffi.callback('BFG BigCallback(BFG bfg)');
 const ApplyCallback = koffi.callback('int __stdcall ApplyCallback(int a, int b, int c)');
+const IntCallback = koffi.callback('int IntCallback(int x)');
+
+const StructCallbacks = koffi.struct('StructCallbacks', {
+    first: IntCallback,
+    second: IntCallback,
+    third: IntCallback
+});
 
 main();
 
@@ -54,6 +61,8 @@ async function test() {
     const CallRecursiveJS = lib.func('float CallRecursiveJS(int i, RecursiveCallback func)');
     const ModifyBFG = lib.func('BFG ModifyBFG(int x, double y, const char *str, BigCallback func, _Out_ BFG *p)');
     const ApplyStd = lib.func('int ApplyStd(int a, int b, int c, ApplyCallback func)');
+    const ApplyMany = lib.func('int ApplyMany(int x, ApplyCallback *funcs, int length)');
+    const ApplyStruct = lib.func('int ApplyStruct(int x, StructCallbacks callbacks)');
 
     // Simple test similar to README example
     {
@@ -91,5 +100,19 @@ async function test() {
     {
         let ret = ApplyStd(1, 5, 9, (a, b, c) => a + b * c);
         assert.equal(ret, 46);
+    }
+
+    // Array of callbacks
+    {
+        let callbacks = [x => x * 5, x => x - 42, x => -x];
+        let ret = ApplyMany(27, callbacks, callbacks.length);
+        assert.equal(ret, -93);
+    }
+
+    // Struct of callbacks
+    {
+        let callbacks = { first: x => -x, second: x => x * 5, third: x => x - 42 };
+        let ret = ApplyStruct(27, callbacks);
+        assert.equal(ret, -177);
     }
 }
