@@ -129,6 +129,11 @@ typedef struct IntContainer {
     int len;
 } IntContainer;
 
+typedef struct StrStruct {
+    const char *str;
+    const char16_t *str16;
+} StrStruct;
+
 EXPORT int8_t GetMinusOne1(void)
 {
     return -1;
@@ -565,4 +570,24 @@ EXPORT void MultiplyIntegers(int multiplier, int *values, int len)
     for (int i = 0; i < len; i++) {
         values[i] *= multiplier;
     }
+}
+
+EXPORT const char *ThroughStr(StrStruct s)
+{
+    return s.str;
+}
+
+EXPORT const char16_t *ThroughStr16(StrStruct s)
+{
+    return s.str16;
+}
+
+EXPORT const char *ThroughStrStar(StrStruct *s)
+{
+    return s->str;
+}
+
+EXPORT const char16_t *ThroughStrStar16(StrStruct *s)
+{
+    return s->str16;
 }

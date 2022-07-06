@@ -109,6 +109,11 @@ const IntContainer = koffi.struct('IntContainer', {
 const StrFree = koffi.disposable('str_free', 'str', koffi.free);
 const Str16Free = koffi.disposable('str16_free', 'str16');
 
+const StrStruct = koffi.struct('StrStruct', {
+    str: 'str',
+    str16: 'str16'
+});
+
 main();
 
 async function main() {
@@ -178,6 +183,8 @@ async function test() {
     const ArrayToStruct = lib.func('IntContainer ArrayToStruct(int *ptr, int len)');
     const FillRange = lib.func('void FillRange(int init, int step, _Out_ int *out, int len)');
     const MultiplyIntegers = lib.func('void MultiplyIntegers(int multiplier, _Inout_ int *values, int len)');
+    const ThroughStr = lib.func('str ThroughStr(StrStruct s)');
+    const ThroughStr16 = lib.func('str16 ThroughStr16(StrStruct s)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -369,5 +376,13 @@ async function test() {
         MultiplyIntegers(3, out2, out2.length - 3);
         assert.deepEqual(out1, [-2, -9, -16, -23, -30, -37, -44, -51, 58, 65]);
         assert.deepEqual(out2, new Int32Array([3 * 13, 3 * 16, 3 * 19, 3 * 22, 3 * 25, 3 * 28, 3 * 31, 34, 37, 40]));
+    }
+
+    // Test struct strings
+    {
+        assert.equal(ThroughStr({ str: 'Hello', str16: null }), 'Hello');
+        assert.equal(ThroughStr({ str: null, str16: 'Hello' }), null);
+        assert.equal(ThroughStr16({ str: null, str16: 'World!' }), 'World!');
+        assert.equal(ThroughStr16({ str: 'World!', str16: null }), null);
     }
 }
