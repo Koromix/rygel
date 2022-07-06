@@ -226,25 +226,33 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 *(uint64_t *)dest = v;
             } break;
             case PrimitiveKind::String: {
-                if (RG_UNLIKELY(!value.IsString())) {
+                const char *str;
+                if (RG_LIKELY(value.IsString())) {
+                    str = PushString(value);
+                    if (RG_UNLIKELY(!str))
+                        return false;
+                } else if (IsNullOrUndefined(value)) {
+                    str = nullptr;
+                } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected string", GetValueType(instance, value), member.name);
                     return false;
                 }
 
-                const char *str = PushString(value);
-                if (RG_UNLIKELY(!str))
-                    return false;
                 *(const char **)dest = str;
             } break;
             case PrimitiveKind::String16: {
-                if (RG_UNLIKELY(!value.IsString())) {
+                const char16_t *str16;
+                if (RG_LIKELY(value.IsString())) {
+                    str16 = PushString16(value);
+                    if (RG_UNLIKELY(!str16))
+                        return false;
+                } else if (IsNullOrUndefined(value)) {
+                    str16 = nullptr;
+                } else {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected string", GetValueType(instance, value), member.name);
                     return false;
                 }
 
-                const char16_t *str16 = PushString16(value);
-                if (RG_UNLIKELY(!str16))
-                    return false;
                 *(const char16_t **)dest = str16;
             } break;
             case PrimitiveKind::Pointer: {
