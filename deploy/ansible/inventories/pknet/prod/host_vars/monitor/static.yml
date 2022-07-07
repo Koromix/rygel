@@ -25,4 +25,5 @@ static_deploys:
 
   - name: koffi.dev/www
     repo: https://github.com/Koromix/luigi.git
+    version: koffi1
     path: koffi/doc/dist/html
