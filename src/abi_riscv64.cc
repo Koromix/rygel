@@ -482,8 +482,15 @@ Napi::Value CallData::Complete()
 
 void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
-    const FunctionInfo *proto = instance->trampolines[idx].proto;
-    Napi::Function func = instance->trampolines[idx].func;
+    const TrampolineInfo &trampoline = instance->trampolines[idx];
+
+    if (RG_UNLIKELY(trampoline.generation != mem->generation)) {
+        ThrowError<Napi::Error>(env, "Cannot use non-persistent callback beyond FFI call");
+        return;
+    }
+
+    const FunctionInfo *proto = trampoline.proto;
+    Napi::Function func = trampoline.func.Value();
 
     uint64_t *gpr_ptr = (uint64_t *)own_sp;
     uint64_t *vec_ptr = gpr_ptr + 8;

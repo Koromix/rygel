@@ -24,6 +24,7 @@ CallData::CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *fu
     : env(env), instance(instance), func(func),
       mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap)
 {
+    mem->generation += !mem->depth;
     mem->depth++;
 
     RG_ASSERT(AlignUp(mem->stack.ptr, 16) == mem->stack.ptr);
@@ -760,7 +761,8 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     used_trampolines |= 1u << idx;
 
     instance->trampolines[idx].proto = proto;
-    instance->trampolines[idx].func = func;
+    instance->trampolines[idx].func.Reset(func, 1);
+    instance->trampolines[idx].generation = mem->generation;
 
     void *trampoline = GetTrampoline(idx, proto);
     return trampoline;

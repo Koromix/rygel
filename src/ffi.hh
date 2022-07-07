@@ -203,13 +203,15 @@ struct InstanceMemory {
     Span<uint8_t> stack;
     Span<uint8_t> heap;
 
-    int depth;
+    uint16_t generation; // Can wrap without risk
+    int16_t depth;
     bool temporary;
 };
 
 struct TrampolineInfo {
     const FunctionInfo *proto;
-    Napi::Function func;
+    Napi::FunctionReference func;
+    uint16_t generation;
 };
 
 struct InstanceData {
