@@ -10,6 +10,7 @@
 **Other changes:**
 
 - Add intptr_t and uintptr_t primitive types
+- Add str/str16 type aliases for string/string16
 - Various documentation fixes and improvements
 
 ## Koffi 1.3.6
