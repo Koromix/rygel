@@ -130,6 +130,22 @@ ForwardCallXDDDD PROC
     EXPORT Trampoline13
     EXPORT Trampoline14
     EXPORT Trampoline15
+    EXPORT Trampoline16
+    EXPORT Trampoline17
+    EXPORT Trampoline18
+    EXPORT Trampoline19
+    EXPORT Trampoline20
+    EXPORT Trampoline21
+    EXPORT Trampoline22
+    EXPORT Trampoline23
+    EXPORT Trampoline24
+    EXPORT Trampoline25
+    EXPORT Trampoline26
+    EXPORT Trampoline27
+    EXPORT Trampoline28
+    EXPORT Trampoline29
+    EXPORT Trampoline30
+    EXPORT Trampoline31
     EXPORT TrampolineX0
     EXPORT TrampolineX1
     EXPORT TrampolineX2
@@ -146,6 +162,22 @@ ForwardCallXDDDD PROC
     EXPORT TrampolineX13
     EXPORT TrampolineX14
     EXPORT TrampolineX15
+    EXPORT TrampolineX16
+    EXPORT TrampolineX17
+    EXPORT TrampolineX18
+    EXPORT TrampolineX19
+    EXPORT TrampolineX20
+    EXPORT TrampolineX21
+    EXPORT TrampolineX22
+    EXPORT TrampolineX23
+    EXPORT TrampolineX24
+    EXPORT TrampolineX25
+    EXPORT TrampolineX26
+    EXPORT TrampolineX27
+    EXPORT TrampolineX28
+    EXPORT TrampolineX29
+    EXPORT TrampolineX30
+    EXPORT TrampolineX31
     EXPORT RelayCallback
     EXTERN RelayCallback
     EXPORT CallSwitchStack
@@ -252,6 +284,54 @@ Trampoline14 PROC
 Trampoline15 PROC
     trampoline 15
     ENDP
+Trampoline16 PROC
+    trampoline 16
+    ENDP
+Trampoline17 PROC
+    trampoline 17
+    ENDP
+Trampoline18 PROC
+    trampoline 18
+    ENDP
+Trampoline19 PROC
+    trampoline 19
+    ENDP
+Trampoline20 PROC
+    trampoline 20
+    ENDP
+Trampoline21 PROC
+    trampoline 21
+    ENDP
+Trampoline22 PROC
+    trampoline 22
+    ENDP
+Trampoline23 PROC
+    trampoline 23
+    ENDP
+Trampoline24 PROC
+    trampoline 24
+    ENDP
+Trampoline25 PROC
+    trampoline 25
+    ENDP
+Trampoline26 PROC
+    trampoline 26
+    ENDP
+Trampoline27 PROC
+    trampoline 27
+    ENDP
+Trampoline28 PROC
+    trampoline 28
+    ENDP
+Trampoline29 PROC
+    trampoline 29
+    ENDP
+Trampoline30 PROC
+    trampoline 30
+    ENDP
+Trampoline31 PROC
+    trampoline 31
+    ENDP
 
 TrampolineX0 PROC
     trampoline_vec 0
@@ -300,6 +380,54 @@ TrampolineX14 PROC
     ENDP
 TrampolineX15 PROC
     trampoline_vec 15
+    ENDP
+TrampolineX16 PROC
+    trampoline_vec 16
+    ENDP
+TrampolineX17 PROC
+    trampoline_vec 17
+    ENDP
+TrampolineX18 PROC
+    trampoline_vec 18
+    ENDP
+TrampolineX19 PROC
+    trampoline_vec 19
+    ENDP
+TrampolineX20 PROC
+    trampoline_vec 20
+    ENDP
+TrampolineX21 PROC
+    trampoline_vec 21
+    ENDP
+TrampolineX22 PROC
+    trampoline_vec 22
+    ENDP
+TrampolineX23 PROC
+    trampoline_vec 23
+    ENDP
+TrampolineX24 PROC
+    trampoline_vec 24
+    ENDP
+TrampolineX25 PROC
+    trampoline_vec 25
+    ENDP
+TrampolineX26 PROC
+    trampoline_vec 26
+    ENDP
+TrampolineX27 PROC
+    trampoline_vec 27
+    ENDP
+TrampolineX28 PROC
+    trampoline_vec 28
+    ENDP
+TrampolineX29 PROC
+    trampoline_vec 29
+    ENDP
+TrampolineX30 PROC
+    trampoline_vec 30
+    ENDP
+TrampolineX31 PROC
+    trampoline_vec 31
     ENDP
 
 ; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.

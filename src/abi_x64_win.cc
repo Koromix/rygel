@@ -50,6 +50,22 @@ extern "C" int Trampoline12; extern "C" int TrampolineX12;
 extern "C" int Trampoline13; extern "C" int TrampolineX13;
 extern "C" int Trampoline14; extern "C" int TrampolineX14;
 extern "C" int Trampoline15; extern "C" int TrampolineX15;
+extern "C" int Trampoline16; extern "C" int TrampolineX16;
+extern "C" int Trampoline17; extern "C" int TrampolineX17;
+extern "C" int Trampoline18; extern "C" int TrampolineX18;
+extern "C" int Trampoline19; extern "C" int TrampolineX19;
+extern "C" int Trampoline20; extern "C" int TrampolineX20;
+extern "C" int Trampoline21; extern "C" int TrampolineX21;
+extern "C" int Trampoline22; extern "C" int TrampolineX22;
+extern "C" int Trampoline23; extern "C" int TrampolineX23;
+extern "C" int Trampoline24; extern "C" int TrampolineX24;
+extern "C" int Trampoline25; extern "C" int TrampolineX25;
+extern "C" int Trampoline26; extern "C" int TrampolineX26;
+extern "C" int Trampoline27; extern "C" int TrampolineX27;
+extern "C" int Trampoline28; extern "C" int TrampolineX28;
+extern "C" int Trampoline29; extern "C" int TrampolineX29;
+extern "C" int Trampoline30; extern "C" int TrampolineX30;
+extern "C" int Trampoline31; extern "C" int TrampolineX31;
 
 extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_value *argv,
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
@@ -71,7 +87,23 @@ static void *const Trampolines[][2] = {
     { &Trampoline12, &TrampolineX12 },
     { &Trampoline13, &TrampolineX13 },
     { &Trampoline14, &TrampolineX14 },
-    { &Trampoline15, &TrampolineX15 }
+    { &Trampoline15, &TrampolineX15 },
+    { &Trampoline16, &TrampolineX16 },
+    { &Trampoline17, &TrampolineX17 },
+    { &Trampoline18, &TrampolineX18 },
+    { &Trampoline19, &TrampolineX19 },
+    { &Trampoline20, &TrampolineX20 },
+    { &Trampoline21, &TrampolineX21 },
+    { &Trampoline22, &TrampolineX22 },
+    { &Trampoline23, &TrampolineX23 },
+    { &Trampoline24, &TrampolineX24 },
+    { &Trampoline25, &TrampolineX25 },
+    { &Trampoline26, &TrampolineX26 },
+    { &Trampoline27, &TrampolineX27 },
+    { &Trampoline28, &TrampolineX28 },
+    { &Trampoline29, &TrampolineX29 },
+    { &Trampoline30, &TrampolineX30 },
+    { &Trampoline31, &TrampolineX31 }
 };
 RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines);
 

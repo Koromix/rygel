@@ -171,6 +171,22 @@ SYMBOL(ForwardCallXDD):
 .global SYMBOL(Trampoline13)
 .global SYMBOL(Trampoline14)
 .global SYMBOL(Trampoline15)
+.global SYMBOL(Trampoline16)
+.global SYMBOL(Trampoline17)
+.global SYMBOL(Trampoline18)
+.global SYMBOL(Trampoline19)
+.global SYMBOL(Trampoline20)
+.global SYMBOL(Trampoline21)
+.global SYMBOL(Trampoline22)
+.global SYMBOL(Trampoline23)
+.global SYMBOL(Trampoline24)
+.global SYMBOL(Trampoline25)
+.global SYMBOL(Trampoline26)
+.global SYMBOL(Trampoline27)
+.global SYMBOL(Trampoline28)
+.global SYMBOL(Trampoline29)
+.global SYMBOL(Trampoline30)
+.global SYMBOL(Trampoline31)
 .global SYMBOL(TrampolineX0)
 .global SYMBOL(TrampolineX1)
 .global SYMBOL(TrampolineX2)
@@ -187,6 +203,22 @@ SYMBOL(ForwardCallXDD):
 .global SYMBOL(TrampolineX13)
 .global SYMBOL(TrampolineX14)
 .global SYMBOL(TrampolineX15)
+.global SYMBOL(TrampolineX16)
+.global SYMBOL(TrampolineX17)
+.global SYMBOL(TrampolineX18)
+.global SYMBOL(TrampolineX19)
+.global SYMBOL(TrampolineX20)
+.global SYMBOL(TrampolineX21)
+.global SYMBOL(TrampolineX22)
+.global SYMBOL(TrampolineX23)
+.global SYMBOL(TrampolineX24)
+.global SYMBOL(TrampolineX25)
+.global SYMBOL(TrampolineX26)
+.global SYMBOL(TrampolineX27)
+.global SYMBOL(TrampolineX28)
+.global SYMBOL(TrampolineX29)
+.global SYMBOL(TrampolineX30)
+.global SYMBOL(TrampolineX31)
 .global SYMBOL(RelayCallback)
 .global SYMBOL(CallSwitchStack)
 
@@ -296,6 +328,38 @@ SYMBOL(Trampoline14):
     trampoline 14
 SYMBOL(Trampoline15):
     trampoline 15
+SYMBOL(Trampoline16):
+    trampoline 16
+SYMBOL(Trampoline17):
+    trampoline 17
+SYMBOL(Trampoline18):
+    trampoline 18
+SYMBOL(Trampoline19):
+    trampoline 19
+SYMBOL(Trampoline20):
+    trampoline 20
+SYMBOL(Trampoline21):
+    trampoline 21
+SYMBOL(Trampoline22):
+    trampoline 22
+SYMBOL(Trampoline23):
+    trampoline 23
+SYMBOL(Trampoline24):
+    trampoline 24
+SYMBOL(Trampoline25):
+    trampoline 25
+SYMBOL(Trampoline26):
+    trampoline 26
+SYMBOL(Trampoline27):
+    trampoline 27
+SYMBOL(Trampoline28):
+    trampoline 28
+SYMBOL(Trampoline29):
+    trampoline 29
+SYMBOL(Trampoline30):
+    trampoline 30
+SYMBOL(Trampoline31):
+    trampoline 31
 
 SYMBOL(TrampolineX0):
     trampoline_xmm 0
@@ -329,6 +393,38 @@ SYMBOL(TrampolineX14):
     trampoline_xmm 14
 SYMBOL(TrampolineX15):
     trampoline_xmm 15
+SYMBOL(TrampolineX16):
+    trampoline_xmm 16
+SYMBOL(TrampolineX17):
+    trampoline_xmm 17
+SYMBOL(TrampolineX18):
+    trampoline_xmm 18
+SYMBOL(TrampolineX19):
+    trampoline_xmm 19
+SYMBOL(TrampolineX20):
+    trampoline_xmm 20
+SYMBOL(TrampolineX21):
+    trampoline_xmm 21
+SYMBOL(TrampolineX22):
+    trampoline_xmm 22
+SYMBOL(TrampolineX23):
+    trampoline_xmm 23
+SYMBOL(TrampolineX24):
+    trampoline_xmm 24
+SYMBOL(TrampolineX25):
+    trampoline_xmm 25
+SYMBOL(TrampolineX26):
+    trampoline_xmm 26
+SYMBOL(TrampolineX27):
+    trampoline_xmm 27
+SYMBOL(TrampolineX28):
+    trampoline_xmm 28
+SYMBOL(TrampolineX29):
+    trampoline_xmm 29
+SYMBOL(TrampolineX30):
+    trampoline_xmm 30
+SYMBOL(TrampolineX31):
+    trampoline_xmm 31
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 # The problem is that we're still running on the separate Koffi stack, and V8 will

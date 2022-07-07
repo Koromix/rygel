@@ -128,6 +128,22 @@ ForwardCallXDDDD:
 .global Trampoline13
 .global Trampoline14
 .global Trampoline15
+.global Trampoline16
+.global Trampoline17
+.global Trampoline18
+.global Trampoline19
+.global Trampoline20
+.global Trampoline21
+.global Trampoline22
+.global Trampoline23
+.global Trampoline24
+.global Trampoline25
+.global Trampoline26
+.global Trampoline27
+.global Trampoline28
+.global Trampoline29
+.global Trampoline30
+.global Trampoline31
 .global TrampolineX0
 .global TrampolineX1
 .global TrampolineX2
@@ -144,6 +160,22 @@ ForwardCallXDDDD:
 .global TrampolineX13
 .global TrampolineX14
 .global TrampolineX15
+.global TrampolineX16
+.global TrampolineX17
+.global TrampolineX18
+.global TrampolineX19
+.global TrampolineX20
+.global TrampolineX21
+.global TrampolineX22
+.global TrampolineX23
+.global TrampolineX24
+.global TrampolineX25
+.global TrampolineX26
+.global TrampolineX27
+.global TrampolineX28
+.global TrampolineX29
+.global TrampolineX30
+.global TrampolineX31
 .global RelayCallback
 .global CallSwitchStack
 
@@ -255,6 +287,38 @@ Trampoline14:
     trampoline 14
 Trampoline15:
     trampoline 15
+Trampoline16:
+    trampoline 16
+Trampoline17:
+    trampoline 17
+Trampoline18:
+    trampoline 18
+Trampoline19:
+    trampoline 19
+Trampoline20:
+    trampoline 20
+Trampoline21:
+    trampoline 21
+Trampoline22:
+    trampoline 22
+Trampoline23:
+    trampoline 23
+Trampoline24:
+    trampoline 24
+Trampoline25:
+    trampoline 25
+Trampoline26:
+    trampoline 26
+Trampoline27:
+    trampoline 27
+Trampoline28:
+    trampoline 28
+Trampoline29:
+    trampoline 29
+Trampoline30:
+    trampoline 30
+Trampoline31:
+    trampoline 31
 
 TrampolineX0:
     trampoline_vec 0
@@ -288,6 +352,38 @@ TrampolineX14:
     trampoline_vec 14
 TrampolineX15:
     trampoline_vec 15
+TrampolineX16:
+    trampoline_vec 16
+TrampolineX17:
+    trampoline_vec 17
+TrampolineX18:
+    trampoline_vec 18
+TrampolineX19:
+    trampoline_vec 19
+TrampolineX20:
+    trampoline_vec 20
+TrampolineX21:
+    trampoline_vec 21
+TrampolineX22:
+    trampoline_vec 22
+TrampolineX23:
+    trampoline_vec 23
+TrampolineX24:
+    trampoline_vec 24
+TrampolineX25:
+    trampoline_vec 25
+TrampolineX26:
+    trampoline_vec 26
+TrampolineX27:
+    trampoline_vec 27
+TrampolineX28:
+    trampoline_vec 28
+TrampolineX29:
+    trampoline_vec 29
+TrampolineX30:
+    trampoline_vec 30
+TrampolineX31:
+    trampoline_vec 31
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 # The problem is that we're still running on the separate Koffi stack, and V8 will
