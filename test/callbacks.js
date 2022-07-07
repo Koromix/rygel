@@ -61,7 +61,7 @@ async function test() {
     const CallRecursiveJS = lib.func('float CallRecursiveJS(int i, RecursiveCallback func)');
     const ModifyBFG = lib.func('BFG ModifyBFG(int x, double y, const char *str, BigCallback func, _Out_ BFG *p)');
     const ApplyStd = lib.func('int ApplyStd(int a, int b, int c, ApplyCallback func)');
-    const ApplyMany = lib.func('int ApplyMany(int x, ApplyCallback *funcs, int length)');
+    const ApplyMany = lib.func('int ApplyMany(int x, IntCallback *funcs, int length)');
     const ApplyStruct = lib.func('int ApplyStruct(int x, StructCallbacks callbacks)');
 
     // Simple test similar to README example
