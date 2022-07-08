@@ -302,6 +302,9 @@ void json_Parser::PushLogFilter()
 
 json_TokenType json_Parser::PeekToken()
 {
+    if (RG_UNLIKELY(error))
+        return json_TokenType::Invalid;
+
     if (handler.token == json_TokenType::Invalid &&
             !reader.IterativeParseNext<rapidjson::kParseDefaultFlags>(st, handler)) {
         if (reader.HasParseError()) {
