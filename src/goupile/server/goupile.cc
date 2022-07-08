@@ -684,6 +684,8 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleSendMail(instance, request, io);
     } else if (TestStr(instance_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
         HandleSendSMS(instance, request, io);
+    } else if (TestStr(instance_url, "/api/send/tokenize") && request.method == http_RequestMethod::Post) {
+        HandleSendTokenize(instance, request, io);
     } else {
         io->AttachError(404);
     }

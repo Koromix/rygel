@@ -16,6 +16,7 @@
 #include "goupile.hh"
 #include "messages.hh"
 #include "src/core/libnet/libnet.hh"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -181,6 +182,63 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
             return;
 
         io->AttachText(200, "Done!");
+    });
+}
+
+void HandleSendTokenize(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::DataMessage)) {
+        LogError("User is not allowed to send messages");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        Span<uint8_t> msg;
+        {
+            msg.len = Kibibytes(8);
+            msg.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, msg.len);
+
+            StreamReader reader;
+            if (!io->OpenForRead(msg.len, &reader))
+                return;
+            msg.len = reader.Read(msg);
+            if (msg.len < 0)
+                return;
+        }
+
+        // Encode token
+        Span<uint8_t> cypher;
+        {
+            cypher.len = msg.len + crypto_box_SEALBYTES;
+            cypher.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, cypher.len);
+
+            if (crypto_box_seal((uint8_t *)cypher.ptr, msg.ptr, msg.len, instance->config.token_pkey) != 0) {
+                LogError("Failed to seal token");
+                io->AttachError(403);
+                return;
+            }
+        }
+
+        // Encode Base64
+        Span<char> token;
+        {
+            token.len = cypher.len * 2 + 1;
+            token.ptr = (char *)Allocator::Allocate(&io->allocator, token.len);
+
+            sodium_bin2hex(token.ptr, (size_t)token.len, cypher.ptr, (size_t)cypher.len);
+
+            token.len = (Size)strlen(token.ptr);
+        }
+
+        io->AttachText(200, token);
     });
 }
 

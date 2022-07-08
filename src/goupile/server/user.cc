@@ -701,10 +701,10 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     Span<uint8_t> cypher;
     {
         cypher.len = token.len / 2 + 1;
-        cypher.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, token.len);
+        cypher.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, cypher.len);
 
         size_t cypher_len;
-        if (sodium_hex2bin(cypher.ptr, cypher.len, token.ptr, (size_t)token.len,
+        if (sodium_hex2bin(cypher.ptr, (size_t)cypher.len, token.ptr, (size_t)token.len,
                            nullptr, &cypher_len, nullptr) != 0) {
             LogError("Failed to unseal token");
             io->AttachError(403);

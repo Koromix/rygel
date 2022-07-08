@@ -28,5 +28,6 @@ bool SendSMS(const char *to, const char *message);
 
 void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSendTokenize(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 }
