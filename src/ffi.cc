@@ -680,7 +680,7 @@ static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
         if (!ParsePrototype(env, proto.c_str(), func))
             return env.Null();
     } else {
-        ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, not %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, got %1", info.Length());
         return env.Null();
     }
 
@@ -1073,7 +1073,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
         if (!ParsePrototype(env, proto.c_str(), func))
             return env.Null();
     } else {
-        ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, not %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, got %1", info.Length());
         return env.Null();
     }
 
@@ -1136,7 +1136,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, not %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
         return env.Null();
     }
     if (!info[0].IsString() && !IsNullOrUndefined(info[0])) {
