@@ -616,3 +616,15 @@ EXPORT int ApplyStruct(int x, StructCallbacks callbacks)
 
     return x;
 }
+
+static IntCallback *callback;
+
+EXPORT void SetCallback(IntCallback *cb)
+{
+    callback = cb;
+}
+
+EXPORT int CallCallback(int x)
+{
+    return callback(x);
+}

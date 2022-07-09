@@ -63,6 +63,8 @@ async function test() {
     const ApplyStd = lib.func('int ApplyStd(int a, int b, int c, ApplyCallback func)');
     const ApplyMany = lib.func('int ApplyMany(int x, IntCallback *funcs, int length)');
     const ApplyStruct = lib.func('int ApplyStruct(int x, StructCallbacks callbacks)');
+    const SetCallback = lib.func('void SetCallback(IntCallback func)');
+    const CallCallback = lib.func('int CallCallback(int x)');
 
     // Simple test similar to README example
     {
@@ -114,5 +116,14 @@ async function test() {
         let callbacks = { first: x => -x, second: x => x * 5, third: x => x - 42 };
         let ret = ApplyStruct(27, callbacks);
         assert.equal(ret, -177);
+    }
+
+    // Persistent callback
+    {
+        SetCallback(x => -x);
+        assert.throws(() => CallCallback(27), { message: /non-persistent callback/ });
+
+        SetCallback(koffi.register(x => -x, IntCallback));
+        assert.equal(CallCallback(27), -27);
     }
 }
