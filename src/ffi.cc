@@ -326,7 +326,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     }
 
     int count = 0;
-    if (info.Length() >= 2 + named) {
+    if (info.Length() >= 2u + named) {
         if (!info[1 + named].IsNumber()) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for count, expected number", GetValueType(instance, info[1 + named]));
             return env.Null();
@@ -441,7 +441,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 
     DisposeFunc *dispose;
     Napi::Function dispose_func;
-    if (info.Length() >= 2 + named && !IsNullOrUndefined(info[1 + named])) {
+    if (info.Length() >= 2u + named && !IsNullOrUndefined(info[1 + named])) {
         Napi::Function func = info[1 + named].As<Napi::Function>();
 
         if (!func.IsFunction()) {
@@ -471,7 +471,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     TypeInfo *type = instance->types.AppendDefault();
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
-    memcpy(type, src, RG_SIZE(*src));
+    memcpy((void *)type, (const void *)src, RG_SIZE(*src));
     type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
     type->members.allocator = GetNullAllocator();
     type->dispose = dispose;

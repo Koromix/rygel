@@ -203,7 +203,7 @@ const TypeInfo *PrototypeParser::ParseType()
 
                 TypeInfo *copy = instance->types.AppendDefault();
 
-                memcpy(copy, type, RG_SIZE(*type));
+                memcpy((void *)copy, (const void *)type, RG_SIZE(*type));
                 copy->name = "<anonymous>";
                 copy->members.allocator = GetNullAllocator();
                 copy->dispose = [](Napi::Env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
