@@ -123,7 +123,11 @@ async function test() {
         SetCallback(x => -x);
         assert.throws(() => CallCallback(27), { message: /non-registered callback/ });
 
-        SetCallback(koffi.register(x => -x, IntCallback));
+        let cb = koffi.register(x => -x, IntCallback);
+        SetCallback(cb);
         assert.equal(CallCallback(27), -27);
+
+        assert.equal(koffi.unregister(cb), null);
+        assert.throws(() => koffi.unregister(cb));
     }
 }
