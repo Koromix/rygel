@@ -121,7 +121,7 @@ async function test() {
     // Persistent callback
     {
         SetCallback(x => -x);
-        assert.throws(() => CallCallback(27), { message: /non-persistent callback/ });
+        assert.throws(() => CallCallback(27), { message: /non-registered callback/ });
 
         SetCallback(koffi.register(x => -x, IntCallback));
         assert.equal(CallCallback(27), -27);
