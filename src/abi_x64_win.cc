@@ -377,7 +377,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 {
     const TrampolineInfo &trampoline = instance->trampolines[idx];
 
-    if (RG_UNLIKELY(trampoline.generation != mem->generation)) {
+    if (RG_UNLIKELY(trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation)) {
         ThrowError<Napi::Error>(env, "Cannot use non-persistent callback beyond FFI call");
         return;
     }

@@ -757,15 +757,18 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
         return nullptr;
     }
 
+    TrampolineInfo *trampoline = &instance->trampolines[idx];
+
+    trampoline->proto = proto;
+    trampoline->func.Reset(func, 1);
+    trampoline->generation = (int64_t)mem->generation;
+    trampoline->counter++;
+
     instance->free_trampolines &= ~(1u << idx);
     used_trampolines |= 1u << idx;
 
-    instance->trampolines[idx].proto = proto;
-    instance->trampolines[idx].func.Reset(func, 1);
-    instance->trampolines[idx].generation = mem->generation;
-
-    void *trampoline = GetTrampoline(idx, proto);
-    return trampoline;
+    void *ptr = GetTrampoline(idx, proto);
+    return ptr;
 }
 
 void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign)

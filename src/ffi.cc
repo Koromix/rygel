@@ -1211,6 +1211,98 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     return obj;
 }
 
+static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+    if (!info[0].IsFunction()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    Napi::Function func = info[0].As<Napi::Function>();
+
+    const TypeInfo *type = ResolveType(instance, info[1]);
+    if (!type)
+        return env.Null();
+    if (type->primitive != PrimitiveKind::Callback) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected callback type", type->name);
+        return env.Null();
+    }
+
+    uint16_t idx = (uint16_t)CountTrailingZeros(instance->free_trampolines);
+
+    if (RG_UNLIKELY(idx >= MaxTrampolines)) {
+        ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
+        return env.Null();
+    }
+
+    TrampolineInfo *trampoline = &instance->trampolines[idx];
+
+    trampoline->proto = type->proto;
+    trampoline->func.Reset(func, 1);
+    trampoline->generation = -1;
+    trampoline->counter++;
+
+    instance->free_trampolines &= ~(1u << idx);
+
+    void *ptr = GetTrampoline(idx, type->proto);
+    uintptr_t payload = ((uintptr_t)trampoline->counter << 16) | (uintptr_t)idx;
+
+    Napi::External<void> external = Napi::External<void>::New(env, ptr, [](Napi::Env env, void *, void *udata) {
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
+        uintptr_t payload = (uintptr_t)udata;
+
+        uint16_t idx = (uint16_t)(payload & 0xFFFFu);
+        uint16_t counter = (uint16_t)((payload >> 16) & 0xFFFFu);
+
+        if (instance->trampolines[idx].counter == counter) {
+            instance->free_trampolines |= 1u << idx;
+        }
+    }, (void *)payload);
+    SetValueTag(instance, external, type);
+
+    return external;
+}
+
+static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+    if (!info[0].IsExternal()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for id, expected registered callback", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    Napi::External<void> external = info[0].As<Napi::External<void>>();
+    void *ptr = external.Data();
+
+    for (Size i = 0; i < RG_LEN(instance->trampolines); i++) {
+        if (instance->free_trampolines & (1u << i))
+            continue;
+
+        const TrampolineInfo &trampoline = instance->trampolines[i];
+
+        if (GetTrampoline(i, trampoline.proto) == ptr) {
+            instance->free_trampolines |= 1u << i;
+            return env.Null();
+        }
+    }
+
+    ThrowError<Napi::Error>(env, "Could not find matching registered callback");
+    return env.Null();
+}
+
 LibraryHolder::~LibraryHolder()
 {
 #ifdef _WIN32
@@ -1414,6 +1506,9 @@ static void SetExports(Napi::Env env, Func func)
 
     func("disposable", Napi::Function::New(env, CreateDisposableType));
     func("free", Napi::Function::New(env, CallFree));
+
+    func("register", Napi::Function::New(env, RegisterCallback));
+    func("unregister", Napi::Function::New(env, UnregisterCallback));
 
 #if defined(_WIN32)
     func("extension", Napi::String::New(env, ".dll"));
