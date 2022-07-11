@@ -211,7 +211,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         Napi::Value value = obj[key];
 
         member.name = DuplicateString(key.c_str(), &instance->str_alloc).ptr;
-        member.type = ResolveType(instance, value);
+        member.type = ResolveType(value);
         if (!member.type)
             return env.Null();
         if (member.type->primitive == PrimitiveKind::Void) {
@@ -317,7 +317,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 
     std::string name = named ? info[0].As<Napi::String>() : std::string();
 
-    const TypeInfo *type = ResolveType(instance, info[named]);
+    const TypeInfo *type = ResolveType(info[named]);
     if (!type)
         return env.Null();
     if (type->dispose) {
@@ -373,7 +373,7 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(instance, info[0]);
+    const TypeInfo *type = ResolveType(info[0]);
     if (!type)
         return env.Null();
 
@@ -425,7 +425,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 
     std::string name = named ? info[0].As<Napi::String>() : std::string("<anonymous>");
 
-    const TypeInfo *src = ResolveType(instance, info[named]);
+    const TypeInfo *src = ResolveType(info[named]);
     if (!src)
         return env.Null();
     if (src->primitive != PrimitiveKind::String &&
@@ -526,7 +526,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    const TypeInfo *ref = ResolveType(instance, info[0]);
+    const TypeInfo *ref = ResolveType(info[0]);
     int64_t len = (uint16_t)info[1].As<Napi::Number>().Int64Value();
 
     if (!ref)
@@ -606,7 +606,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
 
     func->name = DuplicateString(name.ToString().Utf8Value().c_str(), &instance->str_alloc).ptr;
 
-    func->ret.type = ResolveType(instance, ret);
+    func->ret.type = ResolveType(ret);
     if (!func->ret.type)
         return false;
     if (func->ret.type->primitive == PrimitiveKind::Array) {
@@ -633,7 +633,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
     for (uint32_t j = 0; j < parameters_len; j++) {
         ParameterInfo param = {};
 
-        param.type = ResolveType(instance, parameters[j], &param.directions);
+        param.type = ResolveType(parameters[j], &param.directions);
         if (!param.type)
             return false;
         if (param.type->primitive == PrimitiveKind::Void ||
@@ -719,14 +719,13 @@ static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
 static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(instance, info[0]);
+    const TypeInfo *type = ResolveType(info[0]);
     if (!type)
         return env.Null();
 
@@ -736,14 +735,13 @@ static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
 static Napi::Value GetTypeAlign(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(instance, info[0]);
+    const TypeInfo *type = ResolveType(info[0]);
     if (!type)
         return env.Null();
 
@@ -760,7 +758,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(instance, info[0]);
+    const TypeInfo *type = ResolveType(info[0]);
     if (!type)
         return env.Null();
 
@@ -922,7 +920,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
     for (Size i = func.parameters.len; i < (Size)info.Length(); i += 2) {
         ParameterInfo param = {};
 
-        param.type = ResolveType(instance, info[i], &param.directions);
+        param.type = ResolveType(info[i], &param.directions);
         if (RG_UNLIKELY(!param.type))
             return env.Null();
         if (RG_UNLIKELY(param.type->primitive == PrimitiveKind::Void ||
@@ -1227,7 +1225,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     Napi::Function func = info[0].As<Napi::Function>();
 
-    const TypeInfo *type = ResolveType(instance, info[1]);
+    const TypeInfo *type = ResolveType(info[1]);
     if (!type)
         return env.Null();
     if (type->primitive != PrimitiveKind::Callback) {

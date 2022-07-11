@@ -20,45 +20,20 @@
 
 namespace RG {
 
-const TypeInfo *ResolveType(InstanceData *instance, Napi::Value value, int *out_directions)
+const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
 {
+    Napi::Env env = value.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
     if (value.IsString()) {
         std::string str = value.As<Napi::String>();
-
-        Span<const char> remain = TrimStr(MakeSpan(str.c_str(), (Size)str.size()));
-        int indirect = 0;
-
-        while (StartsWith(remain, "const ")) {
-            remain = remain.Take(6, remain.len - 6);
-            remain = TrimStr(remain);
-        }
-        while (remain.len) {
-            if (remain[remain.len - 1] == '*') {
-                remain = remain.Take(0, remain.len - 1);
-                indirect++;
-            } else if (EndsWith(remain, " const")) {
-                remain = remain.Take(0, remain.len - 6);
-            } else {
-                break;
-            }
-            remain = TrimStr(remain);
-        }
-
-        const TypeInfo *type = instance->types_map.FindValue(remain, nullptr);
+        const TypeInfo *type = ResolveType(instance, str.c_str(), out_directions);
 
         if (!type) {
-            ThrowError<Napi::TypeError>(value.Env(), "Unknown type name '%1'", str.c_str());
+            ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str.c_str());
             return nullptr;
         }
 
-        if (indirect) {
-            type = MakePointerType(instance, type, indirect);
-            RG_ASSERT(type);
-        }
-
-        if (out_directions) {
-            *out_directions = 1;
-        }
         return type;
     } else if (CheckValueTag(instance, value, &TypeInfoMarker)) {
         Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
@@ -73,9 +48,70 @@ const TypeInfo *ResolveType(InstanceData *instance, Napi::Value value, int *out_
         }
         return type;
     } else {
-        ThrowError<Napi::TypeError>(value.Env(), "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
         return nullptr;
     }
+}
+
+const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str, int *out_directions)
+{
+    Span<const char> remain = TrimStr(str);
+
+    int indirect = 0;
+    bool dispose = false;
+
+    while (StartsWith(remain, "const ")) {
+        remain = remain.Take(6, remain.len - 6);
+        remain = TrimStr(remain);
+    }
+    if (remain.len && remain[remain.len - 1] == '!') {
+        dispose = true;
+
+        remain = remain.Take(0, remain.len - 1);
+        remain = TrimStr(remain);
+    }
+    while (remain.len) {
+        if (remain[remain.len - 1] == '*') {
+            remain = remain.Take(0, remain.len - 1);
+            indirect++;
+        } else if (EndsWith(remain, " const")) {
+            remain = remain.Take(0, remain.len - 6);
+        } else {
+            break;
+        }
+        remain = TrimStr(remain);
+    }
+
+    const TypeInfo *type = instance->types_map.FindValue(remain, nullptr);
+
+    if (!type)
+        return nullptr;
+
+    if (indirect) {
+        type = MakePointerType(instance, type, indirect);
+        RG_ASSERT(type);
+    }
+
+    if (dispose) {
+        if (type->primitive != PrimitiveKind::String &&
+                type->primitive != PrimitiveKind::String16 &&
+                indirect != 1)
+            return nullptr;
+
+        TypeInfo *copy = instance->types.AppendDefault();
+
+        memcpy((void *)copy, (const void *)type, RG_SIZE(*type));
+        copy->name = "<anonymous>";
+        copy->members.allocator = GetNullAllocator();
+        copy->dispose = [](Napi::Env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
+
+        type = copy;
+    }
+
+    if (out_directions) {
+        *out_directions = 1;
+    }
+    return type;
 }
 
 const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count)

@@ -143,93 +143,35 @@ void PrototypeParser::Tokenize(const char *str)
 
 const TypeInfo *PrototypeParser::ParseType()
 {
-    HeapArray<char> buf(&instance->str_alloc);
-
-    int indirect = 0;
-    bool dispose = false;
-
     Size start = offset;
-    while (offset < tokens.len && IsIdentifier(tokens[offset])) {
-        Span<const char> tok = tokens[offset++];
 
-        if (tok != "const") {
-            buf.Append(tok);
-            buf.Append(' ');
-        }
-    }
-    if (offset == start) {
-        if (offset < tokens.len) {
-            MarkError("Unexpected token '%1', expected type", tokens[offset]);
-        } else {
-            MarkError("Unexpected end of prototype, expected type");
-        }
+    if (offset >= tokens.len) {
+        MarkError("Unexpected end of prototype, expected type");
+        return instance->types_map.FindValue("void", nullptr);
+    } else if (!IsIdentifier(tokens[offset])) {
+        MarkError("Unexpected token '%1', expected type", tokens[offset]);
         return instance->types_map.FindValue("void", nullptr);
     }
-    while (offset < tokens.len && tokens[offset] == "*" && indirect < 4) {
-        offset++;
-        indirect++;
-    }
-    if (offset < tokens.len && tokens[offset] == "!") {
-        offset++;
-        dispose = true;
-    }
-    buf.ptr[--buf.len] = 0;
 
-    while (buf.len) {
-        const TypeInfo *type = instance->types_map.FindValue(buf.ptr, nullptr);
+    while (offset < tokens.len && (IsIdentifier(tokens[offset]) ||
+                                   tokens[offset] == '*')) {
+        offset++;
+    }
+    offset += (offset < tokens.len && tokens[offset] == "!");
+
+    while (offset >= start) {
+        Span<const char> str = MakeSpan(tokens[start].ptr, tokens[offset].end() - tokens[start].ptr);
+        const TypeInfo *type = ResolveType(instance, str);
 
         if (type) {
-            if (type->dispose && indirect) {
-                MarkError("Cannot create pointer to disposable type '%1'", type->name);
-                break;
-            }
-            if (type->dispose && dispose) {
-                MarkError("Cannot use disposable qualifier '!' with disposable type '%1'", type->name);
-                break;
-            }
-
-            if (indirect) {
-                type = MakePointerType(instance, type, indirect);
-                RG_ASSERT(type);
-            }
-
-            if (dispose) {
-                if (type->primitive != PrimitiveKind::String &&
-                        type->primitive != PrimitiveKind::String16 &&
-                        indirect != 1) {
-                    MarkError("Cannot use disposable qualifier '!' with type '%1'", type->name);
-                    break;
-                }
-
-                TypeInfo *copy = instance->types.AppendDefault();
-
-                memcpy((void *)copy, (const void *)type, RG_SIZE(*type));
-                copy->name = "<anonymous>";
-                copy->members.allocator = GetNullAllocator();
-                copy->dispose = [](Napi::Env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
-
-                type = copy;
-            }
-
+            offset++;
             return type;
         }
 
-        // Truncate last token
-        {
-            Span<const char> remain;
-            SplitStrReverse(buf, ' ', &remain);
-            buf.len = remain.len;
-            buf.ptr[buf.len] = 0;
-        }
-
-        if (indirect) {
-            offset -= indirect;
-            indirect = 0;
-        }
         offset--;
     }
 
-    MarkError("Unknown type '%1'", tokens[start]);
+    MarkError("Unknown or invalid type name '%1'", tokens[start]);
     return instance->types_map.FindValue("void", nullptr);
 }
 
