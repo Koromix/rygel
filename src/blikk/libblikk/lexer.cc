@@ -19,7 +19,7 @@
 
 namespace RG {
 
-static const HashMap<Span<const char>, bk_Token> KeywordsMap {
+static const HashMap<const char *, bk_Token> KeywordsMap {
     {"func", {bk_TokenKind::Func}},
     {"return", {bk_TokenKind::Return}},
     {"let", {bk_TokenKind::Let}},
