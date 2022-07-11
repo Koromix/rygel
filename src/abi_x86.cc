@@ -451,11 +451,6 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 {
     const TrampolineInfo &trampoline = instance->trampolines[idx];
 
-    if (RG_UNLIKELY(trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation)) {
-        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
-        return;
-    }
-
     const FunctionInfo *proto = trampoline.proto;
     Napi::Function func = trampoline.func.Value();
 
@@ -472,6 +467,11 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 #endif
     } else {
         out_reg->ret_pop = 0;
+    }
+
+    if (RG_UNLIKELY(trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation)) {
+        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
+        return;
     }
 
     LocalArray<napi_value, MaxParameters> arguments;
