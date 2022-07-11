@@ -2021,9 +2021,11 @@ public:
     Iterator<HashTable> end() { return Iterator<HashTable>(this, capacity); }
     Iterator<const HashTable> end() const { return Iterator<const HashTable>(this, capacity); }
 
-    ValueType *Find(const KeyType &key)
+    template <typename T = KeyType>
+    ValueType *Find(const T &key)
         { return (ValueType *)((const HashTable *)this)->Find(key); }
-    const ValueType *Find(const KeyType &key) const
+    template <typename T = KeyType>
+    const ValueType *Find(const T &key) const
     {
         if (!capacity)
             return nullptr;
@@ -2032,9 +2034,11 @@ public:
         Size idx = HashToIndex(hash);
         return Find(&idx, key);
     }
-    ValueType FindValue(const KeyType &key, const ValueType &default_value)
+    template <typename T = KeyType>
+    ValueType FindValue(const T &key, const ValueType &default_value)
         { return (ValueType)((const HashTable *)this)->FindValue(key, default_value); }
-    const ValueType FindValue(const KeyType &key, const ValueType &default_value) const
+    template <typename T = KeyType>
+    const ValueType FindValue(const T &key, const ValueType &default_value) const
     {
         const ValueType *it = Find(key);
         return it ? *it : default_value;
@@ -2105,7 +2109,8 @@ public:
         MarkEmpty(empty_idx);
         new (&data[empty_idx]) ValueType();
     }
-    void Remove(const KeyType &key) { Remove(Find(key)); }
+    template <typename T = KeyType>
+    void Remove(const T &key) { Remove(Find(key)); }
 
     void Trim()
     {
@@ -2127,9 +2132,11 @@ public:
     Size IsEmpty(Size idx) const { return IsEmpty(used, idx); }
 
 private:
-    ValueType *Find(Size *idx, const KeyType &key)
+    template <typename T = KeyType>
+    ValueType *Find(Size *idx, const T &key)
         { return (ValueType *)((const HashTable *)this)->Find(idx, key); }
-    const ValueType *Find(Size *idx, const KeyType &key) const
+    template <typename T = KeyType>
+    const ValueType *Find(Size *idx, const T &key) const
     {
 #if __cplusplus >= 201703L
         if constexpr(std::is_pointer<ValueType>::value) {
@@ -2342,6 +2349,16 @@ template <>
 class HashTraits<const char *> {
 public:
     // FNV-1a
+    static uint64_t Hash(Span<const char> key)
+    {
+        uint64_t hash = 0xCBF29CE484222325ull;
+        for (char c: key) {
+            hash ^= (uint64_t)c;
+            hash *= 0x100000001B3ull;
+        }
+
+        return hash;
+    }
     static uint64_t Hash(const char *key)
     {
         uint64_t hash = 0xCBF29CE484222325ull;
@@ -2354,6 +2371,7 @@ public:
     }
 
     static bool Test(const char *key1, const char *key2) { return !strcmp(key1, key2); }
+    static bool Test(const char *key1, Span<const char> key2) { return key2 == key1; }
 };
 
 template <>
@@ -2365,6 +2383,16 @@ public:
         uint64_t hash = 0xCBF29CE484222325ull;
         for (char c: key) {
             hash ^= (uint64_t)c;
+            hash *= 0x100000001B3ull;
+        }
+
+        return hash;
+    }
+    static uint64_t Hash(const char *key)
+    {
+        uint64_t hash = 0xCBF29CE484222325ull;
+        for (Size i = 0; key[i]; i++) {
+            hash ^= (uint64_t)key[i];
             hash *= 0x100000001B3ull;
         }
 
@@ -2382,9 +2410,11 @@ public:
             { return (KeyType)(value.KeyMember); } \
         static KeyType GetKey(const ValueType *value) \
             { return (KeyType)(value->KeyMember); } \
-        static uint64_t HashKey(KeyType key) \
+        template <typename TestKey> \
+        static uint64_t HashKey(TestKey key) \
             { return HashFunc(key); } \
-        static bool TestKeys(KeyType key1, KeyType key2) \
+        template <typename TestKey> \
+        static bool TestKeys(KeyType key1, TestKey key2) \
             { return TestFunc((key1), (key2)); } \
     }
 #define RG_HASHTABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
@@ -2421,16 +2451,20 @@ public:
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
 
-    ValueType *Find(const KeyType &key)
+    template <typename T = KeyType>
+    ValueType *Find(const T &key)
         { return (ValueType *)((const HashMap *)this)->Find(key); }
-    const ValueType *Find(const KeyType &key) const
+    template <typename T = KeyType>
+    const ValueType *Find(const T &key) const
     {
         const Bucket *table_it = table.Find(key);
         return table_it ? &table_it->value : nullptr;
     }
-    ValueType FindValue(const KeyType &key, const ValueType &default_value)
+    template <typename T = KeyType>
+    ValueType FindValue(const T &key, const ValueType &default_value)
         { return (ValueType)((const HashMap *)this)->FindValue(key, default_value); }
-    const ValueType FindValue(const KeyType &key, const ValueType &default_value) const
+    template <typename T = KeyType>
+    const ValueType FindValue(const T &key, const ValueType &default_value) const
     {
         const ValueType *it = Find(key);
         return it ? *it : default_value;
@@ -2463,6 +2497,7 @@ public:
             return;
         table.Remove((Bucket *)((uint8_t *)it - RG_OFFSET_OF(Bucket, value)));
     }
+    template <typename T = KeyType>
     void Remove(const KeyType &key) { Remove(Find(key)); }
 
     void Trim() { table.Trim(); }
@@ -2494,18 +2529,23 @@ public:
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
 
-    ValueType *Find(const ValueType &value) { return table.Find(value); }
-    const ValueType *Find(const ValueType &value) const { return table.Find(value); }
-    ValueType FindValue(const ValueType &value, const ValueType &default_value)
+    template <typename T = ValueType>
+    ValueType *Find(const T &value) { return table.Find(value); }
+    template <typename T = ValueType>
+    const ValueType *Find(const T &value) const { return table.Find(value); }
+    template <typename T = ValueType>
+    ValueType FindValue(const T &value, const ValueType &default_value)
         { return table.FindValue(value, default_value); }
-    const ValueType FindValue(const ValueType &value, const ValueType &default_value) const
+    template <typename T = ValueType>
+    const ValueType FindValue(const T &value, const ValueType &default_value) const
         { return table.FindValue(value, default_value); }
 
     ValueType *Set(const ValueType &value) { return table.Set(value); }
     std::pair<ValueType *, bool> TrySet(const ValueType &value) { return table.TrySet(value); }
 
     void Remove(ValueType *it) { table.Remove(it); }
-    void Remove(const ValueType &value) { Remove(Find(value)); }
+    template <typename T = ValueType>
+    void Remove(const T &value) { Remove(Find(value)); }
 
     void Trim() { table.Trim(); }
 };
@@ -3364,6 +3404,8 @@ static inline bool TestStr(Span<const char> str1, const char *str2)
     }
     return (i == str1.len) && !str2[i];
 }
+static inline bool TestStr(const char *str1, Span<const char> str2)
+    { return TestStr(str2, str1); }
 static inline bool TestStr(const char *str1, const char *str2)
     { return !strcmp(str1, str2); }
 
@@ -3393,6 +3435,8 @@ static inline bool TestStrI(Span<const char> str1, const char *str2)
     }
     return (i == str1.len) && !str2[i];
 }
+static inline bool TestStrI(const char *str1, Span<const char> str2)
+    { return TestStr(str2, str1); }
 static inline bool TestStrI(const char *str1, const char *str2)
 {
     Size i = 0;
@@ -3432,6 +3476,8 @@ static inline int CmpStr(Span<const char> str1, const char *str2)
         return str1[i];
     }
 }
+static inline int CmpStr(const char *str1, Span<const char> str2)
+    { return -CmpStr(str2, str1); }
 static inline int CmpStr(const char *str1, const char *str2)
     { return strcmp(str1, str2); }
 
