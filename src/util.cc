@@ -20,16 +20,40 @@
 
 namespace RG {
 
-const TypeInfo *ResolveType(const InstanceData *instance, Napi::Value value, int *out_directions)
+const TypeInfo *ResolveType(InstanceData *instance, Napi::Value value, int *out_directions)
 {
     if (value.IsString()) {
         std::string str = value.As<Napi::String>();
 
-        const TypeInfo *type = instance->types_map.FindValue(str.c_str(), nullptr);
+        Span<const char> remain = TrimStr(MakeSpan(str.c_str(), (Size)str.size()));
+        int indirect = 0;
+
+        while (StartsWith(remain, "const ")) {
+            remain = remain.Take(6, remain.len - 6);
+            remain = TrimStr(remain);
+        }
+        while (remain.len) {
+            if (remain[remain.len - 1] == '*') {
+                remain = remain.Take(0, remain.len - 1);
+                indirect++;
+            } else if (EndsWith(remain, " const")) {
+                remain = remain.Take(0, remain.len - 6);
+            } else {
+                break;
+            }
+            remain = TrimStr(remain);
+        }
+
+        const TypeInfo *type = instance->types_map.FindValue(remain, nullptr);
 
         if (!type) {
             ThrowError<Napi::TypeError>(value.Env(), "Unknown type name '%1'", str.c_str());
             return nullptr;
+        }
+
+        if (indirect) {
+            type = MakePointerType(instance, type, indirect);
+            RG_ASSERT(type);
         }
 
         if (out_directions) {

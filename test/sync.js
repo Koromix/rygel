@@ -64,7 +64,7 @@ const BFG = koffi.struct('BFG', {
     a: 'int8_t',
     b: 'int64_t',
     c: 'char',
-    d: 'str',
+    d: 'const char *',
     e: 'short',
     inner: koffi.struct({
         f: 'float',
@@ -75,7 +75,7 @@ const PackedBFG = koffi.pack('PackedBFG', {
     a: 'int8_t',
     b: 'int64_t',
     c: 'char',
-    d: 'str',
+    d: 'char *',
     e: 'short',
     inner: koffi.pack({
         f: 'float',
