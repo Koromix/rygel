@@ -36,7 +36,7 @@ namespace RG {
 static Config config;
 static Size profile_idx = 0;
 
-static HWND hwnd;
+static HWND main_hwnd;
 static NOTIFYICONDATAA notify;
 static HHOOK hook;
 static HANDLE toggle;
@@ -54,7 +54,7 @@ static void ShowAboutDialog()
     const wchar_t *content = LR"(<a href="https://koromix.dev/misc#meestic">https://koromix.dev/</a>)";
 
     dialog.cbSize = RG_SIZE(dialog);
-    dialog.hwndParent = hwnd;
+    dialog.hwndParent = main_hwnd;
     dialog.hInstance = module;
     dialog.dwCommonButtons = TDCBF_OK_BUTTON;
     dialog.pszWindowTitle = title;
@@ -69,7 +69,7 @@ static void ShowAboutDialog()
             ShellExecuteW(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
 
             // Close the dialog by simulating a button click
-            PostMessageW(hwnd, TDM_CLICK_BUTTON, IDOK, 0);
+            PostMessageW(main_hwnd, TDM_CLICK_BUTTON, IDOK, 0);
         }
 
         return (HRESULT)S_OK;
@@ -154,7 +154,7 @@ static LRESULT __stdcall LowLevelKeyboardProc(int code, WPARAM wparam, LPARAM lp
     return CallNextHookEx(hook, code, wparam, lparam);
 }
 
-static LRESULT __stdcall MainWindowProc(HWND, UINT msg, WPARAM wparam, LPARAM lparam)
+static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     static UINT taskbar_created = RegisterWindowMessageA("TaskbarCreated");
 
@@ -328,13 +328,13 @@ Options:
     RG_DEFER { UnregisterClassA(cls_name, module); };
 
     // Create hidden window
-    hwnd = CreateWindowExA(0, cls_name, win_name, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-                           CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, module, nullptr);
-    if (!hwnd) {
-        LogError("Failed to create window named '%1': %2", win_name, GetWin32ErrorString());
+    main_hwnd = CreateWindowExA(0, cls_name, win_name, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+                                CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, module, nullptr);
+    if (!main_hwnd) {
+        LogError("Failed to create window named '%1': %2", win_name, GetLastError(), GetWin32ErrorString());
         return 1;
     }
-    RG_DEFER { DestroyWindow(hwnd); };
+    RG_DEFER { DestroyWindow(main_hwnd); };
 
     // We want to intercept Fn+F8, and this is not possible with RegisterHotKey because
     // it is not mapped to a virtual key. We want the raw scan code.
@@ -350,11 +350,11 @@ Options:
     };
 
     // Unfortunately, Windows sometimes disconnects our hook for no good reason
-    if (!SetTimer(hwnd, WM_APP_REHOOK, 30000, nullptr)) {
+    if (!SetTimer(main_hwnd, WM_APP_REHOOK, 30000, nullptr)) {
         LogError("Failed to create Win32 timer: %1", GetWin32ErrorString());
         return 1;
     }
-    RG_DEFER { KillTimer(hwnd, WM_APP_REHOOK); };
+    RG_DEFER { KillTimer(main_hwnd, WM_APP_REHOOK); };
 
     toggle = CreateEvent(nullptr, TRUE, FALSE, nullptr);
     if (!toggle) {
@@ -366,7 +366,7 @@ Options:
     // Create tray icon
     {
         notify.cbSize = RG_SIZE(notify);
-        notify.hWnd = hwnd;
+        notify.hWnd = main_hwnd;
         notify.uID = 0xA56B96F2u;
         notify.hIcon = LoadIcon(module, MAKEINTRESOURCE(1));
         notify.uCallbackMessage = WM_APP_TRAY;
