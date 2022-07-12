@@ -82,6 +82,7 @@ const PackedBFG = koffi.pack('PackedBFG', {
         g: 'double'
     })
 });
+const AliasBFG = koffi.alias('AliasBFG', PackedBFG);
 
 const FixedString = koffi.struct('FixedString', {
     buf: koffi.array('int8', 64)
@@ -158,7 +159,7 @@ async function test() {
     const ConcatenateToStr4 = lib.func('ConcatenateToStr4', 'str', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', {i: 'int32_t', j: 'int32_t', k: 'int32_t'})), 'int32_t']);
     const ConcatenateToStr8 = lib.func('ConcatenateToStr8', 'str', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
     const MakeBFG = lib.func('BFG __stdcall MakeBFG(_Out_ BFG *p, int x, double y, const char *str)');
-    const MakePackedBFG = lib.func('PackedBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
+    const MakePackedBFG = lib.func('AliasBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const ReturnBigString = process.platform == 'win32' ?
                             lib.stdcall(1, koffi.disposable('str', koffi.free), ['str']) :
                             lib.func('const char * __stdcall ReturnBigString(const char *str)');

@@ -716,6 +716,40 @@ static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
     return external;
 }
 
+static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+    if (!info[0].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    std::string name = info[0].As<Napi::String>();
+    const char *alias = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+
+    const TypeInfo *type = ResolveType(info[1]);
+    if (!type)
+        return env.Null();
+
+    std::pair<const TypeInfo **, bool> ret = instance->types_map.TrySet(alias, type);
+
+    if (!ret.second) {
+        ThrowError<Napi::Error>(env, "Type name '%1' already exists", alias);
+        return env.Null();
+    }
+
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
+}
+
 static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -1473,6 +1507,7 @@ static void SetExports(Napi::Env env, Func func)
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("array", Napi::Function::New(env, CreateArrayType));
     func("callback", Napi::Function::New(env, CreateCallbackType));
+    func("alias", Napi::Function::New(env, CreateTypeAlias));
 
     func("sizeof", Napi::Function::New(env, GetTypeSize));
     func("alignof", Napi::Function::New(env, GetTypeAlign));
