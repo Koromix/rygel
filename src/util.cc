@@ -118,15 +118,6 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 {
     RG_ASSERT(count >= 1);
 
-    // Special cases
-    if (TestStr(ref->name, "char")) {
-        ref = instance->types_map.FindValue("str", nullptr);
-        count--;
-    } else if (TestStr(ref->name, "char16") || TestStr(ref->name, "char16_t")) {
-        ref = instance->types_map.FindValue("str16", nullptr);
-        count--;
-    }
-
     for (int i = 0; i < count; i++) {
         char name_buf[256];
         Fmt(name_buf, "%1%2*", ref->name, ref->primitive == PrimitiveKind::Pointer ? "" : " ");

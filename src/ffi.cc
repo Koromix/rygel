@@ -1327,21 +1327,24 @@ void LibraryHolder::Unref() const
     }
 }
 
-static void RegisterPrimitiveType(InstanceData *instance, const char *name, PrimitiveKind primitive,
-                                  int16_t size, int16_t align)
+static void RegisterPrimitiveType(InstanceData *instance, Span<const char *const> names,
+                                  PrimitiveKind primitive, int16_t size, int16_t align)
 {
+    RG_ASSERT(names.len > 0);
     RG_ASSERT(align <= size);
 
     TypeInfo *type = instance->types.AppendDefault();
 
-    type->name = name;
+    type->name = names[0];
 
     type->primitive = primitive;
     type->size = size;
     type->align = align;
 
-    RG_ASSERT(!instance->types_map.Find(name));
-    instance->types_map.Set(type->name, type);
+    for (const char *name: names) {
+        std::pair<const TypeInfo **, bool> ret = instance->types_map.TrySet(name, type);
+        RG_ASSERT(ret.second);
+    }
 }
 
 template <typename T>
@@ -1363,55 +1366,34 @@ static Napi::Object InitBaseTypes(Napi::Env env)
 
     RG_ASSERT(!instance->types.len);
 
-    RegisterPrimitiveType(instance, "void", PrimitiveKind::Void, 0, 0);
-    RegisterPrimitiveType(instance, "void *", PrimitiveKind::Pointer, RG_SIZE(void *), alignof(void *));
-    RegisterPrimitiveType(instance, "bool", PrimitiveKind::Bool, RG_SIZE(bool), alignof(bool));
-    RegisterPrimitiveType(instance, "int8", PrimitiveKind::Int8, 1, 1);
-    RegisterPrimitiveType(instance, "int8_t", PrimitiveKind::Int8, 1, 1);
-    RegisterPrimitiveType(instance, "uint8", PrimitiveKind::UInt8, 1, 1);
-    RegisterPrimitiveType(instance, "uint8_t", PrimitiveKind::UInt8, 1, 1);
-    RegisterPrimitiveType(instance, "char", PrimitiveKind::Int8, 1, 1);
-    RegisterPrimitiveType(instance, "uchar", PrimitiveKind::UInt8, 1, 1);
-    RegisterPrimitiveType(instance, "unsigned char", PrimitiveKind::UInt8, 1, 1);
-    RegisterPrimitiveType(instance, "char16", PrimitiveKind::Int16, 2, 2);
-    RegisterPrimitiveType(instance, "char16_t", PrimitiveKind::Int16, 2, 2);
-    RegisterPrimitiveType(instance, "int16", PrimitiveKind::Int16, 2, 2);
-    RegisterPrimitiveType(instance, "int16_t", PrimitiveKind::Int16, 2, 2);
-    RegisterPrimitiveType(instance, "uint16", PrimitiveKind::UInt16, 2, 2);
-    RegisterPrimitiveType(instance, "uint16_t", PrimitiveKind::UInt16, 2, 2);
-    RegisterPrimitiveType(instance, "short", PrimitiveKind::Int16, 2, 2);
-    RegisterPrimitiveType(instance, "ushort", PrimitiveKind::UInt16, 2, 2);
-    RegisterPrimitiveType(instance, "unsigned short", PrimitiveKind::UInt16, 2, 2);
-    RegisterPrimitiveType(instance, "int32", PrimitiveKind::Int32, 4, 4);
-    RegisterPrimitiveType(instance, "int32_t", PrimitiveKind::Int32, 4, 4);
-    RegisterPrimitiveType(instance, "uint32", PrimitiveKind::UInt32, 4, 4);
-    RegisterPrimitiveType(instance, "uint32_t", PrimitiveKind::UInt32, 4, 4);
-    RegisterPrimitiveType(instance, "int", PrimitiveKind::Int32, 4, 4);
-    RegisterPrimitiveType(instance, "uint", PrimitiveKind::UInt32, 4, 4);
-    RegisterPrimitiveType(instance, "unsigned int", PrimitiveKind::UInt32, 4, 4);
-    RegisterPrimitiveType(instance, "int64", PrimitiveKind::Int64, 8, alignof(int64_t));
-    RegisterPrimitiveType(instance, "int64_t", PrimitiveKind::Int64, 8, alignof(int64_t));
-    RegisterPrimitiveType(instance, "uint64", PrimitiveKind::UInt64, 8, alignof(int64_t));
-    RegisterPrimitiveType(instance, "uint64_t", PrimitiveKind::UInt64, 8, alignof(int64_t));
-    RegisterPrimitiveType(instance, "intptr", GetIntegerPrimitive<intptr_t>(true), RG_SIZE(intptr_t), alignof(intptr_t));
-    RegisterPrimitiveType(instance, "intptr_t", GetIntegerPrimitive<intptr_t>(true), RG_SIZE(intptr_t), alignof(intptr_t));
-    RegisterPrimitiveType(instance, "uintptr", GetIntegerPrimitive<intptr_t>(false), RG_SIZE(intptr_t), alignof(intptr_t));
-    RegisterPrimitiveType(instance, "uintptr_t", GetIntegerPrimitive<intptr_t>(false), RG_SIZE(intptr_t), alignof(intptr_t));
-    RegisterPrimitiveType(instance, "long", GetIntegerPrimitive<long>(true), RG_SIZE(long), alignof(long));
-    RegisterPrimitiveType(instance, "ulong", GetIntegerPrimitive<long>(false), RG_SIZE(long), alignof(long));
-    RegisterPrimitiveType(instance, "unsigned long", GetIntegerPrimitive<long>(false), RG_SIZE(long), alignof(long));
-    RegisterPrimitiveType(instance, "longlong", PrimitiveKind::Int64, RG_SIZE(int64_t), alignof(int64_t));
-    RegisterPrimitiveType(instance, "long long", PrimitiveKind::Int64, RG_SIZE(int64_t), alignof(int64_t));
-    RegisterPrimitiveType(instance, "ulonglong", PrimitiveKind::UInt64, RG_SIZE(uint64_t), alignof(uint64_t));
-    RegisterPrimitiveType(instance, "unsigned long long", PrimitiveKind::UInt64, RG_SIZE(uint64_t), alignof(uint64_t));
-    RegisterPrimitiveType(instance, "float32", PrimitiveKind::Float32, 4, alignof(float));
-    RegisterPrimitiveType(instance, "float64", PrimitiveKind::Float64, 8, alignof(double));
-    RegisterPrimitiveType(instance, "float", PrimitiveKind::Float32, 4, alignof(float));
-    RegisterPrimitiveType(instance, "double", PrimitiveKind::Float64, 8, alignof(double));
-    RegisterPrimitiveType(instance, "string", PrimitiveKind::String, RG_SIZE(void *), alignof(void *));
-    RegisterPrimitiveType(instance, "string16", PrimitiveKind::String16, RG_SIZE(void *), alignof(void *));
-    RegisterPrimitiveType(instance, "str", PrimitiveKind::String, RG_SIZE(void *), alignof(void *));
-    RegisterPrimitiveType(instance, "str16", PrimitiveKind::String16, RG_SIZE(void *), alignof(void *));
+    RegisterPrimitiveType(instance, {"void"}, PrimitiveKind::Void, 0, 0);
+    RegisterPrimitiveType(instance, {"void *"}, PrimitiveKind::Pointer, RG_SIZE(void *), alignof(void *));
+    RegisterPrimitiveType(instance, {"bool"}, PrimitiveKind::Bool, RG_SIZE(bool), alignof(bool));
+    RegisterPrimitiveType(instance, {"int8_t", "int8"}, PrimitiveKind::Int8, 1, 1);
+    RegisterPrimitiveType(instance, {"uint8_t", "uint8"}, PrimitiveKind::UInt8, 1, 1);
+    RegisterPrimitiveType(instance, {"char"}, PrimitiveKind::Int8, 1, 1);
+    RegisterPrimitiveType(instance, {"unsigned char", "uchar"}, PrimitiveKind::UInt8, 1, 1);
+    RegisterPrimitiveType(instance, {"char16_t", "char16"}, PrimitiveKind::Int16, 2, 2);
+    RegisterPrimitiveType(instance, {"int16_t", "int16"}, PrimitiveKind::Int16, 2, 2);
+    RegisterPrimitiveType(instance, {"uint16_t", "uint16"}, PrimitiveKind::UInt16, 2, 2);
+    RegisterPrimitiveType(instance, {"short"}, PrimitiveKind::Int16, 2, 2);
+    RegisterPrimitiveType(instance, {"unsigned short", "ushort"}, PrimitiveKind::UInt16, 2, 2);
+    RegisterPrimitiveType(instance, {"int32_t", "int32"}, PrimitiveKind::Int32, 4, 4);
+    RegisterPrimitiveType(instance, {"uint32_t", "uint32"}, PrimitiveKind::UInt32, 4, 4);
+    RegisterPrimitiveType(instance, {"int"}, PrimitiveKind::Int32, 4, 4);
+    RegisterPrimitiveType(instance, {"unsigned int", "uint"}, PrimitiveKind::UInt32, 4, 4);
+    RegisterPrimitiveType(instance, {"int64_t", "int64"}, PrimitiveKind::Int64, 8, alignof(int64_t));
+    RegisterPrimitiveType(instance, {"uint64_t", "uint64"}, PrimitiveKind::UInt64, 8, alignof(int64_t));
+    RegisterPrimitiveType(instance, {"intptr_t", "intptr"}, GetIntegerPrimitive<intptr_t>(true), RG_SIZE(intptr_t), alignof(intptr_t));
+    RegisterPrimitiveType(instance, {"uintptr_t", "uintptr"}, GetIntegerPrimitive<intptr_t>(false), RG_SIZE(intptr_t), alignof(intptr_t));
+    RegisterPrimitiveType(instance, {"long"}, GetIntegerPrimitive<long>(true), RG_SIZE(long), alignof(long));
+    RegisterPrimitiveType(instance, {"unsigned long", "ulong"}, GetIntegerPrimitive<long>(false), RG_SIZE(long), alignof(long));
+    RegisterPrimitiveType(instance, {"long long", "longlong"}, PrimitiveKind::Int64, RG_SIZE(int64_t), alignof(int64_t));
+    RegisterPrimitiveType(instance, {"unsigned long long", "ulonglong"}, PrimitiveKind::UInt64, RG_SIZE(uint64_t), alignof(uint64_t));
+    RegisterPrimitiveType(instance, {"float", "float32"}, PrimitiveKind::Float32, 4, alignof(float));
+    RegisterPrimitiveType(instance, {"double", "float64"}, PrimitiveKind::Float64, 8, alignof(double));
+    RegisterPrimitiveType(instance, {"char *", "str", "string"}, PrimitiveKind::String, RG_SIZE(void *), alignof(void *));
+    RegisterPrimitiveType(instance, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, RG_SIZE(void *), alignof(void *));
 
     Napi::Object types = Napi::Object::New(env);
     for (TypeInfo &type: instance->types) {
