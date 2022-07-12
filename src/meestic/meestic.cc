@@ -29,7 +29,7 @@ int Main(int argc, char **argv)
 Options:
     %!..+-m, --mode <mode>%!0            Set light mode (see below)
                                  %!D..(default: %2)%!0
-    %!..+-s, --speed <speed>%!0          Set change of speed, from 0 and 2
+    %!..+-s, --speed <speed>%!0          Set speed of change, from 0 and 2
                                  %!D..(default: %3)%!0
     %!..+-i, --intensity <intensity>%!0  Set light intensity, from 0 to 10
                                  %!D..(default: %4)%!0
