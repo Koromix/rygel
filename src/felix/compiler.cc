@@ -303,7 +303,7 @@ public:
             return false;
         }
         if (lld_ver < 110000 && (features & (int)CompileFeature::ShuffleCode)) {
-            LogError("ShuffleCode requires LLD >= 11, try --host option (e.g. --host=,clang-11 or --host=,clang-11,lld-11)");
+            LogError("ShuffleCode requires LLD >= 11, try --host option (e.g. --host=,clang-11,lld-11)");
             return false;
         }
 
