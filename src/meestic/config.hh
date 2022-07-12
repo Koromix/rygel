@@ -36,6 +36,13 @@ struct Config {
     BlockAllocator str_alloc;
 };
 
+struct PredefinedColor {
+    const char *name;
+    RgbColor rgb;
+};
+
+extern const Span<const PredefinedColor> PredefinedColors;
+
 bool LoadConfig(StreamReader *st, Config *out_config);
 bool LoadConfig(const char *filename, Config *out_config);
 

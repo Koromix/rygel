@@ -17,6 +17,34 @@
 
 namespace RG {
 
+static const PredefinedColor ColorTable[] = {
+    {"LightGray",  {200, 200, 200}},
+    {"Gray",       {130, 130, 130}},
+    {"DarkDray",   {80, 80, 80}},
+    {"Yellow",     {253, 249, 0}},
+    {"Gold",       {255, 203, 0}},
+    {"Orange",     {255, 161, 0}},
+    {"Pink",       {255, 109, 194}},
+    {"Red",        {230, 41, 55}},
+    {"Maroon",     {190, 33, 55}},
+    {"Green",      {0, 228, 48}},
+    {"Lime",       {0, 158, 47}},
+    {"DarkGreen",  {0, 117, 44}},
+    {"MsiBlue",    {29, 191, 255}},
+    {"SkyBlue",    {102, 191, 255}},
+    {"Blue",       {0, 121, 241}},
+    {"DarkBlue",   {0, 82, 172}},
+    {"Purple",     {200, 122, 255}},
+    {"Violet",     {135, 60, 190}},
+    {"DarkPurple", {112, 31, 126}},
+    {"Beige",      {211, 176, 131}},
+    {"Brown",      {127, 106, 79}},
+    {"DarkBrown",  {76, 63, 47}},
+    {"White",      {255, 255, 255}},
+    {"Magenta",    {255, 0, 255}}
+};
+const Span<const PredefinedColor> PredefinedColors = ColorTable;
+
 bool LoadConfig(StreamReader *st, Config *out_config)
 {
     Config config;
@@ -144,39 +172,13 @@ static inline int ParseHexadecimalChar(char c)
 
 bool ParseColor(Span<const char> str, RgbColor *out_color)
 {
-    static const HashMap<Span<const char>, RgbColor> PredefinedColors {
-        {"LightGray",  {200, 200, 200}},
-        {"Gray",       {130, 130, 130}},
-        {"DarkDray",   {80, 80, 80}},
-        {"Yellow",     {253, 249, 0}},
-        {"Gold",       {255, 203, 0}},
-        {"Orange",     {255, 161, 0}},
-        {"Pink",       {255, 109, 194}},
-        {"Red",        {230, 41, 55}},
-        {"Maroon",     {190, 33, 55}},
-        {"Green",      {0, 228, 48}},
-        {"Lime",       {0, 158, 47}},
-        {"DarkGreen",  {0, 117, 44}},
-        {"MsiBlue",    {29, 191, 255}},
-        {"SkyBlue",    {102, 191, 255}},
-        {"Blue",       {0, 121, 241}},
-        {"DarkBlue",   {0, 82, 172}},
-        {"Purple",     {200, 122, 255}},
-        {"Violet",     {135, 60, 190}},
-        {"DarkPurple", {112, 31, 126}},
-        {"Beige",      {211, 176, 131}},
-        {"Brown",      {127, 106, 79}},
-        {"DarkBrown",  {76, 63, 47}},
-        {"White",      {255, 255, 255}},
-        {"Magenta",    {255, 0, 255}}
-    };
-
     // Try predefined colors first
     {
-        const RgbColor *color = PredefinedColors.Find(str);
+        const PredefinedColor *color = std::find_if(PredefinedColors.begin(), PredefinedColors.end(),
+                                                    [&](const PredefinedColor &color) { return TestStr(color.name, str); });
 
-        if (color) {
-            *out_color = *color;
+        if (color != PredefinedColors.end()) {
+            *out_color = color->rgb;
             return true;
         }
     }

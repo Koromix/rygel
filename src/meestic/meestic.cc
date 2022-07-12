@@ -43,6 +43,13 @@ A few predefined color names can be used (such as MsiBlue), or you can use
 hexadecimal RGB color codes. Don't forget the quotes or your shell may not
 like the hash character.
 
+Predefined color names:)");
+        for (const PredefinedColor &color: PredefinedColors) {
+            PrintLn(fp, "    %!..+%1%!0  %!D..#%2%3%4%!0", FmtArg(color.name).Pad(27), FmtHex(color.rgb.red).Pad0(-2),
+                                                                                       FmtHex(color.rgb.green).Pad0(-2),
+                                                                                       FmtHex(color.rgb.blue).Pad0(-2));
+        };
+        PrintLn(fp, R"(
 Examples:
     Disable lighting
     %!..+%1 -m Disabled%!0

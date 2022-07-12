@@ -50,4 +50,6 @@ meestic -m Breathe -s 0 "#FFA100" MsiBlue
 meestic -m Transition -s 2 Magenta Orange MsiBlue
 ```
 
+Use `meestic --help` for a list of available options.
+
 Be careful, color names and most options are **case-sensitive**.
