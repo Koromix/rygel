@@ -55,7 +55,7 @@ const Rectangle = koffi.struct('Rectangle', {
 });
 
 const Texture = koffi.struct('Texture', {
-    id: 'uint',
+    id: 'unsigned  int', // Extra space is on purpose, leave it!
     width: 'int',
     height: 'int',
     mipmaps: 'int',

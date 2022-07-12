@@ -84,8 +84,28 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str, int *o
 
     const TypeInfo *type = instance->types_map.FindValue(remain, nullptr);
 
-    if (!type)
-        return nullptr;
+    if (!type) {
+        // Try with cleaned up spaces
+        if (remain.len < 256) {
+            LocalArray<char, 256> buf;
+            for (Size i = 0; i < remain.len; i++) {
+                char c = remain[i];
+
+                if (IsAsciiWhite(c)) {
+                    buf.Append(' ');
+                    while (++i < remain.len && IsAsciiWhite(remain[i]));
+                    i--;
+                } else {
+                    buf.Append(c);
+                }
+            }
+
+            type = instance->types_map.FindValue(buf, nullptr);
+        }
+
+        if (!type)
+            return nullptr;
+    }
 
     if (indirect) {
         type = MakePointerType(instance, type, indirect);
