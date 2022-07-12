@@ -67,7 +67,9 @@
 #include "mbedtls/pk.h"
 #include "mbedtls/pkcs12.h"
 #include "mbedtls/pkcs5.h"
+#if defined(MBEDTLS_HAVE_TIME)
 #include "mbedtls/platform_time.h"
+#endif
 #include "mbedtls/platform_util.h"
 #include "mbedtls/poly1305.h"
 #include "mbedtls/ripemd160.h"
@@ -189,6 +191,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_PLATFORM_NO_STD_FUNCTIONS */
+
+#if defined(MBEDTLS_PLATFORM_SETBUF_ALT)
+    if( strcmp( "MBEDTLS_PLATFORM_SETBUF_ALT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PLATFORM_SETBUF_ALT );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PLATFORM_SETBUF_ALT */
 
 #if defined(MBEDTLS_PLATFORM_EXIT_ALT)
     if( strcmp( "MBEDTLS_PLATFORM_EXIT_ALT", config ) == 0 )
@@ -1862,6 +1872,22 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_SHA256_C */
 
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT)
+    if( strcmp( "MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT */
+
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
+    if( strcmp( "MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY */
+
 #if defined(MBEDTLS_SHA384_C)
     if( strcmp( "MBEDTLS_SHA384_C", config ) == 0 )
     {
@@ -1877,6 +1903,22 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SHA512_C */
+
+#if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT)
+    if( strcmp( "MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT */
+
+#if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY)
+    if( strcmp( "MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY */
 
 #if defined(MBEDTLS_SSL_CACHE_C)
     if( strcmp( "MBEDTLS_SSL_CACHE_C", config ) == 0 )
@@ -2005,6 +2047,38 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_X509_CSR_WRITE_C */
+
+#if defined(MBEDTLS_CONFIG_FILE)
+    if( strcmp( "MBEDTLS_CONFIG_FILE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_CONFIG_FILE );
+        return( 0 );
+    }
+#endif /* MBEDTLS_CONFIG_FILE */
+
+#if defined(MBEDTLS_USER_CONFIG_FILE)
+    if( strcmp( "MBEDTLS_USER_CONFIG_FILE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_USER_CONFIG_FILE );
+        return( 0 );
+    }
+#endif /* MBEDTLS_USER_CONFIG_FILE */
+
+#if defined(MBEDTLS_PSA_CRYPTO_CONFIG_FILE)
+    if( strcmp( "MBEDTLS_PSA_CRYPTO_CONFIG_FILE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_CONFIG_FILE );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_CRYPTO_CONFIG_FILE */
+
+#if defined(MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE)
+    if( strcmp( "MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE */
 
 #if defined(MBEDTLS_MPI_WINDOW_SIZE)
     if( strcmp( "MBEDTLS_MPI_WINDOW_SIZE", config ) == 0 )
@@ -2166,6 +2240,14 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_PLATFORM_STD_FREE */
 
+#if defined(MBEDTLS_PLATFORM_STD_SETBUF)
+    if( strcmp( "MBEDTLS_PLATFORM_STD_SETBUF", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PLATFORM_STD_SETBUF );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PLATFORM_STD_SETBUF */
+
 #if defined(MBEDTLS_PLATFORM_STD_EXIT)
     if( strcmp( "MBEDTLS_PLATFORM_STD_EXIT", config ) == 0 )
     {
@@ -2269,6 +2351,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_PLATFORM_EXIT_MACRO */
+
+#if defined(MBEDTLS_PLATFORM_SETBUF_MACRO)
+    if( strcmp( "MBEDTLS_PLATFORM_SETBUF_MACRO", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PLATFORM_SETBUF_MACRO );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PLATFORM_SETBUF_MACRO */
 
 #if defined(MBEDTLS_PLATFORM_TIME_MACRO)
     if( strcmp( "MBEDTLS_PLATFORM_TIME_MACRO", config ) == 0 )
@@ -2535,6 +2625,10 @@ void list_config( void )
 #if defined(MBEDTLS_PLATFORM_NO_STD_FUNCTIONS)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PLATFORM_NO_STD_FUNCTIONS);
 #endif /* MBEDTLS_PLATFORM_NO_STD_FUNCTIONS */
+
+#if defined(MBEDTLS_PLATFORM_SETBUF_ALT)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PLATFORM_SETBUF_ALT);
+#endif /* MBEDTLS_PLATFORM_SETBUF_ALT */
 
 #if defined(MBEDTLS_PLATFORM_EXIT_ALT)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PLATFORM_EXIT_ALT);
@@ -3372,6 +3466,14 @@ void list_config( void )
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SHA256_C);
 #endif /* MBEDTLS_SHA256_C */
 
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT);
+#endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT */
+
+#if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY);
+#endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY */
+
 #if defined(MBEDTLS_SHA384_C)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SHA384_C);
 #endif /* MBEDTLS_SHA384_C */
@@ -3379,6 +3481,14 @@ void list_config( void )
 #if defined(MBEDTLS_SHA512_C)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SHA512_C);
 #endif /* MBEDTLS_SHA512_C */
+
+#if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT);
+#endif /* MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT */
+
+#if defined(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY);
+#endif /* MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY */
 
 #if defined(MBEDTLS_SSL_CACHE_C)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_CACHE_C);
@@ -3443,6 +3553,22 @@ void list_config( void )
 #if defined(MBEDTLS_X509_CSR_WRITE_C)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_X509_CSR_WRITE_C);
 #endif /* MBEDTLS_X509_CSR_WRITE_C */
+
+#if defined(MBEDTLS_CONFIG_FILE)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_CONFIG_FILE);
+#endif /* MBEDTLS_CONFIG_FILE */
+
+#if defined(MBEDTLS_USER_CONFIG_FILE)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_USER_CONFIG_FILE);
+#endif /* MBEDTLS_USER_CONFIG_FILE */
+
+#if defined(MBEDTLS_PSA_CRYPTO_CONFIG_FILE)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PSA_CRYPTO_CONFIG_FILE);
+#endif /* MBEDTLS_PSA_CRYPTO_CONFIG_FILE */
+
+#if defined(MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE);
+#endif /* MBEDTLS_PSA_CRYPTO_USER_CONFIG_FILE */
 
 #if defined(MBEDTLS_MPI_WINDOW_SIZE)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_MPI_WINDOW_SIZE);
@@ -3524,6 +3650,10 @@ void list_config( void )
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PLATFORM_STD_FREE);
 #endif /* MBEDTLS_PLATFORM_STD_FREE */
 
+#if defined(MBEDTLS_PLATFORM_STD_SETBUF)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PLATFORM_STD_SETBUF);
+#endif /* MBEDTLS_PLATFORM_STD_SETBUF */
+
 #if defined(MBEDTLS_PLATFORM_STD_EXIT)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PLATFORM_STD_EXIT);
 #endif /* MBEDTLS_PLATFORM_STD_EXIT */
@@ -3575,6 +3705,10 @@ void list_config( void )
 #if defined(MBEDTLS_PLATFORM_EXIT_MACRO)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PLATFORM_EXIT_MACRO);
 #endif /* MBEDTLS_PLATFORM_EXIT_MACRO */
+
+#if defined(MBEDTLS_PLATFORM_SETBUF_MACRO)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PLATFORM_SETBUF_MACRO);
+#endif /* MBEDTLS_PLATFORM_SETBUF_MACRO */
 
 #if defined(MBEDTLS_PLATFORM_TIME_MACRO)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PLATFORM_TIME_MACRO);

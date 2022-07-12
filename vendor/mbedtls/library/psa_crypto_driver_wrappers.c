@@ -26,6 +26,7 @@
 #include "psa_crypto_driver_wrappers.h"
 #include "psa_crypto_hash.h"
 #include "psa_crypto_mac.h"
+#include "psa_crypto_rsa.h"
 
 #include "mbedtls/platform.h"
 
@@ -1615,6 +1616,22 @@ psa_status_t psa_driver_wrapper_aead_decrypt(
     }
 }
 
+psa_status_t psa_driver_get_tag_len( psa_aead_operation_t *operation,
+                                     uint8_t *tag_len )
+{
+    if( operation == NULL || tag_len == NULL )
+        return( PSA_ERROR_INVALID_ARGUMENT );
+
+#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+    *tag_len = operation->ctx.transparent_test_driver_ctx.tag_length;
+    return ( PSA_SUCCESS );
+#endif
+#endif
+    *tag_len = operation->ctx.mbedtls_ctx.tag_length;
+    return ( PSA_SUCCESS );
+}
+
 psa_status_t psa_driver_wrapper_aead_encrypt_setup(
    psa_aead_operation_t *operation,
    const psa_key_attributes_t *attributes,
@@ -2332,4 +2349,124 @@ psa_status_t psa_driver_wrapper_mac_abort(
     }
 }
 
+/*
+ * Asymmetric cryptography
+ */
+psa_status_t psa_driver_wrapper_asymmetric_encrypt(
+    const psa_key_attributes_t *attributes, const uint8_t *key_buffer,
+    size_t key_buffer_size, psa_algorithm_t alg, const uint8_t *input,
+    size_t input_length, const uint8_t *salt, size_t salt_length,
+    uint8_t *output, size_t output_size, size_t *output_length )
+{
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_key_location_t location =
+        PSA_KEY_LIFETIME_GET_LOCATION( attributes->core.lifetime );
+
+    switch( location )
+    {
+        case PSA_KEY_LOCATION_LOCAL_STORAGE:
+            /* Key is stored in the slot in export representation, so
+             * cycle through all known transparent accelerators */
+#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+            status = mbedtls_test_transparent_asymmetric_encrypt( attributes,
+                        key_buffer, key_buffer_size, alg, input, input_length,
+                        salt, salt_length, output, output_size,
+                        output_length );
+            /* Declared with fallback == true */
+            if( status != PSA_ERROR_NOT_SUPPORTED )
+                return( status );
+#endif /* PSA_CRYPTO_DRIVER_TEST */
+#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
+            return( mbedtls_psa_asymmetric_encrypt( attributes,
+                        key_buffer, key_buffer_size, alg, input, input_length,
+                        salt, salt_length, output, output_size, output_length )
+                  );
+        /* Add cases for opaque driver here */
+#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+        case PSA_CRYPTO_TEST_DRIVER_LOCATION:
+            return( mbedtls_test_opaque_asymmetric_encrypt( attributes,
+                        key_buffer, key_buffer_size, alg, input, input_length,
+                        salt, salt_length, output, output_size, output_length )
+                  );
+#endif /* PSA_CRYPTO_DRIVER_TEST */
+#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
+
+        default:
+            /* Key is declared with a lifetime not known to us */
+            (void)status;
+            (void)key_buffer;
+            (void)key_buffer_size;
+            (void)alg;
+            (void)input;
+            (void)input_length;
+            (void)salt;
+            (void)salt_length;
+            (void)output;
+            (void)output_size;
+            (void)output_length;
+            return( PSA_ERROR_INVALID_ARGUMENT );
+    }
+}
+
+psa_status_t psa_driver_wrapper_asymmetric_decrypt(
+    const psa_key_attributes_t *attributes, const uint8_t *key_buffer,
+    size_t key_buffer_size, psa_algorithm_t alg, const uint8_t *input,
+    size_t input_length, const uint8_t *salt, size_t salt_length,
+    uint8_t *output, size_t output_size, size_t *output_length )
+{
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_key_location_t location =
+        PSA_KEY_LIFETIME_GET_LOCATION( attributes->core.lifetime );
+
+    switch( location )
+    {
+        case PSA_KEY_LOCATION_LOCAL_STORAGE:
+            /* Key is stored in the slot in export representation, so
+             * cycle through all known transparent accelerators */
+#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+            status = mbedtls_test_transparent_asymmetric_decrypt( attributes,
+                        key_buffer, key_buffer_size, alg, input, input_length,
+                        salt, salt_length, output, output_size,
+                        output_length );
+            /* Declared with fallback == true */
+            if( status != PSA_ERROR_NOT_SUPPORTED )
+                return( status );
+#endif /* PSA_CRYPTO_DRIVER_TEST */
+#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
+            return( mbedtls_psa_asymmetric_decrypt( attributes,
+                        key_buffer, key_buffer_size, alg,input, input_length,
+                        salt, salt_length, output, output_size,
+                        output_length ) );
+        /* Add cases for opaque driver here */
+#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(PSA_CRYPTO_DRIVER_TEST)
+        case PSA_CRYPTO_TEST_DRIVER_LOCATION:
+            return( mbedtls_test_opaque_asymmetric_decrypt( attributes,
+                        key_buffer, key_buffer_size, alg, input, input_length,
+                        salt, salt_length, output, output_size,
+                        output_length ) );
+#endif /* PSA_CRYPTO_DRIVER_TEST */
+#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
+
+        default:
+            /* Key is declared with a lifetime not known to us */
+            (void)status;
+            (void)key_buffer;
+            (void)key_buffer_size;
+            (void)alg;
+            (void)input;
+            (void)input_length;
+            (void)salt;
+            (void)salt_length;
+            (void)output;
+            (void)output_size;
+            (void)output_length;
+            return( PSA_ERROR_INVALID_ARGUMENT );
+    }
+}
+
 #endif /* MBEDTLS_PSA_CRYPTO_C */
+

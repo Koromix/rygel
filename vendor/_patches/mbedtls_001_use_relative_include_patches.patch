@@ -1,5 +1,5 @@
 diff --git a/vendor/mbedtls/include/mbedtls/aes.h b/vendor/mbedtls/include/mbedtls/aes.h
-index e381c1183..7dade1184 100644
+index 144bd89e2..1a2688609 100644
 --- a/vendor/mbedtls/include/mbedtls/aes.h
 +++ b/vendor/mbedtls/include/mbedtls/aes.h
 @@ -39,10 +39,10 @@
@@ -17,7 +17,7 @@ index e381c1183..7dade1184 100644
  #include <stddef.h>
  #include <stdint.h>
 diff --git a/vendor/mbedtls/include/mbedtls/aria.h b/vendor/mbedtls/include/mbedtls/aria.h
-index 1a96d153a..e43d3990f 100644
+index 71540c86e..a83837b40 100644
 --- a/vendor/mbedtls/include/mbedtls/aria.h
 +++ b/vendor/mbedtls/include/mbedtls/aria.h
 @@ -28,14 +28,14 @@
@@ -39,7 +39,7 @@ index 1a96d153a..e43d3990f 100644
  #define MBEDTLS_ARIA_ENCRYPT     1 /**< ARIA encryption. */
  #define MBEDTLS_ARIA_DECRYPT     0 /**< ARIA decryption. */
 diff --git a/vendor/mbedtls/include/mbedtls/asn1.h b/vendor/mbedtls/include/mbedtls/asn1.h
-index 4746c1cb4..5d5a47c27 100644
+index be2cae7b5..32ccd3e4e 100644
 --- a/vendor/mbedtls/include/mbedtls/asn1.h
 +++ b/vendor/mbedtls/include/mbedtls/asn1.h
 @@ -21,14 +21,14 @@
@@ -90,7 +90,7 @@ index 8378589f3..b204e674c 100644
  #include <stddef.h>
  
 diff --git a/vendor/mbedtls/include/mbedtls/bignum.h b/vendor/mbedtls/include/mbedtls/bignum.h
-index 45d311991..22badca21 100644
+index 5277f56d9..36e7bfb29 100644
 --- a/vendor/mbedtls/include/mbedtls/bignum.h
 +++ b/vendor/mbedtls/include/mbedtls/bignum.h
 @@ -21,9 +21,9 @@
@@ -106,7 +106,7 @@ index 45d311991..22badca21 100644
  #include <stddef.h>
  #include <stdint.h>
 diff --git a/vendor/mbedtls/include/mbedtls/build_info.h b/vendor/mbedtls/include/mbedtls/build_info.h
-index cef6566c3..7659b73fc 100644
+index 75545f2e9..7f1176b9e 100644
 --- a/vendor/mbedtls/include/mbedtls/build_info.h
 +++ b/vendor/mbedtls/include/mbedtls/build_info.h
 @@ -54,7 +54,7 @@
@@ -118,9 +118,9 @@ index cef6566c3..7659b73fc 100644
  #else
  #include MBEDTLS_CONFIG_FILE
  #endif
-@@ -75,9 +75,9 @@
+@@ -78,9 +78,9 @@
+ #define MBEDTLS_PK_WRITE_C
  #endif
- 
  #if defined(MBEDTLS_PSA_CRYPTO_CONFIG)
 -#include "mbedtls/config_psa.h"
 +#include "config_psa.h"
@@ -131,7 +131,7 @@ index cef6566c3..7659b73fc 100644
  
  #endif /* MBEDTLS_BUILD_INFO_H */
 diff --git a/vendor/mbedtls/include/mbedtls/camellia.h b/vendor/mbedtls/include/mbedtls/camellia.h
-index 6feeaf049..bc62b9fad 100644
+index 6b0a87156..be71e6c19 100644
 --- a/vendor/mbedtls/include/mbedtls/camellia.h
 +++ b/vendor/mbedtls/include/mbedtls/camellia.h
 @@ -21,14 +21,14 @@
@@ -188,7 +188,7 @@ index 8af16ede9..2abf5d4cf 100644
  #include <stdint.h>
  #include <stddef.h>
 diff --git a/vendor/mbedtls/include/mbedtls/chachapoly.h b/vendor/mbedtls/include/mbedtls/chachapoly.h
-index 3f4318fb0..ab58feee0 100644
+index 2b4940220..a126ac5bb 100644
 --- a/vendor/mbedtls/include/mbedtls/chachapoly.h
 +++ b/vendor/mbedtls/include/mbedtls/chachapoly.h
 @@ -31,12 +31,12 @@
@@ -217,7 +217,7 @@ index 3f4318fb0..ab58feee0 100644
  typedef struct mbedtls_chachapoly_context
  {
 diff --git a/vendor/mbedtls/include/mbedtls/cipher.h b/vendor/mbedtls/include/mbedtls/cipher.h
-index c04097dad..2a7c73837 100644
+index a3f52ea71..5e78c6c99 100644
 --- a/vendor/mbedtls/include/mbedtls/cipher.h
 +++ b/vendor/mbedtls/include/mbedtls/cipher.h
 @@ -26,12 +26,12 @@
@@ -256,7 +256,7 @@ index 21ce88276..f9a5e94f2 100644
  #ifdef __cplusplus
  extern "C" {
 diff --git a/vendor/mbedtls/include/mbedtls/ctr_drbg.h b/vendor/mbedtls/include/mbedtls/ctr_drbg.h
-index 959a5d57c..cd8b1d78c 100644
+index 2b66b534a..af4aace9a 100644
 --- a/vendor/mbedtls/include/mbedtls/ctr_drbg.h
 +++ b/vendor/mbedtls/include/mbedtls/ctr_drbg.h
 @@ -40,14 +40,14 @@
@@ -279,7 +279,7 @@ index 959a5d57c..cd8b1d78c 100644
  
  /** The entropy source failed. */
 diff --git a/vendor/mbedtls/include/mbedtls/debug.h b/vendor/mbedtls/include/mbedtls/debug.h
-index 0aed59619..34c4983a8 100644
+index 5c8aba8db..040bae647 100644
 --- a/vendor/mbedtls/include/mbedtls/debug.h
 +++ b/vendor/mbedtls/include/mbedtls/debug.h
 @@ -22,12 +22,12 @@
@@ -375,7 +375,7 @@ index 71b73eee5..f28fdd2a4 100644
  /**
   * \brief           Maximum ECDSA signature size for a given curve bit size
 diff --git a/vendor/mbedtls/include/mbedtls/ecjpake.h b/vendor/mbedtls/include/mbedtls/ecjpake.h
-index a73f6249d..3c7102ead 100644
+index 7853a6a83..9a4d0e56a 100644
 --- a/vendor/mbedtls/include/mbedtls/ecjpake.h
 +++ b/vendor/mbedtls/include/mbedtls/ecjpake.h
 @@ -21,7 +21,7 @@
@@ -402,7 +402,7 @@ index a73f6249d..3c7102ead 100644
  #ifdef __cplusplus
  extern "C" {
 diff --git a/vendor/mbedtls/include/mbedtls/ecp.h b/vendor/mbedtls/include/mbedtls/ecp.h
-index 5b26084d4..e7edd7972 100644
+index ac8b7c0da..a5f13d7ed 100644
 --- a/vendor/mbedtls/include/mbedtls/ecp.h
 +++ b/vendor/mbedtls/include/mbedtls/ecp.h
 @@ -33,11 +33,11 @@
@@ -421,7 +421,7 @@ index 5b26084d4..e7edd7972 100644
  /*
   * ECP error codes
 diff --git a/vendor/mbedtls/include/mbedtls/entropy.h b/vendor/mbedtls/include/mbedtls/entropy.h
-index fede05ffa..71170a980 100644
+index 14e8b31c7..ed49680c5 100644
 --- a/vendor/mbedtls/include/mbedtls/entropy.h
 +++ b/vendor/mbedtls/include/mbedtls/entropy.h
 @@ -21,24 +21,24 @@
@@ -487,7 +487,7 @@ index 7dc9dfb8e..c91ea94ac 100644
  #include <stdint.h>
  
 diff --git a/vendor/mbedtls/include/mbedtls/hkdf.h b/vendor/mbedtls/include/mbedtls/hkdf.h
-index e6bfe0560..68322a29e 100644
+index 2e225cb3b..c4fe6007b 100644
 --- a/vendor/mbedtls/include/mbedtls/hkdf.h
 +++ b/vendor/mbedtls/include/mbedtls/hkdf.h
 @@ -25,9 +25,9 @@
@@ -503,7 +503,7 @@ index e6bfe0560..68322a29e 100644
  /**
   *  \name HKDF Error codes
 diff --git a/vendor/mbedtls/include/mbedtls/hmac_drbg.h b/vendor/mbedtls/include/mbedtls/hmac_drbg.h
-index 0f1653f7a..d020a2764 100644
+index f2cf2c0bf..b9909d25a 100644
 --- a/vendor/mbedtls/include/mbedtls/hmac_drbg.h
 +++ b/vendor/mbedtls/include/mbedtls/hmac_drbg.h
 @@ -25,14 +25,14 @@
@@ -526,7 +526,7 @@ index 0f1653f7a..d020a2764 100644
  
  /*
 diff --git a/vendor/mbedtls/include/mbedtls/md.h b/vendor/mbedtls/include/mbedtls/md.h
-index 2b668f55e..2417c5ca6 100644
+index 612061d15..4ebe4b9e5 100644
 --- a/vendor/mbedtls/include/mbedtls/md.h
 +++ b/vendor/mbedtls/include/mbedtls/md.h
 @@ -24,12 +24,12 @@
@@ -562,7 +562,7 @@ index e7befc34f..e29e9cc18 100644
  #include <stddef.h>
  #include <stdint.h>
 diff --git a/vendor/mbedtls/include/mbedtls/memory_buffer_alloc.h b/vendor/mbedtls/include/mbedtls/memory_buffer_alloc.h
-index d4737f5c4..c10e6aecc 100644
+index 0b07974f8..cc1eb62d3 100644
 --- a/vendor/mbedtls/include/mbedtls/memory_buffer_alloc.h
 +++ b/vendor/mbedtls/include/mbedtls/memory_buffer_alloc.h
 @@ -22,7 +22,7 @@
@@ -613,7 +613,7 @@ index bd6c65841..2106ad935 100644
  #ifdef __cplusplus
  extern "C" {
 diff --git a/vendor/mbedtls/include/mbedtls/oid.h b/vendor/mbedtls/include/mbedtls/oid.h
-index 836e455b3..93d016ece 100644
+index a031fe2dd..ca2c4821b 100644
 --- a/vendor/mbedtls/include/mbedtls/oid.h
 +++ b/vendor/mbedtls/include/mbedtls/oid.h
 @@ -21,21 +21,21 @@
@@ -645,7 +645,7 @@ index 836e455b3..93d016ece 100644
  
  /** OID is not found. */
 diff --git a/vendor/mbedtls/include/mbedtls/pem.h b/vendor/mbedtls/include/mbedtls/pem.h
-index baceb0762..09251324e 100644
+index c75a1246a..49a78b22a 100644
 --- a/vendor/mbedtls/include/mbedtls/pem.h
 +++ b/vendor/mbedtls/include/mbedtls/pem.h
 @@ -21,9 +21,9 @@
@@ -661,7 +661,7 @@ index baceb0762..09251324e 100644
  #include <stddef.h>
  
 diff --git a/vendor/mbedtls/include/mbedtls/pk.h b/vendor/mbedtls/include/mbedtls/pk.h
-index 5f9f29ff6..daab48cd0 100644
+index 867961d32..ff643def7 100644
 --- a/vendor/mbedtls/include/mbedtls/pk.h
 +++ b/vendor/mbedtls/include/mbedtls/pk.h
 @@ -22,22 +22,22 @@
@@ -732,7 +732,7 @@ index 71d716be7..ce57f345d 100644
  #include <stddef.h>
  #include <stdint.h>
 diff --git a/vendor/mbedtls/include/mbedtls/platform.h b/vendor/mbedtls/include/mbedtls/platform.h
-index 277a85c7d..31550a6fd 100644
+index a5a43ac6d..65104da3e 100644
 --- a/vendor/mbedtls/include/mbedtls/platform.h
 +++ b/vendor/mbedtls/include/mbedtls/platform.h
 @@ -30,12 +30,12 @@
@@ -752,7 +752,7 @@ index 277a85c7d..31550a6fd 100644
  
  #ifdef __cplusplus
 diff --git a/vendor/mbedtls/include/mbedtls/platform_time.h b/vendor/mbedtls/include/mbedtls/platform_time.h
-index 8d4b95d1d..ec4a42bb8 100644
+index 8bef55378..4ebf94e60 100644
 --- a/vendor/mbedtls/include/mbedtls/platform_time.h
 +++ b/vendor/mbedtls/include/mbedtls/platform_time.h
 @@ -22,7 +22,7 @@
@@ -765,7 +765,7 @@ index 8d4b95d1d..ec4a42bb8 100644
  #ifdef __cplusplus
  extern "C" {
 diff --git a/vendor/mbedtls/include/mbedtls/platform_util.h b/vendor/mbedtls/include/mbedtls/platform_util.h
-index 5d2fefc36..e338e9dff 100644
+index ecd36dab5..80e645994 100644
 --- a/vendor/mbedtls/include/mbedtls/platform_util.h
 +++ b/vendor/mbedtls/include/mbedtls/platform_util.h
 @@ -23,11 +23,11 @@
@@ -799,7 +799,7 @@ index 6657aa2e1..381618525 100644
  #include <stdint.h>
  #include <stddef.h>
 diff --git a/vendor/mbedtls/include/mbedtls/psa_util.h b/vendor/mbedtls/include/mbedtls/psa_util.h
-index c54c035c3..b1c2caea2 100644
+index 8dd47f644..a5e259f16 100644
 --- a/vendor/mbedtls/include/mbedtls/psa_util.h
 +++ b/vendor/mbedtls/include/mbedtls/psa_util.h
 @@ -25,19 +25,19 @@
@@ -812,7 +812,7 @@ index c54c035c3..b1c2caea2 100644
 -#include "mbedtls/build_info.h"
 +#include "build_info.h"
  
- #if defined(MBEDTLS_USE_PSA_CRYPTO)
+ #if defined(MBEDTLS_PSA_CRYPTO_C)
  
  #include "psa/crypto.h"
  
@@ -829,7 +829,7 @@ index c54c035c3..b1c2caea2 100644
  
  #include <string.h>
  
-@@ -495,11 +495,11 @@ int mbedtls_psa_get_random( void *p_rng,
+@@ -347,11 +347,11 @@ int mbedtls_psa_get_random( void *p_rng,
  #else /* !defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) */
  
  #if defined(MBEDTLS_CTR_DRBG_C)
@@ -860,7 +860,7 @@ index 9132a83be..c798cb449 100644
  #include <stddef.h>
  #include <stdint.h>
 diff --git a/vendor/mbedtls/include/mbedtls/rsa.h b/vendor/mbedtls/include/mbedtls/rsa.h
-index d03c31d71..a327fbb2f 100644
+index e43ef9694..ac924552a 100644
 --- a/vendor/mbedtls/include/mbedtls/rsa.h
 +++ b/vendor/mbedtls/include/mbedtls/rsa.h
 @@ -27,15 +27,15 @@
@@ -933,7 +933,7 @@ index 48901cc39..d97a0cfec 100644
  #include <stddef.h>
  #include <stdint.h>
 diff --git a/vendor/mbedtls/include/mbedtls/ssl.h b/vendor/mbedtls/include/mbedtls/ssl.h
-index 072ebbe46..568ead760 100644
+index b3b5d47f8..87651bff7 100644
 --- a/vendor/mbedtls/include/mbedtls/ssl.h
 +++ b/vendor/mbedtls/include/mbedtls/ssl.h
 @@ -21,23 +21,23 @@
@@ -969,8 +969,8 @@ index 072ebbe46..568ead760 100644
  #endif
  
  /* Adding guard for MBEDTLS_ECDSA_C to ensure no compile errors due
-@@ -46,11 +46,11 @@
-  * MBEDTLS_ECDSA_C which does not seem correct.
+@@ -45,11 +45,11 @@
+  * ecdh_ctx structure is needed for MBEDTLS_ECDSA_C which does not seem correct.
   */
  #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C)
 -#include "mbedtls/ecdh.h"
@@ -984,7 +984,7 @@ index 072ebbe46..568ead760 100644
  
  #if defined(MBEDTLS_USE_PSA_CRYPTO)
 diff --git a/vendor/mbedtls/include/mbedtls/ssl_cache.h b/vendor/mbedtls/include/mbedtls/ssl_cache.h
-index 6a81ac990..7f06d8987 100644
+index cb016fe70..b6d3a58c5 100644
 --- a/vendor/mbedtls/include/mbedtls/ssl_cache.h
 +++ b/vendor/mbedtls/include/mbedtls/ssl_cache.h
 @@ -21,14 +21,14 @@
@@ -1007,7 +1007,7 @@ index 6a81ac990..7f06d8987 100644
  
  /**
 diff --git a/vendor/mbedtls/include/mbedtls/ssl_ciphersuites.h b/vendor/mbedtls/include/mbedtls/ssl_ciphersuites.h
-index 18e7c9876..f96899fe0 100644
+index cd6ccbc90..33bec970b 100644
 --- a/vendor/mbedtls/include/mbedtls/ssl_ciphersuites.h
 +++ b/vendor/mbedtls/include/mbedtls/ssl_ciphersuites.h
 @@ -21,13 +21,13 @@
@@ -1030,10 +1030,10 @@ index 18e7c9876..f96899fe0 100644
  #ifdef __cplusplus
  extern "C" {
 diff --git a/vendor/mbedtls/include/mbedtls/ssl_cookie.h b/vendor/mbedtls/include/mbedtls/ssl_cookie.h
-index 86698b050..abcf39131 100644
+index a1ca74b48..e420a5153 100644
 --- a/vendor/mbedtls/include/mbedtls/ssl_cookie.h
 +++ b/vendor/mbedtls/include/mbedtls/ssl_cookie.h
-@@ -21,14 +21,14 @@
+@@ -21,15 +21,15 @@
   */
  #ifndef MBEDTLS_SSL_COOKIE_H
  #define MBEDTLS_SSL_COOKIE_H
@@ -1046,14 +1046,15 @@ index 86698b050..abcf39131 100644
 -#include "mbedtls/ssl.h"
 +#include "ssl.h"
  
+ #if !defined(MBEDTLS_USE_PSA_CRYPTO)
  #if defined(MBEDTLS_THREADING_C)
 -#include "mbedtls/threading.h"
 +#include "threading.h"
  #endif
+ #endif /* !MBEDTLS_USE_PSA_CRYPTO */
  
- /**
 diff --git a/vendor/mbedtls/include/mbedtls/ssl_ticket.h b/vendor/mbedtls/include/mbedtls/ssl_ticket.h
-index 0f4117d34..0ce1d9a5b 100644
+index 98fd28707..f188f7413 100644
 --- a/vendor/mbedtls/include/mbedtls/ssl_ticket.h
 +++ b/vendor/mbedtls/include/mbedtls/ssl_ticket.h
 @@ -21,9 +21,9 @@
@@ -1068,7 +1069,7 @@ index 0f4117d34..0ce1d9a5b 100644
  
  /*
   * This implementation of the session ticket callbacks includes key
-@@ -31,11 +31,11 @@
+@@ -31,15 +31,15 @@
   * secrecy, when MBEDTLS_HAVE_TIME is defined.
   */
  
@@ -1076,6 +1077,10 @@ index 0f4117d34..0ce1d9a5b 100644
 -#include "mbedtls/cipher.h"
 +#include "ssl.h"
 +#include "cipher.h"
+ 
+ #if defined(MBEDTLS_USE_PSA_CRYPTO)
+ #include "psa/crypto.h"
+ #endif
  
  #if defined(MBEDTLS_THREADING_C)
 -#include "mbedtls/threading.h"
@@ -1100,7 +1105,7 @@ index fbc737478..f6173f595 100644
  #include <stdlib.h>
  
 diff --git a/vendor/mbedtls/include/mbedtls/timing.h b/vendor/mbedtls/include/mbedtls/timing.h
-index 25db1c6aa..19b703873 100644
+index 652548d97..4d27d2822 100644
 --- a/vendor/mbedtls/include/mbedtls/timing.h
 +++ b/vendor/mbedtls/include/mbedtls/timing.h
 @@ -21,9 +21,9 @@
@@ -1129,7 +1134,7 @@ index 773da4a67..f0e05ed2c 100644
  #if defined(MBEDTLS_VERSION_C)
  
 diff --git a/vendor/mbedtls/include/mbedtls/x509.h b/vendor/mbedtls/include/mbedtls/x509.h
-index 9a4be95a3..f6d00d557 100644
+index 213efa04a..861f9b8ed 100644
 --- a/vendor/mbedtls/include/mbedtls/x509.h
 +++ b/vendor/mbedtls/include/mbedtls/x509.h
 @@ -21,15 +21,15 @@
@@ -1154,7 +1159,7 @@ index 9a4be95a3..f6d00d557 100644
  
  /**
 diff --git a/vendor/mbedtls/include/mbedtls/x509_crl.h b/vendor/mbedtls/include/mbedtls/x509_crl.h
-index 52bd43cd3..16db256a8 100644
+index 0339db861..a54f56627 100644
 --- a/vendor/mbedtls/include/mbedtls/x509_crl.h
 +++ b/vendor/mbedtls/include/mbedtls/x509_crl.h
 @@ -21,11 +21,11 @@
@@ -1173,7 +1178,7 @@ index 52bd43cd3..16db256a8 100644
  #ifdef __cplusplus
  extern "C" {
 diff --git a/vendor/mbedtls/include/mbedtls/x509_crt.h b/vendor/mbedtls/include/mbedtls/x509_crt.h
-index 3c11a9989..16ff68910 100644
+index aa4595706..623952c4c 100644
 --- a/vendor/mbedtls/include/mbedtls/x509_crt.h
 +++ b/vendor/mbedtls/include/mbedtls/x509_crt.h
 @@ -21,13 +21,13 @@
@@ -1196,7 +1201,7 @@ index 3c11a9989..16ff68910 100644
  /**
   * \addtogroup x509_module
 diff --git a/vendor/mbedtls/include/mbedtls/x509_csr.h b/vendor/mbedtls/include/mbedtls/x509_csr.h
-index f80a1a130..c2265d06e 100644
+index 44b7aabba..2654d978c 100644
 --- a/vendor/mbedtls/include/mbedtls/x509_csr.h
 +++ b/vendor/mbedtls/include/mbedtls/x509_csr.h
 @@ -21,11 +21,11 @@
@@ -1237,7 +1242,7 @@ index e11e239cf..b8f11c83e 100644
  typedef struct
  {
 diff --git a/vendor/mbedtls/include/psa/crypto_builtin_primitives.h b/vendor/mbedtls/include/psa/crypto_builtin_primitives.h
-index d3cf33a9d..22a9ee59b 100644
+index 35f3a8b30..5bc204eee 100644
 --- a/vendor/mbedtls/include/psa/crypto_builtin_primitives.h
 +++ b/vendor/mbedtls/include/psa/crypto_builtin_primitives.h
 @@ -32,7 +32,7 @@
@@ -1276,7 +1281,7 @@ index d3cf33a9d..22a9ee59b 100644
  #if defined(MBEDTLS_PSA_BUILTIN_ALG_STREAM_CIPHER) || \
      defined(MBEDTLS_PSA_BUILTIN_ALG_CTR) || \
 diff --git a/vendor/mbedtls/include/psa/crypto_extra.h b/vendor/mbedtls/include/psa/crypto_extra.h
-index 1f68925ff..392737f03 100644
+index 73da364bc..85e21c4e6 100644
 --- a/vendor/mbedtls/include/psa/crypto_extra.h
 +++ b/vendor/mbedtls/include/psa/crypto_extra.h
 @@ -27,9 +27,9 @@
@@ -1328,7 +1333,7 @@ index 91a6d0bee..b889899cb 100644
  #include "crypto_driver_common.h"
  
 diff --git a/vendor/mbedtls/include/psa/crypto_sizes.h b/vendor/mbedtls/include/psa/crypto_sizes.h
-index 9bbcb3444..70f70a867 100644
+index 1024d6b91..b4de4a092 100644
 --- a/vendor/mbedtls/include/psa/crypto_sizes.h
 +++ b/vendor/mbedtls/include/psa/crypto_sizes.h
 @@ -42,7 +42,7 @@
@@ -1341,7 +1346,7 @@ index 9bbcb3444..70f70a867 100644
  #define PSA_BITS_TO_BYTES(bits) (((bits) + 7) / 8)
  #define PSA_BYTES_TO_BITS(bytes) ((bytes) * 8)
 diff --git a/vendor/mbedtls/include/psa/crypto_struct.h b/vendor/mbedtls/include/psa/crypto_struct.h
-index 2c61e53cf..6c2fe5fbc 100644
+index 957b4c611..3da46d556 100644
 --- a/vendor/mbedtls/include/psa/crypto_struct.h
 +++ b/vendor/mbedtls/include/psa/crypto_struct.h
 @@ -60,7 +60,7 @@
@@ -1372,7 +1377,7 @@ index 2c61e53cf..6c2fe5fbc 100644
  /* Include the context definition for the compiled-in drivers for the primitive
   * algorithms. */
 diff --git a/vendor/mbedtls/include/psa/crypto_types.h b/vendor/mbedtls/include/psa/crypto_types.h
-index 2cf965d81..524cf3b2d 100644
+index e619cf537..a0974e766 100644
 --- a/vendor/mbedtls/include/psa/crypto_types.h
 +++ b/vendor/mbedtls/include/psa/crypto_types.h
 @@ -32,7 +32,7 @@
@@ -1385,10 +1390,10 @@ index 2cf965d81..524cf3b2d 100644
  #include "crypto_platform.h"
  
 diff --git a/vendor/mbedtls/include/psa/crypto_values.h b/vendor/mbedtls/include/psa/crypto_values.h
-index 5a903f86a..eb870a9e2 100644
+index b3526aef4..cf6b836ea 100644
 --- a/vendor/mbedtls/include/psa/crypto_values.h
 +++ b/vendor/mbedtls/include/psa/crypto_values.h
-@@ -33,7 +33,7 @@
+@@ -38,7 +38,7 @@
  
  #ifndef PSA_CRYPTO_VALUES_H
  #define PSA_CRYPTO_VALUES_H

@@ -104,54 +104,6 @@ PSA generate DES 192-bit not supported
 depends_on:!PSA_WANT_KEY_TYPE_DES
 generate_not_supported:PSA_KEY_TYPE_DES:192
 
-PSA import HMAC 128-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-import_not_supported:PSA_KEY_TYPE_HMAC:"48657265006973206b6579a064617461"
-
-PSA generate HMAC 128-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-generate_not_supported:PSA_KEY_TYPE_HMAC:128
-
-PSA import HMAC 160-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-import_not_supported:PSA_KEY_TYPE_HMAC:"48657265006973206b6579a06461746148657265"
-
-PSA generate HMAC 160-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-generate_not_supported:PSA_KEY_TYPE_HMAC:160
-
-PSA import HMAC 224-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-import_not_supported:PSA_KEY_TYPE_HMAC:"48657265006973206b6579a06461746148657265006973206b6579a0"
-
-PSA generate HMAC 224-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-generate_not_supported:PSA_KEY_TYPE_HMAC:224
-
-PSA import HMAC 256-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-import_not_supported:PSA_KEY_TYPE_HMAC:"48657265006973206b6579a06461746148657265006973206b6579a064617461"
-
-PSA generate HMAC 256-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-generate_not_supported:PSA_KEY_TYPE_HMAC:256
-
-PSA import HMAC 384-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-import_not_supported:PSA_KEY_TYPE_HMAC:"48657265006973206b6579a06461746148657265006973206b6579a06461746148657265006973206b6579a064617461"
-
-PSA generate HMAC 384-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-generate_not_supported:PSA_KEY_TYPE_HMAC:384
-
-PSA import HMAC 512-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-import_not_supported:PSA_KEY_TYPE_HMAC:"48657265006973206b6579a06461746148657265006973206b6579a06461746148657265006973206b6579a06461746148657265006973206b6579a064617461"
-
-PSA generate HMAC 512-bit not supported
-depends_on:!PSA_WANT_KEY_TYPE_HMAC
-generate_not_supported:PSA_KEY_TYPE_HMAC:512
-
 PSA import PASSWORD 48-bit not supported
 depends_on:!PSA_WANT_KEY_TYPE_PASSWORD:DEPENDENCY_NOT_IMPLEMENTED_YET
 import_not_supported:PSA_KEY_TYPE_PASSWORD:"486572650069"

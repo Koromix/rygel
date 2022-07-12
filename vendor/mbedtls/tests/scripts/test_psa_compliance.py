@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the PSA Cryto API compliance test suite.
+"""Run the PSA Crypto API compliance test suite.
 Clone the repo and check out the commit specified by PSA_ARCH_TEST_REPO and PSA_ARCH_TEST_REF,
 then complie and run the test suite. The clone is stored at <Mbed TLS root>/psa-arch-tests.
 Known defects in either the test suite or mbedtls - identified by their test number - are ignored,
@@ -33,10 +33,6 @@ import sys
 # Test number 2xx corresponds to the files in the folder
 # psa-arch-tests/api-tests/dev_apis/crypto/test_c0xx
 EXPECTED_FAILURES = {
-    # Multipart CCM is not supported.
-    # - Tracked in issue #3721
-    252, 253, 254, 255, 256, 257, 258, 259, 261,
-
     # psa_hash_suspend() and psa_hash_resume() are not supported.
     # - Tracked in issue #3274
     262, 263
@@ -51,7 +47,7 @@ EXPECTED_FAILURES = {
 #
 # Web URL: https://github.com/bensze01/psa-arch-tests/tree/fixes-for-mbedtls-3
 PSA_ARCH_TESTS_REPO = 'https://github.com/bensze01/psa-arch-tests.git'
-PSA_ARCH_TESTS_REF = 'fixes-for-mbedtls-3'
+PSA_ARCH_TESTS_REF = 'fix-pr-5736'
 
 #pylint: disable=too-many-branches,too-many-statements
 def main():

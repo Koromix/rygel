@@ -607,6 +607,9 @@ int mbedtls_ctr_drbg_write_seed_file( mbedtls_ctr_drbg_context *ctx,
     if( ( f = fopen( path, "wb" ) ) == NULL )
         return( MBEDTLS_ERR_CTR_DRBG_FILE_IO_ERROR );
 
+    /* Ensure no stdio buffering of secrets, as such buffers cannot be wiped. */
+    mbedtls_setbuf( f, NULL );
+
     if( ( ret = mbedtls_ctr_drbg_random( ctx, buf,
                                          MBEDTLS_CTR_DRBG_MAX_INPUT ) ) != 0 )
         goto exit;
@@ -639,6 +642,9 @@ int mbedtls_ctr_drbg_update_seed_file( mbedtls_ctr_drbg_context *ctx,
 
     if( ( f = fopen( path, "rb" ) ) == NULL )
         return( MBEDTLS_ERR_CTR_DRBG_FILE_IO_ERROR );
+
+    /* Ensure no stdio buffering of secrets, as such buffers cannot be wiped. */
+    mbedtls_setbuf( f, NULL );
 
     n = fread( buf, 1, sizeof( buf ), f );
     if( fread( &c, 1, 1, f ) != 0 )
@@ -815,7 +821,7 @@ static int ctr_drbg_self_test_entropy( void *data, unsigned char *buf,
                         return( 1 );                        \
                     }
 
-#define SELF_TEST_OUPUT_DISCARD_LENGTH 64
+#define SELF_TEST_OUTPUT_DISCARD_LENGTH 64
 
 /*
  * Checkup routine
@@ -841,7 +847,7 @@ int mbedtls_ctr_drbg_self_test( int verbose )
                                 (void *) entropy_source_pr,
                                 pers_pr, MBEDTLS_CTR_DRBG_KEYSIZE ) );
     mbedtls_ctr_drbg_set_prediction_resistance( &ctx, MBEDTLS_CTR_DRBG_PR_ON );
-    CHK( mbedtls_ctr_drbg_random( &ctx, buf, SELF_TEST_OUPUT_DISCARD_LENGTH ) );
+    CHK( mbedtls_ctr_drbg_random( &ctx, buf, SELF_TEST_OUTPUT_DISCARD_LENGTH ) );
     CHK( mbedtls_ctr_drbg_random( &ctx, buf, sizeof( result_pr ) ) );
     CHK( memcmp( buf, result_pr, sizeof( result_pr ) ) );
 
@@ -866,7 +872,7 @@ int mbedtls_ctr_drbg_self_test( int verbose )
                                 (void *) entropy_source_nopr,
                                 pers_nopr, MBEDTLS_CTR_DRBG_KEYSIZE ) );
     CHK( mbedtls_ctr_drbg_reseed( &ctx, NULL, 0 ) );
-    CHK( mbedtls_ctr_drbg_random( &ctx, buf, SELF_TEST_OUPUT_DISCARD_LENGTH ) );
+    CHK( mbedtls_ctr_drbg_random( &ctx, buf, SELF_TEST_OUTPUT_DISCARD_LENGTH ) );
     CHK( mbedtls_ctr_drbg_random( &ctx, buf, sizeof( result_nopr ) ) );
     CHK( memcmp( buf, result_nopr, sizeof( result_nopr ) ) );
 
