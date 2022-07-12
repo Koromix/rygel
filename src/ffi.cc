@@ -782,6 +782,26 @@ static Napi::Value GetTypeAlign(const Napi::CallbackInfo &info)
     return Napi::Number::New(env, type->align);
 }
 
+static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(info[0]);
+    if (!type)
+        return env.Null();
+
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
+}
+
 static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -1511,6 +1531,7 @@ static void SetExports(Napi::Env env, Func func)
 
     func("sizeof", Napi::Function::New(env, GetTypeSize));
     func("alignof", Napi::Function::New(env, GetTypeAlign));
+    func("resolve", Napi::Function::New(env, GetResolvedType));
     func("introspect", Napi::Function::New(env, GetTypeDefinition));
 
     func("load", Napi::Function::New(env, LoadSharedLibrary));
