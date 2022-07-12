@@ -120,10 +120,10 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 
     // Special cases
     if (TestStr(ref->name, "char")) {
-        ref = instance->types_map.FindValue("string", nullptr);
+        ref = instance->types_map.FindValue("str", nullptr);
         count--;
     } else if (TestStr(ref->name, "char16") || TestStr(ref->name, "char16_t")) {
-        ref = instance->types_map.FindValue("string16", nullptr);
+        ref = instance->types_map.FindValue("str16", nullptr);
         count--;
     }
 
