@@ -138,7 +138,7 @@ bool ApplyLight(const LightSettings &settings)
     hs_port *port = OpenLightDevice();
     if (!port)
         return false;
-    RG_DEFER { hs_port_close(port); };
+    RG_DEFER { CloseLightDevice(port); };
 
     return ApplyLight(port, settings);
 }
