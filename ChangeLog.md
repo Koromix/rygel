@@ -1,5 +1,16 @@
 # Changelog
 
+## Koffi 1.3.8
+
+**Main changes:**
+
+- Prevent callback reuse beyond FFI call
+- Add BTI support for AAarch64 platforms (except Windows)
+
+**Other changes:**
+
+- Fix and harmonize a few error messages
+
 ## Koffi 1.3.7
 
 **Main fixes:**
