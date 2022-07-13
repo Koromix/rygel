@@ -2469,4 +2469,3 @@ psa_status_t psa_driver_wrapper_asymmetric_decrypt(
 }
 
 #endif /* MBEDTLS_PSA_CRYPTO_C */
-
