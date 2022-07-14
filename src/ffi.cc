@@ -1381,10 +1381,9 @@ void LibraryHolder::Unref() const
     }
 }
 
-template <typename T>
-static inline PrimitiveKind GetIntegerPrimitive(bool sign)
+static inline PrimitiveKind GetIntegerPrimitive(Size len, bool sign)
 {
-    switch (RG_SIZE(T)) {
+    switch (len) {
         case 1: return sign ? PrimitiveKind::Int8 : PrimitiveKind::UInt8;
         case 2: return sign ? PrimitiveKind::Int16 : PrimitiveKind::UInt16;
         case 4: return sign ? PrimitiveKind::Int32 : PrimitiveKind::UInt32;
@@ -1445,10 +1444,10 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(env, types, {"unsigned int", "uint"}, PrimitiveKind::UInt32, 4, 4);
     RegisterPrimitiveType(env, types, {"int64_t", "int64"}, PrimitiveKind::Int64, 8, alignof(int64_t));
     RegisterPrimitiveType(env, types, {"uint64_t", "uint64"}, PrimitiveKind::UInt64, 8, alignof(int64_t));
-    RegisterPrimitiveType(env, types, {"intptr_t", "intptr"}, GetIntegerPrimitive<intptr_t>(true), RG_SIZE(intptr_t), alignof(intptr_t));
-    RegisterPrimitiveType(env, types, {"uintptr_t", "uintptr"}, GetIntegerPrimitive<intptr_t>(false), RG_SIZE(intptr_t), alignof(intptr_t));
-    RegisterPrimitiveType(env, types, {"long"}, GetIntegerPrimitive<long>(true), RG_SIZE(long), alignof(long));
-    RegisterPrimitiveType(env, types, {"unsigned long", "ulong"}, GetIntegerPrimitive<long>(false), RG_SIZE(long), alignof(long));
+    RegisterPrimitiveType(env, types, {"intptr_t", "intptr"}, GetIntegerPrimitive(RG_SIZE(intptr_t), true), RG_SIZE(intptr_t), alignof(intptr_t));
+    RegisterPrimitiveType(env, types, {"uintptr_t", "uintptr"}, GetIntegerPrimitive(RG_SIZE(intptr_t), false), RG_SIZE(intptr_t), alignof(intptr_t));
+    RegisterPrimitiveType(env, types, {"long"}, GetIntegerPrimitive(RG_SIZE(long), true), RG_SIZE(long), alignof(long));
+    RegisterPrimitiveType(env, types, {"unsigned long", "ulong"}, GetIntegerPrimitive(RG_SIZE(long), false), RG_SIZE(long), alignof(long));
     RegisterPrimitiveType(env, types, {"long long", "longlong"}, PrimitiveKind::Int64, RG_SIZE(int64_t), alignof(int64_t));
     RegisterPrimitiveType(env, types, {"unsigned long long", "ulonglong"}, PrimitiveKind::UInt64, RG_SIZE(uint64_t), alignof(uint64_t));
     RegisterPrimitiveType(env, types, {"float", "float32"}, PrimitiveKind::Float32, 4, alignof(float));
