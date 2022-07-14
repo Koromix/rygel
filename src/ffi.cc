@@ -1381,15 +1381,15 @@ void LibraryHolder::Unref() const
     }
 }
 
-static void RegisterPrimitiveType(InstanceData *instance, Span<const char *const> names,
+static void RegisterPrimitiveType(InstanceData *instance, std::initializer_list<const char *> names,
                                   PrimitiveKind primitive, int16_t size, int16_t align)
 {
-    RG_ASSERT(names.len > 0);
+    RG_ASSERT(names.size() > 0);
     RG_ASSERT(align <= size);
 
     TypeInfo *type = instance->types.AppendDefault();
 
-    type->name = names[0];
+    type->name = *names.begin();
 
     type->primitive = primitive;
     type->size = size;
