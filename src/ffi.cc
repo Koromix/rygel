@@ -219,10 +219,11 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             return env.Null();
         }
 
-        member.align = pad ? member.type->align : 1;
+        int16_t align = pad ? member.type->align : 1;
+        member.offset = (int16_t)AlignLen(type->size, align);
 
-        type->size = (int16_t)(AlignLen(type->size, member.align) + member.type->size);
-        type->align = std::max(type->align, member.align);
+        type->size = (int16_t)(member.offset + member.type->size);
+        type->align = std::max(type->align, align);
 
         if (!members.TrySet(member.name).second) {
             ThrowError<Napi::Error>(env, "Duplicate member '%1' in struct '%2'", member.name, type->name);

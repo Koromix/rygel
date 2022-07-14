@@ -127,8 +127,6 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     RG_ASSERT(IsObject(obj));
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
-    Size offset = 0;
-
     for (const RecordMember &member: type->members) {
         Napi::Value value = obj.Get(member.name);
 
@@ -137,10 +135,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             return false;
         }
 
-        int16_t align = std::max(member.align, realign);
-        offset = AlignLen(offset, align);
-
-        uint8_t *dest = origin + offset;
+        uint8_t *dest = origin + member.offset;
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -339,8 +334,6 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 *(void **)dest = ptr;
             } break;
         }
-
-        offset += member.type->size;
     }
 
     return true;
@@ -778,13 +771,8 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
 
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
-    Size offset = 0;
-
     for (const RecordMember &member: type->members) {
-        int16_t align = std::max(realign, member.align);
-        offset = AlignLen(offset, align);
-
-        const uint8_t *src = origin + offset;
+        const uint8_t *src = origin + member.offset;
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -875,8 +863,6 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
                 obj.Set(member.name, Napi::Number::New(env, d));
             } break;
         }
-
-        offset += member.type->size;
     }
 }
 
