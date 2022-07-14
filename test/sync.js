@@ -107,12 +107,12 @@ const IntContainer = koffi.struct('IntContainer', {
     len: 'int'
 });
 
-const StrFree = koffi.disposable('str_free', 'str', koffi.free);
+const StrFree = koffi.disposable('str_free', koffi.types.str, koffi.free);
 const Str16Free = koffi.disposable('str16_free', 'str16');
 
 const StrStruct = koffi.struct('StrStruct', {
     str: 'str',
-    str16: 'str16'
+    str16: koffi.types.string16
 });
 
 main();
