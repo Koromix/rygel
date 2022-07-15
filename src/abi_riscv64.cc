@@ -514,6 +514,9 @@ Napi::Value CallData::Complete()
 
 void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
+    if (RG_UNLIKELY(env.IsExceptionPending()))
+        return;
+
     const TrampolineInfo &trampoline = instance->trampolines[idx];
 
     const FunctionInfo *proto = trampoline.proto;
@@ -701,6 +704,9 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
     napi_value ret = CallSwitchStack(&func, (size_t)arguments.len, arguments.data, old_sp, &mem->stack,
                                      [](Napi::Function *func, size_t argc, napi_value *argv) { return (napi_value)func->Call(argc, argv); });
     Napi::Value value(env, ret);
+
+    if (RG_UNLIKELY(env.IsExceptionPending()))
+        return;
 
     // Convert the result
     switch (type->primitive) {
