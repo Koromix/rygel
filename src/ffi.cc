@@ -1330,13 +1330,15 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     Napi::External<void> external = info[0].As<Napi::External<void>>();
     void *ptr = external.Data();
 
-    for (Size i = 0; i < RG_LEN(instance->trampolines); i++) {
+    for (Size i = 0; i < MaxTrampolines; i++) {
+        Size idx = i + MaxTrampolines;
+
         if (instance->free_trampolines[1] & (1u << i))
             continue;
 
-        const TrampolineInfo &trampoline = instance->trampolines[i];
+        const TrampolineInfo &trampoline = instance->trampolines[idx];
 
-        if (GetTrampoline(i + MaxTrampolines, trampoline.proto) == ptr) {
+        if (GetTrampoline(idx, trampoline.proto) == ptr) {
             instance->free_trampolines[1] |= 1u << i;
             return env.Null();
         }
