@@ -1306,19 +1306,8 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->counter++;
 
     void *ptr = GetTrampoline(idx, type->proto);
-    uintptr_t payload = ((uintptr_t)trampoline->counter << 16) | (uintptr_t)idx;
 
-    Napi::External<void> external = Napi::External<void>::New(env, ptr, [](Napi::Env env, void *, void *udata) {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-        uintptr_t payload = (uintptr_t)udata;
-
-        uint16_t idx = (uint16_t)(payload & 0xFFFFu);
-        uint16_t counter = (uint16_t)((payload >> 16) & 0xFFFFu);
-
-        if (instance->trampolines[idx].counter == counter) {
-            instance->free_trampolines[1] |= 1u << idx;
-        }
-    }, (void *)payload);
+    Napi::External<void> external = Napi::External<void>::New(env, ptr);
     SetValueTag(instance, external, type);
 
     return external;
