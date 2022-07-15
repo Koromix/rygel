@@ -103,6 +103,7 @@ private:
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 };
+RG_STATIC_ASSERT(MaxTrampolines <= 32);
 
 template <typename T>
 inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)

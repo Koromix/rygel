@@ -1288,12 +1288,15 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    uint16_t idx = (uint16_t)CountTrailingZeros(instance->free_trampolines);
+    uint16_t idx = (uint16_t)CountTrailingZeros(instance->free_trampolines[1]);
 
     if (RG_UNLIKELY(idx >= MaxTrampolines)) {
         ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
         return env.Null();
     }
+
+    instance->free_trampolines[1] &= ~(1u << idx);
+    idx += MaxTrampolines;
 
     TrampolineInfo *trampoline = &instance->trampolines[idx];
 
@@ -1301,8 +1304,6 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->func.Reset(func, 1);
     trampoline->generation = -1;
     trampoline->counter++;
-
-    instance->free_trampolines &= ~(1u << idx);
 
     void *ptr = GetTrampoline(idx, type->proto);
     uintptr_t payload = ((uintptr_t)trampoline->counter << 16) | (uintptr_t)idx;
@@ -1315,7 +1316,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
         uint16_t counter = (uint16_t)((payload >> 16) & 0xFFFFu);
 
         if (instance->trampolines[idx].counter == counter) {
-            instance->free_trampolines |= 1u << idx;
+            instance->free_trampolines[1] |= 1u << idx;
         }
     }, (void *)payload);
     SetValueTag(instance, external, type);
@@ -1341,13 +1342,13 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     void *ptr = external.Data();
 
     for (Size i = 0; i < RG_LEN(instance->trampolines); i++) {
-        if (instance->free_trampolines & (1u << i))
+        if (instance->free_trampolines[1] & (1u << i))
             continue;
 
         const TrampolineInfo &trampoline = instance->trampolines[i];
 
-        if (GetTrampoline(i, trampoline.proto) == ptr) {
-            instance->free_trampolines |= 1u << i;
+        if (GetTrampoline(i + MaxTrampolines, trampoline.proto) == ptr) {
+            instance->free_trampolines[1] |= 1u << i;
             return env.Null();
         }
     }

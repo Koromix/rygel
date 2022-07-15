@@ -29,7 +29,7 @@ static const int DefaultMaxAsyncCalls = 64;
 static const int MaxAsyncCalls = 256;
 static const Size MaxParameters = 32;
 static const Size MaxOutParameters = 4;
-static const Size MaxTrampolines = 32;
+static const Size MaxTrampolines = 16;
 
 extern const int TypeInfoMarker;
 
@@ -230,8 +230,8 @@ struct InstanceData {
     LocalArray<InstanceMemory *, 9> memories;
     int temporaries = 0;
 
-    TrampolineInfo trampolines[MaxTrampolines];
-    uint32_t free_trampolines = UINT32_MAX;
+    TrampolineInfo trampolines[MaxTrampolines * 2];
+    uint32_t free_trampolines[2] = {UINT32_MAX, UINT32_MAX};
 
     BlockAllocator str_alloc;
 
@@ -245,6 +245,6 @@ struct InstanceData {
 RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(InstanceData::memories.data) - 1);
 RG_STATIC_ASSERT(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
 RG_STATIC_ASSERT(MaxAsyncCalls >= DefaultMaxAsyncCalls);
-RG_STATIC_ASSERT(MaxTrampolines <= 32);
+RG_STATIC_ASSERT(MaxTrampolines <= 16);
 
 }
