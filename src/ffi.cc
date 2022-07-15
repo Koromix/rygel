@@ -1288,14 +1288,14 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    uint16_t idx = (uint16_t)CountTrailingZeros(instance->free_trampolines[1]);
+    int idx = CountTrailingZeros(~instance->registered_trampolines);
 
     if (RG_UNLIKELY(idx >= MaxTrampolines)) {
-        ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
+        ThrowError<Napi::Error>(env, "Too many registered callbacks are in use (max = %1)", MaxTrampolines);
         return env.Null();
     }
 
-    instance->free_trampolines[1] &= ~(1u << idx);
+    instance->registered_trampolines |= 1u << idx;
     idx += MaxTrampolines;
 
     TrampolineInfo *trampoline = &instance->trampolines[idx];
@@ -1303,7 +1303,6 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->proto = type->proto;
     trampoline->func.Reset(func, 1);
     trampoline->generation = -1;
-    trampoline->counter++;
 
     void *ptr = GetTrampoline(idx, type->proto);
 
@@ -1333,13 +1332,13 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     for (Size i = 0; i < MaxTrampolines; i++) {
         Size idx = i + MaxTrampolines;
 
-        if (instance->free_trampolines[1] & (1u << i))
+        if (!(instance->registered_trampolines & (1u << i)))
             continue;
 
         const TrampolineInfo &trampoline = instance->trampolines[idx];
 
         if (GetTrampoline(idx, trampoline.proto) == ptr) {
-            instance->free_trampolines[1] |= 1u << i;
+            instance->registered_trampolines &= ~(1u << i);
             return env.Null();
         }
     }

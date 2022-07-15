@@ -214,7 +214,6 @@ struct TrampolineInfo {
     Napi::FunctionReference func;
 
     int32_t generation;
-    uint16_t counter; // Can wrap without risk
 };
 
 struct InstanceData {
@@ -231,7 +230,9 @@ struct InstanceData {
     int temporaries = 0;
 
     TrampolineInfo trampolines[MaxTrampolines * 2];
-    uint32_t free_trampolines[2] = {UINT32_MAX, UINT32_MAX};
+    int16_t next_trampoline = 0;
+    int16_t temp_trampolines = 0;
+    uint32_t registered_trampolines = 0;
 
     BlockAllocator str_alloc;
 

@@ -40,7 +40,7 @@ CallData::~CallData()
     mem->stack = old_stack_mem;
     mem->heap = old_heap_mem;
 
-    instance->free_trampolines[0] |= used_trampolines;
+    instance->temp_trampolines -= used_trampolines;
     instance->temporaries -= mem->temporary;
 
     if (!--mem->depth && mem->temporary) {
@@ -743,22 +743,22 @@ void CallData::PopOutArguments()
 
 void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
 {
-    uint32_t idx = CountTrailingZeros(instance->free_trampolines[0]);
-
-    if (RG_UNLIKELY(idx >= MaxTrampolines)) {
-        ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
+    if (RG_UNLIKELY(instance->temp_trampolines >= MaxTrampolines)) {
+        ThrowError<Napi::Error>(env, "Too many temporary callbacks are in use (max = %1)", MaxTrampolines);
         return nullptr;
     }
 
-    instance->free_trampolines[0] &= ~(1u << idx);
-    used_trampolines |= 1u << idx;
+    int idx = instance->next_trampoline;
+
+    instance->next_trampoline = (int16_t)((instance->next_trampoline + 1) % MaxTrampolines);
+    instance->temp_trampolines++;
+    used_trampolines++;
 
     TrampolineInfo *trampoline = &instance->trampolines[idx];
 
     trampoline->proto = proto;
     trampoline->func.Reset(func, 1);
-    trampoline->generation = (int64_t)mem->generation;
-    trampoline->counter++;
+    trampoline->generation = (int32_t)mem->generation;
 
     void *ptr = GetTrampoline(idx, proto);
     return ptr;
