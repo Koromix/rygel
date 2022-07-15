@@ -199,7 +199,7 @@
             "Windows x64": {
                 "arch": "x64",
                 "directory": "C:/Users/windows/Desktop/luigi_x64",
-                "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js --prefer-clang"
+                "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js"
             },
 
             "Windows ARM64": {
