@@ -1,5 +1,11 @@
 # Changelog
 
+## Koffi 1.3.9
+
+**Main fixes:**
+
+- Fix prebuild compatibility with Electron on Windows x64
+
 ## Koffi 1.3.8
 
 **Main changes:**
