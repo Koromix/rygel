@@ -526,6 +526,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
     uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[0] : nullptr;
     gpr_ptr += proto->ret.use_memory;
 
+    RG_DEFER_N(err_guard) { memset(out_reg, 0, RG_SIZE(*out_reg)); };
+
     if (RG_UNLIKELY(trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation)) {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
         return;
@@ -838,6 +840,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             out_reg->a0 = (uint64_t)ptr;
         } break;
     }
+
+    err_guard.Disable();
 }
 
 void *GetTrampoline(Size idx, const FunctionInfo *proto)
