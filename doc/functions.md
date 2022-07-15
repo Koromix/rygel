@@ -240,7 +240,18 @@ const AddDoubleFloat = koffi.callback('double AddDoubleFloat(double d, float f)'
 
 Once your callback type is declared, you can use it in struct definitions, or as function parameter and/or return type.
 
-Here is a small example with the C part and the JS part.
+Koffi only uses predefined static trampolines, and does not need to generate code at runtime, which makes it compatible with platforms with hardened W^X migitations (such as PaX mprotect). However, this imposes some restrictions on the maximum number of callbacks, and their duration.
+
+Thus, Koffi distinguishes two callback modes:
+
+- [Transient callbacks](#transient-callbacks) can only be called while the C function they are passed to is running, and are invalidated when it returns. If the C function calls the callback later, the behavior is undefined, though Koffi tries to detect such cases. If it does, an exception will be thrown, but this is no guaranteed. However, they are simple to use, and don't require any special handling.
+- [Registered callbacks](#registered-callbacks) can be called at any time, but they must be manually registered and unregistered. A limited number of registered callbacks can exist at the same time.
+
+On x86 platforms, only Cdecl and Stdcall callbacks are supported.
+
+### Transient callbacks
+
+Use transient callbacks when the native C function only needs to call them while it runs (e.g. qsort, progress callback, `sqlite3_exec`). Here is a small example with the C part and the JS part.
 
 ```c
 #include <string.h>
@@ -255,6 +266,7 @@ int TransferToJS(const char *name, int age, int (*cb)(const char *str, int age))
 
 ```js
 const koffi = require('koffi');
+const lib = koffi.load('./callbacks.so'); // Fake path
 
 const TransferCallback = koffi.callback('int TransferCallback(const char *str, int age)');
 
@@ -273,7 +285,56 @@ console.log(ret);
 //   42
 ```
 
-On x86 platforms, only Cdecl and Stdcall callbacks are supported.
+### Registered callbacks
+
+Use registered callbacks when the function needs to be called at a later time (e.g. log handler, event handler, `fopencookie/funopen`). Call `koffi.register(func, type)` to register a callback function, with two arguments: the JS function, and the callback type.
+
+When you are done, call `koffi.unregister()` (with the value returned by `koffi.register()`) to release the slot. A maximum of 16 registered callbacks can exist at the same time. Failure to do so will leak the slot, and subsequent registrations may fail (with an exception) once all slots are used.
+
+The example below shows how to register and unregister delayed callbacks.
+
+```c
+static const char *(*g_cb1)(const char *name);
+static void (*g_cb2)(const char *str);
+
+void RegisterFunctions(const char *(*cb1)(const char *name), void (*cb2)(const char *str))
+{
+    g_cb1 = cb1;
+    g_cb2 = cb2;
+}
+
+void SayIt(const char *name)
+{
+    const char *str = g_cb1(name);
+    g_cb2(str);
+}
+```
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('./callbacks.so'); // Fake path
+
+const GetCallback = koffi.callback('const char *GetCallback(const char *name)');
+const PrintCallback = koffi.callback('void PrintCallback(const char *str)');
+
+const RegisterFunctions = lib.func('void RegisterFunctions(GetCallback cb1, PrintCallback cb2)');
+const SayIt = lib.func('void SayIt(const char *name)');
+
+let cb1 = koffi.register(name => 'Hello ' + name + '!', GetCallback);
+let cb2 = koffi.register(console.log, 'PrintCallback');
+
+RegisterFunctions(cb1, cb2);
+SayIt('Kyoto'); // Prints Hello Kyoto!
+
+koffi.unregister(cb1);
+koffi.unregister(cb2);
+```
+
+### Handling of exceptions
+
+If an exception happens inside the JS callback, the C API will receive 0 or NULL (depending on the return value type).
+
+Handle the exception yourself (with try/catch) if you need to handle exceptions differently.
 
 ## Thread safety
 
