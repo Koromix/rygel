@@ -17,7 +17,19 @@
     pkg:
       - git
       - rsync
+      - python3
+      - python3-venv
+      - python3-cachecontrol
+      - make
+      - curl
     state: latest
+  become: yes
+
+- name: Install Poetry
+  shell:
+    cmd: 'curl -sSL https://install.python-poetry.org | python3 -'
+    creates: '{{ lookup("env", "HOME") }}/.local/share/pypoetry/venv/bin/poetry'
+    warn: no
   become: yes
 
 - name: Prepare static directories
@@ -58,6 +70,13 @@
     group: root
     recurse: yes
   loop: '{{ static_deploys }}'
+  become: yes
+
+- name: Run build commands
+  command:
+    cmd: '{{ item.cmd }}'
+    chdir: '{{ item.chdir | default(".") }}'
+  loop: '{{ static_deploys | map(attribute="build", default=[]) | flatten }}'
   become: yes
 
 - name: Extract static subdirectories

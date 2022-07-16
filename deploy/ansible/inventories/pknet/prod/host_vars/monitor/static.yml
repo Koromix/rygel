@@ -27,3 +27,10 @@ static_deploys:
     repo: https://github.com/Koromix/luigi.git
     version: koffi1
     path: koffi/doc/dist/html
+    build:
+      - cmd: '/root/.local/share/pypoetry/venv/bin/poetry install'
+        chdir: '{{ static_root_path }}/repo/koffi.dev/www/koffi/doc'
+      - cmd: '/root/.local/share/pypoetry/venv/bin/poetry run make clean'
+        chdir: '{{ static_root_path }}/repo/koffi.dev/www/koffi/doc'
+      - cmd: '/root/.local/share/pypoetry/venv/bin/poetry run make html'
+        chdir: '{{ static_root_path }}/repo/koffi.dev/www/koffi/doc'
