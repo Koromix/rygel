@@ -31,7 +31,7 @@ html_title = project
 
 html_theme = 'furo'
 
-html_static_path = ['_static']
+html_static_path = ['static']
 
 html_theme_options = {
     'light_css_variables': {

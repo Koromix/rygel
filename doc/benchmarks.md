@@ -10,8 +10,8 @@ Here is a quick overview of the execution time of Koffi calls on three benchmark
 
 <table style="margin: 0 auto;">
     <tr>
-        <td><a href="_static/perf_linux_20220628.png" target="_blank"><img src="_static/perf_linux_20220628.png" alt="Linux performance" style="width: 350px;"/></a></td>
-        <td><a href="_static/perf_windows_20220628.png" target="_blank"><img src="_static/perf_windows_20220628.png" alt="Windows performance" style="width: 350px;"/></a></td>
+        <td><a href="static/perf_linux_20220628.png" target="_blank"><img src="static/perf_linux_20220628.png" alt="Linux x86_64 performance" style="width: 350px;"/></a></td>
+        <td><a href="static/perf_windows_20220628.png" target="_blank"><img src="static/perf_windows_20220628.png" alt="Windows x86_64 performance" style="width: 350px;"/></a></td>
     </tr>
 </table>
 
