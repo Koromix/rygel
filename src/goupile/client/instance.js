@@ -854,9 +854,11 @@ function InstanceController() {
                         form_builder.action('-');
                 }
                 if (nav_sequence.stay) {
-                    form_builder.action('Enregistrer', {disabled: !form_state.hasChanged(),
-                                                        color: nav_sequence.next == null ? '#2d8261' : null,
-                                                        always: nav_sequence.next == null}, async () => {
+                    let name = (!form_record.saved || form_state.hasChanged()) ? 'Enregistrer' : '✓ Enregistré';
+
+                    form_builder.action(name, {disabled: !form_state.hasChanged(),
+                                               color: nav_sequence.next == null ? '#2d8261' : null,
+                                               always: nav_sequence.next == null}, async () => {
                         form_builder.triggerErrors();
 
                         await saveRecord(form_record, new_hid, form_values, route.page);
@@ -1133,7 +1135,7 @@ function InstanceController() {
         });
     }
 
-    async function saveRecord(record, hid, values, page) {
+    async function saveRecord(record, hid, values, page, silent = false) {
         await mutex.run(async () => {
             let progress = log.progress('Enregistrement en cours');
 
@@ -1224,13 +1226,21 @@ function InstanceController() {
                             throw new Error('Cannot save online');
 
                         await mutex.chain(() => syncRecords(false));
-                        progress.success('Enregistrement effectué');
+                        if (!silent) {
+                            progress.success('Enregistrement effectué');
+                        } else {
+                            progress.close();
+                        }
                     } catch (err) {
                         progress.info('Enregistrement local effectué');
                         enablePersistence();
                     }
                 } else {
-                    progress.success('Enregistrement local effectué');
+                    if (!silent) {
+                        progress.success('Enregistrement local effectué');
+                    } else {
+                        progress.close();
+                    }
                     enablePersistence();
                 }
 
@@ -2047,7 +2057,7 @@ function InstanceController() {
             autosave_timer = setTimeout(util.serialize(async () => {
                 if (self.hasUnsavedData()) {
                     try {
-                        await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
+                        await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page, true));
                     } catch (err) {
                         log.error(err);
                     }
