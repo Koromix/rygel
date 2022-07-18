@@ -10,22 +10,21 @@ from RF24 import RF24, RF24_PA_LOW
 
 
 parser = argparse.ArgumentParser(
-    description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter
+    description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
 )
 parser.add_argument(
     "-n",
     "--node",
     type=int,
     choices=range(2),
-    help="the identifying radio number (or node ID number)"
+    help="the identifying radio number (or node ID number)",
 )
 parser.add_argument(
     "-r",
     "--role",
     type=int,
     choices=range(2),
-    help="'1' specifies the TX role. '0' specifies the RX role."
+    help="'1' specifies the TX role. '0' specifies the RX role.",
 )
 
 
@@ -66,11 +65,8 @@ def master():
             failures += 1
         else:
             print(
-                "Transmission successful! Time to Transmit: "
-                "{} us. Sent: {}".format(
-                    (end_timer - start_timer) / 1000,
-                    payload[0]
-                )
+                "Transmission successful! Time to Transmit:",
+                f"{(end_timer - start_timer) / 1000} us. Sent: {payload[0]}",
             )
             payload[0] += 0.01
         time.sleep(1)
@@ -97,11 +93,8 @@ def slave(timeout=6):
             payload[0] = struct.unpack("<f", buffer[:4])[0]
             # print details about the received packet
             print(
-                "Received {} bytes on pipe {}: {}".format(
-                    radio.payloadSize,
-                    pipe_number,
-                    payload[0]
-                )
+                f"Received {radio.payloadSize} bytes",
+                f"on pipe {pipe_number}: {payload[0]}",
             )
             start_timer = time.monotonic()  # reset the timeout timer
 
@@ -110,7 +103,7 @@ def slave(timeout=6):
     radio.stopListening()  # put the radio in TX mode
 
 
-def set_role():
+def set_role() -> bool:
     """Set the role using stdin stream. Timeout arg for slave() can be
     specified using a space delimiter (e.g. 'R 10' calls `slave(10)`)
 
@@ -118,11 +111,14 @@ def set_role():
         - True when role is complete & app should continue running.
         - False when app should exit
     """
-    user_input = input(
-        "*** Enter 'R' for receiver role.\n"
-        "*** Enter 'T' for transmitter role.\n"
-        "*** Enter 'Q' to quit example.\n"
-    ) or "?"
+    user_input = (
+        input(
+            "*** Enter 'R' for receiver role.\n"
+            "*** Enter 'T' for transmitter role.\n"
+            "*** Enter 'Q' to quit example.\n"
+        )
+        or "?"
+    )
     user_input = user_input.split()
     if user_input[0].upper().startswith("R"):
         if len(user_input) > 1:
@@ -130,10 +126,10 @@ def set_role():
         else:
             slave()
         return True
-    elif user_input[0].upper().startswith("T"):
+    if user_input[0].upper().startswith("T"):
         master()
         return True
-    elif user_input[0].upper().startswith("Q"):
+    if user_input[0].upper().startswith("Q"):
         radio.powerDown()
         return False
     print(user_input[0], "is an unrecognized input. Please try again.")
@@ -162,11 +158,7 @@ if __name__ == "__main__":
     radio_number = args.node  # uses default value from `parser`
     if args.node is None:  # if '--node' arg wasn't specified
         radio_number = bool(
-            int(
-                input(
-                    "Which radio is this? Enter '0' or '1'. Defaults to '0' "
-                ) or 0
-            )
+            int(input("Which radio is this? Enter '0' or '1'. Defaults to '0' ") or 0)
         )
 
     # set the Power Amplifier level to -12 dBm since this test example is
@@ -181,8 +173,8 @@ if __name__ == "__main__":
 
     # To save time during transmission, we'll set the payload size to be only
     # what we need. A float value occupies 4 bytes in memory using
-    # struct.pack(); "<f" means a little endian unsigned float
-    radio.payloadSize = len(struct.pack("<f", payload[0]))
+    # struct.pack(); "f" means an unsigned float
+    radio.payloadSize = struct.calcsize("f")
 
     # for debugging, we have 2 options that print a large block of details
     # (smaller) function that prints raw register values
@@ -196,8 +188,10 @@ if __name__ == "__main__":
                 pass  # continue example until 'Q' is entered
         else:  # if role was set using CLI args
             # run role once and exit
-            master() if bool(args.role) else slave()
+            if bool(args.role):
+                master()
+            else:
+                slave()
     except KeyboardInterrupt:
-        print(" Keyboard Interrupt detected. Exiting...")
+        print(" Keyboard Interrupt detected. Powering down radio.")
         radio.powerDown()
-        sys.exit()

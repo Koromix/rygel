@@ -14,15 +14,14 @@ from RF24 import RF24, RF24_PA_LOW
 
 
 parser = argparse.ArgumentParser(
-    description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter
+    description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
 )
 parser.add_argument(
     "-n",
     "--node",
     choices=("0", "1", "2", "3", "4", "5", "R", "r"),
     help="the identifying node ID number for the TX role. "
-         "Use 'R' or 'r' to specify the RX role"
+    "Use 'R' or 'r' to specify the RX role",
 )
 
 ########### USER CONFIGURATION ###########
@@ -48,7 +47,7 @@ addresses = [
     b"\xCD\xB6\xB5\xB4\xB3",
     b"\xA3\xB6\xB5\xB4\xB3",
     b"\x0F\xB6\xB5\xB4\xB3",
-    b"\x05\xB6\xB5\xB4\xB3"
+    b"\x05\xB6\xB5\xB4\xB3",
 ]
 # It is very helpful to think of an address as a path instead of as
 # an identifying device destination
@@ -63,7 +62,9 @@ def master(node_number):
     # According to the datasheet, the auto-retry features's delay value should
     # be "skewed" to allow the RX node to receive 1 transmission at a time.
     # So, use varying delay between retry attempts and 15 (at most) retry attempts
-    radio.setRetries(((node_number * 3) % 12) + 3, 15) # maximum value is 15 for both args
+    radio.setRetries(
+        ((node_number * 3) % 12) + 3, 15
+    )  # maximum value is 15 for both args
 
     radio.stopListening()  # put radio in TX mode
     # set the TX address to the address of the base station.
@@ -79,17 +80,12 @@ def master(node_number):
         end_timer = time.monotonic_ns()
         # show something to see it isn't frozen
         print(
-            "Transmission of payloadID {} as node {}".format(
-                counter,
-                node_number
-            ),
-            end=" "
+            f"Transmission of payloadID {counter} as node {node_number}",
+            end=" ",
         )
         if report:
             print(
-                "successfull! Time to transmit = {} us".format(
-                    (end_timer - start_timer) / 1000
-                )
+                f"successful! Time to transmit = {(end_timer - start_timer) / 1000} us"
             )
         else:
             failures += 1
@@ -98,8 +94,8 @@ def master(node_number):
     print(failures, "failures detected. Leaving TX role.")
 
 
-def slave(timeout=10):
-    """Use the radio as a base station for lisening to all nodes
+def slave(timeout: int = 10):
+    """Use the radio as a base station for listening to all nodes
 
     :param int timeout: The number of seconds to wait (with no transmission)
         until exiting function.
@@ -113,19 +109,12 @@ def slave(timeout=10):
         has_payload, pipe_number = radio.available_pipe()
         if has_payload:
             # unpack payload
-            nodeID, payloadID = struct.unpack(
-                "<ii",
-                radio.read(radio.payloadSize)
-            )
+            node_id, payload_id = struct.unpack("<ii", radio.read(radio.payloadSize))
             # show the pipe number that received the payload
             print(
-                "Received {} bytes on pipe {} from node {}. PayloadID: "
-                "{}".format(
-                    radio.payloadSize,
-                    pipe_number,
-                    nodeID,
-                    payloadID
-                )
+                f"Received {radio.payloadSize} bytes",
+                f"on pipe {pipe_number} from node {node_id}.",
+                f"PayloadID: {payload_id}",
             )
             start_timer = time.monotonic()  # reset timer with every payload
 
@@ -133,7 +122,7 @@ def slave(timeout=10):
     radio.stopListening()
 
 
-def set_role():
+def set_role() -> bool:
     """Set the role using stdin stream. Timeout arg for slave() can be
     specified using a space delimiter (e.g. 'R 10' calls `slave(10)`)
 
@@ -141,12 +130,15 @@ def set_role():
         - True when role is complete & app should continue running.
         - False when app should exit
     """
-    user_input = input(
-        "*** Enter 'R' for receiver role.\n"
-        "*** Enter a number in range [0, 5] to use a specific node ID for "
-        "transmitter role.\n"
-        "*** Enter 'Q' to quit example.\n"
-    ) or "?"
+    user_input = (
+        input(
+            "*** Enter 'R' for receiver role.\n"
+            "*** Enter a number in range [0, 5] to use a specific node ID for "
+            "transmitter role.\n"
+            "*** Enter 'Q' to quit example.\n"
+        )
+        or "?"
+    )
     user_input = user_input.split()
     if user_input[0].upper().startswith("R"):
         if len(user_input) > 1:
@@ -154,10 +146,10 @@ def set_role():
         else:
             slave()
         return True
-    elif user_input[0].isdigit() and 0 <= int(user_input[0]) <= 5:
+    if user_input[0].isdigit() and 0 <= int(user_input[0]) <= 5:
         master(int(user_input[0]))
         return True
-    elif user_input[0].upper().startswith("Q"):
+    if user_input[0].upper().startswith("Q"):
         radio.powerDown()
         return False
     print(user_input[0], "is an unrecognized input. Please try again.")
@@ -180,9 +172,9 @@ if __name__ == "__main__":
 
     # To save time during transmission, we'll set the payload size to be only what
     # we need.
-    # 2 int occupy 8 bytes in memory using len(struct.pack())
-    # "<ii" means 2x little endian unsigned int
-    radio.payloadSize = len(struct.pack("<ii", 0, 0))
+    # 2 int occupy 8 bytes in memory using struct.pack()
+    # "ii" means 2 unsigned integers
+    radio.payloadSize = struct.calcsize("ii")
 
     # for debugging, we have 2 options that print a large block of details
     # radio.printDetails();  # (smaller) function that prints raw register values
@@ -199,6 +191,5 @@ if __name__ == "__main__":
             else:
                 slave()
     except KeyboardInterrupt:
-        print(" Keyboard Interrupt detected. Exiting...")
+        print(" Keyboard Interrupt detected. Powering down radio.")
         radio.powerDown()
-        sys.exit()

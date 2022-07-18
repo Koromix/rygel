@@ -17,12 +17,11 @@
 
 #include "RF24_config.h"
 
-#if defined (RF24_LINUX) || defined (LITTLEWIRE)
+#if defined(RF24_LINUX) || defined(LITTLEWIRE)
     #include "utility/includes.h"
 #elif defined SOFTSPI
     #include <DigitalIO.h>
 #endif
-
 
 /**
  * @defgroup PALevel Power Amplifier level
@@ -33,7 +32,8 @@
  * - RF24::getPALevel()
  * @{
  */
-typedef enum {
+typedef enum
+{
     /**
      * (0) represents:
      * nRF24L01 | Si24R1 with<br>lnaEnabled = 1 | Si24R1 with<br>lnaEnabled = 0
@@ -77,7 +77,8 @@ typedef enum {
  * - RF24::getDataRate()
  * @{
  */
-typedef enum {
+typedef enum
+{
     /** (0) represents 1 Mbps */
     RF24_1MBPS = 0,
     /** (1) represents 2 Mbps */
@@ -89,7 +90,7 @@ typedef enum {
 /**
  * @}
  * @defgroup CRCLength CRC length
- * The length of a CRC checksum that is used (if any).<br>Cyclical Redundancy
+ * The length of a CRC checksum that is used (if any). Cyclical Redundancy
  * Checking (CRC) is commonly used to ensure data integrity.
  * @see
  * - RF24::setCRCLength()
@@ -97,7 +98,8 @@ typedef enum {
  * - RF24::disableCRC()
  * @{
  */
-typedef enum {
+typedef enum
+{
     /** (0) represents no CRC checksum is used */
     RF24_CRC_DISABLED = 0,
     /** (1) represents CRC 8 bit checksum is used */
@@ -110,38 +112,38 @@ typedef enum {
  * @}
  * @brief Driver class for nRF24L01(+) 2.4GHz Wireless Transceiver
  */
-
-class RF24 {
+class RF24
+{
 private:
-    #ifdef SOFTSPI
+#ifdef SOFTSPI
     SoftSPI<SOFT_SPI_MISO_PIN, SOFT_SPI_MOSI_PIN, SOFT_SPI_SCK_PIN, SPI_MODE> spi;
-    #elif defined (SPI_UART)
+#elif defined(SPI_UART)
     SPIUARTClass uspi;
-    #endif
+#endif
 
-    #if defined (RF24_LINUX) || defined (XMEGA_D3) || defined (RF24_RP2) /* XMEGA can use SPI class */
+#if defined(RF24_LINUX) || defined(XMEGA_D3) || defined(RF24_RP2) /* XMEGA can use SPI class */
     SPI spi;
-    #endif // defined (RF24_LINUX) || defined (XMEGA_D3)
-    #if defined (RF24_SPI_PTR)
+#endif // defined (RF24_LINUX) || defined (XMEGA_D3)
+#if defined(RF24_SPI_PTR)
     _SPI* _spi;
-    #endif // defined (RF24_SPI_PTR)
-    #if defined (MRAA)
+#endif // defined (RF24_SPI_PTR)
+#if defined(MRAA)
     GPIO gpio;
-    #endif
+#endif
 
-    uint16_t ce_pin; /** "Chip Enable" pin, activates the RX or TX role */
-    uint16_t csn_pin; /** SPI Chip select */
-    uint32_t spi_speed; /** SPI Bus Speed */
-    #if defined (RF24_LINUX) || defined (XMEGA_D3) || defined (RF24_RP2)
-    uint8_t spi_rxbuff[32+1] ; //SPI receive buffer (payload max 32 bytes)
-    uint8_t spi_txbuff[32+1] ; //SPI transmit buffer (payload max 32 bytes + 1 byte for the command)
-    #endif
-    uint8_t status; /** The status byte returned from every SPI transaction */
-    uint8_t payload_size; /** Fixed size of payloads */
-    uint8_t pipe0_reading_address[5]; /** Last address set on pipe 0 for reading. */
-    uint8_t config_reg; /** For storing the value of the NRF_CONFIG register */
-    bool _is_p_variant; /** For storing the result of testing the toggleFeatures() affect */
-    bool _is_p0_rx; /** For keeping track of pipe 0's usage in user-triggered RX mode. */
+    uint16_t ce_pin;    /* "Chip Enable" pin, activates the RX or TX role */
+    uint16_t csn_pin;   /* SPI Chip select */
+    uint32_t spi_speed; /* SPI Bus Speed */
+#if defined(RF24_LINUX) || defined(XMEGA_D3) || defined(RF24_RP2)
+    uint8_t spi_rxbuff[32 + 1]; //SPI receive buffer (payload max 32 bytes)
+    uint8_t spi_txbuff[32 + 1]; //SPI transmit buffer (payload max 32 bytes + 1 byte for the command)
+#endif
+    uint8_t status;                   /* The status byte returned from every SPI transaction */
+    uint8_t payload_size;             /* Fixed size of payloads */
+    uint8_t pipe0_reading_address[5]; /* Last address set on pipe 0 for reading. */
+    uint8_t config_reg;               /* For storing the value of the NRF_CONFIG register */
+    bool _is_p_variant;               /* For storing the result of testing the toggleFeatures() affect */
+    bool _is_p0_rx;                   /* For keeping track of pipe 0's usage in user-triggered RX mode. */
 
 protected:
     /**
@@ -154,17 +156,20 @@ protected:
 
     inline void endTransaction();
 
-    bool ack_payloads_enabled; /** Whether ack payloads are enabled. */
-    uint8_t addr_width; /** The address width to use (3, 4 or 5 bytes). */
-    bool dynamic_payloads_enabled; /** Whether dynamic payloads are enabled. */
+    /** Whether ack payloads are enabled. */
+    bool ack_payloads_enabled;
+    /** The address width to use (3, 4 or 5 bytes). */
+    uint8_t addr_width;
+    /** Whether dynamic payloads are enabled. */
+    bool dynamic_payloads_enabled;
 
     /**
      * Read a chunk of data in from a register
      *
      * @param reg Which register. Use constants from nRF24L01.h
-     * @param buf Where to put the data
+     * @param[out] buf Where to put the data
      * @param len How many bytes of data to transfer
-     * @return Nothing. Older versions of this function returned the status
+     * @note This returns nothing. Older versions of this function returned the status
      * byte, but that it now saved to a private member on all SPI transactions.
      */
     void read_register(uint8_t reg, uint8_t* buf, uint8_t len);
@@ -178,7 +183,6 @@ protected:
     uint8_t read_register(uint8_t reg);
 
 public:
-
     /**
      * @name Primary public interface
      *
@@ -192,17 +196,17 @@ public:
      * Creates a new instance of this driver.  Before using, you create an instance
      * and send in the unique pins that this chip is connected to.
      *
-     * See [Related Pages](pages.html) for device specific information <br>
+     * See [Related Pages](pages.html) for device specific information
      *
      * @param _cepin The pin attached to Chip Enable on the RF module
      * @param _cspin The pin attached to Chip Select (often labeled CSN) on the radio module.
-     * <br><br>For the Arduino Due board, the [Arduino Due extended SPI feature](https://www.arduino.cc/en/Reference/DueExtendedSPI)
+     * - For the Arduino Due board, the [Arduino Due extended SPI feature](https://www.arduino.cc/en/Reference/DueExtendedSPI)
      * is not supported. This means that the Due's pins 4, 10, or 52 are not mandated options (can use any digital output pin) for the radio's CSN pin.
-     * @param _spi_speed The SPI speed in Hz ie: 1000000 == 1Mhz <br><br>Users can specify default SPI speed by modifying
-     * `#define RF24_SPI_SPEED` in RF24_config.h
-     * - For Arduino, the default SPI speed will only be properly configured this way on devices supporting SPI TRANSACTIONS
-     * - Older/Unsupported Arduino devices will use a default clock divider & settings configuration
-     * - For Linux: The old way of setting SPI speeds using BCM2835 driver enums has been removed as of v1.3.7
+     * @param _spi_speed The SPI speed in Hz ie: 1000000 == 1Mhz
+     * - Users can specify default SPI speed by modifying @ref RF24_SPI_SPEED in @ref RF24_config.h
+     *     - For Arduino, the default SPI speed will only be properly configured this way on devices supporting SPI TRANSACTIONS
+     *     - Older/Unsupported Arduino devices will use a default clock divider & settings configuration
+     *     - For Linux: The old way of setting SPI speeds using BCM2835 driver enums has been removed as of v1.3.7
      */
     RF24(uint16_t _cepin, uint16_t _cspin, uint32_t _spi_speed = RF24_SPI_SPEED);
 
@@ -210,17 +214,17 @@ public:
      * A constructor for initializing the radio's hardware dynamically
      * @warning You MUST use begin(uint16_t, uint16_t) or begin(_SPI*, uint16_t, uint16_t) to pass both the digital output pin
      * numbers connected to the radio's CE and CSN pins.
-     * @param _spi_speed The SPI speed in Hz ie: 1000000 == 1Mhz <br><br>Users can specify default SPI speed by modifying
-     * `#define RF24_SPI_SPEED` in RF24_config.h
-     * - For Arduino, the default SPI speed will only be properly configured this way on devices supporting SPI TRANSACTIONS
-     * - Older/Unsupported Arduino devices will use a default clock divider & settings configuration
-     * - For Linux: The old way of setting SPI speeds using BCM2835 driver enums has been removed as of v1.3.7
+     * @param _spi_speed The SPI speed in Hz ie: 1000000 == 1Mhz
+     * - Users can specify default SPI speed by modifying @ref RF24_SPI_SPEED in @ref RF24_config.h
+     *     - For Arduino, the default SPI speed will only be properly configured this way on devices supporting SPI TRANSACTIONS
+     *     - Older/Unsupported Arduino devices will use a default clock divider & settings configuration
+     *     - For Linux: The old way of setting SPI speeds using BCM2835 driver enums has been removed as of v1.3.7
      */
     RF24(uint32_t _spi_speed = RF24_SPI_SPEED);
 
-    #if defined (RF24_LINUX)
+#if defined(RF24_LINUX)
     virtual ~RF24() {};
-    #endif
+#endif
 
     /**
      * Begin operation of the chip
@@ -238,17 +242,17 @@ public:
      */
     bool begin(void);
 
-    #if defined (RF24_SPI_PTR) || defined (DOXYGEN_FORCED)
+#if defined(RF24_SPI_PTR) || defined(DOXYGEN_FORCED)
     /**
      * Same as begin(), but allows specifying a non-default SPI bus to use.
+     *
      * @note This function assumes the `SPI::begin()` method was called before to
      * calling this function.
      *
-     * @warning This function is for the Arduino platform only
+     * @warning This function is for the Arduino platforms only
      *
      * @param spiBus A pointer or reference to an instantiated SPI bus object.
-     *
-     * @note The _SPI datatype is a "wrapped" definition that will represent
+     * The `_SPI` datatype is a "wrapped" definition that will represent
      * various SPI implementations based on the specified platform.
      * @see Review the [Arduino support page](md_docs_arduino.html).
      *
@@ -259,32 +263,33 @@ public:
     /**
      * Same as begin(), but allows dynamically specifying a SPI bus, CE pin,
      * and CSN pin to use.
+     *
      * @note This function assumes the `SPI::begin()` method was called before to
      * calling this function.
      *
-     * @warning This function is for the Arduino platform only
+     * @warning This function is for the Arduino platforms only
      *
      * @param spiBus A pointer or reference to an instantiated SPI bus object.
+     * The `_SPI` datatype is a "wrapped" definition that will represent
+     * various SPI implementations based on the specified platform.
      * @param _cepin The pin attached to Chip Enable on the RF module
      * @param _cspin The pin attached to Chip Select (often labeled CSN) on the radio module.
-     * <br><br>For the Arduino Due board, the [Arduino Due extended SPI feature](https://www.arduino.cc/en/Reference/DueExtendedSPI)
+     * - For the Arduino Due board, the [Arduino Due extended SPI feature](https://www.arduino.cc/en/Reference/DueExtendedSPI)
      * is not supported. This means that the Due's pins 4, 10, or 52 are not mandated options (can use any digital output pin) for the radio's CSN pin.
      *
-     * @note The _SPI datatype is a "wrapped" definition that will represent
-     * various SPI implementations based on the specified platform.
      * @see Review the [Arduino support page](md_docs_arduino.html).
      *
      * @return same result as begin()
      */
     bool begin(_SPI* spiBus, uint16_t _cepin, uint16_t _cspin);
-    #endif // defined (RF24_SPI_PTR) || defined (DOXYGEN_FORCED)
+#endif // defined (RF24_SPI_PTR) || defined (DOXYGEN_FORCED)
 
     /**
      * Same as begin(), but allows dynamically specifying a CE pin
      * and CSN pin to use.
      * @param _cepin The pin attached to Chip Enable on the RF module
      * @param _cspin The pin attached to Chip Select (often labeled CSN) on the radio module.
-     * <br><br>For the Arduino Due board, the [Arduino Due extended SPI feature](https://www.arduino.cc/en/Reference/DueExtendedSPI)
+     * - For the Arduino Due board, the [Arduino Due extended SPI feature](https://www.arduino.cc/en/Reference/DueExtendedSPI)
      * is not supported. This means that the Due's pins 4, 10, or 52 are not mandated options (can use any digital output pin) for the radio's CSN pin.
      * @return same result as begin()
      */
@@ -349,7 +354,7 @@ public:
      * the data about the pipe number that received the next available payload
      * is "unreliable" during a FALLING transition on the IRQ pin. This means
      * you should call whatHappened() before calling this function
-     * during an ISR (Interrupt Service Routine).<br>For example:
+     * during an ISR (Interrupt Service Routine). For example:
      * @code
      * void isrCallbackFunction() {
      *   bool tx_ds, tx_df, rx_dr;
@@ -382,11 +387,13 @@ public:
      * `buf` parameter. The absolute maximum number of bytes that can be read
      * in one call is 32 (for dynamic payload lengths) or whatever number was
      * previously passed to setPayloadSize() (for static payload lengths).
-     * @remark Remember that each call to read() fetches data from the
+     * @remark
+     * @parblock
+     * Remember that each call to read() fetches data from the
      * RX FIFO beginning with the first byte from the first available
      * payload. A payload is not removed from the RX FIFO until it's
      * entire length (or more) is fetched using read().
-     * @remarks
+     *
      * - If `len` parameter's value is less than the available payload's
      *   length, then the payload remains in the RX FIFO.
      * - If `len` parameter's value is greater than the first of multiple
@@ -398,7 +405,7 @@ public:
      *   padding for the data saved to the `buf` parameter's object.
      *   The nRF24L01 will repeatedly use the last byte from the last
      *   payload even when read() is called with an empty RX FIFO.
-     *
+     * @endparblock
      * @note To use this function in the python wrapper, remember that
      * only the `len` parameter is required because this function (in the
      * python wrapper) returns the payload data as a buffer protocol object
@@ -410,7 +417,6 @@ public:
      *     received_payload = radio.read(length)
      * @endcode
      *
-     * @return No return value. Use available().
      * @note This function no longer returns a boolean. Use available to
      * determine if packets are available. The `RX_DR` Interrupt flag is now
      * cleared with this function instead of when calling available().
@@ -446,7 +452,7 @@ public:
      *
      * @note The `len` parameter must be omitted when using the python
      * wrapper because the length of the payload is determined automatically.
-     * <br>To use this function in the python wrapper:
+     * To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * buffer = b"Hello World"  # a `bytes` object
@@ -475,14 +481,14 @@ public:
      * Addresses are assigned via a byte array, default is 5 byte address length
      *
      * @code
-     *   uint8_t addresses[][6] = {"1Node", "2Node"};
-     *   radio.openWritingPipe(addresses[0]);
+     * uint8_t addresses[][6] = {"1Node", "2Node"};
+     * radio.openWritingPipe(addresses[0]);
      * @endcode
      * @code
-     *  uint8_t address[] = { 0xCC, 0xCE, 0xCC, 0xCE, 0xCC };
-     *  radio.openWritingPipe(address);
-     *  address[0] = 0x33;
-     *  radio.openReadingPipe(1, address);
+     * uint8_t address[] = { 0xCC, 0xCE, 0xCC, 0xCE, 0xCC };
+     * radio.openWritingPipe(address);
+     * address[0] = 0x33;
+     * radio.openReadingPipe(1, address);
      * @endcode
      *
      * @warning This function will overwrite the address set to reading pipe 0
@@ -520,7 +526,7 @@ public:
      *
      * @note Pipes 0 and 1 will store a full 5-byte address. Pipes 2-5 will technically
      * only store a single byte, borrowing up to 4 additional bytes from pipe 1 per the
-     * assigned address width.<br>
+     * assigned address width.
      * Pipes 1-5 should share the same address, except the first byte.
      * Only the first byte in the array should be unique, e.g.
      * @code
@@ -531,30 +537,34 @@ public:
      * openReadingPipe(3, addresses[3]); // address used is "4Node"
      * @endcode
      *
-     * @warning If the reading pipe 0 is opened by this function, the address
+     * @warning
+     * @parblock
+     * If the reading pipe 0 is opened by this function, the address
      * passed to this function (for pipe 0) will be restored at every call to
-     * startListening().<br> Read
+     * startListening().
+     *
+     * Read
      * http://maniacalbits.blogspot.com/2013/04/rf24-addressing-nrf24l01-radios-require.html
      * to understand how to avoid using malformed addresses. This address
-     * restoration is implemented because of the underlying neccessary
+     * restoration is implemented because of the underlying necessary
      * functionality of openWritingPipe().
+     * @endparblock
      *
      * @param number Which pipe to open. Only pipe numbers 0-5 are available,
      * an address assigned to any pipe number not in that range will be ignored.
      * @param address The 24, 32 or 40 bit address of the pipe to open.
      *
-     * @remark There is no address length parameter because this function will
+     * There is no address length parameter because this function will
      * always write the number of bytes (for pipes 0 and 1) that the radio
      * addresses are configured to use (set with setAddressWidth()).
      */
-
     void openReadingPipe(uint8_t number, const uint8_t* address);
 
     /**@}*/
     /**
      * @name Advanced Operation
      *
-     *  Methods you can use to drive the chip in more advanced ways
+     * Methods you can use to drive the chip in more advanced ways
      */
     /**@{*/
 
@@ -566,9 +576,9 @@ public:
      * @code
      * #include <printf.h>
      * setup(){
-     *  Serial.begin(115200);
-     *  printf_begin();
-     *  ...
+     *   Serial.begin(115200);
+     *   printf_begin();
+     *   ...
      * }
      * @endcode
      */
@@ -586,24 +596,125 @@ public:
      * @code
      * #include <printf.h>
      * setup(){
-     *  Serial.begin(115200);
-     *  printf_begin();
-     *  ...
+     *   Serial.begin(115200);
+     *   printf_begin();
+     *   // ...
      * }
      * @endcode
      *
      * @note If the automatic acknowledgements feature is configured differently
      * for each pipe, then a binary representation is used in which bits 0-5
-     * represent pipes 0-5 respectively. A `0` means the feature is disabled and
+     * represent pipes 0-5 respectively. A `0` means the feature is disabled, and
      * a `1` means the feature is enabled.
      */
     void printPrettyDetails(void);
+
+    /**
+     * Put a giant block of debugging information in a char array. This function
+     * differs from printPrettyDetails() because it uses `sprintf()` and does not use
+     * a predefined output stream (like `Serial` or stdout). Only use this function if
+     * your application can spare extra bytes of memory. This can also be used for boards that
+     * do not support `printf()` (which is required for printDetails() and printPrettyDetails()).
+     *
+     * @remark
+     * The C standard function [sprintf()](http://www.cplusplus.com/reference/cstdio/sprintf)
+     * formats a C-string in the exact same way as `printf()` but outputs (by reference)
+     * into a char array. The formatted string literal for sprintf() is stored
+     * in nonvolatile program memory.
+     *
+     * @warning Use a buffer of sufficient size for the `debugging_information`. Start
+     * with a char array that has at least 870 elements. There is no overflow protection when using
+     * sprintf(), so the output buffer must be sized correctly or the resulting behavior will
+     * be undefined.
+     * @code
+     * char buffer[870] = {'\0'};
+     * uint16_t used_chars = radio.sprintfPrettyDetails(buffer);
+     * Serial.println(buffer);
+     * Serial.print(F("strlen = "));
+     * Serial.println(used_chars + 1); // +1 for c-strings' null terminating byte
+     * @endcode
+     *
+     * @param debugging_information The c-string buffer that the debugging
+     * information is stored to. This must be allocated to a minimum of 870 bytes of memory.
+     * @returns The number of characters altered in the given buffer. Remember that,
+     * like `sprintf()`, this returned number does not include the null terminating byte.
+     *
+     * This function is available in the python wrapper, but it accepts no parameters and
+     * returns a string. It does not return the number of characters in the string.
+     * @code{.py}
+     * debug_info = radio.sprintfPrettyDetails()
+     * print(debug_info)
+     * print("str_len =", len(debug_info))
+     * @endcode
+     *
+     * @note If the automatic acknowledgements feature is configured differently
+     * for each pipe, then a binary representation is used in which bits 0-5
+     * represent pipes 0-5 respectively. A `0` means the feature is disabled, and
+     * a `1` means the feature is enabled.
+     */
+    uint16_t sprintfPrettyDetails(char* debugging_information);
+
+    /**
+     * Encode radio debugging information into an array of uint8_t. This function
+     * differs from other debug output methods because the debug information can
+     * be decoded by an external program.
+     *
+     * This function is not available in the python wrapper because it is intended for
+     * use on processors with very limited available resources.
+     * 
+     * @remark
+     * This function uses much less ram than other `*print*Details()` methods.
+     * 
+     * @code
+     * uint8_t encoded_details[43] = {0};
+     * radio.encodeRadioDetails(encoded_details);
+     * @endcode
+     *
+     * @param encoded_status The uint8_t array that RF24 radio details are
+     * encoded into. This array must be at least 43 bytes in length; any less would surely
+     * cause undefined behavior.
+     * 
+     * Registers names and/or data corresponding to the index of the `encoded_details` array:
+     * | index | register/data |
+     * |------:|:--------------|
+     * | 0 |     NRF_CONFIG |
+     * | 1 |     EN_AA |
+     * | 2 |     EN_RXADDR |
+     * | 3 |     SETUP_AW |
+     * | 4 |     SETUP_RETR |
+     * | 5 |     RF_CH |
+     * | 6 |     RF_SETUP |
+     * | 7 |     NRF_STATUS |
+     * | 8 |     OBSERVE_TX |
+     * | 9 |     CD (aka RPD) |
+     * | 10-14 | RX_ADDR_P0 |
+     * | 15-19 | RX_ADDR_P1 |
+     * | 20 |    RX_ADDR_P2 |
+     * | 21 |    RX_ADDR_P3 |
+     * | 22 |    RX_ADDR_P4 |
+     * | 23 |    RX_ADDR_P5 |
+     * | 24-28 | TX_ADDR |
+     * | 29 |    RX_PW_P0 |
+     * | 30 |    RX_PW_P1 |
+     * | 31 |    RX_PW_P2 |
+     * | 32 |    RX_PW_P3 |
+     * | 33 |    RX_PW_P4 |
+     * | 34 |    RX_PW_P5 |
+     * | 35 |    FIFO_STATUS |
+     * | 36 |    DYNPD |
+     * | 37 |    FEATURE |
+     * | 38-39 | ce_pin |
+     * | 40-41 | csn_pin |
+     * | 42 |    SPI speed (in MHz) or'd with (isPlusVariant << 4) |
+     */
+    void encodeRadioDetails(uint8_t* encoded_status);
 
     /**
      * Test whether there are bytes available to be read from the
      * FIFO buffers.
      *
      * @note This function is named `available_pipe()` in the python wrapper.
+     * @parblock
      * Additionally, the `available_pipe()` function (which
      * takes no arguments) returns a 2 item tuple containing (ordered by
      * tuple's indices):
@@ -612,13 +723,15 @@ public:
      * - The pipe number that received the next available payload in the RX
      *   FIFO buffers. If the item at the tuple's index 0 is `False`, then
      *   this pipe number is invalid.
-     * @note To use this function in python:
+     *
+     * To use this function in python:
      * @code{.py}
-     * # let `radio` be the instatiated RF24 object
+     * # let `radio` be the instantiated RF24 object
      * has_payload, pipe_number = radio.available_pipe()  # expand the tuple to 2 variables
      * if has_payload:
      *     print("Received a payload with pipe", pipe_number)
      * @endcode
+     * @endparblock
      *
      * @param[out] pipe_num Which pipe has the payload available
      * @code
@@ -633,7 +746,7 @@ public:
      * @warning According to the datasheet, the data saved to `pipe_num` is
      * "unreliable" during a FALLING transition on the IRQ pin. This means you
      * should call whatHappened() before calling this function during
-     * an ISR (Interrupt Service Routine).<br>For example:
+     * an ISR (Interrupt Service Routine). For example:
      * @code
      * void isrCallbackFunction() {
      *   bool tx_ds, tx_df, rx_dr;
@@ -670,6 +783,24 @@ public:
      *   empty or not.
      */
     bool rxFifoFull();
+
+    /**
+     * @param about_tx `true` focuses on the TX FIFO, `false` focuses on the RX FIFO
+     * @return 
+     * - `0` if the specified FIFO is neither full nor empty.
+     * - `1` if the specified FIFO is empty.
+     * - `2` if the specified FIFO is full.
+     */
+    uint8_t isFifo(bool about_tx);
+
+    /** 
+     * @param about_tx `true` focuses on the TX FIFO, `false` focuses on the RX FIFO
+     * @param check_empty
+     * - `true` checks if the specified FIFO is empty
+     * - `false` checks is the specified FIFO is full.
+     * @return A boolean answer to the question "is the [TX/RX] FIFO [empty/full]?"
+     */
+    bool isFifo(bool about_tx, bool check_empty);
 
     /**
      * Enter low-power mode
@@ -724,7 +855,7 @@ public:
      *
      * @note The `len` parameter must be omitted when using the python
      * wrapper because the length of the payload is determined automatically.
-     * <br>To use this function in the python wrapper:
+     * To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * buffer = b"Hello World"  # a `bytes` object
@@ -770,7 +901,7 @@ public:
      *
      * @note The `len` parameter must be omitted when using the python
      * wrapper because the length of the payload is determined automatically.
-     * <br>To use this function in the python wrapper:
+     * To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * buffer = b"Hello World"  # a `bytes` object
@@ -800,7 +931,7 @@ public:
      *
      * @note The `len` parameter must be omitted when using the python
      * wrapper because the length of the payload is determined automatically.
-     * <br>To use this function in the python wrapper:
+     * To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * buffer = b"Hello World"  # a `bytes` object
@@ -836,7 +967,7 @@ public:
      *
      * @note The `len` parameter must be omitted when using the python
      * wrapper because the length of the payload is determined automatically.
-     * <br>To use this function in the python wrapper:
+     * To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * buffer = b"Hello World"  # a `bytes` object
@@ -929,21 +1060,21 @@ public:
      * startListening().
      *
      * @warning Only three of these can be pending at any time as there are
-     * only 3 FIFO buffers.<br> Dynamic payloads must be enabled.
+     * only 3 FIFO buffers. Dynamic payloads must be enabled.
      *
      * @note ACK payloads are dynamic payloads. Calling enableAckPayload()
      * will automatically enable dynamic payloads on pipe 0 (required for TX
-     * mode when expecting ACK payloads). To use ACK payloads on any other
+     * mode when expecting ACK payloads)& pipe 1. To use ACK payloads on any other
      * pipe in RX mode, call enableDynamicPayloads().
      *
      * @param pipe Which pipe# (typically 1-5) will get this response.
      * @param buf Pointer to data that is sent
      * @param len Length of the data to send, up to 32 bytes max.  Not affected
-     * by the static payload set by setPayloadSize().
+     * by the static payload size set by setPayloadSize().
      *
      * @note The `len` parameter must be omitted when using the python
      * wrapper because the length of the payload is determined automatically.
-     * <br>To use this function in the python wrapper:
+     * To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * buffer = b"Hello World"  # a `bytes` object
@@ -981,7 +1112,7 @@ public:
      *
      * @note This function expects no parameters in the python wrapper.
      * Instead, this function returns a 3 item tuple describing the IRQ
-     * events' status.<br> To use this function in the python wrapper:
+     * events' status. To use this function in the python wrapper:
      * @code{.py}
      * # let`radio` be the instantiated RF24 object
      * tx_ds, tx_df, rx_dr = radio.whatHappened()  # get IRQ status flags
@@ -1019,7 +1150,7 @@ public:
      *
      * @note The `len` parameter must be omitted when using the python
      * wrapper because the length of the payload is determined automatically.
-     * <br>To use this function in the python wrapper:
+     * To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * buffer = b"Hello World"  # a `bytes` object
@@ -1056,7 +1187,7 @@ public:
      *   this condition, the transmission process is restarted.
      * @note The `len` parameter must be omitted when using the python
      * wrapper because the length of the payload is determined automatically.
-     * <br>To use this function in the python wrapper:
+     * To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * buffer = b"Hello World"  # a `bytes` object
@@ -1160,7 +1291,7 @@ public:
      */
     void closeReadingPipe(uint8_t pipe);
 
-    #if defined (FAILURE_HANDLING)
+#if defined(FAILURE_HANDLING)
     /**
      *
      * If a failure has been detected, it usually indicates a hardware issue. By default the library
@@ -1172,26 +1303,27 @@ public:
      *
      * The three main failure modes of the radio include:
      *
-     * Writing to radio: Radio unresponsive - Fixed internally by adding a timeout to the internal write functions in RF24 (failure handling)
-     *
-     * Reading from radio: Available returns true always - Fixed by adding a timeout to available functions by the user. This is implemented internally in  RF24Network.
-     *
-     * Radio configuration settings are lost - Fixed by monitoring a value that is different from the default, and re-configuring the radio if this setting reverts to the default.
+     * 1. Writing to radio: Radio unresponsive
+     *     - Fixed internally by adding a timeout to the internal write functions in RF24 (failure handling)
+     * 2. Reading from radio: Available returns true always
+     *     - Fixed by adding a timeout to available functions by the user. This is implemented internally in  RF24Network.
+     * 3. Radio configuration settings are lost
+     *     - Fixed by monitoring a value that is different from the default, and re-configuring the radio if this setting reverts to the default.
      *
      * See the included example, GettingStarted_HandlingFailures
      *
-     *  @code
-     *  if(radio.failureDetected){
-     *    radio.begin();                        // Attempt to re-configure the radio with defaults
-     *    radio.failureDetected = 0;            // Reset the detection value
-     *	 radio.openWritingPipe(addresses[1]);  // Re-configure pipe addresses
-     *    radio.openReadingPipe(1, addresses[0]);
-     *    report_failure();                     // Blink leds, send a message, etc. to indicate failure
-     *  }
+     * @code
+     * if(radio.failureDetected) {
+     *   radio.begin();                          // Attempt to re-configure the radio with defaults
+     *   radio.failureDetected = 0;              // Reset the detection value
+     *   radio.openWritingPipe(addresses[1]);    // Re-configure pipe addresses
+     *   radio.openReadingPipe(1, addresses[0]);
+     *   report_failure();                       // Blink LEDs, send a message, etc. to indicate failure
+     * }
      * @endcode
      */
     bool failureDetected;
-    #endif // defined (FAILURE_HANDLING)
+#endif // defined (FAILURE_HANDLING)
 
     /**@}*/
     /**
@@ -1236,7 +1368,7 @@ public:
      * 2476 MHz.
      *
      * @note In the python wrapper, this function is the setter of the
-     * `channel` attribute.<br>To use this function in the python wrapper:
+     * `channel` attribute.To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * radio.channel = 2  # set the channel to 2 (2402 MHz)
@@ -1250,7 +1382,7 @@ public:
      * Get RF communication channel
      *
      * @note In the python wrapper, this function is the getter of the
-     * `channel` attribute.<br>To use this function in the python wrapper:
+     * `channel` attribute.To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * chn = radio.channel  # get the channel
@@ -1263,13 +1395,13 @@ public:
     /**
      * Set Static Payload Size
      *
-     * This implementation uses a pre-stablished fixed payload size for all
+     * This implementation uses a pre-established fixed payload size for all
      * transmissions.  If this method is never called, the driver will always
      * transmit the maximum payload size (32 bytes), no matter how much
      * was sent to write().
      *
      * @note In the python wrapper, this function is the setter of the
-     * `payloadSize` attribute.<br>To use this function in the python wrapper:
+     * `payloadSize` attribute.To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * radio.payloadSize = 16  # set the static payload size to 16 bytes
@@ -1283,7 +1415,7 @@ public:
      * Get Static Payload Size
      *
      * @note In the python wrapper, this function is the getter of the
-     * `payloadSize` attribute.<br>To use this function in the python wrapper:
+     * `payloadSize` attribute.To use this function in the python wrapper:
      * @code{.py}
      * # let `radio` be the instantiated RF24 object
      * pl_size = radio.payloadSize  # get the static payload size
@@ -1331,7 +1463,7 @@ public:
      * @see setAutoAck()
      *
      * @note ACK payloads are dynamic payloads. This function automatically
-     * enables dynamic payloads on pipe 0 by default. Call
+     * enables dynamic payloads on pipes 0 & 1 by default. Call
      * enableDynamicPayloads() to enable on all pipes (especially for RX nodes
      * that use pipes other than pipe 0 to receive transmissions expecting
      * responses with ACK payloads).
@@ -1339,7 +1471,7 @@ public:
     void enableAckPayload(void);
 
     /**
-     * Disable custom payloads on the ackowledge packets
+     * Disable custom payloads on the acknowledge packets
      *
      * @see enableAckPayload()
      */
@@ -1349,7 +1481,7 @@ public:
      * Enable dynamically-sized payloads
      *
      * This way you don't always have to send large packets just to send them
-     * once in a while.  This enables dynamic payloads on ALL pipes.
+     * once in a while. This enables dynamic payloads on ALL pipes.
      *
      */
     void enableDynamicPayloads(void);
@@ -1396,12 +1528,12 @@ public:
     /**
      * Enable or disable the auto-acknowledgement feature for all pipes. This
      * feature is enabled by default. Auto-acknowledgement responds to every
-     * recieved payload with an empty ACK packet. These ACK packets get sent
+     * received payload with an empty ACK packet. These ACK packets get sent
      * from the receiving radio back to the transmitting radio. To attach an
      * ACK payload to a ACK packet, use writeAckPayload().
      *
      * If this feature is disabled on a transmitting radio, then the
-     * transmitting radio will always report that the payload was recieved
+     * transmitting radio will always report that the payload was received
      * (even if it was not). Please remember that this feature's configuration
      * needs to match for transmitting and receiving radios.
      *
@@ -1428,7 +1560,7 @@ public:
     /**
      * Enable or disable the auto-acknowledgement feature for a specific pipe.
      * This feature is enabled by default for all pipes. Auto-acknowledgement
-     * responds to every recieved payload with an empty ACK packet. These ACK
+     * responds to every received payload with an empty ACK packet. These ACK
      * packets get sent from the receiving radio back to the transmitting
      * radio. To attach an ACK payload to a ACK packet, use writeAckPayload().
      *
@@ -1436,7 +1568,7 @@ public:
      * using this feature on both TX & RX nodes, then pipe 0 must have this
      * feature enabled for the RX & TX operations. If this feature is disabled
      * on a transmitting radio's pipe 0, then the transmitting radio will
-     * always report that the payload was recieved (even if it was not).
+     * always report that the payload was received (even if it was not).
      * Remember to also enable this feature for any pipe that is openly
      * listening to a transmitting radio with this feature enabled.
      *
@@ -1470,7 +1602,7 @@ public:
      *
      * @param level The desired @ref PALevel as defined by @ref rf24_pa_dbm_e.
      * @param lnaEnable Enable or Disable the LNA (Low Noise Amplifier) Gain.
-     * See table for Si24R1 modules below.<br> @p lnaEnable only affects
+     * See table for Si24R1 modules below. @p lnaEnable only affects
      * nRF24L01 modules with an LNA chip.
      *
      * | @p level (enum value) | nRF24L01<br>description | Si24R1<br>description when<br> @p lnaEnable = 1 | Si24R1<br>description when<br> @p lnaEnable = 0 |
@@ -1487,7 +1619,7 @@ public:
     /**
      * Fetches the current @ref PALevel.
      *
-     * @return One of the values defined by @ref rf24_pa_dbm_e.<br>
+     * @return One of the values defined by @ref rf24_pa_dbm_e.
      * See tables in @ref rf24_pa_dbm_e or setPALevel()
      */
     uint8_t getPALevel(void);
@@ -1522,14 +1654,15 @@ public:
     /**
      * Fetches the currently configured transmission @ref Datarate
      *
-     * @return One of the values defined by @ref rf24_datarate_e.<br>
+     * @return One of the values defined by @ref rf24_datarate_e.
      * See table in @ref rf24_datarate_e or setDataRate()
      */
     rf24_datarate_e getDataRate(void);
 
     /**
      * Set the @ref CRCLength (in bits)
-     * <br>CRC cannot be disabled if auto-ack is enabled
+     *
+     * CRC cannot be disabled if auto-ack is enabled
      * @param length Specify one of the values (as defined by @ref rf24_crclength_e)
      * | @p length (enum value)     | description                    |
      * |:--------------------------:|:------------------------------:|
@@ -1541,8 +1674,9 @@ public:
 
     /**
      * Get the @ref CRCLength (in bits)
-     * <br>CRC checking cannot be disabled if auto-ack is enabled
-     * @return One of the values defined by @ref rf24_crclength_e.<br>
+     *
+     * CRC checking cannot be disabled if auto-ack is enabled
+     * @return One of the values defined by @ref rf24_crclength_e.
      * See table in @ref rf24_crclength_e or setCRCLength()
      */
     rf24_crclength_e getCRCLength(void);
@@ -1559,8 +1693,8 @@ public:
      * Request (IRQ) pin active LOW.
      * The following events can be configured:
      * 1. "data sent": This does not mean that the data transmitted was
-     * recieved, only that the attempt to send it was complete.
-     * 2. "data failed": This means the data being sent was not recieved. This
+     * received, only that the attempt to send it was complete.
+     * 2. "data failed": This means the data being sent was not received. This
      * event is only triggered when the auto-ack feature is enabled.
      * 3. "data received": This means that data from a receiving payload has
      * been loaded into the RX FIFO buffers. Remember that there are only 3
@@ -1568,7 +1702,7 @@ public:
      *
      * By default, all events are configured to trigger the IRQ pin active LOW.
      * When the IRQ pin is active, use whatHappened() to determine what events
-     * triggered it. Remeber that calling whatHappened() also clears these
+     * triggered it. Remember that calling whatHappened() also clears these
      * events' status, and the IRQ pin will then be reset to inactive HIGH.
      *
      * The following code configures the IRQ pin to only reflect the "data received"
@@ -1666,7 +1800,7 @@ public:
     /**
      * @name Deprecated
      *
-     *  Methods provided for backwards compabibility.
+     *  Methods provided for backwards compatibility.
      */
     /**@{*/
 
@@ -1675,16 +1809,20 @@ public:
      * @deprecated For compatibility with old code only, see newer function
      * openReadingPipe()
      *
-     * @warning Pipes 1-5 should share the first 32 bits.
+     * @note Pipes 1-5 should share the first 32 bits.
      * Only the least significant byte should be unique, e.g.
      * @code
      * openReadingPipe(1, 0xF0F0F0F0AA);
      * openReadingPipe(2, 0xF0F0F0F066);
      * @endcode
      *
-     * @warning Pipe 0 is also used by the writing pipe so should typically be avoided as a reading pipe.<br>
+     * @warning
+     * @parblock
+     * Pipe 0 is also used by the writing pipe so should typically be avoided as a reading pipe.
      * If used, the reading pipe 0 address needs to be restored at every call to startListening().
-     * <br> See http://maniacalbits.blogspot.com/2013/04/rf24-addressing-nrf24l01-radios-require.html
+     *
+     * See http://maniacalbits.blogspot.com/2013/04/rf24-addressing-nrf24l01-radios-require.html
+     * @endparblock
      *
      * @param number Which pipe# to open, 0-5.
      * @param address The 40-bit address of the pipe to open.
@@ -1710,7 +1848,7 @@ public:
      * Determine if an ack payload was received in the most recent call to
      * write(). The regular available() can also be used.
      *
-     * @deprecated For compatibility with old code only, see synonomous function available().
+     * @deprecated For compatibility with old code only, see synonymous function available().
      * Use read() to retrieve the ack payload and getDynamicPayloadSize() to get the ACK payload size.
      *
      * @return True if an ack payload is available.
@@ -1718,7 +1856,6 @@ public:
     bool isAckPayloadAvailable(void);
 
 private:
-
     /**@}*/
     /**
      * @name Low-level internal interface.
@@ -1822,7 +1959,7 @@ private:
      */
     uint8_t get_status(void);
 
-    #if !defined (MINIMAL)
+#if !defined(MINIMAL)
 
     /**
      * Decode and print the given status to stdout
@@ -1868,7 +2005,20 @@ private:
      */
     void print_address_register(const char* name, uint8_t reg, uint8_t qty = 1);
 
-    #endif
+    /**
+     * Put the value of a 40-bit address register into a char array
+     *
+     * Optionally it can print some quantity of successive
+     * registers on the same line.  This is useful for printing a group
+     * of related registers on one line.
+     *
+     * @param out_buffer Output buffer, char array
+     * @param reg Which register. Use constants from nRF24L01.h
+     * @param qty How many successive registers to print
+     * @return The total number of characters written to the given buffer.
+     */
+    uint8_t sprintf_address_register(char* out_buffer, uint8_t reg, uint8_t qty = 1);
+#endif
 
     /**
      * Turn on or off the special features of the chip
@@ -1878,11 +2028,11 @@ private:
      */
     void toggle_features(void);
 
-    #if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
+#if defined(FAILURE_HANDLING) || defined(RF24_LINUX)
 
     void errNotify(void);
 
-    #endif
+#endif
 
     /**
      * @brief Manipulate the @ref Datarate and txDelay
@@ -1902,9 +2052,7 @@ private:
     inline uint8_t _pa_level_reg_value(uint8_t level, bool lnaEnable);
 
     /**@}*/
-
 };
-
 
 /**
  * @example{lineno} examples/GettingStarted/GettingStarted.ino
@@ -2058,7 +2206,7 @@ private:
  * @see RF24::csDelay
  *
  * The settle time values used here are 100/20. However, these values depend
- * on the actual used RC combiniation and voltage drop by LED. The
+ * on the actual used RC combination and voltage drop by LED. The
  * intermediate results are written to TX (PB3, pin 2 -- using Serial).
  *
  * For schematic details, see introductory comment block in the rf24ping85.ino sketch.

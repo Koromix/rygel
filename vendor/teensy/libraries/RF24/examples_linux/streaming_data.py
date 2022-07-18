@@ -10,22 +10,21 @@ from RF24 import RF24, RF24_PA_LOW
 
 
 parser = argparse.ArgumentParser(
-    description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter
+    description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
 )
 parser.add_argument(
     "-n",
     "--node",
     type=int,
     choices=range(2),
-    help="the identifying radio number (or node ID number)"
+    help="the identifying radio number (or node ID number)",
 )
 parser.add_argument(
     "-r",
     "--role",
     type=int,
     choices=range(2),
-    help="'1' specifies the TX role. '0' specifies the RX role."
+    help="'1' specifies the TX role. '0' specifies the RX role.",
 )
 
 ########### USER CONFIGURATION ###########
@@ -49,7 +48,7 @@ radio = RF24(22, 0)
 SIZE = 32  # this is the default maximum payload size
 
 
-def make_buffer(buf_iter):
+def make_buffer(buf_iter: int) -> bytes:
     """Returns a dynamically created payloads
 
     :param int buf_iter: The position of the payload in the data stream
@@ -66,7 +65,7 @@ def make_buffer(buf_iter):
     return buff
 
 
-def master(count=1):
+def master(count: int = 1):
     """Uses all 3 levels of the TX FIFO to send a stream of data
 
     :param int count: how many times to transmit the stream of data.
@@ -84,10 +83,7 @@ def master(count=1):
                 failures += 1  # increment manual retry count
                 if failures > 99 and buf_iter < 7 and multiplier < 2:
                     # we need to prevent an infinite loop
-                    print(
-                        "Too many failures detected. Aborting at payload ",
-                        buffer[0]
-                    )
+                    print("Too many failures detected. Aborting at payload ", buffer[0])
                     multiplier = count  # be sure to exit the for loop
                     break  # exit the while loop
                 radio.reUseTX()  # resend payload in top level of TX FIFO
@@ -95,14 +91,12 @@ def master(count=1):
                 buf_iter += 1
     end_timer = time.monotonic_ns()  # end timer
     print(
-        "Time to transmit data = {} us. Detected {} failures.".format(
-            (end_timer - start_timer) / 1000,
-            failures
-        )
+        f"Time to transmit data = {(end_timer - start_timer) / 1000} us.",
+        f"Detected {failures} failures."
     )
 
 
-def slave(timeout=6):
+def slave(timeout: int = 6):
     """Listen for any payloads and print them out (suffixed with received
     counter)
 
@@ -115,18 +109,18 @@ def slave(timeout=6):
     while (time.monotonic() - start_timer) < timeout:
         if radio.available():
             count += 1
-            # retreive the received packet's payload
+            # retrieve the received packet's payload
             receive_payload = radio.read(radio.payloadSize)
-            print("Received: {} - {}".format(receive_payload, count))
+            print("Received:", receive_payload, "-", count)
             start_timer = time.monotonic()  # reset timer on every RX payload
 
     print("Nothing received in", timeout, "seconds. Leaving RX role")
     # recommended behavior is to keep in TX mode while idle
     radio.stopListening()  # put the radio in TX mode
 
-    print("Nothing received in ", timeout, " seconds. Leaving RX role")
 
-def set_role():
+
+def set_role() -> bool:
     """Set the role using stdin stream. Role args can be specified using space
     delimiters (e.g. 'R 10' calls `slave(10)` & 'T 3' calls `master(3)`)
 
@@ -134,11 +128,14 @@ def set_role():
         - True when role is complete & app should continue running.
         - False when app should exit
     """
-    user_input = input(
-        "*** Enter 'R' for receiver role.\n"
-        "*** Enter 'T' for transmitter role.\n"
-        "*** Enter 'Q' to quit example.\n"
-    ) or "?"
+    user_input = (
+        input(
+            "*** Enter 'R' for receiver role.\n"
+            "*** Enter 'T' for transmitter role.\n"
+            "*** Enter 'Q' to quit example.\n"
+        )
+        or "?"
+    )
     user_input = user_input.split()
     if user_input[0].upper().startswith("R"):
         if len(user_input) > 1:
@@ -146,13 +143,13 @@ def set_role():
         else:
             slave()
         return True
-    elif user_input[0].upper().startswith("T"):
+    if user_input[0].upper().startswith("T"):
         if len(user_input) > 1:
             master(int(user_input[1]))
         else:
             master()
         return True
-    elif user_input[0].upper().startswith("Q"):
+    if user_input[0].upper().startswith("Q"):
         radio.powerDown()
         return False
     print(user_input[0], "is an unrecognized input. Please try again.")
@@ -181,11 +178,7 @@ if __name__ == "__main__":
     radio_number = args.node  # uses default value from `parser`
     if args.node is None:  # if '--node' arg wasn't specified
         radio_number = bool(
-            int(
-                input(
-                    "Which radio is this? Enter '0' or '1'. Defaults to '0' "
-                ) or 0
-            )
+            int(input("Which radio is this? Enter '0' or '1'. Defaults to '0' ") or 0)
         )
 
     # set the Power Amplifier level to -12 dBm since this test example is
@@ -214,8 +207,10 @@ if __name__ == "__main__":
                 pass  # continue example until 'Q' is entered
         else:  # if role was set using CLI args
             # run role once and exit
-            master() if bool(args.role) else slave()
+            if bool(args.role):
+                master()
+            else:
+                slave()
     except KeyboardInterrupt:
-        print(" Keyboard Interrupt detected. Exiting...")
+        print(" Keyboard Interrupt detected. Powering down radio.")
         radio.powerDown()
-        sys.exit()

@@ -11,22 +11,21 @@ from RF24 import RF24, RF24_PA_LOW
 
 
 parser = argparse.ArgumentParser(
-    description=__doc__,
-    formatter_class=argparse.RawDescriptionHelpFormatter
+    description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
 )
 parser.add_argument(
     "-n",
     "--node",
     type=int,
     choices=range(2),
-    help="the identifying radio number (or node ID number)"
+    help="the identifying radio number (or node ID number)",
 )
 parser.add_argument(
     "-r",
     "--role",
     type=int,
     choices=range(2),
-    help="'1' specifies the TX role. '0' specifies the RX role."
+    help="'1' specifies the TX role. '0' specifies the RX role.",
 )
 
 ########### USER CONFIGURATION ###########
@@ -49,6 +48,7 @@ radio = RF24(22, 0)
 # 1 item list to store our integer number for the payloads' counter
 counter = [0]
 
+
 def master():
     """Transmits a message and an incrementing integer every second."""
     radio.stopListening()  # put radio in TX mode
@@ -63,27 +63,22 @@ def master():
         end_timer = time.monotonic_ns()  # stop timer
         if result:
             # print timer results upon transmission success
+            decoded = buffer[:6].decode("utf-8")
             print(
-                "Transmission successful! Time to transmit: "
-                "{} us. Sent: {}{}".format(
-                    int((end_timer - start_timer) / 1000),
-                    buffer[:6].decode("utf-8"),
-                    counter[0]
-                ),
-                end=" "
+                "Transmission successful! Time to transmit:",
+                f"{int((end_timer - start_timer) / 1000)} us.",
+                f"Sent: {decoded}{counter[0]}",
+                end=" ",
             )
             has_payload, pipe_number = radio.available_pipe()
             if has_payload:
                 # print the received ACK that was automatically sent
                 length = radio.getDynamicPayloadSize()
                 response = radio.read(length)
+                decoded = bytes(response[:6]).decode("utf-8")
                 print(
-                    "Received {} on pipe {}: {}{}".format(
-                        length,
-                        pipe_number,
-                        bytes(response[:6]).decode("utf-8"),
-                        response[7:8][0]
-                    )
+                    f"Received {length} on pipe {pipe_number}:",
+                    f"{decoded}{response[7:8][0]}",
                 )
                 # increment counter from received payload
                 if response[7:8][0] < 255:
@@ -99,7 +94,7 @@ def master():
     print(failures, "failures detected. Leaving TX role.")
 
 
-def slave(timeout=6):
+def slave(timeout: int = 6):
     """Listen for any payloads and print the transaction
 
     :param int timeout: The number of seconds to wait (with no transmission)
@@ -121,15 +116,12 @@ def slave(timeout=6):
             received = radio.read(length)  # fetch 1 payload from RX FIFO
             # increment counter from received payload
             counter[0] = received[7:8][0] + 1 if received[7:8][0] < 255 else 0
+            decoded = [bytes(received[:6]).decode("utf-8")]
+            decoded.append(buffer[:6].decode("utf-8"))
             print(
-                "Received {} bytes on pipe {}: {}{} Sent: {}{}".format(
-                    length,
-                    pipe_number,
-                    bytes(received[:6]).decode("utf-8"),
-                    received[7:8][0],
-                    buffer[:6].decode("utf-8"),
-                    buffer[7:8][0]
-                )
+                f"Received {length} bytes on pipe {pipe_number}:",
+                f"{decoded[0]}{received[7:8][0]}",
+                f"Sent: {decoded[1]}{buffer[7:8][0]}",
             )
             buffer = b"World \x00" + bytes(counter)  # build a new ACK payload
             radio.writeAckPayload(1, buffer)  # load ACK for next response
@@ -140,7 +132,7 @@ def slave(timeout=6):
     radio.stopListening()  # put radio in TX mode & flush unused ACK payloads
 
 
-def set_role():
+def set_role() -> bool:
     """Set the role using stdin stream. Timeout arg for slave() can be
     specified using a space delimiter (e.g. 'R 10' calls `slave(10)`)
 
@@ -148,11 +140,14 @@ def set_role():
         - True when role is complete & app should continue running.
         - False when app should exit
     """
-    user_input = input(
-        "*** Enter 'R' for receiver role.\n"
-        "*** Enter 'T' for transmitter role.\n"
-        "*** Enter 'Q' to quit example.\n"
-    ) or "?"
+    user_input = (
+        input(
+            "*** Enter 'R' for receiver role.\n"
+            "*** Enter 'T' for transmitter role.\n"
+            "*** Enter 'Q' to quit example.\n"
+        )
+        or "?"
+    )
     user_input = user_input.split()
     if user_input[0].upper().startswith("R"):
         if len(user_input) > 1:
@@ -160,10 +155,10 @@ def set_role():
         else:
             slave()
         return True
-    elif user_input[0].upper().startswith("T"):
+    if user_input[0].upper().startswith("T"):
         master()
         return True
-    elif user_input[0].upper().startswith("Q"):
+    if user_input[0].upper().startswith("Q"):
         radio.powerDown()
         return False
     print(user_input[0], "is an unrecognized input. Please try again.")
@@ -192,11 +187,7 @@ if __name__ == "__main__":
     radio_number = args.node  # uses default value from `parser`
     if args.node is None:  # if '--node' arg wasn't specified
         radio_number = bool(
-            int(
-                input(
-                    "Which radio is this? Enter '0' or '1'. Defaults to '0' "
-                ) or 0
-            )
+            int(input("Which radio is this? Enter '0' or '1'. Defaults to '0' ") or 0)
         )
 
     # ACK payloads are dynamically sized.
@@ -227,7 +218,10 @@ if __name__ == "__main__":
                 pass  # continue example until 'Q' is entered
         else:  # if role was set using CLI args
             # run role once and exit
-            master() if bool(args.role) else slave()
+            if bool(args.role):
+                master()
+            else:
+                slave()
     except KeyboardInterrupt:
         print(" Keyboard Interrupt detected. Exiting...")
         radio.powerDown()
