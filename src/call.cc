@@ -127,7 +127,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     RG_ASSERT(IsObject(obj));
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
-    for (const RecordMember &member: type->members) {
+    for (Size i = 0; i < type->members.len; i++) {
+        const RecordMember &member = type->members[i];
         Napi::Value value = obj.Get(member.name);
 
         if (RG_UNLIKELY(value.IsUndefined())) {
@@ -135,7 +136,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             return false;
         }
 
-        uint8_t *dest = origin + member.offset;
+        Size offset = realign ? (i * realign) : member.offset;
+        uint8_t *dest = origin + offset;
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -771,8 +773,11 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
 
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
-    for (const RecordMember &member: type->members) {
-        const uint8_t *src = origin + member.offset;
+    for (Size i = 0; i < type->members.len; i++) {
+        const RecordMember &member = type->members[i];
+
+        Size offset = realign ? (i * realign) : member.offset;
+        const uint8_t *src = origin + offset;
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
