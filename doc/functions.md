@@ -238,7 +238,15 @@ const ExampleCallback = koffi.callback('ExampleCallback', 'void', ['int']);
 const AddDoubleFloat = koffi.callback('double AddDoubleFloat(double d, float f)');
 ```
 
-Once your callback type is declared, you can use it in struct definitions, or as function parameters and/or return types.
+Once your callback type is declared, you can use a pointer to it in struct definitions, or as function parameters and/or return types.
+
+```{note}
+Callbacks **have changed in version 2.0**.
+
+In Koffi 1.x, callbacks were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
+
+Now, you must use them through a pointer: `void CallIt(CallbackType func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version 2.0 and newer.
+```
 
 Koffi only uses predefined static trampolines, and does not need to generate code at runtime, which makes it compatible with platforms with hardened W^X migitations (such as PaX mprotect). However, this imposes some restrictions on the maximum number of callbacks, and their duration.
 
@@ -270,7 +278,7 @@ const lib = koffi.load('./callbacks.so'); // Fake path
 
 const TransferCallback = koffi.callback('int TransferCallback(const char *str, int age)');
 
-const TransferToJS = lib.func('int TransferToJS(const char *str, int age, TransferCallback cb)');
+const TransferToJS = lib.func('TransferToJS', 'int', ['str', 'int', koffi.pointer(TransferCallback)]);
 
 let ret = TransferToJS('Niels', 27, (str, age) => {
     console.log(str);
@@ -317,11 +325,11 @@ const lib = koffi.load('./callbacks.so'); // Fake path
 const GetCallback = koffi.callback('const char *GetCallback(const char *name)');
 const PrintCallback = koffi.callback('void PrintCallback(const char *str)');
 
-const RegisterFunctions = lib.func('void RegisterFunctions(GetCallback cb1, PrintCallback cb2)');
+const RegisterFunctions = lib.func('void RegisterFunctions(GetCallback *cb1, PrintCallback *cb2)');
 const SayIt = lib.func('void SayIt(const char *name)');
 
-let cb1 = koffi.register(name => 'Hello ' + name + '!', GetCallback);
-let cb2 = koffi.register(console.log, 'PrintCallback');
+let cb1 = koffi.register(name => 'Hello ' + name + '!', koffi.pointer(GetCallback));
+let cb2 = koffi.register(console.log, 'PrintCallback *');
 
 RegisterFunctions(cb1, cb2);
 SayIt('Kyoto'); // Prints Hello Kyoto!

@@ -36,9 +36,9 @@ const ApplyCallback = koffi.callback('int __stdcall ApplyCallback(int a, int b, 
 const IntCallback = koffi.callback('int IntCallback(int x)');
 
 const StructCallbacks = koffi.struct('StructCallbacks', {
-    first: IntCallback,
-    second: IntCallback,
-    third: IntCallback
+    first: koffi.pointer(IntCallback),
+    second: 'IntCallback *',
+    third: 'IntCallback *'
 });
 
 main();
@@ -57,13 +57,13 @@ async function test() {
     const lib_filename = path.dirname(__filename) + '/build/misc' + koffi.extension;
     const lib = koffi.load(lib_filename);
 
-    const CallJS = lib.func('int CallJS(const char *str, SimpleCallback cb)');
-    const CallRecursiveJS = lib.func('float CallRecursiveJS(int i, RecursiveCallback func)');
-    const ModifyBFG = lib.func('BFG ModifyBFG(int x, double y, const char *str, BigCallback func, _Out_ BFG *p)');
-    const ApplyStd = lib.func('int ApplyStd(int a, int b, int c, ApplyCallback func)');
-    const ApplyMany = lib.func('int ApplyMany(int x, IntCallback *funcs, int length)');
+    const CallJS = lib.func('int CallJS(const char *str, SimpleCallback *cb)');
+    const CallRecursiveJS = lib.func('float CallRecursiveJS(int i, RecursiveCallback *func)');
+    const ModifyBFG = lib.func('BFG ModifyBFG(int x, double y, const char *str, BigCallback *func, _Out_ BFG *p)');
+    const ApplyStd = lib.func('int ApplyStd(int a, int b, int c, ApplyCallback *func)');
+    const ApplyMany = lib.func('int ApplyMany(int x, IntCallback **funcs, int length)');
     const ApplyStruct = lib.func('int ApplyStruct(int x, StructCallbacks callbacks)');
-    const SetCallback = lib.func('void SetCallback(IntCallback func)');
+    const SetCallback = lib.func('void SetCallback(IntCallback *func)');
     const CallCallback = lib.func('int CallCallback(int x)');
 
     // Simple test similar to README example
@@ -123,7 +123,7 @@ async function test() {
         SetCallback(x => -x);
         assert.throws(() => CallCallback(27), { message: /non-registered callback/ });
 
-        let cb = koffi.register(x => -x, IntCallback);
+        let cb = koffi.register(x => -x, koffi.pointer(IntCallback));
         SetCallback(cb);
         assert.equal(CallCallback(27), -27);
 

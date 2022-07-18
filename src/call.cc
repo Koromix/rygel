@@ -335,6 +335,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
                 *(void **)dest = ptr;
             } break;
+
+            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
         }
     }
 
@@ -547,6 +549,8 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                 offset += ref->size;
             }
         } break;
+
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
     }
 
 #undef PUSH_ARRAY
@@ -867,6 +871,8 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
                 double d = *(double *)src;
                 obj.Set(member.name, Napi::Number::New(env, d));
             } break;
+
+            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
         }
     }
 }
@@ -997,6 +1003,8 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
         } break;
         case PrimitiveKind::Float32: { POP_NUMBER_ARRAY(float); } break;
         case PrimitiveKind::Float64: { POP_NUMBER_ARRAY(double); } break;
+
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
     }
 
 #undef POP_NUMBER_ARRAY
@@ -1161,6 +1169,8 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
         } break;
         case PrimitiveKind::Float32: { POP_NUMBER_ARRAY(Float32Array, float); } break;
         case PrimitiveKind::Float64: { POP_NUMBER_ARRAY(Float64Array, double); } break;
+
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
     }
 
 #undef POP_NUMBER_ARRAY

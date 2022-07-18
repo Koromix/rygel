@@ -51,6 +51,7 @@ enum class PrimitiveKind {
     Array,
     Float32,
     Float64,
+    Prototype,
     Callback
 };
 static const char *const PrimitiveKindNames[] = {
@@ -71,6 +72,7 @@ static const char *const PrimitiveKindNames[] = {
     "Array",
     "Float32",
     "Float64",
+    "Prototype",
     "Callback"
 };
 

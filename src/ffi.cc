@@ -214,8 +214,9 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         member.type = ResolveType(value);
         if (!member.type)
             return env.Null();
-        if (member.type->primitive == PrimitiveKind::Void) {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a member (try %1*?)", member.type->name);
+        if (member.type->primitive == PrimitiveKind::Void ||
+                member.type->primitive == PrimitiveKind::Prototype) {
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a member (maybe try %1 *)", member.type->name);
             return env.Null();
         }
 
@@ -638,8 +639,9 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
         if (!param.type)
             return false;
         if (param.type->primitive == PrimitiveKind::Void ||
-                param.type->primitive == PrimitiveKind::Array) {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (try %1*?)", param.type->name);
+                param.type->primitive == PrimitiveKind::Array ||
+                param.type->primitive == PrimitiveKind::Prototype) {
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
             return false;
         }
 
@@ -704,7 +706,7 @@ static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
 
     type->name = func->name;
 
-    type->primitive = PrimitiveKind::Callback;
+    type->primitive = PrimitiveKind::Prototype;
     type->align = alignof(void *);
     type->size = RG_SIZE(void *);
     type->proto = func;
@@ -840,6 +842,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
             case PrimitiveKind::String16:
             case PrimitiveKind::Float32:
             case PrimitiveKind::Float64:
+            case PrimitiveKind::Prototype:
             case PrimitiveKind::Callback: {} break;
 
             case PrimitiveKind::Array: {
@@ -979,8 +982,9 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         if (RG_UNLIKELY(!param.type))
             return env.Null();
         if (RG_UNLIKELY(param.type->primitive == PrimitiveKind::Void ||
-                        param.type->primitive == PrimitiveKind::Array)) {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (try %1*?)", PrimitiveKindNames[(int)param.type->primitive]);
+                        param.type->primitive == PrimitiveKind::Array ||
+                        param.type->primitive == PrimitiveKind::Prototype)) {
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", PrimitiveKindNames[(int)param.type->primitive]);
             return env.Null();
         }
 
@@ -1284,7 +1288,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
     if (type->primitive != PrimitiveKind::Callback) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected callback type", type->name);
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected <callback> * type", type->name);
         return env.Null();
     }
 

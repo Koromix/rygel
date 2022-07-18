@@ -65,8 +65,9 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
 
             param.type = ParseType();
             if (param.type->primitive == PrimitiveKind::Void ||
-                    param.type->primitive == PrimitiveKind::Array) {
-                MarkError("Type %1 cannot be used as a parameter (try %1*?)", param.type->name);
+                    param.type->primitive == PrimitiveKind::Array ||
+                    param.type->primitive == PrimitiveKind::Prototype) {
+                MarkError("Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
                 return false;
             }
 

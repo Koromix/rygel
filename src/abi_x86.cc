@@ -354,6 +354,8 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                 *(void **)((param.fast ? fast_ptr : args_ptr)++) = ptr;
             } break;
+
+            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
         }
     }
 
@@ -393,6 +395,8 @@ void CallData::Execute()
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
         case PrimitiveKind::Float64: { result.d = PERFORM_CALL(D); } break;
+
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
     }
 
 #undef PERFORM_CALL
@@ -442,6 +446,8 @@ Napi::Value CallData::Complete()
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
         case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
+
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
     }
 
     RG_UNREACHABLE();
@@ -611,6 +617,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
+
+            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
         }
     }
 
@@ -766,6 +774,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
             out_reg->eax = (uint32_t)ptr;
         } break;
+
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
     }
 
     err_guard.Disable();

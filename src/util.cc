@@ -149,10 +149,17 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 
             type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
 
-            type->primitive = PrimitiveKind::Pointer;
-            type->size = RG_SIZE(void *);
-            type->align = RG_SIZE(void *);
-            type->ref = ref;
+            if (ref->primitive != PrimitiveKind::Prototype) {
+                type->primitive = PrimitiveKind::Pointer;
+                type->size = RG_SIZE(void *);
+                type->align = RG_SIZE(void *);
+                type->ref = ref;
+            } else {
+                type->primitive = PrimitiveKind::Callback;
+                type->size = RG_SIZE(void *);
+                type->align = RG_SIZE(void *);
+                type->proto = ref->proto;
+            }
 
             instance->types_map.Set(type->name, type);
         }
