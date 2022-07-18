@@ -151,7 +151,7 @@ In Koffi, you can manage this with opaque handles. Declare the handle type with 
 ```{note}
 Opaque handles **have changed in version 2.0**.
 
-In Koffi 1.x, opaque handle were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
+In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
 
 Now, you must use them through a pointer, and use an array for output parameters. This is shown in the example below (look for the call to `ConcatNewOut` in the JS part), and is described in the section on [output parameters](functions.md#output-parameters).
 ```

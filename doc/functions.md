@@ -238,7 +238,7 @@ const ExampleCallback = koffi.callback('ExampleCallback', 'void', ['int']);
 const AddDoubleFloat = koffi.callback('double AddDoubleFloat(double d, float f)');
 ```
 
-Once your callback type is declared, you can use it in struct definitions, or as function parameter and/or return type.
+Once your callback type is declared, you can use it in struct definitions, or as function parameters and/or return types.
 
 Koffi only uses predefined static trampolines, and does not need to generate code at runtime, which makes it compatible with platforms with hardened W^X migitations (such as PaX mprotect). However, this imposes some restrictions on the maximum number of callbacks, and their duration.
 
