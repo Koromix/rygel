@@ -60,7 +60,7 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str, int *o
     int indirect = 0;
     bool dispose = false;
 
-    while (StartsWith(remain, "const ")) {
+    while (remain.len >= 6 && StartsWith(remain, "const") && IsAsciiWhite(remain[5])) {
         remain = remain.Take(6, remain.len - 6);
         remain = TrimStr(remain);
     }
@@ -74,7 +74,7 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str, int *o
         if (remain[remain.len - 1] == '*') {
             remain = remain.Take(0, remain.len - 1);
             indirect++;
-        } else if (EndsWith(remain, " const")) {
+        } else if (remain.len >= 6 && EndsWith(remain, "const") && IsAsciiWhite(remain[remain.len - 6])) {
             remain = remain.Take(0, remain.len - 6);
         } else {
             break;
