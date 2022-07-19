@@ -56,7 +56,7 @@ public:
     static WaitFor VarName(DelayUs); \
     if (!VarName.Test()) \
         return;
-#define PROCESS_EVERY(DelayUs) PROCESS_EVERY_(UNIQUE_NAME(wf_), (Delayus))
+#define PROCESS_EVERY(DelayUs) PROCESS_EVERY_(UNIQUE_NAME(wf_), (DelayUs))
 
 template <typename Fun>
 class DeferGuard {
