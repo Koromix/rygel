@@ -63,7 +63,7 @@ Primitive types can be specified by name (in a string) or through `koffi.types`:
 
 ```js
 // These two lines do the same:
-let struct1 = koffi.struct({ dummy: 'int' });
+let struct1 = koffi.struct({ dummy: 'long' });
 let struct2 = koffi.struct({ dummy: koffi.types.long });
 ```
 
@@ -91,7 +91,7 @@ typedef struct A {
 const A = koffi.struct('A', {
     a: 'int',
     b: 'char',
-    c: 'str',
+    c: 'const char *', // Koffi does not care about const, it is ignored
     d: koffi.struct({
         d1: 'double',
         d2: 'double'
