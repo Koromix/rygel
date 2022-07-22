@@ -162,6 +162,8 @@ function FormBuilder(state, model, readonly = false) {
     this.widgets = model.widgets;
     this.widgets0 = model.widgets0;
     this.variables = model.variables;
+    this.state = state;
+    this.values = state.values;
 
     this.hasChanged = function() { return state.hasChanged(); };
     this.markInteraction = function() { state.markInteraction(); };
