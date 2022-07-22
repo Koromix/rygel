@@ -74,6 +74,8 @@ function FormState(values = {}) {
                     } else {
                         changes.delete(obj);
                     }
+
+                    return true;
                 }
             });
 
