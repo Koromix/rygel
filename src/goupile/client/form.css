@@ -282,6 +282,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     opacity: 0;
 }
 .fm_radio > input + label {
+    display: inline-block;
     position: relative;
     padding-left: calc(1.18em + 10px);
     line-height: 20px;
@@ -332,6 +333,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     opacity: 0;
 }
 .fm_multi > input + label {
+    display: inline-block;
     position: relative;
     padding-left: calc(1.18em + 10px);
     line-height: 20px;

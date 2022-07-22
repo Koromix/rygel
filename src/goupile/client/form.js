@@ -656,7 +656,8 @@ function FormBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${options.readonly ? 'fm_radio readonly' : 'fm_radio'} id=${id}>
+            <div class=${options.readonly ? 'fm_radio readonly' : 'fm_radio'}
+                 style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) => {
                     let tab = !tabbed && (tab0 || value === p.value);
                     tabbed |= tab;
@@ -799,7 +800,8 @@ function FormBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${options.readonly ? 'fm_multi readonly' : 'fm_multi'} id=${id}>
+            <div class=${options.readonly ? 'fm_multi readonly' : 'fm_multi'}
+                 style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) =>
                     html`<input type="checkbox" id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
                                 ?disabled=${options.disabled} .checked=${value != null && value.includes(p.value)}
@@ -1661,6 +1663,17 @@ instead of:
 
         if (options.wide)
             style += 'width: 100%;';
+        if (options.style)
+            style += options.style;
+
+        return style;
+    }
+
+    function makeRadioStyle(options) {
+        let style = '';
+
+        if (options.columns)
+            style += `columns: ${options.columns};`;
         if (options.style)
             style += options.style;
 
