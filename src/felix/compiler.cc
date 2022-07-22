@@ -203,7 +203,13 @@ public:
             compiler->cc = DuplicateString(cc, &compiler->str_alloc).ptr;
             compiler->cxx = Fmt(&compiler->str_alloc, "%1clang++%2", prefix, suffix).ptr;
             compiler->rc = Fmt(&compiler->str_alloc, "%1llvm-rc%2", prefix, version).ptr;
-            compiler->ld = ld ? DuplicateString(ld, &compiler->str_alloc).ptr : nullptr;
+            if (ld) {
+                compiler->ld = ld;
+            } else if (suffix.len) {
+                compiler->ld = Fmt(&compiler->str_alloc, "%1lld%2", prefix, suffix).ptr;
+            } else {
+                compiler->ld = nullptr;
+            }
         }
 
         Async async;
