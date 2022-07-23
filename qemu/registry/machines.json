@@ -247,7 +247,7 @@
         "qemu": {
             "binary": "qemu-system-x86_64",
             "arguments": ["-m", "1G", "-smp", 2, "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22206-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:16"],
-            "version": 2,
+            "version": 3,
 
             "ssh_port": 22206,
             "vnc_port": 5916,
@@ -290,7 +290,7 @@
         "qemu": {
             "binary": "qemu-system-i386",
             "arguments": ["-m", "1G", "-smp", 2, "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22207-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:17"],
-            "version": 2,
+            "version": 3,
 
             "ssh_port": 22207,
             "vnc_port": 5917,
@@ -333,7 +333,7 @@
         "qemu": {
             "binary": "qemu-system-aarch64",
             "arguments": ["-M", "virt", "-cpu", "cortex-a53", "-m", "1G", "-smp", 2, "-drive", "if=pflash,format=raw,file=QEMU_EFI.img", "-drive", "if=pflash,file=varstore.img", "-drive", "if=virtio,file=disk.qcow2,format=qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22208-:22", "-device", "virtio-net-device,netdev=mynet", "-vnc", "127.0.0.1:18"],
-            "version": 2,
+            "version": 3,
 
             "ssh_port": 22208,
             "vnc_port": 5918,
