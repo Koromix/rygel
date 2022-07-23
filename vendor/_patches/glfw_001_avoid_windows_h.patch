@@ -1,16 +1,16 @@
 diff --git a/vendor/glfw/include/GLFW/glfw3native.h b/vendor/glfw/include/GLFW/glfw3native.h
-index 267e75ca9..9a792f21d 100644
+index 7be0227d5..680a7bee6 100644
 --- a/vendor/glfw/include/GLFW/glfw3native.h
 +++ b/vendor/glfw/include/GLFW/glfw3native.h
-@@ -89,7 +89,10 @@ extern "C" {
-   #undef APIENTRY
-   #undef GLFW_APIENTRY_DEFINED
-  #endif
-- #include <windows.h>
-+ // #include <windows.h>
-+ typedef void *PVOID;
-+ typedef PVOID HANDLE;
-+ typedef HANDLE HWND;
- #elif defined(GLFW_EXPOSE_NATIVE_COCOA) || defined(GLFW_EXPOSE_NATIVE_NSGL)
-  #if defined(__OBJC__)
-   #import <Cocoa/Cocoa.h>
+@@ -102,7 +102,10 @@ extern "C" {
+    #undef APIENTRY
+    #undef GLFW_APIENTRY_DEFINED
+   #endif
+-  #include <windows.h>
++  // #include <windows.h>
++  typedef void *PVOID;
++  typedef PVOID HANDLE;
++  typedef HANDLE HWND;
+  #elif defined(GLFW_EXPOSE_NATIVE_COCOA) || defined(GLFW_EXPOSE_NATIVE_NSGL)
+   #if defined(__OBJC__)
+    #import <Cocoa/Cocoa.h>
