@@ -324,30 +324,36 @@ async function test() {
 
     // Big numbers
     {
-        assert.equal(ThroughUInt32UU(4294967284), 4294967284);
-        assert.deepEqual(ThroughUInt32SS({ v: 4294967284 }), { v: 4294967284 });
-        assert.deepEqual(ThroughUInt32SU(4294967284), { v: 4294967284 });
-        assert.equal(ThroughUInt32US({ v: 4294967284 }), 4294967284);
+        assert.strictEqual(ThroughUInt32UU(4294967284), 4294967284);
+        assert.deepStrictEqual(ThroughUInt32SS({ v: 4294967284 }), { v: 4294967284 });
+        assert.deepStrictEqual(ThroughUInt32SU(4294967284), { v: 4294967284 });
+        assert.strictEqual(ThroughUInt32US({ v: 4294967284 }), 4294967284);
 
-        assert.equal(ThroughUInt64UU(9007199254740989), 9007199254740989);
-        assert.deepEqual(ThroughUInt64SS({ v: 9007199254740989 }), { v: 9007199254740989 });
-        assert.deepEqual(ThroughUInt64SU(9007199254740989), { v: 9007199254740989 });
-        assert.equal(ThroughUInt64US({ v: 9007199254740989 }), 9007199254740989);
+        assert.strictEqual(ThroughUInt64UU(9007199254740992n), 9007199254740992);
+        assert.deepStrictEqual(ThroughUInt64SS({ v: 9007199254740992n }), { v: 9007199254740992 });
+        assert.deepStrictEqual(ThroughUInt64SU(9007199254740992n), { v: 9007199254740992 });
+        assert.strictEqual(ThroughUInt64US({ v: 9007199254740992n }), 9007199254740992);
+        assert.strictEqual(ThroughUInt64UU(9007199254740993n), 9007199254740993n);
+        assert.deepStrictEqual(ThroughUInt64SS({ v: 9007199254740993n }), { v: 9007199254740993n });
+        assert.deepStrictEqual(ThroughUInt64SU(9007199254740993n), { v: 9007199254740993n });
+        assert.strictEqual(ThroughUInt64US({ v: 9007199254740993n }), 9007199254740993n);
+        assert.strictEqual(ThroughUInt64UU(18446744073709551598n), 18446744073709551598n);
+        assert.deepStrictEqual(ThroughUInt64SS({ v: 18446744073709551598n }), { v: 18446744073709551598n });
+        assert.deepStrictEqual(ThroughUInt64SU(18446744073709551598n), { v: 18446744073709551598n });
+        assert.strictEqual(ThroughUInt64US({ v: 18446744073709551598n }), 18446744073709551598n);
 
-        assert.equal(ThroughUInt64UU(18446744073709551598n), 18446744073709551598n);
-        assert.deepEqual(ThroughUInt64SS({ v: 18446744073709551598n }), { v: 18446744073709551598n });
-        assert.deepEqual(ThroughUInt64SU(18446744073709551598n), { v: 18446744073709551598n });
-        assert.equal(ThroughUInt64US({ v: 18446744073709551598n }), 18446744073709551598n);
-
-        assert.equal(ThroughInt64II(-9007199254740989), -9007199254740989);
-        assert.deepEqual(ThroughInt64SS({ v: -9007199254740989 }), { v: -9007199254740989 });
-        assert.deepEqual(ThroughInt64SI(-9007199254740989), { v: -9007199254740989 });
-        assert.equal(ThroughInt64IS({ v: -9007199254740989 }), -9007199254740989);
-
-        assert.equal(ThroughInt64II(-9223372036854775803n), -9223372036854775803n);
-        assert.deepEqual(ThroughInt64SS({ v: -9223372036854775803n }), { v: -9223372036854775803n });
-        assert.deepEqual(ThroughInt64SI(-9223372036854775803n), { v: -9223372036854775803n });
-        assert.equal(ThroughInt64IS({ v: -9223372036854775803n }), -9223372036854775803n);
+        assert.strictEqual(ThroughInt64II(-9007199254740992), -9007199254740992);
+        assert.deepStrictEqual(ThroughInt64SS({ v: -9007199254740992 }), { v: -9007199254740992 });
+        assert.deepStrictEqual(ThroughInt64SI(-9007199254740992), { v: -9007199254740992 });
+        assert.strictEqual(ThroughInt64IS({ v: -9007199254740992 }), -9007199254740992);
+        assert.strictEqual(ThroughInt64II(-9007199254740993n), -9007199254740993n);
+        assert.deepStrictEqual(ThroughInt64SS({ v: -9007199254740993n }), { v: -9007199254740993n });
+        assert.deepStrictEqual(ThroughInt64SI(-9007199254740993n), { v: -9007199254740993n });
+        assert.strictEqual(ThroughInt64IS({ v: -9007199254740993n }), -9007199254740993n);
+        assert.strictEqual(ThroughInt64II(-9223372036854775803n), -9223372036854775803n);
+        assert.deepStrictEqual(ThroughInt64SS({ v: -9223372036854775803n }), { v: -9223372036854775803n });
+        assert.deepStrictEqual(ThroughInt64SI(-9223372036854775803n), { v: -9223372036854775803n });
+        assert.strictEqual(ThroughInt64IS({ v: -9223372036854775803n }), -9223372036854775803n);
     }
 
     // Array pointers as input
