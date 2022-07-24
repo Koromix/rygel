@@ -59,7 +59,7 @@ Below you can find a small example showing how to use a non-default calling conv
 const koffi = require('koffi');
 const lib = koffi.load('user32.dll');
 
-// The following two declarations are equivalent, and use Stdcall
+// The following two declarations are equivalent, and use stdcall on x86 (and the default ABI on other platforms)
 const MessageBoxA_1 = lib.stdcall('MessageBoxA', 'int', ['void *', 'str', 'str', 'uint']);
 const MessageBoxA_2 = lib.func('int __stdcall MessageBoxA(void *hwnd, str text, str caption, uint type)');
 ```
