@@ -253,7 +253,7 @@ async function start(detach = true) {
                 log(machine, 'Machine version mismatch', chalk.bold.gray('[ignore]'));
 
                 ignore.add(machine);
-                missing++;
+                success = false;
 
                 return;
             }
@@ -272,7 +272,7 @@ async function start(detach = true) {
             log(machine, 'Start', chalk.bold.red('[error]'));
 
             ignore.add(machine);
-            missing++;
+            success = false;
         }
     }));
 
