@@ -224,20 +224,20 @@ function InstanceController() {
                 ${menu ? html`
                     ${util.map(route.form.chain[0].menu, item => {
                         let active = (route.form.chain.some(form => form === item.form) || item.page === route.page);
+                        let form = active ? route.form : item.form;
                         let drop = (item.type === 'form' && item.form.menu.length > 1);
+                        let enabled = (item.type === 'form') ? isFormEnabled(form, form_record) : isPageEnabled(item.page, form_record);
 
                         if (drop) {
-                            let form = active ? route.form : item.form;
-
                             return html`
                                 <div id="ins_drop" class="drop">
-                                    <button title=${item.title} class=${active ? 'active' : ''}
+                                    <button title=${item.title} class=${active ? 'active' : ''} ?disabled=${!enabled}
                                             @click=${ui.deployMenu}>${item.title}</button>
                                     <div>${util.mapRange(1, form.chain.length, idx => renderFormDrop(form.chain[idx], idx === 1))}</div>
                                 </div>
                             `;
                         } else {
-                            return html`<button title=${item.title} class=${active ? 'active' : ''}
+                            return html`<button title=${item.title} class=${active ? 'active' : ''} ?disabled=${!enabled}
                                                 @click=${e => self.go(e, item.url)}>${item.title}</button>`;
                         }
                     })}
