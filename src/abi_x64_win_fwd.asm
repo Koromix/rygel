@@ -193,7 +193,7 @@ trampoline macro ID
     mov qword ptr [rsp+56], r9
     mov rcx, ID
     lea rdx, qword ptr [rsp+32]
-    lea r8, qword ptr [rsp+128]
+    lea r8, qword ptr [rsp+160]
     lea r9, qword ptr [rsp+96]
     call RelayCallback
     mov rax, qword ptr [rsp+96]
@@ -217,7 +217,7 @@ trampoline_xmm macro ID
     movsd qword ptr [rsp+88], xmm3
     mov rcx, ID
     lea rdx, qword ptr [rsp+32]
-    lea r8, qword ptr [rsp+128]
+    lea r8, qword ptr [rsp+160]
     lea r9, qword ptr [rsp+96]
     call RelayCallback
     mov rax, qword ptr [rsp+96]
