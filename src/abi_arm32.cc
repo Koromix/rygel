@@ -589,8 +589,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
     const FunctionInfo *proto = trampoline.proto;
     Napi::Function func = trampoline.func.Value();
 
-    uint64_t *vec_ptr = (uint64_t *)own_sp;
-    uint32_t *gpr_ptr = (uint32_t *)(vec_ptr + 8);
+    uint32_t *vec_ptr = (uint32_t *)own_sp;
+    uint32_t *gpr_ptr = vec_ptr + 16;
     uint32_t *args_ptr = (uint32_t *)caller_sp;
 
     uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[0] : nullptr;
