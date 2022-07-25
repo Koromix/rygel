@@ -56,57 +56,40 @@
     .cfi_endproc
 .endm
 
-# Prepare general purpose argument registers from array passed by caller.
-.macro forward_gpr
-    ldr r3, [r1, 76]
-    ldr r2, [r1, 72]
-    ldr r0, [r1, 64]
-    ldr r1, [r1, 68]
-.endm
-
-# Prepare vector argument registers from array passed by caller.
-.macro forward_vec
-    vldr d7, [r1, 56]
-    vldr d6, [r1, 48]
-    vldr d5, [r1, 40]
-    vldr d4, [r1, 32]
-    vldr d3, [r1, 24]
-    vldr d2, [r1, 16]
-    vldr d1, [r1, 8]
-    vldr d0, [r1, 0]
-.endm
-
 ForwardCallGG:
     prologue
-    forward_gpr
+    add r1, r1, #64
+    ldmia r1, {r0-r3}
     epilogue
 
 ForwardCallF:
     prologue
-    forward_gpr
+    add r1, r1, #64
+    ldmia r1, {r0-r3}
     epilogue
 
 ForwardCallDDDD:
     prologue
-    forward_gpr
+    add r1, r1, #64
+    ldmia r1, {r0-r3}
     epilogue
 
 ForwardCallXGG:
     prologue
-    forward_vec
-    forward_gpr
+    vldmia r1!, {d0-d7}
+    ldmia r1, {r0-r3}
     epilogue
 
 ForwardCallXF:
     prologue
-    forward_vec
-    forward_gpr
+    vldmia r1!, {d0-d7}
+    ldmia r1, {r0-r3}
     epilogue
 
 ForwardCallXDDDD:
     prologue
-    forward_vec
-    forward_gpr
+    vldmia r1!, {d0-d7}
+    ldmia r1, {r0-r3}
     epilogue
 
 # Callback trampolines
@@ -192,18 +175,16 @@ ForwardCallXDDDD:
     .cfi_offset 14, 8
     sub sp, sp, #120
     .cfi_def_cfa sp, 128
-    str r0, [sp, 64]
-    str r1, [sp, 68]
-    str r2, [sp, 72]
-    str r3, [sp, 76]
+    add r12, sp, 64
+    stmia r12!, {r0-r3}
     mov r0, \id
     mov r1, sp
     add r2, sp, #128
-    add r3, sp, #80
+    mov r3, r12
     bl RelayCallback
-    ldr r0, [sp, 80]
-    ldr r1, [sp, 84]
-    add sp, sp, #120
+    add sp, sp, #80
+    ldmia sp!, {r0-r1}
+    add sp, sp, #32
     .cfi_def_cfa sp, 8
     pop {fp, lr}
     .cfi_def_cfa sp, 0
@@ -222,30 +203,17 @@ ForwardCallXDDDD:
     .cfi_offset 14, 8
     sub sp, sp, #120
     .cfi_def_cfa sp, 128
-    str r0, [sp, 64]
-    str r1, [sp, 68]
-    str r2, [sp, 72]
-    str r3, [sp, 76]
-    vstr d0, [sp, 0]
-    vstr d1, [sp, 8]
-    vstr d2, [sp, 16]
-    vstr d3, [sp, 24]
-    vstr d4, [sp, 32]
-    vstr d5, [sp, 40]
-    vstr d6, [sp, 48]
-    vstr d7, [sp, 56]
+    mov r12, sp
+    vstmia r12!, {d0-d7}
+    stmia r12!, {r0-r3}
     mov r0, \id
     mov r1, sp
     add r2, sp, #128
-    add r3, sp, #80
+    mov r3, r12
     bl RelayCallback
-    ldr r0, [sp, 80]
-    ldr r1, [sp, 84]
-    vldr d0, [sp, 88]
-    vldr d1, [sp, 96]
-    vldr d2, [sp, 104]
-    vldr d3, [sp, 112]
-    add sp, sp, #120
+    add sp, sp, #80
+    ldmia sp!, {r0-r1}
+    vldmia sp!, {d0-d3}
     .cfi_def_cfa sp, 8
     pop {fp, lr}
     .cfi_def_cfa sp, 0
