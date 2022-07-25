@@ -455,7 +455,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32: {
-                double d = (double)*(int32_t *)(j < 4 ? gpr_ptr + j : args_ptr);
+                double d = (double)*(uint32_t *)(j < 4 ? gpr_ptr + j : args_ptr);
                 args_ptr += (j >= 4);
 
                 Napi::Value arg = Napi::Number::New(env, d);
