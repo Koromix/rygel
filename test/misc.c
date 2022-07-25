@@ -547,6 +547,11 @@ EXPORT BFG ModifyBFG(int x, double y, const char *str, BFG (*func)(BFG bfg), BFG
     return bfg;
 }
 
+EXPORT void Recurse8(int i, void (*func)(int i, int v1, double v2, int v3, int v4, int v5, int v6, float v7, int v8))
+{
+    func(i, i, (double)(i * 2), i + 1, i * 2 + 1, 3 - i, 100 + i, (float)(i % 2), -i - 1);
+}
+
 EXPORT int ApplyStd(int a, int b, int c, ApplyCallback *func)
 {
     int ret = func(a, b, c);

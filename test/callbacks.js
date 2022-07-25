@@ -32,6 +32,7 @@ const BFG = koffi.struct('BFG', {
 const SimpleCallback = koffi.callback('int SimpleCallback(const char *str)');
 const RecursiveCallback = koffi.callback('RecursiveCallback', 'float', ['int', 'str', 'double']);
 const BigCallback = koffi.callback('BFG BigCallback(BFG bfg)');
+const SuperCallback = koffi.callback('void SuperCallback(int i, int v1, double v2, int v3, int v4, int v5, int v6, float v7, int v8)');
 const ApplyCallback = koffi.callback('int __stdcall ApplyCallback(int a, int b, int c)');
 const IntCallback = koffi.callback('int IntCallback(int x)');
 
@@ -60,6 +61,7 @@ async function test() {
     const CallJS = lib.func('int CallJS(const char *str, SimpleCallback *cb)');
     const CallRecursiveJS = lib.func('float CallRecursiveJS(int i, RecursiveCallback *func)');
     const ModifyBFG = lib.func('BFG ModifyBFG(int x, double y, const char *str, BigCallback *func, _Out_ BFG *p)');
+    const Recurse8 = lib.func('void Recurse8(int i, SuperCallback *func)');
     const ApplyStd = lib.func('int ApplyStd(int a, int b, int c, ApplyCallback *func)');
     const ApplyMany = lib.func('int ApplyMany(int x, IntCallback **funcs, int length)');
     const ApplyStruct = lib.func('int ApplyStruct(int x, StructCallbacks callbacks)');
@@ -96,6 +98,35 @@ async function test() {
         }, out);
         assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'New!', e: 54, inner: { f: -10, g: 3 } });
         assert.deepEqual(out, { a: 2, b: 4, c: -25, d: 'X/Yo!/X', e: 54, inner: { f: 10, g: 3 } });
+    }
+
+    // With many parameters
+    {
+        let a = [], b = [], c = [], d = [], e = [], f = [], g = [], h = [];
+
+        let fn = (i, v1, v2, v3, v4, v5, v6, v7, v8) => {
+            a.push(v1);
+            b.push(v2);
+            c.push(v3);
+            d.push(v4);
+            e.push(v5);
+            f.push(v6);
+            g.push(v7);
+            h.push(v8);
+
+            if (i)
+                Recurse8(i - 1, fn);
+        };
+        Recurse8(3, fn);
+
+        assert.deepEqual(a, [3, 2, 1, 0]);
+        assert.deepEqual(b, [6, 4, 2, 0]);
+        assert.deepEqual(c, [4, 3, 2, 1]);
+        assert.deepEqual(d, [7, 5, 3, 1]);
+        assert.deepEqual(e, [0, 1, 2, 3]);
+        assert.deepEqual(f, [103, 102, 101, 100]);
+        assert.deepEqual(g, [1, 0, 1, 0]);
+        assert.deepEqual(h, [-4, -3, -2, -1]);
     }
 
     // Stdcall callbacks
