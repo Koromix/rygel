@@ -470,12 +470,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
     if (proto->convention == CallConvention::Stdcall) {
         out_reg->ret_pop = (int)proto->args_size;
-#ifndef _WIN32
-    } else if (return_ptr) {
-        out_reg->ret_pop = 4;
-#endif
     } else {
+#ifdef _WIN32
         out_reg->ret_pop = 0;
+#else
+        out_reg->ret_pop = return_ptr ? 4 : 0;
+#endif
     }
 
     RG_DEFER_N(err_guard) {

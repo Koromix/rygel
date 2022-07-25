@@ -1,4 +1,4 @@
-# Function calls
+# Functions
 
 ## Function definitions
 
@@ -23,7 +23,7 @@ const printf = lib.func('printf', 'int', ['str', '...']);
 const atoi = lib.func('atoi', 'int', ['str']);
 ```
 
-Koffi automatically tries mangled names for non-standard x86 calling conventions. See the section [on standard calls](#synchronous-calls) for more information on this subject.
+Koffi automatically tries mangled names for non-standard x86 calling conventions. See the section on [calling conventions](#calling-conventions) for more information on this subject.
 
 ### C-like prototypes
 
@@ -36,9 +36,9 @@ const atoi = lib.func('int atoi(str)'); // The parameter name is not used by Kof
 
 You can use `()` or `(void)` for functions that take no argument.
 
-## Calling functions
+## Function calls
 
-### Synchronous calls
+### Calling conventions
 
 By default, calling a C function happens synchronously.
 
@@ -255,7 +255,7 @@ Thus, Koffi distinguishes two callback modes:
 - [Transient callbacks](#transient-callbacks) can only be called while the C function they are passed to is running, and are invalidated when it returns. If the C function calls the callback later, the behavior is undefined, though Koffi tries to detect such cases. If it does, an exception will be thrown, but this is no guaranteed. However, they are simple to use, and don't require any special handling.
 - [Registered callbacks](#registered-callbacks) can be called at any time, but they must be manually registered and unregistered. A limited number of registered callbacks can exist at the same time.
 
-On x86 platforms, only Cdecl and Stdcall callbacks are supported.
+You need to specify the correct [calling convention](#calling-conventions) on x86 platforms, or the behavior is undefined (Node will probably crash). Only *cdecl* and *stdcall* callbacks are supported.
 
 ### Transient callbacks
 
