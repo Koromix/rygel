@@ -1,5 +1,17 @@
 # Changelog
 
+## Koffi 1.3.10
+
+**Main fixes:**
+
+- Fix support for callbacks with more than 4 parameters on Windows x64
+- Fix support for callbacks with multiple floating-point arguments on ARM32 platforms
+- Fix possibly incorrect conversion for uint32_t callback parameters
+
+**Other changes:**
+
+- Various documentation fixes and improvements
+
 ## Koffi 1.3.9
 
 **Main fixes:**
