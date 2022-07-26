@@ -140,7 +140,7 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 
     for (int i = 0; i < count; i++) {
         char name_buf[256];
-        Fmt(name_buf, "%1%2*", ref->name, ref->primitive == PrimitiveKind::Pointer ? "" : " ");
+        Fmt(name_buf, "%1%2*", ref->name, EndsWith(ref->name, "*") ? "" : " ");
 
         TypeInfo *type = (TypeInfo *)instance->types_map.FindValue(name_buf, nullptr);
 
