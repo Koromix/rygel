@@ -171,8 +171,9 @@ const TypeInfo *PrototypeParser::ParseType()
 
         offset--;
     }
+    offset = start;
 
-    MarkError("Unknown or invalid type name '%1'", tokens[start]);
+    MarkError("Unknown or invalid type name '%1'", tokens[offset]);
     return instance->types_map.FindValue("void", nullptr);
 }
 
