@@ -158,7 +158,7 @@ EXPORT int32_t GetMinusOne4(void)
     return -1;
 }
 
-EXPORT int64_t GetMinusOne8(void)
+EXPORT int64_t GetMinusOne8(void *dummy)
 {
     return -1;
 }

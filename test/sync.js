@@ -134,7 +134,7 @@ async function test() {
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
     const GetMinusOne2 = lib.func('int16_t GetMinusOne2(void)');
     const GetMinusOne4 = lib.func('int32_t GetMinusOne4(void)');
-    const GetMinusOne8 = lib.func('int64_t GetMinusOne8(void)');
+    const GetMinusOne8 = lib.func('int64_t GetMinusOne8(void *dummy)');
     const FillPack1 = lib.func('FillPack1', 'void', ['int', koffi.out(koffi.pointer(Pack1))]);
     const RetPack1 = lib.func('RetPack1', Pack1, ['int']);
     const AddPack1 = lib.fastcall('AddPack1', 'void', ['int', koffi.inout(koffi.pointer(Pack1))]);
@@ -191,7 +191,7 @@ async function test() {
     assert.equal(GetMinusOne1(), -1);
     assert.equal(GetMinusOne2(), -1);
     assert.equal(GetMinusOne4(), -1);
-    assert.equal(GetMinusOne8(), -1);
+    assert.equal(GetMinusOne8(null), -1);
 
     // Simple tests with Pack1
     {
