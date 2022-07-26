@@ -1,5 +1,11 @@
 # Changelog
 
+## Koffi 1.3.11
+
+**Main fixes:**
+
+- Fix broken parsing of `void *` when used for first parameter
+
 ## Koffi 1.3.10
 
 **Main fixes:**
