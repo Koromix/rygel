@@ -45,6 +45,7 @@ let targets = [];
 let verbose = false;
 let prebuild = false;
 let prebuild_url = null;
+let prebuild_req = null;
 
 let cmake_bin = null;
 
@@ -136,6 +137,11 @@ async function main() {
             } else if (command == build && arg == '--prebuild') {
                 prebuild = true;
                 prebuild_url = value;
+            } else if (command == build && arg == '--require') {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                prebuild_req = value;
             } else if (command == build && (arg == '-T' || arg == '--target')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -192,6 +198,7 @@ Options:
     -D, --debug                          Shortcut for --config Debug
 
         --prebuild [URL]                 Enable use of prebuilt binaries
+        --require <PATH>                 Require specified module, drop prebuild if it fails
 
     -a, --arch <ARCH>                    Change architecture and ABI
                                          (default: ${determine_arch()})
@@ -413,8 +420,10 @@ async function build() {
             await extract_targz(archive_filename, build_dir, 1);
 
             // Make sure the binary works
-            if (pkg.cnoke.require != null) {
-                let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', pkg.cnoke.require]);
+            if (prebuild_req == null)
+                prebuild_req = pkg.cnoke.require;
+            if (prebuild_req != null) {
+                let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', prebuild_req]);
                 if (proc.status === 0)
                     return;
             } else {
