@@ -143,8 +143,11 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 prebuild_req = value;
-            } else if (command == build && arg[0] != '-') {
-                targets.push(arg);
+            } else if (command == build && (arg == '-T' || arg == '--target')) {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                targets = [value];
             } else {
                 if (arg[0] == '-') {
                     throw new Error(`Unexpected argument '${arg}'`);
@@ -180,7 +183,7 @@ async function main() {
 }
 
 function print_usage() {
-    let help = `Usage: cnoke [command] [options...] [targets...]
+    let help = `Usage: cnoke [command] [options...]
 
 Commands:
     configure                            Configure CMake build
@@ -204,6 +207,8 @@ Options:
                                          (default: ${process.version})
     -t, --toolset <TOOLSET>              Change default CMake toolset
     -C, --prefer-clang                   Use Clang instead of default CMake compiler
+
+    -T, --target <TARGET>                Only build the specified target
 
         --verbose                        Show build commands while building
 
