@@ -43,8 +43,8 @@ let prefer_clang = false;
 let mode = default_mode;
 let targets = [];
 let verbose = false;
-let prebuild = null;
-let prebuild_req = null;
+let prebuild = false;
+let prebuild_url = null;
 
 let cmake_bin = null;
 
@@ -134,15 +134,8 @@ async function main() {
             } else if (command == build && arg == '--verbose') {
                 verbose = true;
             } else if (command == build && arg == '--prebuild') {
-                if (value == null)
-                    throw new Error(`Missing value for ${arg}`);
-
-                prebuild = value;
-            } else if (command == build && arg == '--require') {
-                if (value == null)
-                    throw new Error(`Missing value for ${arg}`);
-
-                prebuild_req = value;
+                prebuild = true;
+                prebuild_url = value;
             } else if (command == build && (arg == '-T' || arg == '--target')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -198,8 +191,7 @@ Options:
                                          (default: ${default_mode})
     -D, --debug                          Shortcut for --config Debug
 
-        --prebuild <URL>                 Set URL template to download prebuilt binaries
-        --require <PATH>                 Require specified module, drop prebuild if it fails
+        --prebuild [URL]                 Enable use of prebuilt binaries
 
     -a, --arch <ARCH>                    Change architecture and ABI
                                          (default: ${determine_arch()})
@@ -235,19 +227,17 @@ async function configure(retry = true) {
     {
         let pkg = read_package_json();
 
-        if (pkg.engines != null) {
-            if (pkg.engines.node != null && cmp_version(runtime_version, pkg.engines.node) < 0)
-                throw new Error(`Project ${pkg.name} requires Node.js >= ${pkg.engines.node}`);
+        if (pkg.cnoke.node != null && cmp_version(runtime_version, pkg.cnoke.node) < 0)
+            throw new Error(`Project ${pkg.name} requires Node.js >= ${pkg.cnoke.node}`);
 
-            if (pkg.engines.napi != null) {
-                let major = parseInt(runtime_version, 10);
-                let required = get_napi_version(pkg.engines.napi, major);
+        if (pkg.cnoke.napi != null) {
+            let major = parseInt(runtime_version, 10);
+            let required = get_napi_version(pkg.cnoke.napi, major);
 
-                if (required == null)
-                    throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (old or missing N-API)`);
-                if (cmp_version(runtime_version, required) < 0)
-                    throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${pkg.engines.napi})`);
-            }
+            if (required == null)
+                throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (old or missing N-API)`);
+            if (cmp_version(runtime_version, required) < 0)
+                throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${pkg.engines.napi})`);
         }
     }
 
@@ -379,6 +369,15 @@ async function configure(retry = true) {
 
 async function build() {
     if (prebuild) {
+        let pkg = read_package_json();
+
+        if (prebuild_url == null) {
+            if (pkg.cnoke.prebuild == null)
+                throw new Error('Missing prebuild URL');
+
+            prebuild_url = pkg.cnoke.prebuild;
+        }
+
         fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
 
         let url = prebuild.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
@@ -429,8 +428,8 @@ async function build() {
             await extract_targz(archive_filename, build_dir, 1);
 
             // Make sure the binary works
-            if (prebuild_req) {
-                let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', prebuild_req]);
+            if (pkg.cnoke.require != null) {
+                let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', pkg.cnoke.require]);
                 if (proc.status === 0)
                     return;
             } else {
@@ -549,19 +548,22 @@ function check_cmake() {
 }
 
 function read_package_json() {
-    if (package_dir == null)
-        return {};
+    let pkg = {};
 
-    try {
-        let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
-        let pkg = JSON.parse(json);
-
-        return pkg;
-    } catch (err) {
-        if (err.code === 'ENOENT')
-            return {};
-        throw err;
+    if (package_dir != null) {
+        try {
+            let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
+            pkg = JSON.parse(json);
+        } catch (err) {
+            if (err.code != 'ENOENT')
+                throw err;
+        }
     }
+
+    if (pkg.cnoke == null)
+        pkg.cnoke = {};
+
+    return pkg;
 }
 
 function unlink_recursive(path) {
