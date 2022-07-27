@@ -929,6 +929,9 @@ function decode_elf_header(buf) {
 // Versioning
 
 function get_napi_version(napi, major) {
+    if (napi > 8)
+        return null;
+
     // https://nodejs.org/api/n-api.html#node-api-version-matrix
     const support = {
         6:  ['6.14.2', '6.14.2', '6.14.2'],
