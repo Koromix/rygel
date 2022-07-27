@@ -219,27 +219,10 @@ async function configure(retry = true) {
     let args = [project_dir];
 
     check_cmake();
+    check_compatibility();
 
     console.log(`>> Node: ${runtime_version}`);
     console.log(`>> Target: ${process.platform}_${arch}`);
-
-    // Check Node.js compatibility
-    {
-        let pkg = read_package_json();
-
-        if (pkg.cnoke.node != null && cmp_version(runtime_version, pkg.cnoke.node) < 0)
-            throw new Error(`Project ${pkg.name} requires Node.js >= ${pkg.cnoke.node}`);
-
-        if (pkg.cnoke.napi != null) {
-            let major = parseInt(runtime_version, 10);
-            let required = get_napi_version(pkg.cnoke.napi, major);
-
-            if (required == null)
-                throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (old or missing N-API)`);
-            if (cmp_version(runtime_version, required) < 0)
-                throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${pkg.engines.napi})`);
-        }
-    }
 
     // Prepare build directory
     fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
@@ -368,6 +351,8 @@ async function configure(retry = true) {
 }
 
 async function build() {
+    check_compatibility();
+
     if (prebuild) {
         let pkg = read_package_json();
 
@@ -545,6 +530,23 @@ function check_cmake() {
     }
 
     console.log(`>> Using CMake binary: ${cmake_bin}`);
+}
+
+function check_compatibility() {
+    let pkg = read_package_json();
+
+    if (pkg.cnoke.node != null && cmp_version(runtime_version, pkg.cnoke.node) < 0)
+        throw new Error(`Project ${pkg.name} requires Node.js >= ${pkg.cnoke.node}`);
+
+    if (pkg.cnoke.napi != null) {
+        let major = parseInt(runtime_version, 10);
+        let required = get_napi_version(pkg.cnoke.napi, major);
+
+        if (required == null)
+            throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (old or missing N-API)`);
+        if (cmp_version(runtime_version, required) < 0)
+            throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${pkg.engines.napi})`);
+    }
 }
 
 function read_package_json() {
