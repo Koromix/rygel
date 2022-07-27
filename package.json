@@ -19,13 +19,13 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "src/index.js",
   "scripts": {
-    "install": "cnoke --prebuild build/qemu/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz --require ./build/koffi.node",
+    "install": "cnoke --prebuild",
     "test": "node qemu/qemu.js test",
     "prepublishOnly": "node qemu/qemu.js pack"
   },
   "license": "AGPL-3.0",
   "dependencies": {
-    "cnoke": "^3.0.0"
+    "cnoke": "^3.1.4"
   },
   "devDependencies": {
     "chalk": "^4.1.2",
@@ -36,6 +36,11 @@
     "ref-napi": "^3.0.3",
     "ref-struct-di": "^1.1.1",
     "tar": "^6.1.11"
+  },
+  "cnoke": {
+    "prebuild": "build/qemu/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz",
+    "require": "./build/koffi.node",
+    "napi": 8
   },
   "files": [
     "src",
@@ -59,8 +64,5 @@
     "ChangeLog.md",
     "CMakeLists.txt",
     "build/qemu/*/*.tar.gz"
-  ],
-  "engines": {
-    "napi": 8
-  }
+  ]
 }
