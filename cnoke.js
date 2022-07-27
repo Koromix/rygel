@@ -380,7 +380,7 @@ async function build() {
 
         fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
 
-        let url = prebuild.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
+        let url = prebuild_url.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
             switch (p1) {
                 case 'version': {
                     let pkg = read_package_json();
