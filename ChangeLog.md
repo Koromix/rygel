@@ -1,5 +1,11 @@
 # Changelog
 
+## Koffi 1.3.12
+
+**Main fixes:**
+
+- Fix support for Yarn package manager
+
 ## Koffi 1.3.11
 
 **Main fixes:**
