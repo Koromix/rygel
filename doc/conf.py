@@ -21,7 +21,7 @@ extensions = [
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ['templates']
 
 exclude_patterns = []
 
@@ -47,6 +47,19 @@ html_theme_options = {
 html_link_suffix = ''
 
 html_css_files = ['custom.css']
+
+html_sidebars = {
+    "**": [
+        "sidebar/brand.html",
+        "sidebar/search.html",
+        "sidebar/scroll-start.html",
+        "sidebar/navigation.html",
+        "sidebar/ethical-ads.html",
+        "badges.html",
+        "sidebar/scroll-end.html",
+        "sidebar/variant-selector.html"
+    ]
+}
 
 # -- MyST parser options -------------------------------------------------
 
