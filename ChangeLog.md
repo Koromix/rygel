@@ -6,8 +6,8 @@
 
 **Major new features:**
 
-- Add disposable types for automatic disposal of C values (such as heap-allocated strings)
-- Add support for registered callbacks, that can be called after the initial FFI call
+- Add [disposable types](functions.md#heap-allocated-values) for automatic disposal of C values (such as heap-allocated strings)
+- Add support for [registered callbacks](functions.md#registered-callbacks), that can be called after the initial FFI call
 - Support named pointer types
 - Support complex type specifications outside of prototype parser
 
