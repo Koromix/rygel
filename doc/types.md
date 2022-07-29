@@ -515,7 +515,15 @@ Koffi can also convert JS strings to fixed-sized arrays in the following cases:
 
 The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16 and char16_t arrays, but you can also explicitly ask for this with the `string` array hint (e.g. `koffi.array('char', 8, 'string')`).
 
-## Type introspection
+## Disposable types
+
+Disposable types allow you to register a function that will automatically called after each C to JS conversion performed by Koffi. This can be used to avoid leaking heap-allocated strings, for example.
+
+Read the documentation for [disposable types](functions.md#heap-allocated-values) on the page about function calls.
+
+## Utility functions
+
+### Type introspection
 
 Koffi exposes three functions to explore type information:
 
@@ -540,6 +548,6 @@ console.log(koffi.sizeof('long'));
 console.log(koffi.sizeof(koffi.types.long));
 ```
 
-## Type aliasing
+### Type aliasing
 
 You can alias a type with `koffi.alias(name, type)`. Aliased types are completely equivalent.
