@@ -158,7 +158,7 @@ This example opens an in-memory SQLite database, and uses the node-ffi-style fun
 
 ```js
 const koffi = require('koffi');
-const lib = koffi.load('sqlite.so');
+const lib = koffi.load('sqlite3.so');
 
 const sqlite3_db = koffi.handle('sqlite3_db');
 
@@ -169,9 +169,11 @@ const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [koffi.pointer(sqli
 const SQLITE_OPEN_READWRITE = 0x2;
 const SQLITE_OPEN_CREATE = 0x4;
 
-let db = {};
-if (sqlite3_open_v2(':memory:', db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, null) != 0)
+let out = [null];
+if (sqlite3_open_v2(':memory:', out, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, null) != 0)
     throw new Error('Failed to open database');
+let db = out[0];
+
 sqlite3_close_v2(db);
 ```
 
