@@ -154,6 +154,8 @@ Opaque handles **have changed in version 2.0**.
 In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
 
 Now, you must use them through a pointer, and use an array for output parameters. This is shown in the example below (look for the call to `ConcatNewOut` in the JS part), and is described in the section on [output parameters](functions.md#output-parameters).
+
+Consult the [migration guide](changes.md) for more information.
 ```
 
 The full example below implements an iterative string builder (concatenator) in C, and uses it from Javascript to output a mix of Hello World and FizzBuzz. The builder is hidden behind an opaque handle, and is created and destroyed using a pair of C functions: `ConcatNew` (or `ConcatNewOut`) and `ConcatFree`.
@@ -525,6 +527,8 @@ Koffi exposes three functions to explore type information:
 The value returned by `introspect()` has **changed in version 2.0**.
 
 In Koffi 1.x, it could only be used with struct types and returned the object passed to koffi.struct() with the member names and types.
+
+Consult the [migration guide](changes.md) for more information.
 ```
 
 Just like before, you can refer to primitive types by their name or through `koffi.types`:

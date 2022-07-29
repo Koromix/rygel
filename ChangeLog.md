@@ -1,18 +1,20 @@
 # Changelog
 
-## Koffi 1.3.12
+## History
+
+### Koffi 1.3.12
 
 **Main fixes:**
 
 - Fix support for Yarn package manager
 
-## Koffi 1.3.11
+### Koffi 1.3.11
 
 **Main fixes:**
 
 - Fix broken parsing of `void *` when used for first parameter
 
-## Koffi 1.3.10
+### Koffi 1.3.10
 
 **Main fixes:**
 
@@ -24,13 +26,13 @@
 
 - Various documentation fixes and improvements
 
-## Koffi 1.3.9
+### Koffi 1.3.9
 
 **Main fixes:**
 
 - Fix prebuild compatibility with Electron on Windows x64
 
-## Koffi 1.3.8
+### Koffi 1.3.8
 
 **Main changes:**
 
@@ -41,7 +43,7 @@
 
 - Fix and harmonize a few error messages
 
-## Koffi 1.3.7
+### Koffi 1.3.7
 
 **Main fixes:**
 
@@ -54,7 +56,7 @@
 - Add str/str16 type aliases for string/string16
 - Various documentation fixes and improvements
 
-## Koffi 1.3.6
+### Koffi 1.3.6
 
 **Main fixes:**
 
@@ -66,7 +68,7 @@
 - Prebuild with Clang for Windows x64 and Linux x64 binaries
 - Various documentation improvements
 
-## Koffi 1.3.5
+### Koffi 1.3.5
 
 **Main changes:**
 
@@ -78,13 +80,13 @@
 - Reduce default async memory stack and heap size
 - Various documentation improvements
 
-## Koffi 1.3.4
+### Koffi 1.3.4
 
 **Main fixes:**
 
 - Fix possible OpenBSD i386 crash with `(void)` functions
 
-## Koffi 1.3.3
+### Koffi 1.3.3
 
 **Main fixes:**
 
@@ -96,20 +98,20 @@
 - Disable unsafe compiler optimizations
 - Various documentation improvements
 
-## Koffi 1.3.2
+### Koffi 1.3.2
 
 **Main fixes:**
 
 - Support compilation in C++14 mode (graceful degradation)
 - Support older toolchains on Linux (tested on Debian 9)
 
-## Koffi 1.3.1
+### Koffi 1.3.1
 
 **Main fixes:**
 
 - The prebuilt binary is tested when Koffi is installed, and a rebuild happens if it fails to load
 
-## Koffi 1.3.0
+### Koffi 1.3.0
 
 **Major changes:**
 
@@ -125,19 +127,19 @@
 - Detect floating-point ABI before using prebuilt binaries (ARM32, RISC-V)
 - Forbid duplicate member names in struct types
 
-## Koffi 1.2.4
+### Koffi 1.2.4
 
 **New features:**
 
 - Windows ARM64 is now supported
 
-## Koffi 1.2.3
+### Koffi 1.2.3
 
 **New features:**
 
 - A prebuilt binary for macOS ARM64 (M1) is now included
 
-## Koffi 1.2.1
+### Koffi 1.2.1
 
 This entry documents changes since version 1.1.0.
 
