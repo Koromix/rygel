@@ -518,7 +518,7 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
 
     free(ptr);
 
-    return env.Null();
+    return env.Undefined();
 }
 
 static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
@@ -1109,7 +1109,7 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     }
     async->Queue();
 
-    return env.Null();
+    return env.Undefined();
 }
 
 static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConvention convention)
@@ -1350,7 +1350,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
 
         if (GetTrampoline(idx, trampoline.proto) == ptr) {
             instance->registered_trampolines &= ~(1u << i);
-            return env.Null();
+            return env.Undefined();
         }
     }
 

@@ -372,10 +372,12 @@ async function test() {
         let out1 = Array(10);
         let out2 = new Int32Array(10);
         let mult = -3;
+        let ret = null;
 
         FillRange(2, 7, out1, out1.length);
-        FillRange(13, 3, out2, out2.length);
+        ret = FillRange(13, 3, out2, out2.length);
 
+        assert.strictEqual(ret, undefined);
         assert.deepEqual(out1, [2, 9, 16, 23, 30, 37, 44, 51, 58, 65]);
         assert.deepEqual(out2, new Int32Array([13, 16, 19, 22, 25, 28, 31, 34, 37, 40]));
 
