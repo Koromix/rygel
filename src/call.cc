@@ -254,7 +254,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 *(const char16_t **)dest = str16;
             } break;
             case PrimitiveKind::Pointer: {
-                if (CheckValueTag(instance, value, member.type)) {
+                if (CheckValueTag(instance, value, member.type->ref.marker)) {
                     Napi::External<void> external = value.As<Napi::External<void>>();
                     void *ptr = external.Data();
                     *(void **)dest = ptr;
@@ -278,15 +278,15 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             case PrimitiveKind::Array: {
                 if (value.IsArray()) {
                     Napi::Array array = value.As<Napi::Array>();
-                    Size len = (Size)member.type->size / member.type->ref->size;
+                    Size len = (Size)member.type->size / member.type->ref.type->size;
 
-                    if (!PushNormalArray(array, len, member.type->ref, dest, realign))
+                    if (!PushNormalArray(array, len, member.type->ref.type, dest, realign))
                         return false;
                 } else if (value.IsTypedArray()) {
                     Napi::TypedArray array = value.As<Napi::TypedArray>();
-                    Size len = (Size)member.type->size / member.type->ref->size;
+                    Size len = (Size)member.type->size / member.type->ref.type->size;
 
-                    if (!PushTypedArray(array, len, member.type->ref, dest, realign))
+                    if (!PushTypedArray(array, len, member.type->ref.type, dest, realign))
                         return false;
                 } else if (value.IsString() && !realign) {
                     if (!PushStringArray(value, member.type, dest))
@@ -320,10 +320,10 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    ptr = ReserveTrampoline(member.type->proto, func);
+                    ptr = ReserveTrampoline(member.type->ref.proto, func);
                     if (RG_UNLIKELY(!ptr))
                         return false;
-                } else if (CheckValueTag(instance, value, member.type)) {
+                } else if (CheckValueTag(instance, value, member.type->ref.marker)) {
                     Napi::External<void> external = value.As<Napi::External<void>>();
                     ptr = external.Data();
                 } else if (IsNullOrUndefined(value)) {
@@ -457,7 +457,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
             });
         } break;
         case PrimitiveKind::Pointer: {
-            PUSH_ARRAY(CheckValueTag(instance, value, ref) || IsNullOrUndefined(value), ref->name, {
+            PUSH_ARRAY(CheckValueTag(instance, value, ref->ref.marker) || IsNullOrUndefined(value), ref->name, {
                 if (!IsNullOrUndefined(value)) {
                     Napi::External<void> external = value.As<Napi::External<void>>();
                     *(void **)dest = external.Data();
@@ -484,15 +484,15 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
 
                 if (value.IsArray()) {
                     Napi::Array array2 = value.As<Napi::Array>();
-                    Size len2 = (Size)ref->size / ref->ref->size;
+                    Size len2 = (Size)ref->size / ref->ref.type->size;
 
-                    if (!PushNormalArray(array2, len2, ref->ref, dest, realign))
+                    if (!PushNormalArray(array2, len2, ref->ref.type, dest, realign))
                         return false;
                 } else if (value.IsTypedArray()) {
                     Napi::TypedArray array2 = value.As<Napi::TypedArray>();
-                    Size len2 = (Size)ref->size / ref->ref->size;
+                    Size len2 = (Size)ref->size / ref->ref.type->size;
 
-                    if (!PushTypedArray(array2, len2, ref->ref, dest, realign))
+                    if (!PushTypedArray(array2, len2, ref->ref.type, dest, realign))
                         return false;
                 } else if (value.IsString() && !realign) {
                     if (!PushStringArray(value, ref, dest))
@@ -531,10 +531,10 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    ptr = ReserveTrampoline(ref->proto, func);
+                    ptr = ReserveTrampoline(ref->ref.proto, func);
                     if (RG_UNLIKELY(!ptr))
                         return false;
-                } else if (CheckValueTag(instance, value, ref)) {
+                } else if (CheckValueTag(instance, value, ref->ref.marker)) {
                     Napi::External<void> external = value.As<Napi::External<void>>();
                     ptr = external.Data();
                 } else if (IsNullOrUndefined(value)) {
@@ -600,7 +600,7 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
 
     size_t encoded = 0;
 
-    switch (type->ref->primitive) {
+    switch (type->ref.type->primitive) {
         case PrimitiveKind::Int8: {
             napi_status status = napi_get_value_string_utf8(env, obj, (char *)origin, type->size, &encoded);
             RG_ASSERT(status == napi_ok);
@@ -613,7 +613,7 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
         } break;
 
         default: {
-            ThrowError<Napi::TypeError>(env, "Strings cannot be converted to %1 array", type->ref->name);
+            ThrowError<Napi::TypeError>(env, "Strings cannot be converted to %1 array", type->ref.type->name);
             return false;
         } break;
     }
@@ -633,7 +633,9 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
         } break;
 
         case napi_external: {
-            if (RG_UNLIKELY(!CheckValueTag(instance, value, param.type)))
+            RG_ASSERT(param.type->primitive == PrimitiveKind::Pointer);
+
+            if (RG_UNLIKELY(!CheckValueTag(instance, value, param.type->ref.marker)))
                 goto unexpected;
 
             *out_ptr = value.As<Napi::External<uint8_t>>().Data();
@@ -647,12 +649,12 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
                 Napi::Array array = value.As<Napi::Array>();
 
                 Size len = (Size)array.Length();
-                Size size = len * param.type->ref->size;
+                Size size = len * param.type->ref.type->size;
 
                 ptr = AllocHeap(size, 16);
 
                 if (param.directions & 1) {
-                    if (!PushNormalArray(array, len, param.type->ref, ptr))
+                    if (!PushNormalArray(array, len, param.type->ref.type, ptr))
                         return false;
                 } else {
                     memset(ptr, 0, size);
@@ -666,24 +668,24 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
                 ptr = AllocHeap(size, 16);
 
                 if (param.directions & 1) {
-                    if (!PushTypedArray(array, len, param.type->ref, ptr))
+                    if (!PushTypedArray(array, len, param.type->ref.type, ptr))
                         return false;
                 } else {
-                    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(param.type->ref))) {
-                        ThrowError<Napi::TypeError>(env, "Cannot use %1 value for %2 array", GetValueType(instance, array), param.type->ref->name);
+                    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(param.type->ref.type))) {
+                        ThrowError<Napi::TypeError>(env, "Cannot use %1 value for %2 array", GetValueType(instance, array), param.type->ref.type->name);
                         return false;
                     }
 
                     memset(ptr, 0, size);
                 }
-            } else if (RG_LIKELY(param.type->ref->primitive == PrimitiveKind::Record)) {
+            } else if (RG_LIKELY(param.type->ref.type->primitive == PrimitiveKind::Record)) {
                 Napi::Object obj = value.As<Napi::Object>();
                 RG_ASSERT(IsObject(value));
 
-                ptr = AllocHeap(param.type->ref->size, 16);
+                ptr = AllocHeap(param.type->ref.type->size, 16);
 
                 if (param.directions & 1) {
-                    if (!PushObject(obj, param.type->ref, ptr))
+                    if (!PushObject(obj, param.type->ref.type, ptr))
                         return false;
                 } else {
                     memset(ptr, 0, param.type->size);
@@ -699,7 +701,7 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
                 RG_ASSERT(status == napi_ok);
 
                 out->ptr = ptr;
-                out->type = param.type->ref;
+                out->type = param.type->ref.type;
             }
 
             *out_ptr = ptr;
@@ -844,7 +846,7 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
 
                 if (ptr2) {
                     Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(instance, external, member.type);
+                    SetValueTag(instance, external, member.type->ref.marker);
 
                     obj.Set(member.name, external);
                 } else {
@@ -977,7 +979,7 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
 
                 if (ptr2) {
                     Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(instance, external, ref);
+                    SetValueTag(instance, external, ref->ref.marker);
 
                     array.Set(i, external);
                 } else {
@@ -1042,7 +1044,7 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
 {
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
-    uint32_t len = type->size / type->ref->size;
+    uint32_t len = type->size / type->ref.type->size;
     Size offset = 0;
 
 #define POP_ARRAY(SetCode) \
@@ -1050,14 +1052,14 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
             Napi::Array array = Napi::Array::New(env); \
              \
             for (uint32_t i = 0; i < len; i++) { \
-                int16_t align = std::max(realign, type->ref->align); \
+                int16_t align = std::max(realign, type->ref.type->align); \
                 offset = AlignLen(offset, align); \
                  \
                 const uint8_t *src = origin + offset; \
                  \
                 SetCode \
                  \
-                offset += type->ref->size; \
+                offset += type->ref.type->size; \
             } \
              \
             return array; \
@@ -1071,13 +1073,13 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
                 }); \
             } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
-                PopTypedArray(array, origin, type->ref, realign); \
+                PopTypedArray(array, origin, type->ref.type, realign); \
                  \
                 return array; \
             } \
         } while (false)
 
-    switch (type->ref->primitive) {
+    switch (type->ref.type->primitive) {
         case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
 
         case PrimitiveKind::Bool: {
@@ -1147,7 +1149,7 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
 
                 if (ptr2) {
                     Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(instance, external, type->ref);
+                    SetValueTag(instance, external, type->ref.type->ref.marker);
 
                     array.Set(i, external);
                 } else {
@@ -1157,13 +1159,13 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
         } break;
         case PrimitiveKind::Record: {
             POP_ARRAY({
-                Napi::Object obj = PopObject(src, type->ref, realign);
+                Napi::Object obj = PopObject(src, type->ref.type, realign);
                 array.Set(i, obj);
             });
         } break;
         case PrimitiveKind::Array: {
             POP_ARRAY({
-                Napi::Value value = PopArray(src, type->ref, realign);
+                Napi::Value value = PopArray(src, type->ref.type, realign);
                 array.Set(i, value);
             });
         } break;

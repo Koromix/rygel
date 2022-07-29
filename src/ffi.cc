@@ -456,7 +456,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
             const Napi::FunctionReference &ref = type->dispose_ref;
 
             Napi::External<void> external = Napi::External<void>::New(env, (void *)ptr);
-            SetValueTag(instance, external, type);
+            SetValueTag(instance, external, type->ref.marker);
 
             Napi::Value self = env.Null();
             napi_value args[] = {
@@ -580,7 +580,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     type->primitive = PrimitiveKind::Array;
     type->align = ref->align;
     type->size = (int16_t)(len * ref->size);
-    type->ref = ref;
+    type->ref.type = ref;
     type->hint = hint;
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
@@ -709,7 +709,7 @@ static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
     type->primitive = PrimitiveKind::Prototype;
     type->align = alignof(void *);
     type->size = RG_SIZE(void *);
-    type->proto = func;
+    type->ref.proto = func;
 
     instance->types_map.Set(type->name, type);
 
@@ -846,11 +846,11 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
             case PrimitiveKind::Callback: {} break;
 
             case PrimitiveKind::Array: {
-                uint32_t len = type->size / type->ref->size;
+                uint32_t len = type->size / type->ref.type->size;
                 defn.Set("length", Napi::Number::New(env, (double)len));
             } [[fallthrough]];
             case PrimitiveKind::Pointer: {
-                Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type->ref);
+                Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type->ref.type);
                 SetValueTag(instance, external, &TypeInfoMarker);
 
                 defn.Set("ref", external);
@@ -1304,14 +1304,14 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     TrampolineInfo *trampoline = &instance->trampolines[idx];
 
-    trampoline->proto = type->proto;
+    trampoline->proto = type->ref.proto;
     trampoline->func.Reset(func, 1);
     trampoline->generation = -1;
 
-    void *ptr = GetTrampoline(idx, type->proto);
+    void *ptr = GetTrampoline(idx, type->ref.proto);
 
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(instance, external, type);
+    SetValueTag(instance, external, type->ref.marker);
 
     return external;
 }
@@ -1390,7 +1390,7 @@ static inline PrimitiveKind GetIntegerPrimitive(Size len, bool sign)
 }
 
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
-                                  PrimitiveKind primitive, int16_t size, int16_t align)
+                                  PrimitiveKind primitive, int16_t size, int16_t align, const char *ref = nullptr)
 {
     RG_ASSERT(names.size() > 0);
     RG_ASSERT(align <= size);
@@ -1404,6 +1404,13 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
     type->primitive = primitive;
     type->size = size;
     type->align = align;
+
+    if (ref) {
+        const TypeInfo *marker = instance->types_map.FindValue(ref, nullptr);
+        RG_ASSERT(marker);
+
+        type->ref.marker = marker;
+    }
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
     SetValueTag(instance, external, &TypeInfoMarker);
@@ -1423,7 +1430,6 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     Napi::Object types = Napi::Object::New(env);
 
     RegisterPrimitiveType(env, types, {"void"}, PrimitiveKind::Void, 0, 0);
-    RegisterPrimitiveType(env, types, {"void *"}, PrimitiveKind::Pointer, RG_SIZE(void *), alignof(void *));
     RegisterPrimitiveType(env, types, {"bool"}, PrimitiveKind::Bool, RG_SIZE(bool), alignof(bool));
     RegisterPrimitiveType(env, types, {"int8_t", "int8"}, PrimitiveKind::Int8, 1, 1);
     RegisterPrimitiveType(env, types, {"uint8_t", "uint8"}, PrimitiveKind::UInt8, 1, 1);
@@ -1448,8 +1454,8 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(env, types, {"unsigned long long", "ulonglong"}, PrimitiveKind::UInt64, RG_SIZE(uint64_t), alignof(uint64_t));
     RegisterPrimitiveType(env, types, {"float", "float32"}, PrimitiveKind::Float32, 4, alignof(float));
     RegisterPrimitiveType(env, types, {"double", "float64"}, PrimitiveKind::Float64, 8, alignof(double));
-    RegisterPrimitiveType(env, types, {"char *", "str", "string"}, PrimitiveKind::String, RG_SIZE(void *), alignof(void *));
-    RegisterPrimitiveType(env, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, RG_SIZE(void *), alignof(void *));
+    RegisterPrimitiveType(env, types, {"char *", "str", "string"}, PrimitiveKind::String, RG_SIZE(void *), alignof(void *), "char");
+    RegisterPrimitiveType(env, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, RG_SIZE(void *), alignof(void *), "char16_t");
 
     types.Freeze();
 

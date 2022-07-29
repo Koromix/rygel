@@ -201,12 +201,12 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
                 return 1;
             }
 
-            Size len = type->size / type->ref->size;
+            Size len = type->size / type->ref.type->size;
 
             for (Size i = 0; i < len; i++) {
                 Size start = offset / 8;
-                ClassifyType(type->ref, offset % 8, classes.Take(start, classes.len - start));
-                offset += type->ref->size;
+                ClassifyType(type->ref.type, offset % 8, classes.Take(start, classes.len - start));
+                offset += type->ref.type->size;
             }
 
             return (offset + 7) / 8;
@@ -444,10 +444,10 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    ptr = ReserveTrampoline(param.type->proto, func);
+                    ptr = ReserveTrampoline(param.type->ref.proto, func);
                     if (RG_UNLIKELY(!ptr))
                         return false;
-                } else if (CheckValueTag(instance, value, param.type)) {
+                } else if (CheckValueTag(instance, value, param.type->ref.marker)) {
                     ptr = value.As<Napi::External<void>>().Data();
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
@@ -547,7 +547,7 @@ Napi::Value CallData::Complete()
         case PrimitiveKind::Callback: {
             if (result.ptr) {
                 Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
-                SetValueTag(instance, external, func->ret.type);
+                SetValueTag(instance, external, func->ret.type->ref.marker);
 
                 return external;
             } else {
@@ -685,7 +685,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
                 if (ptr2) {
                     Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(instance, external, param.type);
+                    SetValueTag(instance, external, param.type->ref.marker);
 
                     arguments.Append(external);
                 } else {
@@ -819,14 +819,14 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
         case PrimitiveKind::Pointer: {
             uint8_t *ptr;
 
-            if (CheckValueTag(instance, value, type)) {
+            if (CheckValueTag(instance, value, type->ref.marker)) {
                 ptr = value.As<Napi::External<uint8_t>>().Data();
-            } else if (IsObject(value) && type->ref->primitive == PrimitiveKind::Record) {
+            } else if (IsObject(value) && type->ref.type->primitive == PrimitiveKind::Record) {
                 Napi::Object obj = value.As<Napi::Object>();
 
-                ptr = AllocHeap(type->ref->size, 16);
+                ptr = AllocHeap(type->ref.type->size, 16);
 
-                if (!PushObject(obj, type->ref, ptr))
+                if (!PushObject(obj, type->ref.type, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -898,10 +898,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             if (value.IsFunction()) {
                 Napi::Function func2 = value.As<Napi::Function>();
 
-                ptr = ReserveTrampoline(type->proto, func2);
+                ptr = ReserveTrampoline(type->ref.proto, func2);
                 if (RG_UNLIKELY(!ptr))
                     return;
-            } else if (CheckValueTag(instance, value, type)) {
+            } else if (CheckValueTag(instance, value, type->ref.marker)) {
                 ptr = value.As<Napi::External<uint8_t>>().Data();
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;

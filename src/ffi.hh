@@ -99,9 +99,12 @@ struct TypeInfo {
     Napi::FunctionReference dispose_ref;
 
     HeapArray<RecordMember> members; // Record only
-    const TypeInfo *ref; // Pointer or array
+    union {
+        const void *marker;
+        const TypeInfo *type; // Pointer or array
+        const FunctionInfo *proto; // Callback only
+    } ref;
     ArrayHint hint; // Array only
-    const FunctionInfo *proto; // Callback only
 
     mutable Napi::ObjectReference defn;
 

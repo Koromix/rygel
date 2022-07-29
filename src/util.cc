@@ -153,12 +153,12 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
                 type->primitive = PrimitiveKind::Pointer;
                 type->size = RG_SIZE(void *);
                 type->align = RG_SIZE(void *);
-                type->ref = ref;
+                type->ref.type = ref;
             } else {
                 type->primitive = PrimitiveKind::Callback;
                 type->size = RG_SIZE(void *);
                 type->align = RG_SIZE(void *);
-                type->proto = ref->proto;
+                type->ref.proto = ref->ref.proto;
             }
 
             instance->types_map.Set(type->name, type);
@@ -173,7 +173,7 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 const char *GetValueType(const InstanceData *instance, Napi::Value value)
 {
     for (const TypeInfo &type: instance->types) {
-        if (CheckValueTag(instance, value, &type))
+        if (CheckValueTag(instance, value, type.ref.marker))
             return type.name;
     }
 
@@ -216,6 +216,8 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
 
 void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
 {
+    RG_ASSERT(marker);
+
     napi_type_tag tag = { instance->tag_lower, (uint64_t)marker };
     napi_status status = napi_type_tag_object(value.Env(), value, &tag);
     RG_ASSERT(status == napi_ok);
@@ -223,6 +225,8 @@ void SetValueTag(const InstanceData *instance, Napi::Value value, const void *ma
 
 bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
 {
+    RG_ASSERT(marker);
+
     bool match = false;
 
     if (!IsNullOrUndefined(value)) {
@@ -260,8 +264,8 @@ static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionR
             }
         }
     } else if (type->primitive == PrimitiveKind::Array) {
-        count *= type->size / type->ref->size;
-        offset = AnalyseFlatRec(type->ref, offset, count, func);
+        count *= type->size / type->ref.type->size;
+        offset = AnalyseFlatRec(type->ref.type, offset, count, func);
     } else {
         func(type, offset, count);
         offset += count;
