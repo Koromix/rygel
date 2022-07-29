@@ -348,13 +348,20 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     RG_ASSERT(type);
 
     if (named) {
-        const char *alias = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+        TypeInfo *copy = instance->types.AppendDefault();
+        RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
+
+        memcpy((void *)copy, type, RG_SIZE(*type));
+        copy->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
 
         // If the insert succeeds, we cannot fail anymore
-        if (!instance->types_map.TrySet(alias, type).second) {
-            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", alias);
+        if (!instance->types_map.TrySet(copy->name, copy).second) {
+            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", copy->name);
             return env.Null();
         }
+        err_guard.Disable();
+
+        type = copy;
     }
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
