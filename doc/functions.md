@@ -207,7 +207,7 @@ let copy = strdup('Hello!');
 console.log(copy); // Prints Hello!
 ```
 
-When you declare functions with the [prototype-like syntax](#c-like-prototypes), you can either use named disposables types or use the '!' shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls `koffi.free(ptr)`.
+When you declare functions with the [prototype-like syntax](#c-like-prototypes), you can either use named disposable types or use the '!' shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls `koffi.free(ptr)`.
 
 ```js
 const koffi = require('koffi');
