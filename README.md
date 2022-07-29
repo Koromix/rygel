@@ -23,6 +23,12 @@ RISC-V 64 [^3]     | ⬜️ *N/A*    | ✅ Yes   | ⬜️ *N/A*    | 🟨 Probab
 
 Go to the web site for more information: https://koffi.dev/
 
+# Project history
+
+You can consult the [changelog](https://koffi.dev/changes) on the official website.
+
+Major version increments can include breaking API changes, use the [migration guide](https://koffi.dev/changes#migration-guide) for more information.
+
 # License
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
