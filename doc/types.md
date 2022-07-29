@@ -548,6 +548,6 @@ console.log(koffi.sizeof('long'));
 console.log(koffi.sizeof(koffi.types.long));
 ```
 
-### Type aliasing
+### Type aliases
 
 You can alias a type with `koffi.alias(name, type)`. Aliased types are completely equivalent.
