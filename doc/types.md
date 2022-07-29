@@ -522,6 +522,7 @@ Koffi exposes three functions to explore type information:
 - `koffi.sizeof(type)` to get the size of a type
 - `koffi.alignof(type)` to get the alignment of a type
 - `koffi.introspect(type)` to get the definition of a type in an object containing: name, primitive, size, alignment, members (structs), reference (array, pointer) and length (array)
+- `koffi.resolve(type)` to get the resolved type object from a type string
 
 ```{note}
 The value returned by `introspect()` has **changed in version 2.0**.
@@ -538,3 +539,7 @@ Just like before, you can refer to primitive types by their name or through `kof
 console.log(koffi.sizeof('long'));
 console.log(koffi.sizeof(koffi.types.long));
 ```
+
+## Type aliasing
+
+You can alias a type with `koffi.alias(name, type)`. Aliased types are completely equivalent.

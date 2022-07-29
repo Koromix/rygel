@@ -2,6 +2,30 @@
 
 ## History
 
+### Koffi 2.0.0
+
+**Major new features:**
+
+- Add disposable types for automatic disposal of C values (such as heap-allocated strings)
+- Add support for registered callbacks, that can be called after the initial FFI call
+- Support named pointer types
+- Support complex type specifications outside of prototype parser
+
+**Minor new features:**
+
+- Support type aliases with `koffi.alias()`
+- Add `koffi.resolve()` to resolve type strings
+- Expose all primitive type aliases in `koffi.types`
+- Correctly pass exceptions thrown in JS callbacks
+
+**Breaking API changes:**
+
+- Change handling of callback types, which must be used through pointers
+- Change handling of opaque handles, which must be used through pointers
+- Support all types in `koffi.introspect(type)`
+
+Consult the [migration guide](changes.md#migration-guide) for more information.
+
 ### Koffi 1.3.12
 
 **Main fixes:**
