@@ -76,10 +76,10 @@ For functions that return handles or pass them by parameter:
 // Koffi 1.x
 
 const FILE = koffi.handle('FILE');
-const fopen = lib.func('FILE fopen(const char *path, const char *mode)');
-const fclose = lib.func('int fclose(FILE stream)');
+const fopen = lib.func('fopen', 'FILE', ['str', 'str']);
+const fopen = lib.func('fclose', 'int', ['FILE']);
 
-let fp = fopen('touch', 'wb');
+let fp = fopen('EMPTY', 'wb');
 if (!fp)
     throw new Error('Failed to open file');
 fclose(fp);
@@ -89,10 +89,10 @@ fclose(fp);
 // Koffi 2.x
 
 const FILE = koffi.handle('FILE');
-const fopen = lib.func('FILE *fopen(const char *path, const char *mode)');
-const fclose = lib.func('int fclose(FILE *stream)');
+const fopen = lib.func('fopen', 'FILE *', ['str', 'str']);
+const fopen = lib.func('fclose', 'int', ['FILE *']);
 
-let fp = fopen('touch', 'wb');
+let fp = fopen('EMPTY', 'wb');
 if (!fp)
     throw new Error('Failed to open file');
 fclose(fp);
@@ -103,10 +103,10 @@ For functions that set opaque handles through output parameters (such as `sqlite
 ```js
 // Koffi 1.x
 
-const sqlite3_db = koffi.handle('sqlite3_db');
+const sqlite3 = koffi.handle('sqlite3');
 
-const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(sqlite3_db), 'int', 'str']);
-const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [sqlite3_db]);
+const sqlite3_open_v2 = lib.func('int sqlite3_open_v2(const char *, _Out_ sqlite3 *db, int, const char *)');
+const sqlite3_close_v2 = lib.func('int sqlite3_close_v2(sqlite3 db)');
 
 const SQLITE_OPEN_READWRITE = 0x2;
 const SQLITE_OPEN_CREATE = 0x4;
@@ -122,10 +122,10 @@ sqlite3_close_v2(db);
 ```js
 // Koffi 2.x
 
-const sqlite3_db = koffi.handle('sqlite3_db');
+const sqlite3 = koffi.handle('sqlite3');
 
-const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3_db, 2)), 'int', 'str']);
-const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [koffi.pointer(sqlite3_db)]);
+const sqlite3_open_v2 = lib.func('int sqlite3_open_v2(const char *, _Out_ sqlite3 **db, int, const char *)');
+const sqlite3_close_v2 = lib.func('int sqlite3_close_v2(sqlite3 *db)');
 
 const SQLITE_OPEN_READWRITE = 0x2;
 const SQLITE_OPEN_CREATE = 0x4;

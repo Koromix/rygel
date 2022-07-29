@@ -20,7 +20,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const sqlite3_db = koffi.handle('sqlite3_db');
+const sqlite3 = koffi.handle('sqlite3');
 const sqlite3_stmt = koffi.handle('sqlite3_stmt');
 
 main();
@@ -39,9 +39,9 @@ async function test() {
     let lib_filename = path.dirname(__filename) + '/build/sqlite3' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
-    const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3_db, 2)), 'int', 'str']);
-    const sqlite3_exec = lib.func('sqlite3_exec', 'int', [koffi.pointer(sqlite3_db), 'str', 'void *', 'void *', 'void *']);
-    const sqlite3_prepare_v2 = lib.func('sqlite3_prepare_v2', 'int', [koffi.pointer(sqlite3_db), 'str', 'int', koffi.out(koffi.pointer(sqlite3_stmt, 2)), 'string']);
+    const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3, 2)), 'int', 'str']);
+    const sqlite3_exec = lib.func('sqlite3_exec', 'int', [koffi.pointer(sqlite3), 'str', 'void *', 'void *', 'void *']);
+    const sqlite3_prepare_v2 = lib.func('sqlite3_prepare_v2', 'int', [koffi.pointer(sqlite3), 'str', 'int', koffi.out(koffi.pointer(sqlite3_stmt, 2)), 'string']);
     const sqlite3_reset = lib.func('sqlite3_reset', 'int', [koffi.pointer(sqlite3_stmt)]);
     const sqlite3_bind_text = lib.func('sqlite3_bind_text', 'int', [koffi.pointer(sqlite3_stmt), 'int', 'str', 'int', 'void *']);
     const sqlite3_bind_int = lib.func('sqlite3_bind_int', 'int', [koffi.pointer(sqlite3_stmt), 'int', 'int']);
@@ -49,7 +49,7 @@ async function test() {
     const sqlite3_column_int = lib.func('sqlite3_column_int', 'int', [koffi.pointer(sqlite3_stmt), 'int']);
     const sqlite3_step = lib.func('sqlite3_step', 'int', [koffi.pointer(sqlite3_stmt)]);
     const sqlite3_finalize = lib.func('sqlite3_finalize', 'int', [koffi.pointer(sqlite3_stmt)]);
-    const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [koffi.pointer(sqlite3_db)]);
+    const sqlite3_close_v2 = lib.func('sqlite3_close_v2', 'int', [koffi.pointer(sqlite3)]);
 
     const SQLITE_OPEN_READWRITE = 0x2;
     const SQLITE_OPEN_CREATE = 0x4;
