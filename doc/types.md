@@ -6,7 +6,7 @@ While the C standard allows for variation in the size of most integer types, Kof
 
 JS type           | C type             | Bytes | Signedness | Note
 ----------------- | ------------------ | ----- | ---------- | ---------------------------
-Null              | void               | 0     |            | Only valid as a return type
+Undefined         | void               | 0     |            | Only valid as a return type
 Number (integer)  | int8               | 1     | Signed     |
 Number (integer)  | int8_t             | 1     | Signed     |
 Number (integer)  | uint8              | 1     | Unsigned   |
