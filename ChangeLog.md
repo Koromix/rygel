@@ -2,6 +2,12 @@
 
 ## History
 
+### Koffi 2.0.1
+
+**Main changes:**
+
+- Return `undefined` (instead of null) for `void` functions
+
 ### Koffi 2.0.0
 
 **Major new features:**
