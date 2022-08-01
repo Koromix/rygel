@@ -42,7 +42,7 @@ let qemu_prefix = null;
 main();
 
 async function main() {
-    script_dir = fs.realpathSync(path.dirname(__filename));
+    script_dir = fs.realpathSync(__dirname);
     root_dir = fs.realpathSync(script_dir + '/../..');
 
     // All the code assumes we are working from the script directory

@@ -17,7 +17,6 @@ const ref = require('ref-napi');
 const ffi = require('ffi-napi');
 const struct = require('ref-struct-di')(ref);
 const koffi = require('./build/koffi.node');
-const path = require('path');
 
 const Color = struct({
     r: 'uchar',
@@ -97,7 +96,7 @@ function main() {
             throw new Error('Value must be positive');
     }
 
-    let lib_filename = path.dirname(__filename) + '/build/raylib' + koffi.extension;
+    let lib_filename = __dirname + '/build/raylib' + koffi.extension;
 
     const r = ffi.Library(lib_filename, {
         InitWindow: ['void', ['int', 'int', 'string']],

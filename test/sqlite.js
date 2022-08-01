@@ -36,7 +36,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.dirname(__filename) + '/build/sqlite3' + koffi.extension;
+    let lib_filename = __dirname + '/build/sqlite3' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
     const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3, 2)), 'int', 'str']);

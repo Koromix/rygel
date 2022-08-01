@@ -15,7 +15,5 @@
 
 'use strict';
 
-const path = require('path');
-
-let filename = path.dirname(__filename) + '/../build/koffi.node';
+let filename = __dirname + '/../build/koffi.node';
 module.exports = require(filename);

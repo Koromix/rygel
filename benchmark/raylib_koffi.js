@@ -14,7 +14,6 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 const koffi = require('./build/koffi.node');
-const path = require('path');
 
 const Color = koffi.struct('Color', {
     r: 'uchar',
@@ -81,7 +80,7 @@ function main() {
             throw new Error('Value must be positive');
     }
 
-    let lib_filename = path.dirname(__filename) + '/build/raylib' + koffi.extension;
+    let lib_filename = __dirname + '/build/raylib' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
     const InitWindow = lib.cdecl('InitWindow', 'void', ['int', 'int', 'str']);

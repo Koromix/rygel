@@ -15,7 +15,6 @@
 
 const koffi = require('./build/koffi.node');
 const assert = require('assert');
-const path = require('path');
 
 const PackedBFG = koffi.pack('PackedBFG', {
     a: 'int8_t',
@@ -42,7 +41,7 @@ async function main() {
 }
 
 async function test() {
-    const lib_filename = path.dirname(__filename) + '/build/misc' + koffi.extension;
+    const lib_filename = __dirname + '/build/misc' + koffi.extension;
     const lib = koffi.load(lib_filename);
 
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));

@@ -15,7 +15,6 @@
 
 const koffi = require('./build/koffi.node');
 const assert = require('assert');
-const path = require('path');
 
 const BFG = koffi.struct('BFG', {
     a: 'int8_t',
@@ -55,7 +54,7 @@ async function main() {
 }
 
 async function test() {
-    const lib_filename = path.dirname(__filename) + '/build/misc' + koffi.extension;
+    const lib_filename = __dirname + '/build/misc' + koffi.extension;
     const lib = koffi.load(lib_filename);
 
     const CallJS = lib.func('int CallJS(const char *str, SimpleCallback *cb)');

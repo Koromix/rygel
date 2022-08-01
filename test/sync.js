@@ -15,7 +15,6 @@
 
 const koffi = require('./build/koffi.node');
 const assert = require('assert');
-const path = require('path');
 
 const Pack1 = koffi.struct('Pack1', {
     a: 'int'
@@ -128,7 +127,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.dirname(__filename) + '/build/misc' + koffi.extension;
+    let lib_filename = __dirname + '/build/misc' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
