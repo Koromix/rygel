@@ -164,7 +164,7 @@ async function main() {
     if (arch == null)
         arch = determine_arch();
 
-    app_dir = path.dirname(__filename);
+    app_dir = __dirname;
     if (project_dir == null)
         project_dir = process.cwd();
     project_dir = project_dir.replace(/\\/g, '/');
