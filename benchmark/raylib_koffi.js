@@ -70,14 +70,14 @@ const Font = koffi.struct('Font', {
 main();
 
 function main() {
-    let iterations = 360000;
+    let time = 5000;
 
     if (process.argv.length >= 3) {
-        iterations = parseInt(process.argv[2], 10);
-        if (Number.isNaN(iterations))
+        time = parseFloat(process.argv[2]) * 1000;
+        if (Number.isNaN(time))
             throw new Error('Not a valid number');
-        if (iterations < 1)
-            throw new Error('Value must be positive');
+        if (time < 0)
+            throw new Error('Time must be positive');
     }
 
     let lib_filename = __dirname + '/build/raylib' + koffi.extension;
@@ -102,15 +102,16 @@ function main() {
     let font = GetFontDefault();
 
     let start = performance.now();
+    let iterations = 0;
 
-    for (let i = 0; i < iterations; i += 3600) {
+    while (performance.now() - start < time) {
         ImageClearBackground(img, { r: 0, g: 0, b: 0, a: 255 });
 
-        for (let j = 0; j < 3600; j++) {
+        for (let i = 0; i < 3600; i++) {
             let text = 'Hello World!';
             let text_width = MeasureTextEx(font, text, 10, 1).x;
 
-            let angle = (j * 7) * Math.PI / 180;
+            let angle = (i * 7) * Math.PI / 180;
             let color = {
                 r: 127.5 + 127.5 * Math.sin(angle),
                 g: 127.5 + 127.5 * Math.sin(angle + Math.PI / 2),
@@ -118,14 +119,16 @@ function main() {
                 a: 255
             };
             let pos = {
-                x: (img.width / 2 - text_width / 2) + j * 0.1 * Math.cos(angle - Math.PI / 2),
-                y: (img.height / 2 - 16) + j * 0.1 * Math.sin(angle - Math.PI / 2)
+                x: (img.width / 2 - text_width / 2) + i * 0.1 * Math.cos(angle - Math.PI / 2),
+                y: (img.height / 2 - 16) + i * 0.1 * Math.sin(angle - Math.PI / 2)
             };
 
             ImageDrawTextEx(img, font, text, pos, 10, 1, color);
         }
+
+        iterations += 3600;
     }
 
-    let time = performance.now() - start;
+    time = performance.now() - start;
     console.log(JSON.stringify({ iterations: iterations, time: Math.round(time) }));
 }

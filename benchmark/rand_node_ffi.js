@@ -22,14 +22,14 @@ let sum = 0;
 main();
 
 async function main() {
-    let iterations = 200000;
+    let time = 5000;
 
     if (process.argv.length >= 3) {
-        iterations = parseInt(process.argv[2], 10);
-        if (Number.isNaN(iterations))
+        time = parseFloat(process.argv[2]) * 1000;
+        if (Number.isNaN(time))
             throw new Error('Not a valid number');
-        if (iterations < 1)
-            throw new Error('Value must be positive');
+        if (time < 0)
+            throw new Error('Time must be positive');
     }
 
     const lib = ffi.Library(process.platform == 'win32' ? 'msvcrt.dll' : null, {
@@ -40,15 +40,16 @@ async function main() {
     lib.srand(42);
 
     let start = performance.now();
+    let iterations = 0;
 
-    for (let i = 0; i < iterations; i++) {
-        if (i % 1000000 == 0)
-            await new Promise(resolve => setTimeout(resolve, 0));
+    while (performance.now() - start < time) {
+        for (let i = 0; i < 1000000; i++)
+            sum += lib.rand();
 
-        sum += lib.rand();
+        iterations += 1000000;
     }
 
-    let time = performance.now() - start;
+    time = performance.now() - start;
     console.log(JSON.stringify({ iterations: iterations, time: Math.round(time) }));
 }
 

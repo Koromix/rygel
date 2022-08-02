@@ -18,10 +18,10 @@ namespace RG {
 
 int Main(int argc, char **argv)
 {
-    int iterations = 360000;
+    int time = 5000;
 
     if (argc >= 2) {
-        if (!ParseInt(argv[1], &iterations))
+        if (!ParseInt(argv[1], &time))
             return 1;
     }
 
@@ -34,15 +34,16 @@ int Main(int argc, char **argv)
     Font font = GetFontDefault();
 
     int64_t start = GetMonotonicTime();
+    int64_t iterations = 0;
 
-    for (int i = 0; i < iterations; i += 3600) {
+    while (GetMonotonicTime() - start < time) {
         ImageClearBackground(&img, Color { 0, 0, 0, 255 });
 
-        for (int j = 0; j < 3600; j++) {
+        for (int i = 0; i < 3600; i++) {
             const char *text = "Hello World!";
             float text_width = MeasureTextEx(font, text, 10, 1).x;
 
-            double angle = (j * 7) * PI / 180;
+            double angle = (i * 7) * PI / 180;
             Color color = {
                 (unsigned char)(127.5 + 127.5 * sin(angle)),
                 (unsigned char)(127.5 + 127.5 * sin(angle + PI / 2)),
@@ -50,16 +51,18 @@ int Main(int argc, char **argv)
                 255
             };
             Vector2 pos = {
-                (float)((img.width / 2 - text_width / 2) + j * 0.1 * cos(angle - PI / 2)),
-                (float)((img.height / 2 - 16) + j * 0.1 * sin(angle - PI / 2))
+                (float)((img.width / 2 - text_width / 2) + i * 0.1 * cos(angle - PI / 2)),
+                (float)((img.height / 2 - 16) + i * 0.1 * sin(angle - PI / 2))
             };
 
             ImageDrawTextEx(&img, font, text, pos, 10, 1, color);
         }
+
+        iterations += 3600;
     }
 
-    int64_t time = GetMonotonicTime() - start;
-    PrintLn("{\"iterations\": %1,\"time\": %2}", iterations, time);
+    time = GetMonotonicTime() - start;
+    PrintLn("{\"iterations\": %1, \"time\": %2}", iterations, time);
 
     return 0;
 }
