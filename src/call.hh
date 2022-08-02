@@ -71,9 +71,21 @@ public:
     CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem);
     ~CallData();
 
-    bool Prepare(const Napi::CallbackInfo &info);
-    void Execute();
-    Napi::Value Complete();
+#ifdef UNITY_BUILD
+    #ifdef _MSC_VER
+        #define INLINE_IF_UNITY __forceinline
+    #else
+        #define INLINE_IF_UNITY __attribute__((always_inline)) inline
+    #endif
+#else
+    #define INLINE_IF_UNITY
+#endif
+
+    INLINE_IF_UNITY bool Prepare(const Napi::CallbackInfo &info);
+    INLINE_IF_UNITY void Execute();
+    INLINE_IF_UNITY Napi::Value Complete();
+
+#undef INLINE_IF_UNITY
 
     void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg);
 
