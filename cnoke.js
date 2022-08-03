@@ -276,16 +276,17 @@ async function configure(retry = true) {
         }
 
         fs.copyFileSync(destname, work_dir + '/node.lib');
-        fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
     }
 
-    fs.copyFileSync(`${app_dir}/assets/FindCNoke.cmake`, `${work_dir}/FindCNoke.cmake`);
-    args.push(`-DCMAKE_MODULE_PATH=${work_dir}`);
+    args.push(`-DCMAKE_MODULE_PATH=${app_dir}/assets`);
 
     args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
 
+    // Set platform flags
     switch (process.platform) {
         case 'win32': {
+            fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
+
             args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
             args.push(`-DNODE_JS_LIBRARIES=${work_dir}/node.lib`);
 
