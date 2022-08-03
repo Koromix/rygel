@@ -114,7 +114,7 @@ By default, Koffi will only forward arguments from Javascript to C. However, man
 For simplicity, and because Javascript only has value semantics for primitive types, Koffi can marshal out (or in/out) two types of parameters:
 
 - [Structs](types.md#struct-types) (to/from JS objects)
-- [Opaque handles](types.md#opaque-handles)
+- [Opaque types](types.md#opaque-types)
 
 In order to change an argument from input-only to output or input/output, use the following functions:
 
@@ -152,7 +152,7 @@ gettimeofday(tv, null);
 console.log(tv);
 ```
 
-#### Opaque handle example
+#### Opaque type example
 
 This example opens an in-memory SQLite database, and uses the node-ffi-style function declaration syntax.
 
@@ -160,7 +160,7 @@ This example opens an in-memory SQLite database, and uses the node-ffi-style fun
 const koffi = require('koffi');
 const lib = koffi.load('sqlite3.so');
 
-const sqlite3 = koffi.handle('sqlite3');
+const sqlite3 = koffi.opaque('sqlite3');
 
 // Use koffi.out() on a double pointer to copy out (from C to JS) after the call
 const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3, 2)), 'int', 'str']);
@@ -181,7 +181,7 @@ sqlite3_close_v2(db);
 
 Some C functions return heap-allocated values directly or through output parameters. While Koffi automatically converts values from C to JS (to a string or an object), it does not know when something needs to be freed, or how.
 
-For opaque handles, such as FILE, this does not matter because you will explicitly call `fclose()` on them. But some values (such as strings) get implicitly converted by Koffi, and you lose access to the original pointer. This creates a leak if the string is heap-allocated.
+For opaque types, such as FILE, this does not matter because you will explicitly call `fclose()` on them. But some values (such as strings) get implicitly converted by Koffi, and you lose access to the original pointer. This creates a leak if the string is heap-allocated.
 
 To avoid this, you can instruct Koffi to call a function on the original pointer once the conversion is done, by creating a **disposable type** with `koffi.dispose(name, type, func)`. This creates a type derived from another type, the only difference being that *func* gets called with the original pointer once the value has been converted and is not needed anymore.
 

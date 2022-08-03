@@ -10,7 +10,7 @@ The API was changed in 2.x in a few ways, in order to reduce some excessively "m
 You may need to change your code if you use:
 
 - Callback functions
-- Opaque handles
+- Opaque types
 - `koffi.introspect()`
 
 #### Callback types
@@ -66,11 +66,13 @@ console.log(ret);
 
 Koffi 1.x only supported [transient callbacks](functions.md#javascript-callbacks), you must use Koffi 2.x for registered callbacks.
 
-#### Opaque handles
+#### Opaque types
 
-In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer. Now, you must use them through a pointer, and use an array for output parameters.
+In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer. Now, in Koffi 2.0, you must use them through a pointer, and use an array for output parameters.
 
-For functions that return handles or pass them by parameter:
+In addition to that, `koffi.handle()` has been deprecated in Koffi 2.1 and replaced with `koffi.opaque()`. They work the same but new code should use `koffi.opaque()`, the former one will eventually be removed in Koffi 3.0.
+
+For functions that return opaque pointers or pass them by parameter:
 
 ```js
 // Koffi 1.x
@@ -86,9 +88,10 @@ fclose(fp);
 ```
 
 ```js
-// Koffi 2.x
+// Koffi 2.1
 
-const FILE = koffi.handle('FILE');
+// If you use Koffi 2.0: const FILE = koffi.handle('FILE');
+const FILE = koffi.opaque('FILE');
 const fopen = lib.func('fopen', 'FILE *', ['str', 'str']);
 const fopen = lib.func('fclose', 'int', ['FILE *']);
 
@@ -120,9 +123,10 @@ sqlite3_close_v2(db);
 ```
 
 ```js
-// Koffi 2.x
+// Koffi 2.1
 
-const sqlite3 = koffi.handle('sqlite3');
+// If you use Koffi 2.0: const sqlite3 = koffi.handle('sqlite3');
+const sqlite3 = koffi.opaque('sqlite3');
 
 const sqlite3_open_v2 = lib.func('int sqlite3_open_v2(const char *, _Out_ sqlite3 **db, int, const char *)');
 const sqlite3_close_v2 = lib.func('int sqlite3_close_v2(sqlite3 *db)');

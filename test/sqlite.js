@@ -20,8 +20,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const sqlite3 = koffi.handle('sqlite3');
-const sqlite3_stmt = koffi.handle('sqlite3_stmt');
+const sqlite3 = koffi.opaque('sqlite3');
+const sqlite3_stmt = koffi.opaque('sqlite3_stmt');
 
 main();
 

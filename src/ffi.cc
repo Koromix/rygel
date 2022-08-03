@@ -264,7 +264,7 @@ static Napi::Value CreatePackedStructType(const Napi::CallbackInfo &info)
     return CreateStructType(info, false);
 }
 
-static Napi::Value CreateHandleType(const Napi::CallbackInfo &info)
+static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1522,7 +1522,8 @@ static void SetExports(Napi::Env env, Func func)
 
     func("struct", Napi::Function::New(env, CreatePaddedStructType));
     func("pack", Napi::Function::New(env, CreatePackedStructType));
-    func("handle", Napi::Function::New(env, CreateHandleType));
+    func("opaque", Napi::Function::New(env, CreateOpaqueType));
+    func("handle", Napi::Function::New(env, CreateOpaqueType)); // Deprecated
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("array", Napi::Function::New(env, CreateArrayType));
     func("callback", Napi::Function::New(env, CreateCallbackType));

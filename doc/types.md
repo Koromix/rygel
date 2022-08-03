@@ -114,7 +114,7 @@ const Function2 = lib.func('Function', A, [A]);
 In C, pointer arguments are used for differenty purposes. It is important to distinguish these use cases because Koffi provides different ways to deal with each of them:
 
 - **Struct pointers**: Use of struct pointers by C libraries fall in two cases: avoid (potentially) expensive copies, and to let the function change struct contents (output or input/output arguments).
-- **Opaque handles**: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. `FILE *`). Only the functions provided by the library can do something with this pointer, in Koffi we call this a handle. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.
+- **Opaque types**: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. `FILE *`). Only the functions provided by the library can do something with this pointer, in Koffi we call this an opaque type. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.
 - **Arrays**: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated (or any other sentinel value) or with an additional length argument.
 - **Pointers to primitive types**: This is more rare, and generally used for output or input/output arguments. The Win32 API has a lot of these.
 
@@ -142,23 +142,25 @@ if (!GetCursorPos(pos))
 console.log(pos);
 ```
 
-### Opaque handles
+### Opaque types
 
-Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque `FILE *` pointer. You can open and close files with `fopen()` and `fclose()`, and manipule the handle with other functions such as `fread()` or `ftell()`.
+Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque `FILE *` pointer. You can open and close files with `fopen()` and `fclose()`, and manipule the opaque pointer with other functions such as `fread()` or `ftell()`.
 
-In Koffi, you can manage this with opaque handles. Declare the handle type with `koffi.handle(name)`, and use a pointer to this type either as a return type or some kind of [output parameter](functions.md#output-parameters) (with a double pointer).
+In Koffi, you can manage this with opaque types. Declare the opaque type with `koffi.opaque(name)`, and use a pointer to this type either as a return type or some kind of [output parameter](functions.md#output-parameters) (with a double pointer).
 
 ```{note}
-Opaque handles **have changed in version 2.0**.
+Opaque types **have changed in version 2.0, and again in version 2.1**.
 
 In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
 
 Now, you must use them through a pointer, and use an array for output parameters. This is shown in the example below (look for the call to `ConcatNewOut` in the JS part), and is described in the section on [output parameters](functions.md#output-parameters).
 
+In addition to this, you should use `koffi.opaque()` (introduced in Koffi 2.1) instead of `koffi.handle()` which is deprecated, and will be removed eventually in Koffi 3.0.
+
 Consult the [migration guide](changes.md) for more information.
 ```
 
-The full example below implements an iterative string builder (concatenator) in C, and uses it from Javascript to output a mix of Hello World and FizzBuzz. The builder is hidden behind an opaque handle, and is created and destroyed using a pair of C functions: `ConcatNew` (or `ConcatNewOut`) and `ConcatFree`.
+The full example below implements an iterative string builder (concatenator) in C, and uses it from Javascript to output a mix of Hello World and FizzBuzz. The builder is hidden behind an opaque type, and is created and destroyed using a pair of C functions: `ConcatNew` (or `ConcatNewOut`) and `ConcatFree`.
 
 ```c
 // Build with: clang -fPIC -o handles.so -shared handles.c -Wall -O2
@@ -283,7 +285,7 @@ const char *ConcatBuild(Concat *c)
 const koffi = require('koffi');
 const lib = koffi.load('./handles.so');
 
-const Concat = koffi.handle('Concat');
+const Concat = koffi.opaque('Concat');
 const ConcatNewOut = lib.func('bool ConcatNewOut(_Out_ Concat **out)');
 const ConcatNew = lib.func('Concat *ConcatNew()');
 const ConcatFree = lib.func('void ConcatFree(Concat *c)');
@@ -380,7 +382,7 @@ Here is an example based on the Win32 API, listing files in the current director
 const koffi = require('koffi');
 const lib = koffi.load('kernel32.dll');
 
-const HANDLE = koffi.pointer('HANDLE', koffi.handle());
+const HANDLE = koffi.pointer('HANDLE', koffi.opaque());
 const FILETIME = koffi.struct('FILETIME', {
     dwLowDateTime: 'uint',
     dwHighDateTime: 'uint'
