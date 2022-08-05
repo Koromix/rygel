@@ -334,6 +334,17 @@ try {
 }
 ```
 
+### Named pointer types
+
+Some C libraries prefer to define the handle type directly as a pointer to the opaque struct. An example of this is the HANDLE type in the Win32 API. If you want to reproduce this behavior, you can define a **named pointer type** to an opaque type, like so:
+
+```js
+const HANDLE = koffi.pointer('HANDLE', koffi.opaque());
+
+const GetHandleInformation = lib.func('bool __stdcall GetHandleInformation(HANDLE h, _Out_ uint32_t *flags)');
+const CloseHandle = lib.func('bool __stdcall CloseHandle(HANDLE h)');
+```
+
 ### Array pointers
 
 In C, dynamically-sized arrays are usually passed around as pointers. The length is either passed as an additional argument, or inferred from the array content itself, for example with a terminating sentinel value (such as a NULL pointers in the case of an array of strings).
