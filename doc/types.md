@@ -69,7 +69,7 @@ let struct2 = koffi.struct({ dummy: koffi.types.long });
 
 ## Struct types
 
-### Public structs
+### Struct definition
 
 Koffi converts JS objects to C structs, and vice-versa.
 
