@@ -69,6 +69,8 @@ let struct2 = koffi.struct({ dummy: koffi.types.long });
 
 ## Struct types
 
+### Public structs
+
 Koffi converts JS objects to C structs, and vice-versa.
 
 Unlike function declarations, as of now there is only one way to create a struct type, with the `koffi.struct()` function. This function takes two arguments: the first one is the name of the type, and the second one is an object containing the struct member names and types. You can omit the first argument to declare an anonymous struct.
@@ -107,39 +109,6 @@ Once a struct is declared, you can use it by name (with a string, like you can d
 // The following two function declarations are equivalent, and declare a function taking an A value and returning A
 const Function1 = lib.func('A Function(A value)');
 const Function2 = lib.func('Function', A, [A]);
-```
-
-## Pointer types
-
-In C, pointer arguments are used for differenty purposes. It is important to distinguish these use cases because Koffi provides different ways to deal with each of them:
-
-- **Struct pointers**: Use of struct pointers by C libraries fall in two cases: avoid (potentially) expensive copies, and to let the function change struct contents (output or input/output arguments).
-- **Opaque types**: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. `FILE *`). Only the functions provided by the library can do something with this pointer, in Koffi we call this an opaque type. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.
-- **Arrays**: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated (or any other sentinel value) or with an additional length argument.
-- **Pointers to primitive types**: This is more rare, and generally used for output or input/output arguments. The Win32 API has a lot of these.
-
-### Struct pointers
-
-The following Win32 example uses `GetCursorPos()` (with an output parameter) to retrieve and show the current cursor position.
-
-```js
-const koffi = require('koffi');
-const lib = koffi.load('kernel32.dll');
-
-// Type declarations
-const POINT = koffi.struct('POINT', {
-    x: 'long',
-    y: 'long'
-});
-
-// Functions declarations
-const GetCursorPos = lib.func('int __stdcall GetCursorPos(_Out_ POINT *pos)');
-
-// Get and show cursor position
-let pos = {};
-if (!GetCursorPos(pos))
-    throw new Error('Failed to get cursor position');
-console.log(pos);
 ```
 
 ### Opaque types
@@ -334,13 +303,47 @@ try {
 }
 ```
 
+## Pointer types
+
+In C, pointer arguments are used for differenty purposes. It is important to distinguish these use cases because Koffi provides different ways to deal with each of them:
+
+- **Struct pointers**: Use of struct pointers by C libraries fall in two cases: avoid (potentially) expensive copies, and to let the function change struct contents (output or input/output arguments).
+- **Opaque pointers**: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. `FILE *`). Only the functions provided by the library can do something with this pointer, in Koffi we call this an opaque type. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.
+- **Arrays**: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated (or any other sentinel value) or with an additional length argument.
+- **Pointers to primitive types**: This is more rare, and generally used for output or input/output arguments. The Win32 API has a lot of these.
+
+### Struct pointers
+
+The following Win32 example uses `GetCursorPos()` (with an output parameter) to retrieve and show the current cursor position.
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('kernel32.dll');
+
+// Type declarations
+const POINT = koffi.struct('POINT', {
+    x: 'long',
+    y: 'long'
+});
+
+// Functions declarations
+const GetCursorPos = lib.func('int __stdcall GetCursorPos(_Out_ POINT *pos)');
+
+// Get and show cursor position
+let pos = {};
+if (!GetCursorPos(pos))
+    throw new Error('Failed to get cursor position');
+console.log(pos);
+```
+
 ### Named pointer types
 
-Some C libraries prefer to define the handle type directly as a pointer to the opaque struct. An example of this is the HANDLE type in the Win32 API. If you want to reproduce this behavior, you can define a **named pointer type** to an opaque type, like so:
+Some C libraries use handles, which behave as pointers to opaque structs. An example of this is the HANDLE type in the Win32 API. If you want to reproduce this behavior, you can define a **named pointer type** to an opaque type, like so:
 
 ```js
 const HANDLE = koffi.pointer('HANDLE', koffi.opaque());
 
+// And now you get to use it this way:
 const GetHandleInformation = lib.func('bool __stdcall GetHandleInformation(HANDLE h, _Out_ uint32_t *flags)');
 const CloseHandle = lib.func('bool __stdcall CloseHandle(HANDLE h)');
 ```
