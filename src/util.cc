@@ -170,6 +170,40 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
     return ref;
 }
 
+bool CanPassType(const TypeInfo *type)
+{
+    if (type->primitive == PrimitiveKind::Void)
+        return false;
+    if (type->primitive == PrimitiveKind::Array)
+        return false;
+    if (type->primitive == PrimitiveKind::Prototype)
+        return false;
+
+    return true;
+}
+
+bool CanReturnType(const TypeInfo *type)
+{
+    if (type->primitive == PrimitiveKind::Void && !TestStr(type->name, "void"))
+        return false;
+    if (type->primitive == PrimitiveKind::Array)
+        return false;
+    if (type->primitive == PrimitiveKind::Prototype)
+        return false;
+
+    return true;
+}
+
+bool CanStoreType(const TypeInfo *type)
+{
+    if (type->primitive == PrimitiveKind::Void)
+        return false;
+    if (type->primitive == PrimitiveKind::Prototype)
+        return false;
+
+    return true;
+}
+
 const char *GetValueType(const InstanceData *instance, Napi::Value value)
 {
     for (const TypeInfo &type: instance->types) {

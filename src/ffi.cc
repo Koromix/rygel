@@ -214,8 +214,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         member.type = ResolveType(value);
         if (!member.type)
             return env.Null();
-        if (member.type->primitive == PrimitiveKind::Void ||
-                member.type->primitive == PrimitiveKind::Prototype) {
+        if (!CanStoreType(member.type)) {
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a member (maybe try %1 *)", member.type->name);
             return env.Null();
         }
@@ -618,8 +617,8 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
     func->ret.type = ResolveType(ret);
     if (!func->ret.type)
         return false;
-    if (func->ret.type->primitive == PrimitiveKind::Array) {
-        ThrowError<Napi::Error>(env, "You are not allowed to directly return fixed-size arrays");
+    if (!CanReturnType(func->ret.type)) {
+        ThrowError<Napi::TypeError>(env, "You are not allowed to directly return %1 values (maybe try %1 *)", func->ret.type->name);
         return false;
     }
 
@@ -645,9 +644,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
         param.type = ResolveType(parameters[j], &param.directions);
         if (!param.type)
             return false;
-        if (param.type->primitive == PrimitiveKind::Void ||
-                param.type->primitive == PrimitiveKind::Array ||
-                param.type->primitive == PrimitiveKind::Prototype) {
+        if (!CanPassType(param.type)) {
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
             return false;
         }
@@ -988,9 +985,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         param.type = ResolveType(info[i], &param.directions);
         if (RG_UNLIKELY(!param.type))
             return env.Null();
-        if (RG_UNLIKELY(param.type->primitive == PrimitiveKind::Void ||
-                        param.type->primitive == PrimitiveKind::Array ||
-                        param.type->primitive == PrimitiveKind::Prototype)) {
+        if (RG_UNLIKELY(!CanPassType(param.type))) {
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", PrimitiveKindNames[(int)param.type->primitive]);
             return env.Null();
         }

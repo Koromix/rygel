@@ -71,6 +71,10 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions = nullptr);
 const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str, int *out_directions = nullptr);
 const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *type, int count = 1);
 
+bool CanPassType(const TypeInfo *type);
+bool CanReturnType(const TypeInfo *type);
+bool CanStoreType(const TypeInfo *type);
+
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);
 

@@ -28,8 +28,8 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
     Tokenize(str);
 
     out_func->ret.type = ParseType();
-    if (out_func->ret.type->primitive == PrimitiveKind::Array) {
-        MarkError("You are not allowed to directly return C arrays");
+    if (!CanReturnType(out_func->ret.type)) {
+        MarkError("You are not allowed to directly return %1 values (maybe try %1 *)", out_func->ret.type->name);
         return false;
     }
     if (Match("__cdecl")) {
@@ -65,9 +65,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
             }
 
             param.type = ParseType();
-            if (param.type->primitive == PrimitiveKind::Void ||
-                    param.type->primitive == PrimitiveKind::Array ||
-                    param.type->primitive == PrimitiveKind::Prototype) {
+            if (!CanPassType(param.type)) {
                 MarkError("Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
                 return false;
             }
