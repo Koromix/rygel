@@ -209,8 +209,29 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
         std::string key = ((Napi::Value)keys[i]).As<Napi::String>();
         Napi::Value value = obj[key];
+        int16_t align = 0;
 
         member.name = DuplicateString(key.c_str(), &instance->str_alloc).ptr;
+
+        if (value.IsArray()) {
+            Napi::Array array = value.As<Napi::Array>();
+
+            if (array.Length() != 2 || !((Napi::Value)array[0u]).IsNumber()) {
+                ThrowError<Napi::Error>(env, "Member specifier array must contain alignement value and type");
+                return env.Null();
+            }
+
+            int64_t align64 = ((Napi::Value)array[0u]).As<Napi::Number>().Int64Value();
+
+            if (align64 < 1 || align64 > 64) {
+                ThrowError<Napi::Error>(env, "Alignment value must be between 1 and 64");
+                return env.Null();
+            }
+
+            value = array[1u];
+            align = (int16_t)align64;
+        }
+ 
         member.type = ResolveType(value);
         if (!member.type)
             return env.Null();
@@ -219,7 +240,9 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             return env.Null();
         }
 
-        int16_t align = pad ? member.type->align : 1;
+        if (!align) {
+            align = pad ? member.type->align : 1;
+        }
         member.offset = (int16_t)AlignLen(type->size, align);
 
         type->size = (int16_t)(member.offset + member.type->size);

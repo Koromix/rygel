@@ -111,6 +111,25 @@ const Function1 = lib.func('A Function(A value)');
 const Function2 = lib.func('Function', A, [A]);
 ```
 
+Koffi automatically follows the platform C ABI regarding alignment and padding. However, you can override these rules if needed with:
+
+- Pack all members without padding with `koffi.pack()` (instead of `koffi.struct()`)
+- Change alignment of a specific member as shown below
+
+```js
+// This struct is 3 bytes long
+const PackedStruct = koffi.pack('PackedStruct', {
+    a: 'int8_t',
+    b: 'int16_t'
+});
+
+// This one is 18 bytes long, the second member has an alignment requirement of 16 bytes
+const BigStruct = koffi.struct('BigStruct', {
+    a: 'int8_t',
+    b: [16, 'int16_t']
+})
+```
+
 ### Opaque types
 
 Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque `FILE *` pointer. You can open and close files with `fopen()` and `fclose()`, and manipule the opaque pointer with other functions such as `fread()` or `ftell()`.

@@ -18,7 +18,7 @@ const assert = require('assert');
 
 const BFG = koffi.struct('BFG', {
     a: 'int8_t',
-    b: 'int64_t',
+    b: [16, 'int64_t'],
     c: 'char',
     d: 'str',
     e: 'short',

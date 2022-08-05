@@ -61,7 +61,7 @@ const IntFloat = koffi.struct('IntFloat', {
 
 const BFG = koffi.struct('BFG', {
     a: 'int8_t',
-    b: 'int64_t',
+    b: [16, 'int64_t'],
     c: 'char',
     d: 'const char *',
     e: 'short',
