@@ -42,6 +42,7 @@ namespace RG {
 
 // Value does not matter, the tag system uses memory addresses
 const int TypeInfoMarker = 0xDEADBEEF;
+const int CastMarker = 0xDEADBEEF;
 
 static bool ChangeMemorySize(const char *name, Napi::Value value, Size *out_size)
 {
@@ -1538,6 +1539,37 @@ InstanceData::~InstanceData()
     }
 }
 
+static Napi::Value CastValue(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (RG_UNLIKELY(info.Length() < 2)) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    Napi::Value value = info[0];
+
+    const TypeInfo *type = ResolveType(info[1]);
+    if (RG_UNLIKELY(!type))
+        return env.Null();
+    if (type->primitive != PrimitiveKind::Pointer) {
+        ThrowError<Napi::TypeError>(env, "Only pointer types can be used for casting");
+        return env.Null();
+    }
+
+    ValueCast *cast = new ValueCast;
+
+    cast->ref.Reset(value, 1);
+    cast->type = type;
+
+    Napi::External<ValueCast> external = Napi::External<ValueCast>::New(env, cast, [](Napi::Env, ValueCast *cast) { delete cast; });
+    SetValueTag(instance, external, &CastMarker);
+
+    return external;
+}
+
 template <typename Func>
 static void SetExports(Napi::Env env, Func func)
 {
@@ -1567,6 +1599,8 @@ static void SetExports(Napi::Env env, Func func)
 
     func("register", Napi::Function::New(env, RegisterCallback));
     func("unregister", Napi::Function::New(env, UnregisterCallback));
+
+    func("as", Napi::Function::New(env, CastValue));
 
 #if defined(_WIN32)
     func("extension", Napi::String::New(env, ".dll"));

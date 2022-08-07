@@ -32,6 +32,7 @@ static const Size MaxOutParameters = 4;
 static const Size MaxTrampolines = 16;
 
 extern const int TypeInfoMarker;
+extern const int CastMarker;
 
 enum class PrimitiveKind {
     Void,
@@ -169,6 +170,11 @@ struct ParameterInfo {
     int8_t vec_count;
     bool gpr_first; // Only for structs
 #endif
+};
+
+struct ValueCast {
+    Napi::Reference<Napi::Value> ref;
+    const TypeInfo *type;
 };
 
 // Also used for callbacks, even though many members are not used in this case

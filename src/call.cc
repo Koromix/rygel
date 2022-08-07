@@ -627,6 +627,16 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
 
 bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void **out_ptr)
 {
+    const TypeInfo *type = param.type;
+
+    if (CheckValueTag(instance, value, &CastMarker)) {
+        Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+        ValueCast *cast = external.Data();
+
+        value = cast->ref.Value();
+        type = cast->type;
+    }
+
     switch (value.Type()) {
         case napi_undefined:
         case napi_null: {
@@ -635,11 +645,11 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
         } break;
 
         case napi_external: {
-            RG_ASSERT(param.type->primitive == PrimitiveKind::Pointer);
+            RG_ASSERT(type->primitive == PrimitiveKind::Pointer);
 
-            if (RG_UNLIKELY(!CheckValueTag(instance, value, param.type->ref.marker) &&
+            if (RG_UNLIKELY(!CheckValueTag(instance, value, type->ref.marker) &&
                             !CheckValueTag(instance, value, instance->void_type) &&
-                            param.type->ref.type != instance->void_type))
+                            type->ref.type != instance->void_type))
                 goto unexpected;
 
             *out_ptr = value.As<Napi::External<uint8_t>>().Data();
@@ -653,12 +663,12 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
                 Napi::Array array = value.As<Napi::Array>();
 
                 Size len = (Size)array.Length();
-                Size size = len * param.type->ref.type->size;
+                Size size = len * type->ref.type->size;
 
                 ptr = AllocHeap(size, 16);
 
                 if (param.directions & 1) {
-                    if (!PushNormalArray(array, len, param.type->ref.type, ptr))
+                    if (!PushNormalArray(array, len, type->ref.type, ptr))
                         return false;
                 } else {
                     memset(ptr, 0, size);
@@ -672,28 +682,28 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
                 ptr = AllocHeap(size, 16);
 
                 if (param.directions & 1) {
-                    if (!PushTypedArray(array, len, param.type->ref.type, ptr))
+                    if (!PushTypedArray(array, len, type->ref.type, ptr))
                         return false;
                 } else {
-                    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(param.type->ref.type) &&
-                                    param.type->ref.type != instance->void_type)) {
-                        ThrowError<Napi::TypeError>(env, "Cannot use %1 value for %2 array", GetValueType(instance, array), param.type->ref.type->name);
+                    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(type->ref.type) &&
+                                    type->ref.type != instance->void_type)) {
+                        ThrowError<Napi::TypeError>(env, "Cannot use %1 value for %2 array", GetValueType(instance, array), type->ref.type->name);
                         return false;
                     }
 
                     memset(ptr, 0, size);
                 }
-            } else if (RG_LIKELY(param.type->ref.type->primitive == PrimitiveKind::Record)) {
+            } else if (RG_LIKELY(type->ref.type->primitive == PrimitiveKind::Record)) {
                 Napi::Object obj = value.As<Napi::Object>();
                 RG_ASSERT(IsObject(value));
 
-                ptr = AllocHeap(param.type->ref.type->size, 16);
+                ptr = AllocHeap(type->ref.type->size, 16);
 
                 if (param.directions & 1) {
-                    if (!PushObject(obj, param.type->ref.type, ptr))
+                    if (!PushObject(obj, type->ref.type, ptr))
                         return false;
                 } else {
-                    memset(ptr, 0, param.type->size);
+                    memset(ptr, 0, type->size);
                 }
             } else {
                 goto unexpected;
@@ -706,7 +716,7 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
                 RG_ASSERT(status == napi_ok);
 
                 out->ptr = ptr;
-                out->type = param.type->ref.type;
+                out->type = type->ref.type;
             }
 
             *out_ptr = ptr;
@@ -717,7 +727,7 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
     }
 
 unexpected:
-    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), param.offset + 1, param.type->name);
+    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), param.offset + 1, type->name);
     return false;
 }
 

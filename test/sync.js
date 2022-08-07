@@ -159,6 +159,7 @@ async function test() {
     const ConcatenateToStr8 = lib.func('ConcatenateToStr8', 'str', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
     const MakeBFG = lib.func('BFG __stdcall MakeBFG(_Out_ BFG *p, int x, double y, const char *str)');
     const MakePackedBFG = lib.func('AliasBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
+    const MakePolymorphBFG = lib.func('void MakePolymorphBFG(int type, int x, double y, const char *str, _Out_ void *p)');
     const ReturnBigString = process.platform == 'win32' ?
                             lib.stdcall(1, koffi.disposable('str', koffi.free), ['str']) :
                             lib.func('const char * __stdcall ReturnBigString(const char *str)');
@@ -293,6 +294,17 @@ async function test() {
         let bfg = MakePackedBFG(2, 7, out, '__Hello123456789++++foobarFOOBAR!__');
         assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'X/__Hello123456789++++foobarFOOBAR!__/X', e: 54, inner: { f: 14, g: 5 } });
         assert.deepEqual(out, bfg);
+    }
+
+    // Polymorph pointer
+    {
+        let bfg = {};
+
+        MakePolymorphBFG(0, 2, 7, 'boo', koffi.as(bfg, 'BFG *'));
+        assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'X/boo/X', e: 54, inner: { f: 14, g: 5 }});
+
+        MakePolymorphBFG(1, 2, 7, 'bies', koffi.as(bfg, 'PackedBFG *'));
+        assert.deepEqual(bfg, { a: 2, b: 4, c: -25, d: 'X/bies/X', e: 54, inner: { f: 14, g: 5 }});
     }
 
     // Big string

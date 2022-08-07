@@ -206,8 +206,17 @@ bool CanStoreType(const TypeInfo *type)
 
 const char *GetValueType(const InstanceData *instance, Napi::Value value)
 {
+    if (CheckValueTag(instance, value, &CastMarker)) {
+        Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+        ValueCast *cast = external.Data();
+
+        return cast->type->name;
+    }
+
+    if (CheckValueTag(instance, value, &TypeInfoMarker))
+        return "Type";
     for (const TypeInfo &type: instance->types) {
-        if (CheckValueTag(instance, value, type.ref.marker))
+        if (type.ref.marker && CheckValueTag(instance, value, type.ref.marker))
             return type.name;
     }
 

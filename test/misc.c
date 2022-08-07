@@ -399,6 +399,15 @@ EXPORT PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const cha
     return bfg;
 }
 
+EXPORT void MakePolymorphBFG(int type, int x, double y, const char *str, void *p)
+{
+    if (type == 0) {
+        MakeBFG(p, x, y, str);
+    } else if (type == 1) {
+        MakePackedBFG(x, y, p, str);
+    }
+}
+
 #ifdef _WIN32
 // Exported by DEF file
 const char *ReturnBigString(const char *str)
