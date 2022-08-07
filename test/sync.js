@@ -185,6 +185,7 @@ async function test() {
     const MultiplyIntegers = lib.func('void MultiplyIntegers(int multiplier, _Inout_ int *values, int len)');
     const ThroughStr = lib.func('str ThroughStr(StrStruct s)');
     const ThroughStr16 = lib.func('str16 ThroughStr16(StrStruct s)');
+    const ReverseBytes = lib.func('void ReverseBytes(_Inout_ void *array, int len)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -392,5 +393,17 @@ async function test() {
         assert.equal(ThroughStr({ str: null, str16: 'Hello' }), null);
         assert.equal(ThroughStr16({ str: null, str16: 'World!' }), 'World!');
         assert.equal(ThroughStr16({ str: 'World!', str16: null }), null);
+    }
+
+    // Transparent typed arrays for void pointers
+    {
+        let arr8 = Uint8Array.from([1, 2, 3, 4, 5]);
+        let arr16 = Int16Array.from([1, 2, 3, 4, 5]);
+
+        ReverseBytes(arr8, arr8.byteLength);
+        assert.deepEqual(arr8, Uint8Array.from([5, 4, 3, 2, 1]));
+
+        ReverseBytes(arr16, arr16.byteLength);
+        assert.deepEqual(arr16, Int16Array.from([1280, 1024, 768, 512, 256]));
     }
 }

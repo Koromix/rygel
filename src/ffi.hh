@@ -230,6 +230,7 @@ struct InstanceData {
 
     bool debug;
     uint64_t tag_lower;
+    const TypeInfo *void_type;
 
     LocalArray<InstanceMemory *, 9> memories;
     int temporaries = 0;

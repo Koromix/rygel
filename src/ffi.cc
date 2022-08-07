@@ -1452,6 +1452,8 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
 
 static Napi::Object InitBaseTypes(Napi::Env env)
 {
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
     Napi::Object types = Napi::Object::New(env);
 
     RegisterPrimitiveType(env, types, {"void"}, PrimitiveKind::Void, 0, 0);
@@ -1481,6 +1483,9 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(env, types, {"double", "float64"}, PrimitiveKind::Float64, 8, alignof(double));
     RegisterPrimitiveType(env, types, {"char *", "str", "string"}, PrimitiveKind::String, RG_SIZE(void *), alignof(void *), "char");
     RegisterPrimitiveType(env, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, RG_SIZE(void *), alignof(void *), "char16_t");
+
+    instance->void_type = instance->types_map.FindValue("void", nullptr);
+    RG_ASSERT(instance->void_type);
 
     types.Freeze();
 

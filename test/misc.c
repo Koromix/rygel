@@ -633,3 +633,14 @@ EXPORT int CallCallback(int x)
 {
     return callback(x);
 }
+
+EXPORT void ReverseBytes(void *p, int len)
+{
+    uint8_t *bytes = (uint8_t *)p;
+
+    for (int i = 0; i < len / 2; i++) {
+        uint8_t tmp = bytes[i];
+        bytes[i] = bytes[len - i - 1];
+        bytes[len - i - 1] = tmp;
+    }
+}

@@ -567,24 +567,26 @@ bool CallData::PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *
         return false;
     }
 
-    Size offset = 0;
     const uint8_t *buf = (const uint8_t *)array.ArrayBuffer().Data();
 
-    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(ref))) {
+    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(ref) &&
+                    ref != instance->void_type)) {
         ThrowError<Napi::TypeError>(env, "Cannot use %1 value for %2 array", GetValueType(instance, array), ref->name);
         return false;
     }
 
     if (realign) {
+        Size offset = 0;
+        Size size = (Size)array.ElementSize();
+
         for (uint32_t i = 0; i < len; i++) {
-            int16_t align = std::max(ref->align, realign);
-            offset = AlignLen(offset, align);
+            offset = AlignLen(offset, realign);
 
             uint8_t *dest = origin + offset;
+            const uint8_t *src = buf + i * size;
 
-            memcpy(dest, buf + i * ref->size, ref->size);
-
-            offset += ref->size;
+            memcpy(dest, src, size);
+            offset += size;
         }
     } else {
         memcpy_safe(origin, buf, (size_t)array.ByteLength());
@@ -635,7 +637,9 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
         case napi_external: {
             RG_ASSERT(param.type->primitive == PrimitiveKind::Pointer);
 
-            if (RG_UNLIKELY(!CheckValueTag(instance, value, param.type->ref.marker)))
+            if (RG_UNLIKELY(!CheckValueTag(instance, value, param.type->ref.marker) &&
+                            !CheckValueTag(instance, value, instance->void_type) &&
+                            param.type->ref.type != instance->void_type))
                 goto unexpected;
 
             *out_ptr = value.As<Napi::External<uint8_t>>().Data();
@@ -671,7 +675,8 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
                     if (!PushTypedArray(array, len, param.type->ref.type, ptr))
                         return false;
                 } else {
-                    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(param.type->ref.type))) {
+                    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(param.type->ref.type) &&
+                                    param.type->ref.type != instance->void_type)) {
                         ThrowError<Napi::TypeError>(env, "Cannot use %1 value for %2 array", GetValueType(instance, array), param.type->ref.type->name);
                         return false;
                     }
@@ -1016,24 +1021,25 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
 void CallData::PopTypedArray(Napi::TypedArray array, const uint8_t *origin, const TypeInfo *ref, int16_t realign)
 {
     RG_ASSERT(array.IsTypedArray());
-    RG_ASSERT(GetTypedArrayType(ref) == array.TypedArrayType());
+    RG_ASSERT(GetTypedArrayType(ref) == array.TypedArrayType() ||
+              ref == instance->void_type);
 
     uint8_t *buf = (uint8_t *)array.ArrayBuffer().Data();
 
     if (realign) {
         Size offset = 0;
         Size len = (Size)array.ElementLength();
+        Size size = (Size)array.ElementSize();
 
         for (Size i = 0; i < len; i++) {
-            int16_t align = std::max(ref->align, realign);
-            offset = AlignLen(offset, align);
+            offset = AlignLen(offset, realign);
 
-            uint8_t *dest = buf + i * ref->size;
+            uint8_t *dest = buf + i * size;
             const uint8_t *src = origin + offset;
 
-            memcpy(dest, src, ref->size);
+            memcpy(dest, src, size);
 
-            offset += ref->size;
+            offset += size;
         }
     } else {
         memcpy_safe(buf, origin, (size_t)array.ByteLength());
