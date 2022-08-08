@@ -328,8 +328,8 @@ In C, pointer arguments are used for differenty purposes. It is important to dis
 
 - **Struct pointers**: Use of struct pointers by C libraries fall in two cases: avoid (potentially) expensive copies, and to let the function change struct contents (output or input/output arguments).
 - **Opaque pointers**: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. `FILE *`). Only the functions provided by the library can do something with this pointer, in Koffi we call this an opaque type. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.
-- **Arrays**: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated (or any other sentinel value) or with an additional length argument.
 - **Pointers to primitive types**: This is more rare, and generally used for output or input/output arguments. The Win32 API has a lot of these.
+- **Arrays**: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated (or any other sentinel value) or with an additional length argument.
 
 ### Struct pointers
 
@@ -367,7 +367,87 @@ const GetHandleInformation = lib.func('bool __stdcall GetHandleInformation(HANDL
 const CloseHandle = lib.func('bool __stdcall CloseHandle(HANDLE h)');
 ```
 
-### Array pointers
+### Pointers to primitive types
+
+In javascript, it is not possible to pass a primitive value by reference to another function. This means that you cannot call a function and expect it to modify the value of one of its number or string parameter.
+
+However, arrays and objects (among others) are reference type values. Assigning an array or an object from one variable to another does not invole any copy. Instead, as the following example illustrates, the new variable references the same array as the first:
+
+```js
+let list1 = [1, 2];
+let list2 = list1;
+
+list2[1] = 42;
+
+console.log(list1); // Prints [1, 42]
+```
+
+All of this means that C functions that are expected to modify their primitive output values (such as an `int *` parameter) cannot be used directly. However, thanks to Koffi's transparent array support, you can use Javascript arrays to approximate reference semantics with single-element arrays.
+
+Below, you can find an example of an addition function where the result is stored in an `int *` input/output parameter and how to use this function from Koffi.
+
+```c
+void AddInt(int *dest, int add)
+{
+    *dest += add;
+}
+```
+
+You can simply pass a single-element array as the first argument:
+
+```js
+const AddInt = lib.func('void AddInt(_Inout_ int *dest, int add)');
+
+let sum = [36];
+AddInt(sum, 6);
+
+console.log(sum[0]); // Prints 42
+```
+
+## Array types
+
+### Fixed-size C arrays
+
+Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C, they cannot be passed as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.
+
+Koffi applies the following conversion rules when passing arrays to/from C:
+
+- **JS to C**: Koffi can take a normal Array (e.g. `[1, 2]`) or a TypedArray of the correct type (e.g. `Uint8Array` for an array of `uint8_t` numbers)
+- **C to JS** (return value, output parameters, callbacks): Koffi will use a TypedArray if possible. But you can change this behavior when you create the array type with the optional hint argument: `koffi.array('uint8_t', 64, 'array')`. For non-number types, such as arrays of strings or structs, Koffi creates normal arrays.
+
+See the example below:
+
+```js
+const koffi = require('koffi');
+
+// Those two structs are exactly the same, only the array conversion hint is different
+const Foo1 = koffi.struct('Foo', {
+    i: 'int',
+    a16: koffi.array('int16_t', 8)
+});
+const Foo2 = koffi.struct('Foo', {
+    i: 'int',
+    a16: koffi.array('int16_t', 8, 'array')
+});
+
+// Uses an hypothetical C function that just returns the struct passed as a parameter
+const ReturnFoo1 = lib.func('Foo1 ReturnFoo(Foo1 p)');
+const ReturnFoo2 = lib.func('Foo2 ReturnFoo(Foo2 p)');
+
+console.log(ReturnFoo1({ i: 5, a16: [6, 8] })) // Prints { i: 5, a16: Int16Array(2) [6, 8] }
+console.log(ReturnFoo2({ i: 5, a16: [6, 8] })) // Prints { i: 5, a16: [6, 8] }
+```
+
+### Fixed-size string buffers
+
+Koffi can also convert JS strings to fixed-sized arrays in the following cases:
+
+- **char arrays** are filled with the UTF-8 encoded string, truncated if needed. The buffer is always NUL-terminated.
+- **char16 (or char16_t) arrays** are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.
+
+The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16 and char16_t arrays, but you can also explicitly ask for this with the `string` array hint (e.g. `koffi.array('char', 8, 'string')`).
+
+### Array pointers (dynamic arrays)
 
 In C, dynamically-sized arrays are usually passed around as pointers. The length is either passed as an additional argument, or inferred from the array content itself, for example with a terminating sentinel value (such as a NULL pointers in the case of an array of strings).
 
@@ -408,147 +488,6 @@ console.log(total); // Prints 14
 ```
 
 By default, just like for objects, array arguments are copied from JS to C but not vice-versa. You can however change the direction as documented in the section on [output parameters](functions.md#output-parameters).
-
-Here is an example based on the Win32 API, listing files in the current directory with `FindFirstFileW()` and `FindNextFileW()`:
-
-```js
-const koffi = require('koffi');
-const lib = koffi.load('kernel32.dll');
-
-const HANDLE = koffi.pointer('HANDLE', koffi.opaque());
-const FILETIME = koffi.struct('FILETIME', {
-    dwLowDateTime: 'uint',
-    dwHighDateTime: 'uint'
-});
-const WIN32_FIND_DATA = koffi.struct('WIN32_FIND_DATA', {
-    dwFileAttributes: 'uint',
-    ftCreationTime: FILETIME,
-    ftLastAccessTime: FILETIME,
-    ftLastWriteTime: FILETIME,
-    nFileSizeHigh: 'uint',
-    nFileSizeLow: 'uint',
-    dwReserved0: 'uint',
-    dwReserved1: 'uint',
-    cFileName: koffi.array('char16', 260),
-    cAlternateFileName: koffi.array('char16', 14),
-    dwFileType: 'uint', // Obsolete. Do not use.
-    dwCreatorType: 'uint', // Obsolete. Do not use
-    wFinderFlags: 'ushort' // Obsolete. Do not use
-});
-
-const FindFirstFile = lib.func('HANDLE __stdcall FindFirstFileW(str16 path, _Out_ WIN32_FIND_DATA *data)');
-const FindNextFile = lib.func('bool __stdcall FindNextFileW(HANDLE h, _Out_ WIN32_FIND_DATA *data)');
-const FindClose = lib.func('bool __stdcall FindClose(HANDLE h)');
-const GetLastError = lib.func('uint GetLastError()');
-
-function list(dirname) {
-    let filenames = [];
-
-    let data = {};
-    let h = FindFirstFile(dirname + '\\*', data);
-
-    if (!h) {
-        if (GetLastError() == 2) // ERROR_FILE_NOT_FOUND
-            return filenames;
-        throw new Error('FindFirstFile() failed');
-    }
-
-    try {
-        do {
-            if (data.cFileName != '.' && data.cFileName != '..')
-                filenames.push(data.cFileName);
-        } while (FindNextFile(h, data));
-
-        if (GetLastError() != 18) // ERROR_NO_MORE_FILES
-            throw new Error('FindNextFile() failed');
-    } finally {
-        FindClose(h);
-    }
-
-    return filenames;
-}
-
-let filenames = list('.');
-console.log(filenames);
-```
-
-### Pointers to primitive types
-
-In javascript, it is not possible to pass a primitive value by reference to another function. This means that you cannot call a function and expect it to modify the value of one of its number or string parameter.
-
-However, arrays and objects (among others) are reference type values. Assigning an array or an object from one variable to another does not invole any copy. Instead, as the following example illustrates, the new variable references the same array as the first:
-
-```js
-let list1 = [1, 2];
-let list2 = list1;
-
-list2[1] = 42;
-
-console.log(list1); // Prints [1, 42]
-```
-
-All of this means that C functions that are expected to modify their primitive output values (such as an `int *` parameter) cannot be used directly. However, thanks to Koffi's transparent array support, you can use Javascript arrays to approximate reference semantics with single-element arrays.
-
-Below, you can find an example of an addition function where the result is stored in an `int *` input/output parameter and how to use this function from Koffi.
-
-```c
-void AddInt(int *dest, int add)
-{
-    *dest += add;
-}
-```
-
-You can simply pass a single-element array as the first argument:
-
-```js
-const AddInt = lib.func('void AddInt(_Inout_ int *dest, int add)');
-
-let sum = [36];
-AddInt(sum, 6);
-
-console.log(sum[0]); // Prints 42
-```
-
-## Fixed-size C arrays
-
-Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C, they cannot be passed as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.
-
-Koffi applies the following conversion rules when passing arrays to/from C:
-
-- **JS to C**: Koffi can take a normal Array (e.g. `[1, 2]`) or a TypedArray of the correct type (e.g. `Uint8Array` for an array of `uint8_t` numbers)
-- **C to JS** (return value, output parameters, callbacks): Koffi will use a TypedArray if possible. But you can change this behavior when you create the array type with the optional hint argument: `koffi.array('uint8_t', 64, 'array')`. For non-number types, such as arrays of strings or structs, Koffi creates normal arrays.
-
-See the example below:
-
-```js
-const koffi = require('koffi');
-
-// Those two structs are exactly the same, only the array conversion hint is different
-const Foo1 = koffi.struct('Foo', {
-    i: 'int',
-    a16: koffi.array('int16_t', 8)
-});
-const Foo2 = koffi.struct('Foo', {
-    i: 'int',
-    a16: koffi.array('int16_t', 8, 'array')
-});
-
-// Uses an hypothetical C function that just returns the struct passed as a parameter
-const ReturnFoo1 = lib.func('Foo1 ReturnFoo(Foo1 p)');
-const ReturnFoo2 = lib.func('Foo2 ReturnFoo(Foo2 p)');
-
-console.log(ReturnFoo1({ i: 5, a16: [6, 8] })) // Prints { i: 5, a16: Int16Array(2) [6, 8] }
-console.log(ReturnFoo2({ i: 5, a16: [6, 8] })) // Prints { i: 5, a16: [6, 8] }
-```
-
-### Handling of strings
-
-Koffi can also convert JS strings to fixed-sized arrays in the following cases:
-
-- **char arrays** are filled with the UTF-8 encoded string, truncated if needed. The buffer is always NUL-terminated.
-- **char16 (or char16_t) arrays** are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.
-
-The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16 and char16_t arrays, but you can also explicitly ask for this with the `string` array hint (e.g. `koffi.array('char', 8, 'string')`).
 
 ## Disposable types
 
