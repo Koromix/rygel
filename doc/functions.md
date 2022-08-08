@@ -105,7 +105,7 @@ printf('Integer %d, double %g, str %s', 'int', 6, 'double', 8.5, 'str', 'THE END
 
 On x86 platforms, only the Cdecl convention can be used for variadic functions.
 
-## C to JS conversion gotchas
+## Special considerations
 
 ### Output parameters
 
@@ -175,6 +175,68 @@ if (sqlite3_open_v2(':memory:', out, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
 let db = out[0];
 
 sqlite3_close_v2(db);
+```
+
+### Polymorphic parameters
+
+*New in Koffi 2.1*
+
+Many C functions use `void *` parameters in order to pass polymorphic objects and arrays, meaning that the data format changes can change depending on one other argument, or on some kind of struct tag member.
+
+Koffi provides two features to deal with this:
+
+- Typed JS arrays can be used as values in place everywhere `void *` is expected. See [dynamic arrays](types.md#array-pointers-dynamic-arrays) for more information, for input or output.
+- You can use `koffi.as(value, type)` to tell Koffi what kind of type is actually expected.
+
+The example below shows the use of `koffi.as()` to read the header of a PNG file with `fread()`.
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('libc.so.6');
+
+const FILE = koffi.opaque('FILE');
+
+const PngHeader = koffi.pack('PngHeader', {
+    signature: koffi.array('uint8_t', 8),
+    ihdr: koffi.pack({
+        length: 'uint32_be_t',
+        chunk: koffi.array('char', 4),
+        width: 'uint32_be_t',
+        height: 'uint32_be_t',
+        depth: 'uint8_t',
+        color: 'uint8_t',
+        compression: 'uint8_t',
+        filter: 'uint8_t',
+        interlace: 'uint8_t',
+        crc: 'uint32_be_t'
+    })
+});
+
+const fopen = lib.func('FILE *fopen(const char *path, const char *mode)');
+const fclose = lib.func('int fclose(FILE *fp)');
+const fread = lib.func('size_t fread(_Out_ void *ptr, size_t size, size_t nmemb, FILE *fp)');
+
+let filename = process.argv[2];
+if (filename == null)
+    throw new Error('Usage: node png.js <image.png>');
+
+let hdr = {};
+{
+
+    let fp = fopen(filename, 'rb');
+    if (!fp)
+        throw new Error(`Failed to open '${filename}'`);
+
+    try {
+        let len = fread(koffi.as(hdr, 'PngHeader *'), 1, koffi.sizeof(PngHeader), fp);
+        if (len < koffi.sizeof(PngHeader))
+            throw new Error('Failed to read PNG header');
+    } finally {
+        fclose(fp);
+    }
+}
+
+console.log('PNG header:', hdr);
 ```
 
 ### Heap-allocated values
