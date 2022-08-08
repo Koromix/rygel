@@ -2,6 +2,23 @@
 
 ## History
 
+### Koffi 2.1.0 (in beta)
+
+**Main changes:**
+
+- Add [koffi.as()](functions.md#polymorphic-parameters) to support polymorphic APIs based on `void *` parameters
+- Add [endian-sensitive integer types](types.md#endian-sensitive-types): `intX_le_t`, `intX_be_t`
+- Accept typed arrays for `void *` parameters
+- Introduce `koffi.opaque()` to replace `koffi.handle()` (which remains supported until Koffi 3.0)
+
+**Other changes:**
+
+- Improve global performance with inlining and unity builds
+- Add `size_t` primitive type
+- Support member-specific alignement value in structs
+- Detect impossible parameters and return types (such as non-pointer opaque types)
+- Various documentation fixes and improvements
+
 ### Koffi 2.0.1
 
 **Main changes:**
