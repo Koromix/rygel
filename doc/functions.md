@@ -179,6 +179,8 @@ sqlite3_close_v2(db);
 
 ### Heap-allocated values
 
+*New in Koffi 2.0*
+
 Some C functions return heap-allocated values directly or through output parameters. While Koffi automatically converts values from C to JS (to a string or an object), it does not know when something needs to be freed, or how.
 
 For opaque types, such as FILE, this does not matter because you will explicitly call `fclose()` on them. But some values (such as strings) get implicitly converted by Koffi, and you lose access to the original pointer. This creates a leak if the string is heap-allocated.
@@ -298,6 +300,8 @@ console.log(ret);
 ```
 
 ### Registered callbacks
+
+*New in Koffi 2.0*
 
 Use registered callbacks when the function needs to be called at a later time (e.g. log handler, event handler, `fopencookie/funopen`). Call `koffi.register(func, type)` to register a callback function, with two arguments: the JS function, and the callback type.
 

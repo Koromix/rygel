@@ -357,6 +357,8 @@ console.log(pos);
 
 ### Named pointer types
 
+*New in Koffi 2.0*
+
 Some C libraries use handles, which behave as pointers to opaque structs. An example of this is the HANDLE type in the Win32 API. If you want to reproduce this behavior, you can define a **named pointer type** to an opaque type, like so:
 
 ```js
@@ -499,6 +501,8 @@ Read the documentation for [disposable types](functions.md#heap-allocated-values
 
 ### Type introspection
 
+*New in Koffi 2.0: `koffi.resolve()`*
+
 Koffi exposes three functions to explore type information:
 
 - `koffi.sizeof(type)` to get the size of a type
@@ -523,5 +527,7 @@ console.log(koffi.sizeof(koffi.types.long));
 ```
 
 ### Type aliases
+
+*New in Koffi 2.0*
 
 You can alias a type with `koffi.alias(name, type)`. Aliased types are completely equivalent.
