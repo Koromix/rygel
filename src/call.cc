@@ -178,6 +178,15 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 int16_t v = CopyNumber<int16_t>(value);
                 *(int16_t *)dest = v;
             } break;
+            case PrimitiveKind::Int16S: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                int16_t v = CopyNumber<int16_t>(value);
+                *(int16_t *)dest = ReverseBytes(v);
+            } break;
             case PrimitiveKind::UInt16: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
@@ -186,6 +195,15 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
                 uint16_t v = CopyNumber<uint16_t>(value);
                 *(uint16_t *)dest = v;
+            } break;
+            case PrimitiveKind::UInt16S: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                uint16_t v = CopyNumber<uint16_t>(value);
+                *(uint16_t *)dest = ReverseBytes(v);
             } break;
             case PrimitiveKind::Int32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -196,6 +214,15 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 int32_t v = CopyNumber<int32_t>(value);
                 *(int32_t *)dest = v;
             } break;
+            case PrimitiveKind::Int32S: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                int32_t v = CopyNumber<int32_t>(value);
+                *(int32_t *)dest = ReverseBytes(v);
+            } break;
             case PrimitiveKind::UInt32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
@@ -204,6 +231,15 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
                 uint32_t v = CopyNumber<uint32_t>(value);
                 *(uint32_t *)dest = v;
+            } break;
+            case PrimitiveKind::UInt32S: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                uint32_t v = CopyNumber<uint32_t>(value);
+                *(uint32_t *)dest = ReverseBytes(v);
             } break;
             case PrimitiveKind::Int64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
@@ -214,6 +250,15 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 int64_t v = CopyNumber<int64_t>(value);
                 *(int64_t *)dest = v;
             } break;
+            case PrimitiveKind::Int64S: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                int64_t v = CopyNumber<int64_t>(value);
+                *(int64_t *)dest = ReverseBytes(v);
+            } break;
             case PrimitiveKind::UInt64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
@@ -222,6 +267,15 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
                 uint64_t v = CopyNumber<uint64_t>(value);
                 *(uint64_t *)dest = v;
+            } break;
+            case PrimitiveKind::UInt64S: {
+                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    return false;
+                }
+
+                uint64_t v = CopyNumber<uint64_t>(value);
+                *(uint64_t *)dest = ReverseBytes(v);
             } break;
             case PrimitiveKind::String: {
                 const char *str;
@@ -402,10 +456,22 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                 *(int16_t *)dest = v;
             });
         } break;
+        case PrimitiveKind::Int16S: {
+            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                int16_t v = CopyNumber<int16_t>(value);
+                *(int16_t *)dest = ReverseBytes(v);
+            });
+        } break;
         case PrimitiveKind::UInt16: {
             PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
                 uint16_t v = CopyNumber<uint16_t>(value);
                 *(uint16_t *)dest = v;
+            });
+        } break;
+        case PrimitiveKind::UInt16S: {
+            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                uint16_t v = CopyNumber<uint16_t>(value);
+                *(uint16_t *)dest = ReverseBytes(v);
             });
         } break;
         case PrimitiveKind::Int32: {
@@ -414,10 +480,22 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                 *(int32_t *)dest = v;
             });
         } break;
+        case PrimitiveKind::Int32S: {
+            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                int32_t v = CopyNumber<int32_t>(value);
+                *(int32_t *)dest = ReverseBytes(v);
+            });
+        } break;
         case PrimitiveKind::UInt32: {
             PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
                 uint32_t v = CopyNumber<uint32_t>(value);
                 *(uint32_t *)dest = v;
+            });
+        } break;
+        case PrimitiveKind::UInt32S: {
+            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                uint32_t v = CopyNumber<uint32_t>(value);
+                *(uint32_t *)dest = ReverseBytes(v);
             });
         } break;
         case PrimitiveKind::Int64: {
@@ -426,10 +504,22 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                 *(int64_t *)dest = v;
             });
         } break;
+        case PrimitiveKind::Int64S: {
+            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                int64_t v = CopyNumber<int64_t>(value);
+                *(int64_t *)dest = ReverseBytes(v);
+            });
+        } break;
         case PrimitiveKind::UInt64: {
             PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
                 uint64_t v = CopyNumber<uint64_t>(value);
                 *(uint64_t *)dest = v;
+            });
+        } break;
+        case PrimitiveKind::UInt64S: {
+            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
+                uint64_t v = CopyNumber<uint64_t>(value);
+                *(uint64_t *)dest = ReverseBytes(v);
             });
         } break;
         case PrimitiveKind::String: {
@@ -819,24 +909,56 @@ void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo
                 double d = (double)*(int16_t *)src;
                 obj.Set(member.name, Napi::Number::New(env, d));
             } break;
+            case PrimitiveKind::Int16S: {
+                int16_t v = *(int16_t *)src;
+                double d = (double)ReverseBytes(v);
+
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
             case PrimitiveKind::UInt16: {
                 double d = (double)*(uint16_t *)src;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt16S: {
+                uint16_t v = *(uint16_t *)src;
+                double d = (double)ReverseBytes(v);
+
                 obj.Set(member.name, Napi::Number::New(env, d));
             } break;
             case PrimitiveKind::Int32: {
                 double d = (double)*(int32_t *)src;
                 obj.Set(member.name, Napi::Number::New(env, d));
             } break;
+            case PrimitiveKind::Int32S: {
+                int32_t v = *(int32_t *)src;
+                double d = (double)ReverseBytes(v);
+
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
             case PrimitiveKind::UInt32: {
                 double d = (double)*(uint32_t *)src;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt32S: {
+                uint32_t v = *(uint32_t *)src;
+                double d = (double)ReverseBytes(v);
+
                 obj.Set(member.name, Napi::Number::New(env, d));
             } break;
             case PrimitiveKind::Int64: {
                 int64_t v = *(int64_t *)src;
                 obj.Set(member.name, NewBigInt(env, v));
             } break;
+            case PrimitiveKind::Int64S: {
+                int64_t v = ReverseBytes(*(int64_t *)src);
+                obj.Set(member.name, NewBigInt(env, v));
+            } break;
             case PrimitiveKind::UInt64: {
                 uint64_t v = *(uint64_t *)src;
+                obj.Set(member.name, NewBigInt(env, v));
+            } break;
+            case PrimitiveKind::UInt64S: {
+                uint64_t v = ReverseBytes(*(uint64_t *)src);
                 obj.Set(member.name, NewBigInt(env, v));
             } break;
             case PrimitiveKind::String: {
@@ -939,6 +1061,14 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
                 array.Set(i, Napi::Number::New(env, d)); \
             }); \
         } while (false)
+#define POP_NUMBER_ARRAY_SWAP(CType) \
+        do { \
+            POP_ARRAY({ \
+                CType v = *(CType *)src; \
+                double d = (double)ReverseBytes(v); \
+                array.Set(i, Napi::Number::New(env, d)); \
+            }); \
+        } while (false)
 
     switch (ref->primitive) {
         case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -952,18 +1082,34 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
         case PrimitiveKind::Int8: { POP_NUMBER_ARRAY(int8_t); } break;
         case PrimitiveKind::UInt8: { POP_NUMBER_ARRAY(uint8_t); } break;
         case PrimitiveKind::Int16: { POP_NUMBER_ARRAY(int16_t); } break;
+        case PrimitiveKind::Int16S: { POP_NUMBER_ARRAY_SWAP(int16_t); } break;
         case PrimitiveKind::UInt16: { POP_NUMBER_ARRAY(uint16_t); } break;
+        case PrimitiveKind::UInt16S: { POP_NUMBER_ARRAY_SWAP(uint16_t); } break;
         case PrimitiveKind::Int32: { POP_NUMBER_ARRAY(int32_t); } break;
+        case PrimitiveKind::Int32S: { POP_NUMBER_ARRAY_SWAP(int32_t); } break;
         case PrimitiveKind::UInt32: { POP_NUMBER_ARRAY(uint32_t); } break;
+        case PrimitiveKind::UInt32S: { POP_NUMBER_ARRAY_SWAP(uint32_t); } break;
         case PrimitiveKind::Int64: {
             POP_ARRAY({
                 int64_t v = *(int64_t *)src;
                 array.Set(i, NewBigInt(env, v));
             });
         } break;
+        case PrimitiveKind::Int64S: {
+            POP_ARRAY({
+                int64_t v = ReverseBytes(*(int64_t *)src);
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
         case PrimitiveKind::UInt64: {
             POP_ARRAY({
                 uint64_t v = *(uint64_t *)src;
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::UInt64S: {
+            POP_ARRAY({
+                uint64_t v = ReverseBytes(*(uint64_t *)src);
                 array.Set(i, NewBigInt(env, v));
             });
         } break;
@@ -1024,6 +1170,7 @@ void CallData::PopNormalArray(Napi::Array array, const uint8_t *origin, const Ty
         case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
     }
 
+#undef POP_NUMBER_ARRAY_SWAP
 #undef POP_NUMBER_ARRAY
 #undef POP_ARRAY
 }
@@ -1054,6 +1201,26 @@ void CallData::PopTypedArray(Napi::TypedArray array, const uint8_t *origin, cons
     } else {
         memcpy_safe(buf, origin, (size_t)array.ByteLength());
     }
+
+#define SWAP(CType) \
+        do { \
+            CType *data = (CType *)buf; \
+            Size len = (Size)array.ElementLength(); \
+             \
+            for (Size i = 0; i < len; i++) { \
+                data[i] = ReverseBytes(data[i]); \
+            } \
+        } while (false)
+
+    if (ref->primitive == PrimitiveKind::Int16S || ref->primitive == PrimitiveKind::UInt16S) {
+        SWAP(uint16_t);
+    } else if (ref->primitive == PrimitiveKind::Int32S || ref->primitive == PrimitiveKind::UInt32S) {
+        SWAP(uint32_t);
+    } else if (ref->primitive == PrimitiveKind::Int64S || ref->primitive == PrimitiveKind::UInt64S) {
+        SWAP(uint64_t);
+    }
+
+#undef SWAP
 }
 
 Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int16_t realign)
@@ -1085,6 +1252,21 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
             if (type->hint == TypeInfo::ArrayHint::Array) { \
                 POP_ARRAY({ \
                     double d = (double)*(CType *)src; \
+                    array.Set(i, Napi::Number::New(env, d)); \
+                }); \
+            } else { \
+                Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
+                PopTypedArray(array, origin, type->ref.type, realign); \
+                 \
+                return array; \
+            } \
+        } while (false)
+#define POP_NUMBER_ARRAY_SWAP(TypedArrayType, CType) \
+        do { \
+            if (type->hint == TypeInfo::ArrayHint::Array) { \
+                POP_ARRAY({ \
+                    CType v = *(CType *)src; \
+                    double d = (double)ReverseBytes(v); \
                     array.Set(i, Napi::Number::New(env, d)); \
                 }); \
             } else { \
@@ -1131,18 +1313,34 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
 
             POP_NUMBER_ARRAY(Int16Array, int16_t);
         } break;
+        case PrimitiveKind::Int16S: { POP_NUMBER_ARRAY_SWAP(Int16Array, int16_t); } break;
         case PrimitiveKind::UInt16: { POP_NUMBER_ARRAY(Uint16Array, uint16_t); } break;
+        case PrimitiveKind::UInt16S: { POP_NUMBER_ARRAY_SWAP(Uint16Array, uint16_t); } break;
         case PrimitiveKind::Int32: { POP_NUMBER_ARRAY(Int32Array, int32_t); } break;
+        case PrimitiveKind::Int32S: { POP_NUMBER_ARRAY_SWAP(Int32Array, int32_t); } break;
         case PrimitiveKind::UInt32: { POP_NUMBER_ARRAY(Uint32Array, uint32_t); } break;
+        case PrimitiveKind::UInt32S: { POP_NUMBER_ARRAY_SWAP(Uint32Array, uint32_t); } break;
         case PrimitiveKind::Int64: {
             POP_ARRAY({
                 int64_t v = *(int64_t *)src;
                 array.Set(i, NewBigInt(env, v));
             });
         } break;
+        case PrimitiveKind::Int64S: {
+            POP_ARRAY({
+                int64_t v = ReverseBytes(*(int64_t *)src);
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
         case PrimitiveKind::UInt64: {
             POP_ARRAY({
                 uint64_t v = *(uint64_t *)src;
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::UInt64S: {
+            POP_ARRAY({
+                uint64_t v = ReverseBytes(*(uint64_t *)src);
                 array.Set(i, NewBigInt(env, v));
             });
         } break;
@@ -1191,6 +1389,7 @@ Napi::Value CallData::PopArray(const uint8_t *origin, const TypeInfo *type, int1
         case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
     }
 
+#undef POP_NUMBER_ARRAY_SWAP
 #undef POP_NUMBER_ARRAY
 #undef POP_ARRAY
 

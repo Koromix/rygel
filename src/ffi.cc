@@ -861,11 +861,17 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
             case PrimitiveKind::Int8:
             case PrimitiveKind::UInt8:
             case PrimitiveKind::Int16:
+            case PrimitiveKind::Int16S:
             case PrimitiveKind::UInt16:
+            case PrimitiveKind::UInt16S:
             case PrimitiveKind::Int32:
+            case PrimitiveKind::Int32S:
             case PrimitiveKind::UInt32:
+            case PrimitiveKind::UInt32S:
             case PrimitiveKind::Int64:
+            case PrimitiveKind::Int64S:
             case PrimitiveKind::UInt64:
+            case PrimitiveKind::UInt64S:
             case PrimitiveKind::String:
             case PrimitiveKind::String16:
             case PrimitiveKind::Float32:
@@ -1403,17 +1409,6 @@ void LibraryHolder::Unref() const
     }
 }
 
-static inline PrimitiveKind GetIntegerPrimitive(Size len, bool sign)
-{
-    switch (len) {
-        case 1: return sign ? PrimitiveKind::Int8 : PrimitiveKind::UInt8;
-        case 2: return sign ? PrimitiveKind::Int16 : PrimitiveKind::UInt16;
-        case 4: return sign ? PrimitiveKind::Int32 : PrimitiveKind::UInt32;
-        case 8: return sign ? PrimitiveKind::Int64 : PrimitiveKind::UInt64;
-    }
-
-    RG_UNREACHABLE();
-}
 
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
                                   PrimitiveKind primitive, int16_t size, int16_t align, const char *ref = nullptr)
@@ -1451,6 +1446,30 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
     }
 }
 
+static inline PrimitiveKind GetSignPrimitive(Size len, bool sign)
+{
+    switch (len) {
+        case 1: return sign ? PrimitiveKind::Int8 : PrimitiveKind::UInt8;
+        case 2: return sign ? PrimitiveKind::Int16 : PrimitiveKind::UInt16;
+        case 4: return sign ? PrimitiveKind::Int32 : PrimitiveKind::UInt32;
+        case 8: return sign ? PrimitiveKind::Int64 : PrimitiveKind::UInt64;
+    }
+
+    RG_UNREACHABLE();
+}
+
+static inline PrimitiveKind GetLittleEndianPrimitive(PrimitiveKind kind)
+{
+    // Sensitive to endianness
+    return kind;
+}
+
+static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
+{
+    // Sensitive to endianness
+    return (PrimitiveKind)((int)kind + 1);
+}
+
 static Napi::Object InitBaseTypes(Napi::Env env)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1465,19 +1484,31 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(env, types, {"unsigned char", "uchar"}, PrimitiveKind::UInt8, 1, 1);
     RegisterPrimitiveType(env, types, {"char16_t", "char16"}, PrimitiveKind::Int16, 2, 2);
     RegisterPrimitiveType(env, types, {"int16_t", "int16"}, PrimitiveKind::Int16, 2, 2);
+    RegisterPrimitiveType(env, types, {"int16_le_t", "int16_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int16), 2, 2);
+    RegisterPrimitiveType(env, types, {"int16_be_t", "int16_be"}, GetBigEndianPrimitive(PrimitiveKind::Int16), 2, 2);
     RegisterPrimitiveType(env, types, {"uint16_t", "uint16"}, PrimitiveKind::UInt16, 2, 2);
+    RegisterPrimitiveType(env, types, {"uint16_le_t", "uint16_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt16), 2, 2);
+    RegisterPrimitiveType(env, types, {"uint16_be_t", "uint16_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt16), 2, 2);
     RegisterPrimitiveType(env, types, {"short"}, PrimitiveKind::Int16, 2, 2);
     RegisterPrimitiveType(env, types, {"unsigned short", "ushort"}, PrimitiveKind::UInt16, 2, 2);
     RegisterPrimitiveType(env, types, {"int32_t", "int32"}, PrimitiveKind::Int32, 4, 4);
+    RegisterPrimitiveType(env, types, {"int32_le_t", "int32_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int32), 4, 4);
+    RegisterPrimitiveType(env, types, {"int32_be_t", "int32_be"}, GetBigEndianPrimitive(PrimitiveKind::Int32), 4, 4);
     RegisterPrimitiveType(env, types, {"uint32_t", "uint32"}, PrimitiveKind::UInt32, 4, 4);
+    RegisterPrimitiveType(env, types, {"uint32_le_t", "uint32_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt32), 4, 4);
+    RegisterPrimitiveType(env, types, {"uint32_be_t", "uint32_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt32), 4, 4);
     RegisterPrimitiveType(env, types, {"int"}, PrimitiveKind::Int32, 4, 4);
     RegisterPrimitiveType(env, types, {"unsigned int", "uint"}, PrimitiveKind::UInt32, 4, 4);
     RegisterPrimitiveType(env, types, {"int64_t", "int64"}, PrimitiveKind::Int64, 8, alignof(int64_t));
+    RegisterPrimitiveType(env, types, {"int64_le_t", "int64_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int64), 8, alignof(int64_t));
+    RegisterPrimitiveType(env, types, {"int64_be_t", "int64_be"}, GetBigEndianPrimitive(PrimitiveKind::Int64), 8, alignof(int64_t));
     RegisterPrimitiveType(env, types, {"uint64_t", "uint64"}, PrimitiveKind::UInt64, 8, alignof(int64_t));
-    RegisterPrimitiveType(env, types, {"intptr_t", "intptr"}, GetIntegerPrimitive(RG_SIZE(intptr_t), true), RG_SIZE(intptr_t), alignof(intptr_t));
-    RegisterPrimitiveType(env, types, {"uintptr_t", "uintptr"}, GetIntegerPrimitive(RG_SIZE(intptr_t), false), RG_SIZE(intptr_t), alignof(intptr_t));
-    RegisterPrimitiveType(env, types, {"long"}, GetIntegerPrimitive(RG_SIZE(long), true), RG_SIZE(long), alignof(long));
-    RegisterPrimitiveType(env, types, {"unsigned long", "ulong"}, GetIntegerPrimitive(RG_SIZE(long), false), RG_SIZE(long), alignof(long));
+    RegisterPrimitiveType(env, types, {"uint64_le_t", "uint64_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt64), 8, alignof(int64_t));
+    RegisterPrimitiveType(env, types, {"uint64_be_t", "uint64_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt64), 8, alignof(int64_t));
+    RegisterPrimitiveType(env, types, {"intptr_t", "intptr"}, GetSignPrimitive(RG_SIZE(intptr_t), true), RG_SIZE(intptr_t), alignof(intptr_t));
+    RegisterPrimitiveType(env, types, {"uintptr_t", "uintptr"}, GetSignPrimitive(RG_SIZE(intptr_t), false), RG_SIZE(intptr_t), alignof(intptr_t));
+    RegisterPrimitiveType(env, types, {"long"}, GetSignPrimitive(RG_SIZE(long), true), RG_SIZE(long), alignof(long));
+    RegisterPrimitiveType(env, types, {"unsigned long", "ulong"}, GetSignPrimitive(RG_SIZE(long), false), RG_SIZE(long), alignof(long));
     RegisterPrimitiveType(env, types, {"long long", "longlong"}, PrimitiveKind::Int64, RG_SIZE(int64_t), alignof(int64_t));
     RegisterPrimitiveType(env, types, {"unsigned long long", "ulonglong"}, PrimitiveKind::UInt64, RG_SIZE(uint64_t), alignof(uint64_t));
     RegisterPrimitiveType(env, types, {"float", "float32"}, PrimitiveKind::Float32, 4, alignof(float));
