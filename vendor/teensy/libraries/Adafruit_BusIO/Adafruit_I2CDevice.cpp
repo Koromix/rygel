@@ -13,6 +13,8 @@ Adafruit_I2CDevice::Adafruit_I2CDevice(uint8_t addr, TwoWire *theWire) {
   _begun = false;
 #ifdef ARDUINO_ARCH_SAMD
   _maxBufferSize = 250; // as defined in Wire.h's RingBuffer
+#elif defined(ESP32)
+  _maxBufferSize = I2C_BUFFER_LENGTH;
 #else
   _maxBufferSize = 32;
 #endif
@@ -106,7 +108,7 @@ bool Adafruit_I2CDevice::write(const uint8_t *buffer, size_t len, bool stop,
   _wire->beginTransmission(_addr);
 
   // Write the prefix data (usually an address)
-  if ((prefix_len != 0) && (prefix_buffer != NULL)) {
+  if ((prefix_len != 0) && (prefix_buffer != nullptr)) {
     if (_wire->write(prefix_buffer, prefix_len) != prefix_len) {
 #ifdef DEBUG_SERIAL
       DEBUG_SERIAL.println(F("\tI2CDevice failed to write"));
@@ -128,7 +130,7 @@ bool Adafruit_I2CDevice::write(const uint8_t *buffer, size_t len, bool stop,
   DEBUG_SERIAL.print(F("\tI2CWRITE @ 0x"));
   DEBUG_SERIAL.print(_addr, HEX);
   DEBUG_SERIAL.print(F(" :: "));
-  if ((prefix_len != 0) && (prefix_buffer != NULL)) {
+  if ((prefix_len != 0) && (prefix_buffer != nullptr)) {
     for (uint16_t i = 0; i < prefix_len; i++) {
       DEBUG_SERIAL.print(F("0x"));
       DEBUG_SERIAL.print(prefix_buffer[i], HEX);
@@ -187,6 +189,8 @@ bool Adafruit_I2CDevice::read(uint8_t *buffer, size_t len, bool stop) {
 bool Adafruit_I2CDevice::_read(uint8_t *buffer, size_t len, bool stop) {
 #if defined(TinyWireM_h)
   size_t recv = _wire->requestFrom((uint8_t)_addr, (uint8_t)len);
+#elif defined(ARDUINO_ARCH_MEGAAVR)
+  size_t recv = _wire->requestFrom(_addr, len, stop);
 #else
   size_t recv = _wire->requestFrom((uint8_t)_addr, (uint8_t)len, (uint8_t)stop);
 #endif
@@ -257,9 +261,41 @@ uint8_t Adafruit_I2CDevice::address(void) { return _addr; }
  *    Not necessarily that the speed was achieved!
  */
 bool Adafruit_I2CDevice::setSpeed(uint32_t desiredclk) {
-#if (ARDUINO >= 157) && !defined(ARDUINO_STM32_FEATHER) && !defined(TinyWireM_h)
+#if defined(__AVR_ATmega328__) ||                                              \
+    defined(__AVR_ATmega328P__) // fix arduino core set clock
+  // calculate TWBR correctly
+  uint8_t prescaler = 1;
+  uint32_t atwbr = ((F_CPU / desiredclk) - 16) / 2;
+  if (atwbr <= 255) {
+    prescaler = 1;
+    TWSR = 0x0;
+  } else if (atwbr <= 1020) {
+    atwbr /= 4;
+    prescaler = 4;
+    TWSR = 0x1;
+  } else if (atwbr <= 4080) {
+    atwbr /= 16;
+    prescaler = 16;
+    TWSR = 0x2;
+  } else if (atwbr <= 16320) {
+    atwbr /= 64;
+    prescaler = 64;
+    TWSR = 0x3;
+  }
+#ifdef DEBUG_SERIAL
+  Serial.print(F("TWSR prescaler = "));
+  Serial.println(prescaler);
+  Serial.print(F("TWBR = "));
+  Serial.println(atwbr);
+#endif
+  TWBR = atwbr;
+  return true;
+
+#elif (ARDUINO >= 157) && !defined(ARDUINO_STM32_FEATHER) &&                   \
+    !defined(TinyWireM_h)
   _wire->setClock(desiredclk);
   return true;
+
 #else
   (void)desiredclk;
   return false;
