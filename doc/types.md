@@ -2,45 +2,34 @@
 
 ## Primitive types
 
+### Standard types
+
 While the C standard allows for variation in the size of most integer types, Koffi enforces the same definition for most primitive types, listed below:
 
-JS type           | C type             | Bytes | Signedness | Note
------------------ | ------------------ | ----- | ---------- | ---------------------------
-Undefined         | void               | 0     |            | Only valid as a return type
-Number (integer)  | int8               | 1     | Signed     |
-Number (integer)  | int8_t             | 1     | Signed     |
-Number (integer)  | uint8              | 1     | Unsigned   |
-Number (integer)  | uint8_t            | 1     | Unsigned   |
-Number (integer)  | char               | 1     | Signed     |
-Number (integer)  | uchar              | 1     | Unsigned   |
-Number (integer)  | unsigned char      | 1     | Unsigned   |
-Number (integer)  | char16             | 2     | Signed     |
-Number (integer)  | char16_t           | 2     | Signed     |
-Number (integer)  | int16              | 2     | Signed     |
-Number (integer)  | int16_t            | 2     | Signed     |
-Number (integer)  | uint16             | 2     | Unsigned   |
-Number (integer)  | uint16_t           | 2     | Unsigned   |
-Number (integer)  | short              | 2     | Signed     |
-Number (integer)  | unsigned short     | 2     | Unsigned   |
-Number (integer)  | int32              | 4     | Signed     |
-Number (integer)  | int32_t            | 4     | Signed     |
-Number (integer)  | uint32             | 4     | Unsigned   |
-Number (integer)  | uint32_t           | 4     | Unsigned   |
-Number (integer)  | int                | 4     | Signed     |
-Number (integer)  | uint               | 4     | Unsigned   |
-Number (integer)  | unsigned int       | 4     | Unsigned   |
-Number (integer)  | int64              | 8     | Signed     |
-Number (integer)  | int64_t            | 8     | Signed     |
-Number (integer)  | uint64             | 8     | Unsigned   |
-Number (integer)  | uint64_t           | 8     | Unsigned   |
-Number (integer)  | longlong           | 8     | Signed     |
-Number (integer)  | long long          | 8     | Signed     |
-Number (integer)  | ulonglong          | 8     | Unsigned   |
-Number (integer)  | unsigned long long | 8     | Unsigned   |
-Number (float)    | float32            | 4     |            |
-Number (float)    | float64            | 8     |            |
-Number (float)    | float              | 4     |            |
-Number (float)    | double             | 8     |            |
+JS type          | C type                        | Bytes | Signedness | Note
+---------------- | ----------------------------- | ----- | ---------- | ---------------------------
+Undefined        | void                          | 0     |            | Only valid as a return type
+Number (integer) | int8, int8_t                  | 1     | Signed     |
+Number (integer) | uint8, uint8_t                | 1     | Unsigned   |
+Number (integer) | char                          | 1     | Signed     |
+Number (integer) | uchar, unsigned char          | 1     | Unsigned   |
+Number (integer) | char16, char16_t              | 2     | Signed     |
+Number (integer) | int16, int16_t                | 2     | Signed     |
+Number (integer) | uint16, uint16_t              | 2     | Unsigned   |
+Number (integer) | short                         | 2     | Signed     |
+Number (integer) | ushort, unsigned short        | 2     | Unsigned   |
+Number (integer) | int32, int32_t                | 4     | Signed     |
+Number (integer) | uint32, uint32_t              | 4     | Unsigned   |
+Number (integer) | int                           | 4     | Signed     |
+Number (integer) | uint, unsigned int            | 4     | Unsigned   |
+Number (integer) | int64, int64_t                | 8     | Signed     |
+Number (integer) | uint64, uint64_t              | 8     | Unsigned   |
+Number (integer) | longlong, long long           | 8     | Signed     |
+Number (integer) | ulonglong, unsigned long long | 8     | Unsigned   |
+Number (float)   | float32                       | 4     |            |
+Number (float)   | float64                       | 8     |            |
+Number (float)   | float                         | 4     |            |
+Number (float)   | double                        | 8     |            |
 
 Koffi also accepts BigInt values when converting from JS to C integers. If the value exceeds the range of the C type, Koffi will convert the number to an undefined value. In the reverse direction, BigInt values are automatically used when needed for big 64-bit integers.
 
@@ -56,8 +45,8 @@ Number (integer) | intptr           | Signed     | 4 or 8 bytes depending on reg
 Number (integer) | intptr_t         | Signed     | 4 or 8 bytes depending on register width
 Number (integer) | uintptr          | Unsigned   | 4 or 8 bytes depending on register width
 Number (integer) | uintptr_t        | Unsigned   | 4 or 8 bytes depending on register width
-String           | str (string)     |            | JS strings are converted to and from UTF-8
-String           | str16 (string16) |            | JS strings are converted to and from UTF-16 (LE)
+String           | str, string      |            | JS strings are converted to and from UTF-8
+String           | str16, string16  |            | JS strings are converted to and from UTF-16 (LE)
 
 Primitive types can be specified by name (in a string) or through `koffi.types`:
 
@@ -66,6 +55,25 @@ Primitive types can be specified by name (in a string) or through `koffi.types`:
 let struct1 = koffi.struct({ dummy: 'long' });
 let struct2 = koffi.struct({ dummy: koffi.types.long });
 ```
+
+### Endian-sensitive types
+
+Koffi defines a bunch of endian-sensitive types, which can be used when dealing with binary data (network payloads, binary file formats, etc.).
+
+JS type          | C type                 | Bytes | Signedness | Endianness
+---------------- | ---------------------- | ----- | ---------- | -------------
+Number (integer) | int16_le, int16_le_t   | 2     | Signed     | Little Endian
+Number (integer) | int16_be, int16_be_t   | 2     | Signed     | Big Endian
+Number (integer) | uint16_le, uint16_le_t | 2     | Unsigned   | Little Endian
+Number (integer) | uint16_be, uint16_be_t | 2     | Unsigned   | Big Endian
+Number (integer) | int32_le, int32_le_t   | 4     | Signed     | Little Endian
+Number (integer) | int32_be, int32_be_t   | 4     | Signed     | Big Endian
+Number (integer) | uint32_le, uint32_le_t | 4     | Unsigned   | Little Endian
+Number (integer) | uint32_be, uint32_be_t | 4     | Unsigned   | Big Endian
+Number (integer) | int64_le, int64_le_t   | 8     | Signed     | Little Endian
+Number (integer) | int64_be, int64_be_t   | 8     | Signed     | Big Endian
+Number (integer) | uint64_le, uint64_le_t | 8     | Unsigned   | Little Endian
+Number (integer) | uint64_be, uint64_be_t | 8     | Unsigned   | Big Endian
 
 ## Struct types
 
