@@ -58,6 +58,8 @@ let struct2 = koffi.struct({ dummy: koffi.types.long });
 
 ### Endian-sensitive types
 
+*New in Koffi 2.1*
+
 Koffi defines a bunch of endian-sensitive types, which can be used when dealing with binary data (network payloads, binary file formats, etc.).
 
 JS type          | C type                 | Bytes | Signedness | Endianness
