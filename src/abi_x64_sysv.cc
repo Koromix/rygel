@@ -776,8 +776,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
         case PrimitiveKind::UInt16:
         case PrimitiveKind::Int32:
         case PrimitiveKind::UInt32:
-        case PrimitiveKind::Int64:
-        case PrimitiveKind::UInt64: {
+        case PrimitiveKind::Int64: {
             if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value));
                 return;
@@ -785,6 +784,15 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
             int64_t v = CopyNumber<int64_t>(value);
             out_reg->rax = (uint64_t)v;
+        } break;
+        case PrimitiveKind::UInt64: {
+            if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value));
+                return;
+            }
+
+            uint64_t v = CopyNumber<uint64_t>(value);
+            out_reg->rax = v;
         } break;
         case PrimitiveKind::String: {
             const char *str;
