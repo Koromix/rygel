@@ -410,7 +410,7 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
         return env.Null();
 
     if (type->primitive != PrimitiveKind::Pointer) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", PrimitiveKindNames[(int)type->primitive]);
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", type->name);
         return env.Null();
     }
 
@@ -463,7 +463,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     if (src->primitive != PrimitiveKind::String &&
             src->primitive != PrimitiveKind::String16 &&
             src->primitive != PrimitiveKind::Pointer) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", PrimitiveKindNames[(int)src->primitive]);
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", src->name);
         return env.Null();
     }
     if (src->dispose) {
@@ -1010,7 +1010,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         if (RG_UNLIKELY(!param.type))
             return env.Null();
         if (RG_UNLIKELY(!CanPassType(param.type))) {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", PrimitiveKindNames[(int)param.type->primitive]);
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
             return env.Null();
         }
 
