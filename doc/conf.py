@@ -12,6 +12,7 @@ with open(os.path.dirname(__file__) + '/../package.json') as f:
 
     version = config['version']
     revision = config['version']
+    stable = config['stable']
 
 # -- General configuration ---------------------------------------------------
 
@@ -59,6 +60,10 @@ html_sidebars = {
         "sidebar/scroll-end.html",
         "sidebar/variant-selector.html"
     ]
+}
+
+html_context = {
+    "stable": stable
 }
 
 # -- MyST parser options -------------------------------------------------

@@ -1,6 +1,7 @@
 {
   "name": "koffi",
   "version": "2.1.0-beta.2",
+  "stable": "2.0.1",
   "description": "Fast and simple C FFI (foreign function interface) for Node.js",
   "keywords": [
     "foreign",
