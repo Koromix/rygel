@@ -1507,6 +1507,7 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(env, types, {"uint64_be_t", "uint64_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt64), 8, alignof(int64_t));
     RegisterPrimitiveType(env, types, {"intptr_t", "intptr"}, GetSignPrimitive(RG_SIZE(intptr_t), true), RG_SIZE(intptr_t), alignof(intptr_t));
     RegisterPrimitiveType(env, types, {"uintptr_t", "uintptr"}, GetSignPrimitive(RG_SIZE(intptr_t), false), RG_SIZE(intptr_t), alignof(intptr_t));
+    RegisterPrimitiveType(env, types, {"size_t"}, GetSignPrimitive(RG_SIZE(size_t), false), RG_SIZE(size_t), alignof(size_t));
     RegisterPrimitiveType(env, types, {"long"}, GetSignPrimitive(RG_SIZE(long), true), RG_SIZE(long), alignof(long));
     RegisterPrimitiveType(env, types, {"unsigned long", "ulong"}, GetSignPrimitive(RG_SIZE(long), false), RG_SIZE(long), alignof(long));
     RegisterPrimitiveType(env, types, {"long long", "longlong"}, PrimitiveKind::Int64, RG_SIZE(int64_t), alignof(int64_t));
