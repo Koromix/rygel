@@ -141,6 +141,27 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
         *(uint8_t **)(args_ptr++) = return_ptr;
     }
 
+#define PUSH_INTEGER(CType) \
+        do { \
+            if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1); \
+                return false; \
+            } \
+             \
+            CType v = CopyNumber<CType>(value); \
+            *(args_ptr++) = (uint64_t)v; \
+        } while (false)
+#define PUSH_INTEGER_SWAP(CType) \
+        do { \
+            if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1); \
+                return false; \
+            } \
+             \
+            CType v = CopyNumber<CType>(value); \
+            *(args_ptr++) = (uint64_t)ReverseBytes(v); \
+        } while (false)
+
     // Push arguments
     for (Size i = 0; i < func->parameters.len; i++) {
         const ParameterInfo &param = func->parameters[i];
@@ -161,52 +182,20 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
                 *(bool *)(args_ptr++) = b;
             } break;
-            case PrimitiveKind::Int8:
-            case PrimitiveKind::UInt8:
-            case PrimitiveKind::Int16:
-            case PrimitiveKind::UInt16:
-            case PrimitiveKind::Int32:
-            case PrimitiveKind::UInt32:
-            case PrimitiveKind::Int64: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1);
-                    return false;
-                }
-
-                int64_t v = CopyNumber<int64_t>(value);
-                *(int64_t *)(args_ptr++) = v;
-            } break;
-            case PrimitiveKind::Int16S:
-            case PrimitiveKind::UInt16S:
-            case PrimitiveKind::Int32S:
-            case PrimitiveKind::UInt32S:
-            case PrimitiveKind::Int64S: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1);
-                    return false;
-                }
-
-                int64_t v = CopyNumber<int64_t>(value);
-                *(int64_t *)(args_ptr++) = ReverseBytes(v);
-            } break;
-            case PrimitiveKind::UInt64: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1);
-                    return false;
-                }
-
-                uint64_t v = CopyNumber<uint64_t>(value);
-                *(args_ptr++) = v;
-            } break;
-            case PrimitiveKind::UInt64S: {
-                if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1);
-                    return false;
-                }
-
-                uint64_t v = CopyNumber<uint64_t>(value);
-                *(args_ptr++) = ReverseBytes(v);
-            } break;
+            case PrimitiveKind::Int8: { PUSH_INTEGER(int8_t); } break;
+            case PrimitiveKind::UInt8: { PUSH_INTEGER(uint8_t); } break;
+            case PrimitiveKind::Int16: { PUSH_INTEGER(int16_t); } break;
+            case PrimitiveKind::Int16S: { PUSH_INTEGER_SWAP(int16_t); } break;
+            case PrimitiveKind::UInt16: { PUSH_INTEGER(uint16_t); } break;
+            case PrimitiveKind::UInt16S: { PUSH_INTEGER_SWAP(uint16_t); } break;
+            case PrimitiveKind::Int32: { PUSH_INTEGER(int32_t); } break;
+            case PrimitiveKind::Int32S: { PUSH_INTEGER_SWAP(int32_t); } break;
+            case PrimitiveKind::UInt32: { PUSH_INTEGER(uint32_t); } break;
+            case PrimitiveKind::UInt32S: { PUSH_INTEGER_SWAP(uint32_t); } break;
+            case PrimitiveKind::Int64: { PUSH_INTEGER(int64_t); } break;
+            case PrimitiveKind::Int64S: { PUSH_INTEGER_SWAP(int64_t); } break;
+            case PrimitiveKind::UInt64: { PUSH_INTEGER(uint64_t); } break;
+            case PrimitiveKind::UInt64S: { PUSH_INTEGER_SWAP(uint64_t); } break;
             case PrimitiveKind::String: {
                 const char *str;
                 if (RG_LIKELY(value.IsString())) {
@@ -307,6 +296,9 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
             case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
         }
     }
+
+#undef PUSH_INTEGER_SWAP
+#undef PUSH_INTEGER
 
     new_sp = mem->stack.end();
 
@@ -637,6 +629,27 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
     if (RG_UNLIKELY(env.IsExceptionPending()))
         return;
 
+#define RETURN_INTEGER(CType) \
+        do { \
+            if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
+                return; \
+            } \
+             \
+            CType v = CopyNumber<CType>(value); \
+            out_reg->rax = (uint64_t)v; \
+        } while (false)
+#define RETURN_INTEGER_SWAP(CType) \
+        do { \
+            if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
+                return; \
+            } \
+             \
+            CType v = CopyNumber<CType>(value); \
+            out_reg->rax = (uint64_t)ReverseBytes(v); \
+        } while (false)
+
     switch (type->primitive) {
         case PrimitiveKind::Void: {} break;
         case PrimitiveKind::Bool: {
@@ -648,52 +661,20 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             bool b = value.As<Napi::Boolean>();
             out_reg->rax = (uint64_t)b;
         } break;
-        case PrimitiveKind::Int8:
-        case PrimitiveKind::UInt8:
-        case PrimitiveKind::Int16:
-        case PrimitiveKind::UInt16:
-        case PrimitiveKind::Int32:
-        case PrimitiveKind::UInt32:
-        case PrimitiveKind::Int64: {
-            if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value));
-                return;
-            }
-
-            int64_t v = CopyNumber<int64_t>(value);
-            out_reg->rax = (uint64_t)v;
-        } break;
-        case PrimitiveKind::Int16S:
-        case PrimitiveKind::UInt16S:
-        case PrimitiveKind::Int32S:
-        case PrimitiveKind::UInt32S:
-        case PrimitiveKind::Int64S: {
-            if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value));
-                return;
-            }
-
-            int64_t v = CopyNumber<int64_t>(value);
-            out_reg->rax = (uint64_t)ReverseBytes(v);
-        } break;
-        case PrimitiveKind::UInt64: {
-            if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value));
-                return;
-            }
-
-            uint64_t v = CopyNumber<uint64_t>(value);
-            out_reg->rax = v;
-        } break;
-        case PrimitiveKind::UInt64S: {
-            if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value));
-                return;
-            }
-
-            uint64_t v = CopyNumber<uint64_t>(value);
-            out_reg->rax = ReverseBytes(v);
-        } break;
+        case PrimitiveKind::Int8: { RETURN_INTEGER(int8_t); } break;
+        case PrimitiveKind::UInt8: { RETURN_INTEGER(uint8_t); } break;
+        case PrimitiveKind::Int16: { RETURN_INTEGER(int16_t); } break;
+        case PrimitiveKind::Int16S: { RETURN_INTEGER_SWAP(int16_t); } break;
+        case PrimitiveKind::UInt16: { RETURN_INTEGER(uint16_t); } break;
+        case PrimitiveKind::UInt16S: { RETURN_INTEGER_SWAP(uint16_t); } break;
+        case PrimitiveKind::Int32: { RETURN_INTEGER(int32_t); } break;
+        case PrimitiveKind::Int32S: { RETURN_INTEGER_SWAP(int32_t); } break;
+        case PrimitiveKind::UInt32: { RETURN_INTEGER(uint32_t); } break;
+        case PrimitiveKind::UInt32S: { RETURN_INTEGER_SWAP(uint32_t); } break;
+        case PrimitiveKind::Int64: { RETURN_INTEGER(int64_t); } break;
+        case PrimitiveKind::Int64S: { RETURN_INTEGER_SWAP(int64_t); } break;
+        case PrimitiveKind::UInt64: { RETURN_INTEGER(uint64_t); } break;
+        case PrimitiveKind::UInt64S: { RETURN_INTEGER_SWAP(uint64_t); } break;
         case PrimitiveKind::String: {
             const char *str;
             if (RG_LIKELY(value.IsString())) {
@@ -805,6 +786,9 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
         case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
     }
+
+#undef RETURN_INTEGER_SWAP
+#undef RETURN_INTEGER
 
     err_guard.Disable();
 }
