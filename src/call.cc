@@ -401,7 +401,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
 {
     RG_ASSERT(array.IsArray());
 
-    if (RG_UNLIKELY(array.Length() != len)) {
+    if (RG_UNLIKELY(array.Length() != (size_t)len)) {
         ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.Length());
         return false;
     }
@@ -410,8 +410,8 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
 
 #define PUSH_ARRAY(Check, Expected, GetCode) \
         do { \
-            for (uint32_t i = 0; i < len; i++) { \
-                Napi::Value value = array[i]; \
+            for (Size i = 0; i < len; i++) { \
+                Napi::Value value = array[(uint32_t)i]; \
                  \
                 int16_t align = std::max(ref->align, realign); \
                  \
@@ -564,8 +564,8 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
             });
         } break;
         case PrimitiveKind::Array: {
-            for (uint32_t i = 0; i < len; i++) {
-                Napi::Value value = array[i];
+            for (Size i = 0; i < len; i++) {
+                Napi::Value value = array[(uint32_t)i];
 
                 int16_t align = std::max(ref->align, realign);
                 offset = AlignLen(offset, align);
@@ -608,8 +608,8 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
             });
         } break;
         case PrimitiveKind::Callback: {
-            for (uint32_t i = 0; i < len; i++) {
-                Napi::Value value = array[i];
+            for (Size i = 0; i < len; i++) {
+                Napi::Value value = array[(uint32_t)i];
 
                 int16_t align = std::max(ref->align, realign);
                 offset = AlignLen(offset, align);
@@ -669,7 +669,7 @@ bool CallData::PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *
         Size offset = 0;
         Size size = (Size)array.ElementSize();
 
-        for (uint32_t i = 0; i < len; i++) {
+        for (Size i = 0; i < len; i++) {
             offset = AlignLen(offset, realign);
 
             uint8_t *dest = origin + offset;
