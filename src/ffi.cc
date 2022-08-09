@@ -170,6 +170,12 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
     return obj;
 }
 
+static inline bool CheckAlignment(int64_t align)
+{
+    bool valid = (align > 0) && (align <= 8 && !(align & (align - 1)));
+    return valid;
+}
+
 static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 {
     Napi::Env env = info.Env();
@@ -224,8 +230,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
             int64_t align64 = ((Napi::Value)array[0u]).As<Napi::Number>().Int64Value();
 
-            if (align64 < 1 || align64 > 64) {
-                ThrowError<Napi::Error>(env, "Alignment value must be between 1 and 64");
+            if (!CheckAlignment(align64)) {
+                ThrowError<Napi::Error>(env, "Alignment of member '%1' must be 1, 2, 4 or 8", member.name);
                 return env.Null();
             }
 

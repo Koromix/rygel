@@ -133,10 +133,10 @@ const PackedStruct = koffi.pack('PackedStruct', {
     b: 'int16_t'
 });
 
-// This one is 18 bytes long, the second member has an alignment requirement of 16 bytes
+// This one is 10 bytes long, the second member has an alignment requirement of 8 bytes
 const BigStruct = koffi.struct('BigStruct', {
     a: 'int8_t',
-    b: [16, 'int16_t']
+    b: [8, 'int16_t']
 })
 ```
 

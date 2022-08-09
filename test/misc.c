@@ -90,10 +90,10 @@ typedef struct IJK8 { int64_t i; int64_t j; int64_t k; } IJK8;
 
 typedef struct BFG {
     int8_t a;
-    char _pad1[15]; int64_t b;
+    char _pad1[7]; short e;
+    int64_t b;
     signed char c;
     const char *d;
-    short e;
     struct {
         float f;
         double g;
