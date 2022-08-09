@@ -143,6 +143,21 @@ typedef struct StructCallbacks {
     IntCallback *third;
 } StructCallbacks;
 
+typedef struct EndianInts {
+    int16_t i16le;
+    int16_t i16be;
+    uint16_t u16le;
+    uint16_t u16be;
+    int32_t i32le;
+    int32_t i32be;
+    uint32_t u32le;
+    uint32_t u32be;
+    int64_t i64le;
+    int64_t i64be;
+    uint64_t u64le;
+    uint64_t u64be;
+} EndianInts;
+
 EXPORT int8_t GetMinusOne1(void)
 {
     return -1;
@@ -653,3 +668,31 @@ EXPORT void ReverseBytes(void *p, int len)
         bytes[len - i - 1] = tmp;
     }
 }
+
+EXPORT void CopyEndianInts1(EndianInts ints, uint8_t buf[56])
+{
+    memcpy(buf, &ints, sizeof(ints));
+}
+
+EXPORT void CopyEndianInts2(int16_t i16le, int16_t i16be, uint16_t u16le, uint16_t u16be,
+                            int32_t i32le, int32_t i32be, uint32_t u32le, uint32_t u32be,
+                            int64_t i64le, int64_t i64be, uint64_t u64le, uint64_t u64be,
+                            EndianInts *out)
+{
+    out->i16le = i16le;
+    out->i16be = i16be;
+    out->u16le = u16le;
+    out->u16be = u16be;
+    out->i32le = i32le;
+    out->i32be = i32be;
+    out->u32le = u32le;
+    out->u32be = u32be;
+    out->i64le = i64le;
+    out->i64be = i64be;
+    out->u64le = u64le;
+    out->u64be = u64be;
+}
+
+EXPORT uint16_t ReturnEndianInt2(uint16_t v) { return v; }
+EXPORT uint32_t ReturnEndianInt4(uint32_t v) { return v; }
+EXPORT uint64_t ReturnEndianInt8(uint64_t v) { return v; }

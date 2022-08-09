@@ -114,6 +114,21 @@ const StrStruct = koffi.struct('StrStruct', {
     str16: koffi.types.string16
 });
 
+const EndianInts = koffi.struct('EndianInts', {
+    i16le: 'int16_le_t',
+    i16be: 'int16_be_t',
+    u16le: 'uint16_le_t',
+    u16be: 'uint16_be_t',
+    i32le: 'int32_le_t',
+    i32be: 'int32_be_t',
+    u32le: 'uint32_le_t',
+    u32be: 'uint32_be_t',
+    i64le: 'int64_le_t',
+    i64be: 'int64_be_t',
+    u64le: 'uint64_le_t',
+    u64be: 'uint64_be_t'
+});
+
 main();
 
 async function main() {
@@ -187,6 +202,23 @@ async function test() {
     const ThroughStr = lib.func('str ThroughStr(StrStruct s)');
     const ThroughStr16 = lib.func('str16 ThroughStr16(StrStruct s)');
     const ReverseBytes = lib.func('void ReverseBytes(_Inout_ void *array, int len)');
+    const CopyEndianInts1 = lib.func('void CopyEndianInts1(EndianInts ints, _Out_ uint8_t *buf)');
+    const CopyEndianInts2 = lib.func('void CopyEndianInts2(int16_le_t i16le, int16_be_t i16be, uint16_le_t u16le, uint16_be_t u16be, ' +
+                                                          'int32_le_t i32le, int32_be_t i32be, uint32_le_t u32le, uint32_be_t u32be, ' +
+                                                          'int64_le_t i64le, int64_be_t i64be, uint64_le_t u64le, uint64_be_t u64be, ' +
+                                                          '_Out_ void *out)');
+    const ReturnEndianInt2SL = lib.func('int16_le_t ReturnEndianInt2(int16_be_t v)');
+    const ReturnEndianInt2SB = lib.func('int16_be_t ReturnEndianInt2(int16_le_t v)');
+    const ReturnEndianInt2UL = lib.func('uint16_le_t ReturnEndianInt2(uint16_be_t v)');
+    const ReturnEndianInt2UB = lib.func('uint16_be_t ReturnEndianInt2(uint16_le_t v)');
+    const ReturnEndianInt4SL = lib.func('int32_le_t ReturnEndianInt4(int32_be_t v)');
+    const ReturnEndianInt4SB = lib.func('int32_be_t ReturnEndianInt4(int32_le_t v)');
+    const ReturnEndianInt4UL = lib.func('uint32_le_t ReturnEndianInt4(uint32_be_t v)');
+    const ReturnEndianInt4UB = lib.func('uint32_be_t ReturnEndianInt4(uint32_le_t v)');
+    const ReturnEndianInt8SL = lib.func('int64_le_t ReturnEndianInt8(int64_be_t v)');
+    const ReturnEndianInt8SB = lib.func('int64_be_t ReturnEndianInt8(int64_le_t v)');
+    const ReturnEndianInt8UL = lib.func('uint64_le_t ReturnEndianInt8(uint64_be_t v)');
+    const ReturnEndianInt8UB = lib.func('uint64_be_t ReturnEndianInt8(uint64_le_t v)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -417,5 +449,54 @@ async function test() {
 
         ReverseBytes(arr16, arr16.byteLength);
         assert.deepEqual(arr16, Int16Array.from([1280, 1024, 768, 512, 256]));
+    }
+
+    // Endian-sensitive integer types
+    {
+        let ints = {
+            i16le: 0x7BCD,
+            i16be: 0x7BCD,
+            u16le: 0x7BCD,
+            u16be: 0x7BCD,
+            i32le: 0x4EADBEEF,
+            i32be: 0x4EADBEEF,
+            u32le: 0x4EADBEEF,
+            u32be: 0x4EADBEEF,
+            i64le: 0x0123456789ABCDEFn,
+            i64be: 0x0123456789ABCDEFn,
+            u64le: 0x0123456789ABCDEFn,
+            u64be: 0x0123456789ABCDEFn
+        };
+
+        let out1 = new Uint8Array(56);
+        let out2 = new Uint8Array(56);
+
+        CopyEndianInts1(ints, out1);
+        CopyEndianInts2(ints.i16le, ints.i16be, ints.u16le, ints.u16be,
+                        ints.i32le, ints.i32be, ints.u32le, ints.u32be,
+                        ints.u64le, ints.u64be, ints.u64le, ints.u64be, out2);
+
+        assert.deepEqual(out1, Uint8Array.from([
+            0xCD, 0x7B, 0x7B, 0xCD,
+            0xCD, 0x7B, 0x7B, 0xCD,
+            0xEF, 0xBE, 0xAD, 0x4E, 0x4E, 0xAD, 0xBE, 0xEF,
+            0xEF, 0xBE, 0xAD, 0x4E, 0x4E, 0xAD, 0xBE, 0xEF,
+            0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+            0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF
+        ]));
+        assert.deepEqual(out2, out1);
+
+        assert.equal(ReturnEndianInt2SL(0x7B6D), 0x6D7B);
+        assert.equal(ReturnEndianInt2SB(0x7B6D), 0x6D7B);
+        assert.equal(ReturnEndianInt2UL(0x7B6D), 0x6D7B);
+        assert.equal(ReturnEndianInt2UB(0x7B6D), 0x6D7B);
+        assert.equal(ReturnEndianInt4SL(0x4EADBE4F), 0x4FBEAD4E);
+        assert.equal(ReturnEndianInt4SB(0x4EADBE4F), 0x4FBEAD4E);
+        assert.equal(ReturnEndianInt4UL(0x4EADBE4F), 0x4FBEAD4E);
+        assert.equal(ReturnEndianInt4UB(0x4EADBE4F), 0x4FBEAD4E);
+        assert.equal(ReturnEndianInt8SL(0x0123456789ABCD3Fn), 0x3FCDAB8967452301n);
+        assert.equal(ReturnEndianInt8SB(0x0123456789ABCD3Fn), 0x3FCDAB8967452301n);
+        assert.equal(ReturnEndianInt8UL(0x0123456789ABCD3Fn), 0x3FCDAB8967452301n);
+        assert.equal(ReturnEndianInt8UB(0x0123456789ABCD3Fn), 0x3FCDAB8967452301n);
     }
 }
