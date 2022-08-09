@@ -111,16 +111,6 @@ const A = koffi.struct('A', {
 });
 ```
 
-Koffi follows the C and ABI rules regarding struct alignment and padding.
-
-Once a struct is declared, you can use it by name (with a string, like you can do for primitive types) or through the value returned by the call to `koffi.struct()`. Only the latter is possible when declaring an anonymous struct.
-
-```js
-// The following two function declarations are equivalent, and declare a function taking an A value and returning A
-const Function1 = lib.func('A Function(A value)');
-const Function2 = lib.func('Function', A, [A]);
-```
-
 Koffi automatically follows the platform C ABI regarding alignment and padding. However, you can override these rules if needed with:
 
 - Pack all members without padding with `koffi.pack()` (instead of `koffi.struct()`)
@@ -138,6 +128,14 @@ const BigStruct = koffi.struct('BigStruct', {
     a: 'int8_t',
     b: [8, 'int16_t']
 })
+```
+
+Once a struct is declared, you can use it by name (with a string, like you can do for primitive types) or through the value returned by the call to `koffi.struct()`. Only the latter is possible when declaring an anonymous struct.
+
+```js
+// The following two function declarations are equivalent, and declare a function taking an A value and returning A
+const Function1 = lib.func('A Function(A value)');
+const Function2 = lib.func('Function', A, [A]);
 ```
 
 ### Opaque types
