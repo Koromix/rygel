@@ -4679,14 +4679,24 @@ static RG_THREAD_LOCAL Size rnd_offset;
 
 static void InitChaCha20(uint32_t state[16], uint32_t key[8], uint32_t iv[2])
 {
-    static const char magic[] = "expand 32-byte k";
+    static const uint32_t *const magic = (const uint32_t *)"expand 32-byte k";
 
-    // Sensitive to endianness
-    memcpy(state, magic, 16);
-    memcpy(state + 4, key, 32);
+    state[0] = LittleEndian(magic[0]);
+    state[1] = LittleEndian(magic[1]);
+    state[2] = LittleEndian(magic[2]);
+    state[3] = LittleEndian(magic[3]);
+    state[4] = LittleEndian(key[0]);
+    state[5] = LittleEndian(key[1]);
+    state[6] = LittleEndian(key[2]);
+    state[7] = LittleEndian(key[3]);
+    state[8] = LittleEndian(key[4]);
+    state[9] = LittleEndian(key[5]);
+    state[10] = LittleEndian(key[6]);
+    state[11] = LittleEndian(key[7]);
     state[12] = 0;
     state[13] = 0;
-    memcpy(state + 14, iv, 8);
+    state[14] = LittleEndian(iv[0]);
+    state[15] = LittleEndian(iv[1]);
 }
 
 static void RunChaCha20(uint32_t state[16], uint8_t out_buf[64])

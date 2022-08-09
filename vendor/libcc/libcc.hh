@@ -109,9 +109,14 @@ extern "C" const char *FelixCompiler;
     #error Machine architecture not supported
 #endif
 
-#if !defined(_MSC_VER) && __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
-    #error This code base is not designed to support big-endian platforms
+#if defined(_MSC_VER) || __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    // Sane platform
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    #define RG_BIG_ENDIAN
+#else
+    #error This code base is not designed to support platforms with crazy endianness
 #endif
+
 #if UINT_MAX != 0xFFFFFFFFu
     #error This code base is not designed to support non-32-bits int types
 #endif
@@ -302,11 +307,17 @@ static inline constexpr int32_t ReverseBytes(int32_t i)
 static inline constexpr int64_t ReverseBytes(int64_t i)
     { return (int64_t)ReverseBytes((uint64_t)i); }
 
-// Sensitive to endianness
+#ifdef RG_BIG_ENDIAN
+template <typename T>
+constexpr T LittleEndian(T v) { return ReverseBytes(v); }
+template <typename T>
+constexpr T BigEndian(T v) { return v; }
+#else
 template <typename T>
 constexpr T LittleEndian(T v) { return v; }
 template <typename T>
 constexpr T BigEndian(T v) { return ReverseBytes(v); }
+#endif
 
 #if defined(__GNUC__)
     static inline int CountLeadingZeros(uint32_t u)
@@ -2557,15 +2568,25 @@ public:
 union Date {
     int32_t value;
     struct {
-        // Sensitive to endianness
+#ifdef RG_BIG_ENDIAN
+        int16_t year;
+        int8_t month;
+        int8_t day;
+#else
         int8_t day;
         int8_t month;
         int16_t year;
+#endif
     } st;
 
     Date() = default;
+#ifdef RG_BIG_ENDIAN
     Date(int16_t year, int8_t month, int8_t day)
-        : st({day, month, year}) { RG_ASSERT(IsValid()); } // Sensitive to endianness
+        : st({year, month, day}) { RG_ASSERT(IsValid()); }
+#else
+    Date(int16_t year, int8_t month, int8_t day)
+        : st({day, month, year}) { RG_ASSERT(IsValid()); }
+#endif
 
     static inline bool IsLeapYear(int16_t year)
     {

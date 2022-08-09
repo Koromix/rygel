@@ -1460,14 +1460,20 @@ static inline PrimitiveKind GetSignPrimitive(Size len, bool sign)
 
 static inline PrimitiveKind GetLittleEndianPrimitive(PrimitiveKind kind)
 {
-    // Sensitive to endianness
+#ifdef RG_BIG_ENDIAN
+    return (PrimitiveKind)((int)kind + 1);
+#else
     return kind;
+#endif
 }
 
 static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 {
-    // Sensitive to endianness
+#ifdef RG_BIG_ENDIAN
+    return kind;
+#else
     return (PrimitiveKind)((int)kind + 1);
+#endif
 }
 
 static Napi::Object InitBaseTypes(Napi::Env env)
