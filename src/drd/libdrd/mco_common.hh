@@ -21,16 +21,27 @@ namespace RG {
 union mco_GhmRootCode {
     int32_t value;
     struct {
-        // Sensitive to endianness
+#ifdef RG_BIG_ENDIAN
+        int8_t cmd;
+        char type;
+        int8_t seq;
+        int8_t pad1;
+#else
         int8_t pad1;
         int8_t seq;
         char type;
         int8_t cmd;
+#endif
     } parts;
 
     mco_GhmRootCode() = default;
+#ifdef RG_BIG_ENDIAN
     constexpr mco_GhmRootCode(int8_t cmd, char type, int8_t seq)
-        : parts {0, seq, type, cmd} {} // Sensitive to endianness
+        : parts {cmd, type, seq, 0} {}
+#else
+    constexpr mco_GhmRootCode(int8_t cmd, char type, int8_t seq)
+        : parts {0, seq, type, cmd} {}
+#endif
 
     static mco_GhmRootCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
                                  Span<const char> *out_remaining = nullptr)
@@ -105,16 +116,27 @@ union mco_GhmRootCode {
 union mco_GhmCode {
     int32_t value;
     struct {
-        // Sensitive to endianness
+#ifdef RG_BIG_ENDIAN
+        int8_t cmd;
+        char type;
+        int8_t seq;
+        char mode;
+#else
         char mode;
         int8_t seq;
         char type;
         int8_t cmd;
+#endif
     } parts;
 
     mco_GhmCode() = default;
+#ifdef RG_BIG_ENDIAN
     constexpr mco_GhmCode(int8_t cmd, char type, int8_t seq, char mode)
-        : parts {mode, seq, type, cmd} {} // Sensitive to endianness
+        : parts {cmd, type, seq, mode} {}
+#else
+    constexpr mco_GhmCode(int8_t cmd, char type, int8_t seq, char mode)
+        : parts {mode, seq, type, cmd} {}
+#endif
 
     static mco_GhmCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
                              Span<const char> *out_remaining = nullptr)
