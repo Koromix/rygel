@@ -15,8 +15,8 @@
 
 - Improve global performance with inlining and unity builds
 - Add `size_t` primitive type
-- Support member-specific alignement value in structs
-- Detect impossible parameters and return types (such as non-pointer opaque types)
+- Support member-specific alignement values in structs
+- Detect impossible parameter and return types (such as non-pointer opaque types)
 - Various documentation fixes and improvements
 
 ### Koffi 2.0.1
