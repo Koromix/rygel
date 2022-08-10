@@ -80,7 +80,7 @@ void *rcc_GetPointerSafe(SEXP xp)
     return ptr;
 }
 
-rcc_Vector<Date>::rcc_Vector(SEXP xp)
+rcc_Vector<LocalDate>::rcc_Vector(SEXP xp)
     : xp(xp)
 {
     if (Rf_isString(xp)) {
@@ -97,22 +97,22 @@ rcc_Vector<Date>::rcc_Vector(SEXP xp)
     }
 }
 
-const Date rcc_Vector<Date>::operator[](Size idx) const
+const LocalDate rcc_Vector<LocalDate>::operator[](Size idx) const
 {
-    Date date = {}; // NA
+    LocalDate date = {}; // NA
 
     switch (type) {
         case Type::Character: {
             SEXP str = u.chr[idx];
             if (str != NA_STRING) {
-                date = Date::Parse(CHAR(str), (int)ParseFlag::End);
+                date = LocalDate::Parse(CHAR(str), (int)ParseFlag::End);
             }
         } break;
 
         case Type::Date: {
             double value = u.num[idx];
             if (!ISNA(value)) {
-                date = Date::FromCalendarDate((int)value);
+                date = LocalDate::FromCalendarDate((int)value);
             }
         } break;
     }
@@ -120,7 +120,7 @@ const Date rcc_Vector<Date>::operator[](Size idx) const
     return date;
 }
 
-Date rcc_Vector<Date>::Value() const
+LocalDate rcc_Vector<LocalDate>::Value() const
 {
     if (RG_UNLIKELY(Len() != 1))
         Rcpp::stop("Date or date-like vector must have one value (no more, no less)");
@@ -128,7 +128,7 @@ Date rcc_Vector<Date>::Value() const
     return (*this)[0];
 }
 
-void rcc_Vector<Date>::Set(Size idx, Date date)
+void rcc_Vector<LocalDate>::Set(Size idx, LocalDate date)
 {
     switch (type) {
         case Type::Character: {

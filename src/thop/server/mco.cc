@@ -25,7 +25,7 @@ McoCacheSet mco_cache_set;
 
 mco_AuthorizationSet mco_authorization_set;
 mco_StaySet mco_stay_set;
-Date mco_stay_set_dates[2];
+LocalDate mco_stay_set_dates[2];
 
 HeapArray<mco_Result> mco_results;
 HeapArray<mco_Result> mco_mono_results;
@@ -191,7 +191,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
         });
 
         for (const Span<const mco_Stay> &group: groups) {
-            Date exit_date = group[group.len - 1].exit.date;
+            LocalDate exit_date = group[group.len - 1].exit.date;
 
             if (RG_LIKELY(exit_date.IsValid())) {
                 mco_stay_set_dates[0] = exit_date;
@@ -200,7 +200,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
         }
         for (Size i = groups.len - 1; i >= 0; i--) {
             const Span<const mco_Stay> &group = groups[i];
-            Date exit_date = group[group.len - 1].exit.date;
+            LocalDate exit_date = group[group.len - 1].exit.date;
 
             if (RG_LIKELY(exit_date.IsValid())) {
                 mco_stay_set_dates[1] = exit_date + 1;
@@ -262,16 +262,16 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
     return true;
 }
 
-static Span<const mco_Result> GetResultsRange(Date min_date, Date max_date)
+static Span<const mco_Result> GetResultsRange(LocalDate min_date, LocalDate max_date)
 {
     const mco_Result *start =
         std::lower_bound(mco_results.begin(), mco_results.end(), min_date,
-                         [](const mco_Result &result, Date date) {
+                         [](const mco_Result &result, LocalDate date) {
         return result.stays[result.stays.len - 1].exit.date < date;
     });
     const mco_Result *end =
         std::upper_bound(start, (const mco_Result *)mco_results.end(), max_date - 1,
-                         [](Date date, const mco_Result &result) {
+                         [](LocalDate date, const mco_Result &result) {
         return date < result.stays[result.stays.len - 1].exit.date;
     });
 
@@ -279,16 +279,16 @@ static Span<const mco_Result> GetResultsRange(Date min_date, Date max_date)
 }
 
 static Span<const mco_Result *> GetIndexRange(Span<const mco_Result *> index,
-                                              Date min_date, Date max_date)
+                                              LocalDate min_date, LocalDate max_date)
 {
     const mco_Result **start =
         std::lower_bound(index.begin(), index.end(), min_date,
-                         [](const mco_Result *result, Date date) {
+                         [](const mco_Result *result, LocalDate date) {
         return result->stays[result->stays.len - 1].exit.date < date;
     });
     const mco_Result **end =
         std::upper_bound(start, index.end(), max_date - 1,
-                         [](Date date, const mco_Result *result) {
+                         [](LocalDate date, const mco_Result *result) {
         return date < result->stays[result->stays.len - 1].exit.date;
     });
 

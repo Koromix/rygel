@@ -2565,7 +2565,7 @@ public:
 // Date
 // ------------------------------------------------------------------------
 
-union Date {
+union LocalDate {
     int32_t value;
     struct {
 #ifdef RG_BIG_ENDIAN
@@ -2579,12 +2579,12 @@ union Date {
 #endif
     } st;
 
-    Date() = default;
+    LocalDate() = default;
 #ifdef RG_BIG_ENDIAN
-    Date(int16_t year, int8_t month, int8_t day)
+    LocalDate(int16_t year, int8_t month, int8_t day)
         : st({year, month, day}) { RG_ASSERT(IsValid()); }
 #else
-    Date(int16_t year, int8_t month, int8_t day)
+    LocalDate(int16_t year, int8_t month, int8_t day)
         : st({day, month, year}) { RG_ASSERT(IsValid()); }
 #endif
 
@@ -2598,10 +2598,10 @@ union Date {
         return (int8_t)(DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year)));
     }
 
-    static Date Parse(Span<const char> date_str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
-                      Span<const char> *out_remaining = nullptr);
-    static Date FromJulianDays(int days);
-    static Date FromCalendarDate(int days) { return Date::FromJulianDays(days + 2440588); }
+    static LocalDate Parse(Span<const char> date_str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                           Span<const char> *out_remaining = nullptr);
+    static LocalDate FromJulianDays(int days);
+    static LocalDate FromCalendarDate(int days) { return LocalDate::FromJulianDays(days + 2440588); }
 
     bool IsValid() const
     {
@@ -2615,25 +2615,25 @@ union Date {
         return true;
     }
 
-    bool operator==(Date other) const { return value == other.value; }
-    bool operator!=(Date other) const { return value != other.value; }
-    bool operator>(Date other) const { return value > other.value; }
-    bool operator>=(Date other) const { return value >= other.value; }
-    bool operator<(Date other) const { return value < other.value; }
-    bool operator<=(Date other) const { return value <= other.value; }
+    bool operator==(LocalDate other) const { return value == other.value; }
+    bool operator!=(LocalDate other) const { return value != other.value; }
+    bool operator>(LocalDate other) const { return value > other.value; }
+    bool operator>=(LocalDate other) const { return value >= other.value; }
+    bool operator<(LocalDate other) const { return value < other.value; }
+    bool operator<=(LocalDate other) const { return value <= other.value; }
 
     int ToJulianDays() const;
     int ToCalendarDate() const { return ToJulianDays() - 2440588; }
 
     int GetWeekDay() const;
 
-    int operator-(Date other) const
+    int operator-(LocalDate other) const
         { return ToJulianDays() - other.ToJulianDays(); }
 
-    Date operator+(int days) const
+    LocalDate operator+(int days) const
     {
         if (days < 5 && days > -5) {
-            Date date = *this;
+            LocalDate date = *this;
             if (days > 0) {
                 while (days--) {
                     ++date;
@@ -2645,19 +2645,19 @@ union Date {
             }
             return date;
         } else {
-            return Date::FromJulianDays(ToJulianDays() + days);
+            return LocalDate::FromJulianDays(ToJulianDays() + days);
         }
     }
     // That'll fail with INT_MAX days but that's far more days than can
     // be represented as a date anyway
-    Date operator-(int days) const { return *this + (-days); }
+    LocalDate operator-(int days) const { return *this + (-days); }
 
-    Date &operator+=(int days) { *this = *this + days; return *this; }
-    Date &operator-=(int days) { *this = *this - days; return *this; }
-    Date &operator++();
-    Date operator++(int) { Date date = *this; ++(*this); return date; }
-    Date &operator--();
-    Date operator--(int) { Date date = *this; --(*this); return date; }
+    LocalDate &operator+=(int days) { *this = *this + days; return *this; }
+    LocalDate &operator-=(int days) { *this = *this - days; return *this; }
+    LocalDate &operator++();
+    LocalDate operator++(int) { LocalDate date = *this; ++(*this); return date; }
+    LocalDate &operator--();
+    LocalDate operator--(int) { LocalDate date = *this; --(*this); return date; }
 
     uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
 };
@@ -3088,7 +3088,7 @@ public:
             int max_prec;
         } d;
         const void *ptr;
-        Date date;
+        LocalDate date;
         TimeSpec time;
         Size random_len;
         struct {
@@ -3131,7 +3131,7 @@ public:
     FmtArg(float f) : type(FmtType::Float) { u.f = { f, 0, INT_MAX }; }
     FmtArg(double d) : type(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
     FmtArg(const void *ptr) : type(FmtType::Hexadecimal) { u.u = (uint64_t)ptr; }
-    FmtArg(const Date &date) : type(FmtType::Date) { u.date = date; }
+    FmtArg(const LocalDate &date) : type(FmtType::Date) { u.date = date; }
 
     FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
     FmtArg &Pad(int len, char c = ' ') { pad_char = c; pad_len = len; return *this; }

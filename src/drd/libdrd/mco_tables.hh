@@ -62,9 +62,9 @@ struct mco_TableInfo {
     };
 
     const char *filename;
-    Date build_date;
+    LocalDate build_date;
     uint16_t version[2];
-    Date limit_dates[2];
+    LocalDate limit_dates[2];
 
     char raw_type[9];
     mco_TableType type;
@@ -126,7 +126,7 @@ struct mco_ProcedureInfo {
     int8_t phase;
     uint8_t activities;
 
-    Date limit_dates[2];
+    LocalDate limit_dates[2];
 
     int16_t additions[8];
     struct {
@@ -279,11 +279,11 @@ struct mco_SrcPair {
     RG_HASHTABLE_HANDLER(mco_SrcPair, diag);
 };
 
-Date mco_ConvertDate1980(uint16_t days);
-static const Date mco_MaxDate1980 = mco_ConvertDate1980(UINT16_MAX);
+LocalDate mco_ConvertDate1980(uint16_t days);
+static const LocalDate mco_MaxDate1980 = mco_ConvertDate1980(UINT16_MAX);
 
 struct mco_TableIndex {
-    Date limit_dates[2];
+    LocalDate limit_dates[2];
     bool valid;
 
     const mco_TableInfo *tables[RG_LEN(mco_TableTypeNames)];
@@ -320,7 +320,7 @@ struct mco_TableIndex {
     Span<const mco_DiagnosisInfo> FindDiagnosis(drd_DiagnosisCode diag) const;
     const mco_DiagnosisInfo *FindDiagnosis(drd_DiagnosisCode diag, int sex) const;
     Span<const mco_ProcedureInfo> FindProcedure(drd_ProcedureCode proc) const;
-    const mco_ProcedureInfo *FindProcedure(drd_ProcedureCode proc, int8_t phase, Date date) const;
+    const mco_ProcedureInfo *FindProcedure(drd_ProcedureCode proc, int8_t phase, LocalDate date) const;
     const mco_GhmRootInfo *FindGhmRoot(mco_GhmRootCode ghm_root) const;
 
     Span<const mco_GhmToGhsInfo> FindCompatibleGhs(mco_GhmCode ghm) const;
@@ -369,8 +369,8 @@ struct mco_TableSet {
 
     mco_TableSet() = default;
 
-    const mco_TableIndex *FindIndex(Date date = {}, bool valid_only = true) const;
-    mco_TableIndex *FindIndex(Date date = {}, bool valid_only = true)
+    const mco_TableIndex *FindIndex(LocalDate date = {}, bool valid_only = true) const;
+    mco_TableIndex *FindIndex(LocalDate date = {}, bool valid_only = true)
         { return (mco_TableIndex *)((const mco_TableSet *)this)->FindIndex(date, valid_only); }
 };
 
@@ -398,7 +398,7 @@ public:
     void Finish(mco_TableSet *out_set);
 
 private:
-    bool CommitIndex(Date start_date, Date end_date, TableLoadInfo *current_tables[]);
+    bool CommitIndex(LocalDate start_date, LocalDate end_date, TableLoadInfo *current_tables[]);
     void HandleDependencies(mco_TableSetBuilder::TableLoadInfo *current_tables[],
                             Span<const std::pair<mco_TableType, mco_TableType>> pairs);
 };

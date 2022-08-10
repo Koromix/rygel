@@ -270,7 +270,7 @@ static Size GetSlotIndexSafe(WrenVM *vm, int slot, Size len)
     }
 }
 
-static inline Date GetSlotDateSafe(WrenVM *vm, int slot)
+static inline LocalDate GetSlotDateSafe(WrenVM *vm, int slot)
 {
     switch (wrenGetSlotType(vm, slot)) {
         case WREN_TYPE_FOREIGN: {
@@ -281,7 +281,7 @@ static inline Date GetSlotDateSafe(WrenVM *vm, int slot)
                 return {};
             }
 
-            return *(Date *)wrenGetSlotForeign(vm, slot);
+            return *(LocalDate *)wrenGetSlotForeign(vm, slot);
         } break;
         case WREN_TYPE_NULL: return {};
 
@@ -328,7 +328,7 @@ static WrenForeignClassMethods BindForeignClass(WrenVM *, const char *, const ch
 
     if (TestStr(class_name, "Date")) {
         methods.allocate = [](WrenVM *vm) {
-            Date *date = (Date *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(Date));
+            LocalDate *date = (LocalDate *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(LocalDate));
             *date = {};
         };
     }
@@ -361,7 +361,7 @@ static WrenForeignClassMethods BindForeignClass(WrenVM *, const char *, const ch
             const Type &obj = *(const Type *)wrenGetSlotForeign(vm, 0); \
              \
             wrenSetSlotHandle(vm, 0, runner.date_class); \
-            Date *date = (Date *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(Date)); \
+            LocalDate *date = (LocalDate *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(LocalDate)); \
             *date = (Value); \
         }; \
     }
@@ -383,7 +383,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
     if (false) {}
 
     ELSE_IF_METHOD("init new(_,_,_)", [](WrenVM *vm) {
-        Date *date = (Date *)wrenGetSlotForeign(vm, 0);
+        LocalDate *date = (LocalDate *)wrenGetSlotForeign(vm, 0);
 
         date->st.year = GetSlotIntegerSafe<int16_t>(vm, 1);
         date->st.month = GetSlotIntegerSafe<int8_t>(vm, 2);
@@ -394,45 +394,45 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         }
     })
     ELSE_IF_METHOD("==(_)", [](WrenVM *vm) {
-        Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
-        Date date2 = GetSlotDateSafe(vm, 1);
+        LocalDate date1 = *(LocalDate *)wrenGetSlotForeign(vm, 0);
+        LocalDate date2 = GetSlotDateSafe(vm, 1);
 
         wrenSetSlotBool(vm, 0, date1 == date2);
     })
     ELSE_IF_METHOD("!=(_)", [](WrenVM *vm) {
-        Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
-        Date date2 = GetSlotDateSafe(vm, 1);
+        LocalDate date1 = *(LocalDate *)wrenGetSlotForeign(vm, 0);
+        LocalDate date2 = GetSlotDateSafe(vm, 1);
 
         wrenSetSlotBool(vm, 0, date1 != date2);
     })
     ELSE_IF_METHOD("<(_)", [](WrenVM *vm) {
-        Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
-        Date date2 = GetSlotDateSafe(vm, 1);
+        LocalDate date1 = *(LocalDate *)wrenGetSlotForeign(vm, 0);
+        LocalDate date2 = GetSlotDateSafe(vm, 1);
 
         wrenSetSlotBool(vm, 0, date1 < date2);
     })
     ELSE_IF_METHOD("<=(_)", [](WrenVM *vm) {
-        Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
-        Date date2 = GetSlotDateSafe(vm, 1);
+        LocalDate date1 = *(LocalDate *)wrenGetSlotForeign(vm, 0);
+        LocalDate date2 = GetSlotDateSafe(vm, 1);
 
         wrenSetSlotBool(vm, 0, date1 <= date2);
     })
     ELSE_IF_METHOD(">(_)", [](WrenVM *vm) {
-        Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
-        Date date2 = GetSlotDateSafe(vm, 1);
+        LocalDate date1 = *(LocalDate *)wrenGetSlotForeign(vm, 0);
+        LocalDate date2 = GetSlotDateSafe(vm, 1);
 
         wrenSetSlotBool(vm, 0, date1 > date2);
     })
     ELSE_IF_METHOD(">=(_)", [](WrenVM *vm) {
-        Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
-        Date date2 = GetSlotDateSafe(vm, 1);
+        LocalDate date1 = *(LocalDate *)wrenGetSlotForeign(vm, 0);
+        LocalDate date2 = GetSlotDateSafe(vm, 1);
 
         wrenSetSlotBool(vm, 0, date1 >= date2);
     })
     ELSE_IF_METHOD("-(_)", [](WrenVM *vm) {
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
 
-        Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
+        LocalDate date1 = *(LocalDate *)wrenGetSlotForeign(vm, 0);
         if (RG_UNLIKELY(!date1.IsValid())) {
             TriggerError(vm, "Cannot compute on invalid date");
             return;
@@ -440,7 +440,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
 
         switch (wrenGetSlotType(vm, 1)) {
             case WREN_TYPE_FOREIGN: {
-                Date date2 = GetSlotDateSafe(vm, 1);
+                LocalDate date2 = GetSlotDateSafe(vm, 1);
                 if (RG_UNLIKELY(!date2.IsValid())) {
                     TriggerError(vm, "Cannot compute days between invalid dates");
                     return;
@@ -452,7 +452,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
                 int16_t days = GetSlotIntegerSafe<int16_t>(vm, 1);
 
                 wrenSetSlotHandle(vm, 0, runner.date_class);
-                Date *ret = (Date *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(date1));
+                LocalDate *ret = (LocalDate *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(date1));
                 *ret = date1 - days;
             } break;
 
@@ -465,7 +465,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
     ELSE_IF_METHOD("+(_)", [](WrenVM *vm) {
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
 
-        Date date = *(Date *)wrenGetSlotForeign(vm, 0);
+        LocalDate date = *(LocalDate *)wrenGetSlotForeign(vm, 0);
         if (RG_UNLIKELY(!date.IsValid())) {
             TriggerError(vm, "Cannot compute on invalid date");
             return;
@@ -474,14 +474,14 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         int16_t days = GetSlotIntegerSafe<int16_t>(vm, 1);
 
         wrenSetSlotHandle(vm, 0, runner.date_class);
-        Date *ret = (Date *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(date));
+        LocalDate *ret = (LocalDate *)wrenSetSlotNewForeign(vm, 0, 0, RG_SIZE(date));
         *ret = date + days;
     })
-    ELSE_IF_GET_NUM("year", Date, obj.st.year)
-    ELSE_IF_GET_NUM("month", Date, obj.st.month)
-    ELSE_IF_GET_NUM("day", Date, obj.st.day)
+    ELSE_IF_GET_NUM("year", LocalDate, obj.st.year)
+    ELSE_IF_GET_NUM("month", LocalDate, obj.st.month)
+    ELSE_IF_GET_NUM("day", LocalDate, obj.st.day)
     ELSE_IF_METHOD("toString", [](WrenVM *vm) {
-        Date date = *(Date *)wrenGetSlotForeign(vm, 0);
+        LocalDate date = *(LocalDate *)wrenGetSlotForeign(vm, 0);
 
         char buf[64];
         Fmt(buf, "%1", date);
@@ -649,7 +649,7 @@ static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
         ProxyArray<mco_ProcedureRealisation> &arr =
             *(ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
         const char *str = GetSlotStringSafe(vm, 1);
-        Date date = GetSlotDateSafe(vm, 2);
+        LocalDate date = GetSlotDateSafe(vm, 2);
         int8_t phase = GetSlotIntegerSafe<int8_t>(vm, 3);
         int activities_dec = GetSlotIntegerSafe<int>(vm, 4);
         int8_t extension = GetSlotIntegerSafe<int8_t>(vm, 5);
@@ -733,7 +733,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         ProxyArrayObject<mco_Stay> *obj = (ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
         ProxyArray<mco_Stay> *array = obj->array;
 
-        Date new_date = GetSlotDateSafe(vm, 1);
+        LocalDate new_date = GetSlotDateSafe(vm, 1);
 
         if (array->values[obj->idx].birthdate != new_date) {
             GetMutableStay(obj)->birthdate = new_date;
@@ -744,7 +744,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         ProxyArrayObject<mco_Stay> *obj = (ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
         ProxyArray<mco_Stay> *array = obj->array;
 
-        Date new_date = GetSlotDateSafe(vm, 1);
+        LocalDate new_date = GetSlotDateSafe(vm, 1);
 
         if (array->values[obj->idx].entry.date != new_date) {
             GetMutableStay(obj)->entry.date = new_date;
@@ -777,7 +777,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         ProxyArrayObject<mco_Stay> *obj = (ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
         ProxyArray<mco_Stay> *array = obj->array;
 
-        Date new_date = GetSlotDateSafe(vm, 1);
+        LocalDate new_date = GetSlotDateSafe(vm, 1);
 
         if (array->values[obj->idx].exit.date != new_date) {
             GetMutableStay(obj)->exit.date = new_date;
@@ -854,7 +854,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         ProxyArrayObject<mco_Stay> *obj = (ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
         ProxyArray<mco_Stay> *array = obj->array;
 
-        Date new_date = GetSlotDateSafe(vm, 1);
+        LocalDate new_date = GetSlotDateSafe(vm, 1);
 
         if (array->values[obj->idx].last_menstrual_period != new_date) {
             GetMutableStay(obj)->last_menstrual_period = new_date;

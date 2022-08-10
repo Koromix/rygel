@@ -101,12 +101,12 @@ struct StaysProxy {
 
     rcc_NumericVector<int> admin_id;
     rcc_NumericVector<int> bill_id;
-    rcc_Vector<Date> birthdate;
+    rcc_Vector<LocalDate> birthdate;
     rcc_NumericVector<int> sex;
-    rcc_Vector<Date> entry_date;
+    rcc_Vector<LocalDate> entry_date;
     rcc_NumericVector<int> entry_mode;
     rcc_Vector<const char *> entry_origin;
-    rcc_Vector<Date> exit_date;
+    rcc_Vector<LocalDate> exit_date;
     rcc_NumericVector<int> exit_mode;
     rcc_NumericVector<int> exit_destination;
     rcc_NumericVector<int> unit;
@@ -115,7 +115,7 @@ struct StaysProxy {
     rcc_NumericVector<int> igs2;
     rcc_NumericVector<int> gestational_age;
     rcc_NumericVector<int> newborn_weight;
-    rcc_Vector<Date> last_menstrual_period;
+    rcc_Vector<LocalDate> last_menstrual_period;
 
     rcc_Vector<const char *> main_diagnosis;
     rcc_Vector<const char *> linked_diagnosis;
@@ -151,7 +151,7 @@ struct ProceduresProxy {
     rcc_NumericVector<int> phase;
     rcc_NumericVector<int> activity;
     rcc_NumericVector<int> count;
-    rcc_Vector<Date> date;
+    rcc_Vector<LocalDate> date;
     rcc_Vector<const char *> doc;
 };
 
@@ -418,7 +418,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
     if (export_units) {
         unit = df_builder.Add<int>("unit");
     }
-    rcc_Vector<Date> exit_date = df_builder.Add<Date>("exit_date");
+    rcc_Vector<LocalDate> exit_date = df_builder.Add<LocalDate>("exit_date");
     rcc_Vector<int> stays = df_builder.Add<int>("stays");
     rcc_Vector<int> duration = df_builder.Add<int>("duration");
     rcc_Vector<int> main_stay = df_builder.Add<int>("main_stay");
@@ -782,8 +782,8 @@ RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
         }
 
         rcc_DataFrameBuilder df_builder(valid_indexes_count);
-        rcc_Vector<Date> start_date = df_builder.Add<Date>("start_date");
-        rcc_Vector<Date> end_date = df_builder.Add<Date>("end_date");
+        rcc_Vector<LocalDate> start_date = df_builder.Add<LocalDate>("start_date");
+        rcc_Vector<LocalDate> end_date = df_builder.Add<LocalDate>("end_date");
         rcc_Vector<bool> changed_tables = df_builder.Add<bool>("changed_tables");
         rcc_Vector<bool> changed_prices = df_builder.Add<bool>("changed_prices");
 
@@ -815,7 +815,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
 
-    Date date = rcc_Vector<Date>(date_xp).Value();
+    LocalDate date = rcc_Vector<LocalDate>(date_xp).Value();
     if (!date.value)
         rcc_StopWithLastError();
     drd_Sector sector = GetSectorFromString(sector_xp, classifier->default_sector);
@@ -1004,7 +1004,7 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
 
-    Date date = rcc_Vector<Date>(date_xp).Value();
+    LocalDate date = rcc_Vector<LocalDate>(date_xp).Value();
     if (!date.value)
         rcc_StopWithLastError();
 
@@ -1049,7 +1049,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
 
-    Date date = rcc_Vector<Date>(date_xp).Value();
+    LocalDate date = rcc_Vector<LocalDate>(date_xp).Value();
     if (!date.value)
         rcc_StopWithLastError();
 
@@ -1194,7 +1194,7 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
 
-    Date date = rcc_Vector<Date>(date_xp).Value();
+    LocalDate date = rcc_Vector<LocalDate>(date_xp).Value();
     if (!date.value)
         rcc_StopWithLastError();
 
@@ -1209,8 +1209,8 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
         rcc_DataFrameBuilder df_builder(index->procedures.len);
         rcc_Vector<const char *> proc = df_builder.Add<const char *>("proc");
         rcc_Vector<int> phase = df_builder.Add<int>("phase");
-        rcc_Vector<Date> start_date = df_builder.Add<Date>("start_date");
-        rcc_Vector<Date> end_date = df_builder.Add<Date>("end_date");
+        rcc_Vector<LocalDate> start_date = df_builder.Add<LocalDate>("start_date");
+        rcc_Vector<LocalDate> end_date = df_builder.Add<LocalDate>("end_date");
         rcc_Vector<const char *> activities = df_builder.Add<const char *>("activities");
         rcc_Vector<const char *> extensions = df_builder.Add<const char *>("extensions");
 
@@ -1281,18 +1281,18 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
         rcc_Vector<int> stays_admin_id = stays_builder.Add<int>("admin_id");
         rcc_Vector<int> stays_bill_id = stays_builder.Add<int>("bill_id");
         rcc_Vector<int> stays_sex = stays_builder.Add<int>("sex");
-        rcc_Vector<Date> stays_birthdate = stays_builder.Add<Date>("birthdate");
-        rcc_Vector<Date> stays_entry_date = stays_builder.Add<Date>("entry_date");
+        rcc_Vector<LocalDate> stays_birthdate = stays_builder.Add<LocalDate>("birthdate");
+        rcc_Vector<LocalDate> stays_entry_date = stays_builder.Add<LocalDate>("entry_date");
         rcc_Vector<int> stays_entry_mode = stays_builder.Add<int>("entry_mode");
         rcc_Vector<const char *> stays_entry_origin = stays_builder.Add<const char *>("entry_origin");
-        rcc_Vector<Date> stays_exit_date = stays_builder.Add<Date>("exit_date");
+        rcc_Vector<LocalDate> stays_exit_date = stays_builder.Add<LocalDate>("exit_date");
         rcc_Vector<int> stays_exit_mode = stays_builder.Add<int>("exit_mode");
         rcc_Vector<int> stays_exit_destination = stays_builder.Add<int>("exit_destination");
         rcc_Vector<int> stays_unit = stays_builder.Add<int>("unit");
         rcc_Vector<int> stays_bed_authorization = stays_builder.Add<int>("bed_authorization");
         rcc_Vector<int> stays_session_count = stays_builder.Add<int>("session_count");
         rcc_Vector<int> stays_igs2 = stays_builder.Add<int>("igs2");
-        rcc_Vector<Date> stays_last_menstrual_period = stays_builder.Add<Date>("last_menstrual_period");
+        rcc_Vector<LocalDate> stays_last_menstrual_period = stays_builder.Add<LocalDate>("last_menstrual_period");
         rcc_Vector<int> stays_gestational_age = stays_builder.Add<int>("gestational_age");
         rcc_Vector<int> stays_newborn_weight = stays_builder.Add<int>("newborn_weight");
         rcc_Vector<const char *> stays_main_diagnosis = stays_builder.Add<const char *>("main_diagnosis");
@@ -1318,7 +1318,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
         rcc_Vector<int> procedures_phase = procedures_builder.Add<int>("phase");
         rcc_Vector<int> procedures_activity = procedures_builder.Add<int>("activity");
         rcc_Vector<int> procedures_count = procedures_builder.Add<int>("count");
-        rcc_Vector<Date> procedures_date = procedures_builder.Add<Date>("date");
+        rcc_Vector<LocalDate> procedures_date = procedures_builder.Add<LocalDate>("date");
         rcc_Vector<const char *> procedures_doc = procedures_builder.Add<const char *>("doc");
 
         Size j = 0, k = 0;

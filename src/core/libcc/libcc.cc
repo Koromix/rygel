@@ -419,10 +419,10 @@ void IndirectBlockAllocator::ReleaseAll()
 // ------------------------------------------------------------------------
 
 // XXX: Rewrite the ugly parsing part
-Date Date::Parse(Span<const char> date_str, unsigned int flags,
-                      Span<const char> *out_remaining)
+LocalDate LocalDate::Parse(Span<const char> date_str, unsigned int flags,
+                           Span<const char> *out_remaining)
 {
-    Date date;
+    LocalDate date;
 
     int parts[3] = {};
     int lengths[3] = {};
@@ -488,14 +488,14 @@ malformed:
     return {};
 }
 
-Date Date::FromJulianDays(int days)
+LocalDate LocalDate::FromJulianDays(int days)
 {
     RG_ASSERT(days >= 0);
 
     // Algorithm from Richards, copied from Wikipedia:
     // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
 
-    Date date;
+    LocalDate date;
     {
         int f = days + 1401 + (((4 * days + 274277) / 146097) * 3) / 4 - 38;
         int e = 4 * f + 3;
@@ -509,7 +509,7 @@ Date Date::FromJulianDays(int days)
     return date;
 }
 
-int Date::ToJulianDays() const
+int LocalDate::ToJulianDays() const
 {
     RG_ASSERT(IsValid());
 
@@ -529,7 +529,7 @@ int Date::ToJulianDays() const
     return julian_days;
 }
 
-int Date::GetWeekDay() const
+int LocalDate::GetWeekDay() const
 {
     RG_ASSERT(IsValid());
 
@@ -554,7 +554,7 @@ int Date::GetWeekDay() const
     return week_day;
 }
 
-Date &Date::operator++()
+LocalDate &LocalDate::operator++()
 {
     RG_ASSERT(IsValid());
 
@@ -572,7 +572,7 @@ Date &Date::operator++()
     return *this;
 }
 
-Date &Date::operator--()
+LocalDate &LocalDate::operator--()
 {
     RG_ASSERT(IsValid());
 
@@ -1342,7 +1342,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         } break;
                         case FmtType::MemorySize:
                         case FmtType::DiskSize: { arg2.u.i = *(const int64_t *)ptr; } break;
-                        case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
+                        case FmtType::Date: { arg2.u.date = *(const LocalDate *)ptr; } break;
                         case FmtType::TimeISO:
                         case FmtType::TimeNice: { arg2.u.time = *(const TimeSpec *)ptr; } break;
                         case FmtType::Random: { RG_UNREACHABLE(); } break;

@@ -21,7 +21,7 @@
 namespace RG {
 
 static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
-                              http_IO *io, Date *out_start_date, Date *out_end_date)
+                              http_IO *io, LocalDate *out_start_date, LocalDate *out_end_date)
 {
     const char *str = request.GetQueryValue(key);
     if (!str) {
@@ -30,15 +30,15 @@ static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
         return false;
     }
 
-    Date start_date;
-    Date end_date = {};
+    LocalDate start_date;
+    LocalDate end_date = {};
     {
         Span<const char> remain = str;
 
-        start_date = Date::Parse(remain, 0, &remain);
+        start_date = LocalDate::Parse(remain, 0, &remain);
         if (remain.len < 2 || remain[0] != '.' || remain[1] != '.')
             goto invalid;
-        end_date = Date::Parse(remain.Take(2, remain.len - 2), 0, &remain);
+        end_date = LocalDate::Parse(remain.Take(2, remain.len - 2), 0, &remain);
         if (remain.len)
             goto invalid;
 
@@ -334,7 +334,7 @@ void AggregateSetBuilder::Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCod
     }
 }
 
-static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_date, Date max_date,
+static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, LocalDate min_date, LocalDate max_date,
                              drd_Sector sector, HeapArray<GhmGhsInfo> *out_ghm_ghs)
 {
     HashMap<GhmGhsInfo::Key, Size> ghm_ghs_map;
@@ -397,8 +397,8 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     }
 
     // Get query parameters
-    Date period[2] = {};
-    Date diff[2] = {};
+    LocalDate period[2] = {};
+    LocalDate diff[2] = {};
     const char *filter = nullptr;
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficient = false;
@@ -457,7 +457,7 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
         HeapArray<mco_Pricing> pricings;
         HeapArray<mco_Pricing> mono_pricings;
 
-        const auto aggregate_period = [&](Date min_date, Date max_date, int multiplier) {
+        const auto aggregate_period = [&](LocalDate min_date, LocalDate max_date, int multiplier) {
             provider.SetDateRange(min_date, max_date);
 
             return provider.Run([&](Span<const mco_Result> results,
@@ -487,8 +487,8 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     // GHM and GHS info
     HeapArray<GhmGhsInfo> ghm_ghs;
     {
-        Date min_date = diff[0].value ? std::min(diff[0], period[0]) : period[0];
-        Date max_date = diff[0].value ? std::min(diff[1], period[1]) : period[1];
+        LocalDate min_date = diff[0].value ? std::min(diff[0], period[0]) : period[0];
+        LocalDate max_date = diff[0].value ? std::min(diff[1], period[1]) : period[1];
         GatherGhmGhsInfo(ghm_roots, min_date, max_date, thop_config.sector, &ghm_ghs);
     }
 
@@ -566,7 +566,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
     }
 
     // Get query parameters
-    Date period[2] = {};
+    LocalDate period[2] = {};
     mco_GhmRootCode ghm_root = {};
     const char *filter;
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;

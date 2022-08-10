@@ -22,11 +22,11 @@ namespace RG {
 static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request, http_IO *io,
                                                  drd_Sector *out_sector = nullptr)
 {
-    Date date = {};
+    LocalDate date = {};
     {
         const char *date_str = request.GetQueryValue("date");
         if (date_str) {
-            date = Date::Parse(date_str);
+            date = LocalDate::Parse(date_str);
         } else {
             LogError("Missing 'date' parameter");
         }

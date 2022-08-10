@@ -34,7 +34,7 @@ extern McoCacheSet mco_cache_set;
 extern mco_AuthorizationSet mco_authorization_set;
 
 extern mco_StaySet mco_stay_set;
-extern Date mco_stay_set_dates[2];
+extern LocalDate mco_stay_set_dates[2];
 
 extern HeapArray<mco_Result> mco_results;
 extern HeapArray<mco_Result> mco_mono_results;
@@ -49,8 +49,8 @@ class McoResultProvider {
     RG_DELETE_COPY(McoResultProvider)
 
     // Parameters
-    Date min_date = {};
-    Date max_date = {};
+    LocalDate min_date = {};
+    LocalDate max_date = {};
     const char *filter = nullptr;
     bool allow_mutation = false;
     mco_GhmRootCode ghm_root = {};
@@ -58,7 +58,7 @@ class McoResultProvider {
 public:
     McoResultProvider() = default;
 
-    void SetDateRange(Date min_date, Date max_date)
+    void SetDateRange(LocalDate min_date, LocalDate max_date)
     {
         this->min_date = min_date;
         this->max_date = max_date;

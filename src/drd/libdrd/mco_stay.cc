@@ -234,7 +234,7 @@ static bool ParsePmsiInt(Span<const char> str, T *out_value)
     }
 }
 
-static bool ParsePmsiDate(Span<const char> str, Date *out_date)
+static bool ParsePmsiDate(Span<const char> str, LocalDate *out_date)
 {
     RG_ASSERT(str.len == 8);
 
@@ -245,7 +245,7 @@ static bool ParsePmsiDate(Span<const char> str, Date *out_date)
                     !IsAsciiDigit(str[6]) || !IsAsciiDigit(str[7])))
         return false;
 
-    Date date;
+    LocalDate date;
     date.st.day = (int8_t)((str[0] - '0') * 10 + (str[1] - '0'));
     date.st.month = (int8_t)((str[2] - '0') * 10 + (str[3] - '0'));
     date.st.year = (int16_t)((str[4] - '0') * 1000 + (str[5] - '0') * 100 +
@@ -532,7 +532,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         if (ParsePmsiInt(read_fragment(4), &duration) && rsa.exit.date.IsValid()) {
             rsa.entry.date = rsa.exit.date - duration;
             if (age) {
-                rsa.birthdate = Date((int16_t)(rsa.entry.date.st.year - age), 1, 1);
+                rsa.birthdate = LocalDate((int16_t)(rsa.entry.date.st.year - age), 1, 1);
             } else {
                 rsa.birthdate = rsa.entry.date - age_days;
             }

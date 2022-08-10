@@ -23,7 +23,7 @@ struct mco_ProcedureRealisation {
     int8_t phase;
     int8_t activity;
     int16_t count;
-    Date date;
+    LocalDate date;
 
     char doc;
     int8_t extension;
@@ -81,14 +81,14 @@ struct mco_Stay {
     int32_t bill_id;
 
     int8_t sex;
-    Date birthdate;
+    LocalDate birthdate;
     struct {
-        Date date;
+        LocalDate date;
         char mode;
         char origin;
     } entry;
     struct {
-        Date date;
+        LocalDate date;
         char mode;
         char destination;
     } exit;
@@ -96,7 +96,7 @@ struct mco_Stay {
     int8_t bed_authorization;
     int16_t session_count;
     int16_t igs2;
-    Date last_menstrual_period;
+    LocalDate last_menstrual_period;
     int16_t gestational_age;
     int16_t newborn_weight;
     int16_t dip_count;
@@ -184,8 +184,8 @@ class mco_StaySetBuilder {
 
         Type type;
         int32_t admin_id;
-        Date start_date;
-        Date end_date;
+        LocalDate start_date;
+        LocalDate end_date;
         int16_t count;
     };
 

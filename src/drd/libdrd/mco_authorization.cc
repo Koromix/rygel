@@ -36,7 +36,7 @@ Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(drd_UnitCode unit) 
     return auths;
 }
 
-const mco_Authorization *mco_AuthorizationSet::FindUnit(drd_UnitCode unit, Date date) const
+const mco_Authorization *mco_AuthorizationSet::FindUnit(drd_UnitCode unit, LocalDate date) const
 {
     const mco_Authorization *auth = authorizations_map.FindValue(unit, nullptr);
     if (!auth)
@@ -50,7 +50,7 @@ const mco_Authorization *mco_AuthorizationSet::FindUnit(drd_UnitCode unit, Date 
     return nullptr;
 }
 
-bool mco_AuthorizationSet::TestFacilityAuthorization(int8_t auth_type, Date date) const
+bool mco_AuthorizationSet::TestFacilityAuthorization(int8_t auth_type, LocalDate date) const
 {
     return std::any_of(facility_authorizations.begin(), facility_authorizations.end(),
                        [&](const mco_Authorization &auth) {
@@ -163,10 +163,10 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader *st)
                         valid = false;
                     }
                 } else if (prop.key == "Date") {
-                    auth.dates[0] = Date::Parse(prop.value);
+                    auth.dates[0] = LocalDate::Parse(prop.value);
                     valid &= !!auth.dates[0].value;
                 } else if (prop.key == "End") {
-                    auth.dates[1] = Date::Parse(prop.value);
+                    auth.dates[1] = LocalDate::Parse(prop.value);
                     valid &= !!auth.dates[1].value;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);

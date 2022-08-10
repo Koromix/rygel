@@ -618,7 +618,7 @@ Dump options:
 int RunMcoList(Span<const char *> arguments)
 {
     // Options
-    Date index_date = {};
+    LocalDate index_date = {};
     HeapArray<const char *> spec_strings;
 
     const auto print_usage = [](FILE *fp) {
@@ -640,7 +640,7 @@ List options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
-                index_date = Date::Parse(opt.current_value);
+                index_date = LocalDate::Parse(opt.current_value);
                 if (!index_date.value)
                     return 1;
             } else if (!HandleCommonOption(opt)) {
@@ -707,7 +707,7 @@ List options:
 int RunMcoMap(Span<const char *> arguments)
 {
     // Options
-    Date index_date = {};
+    LocalDate index_date = {};
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 mco_map [options]%!0
@@ -728,7 +728,7 @@ Map options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
-                index_date = Date::Parse(opt.current_value);
+                index_date = LocalDate::Parse(opt.current_value);
                 if (!index_date.value)
                     return 1;
             } else if (!HandleCommonOption(opt)) {
@@ -833,7 +833,7 @@ Pack options:
 int RunMcoShow(Span<const char *> arguments)
 {
     // Options
-    Date index_date = {};
+    LocalDate index_date = {};
     HeapArray<const char *> names;
 
     const auto print_usage = [](FILE *fp) {
@@ -851,7 +851,7 @@ int RunMcoShow(Span<const char *> arguments)
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
-                index_date = Date::Parse(opt.current_value);
+                index_date = LocalDate::Parse(opt.current_value);
                 if (!index_date.value)
                     return 1;
             } else if (!HandleCommonOption(opt)) {

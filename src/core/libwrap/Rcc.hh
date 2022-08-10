@@ -283,14 +283,14 @@ public:
 };
 
 template <>
-class rcc_Vector<Date> {
+class rcc_Vector<LocalDate> {
     enum class Type {
         Character,
         Date
     };
 
     rcc_AutoSexp xp;
-    Type type = Type::Date;
+    Type type = Type::LocalDate;
     union {
         Span<SEXP> chr;
         Span<double> num;
@@ -313,12 +313,12 @@ public:
 
     Size Len() const { return u.chr.len; }
 
-    static bool IsNA(Date date) { return !date.value; }
+    static bool IsNA(LocalDate date) { return !date.value; }
 
-    const Date operator[](Size idx) const;
-    Date Value() const;
+    const LocalDate operator[](Size idx) const;
+    LocalDate Value() const;
 
-    void Set(Size idx, Date date);
+    void Set(Size idx, LocalDate date);
 };
 
 template <typename T>

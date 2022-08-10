@@ -28,7 +28,7 @@ struct mco_Authorization {
     drd_UnitCode unit;
     int8_t type;
     Mode mode;
-    Date dates[2];
+    LocalDate dates[2];
 
     RG_HASHTABLE_HANDLER(mco_Authorization, unit);
 };
@@ -39,9 +39,9 @@ struct mco_AuthorizationSet {
     HeapArray<mco_Authorization> facility_authorizations;
 
     Span<const mco_Authorization> FindUnit(drd_UnitCode unit) const;
-    const mco_Authorization *FindUnit(drd_UnitCode unit, Date date) const;
+    const mco_Authorization *FindUnit(drd_UnitCode unit, LocalDate date) const;
 
-    bool TestFacilityAuthorization(int8_t auth_type, Date date) const;
+    bool TestFacilityAuthorization(int8_t auth_type, LocalDate date) const;
 };
 
 class mco_AuthorizationSetBuilder {

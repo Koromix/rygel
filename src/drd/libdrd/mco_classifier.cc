@@ -28,7 +28,7 @@ struct RunGhmTreeContext {
     int gnn;
 };
 
-static int16_t ComputeAge(Date date, Date birthdate)
+static int16_t ComputeAge(LocalDate date, LocalDate birthdate)
 {
     int16_t age = (int16_t)(date.st.year - birthdate.st.year);
     age -= (date.st.month < birthdate.st.month ||
@@ -181,7 +181,7 @@ static bool CheckDiagnosisErrors(const mco_PreparedStay &prep, const mco_Diagnos
             age_bit = 4;
         } else if (!prep.age) {
             age_bit = 3;
-        } else if (prep.age < (prep.stay->exit.date >= Date(2016, 3, 1) ? 8 : 10)) {
+        } else if (prep.age < (prep.stay->exit.date >= LocalDate(2016, 3, 1) ? 8 : 10)) {
             age_bit = 5;
         } else if (prep.age < 20) {
             age_bit = 6;
@@ -206,7 +206,7 @@ static bool CheckDiagnosisErrors(const mco_PreparedStay &prep, const mco_Diagnos
             case 2: return SetError(out_errors, error_codes[3]);
             case 3: return SetError(out_errors, error_codes[4]);
         }
-    } else if (RG_UNLIKELY(prep.stay->exit.date >= Date(2014, 3, 1) &&
+    } else if (RG_UNLIKELY(prep.stay->exit.date >= LocalDate(2014, 3, 1) &&
                            diag_info.raw[0] == 23 && diag_info.raw[1] == 14)) {
         return SetError(out_errors, error_codes[5]);
     } else if (RG_UNLIKELY(diag_info.raw[19] & 0x10 && prep.age < 9)) {
@@ -397,14 +397,14 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
 
                 // Check extension
                 if (!(flags & (int)mco_ClassifyFlag::IgnoreProcedureExtension) &&
-                        stay.exit.date >= Date(2016, 3, 1)) {
-                    if (mono_stay.entry.date >= Date(2020, 3, 1) &&
+                        stay.exit.date >= LocalDate(2016, 3, 1)) {
+                    if (mono_stay.entry.date >= LocalDate(2020, 3, 1) &&
                             (proc_info->disabled_extensions & (1ull << proc.extension))) {
                         valid &= SetError(out_errors, 193);
                     } else if (!(proc_info->extensions & (1ull << proc.extension))) {
-                        if (stay.exit.date >= Date(2019, 3, 1) && !proc.extension) {
+                        if (stay.exit.date >= LocalDate(2019, 3, 1) && !proc.extension) {
                             SetError(out_errors, 192, 0);
-                        } else if (stay.exit.date >= Date(2017, 3, 1)) {
+                        } else if (stay.exit.date >= LocalDate(2017, 3, 1)) {
                             valid &= SetError(out_errors, 186);
                         } else {
                             SetError(out_errors, 186, 0);
@@ -424,7 +424,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                         }
                     }
 
-                    if (RG_UNLIKELY(stay.exit.date >= Date(2013, 3, 1) &&
+                    if (RG_UNLIKELY(stay.exit.date >= LocalDate(2013, 3, 1) &&
                                     proc.activity == 4 && !proc.doc)) {
                         SetError(out_errors, 170, 0);
                     }
@@ -550,7 +550,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
     return valid;
 }
 
-static bool CheckDateErrors(bool malformed_flag, Date date, const int16_t error_codes[3],
+static bool CheckDateErrors(bool malformed_flag, LocalDate date, const int16_t error_codes[3],
                             mco_ErrorSet *out_errors)
 {
     if (RG_UNLIKELY(malformed_flag)) {
@@ -677,7 +677,7 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
             if (RG_UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedProcedureCode)) {
                 valid &= SetError(out_errors, 43);
             }
-            if (RG_UNLIKELY(mono_stays[mono_stays.len - 1].exit.date >= Date(2016, 3, 1) &&
+            if (RG_UNLIKELY(mono_stays[mono_stays.len - 1].exit.date >= LocalDate(2016, 3, 1) &&
                             mono_stay.errors & (int)mco_Stay::Error::MalformedProcedureExtension)) {
                 valid &= SetError(out_errors, 185);
             }
@@ -773,7 +773,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
             } break;
 
             case 'N': {
-                if (stay.exit.date < Date(2019, 3, 1) || mono_stay.entry.origin) {
+                if (stay.exit.date < LocalDate(2019, 3, 1) || mono_stay.entry.origin) {
                     valid &= SetError(out_errors, 25);
                 }
             } break;
@@ -859,7 +859,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
         }
 
         // Conversions
-        if (RG_UNLIKELY(stay.exit.date >= Date(2019, 3, 1) &&
+        if (RG_UNLIKELY(stay.exit.date >= LocalDate(2019, 3, 1) &&
                         (mono_stay.flags & (int)mco_Stay::Flag::Conversion) &&
                         (mono_prep.markers & (int)mco_PreparedStay::Marker::PartialUnit))) {
             SetError(out_errors, 152, 0);
@@ -901,7 +901,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
                 return (proc_info->bytes[44] & 0x40);
             });
             if (!tolerate) {
-                if (stay.exit.date >= Date(2019, 3, 1)) {
+                if (stay.exit.date >= LocalDate(2019, 3, 1)) {
                     valid &= SetError(out_errors, 145);
                 } else {
                     // According to the manual, this is a blocking error but the
@@ -929,7 +929,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
             valid &= SetError(out_errors, 128);
         }
     }
-    if (RG_UNLIKELY(stay.exit.date >= Date(2013, 3, 1) &&
+    if (RG_UNLIKELY(stay.exit.date >= LocalDate(2013, 3, 1) &&
                     (prep.markers & (int)mco_PreparedStay::Marker::ChildbirthProcedure) &&
                     stay.gestational_age < 22)) {
         valid &= SetError(out_errors, 174);
@@ -945,7 +945,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
     }
     if (stay.last_menstrual_period.value) {
         if (RG_UNLIKELY(stay.last_menstrual_period > stay.entry.date)) {
-            if (stay.exit.date >= Date(2016, 3, 1)) {
+            if (stay.exit.date >= LocalDate(2016, 3, 1)) {
                 valid &= SetError(out_errors, 165);
             } else {
                 SetError(out_errors, 165, -1);
@@ -956,7 +956,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
     }
 
     // Newborn entry
-    if (stay.exit.date >= Date(2019, 3, 1) && stay.entry.mode == 'N') {
+    if (stay.exit.date >= LocalDate(2019, 3, 1) && stay.entry.mode == 'N') {
         if (RG_UNLIKELY(stay.entry.date != stay.birthdate)) {
             valid &= SetError(out_errors, 190);
         }
@@ -966,7 +966,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
     }
 
     // Conversions
-    if (stay.exit.date >= Date(2019, 3, 1) && mono_preps.len > 1 && !mono_preps[0].duration) {
+    if (stay.exit.date >= LocalDate(2019, 3, 1) && mono_preps.len > 1 && !mono_preps[0].duration) {
         const mco_PreparedStay &mono_prep0 = mono_preps[0];
         const mco_Stay &mono_stay1 = *mono_preps[1].stay;
 
@@ -1527,7 +1527,7 @@ static bool CheckGhmErrors(const mco_PreparedStay &prep, Span<const mco_Prepared
         if (RG_UNLIKELY(mono_preps.len > 1)) {
             valid &= SetError(out_errors, 150);
         }
-        if (RG_UNLIKELY(stay.exit.date >= Date(2016, 3, 1) &&
+        if (RG_UNLIKELY(stay.exit.date >= LocalDate(2016, 3, 1) &&
                         stay.main_diagnosis.Matches("Z511") &&
                         !stay.linked_diagnosis.IsValid())) {
             valid &= SetError(out_errors, 187);
@@ -1543,7 +1543,7 @@ static bool CheckGhmErrors(const mco_PreparedStay &prep, Span<const mco_Prepared
     }
 
     // Abortion
-    if (RG_UNLIKELY(stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == mco_GhmRootCode(14, 'Z', 8))) {
+    if (RG_UNLIKELY(stay.exit.date >= LocalDate(2016, 3, 1) && ghm.Root() == mco_GhmRootCode(14, 'Z', 8))) {
         bool type_present = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                         [](const mco_ProcedureInfo *proc_info) {
             static drd_ProcedureCode proc1 = drd_ProcedureCode::Parse("JNJD002");
@@ -2073,8 +2073,8 @@ void mco_CountSupplements(const mco_TableIndex &index,
                      ghm != mco_GhmCode(28, 'Z', 3, 'Z') &&
                      ghm != mco_GhmCode(28, 'Z', 4, 'Z') &&
                      ghm != mco_GhmCode(11, 'K', 2, 'J'));
-    bool test_ent3 = (stay.exit.date >= Date(2014, 3, 1) && test_dia);
-    bool test_sdc = (stay.exit.date >= Date(2017, 3, 1) && ghm.Root() != mco_GhmRootCode(5, 'C', 19));
+    bool test_ent3 = (stay.exit.date >= LocalDate(2014, 3, 1) && test_dia);
+    bool test_sdc = (stay.exit.date >= LocalDate(2017, 3, 1) && ghm.Root() != mco_GhmRootCode(5, 'C', 19));
 
     Size ambu_stay_idx = -1;
     int ambu_priority = 0;

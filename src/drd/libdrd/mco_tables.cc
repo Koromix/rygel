@@ -21,7 +21,7 @@ struct ProcedureExtensionInfo {
     int8_t phase;
     int8_t extension;
 
-    Date limit_dates[2];
+    LocalDate limit_dates[2];
 };
 
 struct ProcedureAdditionInfo {
@@ -80,10 +80,10 @@ Span<const char> mco_ProcedureInfo::ExtensionsToStr(Span<char> out_buf) const
     return MakeSpan(out_buf.ptr, offset);
 }
 
-Date mco_ConvertDate1980(uint16_t days)
+LocalDate mco_ConvertDate1980(uint16_t days)
 {
-    static const int base_days = Date(1979, 12, 31).ToJulianDays();
-    return Date::FromJulianDays(base_days + days);
+    static const int base_days = LocalDate(1979, 12, 31).ToJulianDays();
+    return LocalDate::FromJulianDays(base_days + days);
 }
 
 static drd_DiagnosisCode ConvertDiagnosisCode(int16_t code123, uint16_t code456)
@@ -275,7 +275,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
             // Most tab files use UINT16_MAX, but it's dangerous because it means we can
             // continue to use old tables forever without warning. Don't obey for key table,
             // but not all of them because a few remain in use for several versions.
-            table.limit_dates[1] = Date((int16_t)(table.limit_dates[0].st.year + 1), 3, 1);
+            table.limit_dates[1] = LocalDate((int16_t)(table.limit_dates[0].st.year + 1), 3, 1);
         } else {
             table.limit_dates[1] = mco_ConvertDate1980(raw_table_ptr.date_range[1]);
         }
@@ -740,7 +740,7 @@ static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_Tab
                 ext_info.limit_dates[0] = mco_ConvertDate1980(raw_proc_ext.date_min);
                 ext_info.limit_dates[1] = mco_ConvertDate1980(raw_proc_ext.date_max);
             } else {
-                ext_info.limit_dates[0] = Date(2000, 1, 1);
+                ext_info.limit_dates[0] = LocalDate(2000, 1, 1);
                 ext_info.limit_dates[1] = mco_MaxDate1980;
             }
 
@@ -1335,7 +1335,7 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
     return true;
 }
 
-const mco_TableIndex *mco_TableSet::FindIndex(Date date, bool valid_only) const
+const mco_TableIndex *mco_TableSet::FindIndex(LocalDate date, bool valid_only) const
 {
     for (Size i = indexes.len - 1; i >= 0; i--) {
         if (date.value && (date < indexes[i].limit_dates[0] || date >= indexes[i].limit_dates[1]))
@@ -1393,13 +1393,13 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader *st)
         bool valid = true;
         while (ini.Next(&prop) && !prop.section.len) {
             if (prop.key == "Date") {
-                table_info.limit_dates[0] = Date::Parse(prop.value);
+                table_info.limit_dates[0] = LocalDate::Parse(prop.value);
                 valid &= !!table_info.limit_dates[0].value;
             } else if (prop.key == "End") {
-                table_info.limit_dates[1] = Date::Parse(prop.value);
+                table_info.limit_dates[1] = LocalDate::Parse(prop.value);
                 valid &= !!table_info.limit_dates[1].value;
             } else if (prop.key == "Build") {
-                Date build_date = Date::Parse(prop.value);
+                LocalDate build_date = LocalDate::Parse(prop.value);
                 valid &= build_date.IsValid();
                 table_info.build_date = build_date;
             } else if (prop.key == "Sector") {
@@ -1424,7 +1424,7 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader *st)
         }
         if (!table_info.limit_dates[1].value) {
             table_info.limit_dates[1] =
-                Date((int16_t)(table_info.limit_dates[0].st.year + 1), 3, 1);
+                LocalDate((int16_t)(table_info.limit_dates[0].st.year + 1), 3, 1);
         }
     }
 
@@ -1493,8 +1493,8 @@ void mco_TableSetBuilder::Finish(mco_TableSet *out_set)
         active_tables[i] = &dummy_loads[i];
     }
 
-    Date start_date = {};
-    Date end_date = {};
+    LocalDate start_date = {};
+    LocalDate end_date = {};
     for (TableLoadInfo &load_info: table_loads) {
         const mco_TableInfo &table_info = set.tables[load_info.table_idx];
 
@@ -1502,7 +1502,7 @@ void mco_TableSetBuilder::Finish(mco_TableSet *out_set)
             CommitIndex(start_date, end_date, active_tables);
 
             start_date = {};
-            Date next_end_date = {};
+            LocalDate next_end_date = {};
             for (Size i = 0; i < RG_LEN(active_tables); i++) {
                 if (active_tables[i]->table_idx < 0)
                     continue;
@@ -1604,7 +1604,7 @@ static void BuildAdditionLists(const mco_TableIndex &index,
     }
 }
 
-bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
+bool mco_TableSetBuilder::CommitIndex(LocalDate start_date, LocalDate end_date,
                                       mco_TableSetBuilder::TableLoadInfo *current_tables[])
 {
     mco_TableIndex index = {};
@@ -1732,7 +1732,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                     // XXX: Starting with FG 2020, extension codes have
                                     // validity dates... and we need to properly support them!
                                     // This does the job for almost all codes for now (except for ZZQX173).
-                                    if (ext_info.limit_dates[1] < Date(2020, 3, 1)) {
+                                    if (ext_info.limit_dates[1] < LocalDate(2020, 3, 1)) {
                                         proc_info->disabled_extensions |= 1ull << ext_info.extension;
                                     }
                                 }
@@ -1984,7 +1984,7 @@ Span<const mco_ProcedureInfo> mco_TableIndex::FindProcedure(drd_ProcedureCode pr
     return FindSpan(procedures, procedures_map, proc);
 }
 
-const mco_ProcedureInfo *mco_TableIndex::FindProcedure(drd_ProcedureCode proc, int8_t phase, Date date) const
+const mco_ProcedureInfo *mco_TableIndex::FindProcedure(drd_ProcedureCode proc, int8_t phase, LocalDate date) const
 {
     const mco_ProcedureInfo *proc_info = procedures_map->FindValue(proc, nullptr);
 

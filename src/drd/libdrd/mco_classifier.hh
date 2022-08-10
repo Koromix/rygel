@@ -58,7 +58,7 @@ struct mco_PreparedStay {
 
     int8_t auth_type;
     uint16_t markers;
-    Date childbirth_date;
+    LocalDate childbirth_date;
 };
 
 struct mco_PreparedSet {
