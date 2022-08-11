@@ -73,10 +73,7 @@ const char *CallData::PushString(Napi::Value value)
         status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
         RG_ASSERT(status == napi_ok);
 
-        len++;
-
-        buf.ptr = (char *)Allocator::Allocate(&call_alloc, (Size)len);
-        buf.len = (Size)len;
+        buf = AllocateMemory<char>(&call_alloc, (Size)len + 1);
 
         status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
         RG_ASSERT(status == napi_ok);
@@ -110,10 +107,7 @@ const char16_t *CallData::PushString16(Napi::Value value)
         status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
         RG_ASSERT(status == napi_ok);
 
-        len++;
-
-        buf.ptr = (char16_t *)Allocator::Allocate(&call_alloc, (Size)len * 2);
-        buf.len = (Size)len;
+        buf = AllocateMemory<char16_t>(&call_alloc, ((Size)len + 1) * 2);
 
         status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
         RG_ASSERT(status == napi_ok);

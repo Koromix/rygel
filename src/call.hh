@@ -161,7 +161,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
         int flags = 0;
 #endif
 
-        ptr = (uint8_t *)Allocator::Allocate(&call_alloc, size + align, flags);
+        ptr = AllocateMemory<uint8_t>(&call_alloc, size + align, flags).ptr;
         ptr = AlignUp(ptr, align);
 
         return ptr;

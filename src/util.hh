@@ -33,26 +33,6 @@ void ThrowError(Napi::Env env, const char *msg, Args... args)
     err.ThrowAsJavaScriptException();
 }
 
-static inline Size AlignLen(Size len, Size align)
-{
-    Size aligned = (len + align - 1) / align * align;
-    return aligned;
-}
-
-template <typename T>
-static inline T *AlignUp(T *ptr, Size align)
-{
-    uint8_t *aligned = (uint8_t *)(((uintptr_t)ptr + align - 1) / align * align);
-    return (T *)aligned;
-}
-
-template <typename T>
-static inline T *AlignDown(T *ptr, Size align)
-{
-    uint8_t *aligned = (uint8_t *)((uintptr_t)ptr / align * align);
-    return (T *)aligned;
-}
-
 static inline bool IsInteger(const TypeInfo *type)
 {
     bool integer = ((int)type->primitive >= (int)PrimitiveKind::Int8 &&
