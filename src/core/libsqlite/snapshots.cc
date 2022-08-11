@@ -257,7 +257,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
         sh.filename_len = LittleEndian(sh.filename_len);
 
         // Read original filename
-        char *orig_filename = (char *)Allocator::Allocate(&out_set->str_alloc, sh.filename_len + 1, 0);
+        char *orig_filename = AllocateMemory<char>(&out_set->str_alloc, sh.filename_len + 1).ptr;
         if (st.Read(sh.filename_len, orig_filename) != sh.filename_len) {
             LogError("Truncated snapshot header in '%1' (skipping)", filename);
             continue;

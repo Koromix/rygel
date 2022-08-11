@@ -445,11 +445,9 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
     // Fuck UCS-2 and UTF-16...
     Span<wchar_t> work_dir_w;
     Span<wchar_t> binary_w;
-    work_dir_w.len = 4 * work_dir.len + 2;
-    work_dir_w.ptr = (wchar_t *)Allocator::Allocate(&temp_alloc, work_dir_w.len);
+    work_dir_w = AllocateMemory<wchar_t>(&temp_alloc, 4 * work_dir.len + 2);
     work_dir_w.len = ConvertUtf8ToWin32Wide(work_dir, work_dir_w);
-    binary_w.len = 4 * binary.len + 2;
-    binary_w.ptr = (wchar_t *)Allocator::Allocate(&temp_alloc, binary_w.len);
+    binary_w = AllocateMemory<wchar_t>(&temp_alloc, 4 * binary.len + 2);
     binary_w.len = ConvertUtf8ToWin32Wide(binary, binary_w);
     if (binary_w.len < 0 || work_dir_w.len < 0)
         return false;

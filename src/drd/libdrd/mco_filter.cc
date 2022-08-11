@@ -1100,7 +1100,7 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
 
             RG_ASSERT(old_size <= RG_SIZE_MAX && new_size <= RG_SIZE_MAX);
             if (new_size > old_size) {
-                Allocator::Resize(&runner->vm_alloc, &mem, (Size)old_size, (Size)new_size);
+                runner->vm_alloc.Resize(&mem, (Size)old_size, (Size)new_size);
             }
             return mem;
         };

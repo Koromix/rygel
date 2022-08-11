@@ -80,7 +80,7 @@ static const hs_match_spec DeviceSpecs[] = {
 
 static AssetInfo *PatchVariables(const AssetInfo &asset)
 {
-    AssetInfo *copy = (AssetInfo *)Allocator::Allocate(&assets_alloc, RG_SIZE(AssetInfo));
+    AssetInfo *copy = AllocateMemory<AssetInfo>(&assets_alloc, RG_SIZE(AssetInfo)).ptr;
 
     *copy = asset;
     copy->data = PatchAsset(*copy, &assets_alloc, [](const char *key, StreamWriter *writer) {

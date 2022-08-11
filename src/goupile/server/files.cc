@@ -194,8 +194,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     if (dest_encoding == src_encoding && src_len <= 65536) {
         RG_DEFER { sqlite3_blob_close(src_blob); };
 
-        uint8_t *ptr = (uint8_t *)Allocator::Allocate(&io->allocator, src_len);
-        io->AddFinalizer([=] { Allocator::Release(&io->allocator, ptr, src_len); });
+        uint8_t *ptr = AllocateMemory<uint8_t>(&io->allocator, src_len).ptr;
+        io->AddFinalizer([=] { ReleaseMemory(&io->allocator, ptr, src_len); });
 
         if (sqlite3_blob_read(src_blob, ptr, (int)src_len, 0) != SQLITE_OK) {
             LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));

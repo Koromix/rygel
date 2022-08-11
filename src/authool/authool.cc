@@ -206,7 +206,7 @@ Options:
         if (!pwd_CheckSecret(secret))
             return 1;
     } else {
-        char *ptr = (char *)Allocator::Allocate(&temp_alloc, 33, 0);
+        char *ptr = AllocateMemory<char>(&temp_alloc, 33).ptr;
         pwd_GenerateSecret(MakeSpan(ptr, 33));
 
         secret = ptr;

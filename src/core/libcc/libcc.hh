@@ -456,6 +456,26 @@ constexpr T BigEndian(T v) { return ReverseBytes(v); }
     #error No implementation of CountLeadingZeros(), CountTrailingZeros() and PopCount() for this compiler / toolchain
 #endif
 
+static inline Size AlignLen(Size len, Size align)
+{
+    Size aligned = (len + align - 1) / align * align;
+    return aligned;
+}
+
+template <typename T>
+static inline T *AlignUp(T *ptr, Size align)
+{
+    uint8_t *aligned = (uint8_t *)(((uintptr_t)ptr + align - 1) / align * align);
+    return (T *)aligned;
+}
+
+template <typename T>
+static inline T *AlignDown(T *ptr, Size align)
+{
+    uint8_t *aligned = (uint8_t *)((uintptr_t)ptr / align * align);
+    return (T *)aligned;
+}
+
 // Calling memcpy (and friends) with a NULL source pointer is undefined behavior
 // even if length is 0. This is dumb, work around this.
 static inline void *memcpy_safe(void *dest, const void *src, size_t len)
@@ -628,260 +648,6 @@ struct Vec3 {
 
 // ------------------------------------------------------------------------
 // Memory / Allocator
-// ------------------------------------------------------------------------
-
-class Allocator;
-
-Allocator *GetDefaultAllocator();
-Allocator *GetNullAllocator();
-
-class Allocator {
-    RG_DELETE_COPY(Allocator)
-
-public:
-    enum class Flag {
-        Zero = 1,
-        Resizable = 2
-    };
-
-    Allocator() = default;
-    virtual ~Allocator() = default;
-
-    static void *Allocate(Allocator *alloc, Size size, unsigned int flags = 0)
-    {
-        RG_ASSERT(size >= 0);
-
-        if (!alloc) {
-            alloc = GetDefaultAllocator();
-        }
-        return alloc->Allocate(size, flags);
-    }
-
-    static void Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
-                       unsigned int flags = 0)
-    {
-        RG_ASSERT(new_size >= 0);
-
-        if (!alloc) {
-            alloc = GetDefaultAllocator();
-        }
-        alloc->Resize(ptr, old_size, new_size, flags);
-    }
-
-    static void Release(Allocator *alloc, void *ptr, Size size)
-    {
-        if (!alloc) {
-            alloc = GetDefaultAllocator();
-        }
-        alloc->Release(ptr, size);
-    }
-
-protected:
-    virtual void *Allocate(Size size, unsigned int flags = 0) = 0;
-    virtual void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) = 0;
-    virtual void Release(void *ptr, Size size) = 0;
-};
-
-class LinkedAllocator final: public Allocator {
-    struct Node {
-        Node *prev;
-        Node *next;
-    };
-    struct Bucket {
-         // Keep head first or stuff will break
-        Node head;
-        alignas(16) uint8_t data[];
-    };
-
-    Allocator *allocator;
-    // We want allocators to be memmovable, which means we can't use a circular linked list.
-    // Even though it makes the code less nice.
-    Node list = {};
-
-public:
-    LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
-    ~LinkedAllocator() override { ReleaseAll(); }
-
-    LinkedAllocator(LinkedAllocator &&other) { *this = std::move(other); }
-    LinkedAllocator& operator=(LinkedAllocator &&other);
-
-    void ReleaseAll();
-
-protected:
-    void *Allocate(Size size, unsigned int flags) override;
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags) override;
-    void Release(void *ptr, Size size) override;
-
-private:
-    static Bucket *PointerToBucket(void *ptr)
-        { return (Bucket *)((uint8_t *)ptr - RG_OFFSET_OF(Bucket, data)); }
-};
-
-class BlockAllocatorBase: public Allocator {
-    struct Bucket {
-        Size used;
-        alignas(8) uint8_t data[];
-    };
-
-    Size block_size;
-
-    Bucket *current_bucket = nullptr;
-    uint8_t *last_alloc = nullptr;
-
-public:
-    BlockAllocatorBase(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
-        : block_size(block_size)
-    {
-        RG_ASSERT(block_size > 0);
-    }
-
-protected:
-    void *Allocate(Size size, unsigned int flags) override;
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags) override;
-    void Release(void *ptr, Size size) override;
-
-    void CopyFrom(BlockAllocatorBase *other);
-    void ForgetCurrentBlock();
-
-    virtual LinkedAllocator *GetAllocator() = 0;
-
-private:
-    bool AllocateSeparately(Size aligned_size) const { return aligned_size >= block_size / 2; }
-
-    static Size AlignSizeValue(Size size)
-        { return (RG_SIZE(Bucket) + size + 7) / 8 * 8 - RG_SIZE(Bucket); }
-};
-
-class BlockAllocator final: public BlockAllocatorBase {
-    LinkedAllocator allocator;
-
-protected:
-    LinkedAllocator *GetAllocator() override { return &allocator; }
-
-public:
-    BlockAllocator(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
-        : BlockAllocatorBase(block_size) {}
-
-    BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
-    BlockAllocator& operator=(BlockAllocator &&other);
-
-    void ReleaseAll();
-};
-
-class IndirectBlockAllocator final: public BlockAllocatorBase {
-    LinkedAllocator *allocator;
-
-protected:
-    LinkedAllocator *GetAllocator() override { return allocator; }
-
-public:
-    IndirectBlockAllocator(LinkedAllocator *alloc, Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
-        : BlockAllocatorBase(block_size), allocator(alloc) {}
-
-    IndirectBlockAllocator(IndirectBlockAllocator &&other) { *this = std::move(other); }
-    IndirectBlockAllocator& operator=(IndirectBlockAllocator &&other);
-
-    void ReleaseAll();
-};
-
-// ------------------------------------------------------------------------
-// Reference counting
-// ------------------------------------------------------------------------
-
-template <typename T>
-class RetainPtr {
-    T *p = nullptr;
-
-public:
-    RetainPtr() = default;
-    RetainPtr(T *p, void (*delete_func)(std::remove_const_t<T> *))
-        : p(p)
-    {
-        RG_ASSERT(p);
-        RG_ASSERT(delete_func);
-        RG_ASSERT(!p->delete_func || delete_func == p->delete_func);
-
-        p->Ref();
-        p->delete_func = delete_func;
-    }
-    RetainPtr(T *p, bool ref = true)
-        : p(p)
-    {
-        if (p) {
-            RG_ASSERT(p->delete_func);
-
-            if (ref) {
-                p->Ref();
-            }
-        }
-    }
-
-    ~RetainPtr()
-    {
-        if (p && !p->Unref()) {
-            p->delete_func((std::remove_const_t<T> *)p);
-        }
-    }
-
-    RetainPtr(const RetainPtr &other)
-    {
-        p = other.p;
-        if (p) {
-            p->Ref();
-        }
-    }
-    RetainPtr &operator=(const RetainPtr &other)
-    {
-        if (p && !p->Unref()) {
-            p->delete_func((std::remove_const_t<T> *)p);
-        }
-
-        p = other.p;
-        if (p) {
-            p->Ref();
-        }
-
-        return *this;
-    }
-
-    operator RetainPtr<const T>() const
-    {
-        RetainPtr<const T> ptr((const T *)p);
-        return ptr;
-    }
-
-    bool IsValid() const { return p; }
-    operator bool() const { return p; }
-
-    T &operator*() const
-    {
-        RG_ASSERT(p);
-        return *p;
-    }
-    T *operator->() const { return p; }
-    T *GetRaw() const { return p; }
-};
-
-template <typename T>
-class RetainObject {
-    mutable void (*delete_func)(T *) = nullptr;
-    mutable std::atomic_int refcount {0};
-
-public:
-    void Ref() const { refcount++; }
-    bool Unref() const
-    {
-        int new_count = --refcount;
-        RG_ASSERT(new_count >= 0);
-        return new_count;
-    }
-
-    friend class RetainPtr<T>;
-    friend class RetainPtr<const T>;
-};
-
-// ------------------------------------------------------------------------
-// Collections
 // ------------------------------------------------------------------------
 
 // I'd love to make Span default to { nullptr, 0 } but unfortunately that makes
@@ -1057,6 +823,271 @@ static inline constexpr Strider<T> MakeStrider(T (&arr)[N])
 {
     return Strider<T>(arr, RG_SIZE(T));
 }
+
+class Allocator {
+    RG_DELETE_COPY(Allocator)
+
+public:
+    enum class Flag {
+        Zero = 1,
+        Resizable = 2
+    };
+
+    Allocator() = default;
+    virtual ~Allocator() = default;
+
+    virtual void *Allocate(Size size, unsigned int flags = 0) = 0;
+    virtual void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) = 0;
+    virtual void Release(void *ptr, Size size) = 0;
+};
+
+Allocator *GetDefaultAllocator();
+Allocator *GetNullAllocator();
+
+template <typename T>
+Span<T> AllocateMemory(Allocator *alloc, Size size, unsigned int flags = 0)
+{
+    RG_ASSERT(size >= 0);
+
+    if (!alloc) {
+        alloc = GetDefaultAllocator();
+    }
+
+    T *ptr = (T *)alloc->Allocate(size, flags);
+    return MakeSpan(ptr, size);
+}
+
+template <typename T>
+Span<T> ResizeMemory(Allocator *alloc, T *ptr, Size old_size, Size new_size,
+                         unsigned int flags = 0)
+{
+    RG_ASSERT(new_size >= 0);
+
+    if (!alloc) {
+        alloc = GetDefaultAllocator();
+    }
+
+    alloc->Resize((void **)&ptr, old_size, new_size, flags);
+    return MakeSpan(ptr, new_size);
+}
+
+template<typename T>
+void ReleaseMemory(Allocator *alloc, Span<T> mem)
+{
+    if (!alloc) {
+        alloc = GetDefaultAllocator();
+    }
+
+    alloc->Release((void *)mem.ptr, mem.len);
+}
+
+template<typename T>
+void ReleaseMemory(Allocator *alloc, T *ptr, Size size)
+{
+    if (!alloc) {
+        alloc = GetDefaultAllocator();
+    }
+
+    alloc->Release((void *)ptr, size);
+}
+
+class LinkedAllocator final: public Allocator {
+    struct Node {
+        Node *prev;
+        Node *next;
+    };
+    struct Bucket {
+         // Keep head first or stuff will break
+        Node head;
+        uint8_t data[8]; // Extra size is used to align pointer
+    };
+
+    Allocator *allocator;
+    // We want allocators to be memmovable, which means we can't use a circular linked list.
+    // Even though it makes the code less nice.
+    Node list = {};
+
+public:
+    LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
+    ~LinkedAllocator() override { ReleaseAll(); }
+
+    LinkedAllocator(LinkedAllocator &&other) { *this = std::move(other); }
+    LinkedAllocator& operator=(LinkedAllocator &&other);
+
+    void ReleaseAll();
+
+    void *Allocate(Size size, unsigned int flags = 0) override;
+    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void Release(void *ptr, Size size) override;
+
+private:
+    static Bucket *PointerToBucket(void *ptr)
+        { return (Bucket *)((uint8_t *)ptr - RG_OFFSET_OF(Bucket, data)); }
+};
+
+class BlockAllocatorBase: public Allocator {
+    struct Bucket {
+        Size used;
+        uint8_t data[8]; // Extra size is used to align pointer
+    };
+
+    Size block_size;
+
+    Bucket *current_bucket = nullptr;
+    uint8_t *last_alloc = nullptr;
+
+public:
+    BlockAllocatorBase(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
+        : block_size(block_size)
+    {
+        RG_ASSERT(block_size > 0);
+    }
+
+    void *Allocate(Size size, unsigned int flags = 0) override;
+    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void Release(void *ptr, Size size) override;
+
+protected:
+    void CopyFrom(BlockAllocatorBase *other);
+    void ForgetCurrentBlock();
+
+    virtual LinkedAllocator *GetAllocator() = 0;
+
+private:
+    bool AllocateSeparately(Size aligned_size) const { return aligned_size >= block_size / 2; }
+};
+
+class BlockAllocator final: public BlockAllocatorBase {
+    LinkedAllocator allocator;
+
+protected:
+    LinkedAllocator *GetAllocator() override { return &allocator; }
+
+public:
+    BlockAllocator(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
+        : BlockAllocatorBase(block_size) {}
+
+    BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
+    BlockAllocator& operator=(BlockAllocator &&other);
+
+    void ReleaseAll();
+};
+
+class IndirectBlockAllocator final: public BlockAllocatorBase {
+    LinkedAllocator *allocator;
+
+protected:
+    LinkedAllocator *GetAllocator() override { return allocator; }
+
+public:
+    IndirectBlockAllocator(LinkedAllocator *alloc, Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
+        : BlockAllocatorBase(block_size), allocator(alloc) {}
+
+    IndirectBlockAllocator(IndirectBlockAllocator &&other) { *this = std::move(other); }
+    IndirectBlockAllocator& operator=(IndirectBlockAllocator &&other);
+
+    void ReleaseAll();
+};
+
+// ------------------------------------------------------------------------
+// Reference counting
+// ------------------------------------------------------------------------
+
+template <typename T>
+class RetainPtr {
+    T *p = nullptr;
+
+public:
+    RetainPtr() = default;
+    RetainPtr(T *p, void (*delete_func)(std::remove_const_t<T> *))
+        : p(p)
+    {
+        RG_ASSERT(p);
+        RG_ASSERT(delete_func);
+        RG_ASSERT(!p->delete_func || delete_func == p->delete_func);
+
+        p->Ref();
+        p->delete_func = delete_func;
+    }
+    RetainPtr(T *p, bool ref = true)
+        : p(p)
+    {
+        if (p) {
+            RG_ASSERT(p->delete_func);
+
+            if (ref) {
+                p->Ref();
+            }
+        }
+    }
+
+    ~RetainPtr()
+    {
+        if (p && !p->Unref()) {
+            p->delete_func((std::remove_const_t<T> *)p);
+        }
+    }
+
+    RetainPtr(const RetainPtr &other)
+    {
+        p = other.p;
+        if (p) {
+            p->Ref();
+        }
+    }
+    RetainPtr &operator=(const RetainPtr &other)
+    {
+        if (p && !p->Unref()) {
+            p->delete_func((std::remove_const_t<T> *)p);
+        }
+
+        p = other.p;
+        if (p) {
+            p->Ref();
+        }
+
+        return *this;
+    }
+
+    operator RetainPtr<const T>() const
+    {
+        RetainPtr<const T> ptr((const T *)p);
+        return ptr;
+    }
+
+    bool IsValid() const { return p; }
+    operator bool() const { return p; }
+
+    T &operator*() const
+    {
+        RG_ASSERT(p);
+        return *p;
+    }
+    T *operator->() const { return p; }
+    T *GetRaw() const { return p; }
+};
+
+template <typename T>
+class RetainObject {
+    mutable void (*delete_func)(T *) = nullptr;
+    mutable std::atomic_int refcount {0};
+
+public:
+    void Ref() const { refcount++; }
+    bool Unref() const
+    {
+        int new_count = --refcount;
+        RG_ASSERT(new_count >= 0);
+        return new_count;
+    }
+
+    friend class RetainPtr<T>;
+    friend class RetainPtr<const T>;
+};
+
+// ------------------------------------------------------------------------
+// Collections
+// ------------------------------------------------------------------------
 
 template <typename T, Size N, Size AlignAs = alignof(T)>
 class LocalArray {
@@ -1284,8 +1315,7 @@ public:
                 len = new_capacity;
             }
 
-            Allocator::Resize(allocator, (void **)&ptr,
-                              capacity * RG_SIZE(T), new_capacity * RG_SIZE(T));
+            ptr = ResizeMemory(allocator, ptr, capacity * RG_SIZE(T), new_capacity * RG_SIZE(T)).ptr;
             capacity = new_capacity;
         }
     }
@@ -1582,9 +1612,9 @@ public:
         Size bucket_offset = (offset + len) % BucketSize;
 
         if (bucket_idx >= buckets.len) {
-            Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, RG_SIZE(Bucket));
+            Bucket *new_bucket = AllocateMemory<Bucket>(buckets.allocator, RG_SIZE(Bucket)).ptr;
             new (&new_bucket->allocator) AllocatorType();
-            new_bucket->values = (T *)Allocator::Allocate(&new_bucket->allocator, BucketSize * RG_SIZE(T));
+            new_bucket->values = AllocateMemory<T>(&new_bucket->allocator, BucketSize * RG_SIZE(T)).ptr;
 
             buckets.Append(new_bucket);
         }
@@ -1701,7 +1731,7 @@ private:
     void DeleteBucket(Bucket *bucket)
     {
         bucket->allocator.~AllocatorType();
-        Allocator::Release(buckets.allocator, bucket, RG_SIZE(Bucket));
+        ReleaseMemory(buckets.allocator, bucket, RG_SIZE(Bucket));
     }
 };
 
@@ -2214,10 +2244,10 @@ private:
         Size old_capacity = capacity;
 
         if (new_capacity) {
-            used = (size_t *)Allocator::Allocate(allocator,
+            used = AllocateMemory<size_t>(allocator,
                                                  (new_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t),
-                                                 (int)Allocator::Flag::Zero);
-            data = (ValueType *)Allocator::Allocate(allocator, new_capacity * RG_SIZE(ValueType));
+                                                 (int)Allocator::Flag::Zero).ptr;
+            data = AllocateMemory<ValueType>(allocator, new_capacity * RG_SIZE(ValueType)).ptr;
             for (Size i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType();
             }
@@ -2239,9 +2269,9 @@ private:
             capacity = 0;
         }
 
-        Allocator::Release(allocator, old_used,
+        ReleaseMemory(allocator, old_used,
                            (old_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t));
-        Allocator::Release(allocator, old_data, old_capacity * RG_SIZE(ValueType));
+        ReleaseMemory(allocator, old_data, old_capacity * RG_SIZE(ValueType));
     }
 
     void MarkUsed(Size idx)
