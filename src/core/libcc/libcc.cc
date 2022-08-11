@@ -5443,6 +5443,8 @@ Fiber::~Fiber()
         Finalize();
         fib_run = nullptr;
     }
+
+    ReleaseMemory(nullptr, ucp.uc_stack.ss_sp, (Size)ucp.uc_stack.ss_size);
 }
 
 void Fiber::SwitchTo()
