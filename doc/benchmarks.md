@@ -10,8 +10,8 @@ Here is a quick overview of the execution time of Koffi calls on three benchmark
 
 <table style="margin: 0 auto;">
     <tr>
-        <td><a href="_static/perf_linux_20220628.png" target="_blank"><img src="_static/perf_linux_20220628.png" alt="Linux x86_64 performance" style="width: 350px;"/></a></td>
-        <td><a href="_static/perf_windows_20220628.png" target="_blank"><img src="_static/perf_windows_20220628.png" alt="Windows x86_64 performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_linux_20220812.png" target="_blank"><img src="_static/perf_linux_20220812.png" alt="Linux x86_64 performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_windows_20220812.png" target="_blank"><img src="_static/perf_windows_20220812.png" alt="Windows x86_64 performance" style="width: 350px;"/></a></td>
     </tr>
 </table>
 
@@ -31,9 +31,9 @@ This test is based around repeated calls to a simple standard C function atoi, a
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-rand_napi     | 644 ns         | x1.00                | (ref)
-rand_koffi    | 950 ns         | x0.68                | +48%
-rand_node_ffi | 30350 ns       | x0.02                | +4613%
+rand_napi     | 842 ns         | x1.00                | (ref)
+rand_koffi    | 1114 ns        | x0.76                | +32%
+rand_node_ffi | 44845 ns       | x0.02                | +5224%
 
 Because rand is a pretty small function, the FFI overhead is clearly visible.
 
@@ -43,9 +43,9 @@ This test is similar to the rand one, but it is based on atoi, which takes a str
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-atoi_napi     | 1104 ns        | x1.00                | (ref)
-atoi_koffi    | 1778 ns        | x0.62                | +61%
-atoi_node_ffi | 125300 ns      | x0.009               | +11250%
+atoi_napi     | 921 ns         | x1.00                | (ref)
+atoi_koffi    | 1357 ns        | x0.68                | +47%
+atoi_node_ffi | 152550 ns      | x0.006               | +16472%
 
 Because atoi is a pretty small function, the FFI overhead is clearly visible.
 
@@ -77,9 +77,9 @@ This test is based around repeated calls to a simple standard C function atoi, a
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-rand_napi     | 965 ns         | x1.00                | (ref)
-rand_koffi    | 1248 ns        | x0.77                | +29%
-rand_node_ffi | 41500 ns       | x0.02                | +4203%
+rand_napi     | 964 ns         | x1.00                | (ref)
+rand_koffi    | 1274 ns        | x0.76                | +32%
+rand_node_ffi | 42300 ns       | x0.02                | +4289%
 
 Because rand is a pretty small function, the FFI overhead is clearly visible.
 
@@ -91,9 +91,9 @@ The results below were measured on my x86_64 Windows machine (Intel® Core™ i5
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-atoi_napi     | 1393 ns        | x1.00                | (ref)
-atoi_koffi    | 2246 ns        | x0.62                | +61%
-atoi_node_ffi | 157550 ns      | x0.009               | +11210%
+atoi_napi     | 1415 ns        | x1.00                | (ref)
+atoi_koffi    | 2193 ns        | x0.65                | +55%
+atoi_node_ffi | 168300 ns      | x0.008               | +11792%
 
 Because atoi is a pretty small function, the FFI overhead is clearly visible.
 
