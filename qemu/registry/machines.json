@@ -227,7 +227,7 @@
             "Windows x64": {
                 "directory": "C:/Users/windows/Desktop/luigi_x64",
                 "build": {
-                    "Build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -d test --prefer-clang"
+                    "Build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -d test"
                 },
                 "commands": {
                     "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
