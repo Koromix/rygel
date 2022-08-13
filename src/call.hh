@@ -103,7 +103,7 @@ private:
     bool PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);
     bool PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);
     bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
-    bool PushPointer(Napi::Value value, const ParameterInfo &param, void **out_ptr);
+    bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
 
     void PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
     Napi::Object PopObject(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);

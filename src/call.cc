@@ -138,7 +138,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
             case PrimitiveKind::Bool: {
                 if (RG_UNLIKELY(!value.IsBoolean())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected boolean", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
                     return false;
                 }
 
@@ -147,7 +147,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Int8: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -156,7 +156,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::UInt8: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -165,7 +165,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Int16: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -174,7 +174,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Int16S: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -183,7 +183,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::UInt16: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -192,7 +192,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::UInt16S: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -201,7 +201,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Int32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -210,7 +210,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Int32S: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -219,7 +219,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::UInt32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -228,7 +228,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::UInt32S: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -237,7 +237,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Int64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -246,7 +246,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Int64S: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -255,7 +255,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::UInt64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -264,7 +264,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::UInt64S: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -280,7 +280,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 } else if (IsNullOrUndefined(value)) {
                     str = nullptr;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected string", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
                     return false;
                 }
 
@@ -295,7 +295,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 } else if (IsNullOrUndefined(value)) {
                     str16 = nullptr;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected string", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
                     return false;
                 }
 
@@ -309,13 +309,13 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 } else if (IsNullOrUndefined(value)) {
                     *(void **)dest = nullptr;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected %3", GetValueType(instance, value), member.name, member.type->name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value', expected %2", GetValueType(instance, value), member.type->name);
                     return false;
                 }
             } break;
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected object", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                     return false;
                 }
 
@@ -340,13 +340,13 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     if (!PushStringArray(value, member.type, dest))
                         return false;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 for member '%2', expected array", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected array", GetValueType(instance, value));
                     return false;
                 }
             } break;
             case PrimitiveKind::Float32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -355,7 +355,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Float64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected number", GetValueType(instance, value), member.name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -377,7 +377,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member '%2', expected %3", GetValueType(instance, value), member.name, member.type->name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), member.type->name);
                     return false;
                 }
 
@@ -413,7 +413,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                 uint8_t *dest = origin + offset; \
                  \
                 if (RG_UNLIKELY(!(Check))) { \
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected %2", GetValueType(instance, value), (Expected)); \
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), (Expected)); \
                     return false; \
                 } \
                  \
@@ -582,7 +582,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                     if (!PushStringArray(value, ref, dest))
                         return false;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected array", GetValueType(instance, value));
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected array", GetValueType(instance, value));
                     return false;
                 }
 
@@ -624,7 +624,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected value %1 in array, expected %2", GetValueType(instance, value), ref->name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), ref->name);
                     return false;
                 }
 
@@ -709,10 +709,8 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
     return true;
 }
 
-bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void **out_ptr)
+bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr)
 {
-    const TypeInfo *type = param.type;
-
     if (CheckValueTag(instance, value, &CastMarker)) {
         Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
         ValueCast *cast = external.Data();
@@ -751,7 +749,7 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
 
                 ptr = AllocHeap(size, 16);
 
-                if (param.directions & 1) {
+                if (directions & 1) {
                     if (!PushNormalArray(array, len, type->ref.type, ptr))
                         return false;
                 } else {
@@ -765,7 +763,7 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
 
                 ptr = AllocHeap(size, 16);
 
-                if (param.directions & 1) {
+                if (directions & 1) {
                     if (!PushTypedArray(array, len, type->ref.type, ptr))
                         return false;
                 } else {
@@ -783,7 +781,7 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
 
                 ptr = AllocHeap(type->ref.type->size, 16);
 
-                if (param.directions & 1) {
+                if (directions & 1) {
                     if (!PushObject(obj, type->ref.type, ptr))
                         return false;
                 } else {
@@ -793,7 +791,7 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
                 goto unexpected;
             }
 
-            if (param.directions & 2) {
+            if (directions & 2) {
                 OutArgument *out = out_arguments.AppendDefault();
 
                 napi_status status = napi_create_reference(env, value, 1, &out->ref);
@@ -811,7 +809,7 @@ bool CallData::PushPointer(Napi::Value value, const ParameterInfo &param, void *
     }
 
 unexpected:
-    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), param.offset + 1, type->name);
+    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
     return false;
 }
 

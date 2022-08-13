@@ -307,7 +307,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 #define PUSH_INTEGER(CType) \
         do { \
             if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
@@ -317,7 +317,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 #define PUSH_INTEGER_SWAP(CType) \
         do { \
             if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
@@ -337,7 +337,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
             case PrimitiveKind::Bool: {
                 if (RG_UNLIKELY(!value.IsBoolean())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argmument %2, expected boolean", GetValueType(instance, value), param.offset + 1);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argmument %2, expected boolean", GetValueType(instance, value));
                     return false;
                 }
 
@@ -367,7 +367,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else if (IsNullOrUndefined(value)) {
                     str = nullptr;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected string", GetValueType(instance, value), param.offset + 1);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
                     return false;
                 }
 
@@ -382,7 +382,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else if (IsNullOrUndefined(value)) {
                     str16 = nullptr;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected string", GetValueType(instance, value), param.offset + 1);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
                     return false;
                 }
 
@@ -390,14 +390,14 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
             } break;
             case PrimitiveKind::Pointer: {
                 void *ptr;
-                if (RG_UNLIKELY(!PushPointer(value, param, &ptr)))
+                if (RG_UNLIKELY(!PushPointer(value, param.type, param.directions, &ptr)))
                     return false;
 
                 *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected object", GetValueType(instance, value), param.offset + 1);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                     return false;
                 }
 
@@ -436,7 +436,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -448,7 +448,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
             } break;
             case PrimitiveKind::Float64: {
                 if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected number", GetValueType(instance, value), param.offset + 1);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
 
@@ -469,7 +469,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for argument %2, expected %3", GetValueType(instance, value), param.offset + 1, param.type->name);
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), param.type->name);
                     return false;
                 }
 
@@ -833,7 +833,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 #define RETURN_INTEGER(CType) \
         do { \
             if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
@@ -843,7 +843,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 #define RETURN_INTEGER_SWAP(CType) \
         do { \
             if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
@@ -856,7 +856,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
         case PrimitiveKind::Void: {} break;
         case PrimitiveKind::Bool: {
             if (RG_UNLIKELY(!value.IsBoolean())) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected boolean", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
                 return;
             }
 
@@ -886,7 +886,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             } else if (IsNullOrUndefined(value)) {
                 str = nullptr;
             } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected string", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
                 return;
             }
 
@@ -901,7 +901,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             } else if (IsNullOrUndefined(value)) {
                 str16 = nullptr;
             } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected string", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
                 return;
             }
 
@@ -922,7 +922,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
             } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected %2", GetValueType(instance, value), type->name);
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
                 return;
             }
 
@@ -930,7 +930,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
         } break;
         case PrimitiveKind::Record: {
             if (RG_UNLIKELY(!IsObject(value))) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected object", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                 return;
             }
 
@@ -965,7 +965,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: {
             if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return;
             }
 
@@ -976,7 +976,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
         } break;
         case PrimitiveKind::Float64: {
             if (RG_UNLIKELY(!value.IsNumber() && !value.IsBigInt())) {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return;
             }
 
@@ -997,7 +997,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
             } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected %2", GetValueType(instance, value), type->name);
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
                 return;
             }
 
