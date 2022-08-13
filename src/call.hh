@@ -97,8 +97,8 @@ private:
     template <typename T = uint8_t>
     T *AllocHeap(Size size, Size align);
 
-    const char *PushString(Napi::Value value);
-    const char16_t *PushString16(Napi::Value value);
+    bool PushString(Napi::Value value, const char **out_str);
+    bool PushString16(Napi::Value value, const char16_t **out_str16);
     bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin, int16_t realign = 0);
     bool PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);
     bool PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);

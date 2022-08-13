@@ -48,72 +48,82 @@ CallData::~CallData()
     }
 }
 
-const char *CallData::PushString(Napi::Value value)
+bool CallData::PushString(Napi::Value value, const char **out_str)
 {
-    RG_ASSERT(value.IsString());
+    if (value.IsString()) {
+        Span<char> buf;
+        size_t len = 0;
+        napi_status status;
 
-    Napi::Env env = value.Env();
-
-    Span<char> buf;
-    size_t len = 0;
-    napi_status status;
-
-    buf.ptr = (char *)mem->heap.ptr;
-    buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32));
-
-    status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
-    RG_ASSERT(status == napi_ok);
-
-    len++;
-
-    if (RG_LIKELY(len < (size_t)buf.len)) {
-        mem->heap.ptr += (Size)len;
-        mem->heap.len -= (Size)len;
-    } else {
-        status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
-        RG_ASSERT(status == napi_ok);
-
-        buf = AllocateMemory<char>(&call_alloc, (Size)len + 1);
+        buf.ptr = (char *)mem->heap.ptr;
+        buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32));
 
         status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
         RG_ASSERT(status == napi_ok);
-    }
 
-    return buf.ptr;
+        len++;
+
+        if (RG_LIKELY(len < (size_t)buf.len)) {
+            mem->heap.ptr += (Size)len;
+            mem->heap.len -= (Size)len;
+        } else {
+            status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
+            RG_ASSERT(status == napi_ok);
+
+            buf = AllocateMemory<char>(&call_alloc, (Size)len + 1);
+
+            status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
+            RG_ASSERT(status == napi_ok);
+        }
+
+        *out_str = buf.ptr;
+        return true;
+    } else if (IsNullOrUndefined(value)) {
+        *out_str = nullptr;
+        return true;
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
+        return false;
+    }
 }
 
-const char16_t *CallData::PushString16(Napi::Value value)
+bool CallData::PushString16(Napi::Value value, const char16_t **out_str16)
 {
-    RG_ASSERT(value.IsString());
+    if (value.IsString()) {
+        Span<char16_t> buf;
+        size_t len = 0;
+        napi_status status;
 
-    Napi::Env env = value.Env();
-
-    Span<char16_t> buf;
-    size_t len = 0;
-    napi_status status;
-
-    buf.ptr = (char16_t *)mem->heap.ptr;
-    buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32)) / 2;
-
-    status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
-    RG_ASSERT(status == napi_ok);
-
-    len++;
-
-    if (RG_LIKELY(len < (size_t)buf.len)) {
-        mem->heap.ptr += (Size)len * 2;
-        mem->heap.len -= (Size)len * 2;
-    } else {
-        status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
-        RG_ASSERT(status == napi_ok);
-
-        buf = AllocateMemory<char16_t>(&call_alloc, ((Size)len + 1) * 2);
+        buf.ptr = (char16_t *)mem->heap.ptr;
+        buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32)) / 2;
 
         status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
         RG_ASSERT(status == napi_ok);
-    }
 
-    return buf.ptr;
+        len++;
+
+        if (RG_LIKELY(len < (size_t)buf.len)) {
+            mem->heap.ptr += (Size)len * 2;
+            mem->heap.len -= (Size)len * 2;
+        } else {
+            status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
+            RG_ASSERT(status == napi_ok);
+
+            buf = AllocateMemory<char16_t>(&call_alloc, ((Size)len + 1) * 2);
+
+            status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
+            RG_ASSERT(status == napi_ok);
+        }
+
+        *out_str16 = buf.ptr;
+        return true;
+    } else if (IsNullOrUndefined(value)) {
+        *out_str16 = nullptr;
+        return true;
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
+        return false;
+    }
 }
 
 bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin, int16_t realign)
@@ -273,31 +283,15 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::String: {
                 const char *str;
-                if (RG_LIKELY(value.IsString())) {
-                    str = PushString(value);
-                    if (RG_UNLIKELY(!str))
-                        return false;
-                } else if (IsNullOrUndefined(value)) {
-                    str = nullptr;
-                } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
+                if (RG_UNLIKELY(!PushString(value, &str)))
                     return false;
-                }
 
                 *(const char **)dest = str;
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16;
-                if (RG_LIKELY(value.IsString())) {
-                    str16 = PushString16(value);
-                    if (RG_UNLIKELY(!str16))
-                        return false;
-                } else if (IsNullOrUndefined(value)) {
-                    str16 = nullptr;
-                } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
+                if (RG_UNLIKELY(!PushString16(value, &str16)))
                     return false;
-                }
 
                 *(const char16_t **)dest = str16;
             } break;
@@ -512,27 +506,21 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
             });
         } break;
         case PrimitiveKind::String: {
-            PUSH_ARRAY(value.IsString() || IsNullOrUndefined(value), "string", {
-                if (!IsNullOrUndefined(value)) {
-                    const char *str = PushString(value);
-                    if (RG_UNLIKELY(!str))
-                        return false;
-                    *(const char **)dest = str;
-                } else {
-                    *(const char **)dest = nullptr;
-                }
+            PUSH_ARRAY(true, "string", {
+                const char *str;
+                if (RG_UNLIKELY(!PushString(value, &str)))
+                    return false;
+
+                *(const char **)dest = str;
             });
         } break;
         case PrimitiveKind::String16: {
-            PUSH_ARRAY(value.IsString() || IsNullOrUndefined(value), "string", {
-                if (!IsNullOrUndefined(value)) {
-                    const char16_t *str16 = PushString16(value);
-                    if (RG_UNLIKELY(!str16))
-                        return false;
-                    *(const char16_t **)dest = str16;
-                } else {
-                    *(const char16_t **)dest = nullptr;
-                }
+            PUSH_ARRAY(true, "string", {
+                const char16_t *str16;
+                if (RG_UNLIKELY(!PushString16(value, &str16)))
+                    return false;
+
+                *(const char16_t **)dest = str16;
             });
         } break;
         case PrimitiveKind::Pointer: {

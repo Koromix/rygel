@@ -198,31 +198,15 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
             case PrimitiveKind::UInt64S: { PUSH_INTEGER_SWAP(uint64_t); } break;
             case PrimitiveKind::String: {
                 const char *str;
-                if (RG_LIKELY(value.IsString())) {
-                    str = PushString(value);
-                    if (RG_UNLIKELY(!str))
-                        return false;
-                } else if (IsNullOrUndefined(value)) {
-                    str = nullptr;
-                } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
+                if (RG_UNLIKELY(!PushString(value, &str)))
                     return false;
-                }
 
                 *(const char **)(args_ptr++) = str;
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16;
-                if (RG_LIKELY(value.IsString())) {
-                    str16 = PushString16(value);
-                    if (RG_UNLIKELY(!str16))
-                        return false;
-                } else if (IsNullOrUndefined(value)) {
-                    str16 = nullptr;
-                } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
+                if (RG_UNLIKELY(!PushString16(value, &str16)))
                     return false;
-                }
 
                 *(const char16_t **)(args_ptr++) = str16;
             } break;
@@ -677,31 +661,15 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
         case PrimitiveKind::UInt64S: { RETURN_INTEGER_SWAP(uint64_t); } break;
         case PrimitiveKind::String: {
             const char *str;
-            if (RG_LIKELY(value.IsString())) {
-                str = PushString(value);
-                if (RG_UNLIKELY(!str))
-                    return;
-            } else if (IsNullOrUndefined(value)) {
-                str = nullptr;
-            } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
+            if (RG_UNLIKELY(!PushString(value, &str)))
                 return;
-            }
 
             out_reg->rax = (uint64_t)str;
         } break;
         case PrimitiveKind::String16: {
             const char16_t *str16;
-            if (RG_LIKELY(value.IsString())) {
-                str16 = PushString16(value);
-                if (RG_UNLIKELY(!str16))
-                    return;
-            } else if (IsNullOrUndefined(value)) {
-                str16 = nullptr;
-            } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
+            if (RG_UNLIKELY(!PushString16(value, &str16)))
                 return;
-            }
 
             out_reg->rax = (uint64_t)str16;
         } break;
