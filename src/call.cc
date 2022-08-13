@@ -302,16 +302,11 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 *(const char16_t **)dest = str16;
             } break;
             case PrimitiveKind::Pointer: {
-                if (CheckValueTag(instance, value, member.type->ref.marker)) {
-                    Napi::External<void> external = value.As<Napi::External<void>>();
-                    void *ptr = external.Data();
-                    *(void **)dest = ptr;
-                } else if (IsNullOrUndefined(value)) {
-                    *(void **)dest = nullptr;
-                } else {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value', expected %2", GetValueType(instance, value), member.type->name);
+                void *ptr;
+                if (RG_UNLIKELY(!PushPointer(value, member.type, 1, &ptr)))
                     return false;
-                }
+
+                *(void **)dest = ptr;
             } break;
             case PrimitiveKind::Record: {
                 if (RG_UNLIKELY(!IsObject(value))) {
@@ -541,13 +536,12 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
             });
         } break;
         case PrimitiveKind::Pointer: {
-            PUSH_ARRAY(CheckValueTag(instance, value, ref->ref.marker) || IsNullOrUndefined(value), ref->name, {
-                if (!IsNullOrUndefined(value)) {
-                    Napi::External<void> external = value.As<Napi::External<void>>();
-                    *(void **)dest = external.Data();
-                } else {
-                    *(void **)dest = nullptr;
-                }
+            PUSH_ARRAY(true, ref->name, {
+                void *ptr;
+                if (RG_UNLIKELY(!PushPointer(value, ref, 1, &ptr)))
+                    return false;
+
+                *(const void **)dest = ptr;
             });
         } break;
         case PrimitiveKind::Record: {

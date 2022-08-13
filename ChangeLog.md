@@ -10,6 +10,7 @@
 - Add [endian-sensitive integer types](types.md#endian-sensitive-types): `intX_le_t`, `intX_be_t`
 - Accept typed arrays for `void *` parameters
 - Introduce `koffi.opaque()` to replace `koffi.handle()` (which remains supported until Koffi 3.0)
+- Support JS Array and TypedArray to fill struct and array pointer members
 
 **Other changes:**
 
