@@ -2,12 +2,12 @@
 
 ## History
 
-### Koffi 2.1.0 (in beta)
+### Koffi 2.1.0
 
 **Main changes:**
 
 - Add [koffi.as()](functions.md#polymorphic-parameters) to support polymorphic APIs based on `void *` parameters
-- Add [endian-sensitive integer types](types.md#endian-sensitive-types): `intX_le_t`, `intX_be_t`
+- Add [endian-sensitive integer types](types.md#endian-sensitive-types): `intX_le_t`, `intX_be_t`, `uintX_le_t`, `uintX_be_t`
 - Accept typed arrays for `void *` parameters
 - Introduce `koffi.opaque()` to replace `koffi.handle()` (which remains supported until Koffi 3.0)
 - Support JS Array and TypedArray to fill struct and array pointer members
