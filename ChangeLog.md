@@ -2,6 +2,12 @@
 
 ## History
 
+### Koffi 2.1.1
+
+**Main fixes:**
+
+- Fix potential memory allocation bugs
+
 ### Koffi 2.1.0
 
 **Main changes:**
