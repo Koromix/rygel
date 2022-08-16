@@ -203,7 +203,7 @@ void HandleSendTokenize(InstanceHolder *instance, const http_RequestInfo &reques
     io->RunAsync([=]() {
         Span<uint8_t> msg;
         {
-            msg = AllocateMemory<uint8_t>(&io->allocator, Kibibytes(8));
+            msg = AllocateSpan<uint8_t>(&io->allocator, Kibibytes(8));
 
             StreamReader reader;
             if (!io->OpenForRead(msg.len, &reader))
@@ -216,7 +216,7 @@ void HandleSendTokenize(InstanceHolder *instance, const http_RequestInfo &reques
         // Encode token
         Span<uint8_t> cypher;
         {
-            cypher = AllocateMemory<uint8_t>(&io->allocator, msg.len + crypto_box_SEALBYTES);
+            cypher = AllocateSpan<uint8_t>(&io->allocator, msg.len + crypto_box_SEALBYTES);
 
             if (crypto_box_seal((uint8_t *)cypher.ptr, msg.ptr, msg.len, instance->config.token_pkey) != 0) {
                 LogError("Failed to seal token");
@@ -228,7 +228,7 @@ void HandleSendTokenize(InstanceHolder *instance, const http_RequestInfo &reques
         // Encode Base64
         Span<char> token;
         {
-            token = AllocateMemory<char>(&io->allocator, cypher.len * 2 + 1);
+            token = AllocateSpan<char>(&io->allocator, cypher.len * 2 + 1);
 
             sodium_bin2hex(token.ptr, (size_t)token.len, cypher.ptr, (size_t)cypher.len);
 

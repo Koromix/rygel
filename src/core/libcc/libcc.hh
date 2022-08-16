@@ -837,15 +837,14 @@ public:
     virtual ~Allocator() = default;
 
     virtual void *Allocate(Size size, unsigned int flags = 0) = 0;
-    virtual void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) = 0;
+    virtual void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) = 0;
     virtual void Release(void *ptr, Size size) = 0;
 };
 
 Allocator *GetDefaultAllocator();
 Allocator *GetNullAllocator();
 
-template <typename T>
-Span<T> AllocateMemory(Allocator *alloc, Size size, unsigned int flags = 0)
+static inline void *AllocateRaw(Allocator *alloc, Size size, unsigned int flags = 0)
 {
     RG_ASSERT(size >= 0);
 
@@ -853,13 +852,40 @@ Span<T> AllocateMemory(Allocator *alloc, Size size, unsigned int flags = 0)
         alloc = GetDefaultAllocator();
     }
 
-    T *ptr = (T *)alloc->Allocate(size, flags);
-    return MakeSpan(ptr, size);
+    void *ptr = alloc->Allocate(size, flags);
+    return ptr;
 }
 
 template <typename T>
-Span<T> ResizeMemory(Allocator *alloc, T *ptr, Size old_size, Size new_size,
-                         unsigned int flags = 0)
+T *AllocateOne(Allocator *alloc, unsigned int flags = 0)
+{
+    if (!alloc) {
+        alloc = GetDefaultAllocator();
+    }
+
+    Size size = RG_SIZE(T);
+
+    T *ptr = (T *)alloc->Allocate(size, flags);
+    return ptr;
+}
+
+template <typename T>
+Span<T> AllocateSpan(Allocator *alloc, Size len, unsigned int flags = 0)
+{
+    RG_ASSERT(len >= 0);
+
+    if (!alloc) {
+        alloc = GetDefaultAllocator();
+    }
+
+    Size size = len * RG_SIZE(T);
+
+    T *ptr = (T *)alloc->Allocate(size, flags);
+    return MakeSpan(ptr, len);
+}
+
+static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size new_size,
+                              unsigned int flags = 0)
 {
     RG_ASSERT(new_size >= 0);
 
@@ -867,28 +893,56 @@ Span<T> ResizeMemory(Allocator *alloc, T *ptr, Size old_size, Size new_size,
         alloc = GetDefaultAllocator();
     }
 
-    alloc->Resize((void **)&ptr, old_size, new_size, flags);
-    return MakeSpan(ptr, new_size);
+    ptr = alloc->Resize(ptr, old_size, new_size, flags);
+    return ptr;
 }
 
-template<typename T>
-void ReleaseMemory(Allocator *alloc, Span<T> mem)
+template <typename T>
+Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len,
+                     unsigned int flags = 0)
+{
+    RG_ASSERT(new_len >= 0);
+
+    if (!alloc) {
+        alloc = GetDefaultAllocator();
+    }
+
+    Size old_size = mem.len * RG_SIZE(T);
+    Size new_size = new_len * RG_SIZE(T);
+
+    mem.ptr = (T *)alloc->Resize(mem.ptr, old_size, new_size, flags);
+    return MakeSpan(mem.ptr, new_len);
+}
+
+static inline void ReleaseRaw(Allocator *alloc, void *ptr, Size size)
 {
     if (!alloc) {
         alloc = GetDefaultAllocator();
     }
 
-    alloc->Release((void *)mem.ptr, mem.len);
+    alloc->Release(ptr, size);
 }
 
 template<typename T>
-void ReleaseMemory(Allocator *alloc, T *ptr, Size size)
+void ReleaseOne(Allocator *alloc, T *ptr)
 {
     if (!alloc) {
         alloc = GetDefaultAllocator();
     }
 
-    alloc->Release((void *)ptr, size);
+    alloc->Release((void *)ptr, RG_SIZE(T));
+}
+
+template<typename T>
+void ReleaseSpan(Allocator *alloc, Span<T> mem)
+{
+    if (!alloc) {
+        alloc = GetDefaultAllocator();
+    }
+
+    Size size = mem.len * RG_SIZE(T);
+
+    alloc->Release((void *)mem.ptr, size);
 }
 
 class LinkedAllocator final: public Allocator {
@@ -899,7 +953,7 @@ class LinkedAllocator final: public Allocator {
     struct Bucket {
          // Keep head first or stuff will break
         Node head;
-        uint8_t data[8]; // Extra size is used to align pointer
+        uint8_t data[];
     };
 
     Allocator *allocator;
@@ -917,18 +971,17 @@ public:
     void ReleaseAll();
 
     void *Allocate(Size size, unsigned int flags = 0) override;
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
     void Release(void *ptr, Size size) override;
 
 private:
-    static Bucket *PointerToBucket(void *ptr)
-        { return (Bucket *)((uint8_t *)ptr - RG_OFFSET_OF(Bucket, data)); }
+    static Bucket *PointerToBucket(void *ptr);
 };
 
 class BlockAllocatorBase: public Allocator {
     struct Bucket {
         Size used;
-        uint8_t data[8]; // Extra size is used to align pointer
+        uint8_t data[];
     };
 
     Size block_size;
@@ -944,7 +997,7 @@ public:
     }
 
     void *Allocate(Size size, unsigned int flags = 0) override;
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
     void Release(void *ptr, Size size) override;
 
 protected:
@@ -1315,7 +1368,7 @@ public:
                 len = new_capacity;
             }
 
-            ptr = ResizeMemory(allocator, ptr, capacity * RG_SIZE(T), new_capacity * RG_SIZE(T)).ptr;
+            ptr = (T *)ResizeRaw(allocator, ptr, capacity * RG_SIZE(T), new_capacity * RG_SIZE(T));
             capacity = new_capacity;
         }
     }
@@ -1612,9 +1665,9 @@ public:
         Size bucket_offset = (offset + len) % BucketSize;
 
         if (bucket_idx >= buckets.len) {
-            Bucket *new_bucket = AllocateMemory<Bucket>(buckets.allocator, RG_SIZE(Bucket)).ptr;
+            Bucket *new_bucket = AllocateOne<Bucket>(buckets.allocator);
             new (&new_bucket->allocator) AllocatorType();
-            new_bucket->values = AllocateMemory<T>(&new_bucket->allocator, BucketSize * RG_SIZE(T)).ptr;
+            new_bucket->values = (T *)AllocateRaw(&new_bucket->allocator, BucketSize * RG_SIZE(T));
 
             buckets.Append(new_bucket);
         }
@@ -1731,7 +1784,7 @@ private:
     void DeleteBucket(Bucket *bucket)
     {
         bucket->allocator.~AllocatorType();
-        ReleaseMemory(buckets.allocator, bucket, RG_SIZE(Bucket));
+        ReleaseOne(buckets.allocator, bucket);
     }
 };
 
@@ -2244,10 +2297,10 @@ private:
         Size old_capacity = capacity;
 
         if (new_capacity) {
-            used = AllocateMemory<size_t>(allocator,
-                                                 (new_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t),
-                                                 (int)Allocator::Flag::Zero).ptr;
-            data = AllocateMemory<ValueType>(allocator, new_capacity * RG_SIZE(ValueType)).ptr;
+            used = (size_t *)AllocateRaw(allocator,
+                                         (new_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t),
+                                         (int)Allocator::Flag::Zero);
+            data = (ValueType *)AllocateRaw(allocator, new_capacity * RG_SIZE(ValueType));
             for (Size i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType();
             }
@@ -2269,9 +2322,8 @@ private:
             capacity = 0;
         }
 
-        ReleaseMemory(allocator, old_used,
-                           (old_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t));
-        ReleaseMemory(allocator, old_data, old_capacity * RG_SIZE(ValueType));
+        ReleaseRaw(allocator, old_used, (old_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t));
+        ReleaseRaw(allocator, old_data, old_capacity * RG_SIZE(ValueType));
     }
 
     void MarkUsed(Size idx)

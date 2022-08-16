@@ -300,12 +300,12 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = RG_SIZE(SessionInfo) + username_bytes;
 
-    SessionInfo *session = AllocateMemory<SessionInfo>(nullptr, session_bytes, (int)Allocator::Flag::Zero).ptr;
+    SessionInfo *session = (SessionInfo *)AllocateRaw(nullptr, session_bytes, (int)Allocator::Flag::Zero);
 
     new (session) SessionInfo;
     RetainPtr<SessionInfo> ptr(session, [](SessionInfo *session) {
         session->~SessionInfo();
-        ReleaseMemory(nullptr, session, -1);
+        ReleaseRaw(nullptr, session, -1);
     });
 
     session->type = type;
@@ -700,7 +700,7 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     // Decode Base64
     Span<uint8_t> cypher;
     {
-        cypher = AllocateMemory<uint8_t>(&io->allocator, token.len / 2 + 1);
+        cypher = AllocateSpan<uint8_t>(&io->allocator, token.len / 2 + 1);
 
         size_t cypher_len;
         if (sodium_hex2bin(cypher.ptr, (size_t)cypher.len, token.ptr, (size_t)token.len,
@@ -721,7 +721,7 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     // Decode token
     Span<uint8_t> json;
     {
-        json = AllocateMemory<uint8_t>(&io->allocator, cypher.len - crypto_box_SEALBYTES);
+        json = AllocateSpan<uint8_t>(&io->allocator, cypher.len - crypto_box_SEALBYTES);
 
         if (crypto_box_seal_open((uint8_t *)json.ptr, cypher.ptr, cypher.len,
                                  instance->config.token_pkey, instance->config.token_skey) != 0) {

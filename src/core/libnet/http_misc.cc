@@ -208,7 +208,7 @@ bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io)
 
 static void ReleaseDataCallback(void *ptr)
 {
-    ReleaseMemory(nullptr, ptr, -1);
+    ReleaseRaw(nullptr, ptr, -1);
 }
 
 bool http_JsonPageBuilder::Init(http_IO *io)

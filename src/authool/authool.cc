@@ -206,10 +206,10 @@ Options:
         if (!pwd_CheckSecret(secret))
             return 1;
     } else {
-        char *ptr = AllocateMemory<char>(&temp_alloc, 33).ptr;
-        pwd_GenerateSecret(MakeSpan(ptr, 33));
+        Span<char> mem = AllocateSpan<char>(&temp_alloc, 33);
+        pwd_GenerateSecret(mem);
 
-        secret = ptr;
+        secret = mem.ptr;
     }
 
     LogInfo("Secret: %!..+%1%!0", secret);
