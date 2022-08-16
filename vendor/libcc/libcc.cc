@@ -148,13 +148,13 @@ protected:
         return ptr;
     }
 
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags) override
+    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags) override
     {
         if (!new_size) {
-            Release(*ptr, old_size);
-            *ptr = nullptr;
+            Release(ptr, old_size);
+            ptr = nullptr;
         } else {
-            void *new_ptr = realloc(*ptr, (size_t)new_size);
+            void *new_ptr = realloc(ptr, (size_t)new_size);
             RG_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
                                               FmtMemSize(old_size), FmtMemSize(new_size));
 
@@ -162,8 +162,10 @@ protected:
                 memset_safe((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
             }
 
-            *ptr = new_ptr;
+            ptr = new_ptr;
         }
+
+        return ptr;
     }
 
     void Release(void *ptr, Size) override
@@ -175,7 +177,7 @@ protected:
 class NullAllocator: public Allocator {
 protected:
     void *Allocate(Size, unsigned int) override { RG_UNREACHABLE(); }
-    void Resize(void **, Size, Size, unsigned int) override { RG_UNREACHABLE(); }
+    void *Resize(void *, Size, Size, unsigned int) override { RG_UNREACHABLE(); }
     void Release(void *, Size) override {}
 };
 
@@ -205,7 +207,7 @@ void LinkedAllocator::ReleaseAll()
     Node *head = list.next;
     while (head) {
         Node *next = head->next;
-        ReleaseMemory(allocator, head, -1);
+        ReleaseRaw(allocator, head, -1);
         head = next;
     }
     list = {};
@@ -213,7 +215,7 @@ void LinkedAllocator::ReleaseAll()
 
 void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
-    Bucket *bucket = AllocateMemory<Bucket>(allocator, RG_SIZE(*bucket) + size, flags).ptr;
+    Bucket *bucket = (Bucket *)AllocateRaw(allocator, RG_SIZE(Node) + size, flags);
 
     if (list.prev) {
         list.prev->next = &bucket->head;
@@ -227,26 +229,21 @@ void *LinkedAllocator::Allocate(Size size, unsigned int flags)
         bucket->head.next = nullptr;
     }
 
-    uint8_t *data = bucket->data;
-    uint8_t *aligned = AlignUp(data, 16);
-
-    RG_ASSERT(aligned - data <= 8);
-
-    return (void *)aligned;
+    return (void *)bucket->data;
 }
 
-void LinkedAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
+void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned int flags)
 {
-    if (!*ptr) {
-        *ptr = Allocate(new_size, flags);
+    if (!ptr) {
+        ptr = Allocate(new_size, flags);
     } else if (!new_size) {
-        Release(*ptr, old_size);
-        *ptr = nullptr;
+        Release(ptr, old_size);
+        ptr = nullptr;
     } else {
-        Bucket *bucket = PointerToBucket(*ptr);
+        Bucket *bucket = PointerToBucket(ptr);
 
-        bucket = ResizeMemory(allocator, bucket, RG_SIZE(*bucket) + old_size,
-                                                 RG_SIZE(*bucket) + new_size, flags).ptr;
+        bucket = (Bucket *)ResizeRaw(allocator, bucket, RG_SIZE(Node) + old_size,
+                                                        RG_SIZE(Node) + new_size, flags);
 
         if (bucket->head.next) {
             bucket->head.next->prev = &bucket->head;
@@ -259,13 +256,10 @@ void LinkedAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned 
             list.next = &bucket->head;
         }
 
-        uint8_t *data = bucket->data;
-        uint8_t *aligned = AlignUp(data, 16);
-
-        RG_ASSERT(aligned - data <= 8);
-
-        *ptr = (void *)aligned;
+        ptr = (void *)bucket->data;
     }
+
+    return ptr;
 }
 
 void LinkedAllocator::Release(void *ptr, Size size)
@@ -284,8 +278,14 @@ void LinkedAllocator::Release(void *ptr, Size size)
             list.next = bucket->head.next;
         }
 
-        ReleaseMemory(allocator, bucket, size);
+        ReleaseRaw(allocator, bucket, RG_SIZE(Bucket) + size);
     }
+}
+
+LinkedAllocator::Bucket *LinkedAllocator::PointerToBucket(void *ptr)
+{
+    uint8_t *data = (uint8_t *)ptr;
+    return (Bucket *)(data - RG_OFFSET_OF(Bucket, data));
 }
 
 void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
@@ -298,15 +298,13 @@ void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
     Size aligned_size = AlignLen(size, 8);
 
     if (AllocateSeparately(aligned_size)) {
-        uint8_t *ptr = AllocateMemory<uint8_t>(alloc, size, flags).ptr;
+        uint8_t *ptr = (uint8_t *)AllocateRaw(alloc, size, flags);
         return ptr;
     } else {
         if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
-            current_bucket = AllocateMemory<Bucket>(alloc, RG_SIZE(Bucket) + block_size,
-                                                           flags & ~(int)Allocator::Flag::Zero).ptr;
-            current_bucket->used = AlignUp(current_bucket->data, 16) - current_bucket->data;
-
-            RG_ASSERT(current_bucket->used <= 8);
+            current_bucket = (Bucket *)AllocateRaw(alloc, RG_SIZE(Bucket) + block_size,
+                                                   flags & ~(int)Allocator::Flag::Zero);
+            current_bucket->used = 0;
         }
 
         uint8_t *ptr = current_bucket->data + current_bucket->used;
@@ -321,15 +319,16 @@ void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
     }
 }
 
-void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
+void *BlockAllocatorBase::Resize(void *ptr, Size old_size, Size new_size, unsigned int flags)
 {
     RG_ASSERT(old_size >= 0);
     RG_ASSERT(new_size >= 0);
 
     if (!new_size) {
-        Release(*ptr, old_size);
+        Release(ptr, old_size);
+        ptr = nullptr;
     } else {
-        if (!*ptr) {
+        if (!ptr) {
             old_size = 0;
         }
 
@@ -338,32 +337,34 @@ void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsign
         Size aligned_delta = aligned_new_size - aligned_old_size;
 
         // Try fast path
-        if (*ptr && *ptr == last_alloc &&
+        if (ptr && ptr == last_alloc &&
                 (current_bucket->used + aligned_delta) <= block_size &&
                 !AllocateSeparately(aligned_new_size)) {
             current_bucket->used += aligned_delta;
 
             if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
-                memset_safe(ptr + old_size, 0, new_size - old_size);
+                memset_safe((uint8_t *)ptr + old_size, 0, new_size - old_size);
             }
         } else if (AllocateSeparately(aligned_old_size)) {
             LinkedAllocator *alloc = GetAllocator();
-            ptr = ResizeMemory(alloc, ptr, old_size, new_size, flags).ptr;
+            ptr = ResizeRaw(alloc, ptr, old_size, new_size, flags);
         } else {
             void *new_ptr = Allocate(new_size, flags & ~(int)Allocator::Flag::Zero);
             if (new_size > old_size) {
-                memcpy_safe(new_ptr, *ptr, old_size);
+                memcpy_safe(new_ptr, ptr, old_size);
 
                 if (flags & (int)Allocator::Flag::Zero) {
-                    memset_safe(ptr + old_size, 0, new_size - old_size);
+                    memset_safe((uint8_t *)ptr + old_size, 0, new_size - old_size);
                 }
             } else {
-                memcpy_safe(new_ptr, *ptr, new_size);
+                memcpy_safe(new_ptr, ptr, new_size);
             }
 
-            *ptr = new_ptr;
+            ptr = new_ptr;
         }
     }
+
+    return ptr;
 }
 
 void BlockAllocatorBase::Release(void *ptr, Size size)
@@ -377,13 +378,15 @@ void BlockAllocatorBase::Release(void *ptr, Size size)
 
         if (ptr == last_alloc) {
             current_bucket->used -= aligned_size;
+
             if (!current_bucket->used) {
-                ReleaseMemory(alloc, current_bucket, RG_SIZE(Bucket) + block_size);
+                ReleaseRaw(alloc, current_bucket, RG_SIZE(Bucket) + block_size);
                 current_bucket = nullptr;
             }
+
             last_alloc = nullptr;
         } else if (AllocateSeparately(aligned_size)) {
-            ReleaseMemory(alloc, ptr, size);
+            ReleaseRaw(alloc, ptr, size);
         }
     }
 }
@@ -762,7 +765,7 @@ bool CopyString(Span<const char> str, Span<char> buf)
 
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 {
-    char *new_str = AllocateMemory<char>(alloc, str.len + 1).ptr;
+    char *new_str = (char *)AllocateRaw(alloc, str.len + 1);
     memcpy_safe(new_str, str.ptr, (size_t)str.len);
     new_str[str.len] = 0;
     return MakeSpan(new_str, str.len);
@@ -2771,7 +2774,7 @@ const char *GetApplicationExecutable()
             RG_ASSERT(strlen(path) < RG_SIZE(executable_path));
 
             CopyString(path, executable_path);
-            ReleaseMemory(nullptr, (void *)path, -1);
+            ReleaseRaw(nullptr, (void *)path, -1);
         }
     }
 
@@ -3560,8 +3563,8 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
     STARTUPINFOW si = {};
 
     // Convert command line
-    Span<wchar_t> cmd_line_w = AllocateMemory<wchar_t>(nullptr, 4 * strlen(cmd_line) + 2);
-    RG_DEFER { ReleaseMemory(nullptr, cmd_line_w.ptr, cmd_line_w.len); };
+    Span<wchar_t> cmd_line_w = AllocateSpan<wchar_t>(nullptr, 2 * strlen(cmd_line) + 1);
+    RG_DEFER { ReleaseSpan(nullptr, cmd_line_w); };
     if (ConvertUtf8ToWin32Wide(cmd_line, cmd_line_w) < 0)
         return false;
 
@@ -5444,7 +5447,7 @@ Fiber::~Fiber()
         fib_run = nullptr;
     }
 
-    ReleaseMemory(nullptr, ucp.uc_stack.ss_sp, (Size)ucp.uc_stack.ss_size);
+    ReleaseRaw(nullptr, ucp.uc_stack.ss_sp, (Size)ucp.uc_stack.ss_size);
 }
 
 void Fiber::SwitchTo()
@@ -5726,7 +5729,7 @@ bool StreamReader::Close(bool implicit)
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            ReleaseMemory(nullptr, compression.u.miniz, RG_SIZE(*compression.u.miniz));
+            ReleaseOne(nullptr, compression.u.miniz);
             compression.u.miniz = nullptr;
 #else
             RG_UNREACHABLE();
@@ -5742,7 +5745,7 @@ bool StreamReader::Close(bool implicit)
                     BrotliDecoderDestroyInstance(ctx->state);
                 }
 
-                ReleaseMemory(nullptr, ctx, RG_SIZE(*ctx));
+                ReleaseOne(nullptr, ctx);
                 compression.u.brotli = nullptr;
             }
 #else
@@ -5975,8 +5978,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            compression.u.miniz =
-                AllocateMemory<MinizInflateContext>(nullptr, RG_SIZE(MinizInflateContext), (int)Allocator::Flag::Zero).ptr;
+            compression.u.miniz = AllocateOne<MinizInflateContext>(nullptr, (int)Allocator::Flag::Zero);
             tinfl_init(&compression.u.miniz->inflator);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 #else
@@ -5988,8 +5990,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
 
         case CompressionType::Brotli: {
 #ifdef BROTLI_DEFAULT_MODE
-            compression.u.brotli =
-                AllocateMemory<BrotliDecompressContext>(nullptr, RG_SIZE(BrotliDecompressContext), (int)Allocator::Flag::Zero).ptr;
+            compression.u.brotli = AllocateOne<BrotliDecompressContext>(nullptr, (int)Allocator::Flag::Zero);
             compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
 #else
             LogError("Brotli decompression not available for '%1'", filename);
@@ -6527,7 +6528,7 @@ bool StreamWriter::Close(bool implicit)
             MinizDeflateContext *ctx = compression.u.miniz;
 
             RG_DEFER { 
-                ReleaseMemory(nullptr, ctx, RG_SIZE(*ctx));
+                ReleaseOne(nullptr, ctx);
                 compression.u.miniz = nullptr;
             };
 
@@ -6665,8 +6666,7 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            compression.u.miniz =
-                AllocateMemory<MinizDeflateContext>(nullptr, RG_SIZE(MinizDeflateContext), (int)Allocator::Flag::Zero).ptr;
+            compression.u.miniz = AllocateOne<MinizDeflateContext>(nullptr, (int)Allocator::Flag::Zero);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 
             int flags = 0;
@@ -7033,7 +7033,7 @@ bool ReloadAssets()
         AssetInfo asset_copy;
 
         asset_copy.name = DuplicateString(asset.name, &assets_alloc).ptr;
-        asset_copy.data = AllocateMemory<uint8_t>(&assets_alloc, asset.data.len);
+        asset_copy.data = AllocateSpan<uint8_t>(&assets_alloc, asset.data.len);
         memcpy_safe((void *)asset_copy.data.ptr, asset.data.ptr, (size_t)asset.data.len);
         asset_copy.compression_type = asset.compression_type;
         asset_copy.source_map = DuplicateString(asset.source_map, &assets_alloc).ptr;
