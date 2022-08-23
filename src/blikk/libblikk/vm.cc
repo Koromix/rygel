@@ -34,7 +34,7 @@ bool bk_VirtualMachine::Run(unsigned int flags)
     bk_CallFrame *frame = &frames[frames.len - 1];
     Size pc = frame->pc;
     Size bp = frame->bp;
-    Span<const bk_Instruction> ir = program->ir;
+    Span<const bk_Instruction> ir = frame->func ? frame->func->ir : program->ir;
     RG_ASSERT(pc < ir.len);
 
     // Save PC on exit
@@ -539,14 +539,16 @@ bool bk_VirtualMachine::Run(unsigned int flags)
 
                 frame = frames.AppendDefault();
                 frame->func = func;
-                frame->pc = func->addr;
+                frame->pc = 0;
                 frame->direct = false;
 
                 if (func->mode == bk_FunctionInfo::Mode::Blikk) {
                     frame->bp = stack.len - func->type->params_size;
 
                     bp = frame->bp;
-                    DISPATCH(pc = frame->pc);
+                    ir = func->ir;
+
+                    DISPATCH(pc = 0);
                 } else {
                     RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
@@ -600,14 +602,16 @@ bool bk_VirtualMachine::Run(unsigned int flags)
 
             frame = frames.AppendDefault();
             frame->func = func;
-            frame->pc = func->addr;
+            frame->pc = 0;
             frame->direct = true;
 
             if (func->mode == bk_FunctionInfo::Mode::Blikk) {
                 frame->bp = stack.len - func->type->params_size;
 
                 bp = frame->bp;
-                DISPATCH(pc = frame->pc);
+                ir = func->ir;
+
+                DISPATCH(pc = 0);
             } else {
                 RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
@@ -656,6 +660,7 @@ bool bk_VirtualMachine::Run(unsigned int flags)
             frame = &frames[frames.len - 1];
             pc = frame->pc;
             bp = frame->bp;
+            ir = frame->func ? frame->func->ir : program->ir;
 
             DISPATCH(++pc);
         }

@@ -165,21 +165,21 @@ void bk_ReportRuntimeError(const bk_Program &program, Span<const bk_CallFrame> f
     if (frames.len) {
         LogInfo("Dumping stack trace:");
 
-        for (Size i = frames.len - 1; i >= 0; i--) {
-            const bk_CallFrame &frame = frames[i];
+        for (Size i = 0; i < frames.len; i++) {
+            const bk_CallFrame &frame = frames[frames.len - i - 1];
 
             const char *prototype = frame.func ? frame.func->prototype : "<outside function>";
             bool tre = frame.func && frame.func->tre;
 
             int32_t line;
-            const char *filename = program.LocateInstruction(frame.pc, &line);
+            const char *filename = program.LocateInstruction(frame.func, frame.pc, &line);
 
             if (filename) {
                 LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..%4 (%5)%!0",
-                        i ? "   " : ">>>", FmtArg(prototype).Pad(36), tre ? "(+)" : "   ", filename, line);
+                        i ? "   " : ">>>", FmtArg(prototype).Pad(36), tre ? "[+]" : "   ", filename, line);
             } else {
                 LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..<native function>%!0",
-                        i ? "   " : ">>>", FmtArg(prototype).Pad(36), tre ? "(+)" : "   ");
+                        i ? "   " : ">>>", FmtArg(prototype).Pad(36), tre ? "[+]" : "   ");
             }
         }
 

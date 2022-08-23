@@ -60,14 +60,13 @@ class bk_Parser {
     bool valid;
     bool show_errors;
     bool show_hints;
-    bk_SourceInfo *src;
+    bk_SourceMap *src;
 
     // Transient mappings
     HashTable<Size, PrototypeInfo> prototypes_map;
     HashMap<const void *, Size> definitions_map;
     HashSet<const void *> poisoned_set;
 
-    Size func_jump_addr = -1;
     bk_FunctionInfo *current_func = nullptr;
     int depth = 0;
     int recursion = 0;
@@ -427,10 +426,6 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     definitions_map.Clear();
     poisoned_set.Clear();
 
-    // The caller may want to execute the code and then compile new code (e.g. REPL),
-    // we can't ever try to reuse a jump that will not be executed!
-    func_jump_addr = -1;
-
     src = program->sources.AppendDefault();
     src->filename = DuplicateString(file.filename, &program->str_alloc).ptr;
 
@@ -495,7 +490,6 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
     func->prototype = InternString(prototype);
     func->mode = native ? bk_FunctionInfo::Mode::Native : bk_FunctionInfo::Mode::Intrinsic;
     func->native = native;
-    func->addr = -1;
     func->valid = true;
     func->impure = !(flags & (int)bk_FunctionFlag::Pure);
     func->side_effects = !(flags & ((int)bk_FunctionFlag::Pure | (int)bk_FunctionFlag::NoSideEffect));
@@ -795,7 +789,6 @@ void bk_Parser::PreparseFunction(Size proto_pos, bool record)
     func->prototype = InternString(prototype_buf.ptr);
 
     // We don't know anything about it yet!
-    func->addr = -1;
     func->impure = true;
     func->side_effects = true;
     func->earliest_ref_pos = RG_SIZE_MAX;
@@ -1194,16 +1187,20 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
         }
     }
 
-    // Jump over consecutively defined functions in one go
-    if (func_jump_addr < 0 || ir[func_jump_addr].u.i < ir.len - func_jump_addr) {
-        func_jump_addr = ir.len;
-        ir.Append({bk_Opcode::Jump});
-    }
-
     func->valid = true;
-    func->addr = ir.len;
     func->impure = false;
     func->side_effects = false;
+
+    func->ir.Append({bk_Opcode::Nop});
+
+    RG_DEFER_C(prev_src = src) {
+        std::swap(func->ir, ir);
+        src = prev_src;
+    };
+    std::swap(func->ir, ir);
+    func->src.filename = src->filename;
+    func->src.lines.Append((bk_SourceMap::Line) {0, pos < tokens.len ? tokens[pos].line : 0});
+    src = &func->src;
 
     // Function body
     bool has_return = false;
@@ -1221,8 +1218,6 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
             MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
         }
     }
-
-    ir[func_jump_addr].u.i = ir.len - func_jump_addr;
 }
 
 void bk_Parser::ParseReturn()
@@ -1510,7 +1505,7 @@ void bk_Parser::ParseWhile()
         // Copy the condition expression, and the IR/line map information
         for (Size i = condition_line_idx; i < src->lines.len &&
                                           src->lines[i].addr < branch_addr; i++) {
-            const bk_SourceInfo::Line &line = src->lines[i];
+            const bk_SourceMap::Line &line = src->lines[i];
             src->lines.Append({ir.len + (line.addr - condition_addr), line.line});
         }
         ir.Grow(branch_addr - condition_addr);
@@ -2845,12 +2840,15 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
     }
 
     if (var->type->size == 1) {
+        // We use std::swap on IR when we parse functions
+        Span<const bk_Instruction> var_ir = (current_func && var->scope != bk_VariableInfo::Scope::Local) ? current_func->ir : program->ir;
+
         bool stable = !var->changes && (!var->mut || var->scope == bk_VariableInfo::Scope::Local) &&
                       var->ready_addr > 0 &&
-                      ir[var->ready_addr - 1].code == bk_Opcode::Push;
+                      var_ir[var->ready_addr - 1].code == bk_Opcode::Push;
 
         if (stable) {
-            bk_Instruction inst = ir[var->ready_addr - 1];
+            bk_Instruction inst = var_ir[var->ready_addr - 1];
             ir.Append(inst);
         } else {
             bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
@@ -3004,7 +3002,7 @@ void bk_Parser::EmitReturn(Size size)
             ir.Append({bk_Opcode::StoreRev, {}, {.i = current_func->type->params_size}});
         }
         EmitPop(var_offset - current_func->type->params_size);
-        ir.Append({bk_Opcode::Jump, {}, {.i = current_func->addr - ir.len}});
+        ir.Append({bk_Opcode::Jump, {}, {.i = -ir.len}});
 
         current_func->tre = true;
     } else {
@@ -3054,9 +3052,14 @@ void bk_Parser::FixJumps(Size jump_addr, Size target_addr)
 
 void bk_Parser::TrimInstructions(Size count)
 {
-    if (RG_UNLIKELY(count > ir.len - prev_ir_len)) {
-        RG_ASSERT(!valid);
-        return;
+    // Don't trim previously compiled code
+    {
+        Size min_ir_len = current_func ? 0 : prev_ir_len;
+
+        if (RG_UNLIKELY(ir.len - count < min_ir_len)) {
+            RG_ASSERT(!valid);
+            return;
+        }
     }
 
     Size trim_addr = ir.len - count;
@@ -3071,7 +3074,7 @@ void bk_Parser::TrimInstructions(Size count)
 
     // Adjust IR-line map
     if (src->lines.len > 0 && src->lines[src->lines.len - 1].addr > trim_addr) {
-        bk_SourceInfo::Line line = src->lines[src->lines.len - 1];
+        bk_SourceMap::Line line = src->lines[src->lines.len - 1];
         line.addr = trim_addr;
 
         do {

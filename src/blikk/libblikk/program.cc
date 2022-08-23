@@ -33,18 +33,24 @@ const bk_TypeInfo *bk_FloatType = &BaseTypes[3];
 const bk_TypeInfo *bk_StringType = &BaseTypes[4];
 const bk_TypeInfo *bk_TypeType = &BaseTypes[5];
 
-const char *bk_Program::LocateInstruction(Size pc, int32_t *out_line) const
+const char *bk_Program::LocateInstruction(const bk_FunctionInfo *func, Size pc, int32_t *out_line) const
 {
-    if (!sources.len)
-        return nullptr;
+    const bk_SourceMap *src;
 
-    const bk_SourceInfo *src = std::upper_bound(sources.begin(), sources.end(), pc,
-                                                [](Size pc, const bk_SourceInfo &src) { return pc < src.lines[0].addr; }) - 1;
-    if (src < sources.ptr)
-        return nullptr;
+    if (func) {
+        src = &func->src;
+    } else {
+        if (!sources.len)
+            return nullptr;
 
-    const bk_SourceInfo::Line *line = std::upper_bound(src->lines.begin(), src->lines.end(), pc,
-                                                       [](Size pc, const bk_SourceInfo::Line &line) { return pc < line.addr; }) - 1;
+        src = std::upper_bound(sources.begin(), sources.end(), pc,
+                               [](Size pc, const bk_SourceMap &src) { return pc < src.lines[0].addr; }) - 1;
+        if (src < sources.ptr)
+            return nullptr;
+    }
+
+    const bk_SourceMap::Line *line = std::upper_bound(src->lines.begin(), src->lines.end(), pc,
+                                                       [](Size pc, const bk_SourceMap::Line &line) { return pc < line.addr; }) - 1;
     RG_ASSERT(line);
 
     if (out_line) {

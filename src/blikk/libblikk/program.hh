@@ -150,6 +150,31 @@ extern const bk_TypeInfo *bk_FloatType;
 extern const bk_TypeInfo *bk_StringType;
 extern const bk_TypeInfo *bk_TypeType;
 
+enum class bk_Opcode {
+    #define OPCODE(Code) Code,
+    #include "opcodes.inc"
+};
+static const char *const bk_OpcodeNames[] = {
+    #define OPCODE(Code) RG_STRINGIFY(Code),
+    #include "opcodes.inc"
+};
+
+struct bk_Instruction {
+    bk_Opcode code;
+    bk_PrimitiveKind primitive; // Only set for Push
+    bk_PrimitiveValue u;
+};
+
+struct bk_SourceMap {
+    struct Line {
+        Size addr;
+        int32_t line;
+    };
+
+    const char *filename;
+    HeapArray<Line> lines;
+};
+
 typedef void bk_NativeFunction(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, Span<bk_PrimitiveValue> ret);
 
 enum class bk_FunctionFlag {
@@ -179,7 +204,8 @@ struct bk_FunctionInfo {
     Mode mode;
     std::function<bk_NativeFunction> native;
 
-    Size addr; // IR
+    HeapArray<bk_Instruction> ir;
+    bk_SourceMap src;
     bool tre;
 
     bool valid;
@@ -220,31 +246,6 @@ struct bk_VariableInfo {
     RG_HASHTABLE_HANDLER(bk_VariableInfo, name);
 };
 
-enum class bk_Opcode {
-    #define OPCODE(Code) Code,
-    #include "opcodes.inc"
-};
-static const char *const bk_OpcodeNames[] = {
-    #define OPCODE(Code) RG_STRINGIFY(Code),
-    #include "opcodes.inc"
-};
-
-struct bk_Instruction {
-    bk_Opcode code;
-    bk_PrimitiveKind primitive; // Only set for Push
-    bk_PrimitiveValue u;
-};
-
-struct bk_SourceInfo {
-    struct Line {
-        Size addr;
-        int32_t line;
-    };
-
-    const char *filename;
-    HeapArray<Line> lines;
-};
-
 struct bk_CallFrame {
     const bk_FunctionInfo *func; // Can be NULL
     Size pc;
@@ -254,7 +255,7 @@ struct bk_CallFrame {
 
 struct bk_Program {
     HeapArray<bk_Instruction> ir;
-    HeapArray<bk_SourceInfo> sources;
+    HeapArray<bk_SourceMap> sources;
 
     BucketArray<bk_FunctionTypeInfo> function_types;
     BucketArray<bk_ArrayTypeInfo> array_types;
@@ -271,7 +272,7 @@ struct bk_Program {
 
     BlockAllocator str_alloc;
 
-    const char *LocateInstruction(Size pc, int32_t *out_line = nullptr) const;
+    const char *LocateInstruction(const bk_FunctionInfo *func, Size pc, int32_t *out_line = nullptr) const;
 };
 
 }
