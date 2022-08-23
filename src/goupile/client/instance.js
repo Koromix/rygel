@@ -929,10 +929,28 @@ function InstanceController() {
 
         let menu = (profile.lock == null && (route.form.menu.length > 1 || route.form.chain.length > 1));
 
+        let sections = [];
+        for (let intf of model.widgets) {
+            if (intf.options.anchor) {
+                let section = {
+                    title: intf.label,
+                    anchor: intf.options.anchor
+                };
+
+                sections.push(section);
+            }
+        }
+
         return html`
             <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
-                    <div id="ins_menu">${menu ? util.mapRange(1, route.form.chain.length, idx => renderFormMenu(route.form.chain[idx])) : ''}</div>
+                    <div id="ins_menu">${menu ? html`
+                        ${util.mapRange(1, route.form.chain.length, idx => renderFormMenu(route.form.chain[idx]))}
+                        ${sections.length ? html`
+                            <h1>${route.page.title}</h1>
+                            <ul>${sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
+                        ` : ''}
+                    ` : ''}</div>
 
                     <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
                         ${page_div}
@@ -1662,7 +1680,8 @@ function InstanceController() {
 
         // Parse new URL
         if (url != null) {
-            url = new URL(url, window.location.href);
+            if (!(url instanceof URL))
+                url = new URL(url, window.location.href);
             if (url.pathname === ENV.urls.instance)
                 url = new URL(app.home.url, window.location.href);
 

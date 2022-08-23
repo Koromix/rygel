@@ -380,7 +380,8 @@ function AdminController() {
             new_users = await net.fetchJson('/admin/api/users/list');
 
         if (url != null) {
-            url = new URL(url, window.location.href);
+            if (!(url instanceof URL))
+                url = new URL(url, window.location.href);
 
             let panels = url.searchParams.get('p');
             if (panels) {

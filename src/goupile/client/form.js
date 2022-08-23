@@ -156,6 +156,7 @@ function FormBuilder(state, model, readonly = false) {
     let inline_next = false;
     let inline_widgets;
 
+    let section_depth = 0;
     let tabs_keys = new Set;
     let tabs_ref;
 
@@ -1208,6 +1209,45 @@ function FormBuilder(state, model, readonly = false) {
     this.section = function(label, func, options = {}) {
         options = expandOptions(options);
 
+        if (label && options.anchor == null && !section_depth) {
+            let anchor = label;
+
+            anchor = anchor.replace(/[A-Z]/g, c => c.toLowerCase());
+            anchor = anchor.replace(/[^a-zA-Z0-9]/g, c => {
+                switch (c) {
+                    case 'ç': { c = 'c'; } break;
+                    case 'ê':
+                    case 'é':
+                    case 'è':
+                    case 'ë': { c = 'e'; } break;
+                    case 'à':
+                    case 'â':
+                    case 'ä':
+                    case 'å': { c = '[aàâäå]'; } break;
+                    case 'î':
+                    case 'ï': { c = '[iîï]'; } break;
+                    case 'ù':
+                    case 'ü': 
+                    case 'û':
+                    case 'ú': { c = 'u'; } break;
+                    case 'n':
+                    case 'ñ': { c = 'n'; } break;
+                    case 'ó':
+                    case 'ö':
+                    case 'ô': { c = 'o'; } break;
+                    case 'œ': { c = 'oe'; } break;
+                    case 'ÿ': { c = 'y'; } break;
+
+                    default: { c = '-'; } break;
+                }
+
+                return c;
+            });
+            anchor = anchor.replace(/-+/g, '-');
+
+            options.anchor = anchor;
+        }
+
         let deploy = state.state_sections[label];
         if (deploy == null) {
             deploy = options.deploy;
@@ -1216,7 +1256,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let widgets = [];
         let render = intf => html`
-            <fieldset class="fm_container fm_section">
+            <fieldset class="fm_container fm_section" id=${intf.options.anchor || ''}>
                 ${label ? html`<div class="fm_legend" style=${makeLegendStyle(options)}>
                                    <span @click=${e => handleSectionClick(e, label)}>${label}</span></div>` : ''}
                 ${deploy ? widgets.map(intf => intf.render()) : ''}
@@ -1228,7 +1268,15 @@ function FormBuilder(state, model, readonly = false) {
         let intf = makeWidget('section', label, render, options);
         addWidget(intf);
 
-        captureWidgets(widgets, 'section', func, options);
+        options = Object.assign({}, options);
+        options.anchor = null;
+
+        try {
+            section_depth++;
+            captureWidgets(widgets, 'section', func, options);
+        } finally {
+            section_depth--;
+        }
 
         return intf;
     };

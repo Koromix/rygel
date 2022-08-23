@@ -26,6 +26,7 @@ const goupile = new function() {
 
     let controller;
     let current_url;
+    let current_hash;
 
     this.start = async function() {
         let url = new URL(window.location.href);
@@ -471,8 +472,22 @@ const goupile = new function() {
         window.addEventListener('popstate', e => controller.go(null, window.location.href, { push_history: false }));
 
         util.interceptLocalAnchors((e, href) => {
-            let func = ui.wrapAction(e => controller.go(e, href));
+            let url = new URL(href, window.location.href);
+
+            current_hash = url.hash;
+
+            let func = ui.wrapAction(e => controller.go(e, url));
             func(e);
+
+            if (current_hash) {
+                let el = document.querySelector(current_hash);
+
+                if (el) {
+                    el.scrollIntoView();
+                } else {
+                    window.scrollTo(0, 0);
+                }
+            }
 
             e.preventDefault();
         });
@@ -924,13 +939,25 @@ const goupile = new function() {
             url = url.toString();
         }
 
-        if (push) {
-            window.history.pushState(null, null, url);
-        } else {
-            window.history.replaceState(null, null, url);
-        }
-
         current_url = url;
+
+        setTimeout(() => {
+            if (current_hash) {
+                let el = document.querySelector(current_hash);
+
+                if (el) {
+                    url += current_hash;
+                } else {
+                    current_hash = null;
+                }
+            }
+
+            if (push) {
+                window.history.pushState(null, null, url);
+            } else {
+                window.history.replaceState(null, null, url);
+            }
+        }, 0);
     };
 
     this.encryptSymmetric = function(obj, ns) {
