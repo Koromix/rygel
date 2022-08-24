@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 52;
+const int InstanceVersion = 53;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -1536,9 +1536,103 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 52: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_entries_a;
+                    DROP INDEX rec_entries_f;
+                    DROP INDEX rec_entries_u;
+                    DROP INDEX rec_fragments_uv;
+
+                    ALTER TABLE rec_entries RENAME TO rec_entries_BAK;
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+
+                    CREATE TABLE rec_entries (
+                        ulid TEXT NOT NULL,
+                        form TEXT NOT NULL,
+                        sequence INTEGER NOT NULL,
+                        hid BLOB,
+                        parent_ulid TEXT,
+                        parent_version INTEGER,
+                        anchor INTEGER NOT NULL,
+                        root_ulid TEXT NOT NULL,
+                        deleted INTEGER CHECK(deleted IN (0, 1)) NOT NULL
+                    );
+                    CREATE INDEX rec_entries_f ON rec_entries (form);
+                    CREATE UNIQUE INDEX rec_entries_fs ON rec_entries (form, sequence);
+                    CREATE UNIQUE INDEX rec_entries_u ON rec_entries (ulid);
+                    CREATE INDEX rec_entries_a ON rec_entries (anchor);
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ulid TEXT NOT NULL REFERENCES rec_entries (ulid) DEFERRABLE INITIALLY DEFERRED,
+                        version INTEGER NOT NULL,
+                        type TEXT NOT NULL,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime TEXT NOT NULL,
+                        fs INTEGER NOT NULL,
+                        page TEXT,
+                        json BLOB
+                    );
+                    CREATE UNIQUE INDEX rec_fragments_uv ON rec_fragments (ulid, version);
+
+                    INSERT INTO rec_entries (ulid, form, sequence, hid, parent_ulid, parent_version, anchor, root_ulid, deleted)
+                        SELECT ulid, form, IIF(typeof(hid) = 'integer', hid, ulid), hid, parent_ulid, parent_version, anchor, root_ulid, deleted FROM rec_entries_BAK;
+                    INSERT INTO rec_fragments (anchor, ulid, version, type, userid, username, mtime, fs, page, json)
+                        SELECT anchor, ulid, version, type, userid, username, mtime, fs, page, json FROM rec_fragments_BAK;
+
+                    DROP TABLE rec_fragments_BAK;
+                    DROP TABLE rec_entries_BAK;
+
+                    UPDATE seq_counters SET type = 'record' WHERE type = 'hid';
+                )");
+                if (!success)
+                    return false;
+
+                sq_Statement stmt;
+                if (!db->Prepare(R"(SELECT rowid, form FROM rec_entries
+                                    WHERE typeof(sequence) == 'text'
+                                    ORDER BY rowid)", &stmt))
+                    return false;
+
+                HashMap<const char *, int64_t> sequences;
+
+                while (stmt.Step()) {
+                    int64_t rowid = sqlite3_column_int64(stmt, 0);
+                    const char *form = (const char *)sqlite3_column_text(stmt, 1);
+
+                    for (;;) {
+                        auto ptr = sequences.table.TrySetDefault(form).first;
+
+                        if (!ptr->value) {
+                            ptr->key = DuplicateString(form, &temp_alloc).ptr;
+                        }
+
+                        int64_t counter = ++ptr->value;
+
+                        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+                        RG_DEFER { PopLogFilter(); };
+
+                        if (db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1", rowid, counter))
+                            break;
+                        if (sqlite3_errcode(*db) != SQLITE_CONSTRAINT) {
+                            LogError("SQLite Error: %1", sqlite3_errmsg(*db));
+                            return false;
+                        }
+                    }
+                }
+                if (!stmt.IsValid())
+                    return false;
+
+                for (const auto &it: sequences.table) {
+                    if (!db->Run("UPDATE seq_counters SET counter = max(counter, ?2) WHERE type = 'record' AND key = ?1", it.key, it.value))
+                        return false;
+                }
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 52);
+            RG_STATIC_ASSERT(InstanceVersion == 53);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

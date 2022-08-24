@@ -63,7 +63,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     {
         LocalArray<char, 1024> sql;
 
-        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT e.rowid, e.ulid, e.hid, e.form, e.anchor,
+        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT e.rowid, e.ulid, e.form, e.sequence, e.hid, e.anchor,
                                                       e.parent_ulid, e.parent_version, f.anchor, f.version,
                                                       f.type, f.username, f.mtime, f.fs, f.page, f.json FROM rec_entries e
                                                LEFT JOIN rec_fragments f ON (f.ulid = e.ulid)
@@ -93,38 +93,39 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
             json.StartObject();
 
             json.Key("ulid"); json.String((const char *)sqlite3_column_text(stmt, 1));
-            json.Key("hid"); switch (sqlite3_column_type(stmt, 2)) {
+            json.Key("form"); json.String((const char *)sqlite3_column_text(stmt, 2));
+            json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 3));
+            json.Key("hid"); switch (sqlite3_column_type(stmt, 4)) {
                 case SQLITE_NULL: { json.Null(); } break;
-                case SQLITE_INTEGER: { json.Int64(sqlite3_column_int64(stmt, 2)); } break;
-                default: { json.String((const char *)sqlite3_column_text(stmt, 2)); } break;
+                case SQLITE_INTEGER: { json.Int64(sqlite3_column_int64(stmt, 4)); } break;
+                default: { json.String((const char *)sqlite3_column_text(stmt, 4)); } break;
             }
-            json.Key("form"); json.String((const char *)sqlite3_column_text(stmt, 3));
-            json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 4));
-            if (sqlite3_column_type(stmt, 5) != SQLITE_NULL) {
+            json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 5));
+            if (sqlite3_column_type(stmt, 6) != SQLITE_NULL) {
                 json.Key("parent"); json.StartObject();
-                json.Key("ulid"); json.String((const char *)sqlite3_column_text(stmt, 5));
-                json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 6));
+                json.Key("ulid"); json.String((const char *)sqlite3_column_text(stmt, 6));
+                json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 7));
                 json.EndObject();
             } else {
                 json.Key("parent"); json.Null();
             }
 
             json.Key("fragments"); json.StartArray();
-            if (sqlite3_column_type(stmt, 7) != SQLITE_NULL) {
+            if (sqlite3_column_type(stmt, 8) != SQLITE_NULL) {
                 do {
                     json.StartObject();
 
-                    const char *type = (const char *)sqlite3_column_text(stmt, 9);
+                    const char *type = (const char *)sqlite3_column_text(stmt, 10);
 
-                    json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 7));
-                    json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 8));
+                    json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 8));
+                    json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 9));
                     json.Key("type"); json.String(type);
-                    json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 10));
-                    json.Key("mtime"); json.String((const char *)sqlite3_column_text(stmt, 11));
-                    json.Key("fs"); json.Int64(sqlite3_column_int64(stmt, 12));
+                    json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 11));
+                    json.Key("mtime"); json.String((const char *)sqlite3_column_text(stmt, 12));
+                    json.Key("fs"); json.Int64(sqlite3_column_int64(stmt, 13));
                     if (TestStr(type, "save")) {
-                        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 13));
-                        json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 14));
+                        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 14));
+                        json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 15));
                     }
 
                     json.EndObject();
@@ -428,9 +429,9 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                 // Insert or update record entry (if needed)
                 if (RG_LIKELY(updated)) {
-                    if (!instance->db->Run(R"(INSERT INTO rec_entries (ulid, hid, form, parent_ulid,
+                    if (!instance->db->Run(R"(INSERT INTO rec_entries (ulid, sequence, hid, form, parent_ulid,
                                                                        parent_version, root_ulid, anchor, deleted)
-                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                                              VALUES (?1, -1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
                                               ON CONFLICT (ulid) DO UPDATE SET hid = IFNULL(excluded.hid, hid),
                                                                                anchor = excluded.anchor,
                                                                                deleted = excluded.deleted)",
@@ -439,12 +440,12 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                           root_ulid, anchor, record.deleted))
                         return false;
 
-                    if (sqlite3_changes(*instance->db) && !record.hid) {
+                    if (sqlite3_changes(*instance->db)) {
                         int64_t rowid = sqlite3_last_insert_rowid(*instance->db);
 
                         sq_Statement stmt;
                         if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
-                                                      VALUES ('hid', ?1, 1)
+                                                      VALUES ('record', ?1, 1)
                                                       ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
                                                       RETURNING counter)", &stmt))
                             return false;
@@ -457,9 +458,15 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                         int64_t counter = sqlite3_column_int64(stmt, 0);
 
-                        if (!instance->db->Run("UPDATE rec_entries SET hid = ?2 WHERE rowid = ?1",
-                                               rowid, counter))
-                            return false;
+                        if (record.hid) {
+                            if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1",
+                                                   rowid, counter))
+                                return false;
+                        } else {
+                            if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2, hid = ?2 WHERE rowid = ?1",
+                                                   rowid, counter, counter))
+                                return false;
+                        }
                     }
                 }
             }
