@@ -791,8 +791,6 @@ void bk_Parser::PreparseFunction(Size proto_pos, bool record)
     // We don't know anything about it yet!
     func->impure = true;
     func->side_effects = true;
-    func->earliest_ref_pos = RG_SIZE_MAX;
-    func->earliest_ref_addr = RG_SIZE_MAX;
 
     // Publish function
     {
@@ -1879,14 +1877,6 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
 
                                 bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
 
-                                if (current_func && current_func != func) {
-                                    func->earliest_ref_pos = std::min(func->earliest_ref_pos, current_func->earliest_ref_pos);
-                                    func->earliest_ref_addr = std::min(func->earliest_ref_addr, current_func->earliest_ref_addr);
-                                } else {
-                                    func->earliest_ref_pos = std::min(func->earliest_ref_pos, var_pos);
-                                    func->earliest_ref_addr = std::min(func->earliest_ref_addr, ir.len);
-                                }
-
                                 if (!call) {
                                     if (RG_UNLIKELY(func->overload_next != func)) {
                                         MarkError(var_pos, "Ambiguous reference to overloaded function '%1'", var->name);
@@ -2831,14 +2821,6 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 
 void bk_Parser::EmitLoad(bk_VariableInfo *var)
 {
-    if (RG_UNLIKELY(var->scope == bk_VariableInfo::Scope::Global &&
-                    current_func && current_func->earliest_ref_addr < var->ready_addr)) {
-        MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' is referenced before global variable '%2' exists",
-                  current_func->name, var->name);
-        Hint(current_func->earliest_ref_pos, "Function reference is here (it could be indirect)");
-        HintDefinition(&var, "Variable '%1' is defined here", var->name);
-    }
-
     if (var->type->size == 1) {
         // We use std::swap on IR when we parse functions
         Span<const bk_Instruction> var_ir = (current_func && var->scope != bk_VariableInfo::Scope::Local) ? current_func->ir : program->ir;
