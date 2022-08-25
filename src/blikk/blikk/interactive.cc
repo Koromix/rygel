@@ -66,7 +66,7 @@ begin
     let __result =
 )", "<intro>", &intro);
         success &= bk_Tokenize(R"(
-    if typeOf(__result) != Null do debug(__result)
+    if typeOf(__result) != Null do __debug(__result)
 end
 )", "<outro>", &outro);
 
@@ -139,6 +139,15 @@ int RunInteractive(const Config &config)
     BK_ADD_FUNCTION(compiler, "quit()", 0, {
         run = false;
         vm->SetInterrupt();
+    });
+    BK_ADD_FUNCTION(compiler, "__debug(...)", 0, {
+        bk_DoPrint(vm, args, true); PrintLn();
+
+        if (args.len && args[0].type->primitive == bk_PrimitiveKind::Function &&
+                        (TestStr(args[1].func->prototype, "quit()") ||
+                         TestStr(args[1].func->prototype, "exit()"))) {
+            PrintLn("%!D..Use quit() or exit() to exit%!0");
+        }
     });
 
     // Make sure the prelude runs successfully

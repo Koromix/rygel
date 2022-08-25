@@ -25,6 +25,45 @@ void bk_ImportAll(bk_Compiler *out_compiler)
     bk_ImportMath(out_compiler);
 }
 
+void bk_ImportPrint(bk_Compiler *out_compiler)
+{
+    BK_ADD_FUNCTION(*out_compiler, "print(...)", 0, { bk_DoPrint(vm, args, false); });
+    BK_ADD_FUNCTION(*out_compiler, "printLn(...)", 0, { bk_DoPrint(vm, args, false); PrintLn(); });
+    BK_ADD_FUNCTION(*out_compiler, "debug(...)", 0, { bk_DoPrint(vm, args, true); PrintLn(); });
+}
+
+void bk_ImportMath(bk_Compiler *out_compiler)
+{
+    out_compiler->AddGlobal("PI", bk_FloatType, {{.d = 3.141592653589793}});
+    out_compiler->AddGlobal("E", bk_FloatType, {{.d = 2.718281828459045}});
+    out_compiler->AddGlobal("TAU", bk_FloatType, {{.d = 6.283185307179586}});
+
+    BK_ADD_FUNCTION(*out_compiler, "isNormal(Float): Bool", (int)bk_FunctionFlag::Pure, { ret[0].b = std::isnormal(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "isInfinity(Float): Bool", (int)bk_FunctionFlag::Pure, { ret[0].b = std::isinf(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "isNaN(Float): Bool", (int)bk_FunctionFlag::Pure, { ret[0].b = std::isnan(args[0].d); });
+
+    BK_ADD_FUNCTION(*out_compiler, "ceil(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = ceil(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "floor(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = floor(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "round(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = round(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "abs(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = fabs(args[0].d); });
+
+    BK_ADD_FUNCTION(*out_compiler, "exp(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = exp(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "ln(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = log(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "log2(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = log2(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "log10(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = log10(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "pow(Float, Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = pow(args[0].d, args[1].d); });
+    BK_ADD_FUNCTION(*out_compiler, "sqrt(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = sqrt(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "cbrt(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = cbrt(args[0].d); });
+
+    BK_ADD_FUNCTION(*out_compiler, "cos(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = cos(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "sin(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = sin(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "tan(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = tan(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "acos(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = acos(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "asin(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = asin(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "atan(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = atan(args[0].d); });
+    BK_ADD_FUNCTION(*out_compiler, "atan2(Float, Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = atan2(args[0].d, args[1].d); });
+}
+
 static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offset, bool quote)
 {
     switch (type->primitive) {
@@ -113,7 +152,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
     return offset;
 }
 
-static void DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, bool quote)
+void bk_DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, bool quote)
 {
     for (Size i = 0; i < args.len;) {
         const bk_TypeInfo *type = args[i++].type;
@@ -126,45 +165,6 @@ static void DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, b
 
         i += type->size;
     }
-}
-
-void bk_ImportPrint(bk_Compiler *out_compiler)
-{
-    BK_ADD_FUNCTION(*out_compiler, "print(...)", 0, { DoPrint(vm, args, false); });
-    BK_ADD_FUNCTION(*out_compiler, "printLn(...)", 0, { DoPrint(vm, args, false); PrintLn(); });
-    BK_ADD_FUNCTION(*out_compiler, "debug(...)", 0, { DoPrint(vm, args, true); PrintLn(); });
-}
-
-void bk_ImportMath(bk_Compiler *out_compiler)
-{
-    out_compiler->AddGlobal("PI", bk_FloatType, {{.d = 3.141592653589793}});
-    out_compiler->AddGlobal("E", bk_FloatType, {{.d = 2.718281828459045}});
-    out_compiler->AddGlobal("TAU", bk_FloatType, {{.d = 6.283185307179586}});
-
-    BK_ADD_FUNCTION(*out_compiler, "isNormal(Float): Bool", (int)bk_FunctionFlag::Pure, { ret[0].b = std::isnormal(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "isInfinity(Float): Bool", (int)bk_FunctionFlag::Pure, { ret[0].b = std::isinf(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "isNaN(Float): Bool", (int)bk_FunctionFlag::Pure, { ret[0].b = std::isnan(args[0].d); });
-
-    BK_ADD_FUNCTION(*out_compiler, "ceil(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = ceil(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "floor(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = floor(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "round(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = round(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "abs(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = fabs(args[0].d); });
-
-    BK_ADD_FUNCTION(*out_compiler, "exp(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = exp(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "ln(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = log(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "log2(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = log2(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "log10(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = log10(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "pow(Float, Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = pow(args[0].d, args[1].d); });
-    BK_ADD_FUNCTION(*out_compiler, "sqrt(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = sqrt(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "cbrt(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = cbrt(args[0].d); });
-
-    BK_ADD_FUNCTION(*out_compiler, "cos(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = cos(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "sin(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = sin(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "tan(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = tan(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "acos(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = acos(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "asin(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = asin(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "atan(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = atan(args[0].d); });
-    BK_ADD_FUNCTION(*out_compiler, "atan2(Float, Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = atan2(args[0].d, args[1].d); });
 }
 
 }
