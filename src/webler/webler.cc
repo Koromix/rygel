@@ -251,7 +251,7 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
 
     Print(&st, R"(
                     <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
-                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub Profile</a></li>
+                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub</a></li>
                 </ul>
             </nav>
         </div>
