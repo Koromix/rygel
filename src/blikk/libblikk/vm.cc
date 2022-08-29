@@ -81,12 +81,18 @@ bool bk_VirtualMachine::Run(unsigned int flags)
             DISPATCH(++pc);
         }
 
-        CASE(PushValue): {
+        CASE(Push): {
             stack.Append({.i = inst->u.i});
             DISPATCH(++pc);
         }
         CASE(PushZero): {
             stack.AppendDefault(inst->u.i);
+            DISPATCH(++pc);
+        }
+        CASE(PushBig): {
+            Size ptr = stack.ptr[--stack.len].i;
+            Span<bk_PrimitiveValue> data = program->ro.Take(ptr, inst->u.i);
+            stack.Append(data);
             DISPATCH(++pc);
         }
         CASE(Pop): {
@@ -694,7 +700,7 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
           FmtHex(pc).Pad0(-6), FmtArg("  ").Repeat((int)frames.len - 1), bk_OpcodeNames[(int)inst.code]);
 
     switch (inst.code) {
-        case bk_Opcode::PushValue: {
+        case bk_Opcode::Push: {
             switch (inst.primitive) {
                 case bk_PrimitiveKind::Null: { RG_UNREACHABLE(); } break;
                 case bk_PrimitiveKind::Boolean: { PrintLn(stderr, " %!Y..[Bool]%!0 %1 %!M..>%2%!0", inst.u.b, stack.len); } break;
@@ -709,7 +715,8 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
                 case bk_PrimitiveKind::Opaque: { PrintLn(stderr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u.opaque).Pad0(-RG_SIZE(void *) * 2), stack.len); } break;
             }
         } break;
-        case bk_Opcode::PushZero: { PrintLn(stderr, " %!Y..[%1]%!0 |%2", bk_PrimitiveKindNames[(int)inst.primitive], inst.u.i); } break;
+        case bk_Opcode::PushZero:
+        case bk_Opcode::PushBig: { PrintLn(stderr, " %!Y..[%1]%!0 |%2", bk_PrimitiveKindNames[(int)inst.primitive], inst.u.i); } break;
         case bk_Opcode::Pop: { PrintLn(stderr, " %1", inst.u.i); } break;
 
         case bk_Opcode::Lea: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", inst.u.i, stack.len); } break;

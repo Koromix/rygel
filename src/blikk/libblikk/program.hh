@@ -265,6 +265,7 @@ struct bk_Program {
 
     BucketArray<bk_FunctionInfo> functions;
     BucketArray<bk_VariableInfo> variables;
+    HeapArray<bk_PrimitiveValue> ro;
 
     HashTable<const char *, const bk_TypeInfo *> types_map;
     HashTable<const char *, bk_FunctionInfo *> functions_map;
