@@ -538,7 +538,6 @@ bool bk_VirtualMachine::Run(unsigned int flags)
 
                 frame = frames.AppendDefault();
                 frame->func = func;
-                frame->pc = 0;
                 frame->direct = false;
 
                 if (func->mode == bk_FunctionInfo::Mode::Blikk) {
@@ -547,7 +546,7 @@ bool bk_VirtualMachine::Run(unsigned int flags)
                     bp = frame->bp;
                     ir = func->ir;
 
-                    DISPATCH(pc = 0);
+                    DISPATCH(pc = 1); // Skip NOP
                 } else {
                     RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
@@ -601,7 +600,6 @@ bool bk_VirtualMachine::Run(unsigned int flags)
 
             frame = frames.AppendDefault();
             frame->func = func;
-            frame->pc = 0;
             frame->direct = true;
 
             if (func->mode == bk_FunctionInfo::Mode::Blikk) {
@@ -610,7 +608,7 @@ bool bk_VirtualMachine::Run(unsigned int flags)
                 bp = frame->bp;
                 ir = func->ir;
 
-                DISPATCH(pc = 0);
+                DISPATCH(pc = 1); // Skip NOP
             } else {
                 RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
