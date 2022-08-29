@@ -2550,23 +2550,34 @@ void bk_Parser::ParseArraySubscript()
             }
         }
 
-        // Try to check index statically
-        if (ir[ir.len - 1].code == bk_Opcode::Push && show_errors) {
-            RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Integer);
-            int64_t idx = ir[ir.len - 1].u.i;
-
-            if (idx < 0 || idx >= array_type->len) {
-                MarkError(idx_pos, "Index is out of range: %1 (array length %2)", idx, array_type->len);
-            }
-        }
-
         // Compute array index
-        ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
-        if (unit_type->size != 1) {
-            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = unit_type->size}});
-            ir.Append({bk_Opcode::MultiplyInt});
+        if (ir[ir.len - 1].code == bk_Opcode::Push) {
+            int64_t idx = ir[ir.len - 1].u.i;
+            int64_t offset = idx * unit_type->size;
+
+            if (show_errors) {
+                RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Integer);
+
+                if (idx < 0 || idx >= array_type->len) {
+                    MarkError(idx_pos, "Index is out of range: %1 (array length %2)", idx, array_type->len);
+                }
+            }
+
+            if (ir[ir.len - 2].code == bk_Opcode::Lea ||
+                    ir[ir.len - 2].code == bk_Opcode::LeaRel) {
+                TrimInstructions(1);
+                ir[ir.len - 1].u.i += offset;
+            } else {
+                ir[ir.len - 1].u.i = offset;
+            }
+        } else {
+            ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
+            if (unit_type->size != 1) {
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = unit_type->size}});
+                ir.Append({bk_Opcode::MultiplyInt});
+            }
+            ir.Append({bk_Opcode::AddInt});
         }
-        ir.Append({bk_Opcode::AddInt});
 
         // Load value
         stack[stack.len - 1].indirect_addr = ir.len;
@@ -2623,8 +2634,13 @@ void bk_Parser::ParseRecordDot()
 
     // Resolve member
     if (member->offset) {
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = member->offset}});
-        ir.Append({bk_Opcode::AddInt});
+        if (ir[ir.len - 1].code == bk_Opcode::Lea ||
+                ir[ir.len - 1].code == bk_Opcode::LeaRel) {
+            ir[ir.len - 1].u.i += member->offset;
+        } else {
+            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = member->offset}});
+            ir.Append({bk_Opcode::AddInt});
+        }
     }
 
     // Load value
