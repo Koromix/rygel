@@ -130,7 +130,7 @@ private:
     void EmitIntrinsic(const char *name, Size call_pos, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(bk_VariableInfo *var);
 
-    const bk_TypeInfo *ParseTypeExpression();
+    const bk_TypeInfo *ParseType();
 
     void FoldInstruction(Size count, const bk_TypeInfo *out_type);
     void DiscardResult(Size discard);
@@ -679,7 +679,7 @@ void bk_Parser::PreparseFunction(Size proto_pos, bool record)
             }
 
             ConsumeToken(bk_TokenKind::Colon);
-            var->type = ParseTypeExpression();
+            var->type = ParseType();
 
             if (RG_LIKELY(func->params.Available())) {
                 bk_FunctionInfo::Parameter *param = func->params.AppendDefault();
@@ -748,7 +748,7 @@ void bk_Parser::PreparseFunction(Size proto_pos, bool record)
         Fmt(&signature_buf, ": %1", record_type->signature);
         Fmt(&prototype_buf, ": %1", record_type->signature);
     } else if (MatchToken(bk_TokenKind::Colon)) {
-        type_buf.ret_type = ParseTypeExpression();
+        type_buf.ret_type = ParseType();
 
         if (type_buf.ret_type != bk_NullType) {
             Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
@@ -1266,7 +1266,7 @@ void bk_Parser::ParseLet()
 
         // Don't assign to var->type yet, so that ParseExpression() knows it
         // cannot use this variable.
-        const bk_TypeInfo *type = ParseTypeExpression();
+        const bk_TypeInfo *type = ParseType();
 
         if (MatchToken(bk_TokenKind::Assign)) {
             SkipNewLines();
@@ -2400,7 +2400,7 @@ const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
         for (;;) {
             SkipNewLines();
 
-            const bk_TypeInfo *type = ParseTypeExpression();
+            const bk_TypeInfo *type = ParseType();
 
             if (RG_LIKELY(type_buf.params.Available())) {
                 type_buf.params.Append(type);
@@ -2423,7 +2423,7 @@ const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
 
     // Return type
     if (MatchToken(bk_TokenKind::Colon)) {
-        type_buf.ret_type = ParseTypeExpression();
+        type_buf.ret_type = ParseType();
 
         if (type_buf.ret_type != bk_NullType) {
             Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
@@ -2492,7 +2492,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
             type_buf.unit_type = bk_NullType;
         }
     } else {
-        type_buf.unit_type = ParseTypeExpression();
+        type_buf.unit_type = ParseType();
     }
     type_buf.init0 = type_buf.unit_type->init0;
     type_buf.size = type_buf.len * type_buf.unit_type->size;
@@ -2832,7 +2832,7 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
     stack.Append({var->type, var});
 }
 
-const bk_TypeInfo *bk_Parser::ParseTypeExpression()
+const bk_TypeInfo *bk_Parser::ParseType()
 {
     Size type_pos = pos;
 
