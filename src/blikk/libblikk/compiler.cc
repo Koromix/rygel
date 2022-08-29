@@ -2885,11 +2885,8 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
     ir.Append({bk_Opcode::End, {}, {.i = out_type->size}});
 
     folder.frames.RemoveFrom(1);
-    folder.frames[0].pc = ir.len - 2;
+    folder.frames[0].pc = ir.len - 2 - count;
     folder.stack.RemoveFrom(0);
-    for (Size i = count - 1; i >= 0; i--) {
-        folder.stack.Append(ir[ir.len - 3 - i].u);
-    }
 
     bool folded = folder.Run((int)bk_RunFlag::HideErrors);
 
