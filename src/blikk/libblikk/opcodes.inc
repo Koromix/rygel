@@ -18,8 +18,8 @@
 OPCODE(Nop)
 
 // Immediate values
-OPCODE(Push)
-OPCODE(Push0)
+OPCODE(PushImm)
+OPCODE(PushZero)
 OPCODE(Pop)
 
 // Load/store
