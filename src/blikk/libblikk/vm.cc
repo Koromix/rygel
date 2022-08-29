@@ -115,8 +115,7 @@ bool bk_VirtualMachine::Run(unsigned int flags)
             DISPATCH(++pc);
         }
         CASE(LoadIndirect): {
-            Size ptr = stack[stack.len - 1].i;
-            stack.len -= 1;
+            Size ptr = stack.ptr[--stack.len].i;
             for (Size i = 0; i < inst->u.i; i++) {
                 stack.Append({.i = stack[ptr + i].i});
             }

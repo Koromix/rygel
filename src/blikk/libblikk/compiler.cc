@@ -134,6 +134,7 @@ private:
 
     void FoldInstruction(Size count, const bk_TypeInfo *out_type);
     void DiscardResult(Size discard);
+    bool IsResultConstant(Size size);
 
     void EmitPop(int64_t count);
     void EmitReturn(Size size);
@@ -569,6 +570,7 @@ bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
     var->name = InternString(name);
     var->type = type;
     var->mut = mut;
+    var->constant = !mut;
     var->scope = scope;
 
     var->offset = var_offset;
@@ -1261,6 +1263,8 @@ void bk_Parser::ParseLet()
     if (MatchToken(bk_TokenKind::Assign)) {
         SkipNewLines();
         slot = ParseExpression(false, true);
+
+        var->constant = IsResultConstant(slot.type->size);
     } else {
         ConsumeToken(bk_TokenKind::Colon);
 
@@ -1278,6 +1282,8 @@ void bk_Parser::ParseLet()
                 MarkError(expr_pos - 1, "Cannot assign '%1' value to variable '%2' (defined as '%3')",
                           slot.type->signature, var->name, type->signature);
             }
+
+            var->constant = IsResultConstant(slot.type->size);
         } else {
             if (RG_UNLIKELY(!type->init0)) {
                  MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitly initialized",
@@ -1286,6 +1292,8 @@ void bk_Parser::ParseLet()
 
             ir.Append({bk_Opcode::PushZero, type->primitive, {.i = type->size}});
             slot = {type};
+
+            var->constant = true;
         }
     }
 
@@ -2194,7 +2202,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
         if (current_func) {
             current_func->side_effects |= (dest.var->scope != bk_VariableInfo::Scope::Local);
         }
-        dest.var->changes = true;
+        dest.var->constant = false;
 
         if (dest.indirect_addr) {
             // In order for StoreIndirectK to work, the variable address must remain on the stack.
@@ -2821,14 +2829,15 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 void bk_Parser::EmitLoad(bk_VariableInfo *var)
 {
     if (var->type->size == 1) {
-        // We use std::swap on IR when we parse functions
-        Span<const bk_Instruction> var_ir = (current_func && var->scope != bk_VariableInfo::Scope::Local) ? current_func->ir : program->ir;
-
-        bool stable = !var->changes && (!var->mut || var->scope == bk_VariableInfo::Scope::Local) &&
-                      var->ready_addr > 0 &&
-                      var_ir[var->ready_addr - 1].code == bk_Opcode::PushImmediate;
+        // Mutable global variables can change at any time, unlike local variables which can only change linearily.
+        // The constant status of global variable will only be fully known once all the code has been parsed.
+        bool stable = var->constant && (!var->mut || var->scope == bk_VariableInfo::Scope::Local);
 
         if (stable) {
+            // We use std::swap on IR when we parse functions
+            Span<const bk_Instruction> var_ir =
+                (current_func && var->scope != bk_VariableInfo::Scope::Local) ? current_func->ir : program->ir;
+
             bk_Instruction inst = var_ir[var->ready_addr - 1];
             ir.Append(inst);
         } else {
@@ -2954,6 +2963,20 @@ void bk_Parser::DiscardResult(Size size)
             } break;
         }
     }
+}
+
+bool bk_Parser::IsResultConstant(Size size)
+{
+    for (Size i = 0; size > 0; i++) {
+        switch (ir[ir.len - 1 - i].code) {
+            case bk_Opcode::PushImm: { size--; } break;
+            case bk_Opcode::PushZero: { size -= ir[ir.len - 1].u.i; } break;
+
+            default: return false;
+        }
+    }
+
+    return true;
 }
 
 void bk_Parser::EmitPop(int64_t count)
