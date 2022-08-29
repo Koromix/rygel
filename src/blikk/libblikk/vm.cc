@@ -81,7 +81,7 @@ bool bk_VirtualMachine::Run(unsigned int flags)
             DISPATCH(++pc);
         }
 
-        CASE(PushImm): {
+        CASE(PushValue): {
             stack.Append({.i = inst->u.i});
             DISPATCH(++pc);
         }
@@ -696,7 +696,7 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
           FmtHex(pc).Pad0(-6), FmtArg("  ").Repeat((int)frames.len - 1), bk_OpcodeNames[(int)inst.code]);
 
     switch (inst.code) {
-        case bk_Opcode::PushImm: {
+        case bk_Opcode::PushValue: {
             switch (inst.primitive) {
                 case bk_PrimitiveKind::Null: { RG_UNREACHABLE(); } break;
                 case bk_PrimitiveKind::Boolean: { PrintLn(stderr, " %!Y..[Bool]%!0 %1 %!M..>%2%!0", inst.u.b, stack.len); } break;

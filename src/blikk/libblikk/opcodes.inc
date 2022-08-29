@@ -18,7 +18,7 @@
 OPCODE(Nop)
 
 // Immediate values
-OPCODE(PushImm)
+OPCODE(PushValue)
 OPCODE(PushZero)
 OPCODE(Pop)
 
