@@ -20,8 +20,7 @@ namespace RG {
 
 enum class bk_DiagnosticType {
     Error,
-    ErrorHint,
-    Warning
+    Hint
 };
 
 template <typename... Args>
@@ -93,7 +92,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             Log(LogLevel::Error, ctx_buf, "%1", msg_buf.data);
         } break;
 
-        case bk_DiagnosticType::ErrorHint: {
+        case bk_DiagnosticType::Hint: {
             char ctx_buf[512];
             Fmt(ctx_buf, "    %1(%2:%3)", filename, line, column + 1);
 
@@ -104,19 +103,6 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n            |  %1%2%!D..^%!0", align, FmtArg(' ').Repeat(align_more)).len;
 
             Log(LogLevel::Info, ctx_buf, "%1", msg_buf.data);
-        } break;
-
-        case bk_DiagnosticType::Warning: {
-            char ctx_buf[512];
-            Fmt(ctx_buf, "%1(%2:%3)", filename, line, column + 1);
-
-            LocalArray<char, 2048> msg_buf;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n%1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n        |  %1%2%!M..^%!0", align, FmtArg(' ').Repeat(align_more)).len;
-
-            Log(LogLevel::Warning, ctx_buf, "%!M..Warning:%!0 %1", msg_buf.data);
         } break;
     }
 }
@@ -135,22 +121,13 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, const char *fmt, Args... args)
             Log(LogLevel::Error, "Error", "%1", msg_buf.data);
         } break;
 
-        case bk_DiagnosticType::ErrorHint: {
+        case bk_DiagnosticType::Hint: {
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!0").len;
 
             Log(LogLevel::Info, "    Hint", "%1", msg_buf.data);
-        } break;
-
-        case bk_DiagnosticType::Warning: {
-            LocalArray<char, 2048> msg_buf;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!0").len;
-
-            Log(LogLevel::Warning, "Warning", "%1", msg_buf.data);
         } break;
     }
 }

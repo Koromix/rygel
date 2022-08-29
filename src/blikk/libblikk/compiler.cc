@@ -205,12 +205,12 @@ private:
                 int line = tokens[std::min(pos, tokens.len - 1)].line;
 
                 if (offset <= file->code.len) {
-                    bk_ReportDiagnostic(bk_DiagnosticType::ErrorHint, file->code, file->filename, line, offset, fmt, args...);
+                    bk_ReportDiagnostic(bk_DiagnosticType::Hint, file->code, file->filename, line, offset, fmt, args...);
                 } else {
-                    bk_ReportDiagnostic(bk_DiagnosticType::ErrorHint, fmt, args...);
+                    bk_ReportDiagnostic(bk_DiagnosticType::Hint, fmt, args...);
                 }
             } else {
-                bk_ReportDiagnostic(bk_DiagnosticType::ErrorHint, fmt, args...);
+                bk_ReportDiagnostic(bk_DiagnosticType::Hint, fmt, args...);
             }
         }
     }
@@ -242,23 +242,6 @@ private:
         if (warn_case) {
             Hint(-1, "Identifiers are case-sensitive (e.g. foo and FOO are different)");
         }
-    }
-
-    template <typename... Args>
-    void Warn(Size pos, const char *fmt, Args... args)
-    {
-        RG_ASSERT(pos >= 0);
-
-        Size offset = (pos < tokens.len) ? tokens[pos].offset : file->code.len;
-        int line = tokens[std::min(pos, tokens.len - 1)].line;
-
-        if (offset <= file->code.len) {
-            bk_ReportDiagnostic(bk_DiagnosticType::Warning, file->code, file->filename, line, offset, fmt, args...);
-        } else {
-            bk_ReportDiagnostic(bk_DiagnosticType::Warning, fmt, args...);
-        }
-
-        show_hints = true;
     }
 };
 
@@ -931,7 +914,7 @@ bool bk_Parser::ParseBlock(bool end_with_else)
             break;
 
         if (RG_UNLIKELY(has_return && !issued_unreachable)) {
-            Warn(pos, "Unreachable statement");
+            MarkError(pos, "Unreachable statement");
             Hint(-1, "Code after return statement can never run");
 
             issued_unreachable = true;
