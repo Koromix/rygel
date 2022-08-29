@@ -2484,7 +2484,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
         RG_DEFER { RecurseDec(); };
 
         if (RG_LIKELY(recurse)) {
-            type_buf.unit_type = recurse ? ParseArrayType() : bk_NullType;
+            type_buf.unit_type = ParseArrayType();
         } else {
             MarkError(pos, "Excessive parsing depth (compiler limit)");
             Hint(-1, "Simplify surrounding code");
