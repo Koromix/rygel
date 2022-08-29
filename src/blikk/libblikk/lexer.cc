@@ -415,15 +415,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 tokens.Append({bk_TokenKind::String, line, offset, {.str = ret.first->ptr}});
             } break;
 
-            case '.': {
-                if (RG_UNLIKELY(next < code.len && (IsAsciiDigit(code[next]) ||
-                                                    code[next] == 'e' || code[next] == 'E'))) {
-                    // Support '.dddd' float literals
-                    TokenizeFloat();
-                } else {
-                    Token1(bk_TokenKind::Dot);
-                }
-            } break;
+            case '.': { Token1(bk_TokenKind::Dot); } break;
             case ':': { Token2('=', bk_TokenKind::Reassign) || Token1(bk_TokenKind::Colon); } break;
             case '(': { Token1(bk_TokenKind::LeftParenthesis); } break;
             case ')': { Token1(bk_TokenKind::RightParenthesis); } break;
@@ -594,6 +586,10 @@ void bk_Lexer::TokenizeFloat()
     }
     next = ret.ptr - code.ptr;
 
+    if (RG_UNLIKELY(code[next - 1] == '.')) {
+        MarkError(offset, "Malformed float number");
+        return;
+    }
     if (RG_UNLIKELY(next < code.len && IsAsciiAlpha(code[next]))) {
         MarkError(offset, "Malformed float number");
         return;

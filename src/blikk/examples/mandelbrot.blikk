@@ -17,8 +17,8 @@ characters[9] := "&"
 
 for i in 0:24
     for j in 0:80
-        let x = (toFloat(j) / 79.) * (x_max - x_min) + x_min
-        let y = (toFloat(i) / 24.) * (y_max - y_min) + y_min
+        let x = (toFloat(j) / 79.0) * (x_max - x_min) + x_min
+        let y = (toFloat(i) / 24.0) * (y_max - y_min) + y_min
 
         let mut pixel = " "
         let mut x0 = x
@@ -26,14 +26,14 @@ for i in 0:24
 
         for iter in 0:80
             let x1 = (x0 * x0) - (y0 * y0) + x
-            let y1 = 2. * x0 * y0 + y
+            let y1 = 2.0 * x0 * y0 + y
 
             x0 := x1
             y0 := y1
 
             # Stop if the point escaped.
             let d = (x0 * x0) + (y0 * y0)
-            if d > 4.
+            if d > 4.0
                 pixel := characters[iter / 8]
                 break
             end
