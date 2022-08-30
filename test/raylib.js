@@ -75,14 +75,26 @@ main();
 
 async function main() {
     try {
-        await test();
+        let display = false;
+
+        for (let i = 2; i < process.argv.length; i++) {
+            let arg = process.argv[i];
+
+            if (arg == '-d' || arg == '--display') {
+                display = true;
+            } else if (arg[0] == '-') {
+                throw new Error(`Unknown option '${process.argv[i]}'`)
+            }
+        }
+
+        await test(display);
     } catch (err) {
         console.error(err);
         process.exit(1);
     }
 }
 
-async function test() {
+async function test(display) {
     let lib_filename = __dirname + '/build/raylib' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
@@ -94,11 +106,20 @@ async function test() {
     const MeasureTextEx = lib.func('MeasureTextEx', Vector2, [Font, 'str', 'float', 'float']);
     const ImageDrawTextEx = lib.func('ImageDrawTextEx', 'void', [koffi.pointer(Image), Font, 'str', Vector2, 'float', 'float', Color]);
     const ExportImage = lib.func('ExportImage', 'bool', [Image, 'str']);
+    const DrawTextEx = lib.func('DrawTextEx', 'void', [Font, 'str', Vector2, 'float', 'float', Color]);
+    const BeginDrawing = lib.func('BeginDrawing', 'void', []);
+    const EndDrawing = lib.func('EndDrawing', 'void', []);
+    const ClearBackground = lib.func('ClearBackground', 'void', [Color]);
+    const LoadTextureFromImage = lib.func('LoadTextureFromImage', 'Texture', [Image]);
+    const DrawTexture = lib.func('DrawTexture', 'void', [Texture, 'int', 'int', Color]);
+    const WindowShouldClose = lib.func('WindowShouldClose', 'bool', []);
+    const PollInputEvents = lib.func('PollInputEvents', 'void', []);
 
     // We need to call InitWindow before using anything else (such as fonts)
     SetTraceLogLevel(4); // Warnings
-    SetWindowState(0x80); // Hidden
-    InitWindow(640, 480, "Raylib Test");
+    if (!display)
+        SetWindowState(0x80); // Hidden
+    InitWindow(800, 600, "Raylib Test");
 
     let img = GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
     let font = GetFontDefault();
@@ -120,6 +141,17 @@ async function test() {
         };
 
         ImageDrawTextEx(img, font, text, pos, 10, 1, color);
+    }
+
+    if (display) {
+        BeginDrawing();
+        ClearBackground({r: 0, g: 0, b: 0, a: 255});
+        let tex = LoadTextureFromImage(img);
+        DrawTexture(tex, 0, 0, {r: 255, g: 255, b: 255, a: 255});
+        EndDrawing();
+
+        while (!WindowShouldClose())
+            PollInputEvents();
     }
 
     // In theory we could directly checksum the image data, but we can't do it easily right now
