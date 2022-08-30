@@ -1262,6 +1262,8 @@ void bk_Parser::ParseLet()
         }
     }
 
+    Size prev_addr = ir.len;
+
     StackSlot slot;
     if (MatchToken(bk_TokenKind::Assign)) {
         SkipNewLines();
@@ -1308,10 +1310,8 @@ void bk_Parser::ParseLet()
 
     var->type = slot.type;
     if (slot.var && !slot.var->mut && !slot.indirect_addr && !var->mut) {
-        // We're about to alias var to slot.var... we need to drop the load instructions.
-        // Is it enough, and is it safe?
-        Size trim = std::min(slot.type->size, (Size)2);
-        TrimInstructions(trim);
+        // We're about to alias var to slot.var... we need to drop the load instructions
+        TrimInstructions(ir.len - prev_addr);
 
         var->scope = slot.var->scope;
         var->ready_addr = slot.var->ready_addr;
