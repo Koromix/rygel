@@ -2936,6 +2936,25 @@ void bk_Parser::DiscardResult(Size size)
                 size--;
             } break;
 
+            case bk_Opcode::PushZero: {
+                if (size >= ir[ir.len - 1].u.i) {
+                    TrimInstructions(1);
+                    size -= ir[ir.len - 1].u.i;
+                } else {
+                    EmitPop(size);
+                    return;
+                }
+            } break;
+            case bk_Opcode::PushBig: {
+                if (size >= ir[ir.len - 1].u.i) {
+                    TrimInstructions(1);
+                    size -= ir[ir.len - 1].u.i - 1;
+                } else {
+                    EmitPop(size);
+                    return;
+                }
+            } break;
+
             case bk_Opcode::StoreK:
             case bk_Opcode::StoreLocalK: {
                 ir[ir.len - 1].code = (bk_Opcode)((int)ir[ir.len - 1].code - 1);
