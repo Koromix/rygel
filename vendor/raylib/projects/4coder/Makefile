@@ -2,7 +2,7 @@
 #
 #   raylib makefile for Desktop platforms, Raspberry Pi, Android and HTML5
 #
-#   Copyright (c) 2013-2021 Ramon Santamaria (@raysan5)
+#   Copyright (c) 2013-2022 Ramon Santamaria (@raysan5)
 #
 #   This software is provided "as-is", without any express or implied warranty. In no event
 #   will the authors be held liable for any damages arising from the use of this software.
@@ -25,7 +25,7 @@
 
 # Define required raylib variables
 PROJECT_NAME       ?= game
-RAYLIB_VERSION     ?= 4.0.0
+RAYLIB_VERSION     ?= 4.2.0
 RAYLIB_PATH        ?= ..\..
 
 # Define default options
@@ -290,8 +290,6 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
         # Libraries for Windows desktop compilation
         # NOTE: WinMM library required to set high-res timer resolution
         LDLIBS = -lraylib -lopengl32 -lgdi32 -lwinmm
-        # Required for physac examples
-        #LDLIBS += -static -lpthread
     endif
     ifeq ($(PLATFORM_OS),LINUX)
         # Libraries for Debian GNU/Linux desktop compiling

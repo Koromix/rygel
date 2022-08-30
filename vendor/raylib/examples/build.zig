@@ -7,10 +7,7 @@ fn add_module(comptime module: []const u8, b: *std.build.Builder, target: std.zi
     const mode = b.standardReleaseOptions();
 
     const all = b.step(module, "All " ++ module ++ " examples");
-    const dir = try std.fs.cwd().openDir(
-        module,
-        .{ .iterate = true },
-    );
+    const dir = try std.fs.cwd().openIterableDir(module, .{});
     var iter = dir.iterate();
     while (try iter.next()) |entry| {
         if (entry.kind != .File) continue;
@@ -21,13 +18,20 @@ fn add_module(comptime module: []const u8, b: *std.build.Builder, target: std.zi
         // zig's mingw headers do not include pthread.h
         if (std.mem.eql(u8, "core_loading_thread", name) and target.getOsTag() == .windows) continue;
 
-        const exe = b.addExecutable(name, path);
+        const exe = b.addExecutable(name, null);
+        exe.addCSourceFile(path, switch (target.getOsTag()) {
+            .windows => &[_][]const u8{},
+            .linux => &[_][]const u8{},
+            .macos => &[_][]const u8{"-DPLATFORM_DESKTOP"},
+            else => @panic("Unsupported OS"),
+        });
         exe.setTarget(target);
         exe.setBuildMode(mode);
         exe.linkLibC();
         exe.addObjectFile(switch (target.getOsTag()) {
             .windows => "../src/raylib.lib",
             .linux => "../src/libraylib.a",
+            .macos => "../src/libraylib.a",
             else => @panic("Unsupported OS"),
         });
 
@@ -48,6 +52,14 @@ fn add_module(comptime module: []const u8, b: *std.build.Builder, target: std.zi
                 exe.linkSystemLibrary("dl");
                 exe.linkSystemLibrary("m");
                 exe.linkSystemLibrary("X11");
+            },
+            .macos => {
+                exe.linkFramework("Foundation");
+                exe.linkFramework("Cocoa");
+                exe.linkFramework("OpenGL");
+                exe.linkFramework("CoreAudio");
+                exe.linkFramework("CoreVideo");
+                exe.linkFramework("IOKit");
             },
             else => {
                 @panic("Unsupported OS");
@@ -78,7 +90,6 @@ pub fn build(b: *std.build.Builder) !void {
     all.dependOn(try add_module("core", b, target));
     all.dependOn(try add_module("models", b, target));
     all.dependOn(try add_module("others", b, target));
-    all.dependOn(try add_module("physics", b, target));
     all.dependOn(try add_module("shaders", b, target));
     all.dependOn(try add_module("shapes", b, target));
     all.dependOn(try add_module("text", b, target));

@@ -2,15 +2,31 @@
 *
 *   rshapes - Basic functions to draw 2d shapes and check collisions
 *
+*   NOTES:
+*     Shapes can be draw using 3 types of primitives: LINES, TRIANGLES and QUADS.
+*     Some functions implement two drawing options: TRIANGLES and QUADS, by default TRIANGLES
+*     are used but QUADS implementation can be selected with SUPPORT_QUADS_DRAW_MODE define
+*
+*     Some functions define texture coordinates (rlTexCoord2f()) for the shapes and use a
+*     user-provided texture with SetShapesTexture(), the pourpouse of this implementation
+*     is allowing to reduce draw calls when combined with a texture-atlas.
+*
+*     By default, raylib sets the default texture and rectangle at InitWindow()[rcore] to one
+*     white character of default font [rtext], this way, raylib text and shapes can be draw with
+*     a single draw call and it also allows users to configure it the same way with their own fonts.
+*
 *   CONFIGURATION:
 *
+*   #define SUPPORT_MODULE_RSHAPES
+*       rshapes module is included in the build
+*
 *   #define SUPPORT_QUADS_DRAW_MODE
-*       Use QUADS instead of TRIANGLES for drawing when possible.
-*       Some lines-based shapes could still use lines
+*       Use QUADS instead of TRIANGLES for drawing when possible. Lines-based shapes still use LINES
+*
 *
 *   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2013-2021 Ramon Santamaria (@raysan5)
+*   Copyright (c) 2013-2022 Ramon Santamaria (@raysan5)
 *
 *   This software is provided "as-is", without any express or implied warranty. In no event
 *   will the authors be held liable for any damages arising from the use of this software.
@@ -36,6 +52,8 @@
     #include "config.h"         // Defines module configuration flags
 #endif
 
+#if defined(SUPPORT_MODULE_RSHAPES)
+
 #include "rlgl.h"       // OpenGL abstraction layer to OpenGL 1.1, 2.1, 3.3+ or ES2
 
 #include <math.h>       // Required for: sinf(), asinf(), cosf(), acosf(), sqrtf(), fabsf()
@@ -44,12 +62,15 @@
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
-
 // Error rate to calculate how many segments we need to draw a smooth circle,
 // taken from https://stackoverflow.com/a/2244088
 #ifndef SMOOTH_CIRCLE_ERROR_RATE
-    #define SMOOTH_CIRCLE_ERROR_RATE  0.5f
+    #define SMOOTH_CIRCLE_ERROR_RATE    0.5f    // Circle error rate
 #endif
+#ifndef BEZIER_LINE_DIVISIONS
+    #define BEZIER_LINE_DIVISIONS       24      // Bezier line divisions
+#endif
+
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -59,8 +80,8 @@
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
-Texture2D texShapes = { 1, 1, 1, 1, 7 };        // Texture used on shapes drawing (usually a white pixel)
-Rectangle texShapesRec = { 0, 0, 1, 1 };        // Texture source rectangle used on shapes drawing
+Texture2D texShapes = { 1, 1, 1, 1, 7 };                // Texture used on shapes drawing (usually a white pixel)
+Rectangle texShapesRec = { 0.0f, 0.0f, 1.0f, 1.0f };    // Texture source rectangle used on shapes drawing
 
 //----------------------------------------------------------------------------------
 // Module specific Functions Declaration
@@ -144,10 +165,6 @@ void DrawLineEx(Vector2 startPos, Vector2 endPos, float thick, Color color)
 // Draw line using cubic-bezier curves in-out
 void DrawLineBezier(Vector2 startPos, Vector2 endPos, float thick, Color color)
 {
-#ifndef BEZIER_LINE_DIVISIONS
-    #define BEZIER_LINE_DIVISIONS         24   // Bezier line divisions
-#endif
-
     Vector2 previous = startPos;
     Vector2 current = { 0 };
 
@@ -333,6 +350,7 @@ void DrawCircleSector(Vector2 center, float radius, float startAngle, float endA
 #endif
 }
 
+// Draw a piece of a circle outlines
 void DrawCircleSectorLines(Vector2 center, float radius, float startAngle, float endAngle, int segments, Color color)
 {
     if (radius <= 0.0f) radius = 0.1f;  // Avoid div by zero issue
@@ -468,6 +486,7 @@ void DrawEllipseLines(int centerX, int centerY, float radiusH, float radiusV, Co
     rlEnd();
 }
 
+// Draw ring
 void DrawRing(Vector2 center, float innerRadius, float outerRadius, float startAngle, float endAngle, int segments, Color color)
 {
     if (startAngle == endAngle) return;
@@ -561,6 +580,7 @@ void DrawRing(Vector2 center, float innerRadius, float outerRadius, float startA
 #endif
 }
 
+// Draw ring outline
 void DrawRingLines(Vector2 center, float innerRadius, float outerRadius, float startAngle, float endAngle, int segments, Color color)
 {
     if (startAngle == endAngle) return;
@@ -662,8 +682,6 @@ void DrawRectangleRec(Rectangle rec, Color color)
 // Draw a color-filled rectangle with pro parameters
 void DrawRectanglePro(Rectangle rec, Vector2 origin, float rotation, Color color)
 {
-    rlCheckRenderBatchLimit(4);
-
     Vector2 topLeft = { 0 };
     Vector2 topRight = { 0 };
     Vector2 bottomLeft = { 0 };
@@ -701,7 +719,11 @@ void DrawRectanglePro(Rectangle rec, Vector2 origin, float rotation, Color color
         bottomRight.y = y + (dx + rec.width)*sinRotation + (dy + rec.height)*cosRotation;
     }
 
+#if defined(SUPPORT_QUADS_DRAW_MODE)
+    rlCheckRenderBatchLimit(4);
+
     rlSetTexture(texShapes.id);
+
     rlBegin(RL_QUADS);
 
         rlNormal3f(0.0f, 0.0f, 1.0f);
@@ -720,7 +742,25 @@ void DrawRectanglePro(Rectangle rec, Vector2 origin, float rotation, Color color
         rlVertex2f(topRight.x, topRight.y);
 
     rlEnd();
+
     rlSetTexture(0);
+#else
+    rlCheckRenderBatchLimit(6);
+
+    rlBegin(RL_TRIANGLES);
+
+        rlColor4ub(color.r, color.g, color.b, color.a);
+
+        rlVertex2f(topLeft.x, topLeft.y);
+        rlVertex2f(bottomLeft.x, bottomLeft.y);
+        rlVertex2f(topRight.x, topRight.y);
+
+        rlVertex2f(topRight.x, topRight.y);
+        rlVertex2f(bottomLeft.x, bottomLeft.y);
+        rlVertex2f(bottomRight.x, bottomRight.y);
+
+    rlEnd();
+#endif
 }
 
 // Draw a vertical-gradient-filled rectangle
@@ -741,30 +781,30 @@ void DrawRectangleGradientH(int posX, int posY, int width, int height, Color col
 // NOTE: Colors refer to corners, starting at top-lef corner and counter-clockwise
 void DrawRectangleGradientEx(Rectangle rec, Color col1, Color col2, Color col3, Color col4)
 {
+    rlCheckRenderBatchLimit(4);
+
     rlSetTexture(texShapes.id);
 
-    rlPushMatrix();
-        rlBegin(RL_QUADS);
-            rlNormal3f(0.0f, 0.0f, 1.0f);
+    rlBegin(RL_QUADS);
+        rlNormal3f(0.0f, 0.0f, 1.0f);
 
-            // NOTE: Default raylib font character 95 is a white square
-            rlColor4ub(col1.r, col1.g, col1.b, col1.a);
-            rlTexCoord2f(texShapesRec.x/texShapes.width, texShapesRec.y/texShapes.height);
-            rlVertex2f(rec.x, rec.y);
+        // NOTE: Default raylib font character 95 is a white square
+        rlColor4ub(col1.r, col1.g, col1.b, col1.a);
+        rlTexCoord2f(texShapesRec.x/texShapes.width, texShapesRec.y/texShapes.height);
+        rlVertex2f(rec.x, rec.y);
 
-            rlColor4ub(col2.r, col2.g, col2.b, col2.a);
-            rlTexCoord2f(texShapesRec.x/texShapes.width, (texShapesRec.y + texShapesRec.height)/texShapes.height);
-            rlVertex2f(rec.x, rec.y + rec.height);
+        rlColor4ub(col2.r, col2.g, col2.b, col2.a);
+        rlTexCoord2f(texShapesRec.x/texShapes.width, (texShapesRec.y + texShapesRec.height)/texShapes.height);
+        rlVertex2f(rec.x, rec.y + rec.height);
 
-            rlColor4ub(col3.r, col3.g, col3.b, col3.a);
-            rlTexCoord2f((texShapesRec.x + texShapesRec.width)/texShapes.width, (texShapesRec.y + texShapesRec.height)/texShapes.height);
-            rlVertex2f(rec.x + rec.width, rec.y + rec.height);
+        rlColor4ub(col3.r, col3.g, col3.b, col3.a);
+        rlTexCoord2f((texShapesRec.x + texShapesRec.width)/texShapes.width, (texShapesRec.y + texShapesRec.height)/texShapes.height);
+        rlVertex2f(rec.x + rec.width, rec.y + rec.height);
 
-            rlColor4ub(col4.r, col4.g, col4.b, col4.a);
-            rlTexCoord2f((texShapesRec.x + texShapesRec.width)/texShapes.width, texShapesRec.y/texShapes.height);
-            rlVertex2f(rec.x + rec.width, rec.y);
-        rlEnd();
-    rlPopMatrix();
+        rlColor4ub(col4.r, col4.g, col4.b, col4.a);
+        rlTexCoord2f((texShapesRec.x + texShapesRec.width)/texShapes.width, texShapesRec.y/texShapes.height);
+        rlVertex2f(rec.x + rec.width, rec.y);
+    rlEnd();
 
     rlSetTexture(0);
 }
@@ -1291,9 +1331,9 @@ void DrawRectangleRoundedLines(Rectangle rec, float roundness, int segments, flo
 // NOTE: Vertex must be provided in counter-clockwise order
 void DrawTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Color color)
 {
+#if defined(SUPPORT_QUADS_DRAW_MODE)
     rlCheckRenderBatchLimit(4);
 
-#if defined(SUPPORT_QUADS_DRAW_MODE)
     rlSetTexture(texShapes.id);
 
     rlBegin(RL_QUADS);
@@ -1314,6 +1354,8 @@ void DrawTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Color color)
 
     rlSetTexture(0);
 #else
+    rlCheckRenderBatchLimit(3);
+
     rlBegin(RL_TRIANGLES);
         rlColor4ub(color.r, color.g, color.b, color.a);
         rlVertex2f(v1.x, v1.y);
@@ -1564,7 +1606,11 @@ bool CheckCollisionPointRec(Vector2 point, Rectangle rec)
 // Check if point is inside circle
 bool CheckCollisionPointCircle(Vector2 point, Vector2 center, float radius)
 {
-    return CheckCollisionCircles(point, 0, center, radius);
+    bool collision = false;
+
+    collision = CheckCollisionCircles(point, 0, center, radius);
+
+    return collision;
 }
 
 // Check if point is inside a triangle defined by three points (p1, p2, p3)
@@ -1615,6 +1661,8 @@ bool CheckCollisionCircles(Vector2 center1, float radius1, Vector2 center2, floa
 // NOTE: Reviewed version to take into account corner limit case
 bool CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec)
 {
+    bool collision = false;
+
     int recCenterX = (int)(rec.x + rec.width/2.0f);
     int recCenterY = (int)(rec.y + rec.height/2.0f);
 
@@ -1630,37 +1678,45 @@ bool CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec)
     float cornerDistanceSq = (dx - rec.width/2.0f)*(dx - rec.width/2.0f) +
                              (dy - rec.height/2.0f)*(dy - rec.height/2.0f);
 
-    return (cornerDistanceSq <= (radius*radius));
+    collision = (cornerDistanceSq <= (radius*radius));
+
+    return collision;
 }
 
 // Check the collision between two lines defined by two points each, returns collision point by reference
 bool CheckCollisionLines(Vector2 startPos1, Vector2 endPos1, Vector2 startPos2, Vector2 endPos2, Vector2 *collisionPoint)
 {
-    const float div = (endPos2.y - startPos2.y)*(endPos1.x - startPos1.x) - (endPos2.x - startPos2.x)*(endPos1.y - startPos1.y);
+    bool collision = false;
 
-    if (fabsf(div) < FLT_EPSILON) return false;
+    float div = (endPos2.y - startPos2.y)*(endPos1.x - startPos1.x) - (endPos2.x - startPos2.x)*(endPos1.y - startPos1.y);
 
-    const float xi = ((startPos2.x - endPos2.x)*(startPos1.x*endPos1.y - startPos1.y*endPos1.x) - (startPos1.x - endPos1.x)*(startPos2.x*endPos2.y - startPos2.y*endPos2.x))/div;
-    const float yi = ((startPos2.y - endPos2.y)*(startPos1.x*endPos1.y - startPos1.y*endPos1.x) - (startPos1.y - endPos1.y)*(startPos2.x*endPos2.y - startPos2.y*endPos2.x))/div;
-
-    if (fabsf(startPos1.x - endPos1.x) > FLT_EPSILON && (xi < fminf(startPos1.x, endPos1.x) || xi > fmaxf(startPos1.x, endPos1.x))) return false;
-    if (fabsf(startPos2.x - endPos2.x) > FLT_EPSILON && (xi < fminf(startPos2.x, endPos2.x) || xi > fmaxf(startPos2.x, endPos2.x))) return false;
-    if (fabsf(startPos1.y - endPos1.y) > FLT_EPSILON && (yi < fminf(startPos1.y, endPos1.y) || yi > fmaxf(startPos1.y, endPos1.y))) return false;
-    if (fabsf(startPos2.y - endPos2.y) > FLT_EPSILON && (yi < fminf(startPos2.y, endPos2.y) || yi > fmaxf(startPos2.y, endPos2.y))) return false;
-
-    if (collisionPoint != 0)
+    if (fabsf(div) >= FLT_EPSILON)
     {
-        collisionPoint->x = xi;
-        collisionPoint->y = yi;
+        collision = true;
+
+        float xi = ((startPos2.x - endPos2.x)*(startPos1.x*endPos1.y - startPos1.y*endPos1.x) - (startPos1.x - endPos1.x)*(startPos2.x*endPos2.y - startPos2.y*endPos2.x))/div;
+        float yi = ((startPos2.y - endPos2.y)*(startPos1.x*endPos1.y - startPos1.y*endPos1.x) - (startPos1.y - endPos1.y)*(startPos2.x*endPos2.y - startPos2.y*endPos2.x))/div;
+
+        if (((fabsf(startPos1.x - endPos1.x) > FLT_EPSILON) && (xi < fminf(startPos1.x, endPos1.x) || (xi > fmaxf(startPos1.x, endPos1.x)))) ||
+            ((fabsf(startPos2.x - endPos2.x) > FLT_EPSILON) && (xi < fminf(startPos2.x, endPos2.x) || (xi > fmaxf(startPos2.x, endPos2.x)))) ||
+            ((fabsf(startPos1.y - endPos1.y) > FLT_EPSILON) && (yi < fminf(startPos1.y, endPos1.y) || (yi > fmaxf(startPos1.y, endPos1.y)))) ||
+            ((fabsf(startPos2.y - endPos2.y) > FLT_EPSILON) && (yi < fminf(startPos2.y, endPos2.y) || (yi > fmaxf(startPos2.y, endPos2.y))))) collision = false;
+
+        if (collision && (collisionPoint != 0))
+        {
+            collisionPoint->x = xi;
+            collisionPoint->y = yi;
+        }
     }
 
-    return true;
+    return collision;
 }
 
 // Check if point belongs to line created between two points [p1] and [p2] with defined margin in pixels [threshold]
 bool CheckCollisionPointLine(Vector2 point, Vector2 p1, Vector2 p2, int threshold)
 {
     bool collision = false;
+
     float dxc = point.x - p1.x;
     float dyc = point.y - p1.y;
     float dxl = p2.x - p1.x;
@@ -1757,3 +1813,5 @@ static float EaseCubicInOut(float t, float b, float c, float d)
 
     return 0.5f*c*(t*t*t + 2.0f) + b;
 }
+
+#endif      // SUPPORT_MODULE_RSHAPES

@@ -24,7 +24,7 @@ set -e
 while getopts ":hdusrcq" opt; do
     case $opt in
         h)
-            echo "Usage: ./osx-build.sh [-hdusrcqq]"
+            echo "Usage: ./build-osx.sh [-hdusrcqq]"
             echo " -h  Show this information"
             echo " -d  Faster builds that have debug symbols, and enable warnings"
             echo " -u  Run upx* on the executable after compilation (before -r)"
@@ -39,10 +39,10 @@ while getopts ":hdusrcq" opt; do
             echo "  requires that you have upx installed and on your path, of course."
             echo ""
             echo "Examples:"
-            echo " Build a release build:                    ./osx-build.sh"
-            echo " Build a release build, full recompile:    ./osx-build.sh -c"
-            echo " Build a debug build and run:              ./osx-build.sh -d -r"
-            echo " Build in debug, run, don't print at all:  ./osx-build.sh -drqq"
+            echo " Build a release build:                    ./build-osx.sh"
+            echo " Build a release build, full recompile:    ./build-osx.sh -c"
+            echo " Build a debug build and run:              ./build-osx.sh -d -r"
+            echo " Build in debug, run, don't print at all:  ./build-osx.sh -drqq"
             exit 0
             ;;
         d)
@@ -130,7 +130,7 @@ if [ ! -d "$TEMP_DIR" ]; then
         $CC -c $RAYLIB_DEFINES $RAYLIB_INCLUDE_FLAGS $COMPILATION_FLAGS -x objective-c $RAYLIB_SRC/rglfw.c
         $CC -c $RAYLIB_DEFINES $RAYLIB_INCLUDE_FLAGS $COMPILATION_FLAGS $RAYLIB_C_FILES
     fi
-    [ -z "$QUIET" ] && echo "COMPILE-INFO: Raylib compiled into object files in: $TEMP_DIR/"
+    [ -z "$QUIET" ] && echo "COMPILE-INFO: raylib compiled into object files in: $TEMP_DIR/"
     cd $ROOT_DIR
 fi
 
