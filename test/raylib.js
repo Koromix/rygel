@@ -176,7 +176,7 @@ async function test(display) {
                 reject(err);
             }
         });
-        let expected = '5ec23005377082582a14d261f5d07f51a6615b3bcdf5b91ada29aba65da22c5f';
+        let expected = '3cd12ec1cf3d001abe5526c8529fc445ebd2aa710e75cf277b33e59db1e51eb4';
 
         console.log('Computed checksum: ' + sha256);
         console.log('Expected: ' + expected);
