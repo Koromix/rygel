@@ -125,6 +125,16 @@ RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines * 2);
 
 static RG_THREAD_LOCAL CallData *exec_call;
 
+#ifdef _M_ARM64EC
+
+static inline bool IsRegular(Size size)
+{
+    bool regular = (size <= 8 && !(size & (size - 1)));
+    return regular;
+}
+
+#endif
+
 static inline int IsHFA(const TypeInfo *type)
 {
     return IsHFA(type, 1, 4);
@@ -142,6 +152,11 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
     int gpr_avail = 8;
     int vec_avail = 8;
+#ifdef _M_ARM64EC
+    if (func->variadic) {
+        gpr_avail = 4;
+    }
+#endif
 
     for (ParameterInfo &param: func->parameters) {
         switch (param.type->primitive) {
@@ -178,6 +193,25 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             } break;
             case PrimitiveKind::Record: {
                 int hfa = IsHFA(param.type);
+
+#ifdef _M_ARM64EC
+                if (func->variadic) {
+                    int gpr_count = (param.type->size + 7) / 8;
+
+                    if (IsRegular(param.type->size) && gpr_count <= gpr_avail) {
+                        param.gpr_count = (int8_t)gpr_count;
+                        gpr_avail -= gpr_count;
+                    } else {
+                        if (gpr_avail) {
+                            param.gpr_count = 1;
+                            gpr_avail -= 1;
+                        }
+                        param.use_memory = true;
+                    }
+
+                    break;
+                }
+#endif
 
 #if defined(_WIN32)
                 if (param.variadic) {
@@ -264,6 +298,18 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
         return_ptr = AllocHeap(func->ret.type->size, 16);
         gpr_ptr[8] = (uint64_t)return_ptr;
     }
+
+#ifdef _M_ARM64EC
+    if (func->variadic) {
+        gpr_ptr[4] = (uint64_t)args_ptr;
+        gpr_ptr[5] = 0;
+
+        for (Size i = 4; i < func->parameters.len; i++) {
+            const ParameterInfo &param = func->parameters[i];
+            gpr_ptr[5] += std::max((Size)8, param.type->size);
+        }
+    }
+#endif
 
 #ifdef __APPLE__
     #define PUSH_INTEGER(CType) \
