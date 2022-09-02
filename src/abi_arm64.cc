@@ -125,16 +125,6 @@ RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines * 2);
 
 static RG_THREAD_LOCAL CallData *exec_call;
 
-#ifdef _M_ARM64EC
-
-static inline bool IsRegular(Size size)
-{
-    bool regular = (size <= 8 && !(size & (size - 1)));
-    return regular;
-}
-
-#endif
-
 static inline int IsHFA(const TypeInfo *type)
 {
     return IsHFA(type, 1, 4);
@@ -196,7 +186,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
 #ifdef _M_ARM64EC
                 if (func->variadic) {
-                    if (IsRegular(param.type->size) && gpr_avail) {
+                    if (IsRegularSize(param.type->size, 8) && gpr_avail) {
                         param.gpr_count = 1;
                         gpr_avail--;
                     } else {

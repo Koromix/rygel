@@ -115,12 +115,6 @@ RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines * 2);
 
 static RG_THREAD_LOCAL CallData *exec_call;
 
-static inline bool IsRegular(Size size)
-{
-    bool regular = (size <= 8 && !(size & (size - 1)));
-    return regular;
-}
-
 bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 {
     if (!func->lib && func->convention != CallConvention::Cdecl &&
@@ -137,7 +131,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
         func->ret.trivial = true;
 #if defined(_WIN32) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
     } else {
-        func->ret.trivial = IsRegular(func->ret.type->size);
+        func->ret.trivial = IsRegularSize(func->ret.type->size, 8);
 #endif
     }
 #ifndef _WIN32

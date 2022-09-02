@@ -47,6 +47,12 @@ static inline bool IsFloat(const TypeInfo *type)
     return fp;
 }
 
+static inline bool IsRegularSize(Size size, Size max)
+{
+    bool regular = (size <= max && !(size & (size - 1)));
+    return regular;
+}
+
 const TypeInfo *ResolveType(Napi::Value value, int *out_directions = nullptr);
 const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str, int *out_directions = nullptr);
 const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *type, int count = 1);

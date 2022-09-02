@@ -109,18 +109,12 @@ RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines * 2);
 
 static RG_THREAD_LOCAL CallData *exec_call;
 
-static inline bool IsRegular(Size size)
-{
-    bool regular = (size <= 8 && !(size & (size - 1)));
-    return regular;
-}
-
 bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
-    func->ret.regular = IsRegular(func->ret.type->size);
+    func->ret.regular = IsRegularSize(func->ret.type->size, 8);
 
     for (ParameterInfo &param: func->parameters) {
-        param.regular = IsRegular(param.type->size);
+        param.regular = IsRegularSize(param.type->size, 8);
         func->forward_fp |= IsFloat(param.type);
     }
 
