@@ -20,13 +20,15 @@
 
 namespace RG {
 
-struct PrototypeInfo {
+struct HoistedInfo {
+    const char *name;
+
+    bk_TokenKind kind;
     Size pos;
-    Size skip_pos;
 
-    bk_FunctionInfo *func; // Useful only for functions
+    const HoistedInfo *next;
 
-    RG_HASHTABLE_HANDLER(PrototypeInfo, pos);
+    RG_HASHTABLE_HANDLER(HoistedInfo, name);
 };
 
 struct PendingOperator {
@@ -45,45 +47,51 @@ struct StackSlot {
     Size indirect_imbalance;
 };
 
+struct LoopContext {
+    Size offset;
+    Size break_addr;
+    Size continue_addr;
+};
+
 static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2);
 
 class bk_Parser {
     RG_DELETE_COPY(bk_Parser)
 
+    bk_Program *program;
+
     // All these members are relevant to the current parse only, and get resetted each time
     const bk_TokenizedFile *file;
     bk_CompileReport *out_report; // Can be NULL
-    bool preparse;
     Span<const bk_Token> tokens;
     Size pos;
-    Size prev_ir_len;
+    Size prev_main_len;
     bool valid;
     bool show_errors;
     bool show_hints;
     bk_SourceMap *src;
 
     // Transient mappings
-    HashTable<Size, PrototypeInfo> prototypes_map;
+    BucketArray<HoistedInfo> hoisted;
+    HashTable<const char *, HoistedInfo *> hoisted_map;
+    HashMap<Size, Size> skip_map;
     HashMap<const void *, Size> definitions_map;
     HashSet<const void *> poisoned_set;
 
-    bk_FunctionInfo *current_func = nullptr;
+    // Global or function context
+    HeapArray<bk_Instruction> *ir;
+    Size *offset_ptr;
     int depth = 0;
     int recursion = 0;
+    bk_FunctionInfo *current_func = nullptr;
+    LoopContext *loop = nullptr;
 
-    Size var_offset = 0;
-    Size loop_offset = -1;
-    Size loop_break_addr = -1;
-    Size loop_continue_addr = -1;
-
+    Size main_offset = 0;
     HashSet<const char *> strings;
 
     // Only used (and valid) while parsing expression
     HeapArray<StackSlot> stack;
     bk_VirtualMachine folder;
-
-    bk_Program *program;
-    HeapArray<bk_Instruction> &ir;
 
 public:
     bk_Parser(bk_Program *program);
@@ -97,8 +105,6 @@ public:
 
 private:
     void Preparse(Span<const Size> positions);
-    void PreparseFunction(Size proto_pos, bool record);
-    void PreparseEnum(Size proto_pos);
 
     // These 3 functions return true if (and only if) all code paths have a return statement.
     // For simplicity, return statements inside loops are not considered.
@@ -106,7 +112,8 @@ private:
     bool ParseStatement();
     bool ParseDo();
 
-    void ParseFunction(const PrototypeInfo *proto);
+    void ParseFunction(bool record, bool preparse);
+    void ParseEnum(bool preparse);
     void ParseReturn();
     void ParseLet();
     bool ParseIf();
@@ -323,11 +330,16 @@ void bk_Compiler::AddOpaque(const char *name)
     parser->AddOpaque(name);
 }
 
+#define IR (*ir)
+
 bk_Parser::bk_Parser(bk_Program *program)
-    : folder(program), program(program), ir(program->ir)
+    : program(program), folder(program)
 {
+    ir = &program->main;
+    offset_ptr = &main_offset;
+
     RG_ASSERT(program);
-    RG_ASSERT(!ir.len);
+    RG_ASSERT(!IR.len);
 
     // Base types
     for (const bk_TypeInfo &type: bk_BaseTypes) {
@@ -350,11 +362,12 @@ bk_Parser::bk_Parser(bk_Program *program)
 
 bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report)
 {
-    prev_ir_len = ir.len;
+    prev_main_len = program->main.len;
 
     // Restore previous state if something goes wrong
-    RG_DEFER_NC(err_guard, sources_len = program->sources.len,
-                           prev_var_offset = var_offset,
+    RG_DEFER_NC(err_guard, globals_len = program->globals.len,
+                           sources_len = program->sources.len,
+                           prev_main_offset = main_offset,
                            variables_len = program->variables.len,
                            functions_len = program->functions.len,
                            ro_len = program->ro.len,
@@ -363,10 +376,11 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
                            record_types_len = program->record_types.len,
                            enum_types_len = program->enum_types.len,
                            bare_types_len = program->bare_types.len) {
-        ir.RemoveFrom(prev_ir_len);
+        program->main.RemoveFrom(prev_main_len);
+        program->globals.RemoveFrom(globals_len);
         program->sources.RemoveFrom(sources_len);
 
-        var_offset = prev_var_offset;
+        main_offset = prev_main_offset;
         DestroyVariables(variables_len);
 
         for (Size i = functions_len; i < program->functions.len; i++) {
@@ -409,35 +423,35 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     show_errors = true;
     show_hints = false;
 
-    prototypes_map.Clear();
+    hoisted_map.Clear();
+    skip_map.Clear();
     definitions_map.Clear();
     poisoned_set.Clear();
 
     src = program->sources.AppendDefault();
     src->filename = DuplicateString(file.filename, &program->str_alloc).ptr;
+    RG_ASSERT(ir == &program->main);
 
     // Protect IR from before this parse step
-    ir.Append({bk_Opcode::Nop});
+    IR.Append({bk_Opcode::Nop});
 
     // Preparse (top-level order-independence)
-    preparse = true;
     Preparse(file.prototypes);
 
     // Do the actual parsing!
-    preparse = false;
-    src->lines.Append({ir.len, 0});
+    src->lines.Append({IR.len, 0});
     while (RG_LIKELY(pos < tokens.len)) {
         ParseStatement();
     }
 
     // Maybe it'll help catch bugs
     RG_ASSERT(!depth);
-    RG_ASSERT(loop_offset == -1);
+    RG_ASSERT(!loop);
     RG_ASSERT(!current_func);
 
     if (valid) {
-        ir.Append({bk_Opcode::End, {}, {.i = var_offset}});
-        ir.Trim();
+        IR.Append({bk_Opcode::End, {}, {.i = main_offset}});
+        IR.Trim();
 
         err_guard.Disable();
     }
@@ -575,18 +589,18 @@ bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
     var->mut = mut;
     var->constant = !mut;
     var->scope = scope;
-
-    var->offset = var_offset;
-    var_offset += values.len;
+    var->ir = &program->globals;
 
     for (const bk_PrimitiveValue &value: values) {
-        ir.Append({bk_Opcode::Push, type->primitive, value});
+        program->globals.Append({bk_Opcode::Push, type->primitive, value});
     }
-    var->ready_addr = ir.len;
+    var->ready_addr = program->globals.len;
 
     std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
     if (RG_UNLIKELY(!ret.second)) {
         const bk_VariableInfo *prev_var = *ret.first;
+
+        *ret.first = var;
         var->shadow = prev_var;
     }
 
@@ -609,272 +623,41 @@ void bk_Parser::AddOpaque(const char *name)
 
 void bk_Parser::Preparse(Span<const Size> positions)
 {
-    RG_ASSERT(!prototypes_map.count);
+    RG_ASSERT(!hoisted.len);
     RG_ASSERT(pos == 0);
 
     for (Size i = 0; i < positions.len; i++) {
-        Size proto_pos = positions[i];
+        Size hoist_pos = positions[i];
 
-        pos = proto_pos + 1;
+        pos = hoist_pos + 1;
         show_errors = true;
 
-        if (!PeekToken(bk_TokenKind::Identifier))
-            continue;
+        if (MatchToken(bk_TokenKind::Identifier)) {
+            HoistedInfo *hoist = hoisted.AppendDefault();
 
-        switch (tokens[proto_pos].kind) {
-            case bk_TokenKind::Func: { PreparseFunction(proto_pos, false); } break;
-            case bk_TokenKind::Record: { PreparseFunction(proto_pos, true); } break;
-            case bk_TokenKind::Enum: { PreparseEnum(proto_pos); } break;
+            hoist->name = InternString(tokens[pos - 1].u.str);
+            hoist->kind = tokens[hoist_pos].kind;
+            hoist->pos = hoist_pos;
 
-            default: { RG_UNREACHABLE(); } break;
+            std::pair<HoistedInfo **, bool> ret = hoisted_map.TrySet(hoist);
+
+            if (!ret.second) {
+                HoistedInfo *prev = *ret.first;
+
+                if (RG_LIKELY(prev->kind == bk_TokenKind::Func &&
+                              hoist->kind == bk_TokenKind::Func)) {
+                    prev->next = hoist;
+                } else if (prev->kind != hoist->kind) {
+                    MarkError(hoist_pos + 1, "Cannot reuse name '%1' for %2 and %3 types",
+                              bk_TokenKindNames[(int)prev->kind], bk_TokenKindNames[(int)hoist->kind]);
+                } else {
+                    MarkError(hoist_pos + 1, "Duplicate type name '%1'", hoist->name);
+                }
+            }
         }
     }
 
     pos = 0;
-}
-
-void bk_Parser::PreparseFunction(Size proto_pos, bool record)
-{
-    Size prev_ir_len = ir.len;
-    Size prev_lines_len = src->lines.len;
-
-    PrototypeInfo *proto = prototypes_map.SetDefault(proto_pos);
-    bk_FunctionInfo *func = program->functions.AppendDefault();
-    definitions_map.Set(func, pos);
-
-    proto->pos = proto_pos;
-    proto->func = func;
-    func->name = ConsumeIdentifier();
-    func->mode = record ? bk_FunctionInfo::Mode::Record : bk_FunctionInfo::Mode::Blikk;
-
-    HeapArray<char> signature_buf;
-    HeapArray<char> prototype_buf;
-    bk_FunctionTypeInfo type_buf = {};
-    signature_buf.Append("func (");
-    Fmt(&prototype_buf, "%1(", func->name);
-    type_buf.primitive = bk_PrimitiveKind::Function;
-    type_buf.size = 1;
-
-    // Parameters
-    ConsumeToken(bk_TokenKind::LeftParenthesis);
-    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
-        RG_DEFER_C(variables_len = program->variables.len) { DestroyVariables(variables_len); };
-
-        for (;;) {
-            SkipNewLines();
-
-            bk_VariableInfo *var = program->variables.AppendDefault();
-            Size param_pos = pos;
-
-            var->mut = !record && MatchToken(bk_TokenKind::Mut);
-            var->name = ConsumeIdentifier();
-            var->scope = bk_VariableInfo::Scope::Local;
-
-            std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
-            if (RG_UNLIKELY(!ret.second)) {
-                const bk_VariableInfo *prev_var = *ret.first;
-                var->shadow = prev_var;
-
-                // Error messages for globals are issued in ParseFunction(), because at
-                // this stage some globals (those issues from the same Parse call) may not
-                // yet exist. Better issue all errors about that later.
-                if (prev_var->scope == bk_VariableInfo::Scope::Local) {
-                    MarkError(param_pos, "Parameter named '%1' already exists", var->name);
-                }
-            }
-
-            ConsumeToken(bk_TokenKind::Colon);
-            var->type = ParseType();
-
-            if (RG_LIKELY(func->params.Available())) {
-                bk_FunctionInfo::Parameter *param = func->params.AppendDefault();
-                definitions_map.Set(param, param_pos);
-
-                param->name = var->name;
-                param->type = var->type;
-                param->mut = var->mut;
-
-                type_buf.params.Append(var->type);
-                type_buf.params_size += var->type->size;
-            } else {
-                MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
-            }
-
-            signature_buf.Append(var->type->signature);
-            Fmt(&prototype_buf, "%1: %2", var->name, var->type->signature);
-
-            if (MatchToken(bk_TokenKind::Comma)) {
-                signature_buf.Append(", ");
-                prototype_buf.Append(", ");
-            } else {
-                break;
-            }
-        }
-
-        SkipNewLines();
-        ConsumeToken(bk_TokenKind::RightParenthesis);
-    }
-    signature_buf.Append(')');
-    prototype_buf.Append(')');
-
-    // Return type
-    if (record) {
-        bk_RecordTypeInfo *record_type = program->record_types.AppendDefault();
-
-        record_type->signature = func->name;
-        record_type->primitive = bk_PrimitiveKind::Record;
-        record_type->init0 = true;
-        record_type->func = func;
-
-        for (const bk_FunctionInfo::Parameter &param: func->params) {
-            bk_RecordTypeInfo::Member *member = record_type->members.AppendDefault();
-
-            member->name = param.name;
-            member->type = param.type;
-            member->offset = record_type->size;
-
-            record_type->init0 &= param.type->init0;
-            record_type->size += param.type->size;
-
-            // Evaluate each time, so that overflow is not a problem
-            if (RG_UNLIKELY(record_type->size > UINT16_MAX)) {
-                MarkError(proto->pos, "Record size is too big");
-            }
-
-            Size param_pos = definitions_map.FindValue(&param, -1);
-            definitions_map.Set(member, param_pos);
-        }
-
-        // We don't need to check for uniqueness
-        program->types_map.TrySet(record_type);
-
-        type_buf.ret_type = record_type;
-
-        Fmt(&signature_buf, ": %1", record_type->signature);
-        Fmt(&prototype_buf, ": %1", record_type->signature);
-    } else if (MatchToken(bk_TokenKind::Colon)) {
-        type_buf.ret_type = ParseType();
-
-        if (type_buf.ret_type != bk_NullType) {
-            Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
-            Fmt(&prototype_buf, ": %1", type_buf.ret_type->signature);
-        } else {
-            signature_buf.Append(0);
-            prototype_buf.Append(0);
-        }
-    } else {
-        type_buf.ret_type = bk_NullType;
-
-        signature_buf.Append(0);
-        prototype_buf.Append(0);
-    }
-
-    proto->skip_pos = pos;
-
-    // Reuse or add function type
-    type_buf.signature = InternString(signature_buf.ptr);
-    func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
-    func->prototype = InternString(prototype_buf.ptr);
-
-    // We don't know anything about it yet!
-    func->impure = true;
-    func->side_effects = true;
-
-    // Publish function
-    {
-        std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
-        bk_FunctionInfo *proto0 = *ret.first;
-
-        if (ret.second) {
-            proto0->overload_prev = proto0;
-            proto0->overload_next = proto0;
-        } else if (!record) {
-            proto0->overload_prev->overload_next = func;
-            func->overload_next = proto0;
-            func->overload_prev = proto0->overload_prev;
-            proto0->overload_prev = func;
-        } else {
-            MarkError(proto->pos + 1, "Duplicate type '%1'", func->name);
-
-            func->overload_prev = func;
-            func->overload_next = func;
-        }
-    }
-
-    // This is a preparse step, clean up accidental side effets
-    ir.RemoveFrom(prev_ir_len);
-    src->lines.RemoveFrom(prev_lines_len);
-
-    // Publish symbol
-    const bk_VariableInfo *var;
-    if (record) {
-        var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, false, bk_VariableInfo::Scope::Module);
-    } else {
-        var = AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
-    }
-    definitions_map.Set(var, proto->pos);
-
-    // Expressions involving this prototype (function or record) won't issue (visible) errors
-    if (RG_UNLIKELY(!show_errors)) {
-        poisoned_set.Set(var);
-    }
-}
-
-void bk_Parser::PreparseEnum(Size proto_pos)
-{
-    Size prev_ir_len = ir.len;
-    Size prev_lines_len = src->lines.len;
-
-    PrototypeInfo *proto = prototypes_map.SetDefault(proto_pos);
-    bk_EnumTypeInfo *enum_type = program->enum_types.AppendDefault();
-
-    proto->pos = proto_pos;
-
-    enum_type->signature = ConsumeIdentifier();
-    enum_type->primitive = bk_PrimitiveKind::Enum;
-    enum_type->init0 = true;
-    enum_type->size = 1;
-
-    ConsumeToken(bk_TokenKind::LeftParenthesis);
-    if (RG_LIKELY(!MatchToken(bk_TokenKind::RightParenthesis))) {
-        do {
-            SkipNewLines();
-
-            bk_EnumTypeInfo::Label *label = enum_type->labels.AppendDefault();
-
-            label->name = ConsumeIdentifier();
-            label->value = enum_type->labels.len - 1;
-
-            bool duplicate = !enum_type->labels_map.TrySet(label).second;
-            if (RG_UNLIKELY(duplicate)) {
-                MarkError(pos - 1, "Label '%1' is already used", label->name);
-            }
-        } while (MatchToken(bk_TokenKind::Comma));
-
-        SkipNewLines();
-        ConsumeToken(bk_TokenKind::RightParenthesis);
-    } else {
-        MarkError(pos - 1, "Empty enums are not allowed");
-    }
-
-    proto->skip_pos = pos;
-
-    // This is a preparse step, clean up accidental side effets
-    ir.RemoveFrom(prev_ir_len);
-    src->lines.RemoveFrom(prev_lines_len);
-
-    // Publish enum
-    if (!program->types_map.TrySet(enum_type).second) {
-        MarkError(proto->pos + 1, "Duplicate type '%1'", enum_type->signature);
-    }
-
-    const bk_VariableInfo *var = AddGlobal(enum_type->signature, bk_TypeType, {{.type = enum_type}}, false, bk_VariableInfo::Scope::Module);
-    definitions_map.Set(var, proto->pos);
-
-    // Expressions involving this prototype (function or record) won't issue (visible) errors
-    if (RG_UNLIKELY(!show_errors)) {
-        poisoned_set.Set(var);
-    }
 }
 
 template<typename T>
@@ -899,14 +682,14 @@ bool bk_Parser::ParseBlock(bool end_with_else)
     depth++;
 
     bool recurse = RecurseInc();
-    RG_DEFER_C(prev_offset = var_offset,
+    RG_DEFER_C(prev_offset = *offset_ptr,
                variables_len = program->variables.len) {
         RecurseDec();
         depth--;
 
-        EmitPop(var_offset - prev_offset);
+        EmitPop(*offset_ptr - prev_offset);
         DestroyVariables(variables_len);
-        var_offset = prev_offset;
+        *offset_ptr = prev_offset;
     };
 
     bool has_return = false;
@@ -945,7 +728,7 @@ bool bk_Parser::ParseStatement()
 {
     bool has_return = false;
 
-    src->lines.Append({ir.len, tokens[pos].line});
+    src->lines.Append({IR.len, tokens[pos].line});
     show_errors = true;
 
     switch (tokens[pos].kind) {
@@ -966,10 +749,8 @@ bool bk_Parser::ParseStatement()
             }
         } break;
         case bk_TokenKind::Func: {
-            const PrototypeInfo *proto = prototypes_map.Find(pos);
-
-            if (proto) {
-                ParseFunction(proto);
+            if (pos + 1 < tokens.len && tokens[pos + 1].kind == bk_TokenKind::Identifier) {
+                ParseFunction(false, false);
             } else {
                 StackSlot slot = ParseExpression(false, true);
                 DiscardResult(slot.type->size);
@@ -978,45 +759,11 @@ bool bk_Parser::ParseStatement()
             EndStatement();
         } break;
         case bk_TokenKind::Record: {
-            if (RG_UNLIKELY(current_func)) {
-                MarkError(pos, "Record types cannot be defined inside functions");
-                Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
-            } else if (RG_UNLIKELY(depth)) {
-                MarkError(pos, "Records must be defined in top-level scope");
-            }
-
-            const PrototypeInfo *proto = prototypes_map.Find(pos);
-
-            if (RG_LIKELY(proto)) {
-                pos = proto->skip_pos;
-            } else {
-                pos++;
-
-                ConsumeToken(bk_TokenKind::Identifier);
-                RG_ASSERT(!valid);
-            }
-
+            ParseFunction(true, false);
             EndStatement();
         } break;
         case bk_TokenKind::Enum: {
-            if (RG_UNLIKELY(current_func)) {
-                MarkError(pos, "Enum types cannot be defined inside functions");
-                Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
-            } else if (RG_UNLIKELY(depth)) {
-                MarkError(pos, "Enums must be defined in top-level scope");
-            }
-
-            const PrototypeInfo *proto = prototypes_map.Find(pos);
-
-            if (RG_LIKELY(proto)) {
-                pos = proto->skip_pos;
-            } else {
-                pos++;
-
-                ConsumeToken(bk_TokenKind::Identifier);
-                RG_ASSERT(!valid);
-            }
-
+            ParseEnum(false);
             EndStatement();
         } break;
         case bk_TokenKind::Return: {
@@ -1088,74 +835,173 @@ bool bk_Parser::ParseDo()
     }
 }
 
-void bk_Parser::ParseFunction(const PrototypeInfo *proto)
+void bk_Parser::ParseFunction(bool record, bool preparse)
 {
     Size func_pos = ++pos;
 
-    bk_FunctionInfo *func = proto->func;
-
-    RG_DEFER_C(prev_func = current_func,
-               prev_offset = var_offset) {
-        // Variables inside the function are destroyed at the end of the block.
-        // This destroys the parameters.
-        DestroyVariables(program->variables.len - func->params.len);
-        var_offset = prev_offset;
-
-        current_func = prev_func;
-    };
-
-    // Do safety checks we could not do in Preparse()
-    if (RG_UNLIKELY(current_func)) {
-        MarkError(func_pos, "Nested functions are not supported");
-        Hint(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
-    } else if (RG_UNLIKELY(depth)) {
-        MarkError(func_pos, "Functions must be defined in top-level scope");
-    }
-    current_func = func;
-
-    // Skip prototype
-    var_offset = 0;
-    pos = proto->skip_pos;
-
-    // Create parameter variables
-    for (const bk_FunctionInfo::Parameter &param: func->params) {
-        bk_VariableInfo *var = program->variables.AppendDefault();
-        Size param_pos = definitions_map.FindValue(&param, -1);
-        definitions_map.Set(var, param_pos);
-
-        var->name = param.name;
-        var->type = param.type;
-        var->mut = param.mut;
-        var->scope = bk_VariableInfo::Scope::Local;
-
-        var->offset = var_offset;
-        var_offset += param.type->size;
-
-        std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
-        if (RG_UNLIKELY(!ret.second)) {
-            const bk_VariableInfo *prev_var = *ret.first;
-            var->shadow = prev_var;
-
-            // We should already have issued an error message for the other case (duplicate
-            // parameter name) in Preparse().
-            if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
-                MarkError(param_pos, "Parameter '%1' is not allowed to hide function", var->name);
-                HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
-            } else if (prev_var->scope == bk_VariableInfo::Scope::Global) {
-                MarkError(param_pos, "Parameter '%1' is not allowed to hide global variable", var->name);
-                HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
+    if (!preparse) {
+        if (RG_UNLIKELY(current_func)) {
+            if (record) {
+                MarkError(func_pos, "Record types cannot be defined inside functions");
+                Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
             } else {
-                FlagError();
+                MarkError(func_pos, "Nested functions are not supported");
+                Hint(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
+
+            }
+        } else if (RG_UNLIKELY(depth)) {
+            MarkError(func_pos, "%1 must be defined in top-level scope", record ? "Records" : "Functions");
+        }
+    }
+
+    Size *skip_ptr;
+    {
+        std::pair<Size *, bool> ret = skip_map.TrySet(pos, -1);
+
+        if (!ret.second) {
+            pos = *ret.first;
+            return;
+        }
+
+        skip_ptr = ret.first;
+    }
+
+    bk_FunctionInfo *func = program->functions.AppendDefault();
+    definitions_map.Set(func, pos);
+
+    func->name = ConsumeIdentifier();
+    func->mode = record ? bk_FunctionInfo::Mode::Record : bk_FunctionInfo::Mode::Blikk;
+
+    HeapArray<char> signature_buf;
+    HeapArray<char> prototype_buf;
+    bk_FunctionTypeInfo type_buf = {};
+    signature_buf.Append("func (");
+    Fmt(&prototype_buf, "%1(", func->name);
+    type_buf.primitive = bk_PrimitiveKind::Function;
+    type_buf.size = 1;
+
+    // Parameters
+    ConsumeToken(bk_TokenKind::LeftParenthesis);
+    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+        for (;;) {
+            SkipNewLines();
+
+            bk_FunctionInfo::Parameter param = {};
+            Size param_pos = pos;
+
+            param.mut = !record && MatchToken(bk_TokenKind::Mut);
+            param.name = ConsumeIdentifier();
+
+            ConsumeToken(bk_TokenKind::Colon);
+            param.type = ParseType();
+
+            if (RG_LIKELY(func->params.Available())) {
+                bk_FunctionInfo::Parameter *ptr = func->params.Append(param);
+                definitions_map.Set(ptr, param_pos);
+
+                type_buf.params.Append(param.type);
+                type_buf.params_size += param.type->size;
+            } else {
+                MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
+            }
+
+            signature_buf.Append(param.type->signature);
+            Fmt(&prototype_buf, "%1: %2", param.name, param.type->signature);
+
+            if (MatchToken(bk_TokenKind::Comma)) {
+                signature_buf.Append(", ");
+                prototype_buf.Append(", ");
+            } else {
+                break;
             }
         }
 
-        if (RG_UNLIKELY(poisoned_set.Find(&param))) {
-            poisoned_set.Set(var);
+        SkipNewLines();
+        ConsumeToken(bk_TokenKind::RightParenthesis);
+    }
+    signature_buf.Append(')');
+    prototype_buf.Append(')');
+
+    // Return type
+    if (record) {
+        bk_RecordTypeInfo *record_type = program->record_types.AppendDefault();
+
+        record_type->signature = func->name;
+        record_type->primitive = bk_PrimitiveKind::Record;
+        record_type->init0 = true;
+        record_type->func = func;
+
+        for (const bk_FunctionInfo::Parameter &param: func->params) {
+            bk_RecordTypeInfo::Member *member = record_type->members.AppendDefault();
+
+            member->name = param.name;
+            member->type = param.type;
+            member->offset = record_type->size;
+
+            record_type->init0 &= param.type->init0;
+            record_type->size += param.type->size;
+
+            // Evaluate each time, so that overflow is not a problem
+            if (RG_UNLIKELY(record_type->size > UINT16_MAX)) {
+                MarkError(func_pos, "Record size is too big");
+            }
+
+            Size param_pos = definitions_map.FindValue(&param, -1);
+            definitions_map.Set(member, param_pos);
+        }
+
+        // We don't need to check for uniqueness
+        program->types_map.TrySet(record_type);
+
+        type_buf.ret_type = record_type;
+
+        Fmt(&signature_buf, ": %1", record_type->signature);
+        Fmt(&prototype_buf, ": %1", record_type->signature);
+    } else if (MatchToken(bk_TokenKind::Colon)) {
+        type_buf.ret_type = ParseType();
+
+        if (type_buf.ret_type != bk_NullType) {
+            Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
+            Fmt(&prototype_buf, ": %1", type_buf.ret_type->signature);
+        } else {
+            signature_buf.Append(0);
+            prototype_buf.Append(0);
+        }
+    } else {
+        type_buf.ret_type = bk_NullType;
+
+        signature_buf.Append(0);
+        prototype_buf.Append(0);
+    }
+
+    // Reuse or add function type
+    type_buf.signature = InternString(signature_buf.ptr);
+    func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
+    func->prototype = InternString(prototype_buf.ptr);
+
+    // Publish function
+    {
+        std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
+        bk_FunctionInfo *proto0 = *ret.first;
+
+        if (ret.second) {
+            proto0->overload_prev = proto0;
+            proto0->overload_next = proto0;
+        } else if (!record) {
+            proto0->overload_prev->overload_next = func;
+            func->overload_next = proto0;
+            func->overload_prev = proto0->overload_prev;
+            proto0->overload_prev = func;
+        } else {
+            MarkError(func_pos, "Duplicate type '%1'", func->name);
+
+            func->overload_prev = func;
+            func->overload_next = func;
         }
     }
 
-    // Check for incompatible function overloadings
-    {
+    // XXX: Check for incompatible function overloadings
+    if (!record) {
         bk_FunctionInfo *overload = program->functions_map.FindValue(func->name, nullptr);
 
         while (overload != func) {
@@ -1173,36 +1019,182 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
         }
     }
 
+    // Publish symbol
+    {
+        const bk_VariableInfo *var;
+        if (record) {
+            var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, false, bk_VariableInfo::Scope::Module);
+        } else {
+            var = AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
+        }
+        definitions_map.Set(var, func_pos);
+
+        // Expressions involving this prototype (function or record) won't issue (visible) errors
+        if (RG_UNLIKELY(!show_errors)) {
+            poisoned_set.Set(var);
+        }
+    }
+
+    Size func_offset = 0;
+
+    RG_DEFER_C(prev_func = current_func,
+               prev_variables = program->variables.len,
+               prev_offset = offset_ptr) {
+        // Variables inside the function are destroyed at the end of the block.
+        // This destroys the parameters.
+        DestroyVariables(prev_variables);
+        offset_ptr = prev_offset;
+        current_func = prev_func;
+    };
+    offset_ptr = &func_offset;
+    current_func = func;
+
+    // Create parameter variables
+    for (const bk_FunctionInfo::Parameter &param: func->params) {
+        bk_VariableInfo *var = program->variables.AppendDefault();
+        Size param_pos = definitions_map.FindValue(&param, -1);
+        definitions_map.Set(var, param_pos);
+
+        var->name = param.name;
+        var->type = param.type;
+        var->mut = param.mut;
+        var->scope = bk_VariableInfo::Scope::Local;
+        var->ir = &func->ir;
+
+        var->offset = func_offset;
+        func_offset += param.type->size;
+
+        std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
+        if (RG_UNLIKELY(!ret.second)) {
+            const bk_VariableInfo *prev_var = *ret.first;
+
+            *ret.first = var;
+            var->shadow = prev_var;
+
+            if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
+                MarkError(param_pos, "Parameter '%1' is not allowed to hide function", var->name);
+                HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
+            } else if (prev_var->scope == bk_VariableInfo::Scope::Global) {
+                MarkError(param_pos, "Parameter '%1' is not allowed to hide global variable", var->name);
+                HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
+            } else if (prev_var->ir == &func->ir) {
+                MarkError(param_pos, "Parameter named '%1' already exists", var->name);
+            }
+        }
+
+        if (RG_UNLIKELY(poisoned_set.Find(&param))) {
+            poisoned_set.Set(var);
+        }
+    }
+
     func->valid = true;
     func->impure = false;
     func->side_effects = false;
 
-    func->ir.Append({bk_Opcode::Nop});
+    // Parse function body
+    if (!record) {
+        RG_DEFER_C(prev_src = src,
+                   prev_ir = ir) {
+            src = prev_src;
+            ir = prev_ir;
+        };
+        func->src.filename = src->filename;
+        func->src.lines.Append((bk_SourceMap::Line) {0, pos < tokens.len ? tokens[pos].line : 0});
+        src = &func->src;
+        ir = &func->ir;
 
-    RG_DEFER_C(prev_src = src) {
-        std::swap(func->ir, ir);
-        src = prev_src;
-    };
-    std::swap(func->ir, ir);
-    func->src.filename = src->filename;
-    func->src.lines.Append((bk_SourceMap::Line) {0, pos < tokens.len ? tokens[pos].line : 0});
-    src = &func->src;
+        IR.Append({bk_Opcode::Nop});
 
-    // Function body
-    bool has_return = false;
-    if (PeekToken(bk_TokenKind::Do)) {
-        has_return = ParseDo();
-    } else if (RG_LIKELY(EndStatement())) {
-        has_return = ParseBlock(false);
-        ConsumeToken(bk_TokenKind::End);
+        bool has_return = false;
+
+        if (PeekToken(bk_TokenKind::Do)) {
+            has_return = ParseDo();
+        } else if (RG_LIKELY(EndStatement())) {
+            has_return = ParseBlock(false);
+            ConsumeToken(bk_TokenKind::End);
+        }
+
+        if (!has_return) {
+            if (func->type->ret_type == bk_NullType) {
+                EmitReturn(0);
+            } else {
+                MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
+            }
+        }
     }
 
-    if (!has_return) {
-        if (func->type->ret_type == bk_NullType) {
-            EmitReturn(0);
-        } else {
-            MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
+    *skip_ptr = pos;
+
+    func->complete = func->valid;
+}
+
+void bk_Parser::ParseEnum(bool preparse)
+{
+    Size enum_pos = ++pos;
+
+    if (!preparse) {
+        if (RG_UNLIKELY(current_func)) {
+            MarkError(pos, "Enum types cannot be defined inside functions");
+            Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
+        } else if (RG_UNLIKELY(depth)) {
+            MarkError(pos, "Enums must be defined in top-level scope");
         }
+    }
+
+    Size *skip_ptr;
+    {
+        std::pair<Size *, bool> ret = skip_map.TrySet(pos, -1);
+
+        if (!ret.second) {
+            pos = *ret.first;
+            return;
+        }
+
+        skip_ptr = ret.first;
+    }
+
+    bk_EnumTypeInfo *enum_type = program->enum_types.AppendDefault();
+
+    enum_type->signature = ConsumeIdentifier();
+    enum_type->primitive = bk_PrimitiveKind::Enum;
+    enum_type->init0 = true;
+    enum_type->size = 1;
+
+    ConsumeToken(bk_TokenKind::LeftParenthesis);
+    if (RG_LIKELY(!MatchToken(bk_TokenKind::RightParenthesis))) {
+        do {
+            SkipNewLines();
+
+            bk_EnumTypeInfo::Label *label = enum_type->labels.AppendDefault();
+
+            label->name = ConsumeIdentifier();
+            label->value = enum_type->labels.len - 1;
+
+            bool duplicate = !enum_type->labels_map.TrySet(label).second;
+            if (RG_UNLIKELY(duplicate)) {
+                MarkError(pos - 1, "Label '%1' is already used", label->name);
+            }
+        } while (MatchToken(bk_TokenKind::Comma));
+
+        SkipNewLines();
+        ConsumeToken(bk_TokenKind::RightParenthesis);
+    } else {
+        MarkError(pos - 1, "Empty enums are not allowed");
+    }
+
+    *skip_ptr = pos;
+
+    // Publish enum
+    if (!program->types_map.TrySet(enum_type).second) {
+        MarkError(enum_pos, "Duplicate type '%1'", enum_type->signature);
+    }
+
+    const bk_VariableInfo *var = AddGlobal(enum_type->signature, bk_TypeType, {{.type = enum_type}}, false, bk_VariableInfo::Scope::Module);
+    definitions_map.Set(var, enum_pos);
+
+    // Expressions involving this prototype (function or record) won't issue (visible) errors
+    if (RG_UNLIKELY(!show_errors)) {
+        poisoned_set.Set(var);
     }
 }
 
@@ -1241,10 +1233,13 @@ void bk_Parser::ParseLet()
     var_pos += var->mut;
     definitions_map.Set(var, pos);
     var->name = ConsumeIdentifier();
+    var->ir = ir;
 
     std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
     if (RG_UNLIKELY(!ret.second)) {
         const bk_VariableInfo *prev_var = *ret.first;
+
+        *ret.first = var;
         var->shadow = prev_var;
 
         if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
@@ -1256,13 +1251,13 @@ void bk_Parser::ParseLet()
         } else if (current_func && prev_var->offset < 0) {
             MarkError(var_pos, "Declaration '%1' is not allowed to hide parameter", var->name);
             HintDefinition(prev_var, "Parameter '%1' is defined here", prev_var->name);
-        } else {
+        } else if (current_func && prev_var->ir != &current_func->ir) {
             MarkError(var_pos, "Variable '%1' already exists", var->name);
             HintDefinition(prev_var, "Previous variable '%1' is defined here", prev_var->name);
         }
     }
 
-    Size prev_addr = ir.len;
+    Size prev_addr = IR.len;
 
     StackSlot slot;
     if (MatchToken(bk_TokenKind::Assign)) {
@@ -1291,7 +1286,7 @@ void bk_Parser::ParseLet()
                            var->name, type->signature);
             }
 
-            ir.Append({bk_Opcode::PushZero, {}, {.i = type->size}});
+            IR.Append({bk_Opcode::PushZero, {}, {.i = type->size}});
             slot = {type};
 
             var->constant = true;
@@ -1300,7 +1295,7 @@ void bk_Parser::ParseLet()
 
     if (!var->constant) {
         if (slot.type->size == 1) {
-            var->constant = (ir[ir.len - 1].code == bk_Opcode::Push);
+            var->constant = (IR[IR.len - 1].code == bk_Opcode::Push);
         } else if (slot.type->size) {
             var->constant = CopyBigConstant(slot.type->size);
         } else {
@@ -1311,17 +1306,18 @@ void bk_Parser::ParseLet()
     var->type = slot.type;
     if (slot.var && !slot.var->mut && !slot.indirect_addr && !var->mut) {
         // We're about to alias var to slot.var... we need to drop the load instructions
-        TrimInstructions(ir.len - prev_addr);
+        TrimInstructions(IR.len - prev_addr);
 
         var->scope = slot.var->scope;
+        var->ir = slot.var->ir;
         var->ready_addr = slot.var->ready_addr;
         var->offset = slot.var->offset;
     } else {
         var->scope = current_func ? bk_VariableInfo::Scope::Local : bk_VariableInfo::Scope::Global;
-        var->ready_addr = ir.len;
+        var->ready_addr = IR.len;
 
-        var->offset = var_offset;
-        var_offset += slot.type->size;
+        var->offset = *offset_ptr;
+        *offset_ptr += slot.type->size;
     }
 
     // Expressions involving this variable won't issue (visible) errors
@@ -1337,14 +1333,14 @@ bool bk_Parser::ParseIf()
 
     ParseExpression(bk_BoolType);
 
-    bool fold = (ir[ir.len - 1].code == bk_Opcode::Push);
-    bool fold_test = fold && ir[ir.len - 1].u.b;
+    bool fold = (IR[IR.len - 1].code == bk_Opcode::Push);
+    bool fold_test = fold && IR[IR.len - 1].u.b;
     bool fold_skip = fold && fold_test;
     TrimInstructions(fold);
 
-    Size branch_addr = ir.len;
+    Size branch_addr = IR.len;
     if (!fold) {
-        ir.Append({bk_Opcode::BranchIfFalse});
+        IR.Append({bk_Opcode::BranchIfFalse});
     }
 
     bool has_return = true;
@@ -1357,10 +1353,10 @@ bool bk_Parser::ParseIf()
             if (fold_test) {
                 is_exhaustive = true;
             } else {
-                TrimInstructions(ir.len - branch_addr);
+                TrimInstructions(IR.len - branch_addr);
             }
         } else {
-            ir[branch_addr].u.i = ir.len - branch_addr;
+            IR[branch_addr].u.i = IR.len - branch_addr;
         }
     } else if (RG_LIKELY(EndStatement())) {
         has_return &= ParseBlock(true);
@@ -1368,32 +1364,32 @@ bool bk_Parser::ParseIf()
         if (MatchToken(bk_TokenKind::Else)) {
             Size jump_addr;
             if (fold && !fold_test) {
-                TrimInstructions(ir.len - branch_addr);
+                TrimInstructions(IR.len - branch_addr);
                 jump_addr = -1;
             } else if (!fold) {
-                jump_addr = ir.len;
-                ir.Append({bk_Opcode::Jump, {}, {.i = -1}});
+                jump_addr = IR.len;
+                IR.Append({bk_Opcode::Jump, {}, {.i = -1}});
             } else {
                 jump_addr = -1;
             }
 
             do {
                 if (!fold) {
-                    ir[branch_addr].u.i = ir.len - branch_addr;
+                    IR[branch_addr].u.i = IR.len - branch_addr;
                 }
 
                 if (MatchToken(bk_TokenKind::If)) {
-                    Size test_addr = ir.len;
+                    Size test_addr = IR.len;
                     ParseExpression(bk_BoolType);
 
-                    fold = fold_skip || (ir[ir.len - 1].code == bk_Opcode::Push);
-                    fold_test = fold && !fold_skip && ir[ir.len - 1].u.b;
-                    TrimInstructions(fold ? (ir.len - test_addr) : 0);
+                    fold = fold_skip || (IR[IR.len - 1].code == bk_Opcode::Push);
+                    fold_test = fold && !fold_skip && IR[IR.len - 1].u.b;
+                    TrimInstructions(fold ? (IR.len - test_addr) : 0);
 
                     if (RG_LIKELY(EndStatement())) {
-                        branch_addr = ir.len;
+                        branch_addr = IR.len;
                         if (!fold) {
-                            ir.Append({bk_Opcode::BranchIfFalse});
+                            IR.Append({bk_Opcode::BranchIfFalse});
                         }
 
                         bool block_return = ParseBlock(true);
@@ -1403,18 +1399,18 @@ bool bk_Parser::ParseIf()
                                 has_return = block_return;
                                 is_exhaustive = true;
                             } else {
-                                TrimInstructions(ir.len - branch_addr);
+                                TrimInstructions(IR.len - branch_addr);
                             }
                         } else {
                             has_return &= block_return;
 
-                            ir.Append({bk_Opcode::Jump, {}, {.i = jump_addr}});
-                            jump_addr = ir.len - 1;
+                            IR.Append({bk_Opcode::Jump, {}, {.i = jump_addr}});
+                            jump_addr = IR.len - 1;
                         }
                         fold_skip |= fold && fold_test;
                     }
                 } else if (RG_LIKELY(EndStatement())) {
-                    Size else_addr = ir.len;
+                    Size else_addr = IR.len;
                     bool block_return = ParseBlock(false);
 
                     if (fold && !fold_skip) {
@@ -1424,22 +1420,22 @@ bool bk_Parser::ParseIf()
                     }
                     is_exhaustive = true;
 
-                    TrimInstructions(fold_skip ? (ir.len - else_addr) : 0);
+                    TrimInstructions(fold_skip ? (IR.len - else_addr) : 0);
 
                     break;
                 }
             } while (MatchToken(bk_TokenKind::Else));
 
-            FixJumps(jump_addr, ir.len);
+            FixJumps(jump_addr, IR.len);
         } else {
             if (fold) {
                 if (fold_test) {
                     is_exhaustive = true;
                 } else {
-                    TrimInstructions(ir.len - branch_addr);
+                    TrimInstructions(IR.len - branch_addr);
                 }
             } else {
-                ir[branch_addr].u.i = ir.len - branch_addr;
+                IR[branch_addr].u.i = IR.len - branch_addr;
             }
         }
 
@@ -1455,30 +1451,23 @@ void bk_Parser::ParseWhile()
 
     // Parse expression. We'll make a copy after the loop body so that the IR code looks
     // roughly like if (cond) { do { ... } while (cond) }.
-    Size condition_addr = ir.len;
+    Size condition_addr = IR.len;
     Size condition_line_idx = src->lines.len;
     ParseExpression(bk_BoolType);
 
-    bool fold = (ir[ir.len - 1].code == bk_Opcode::Push);
-    bool fold_test = fold && ir[ir.len - 1].u.b;
+    bool fold = (IR[IR.len - 1].code == bk_Opcode::Push);
+    bool fold_test = fold && IR[IR.len - 1].u.b;
     TrimInstructions(fold);
 
-    Size branch_addr = ir.len;
+    Size branch_addr = IR.len;
     if (!fold) {
-        ir.Append({bk_Opcode::BranchIfFalse});
+        IR.Append({bk_Opcode::BranchIfFalse});
     }
 
     // Break and continue need to apply to while loop blocks
-    RG_DEFER_C(prev_offset = loop_offset,
-               prev_break_addr = loop_break_addr,
-               prev_continue_addr = loop_continue_addr) {
-        loop_offset = prev_offset;
-        loop_break_addr = prev_break_addr;
-        loop_continue_addr = prev_continue_addr;
-    };
-    loop_offset = var_offset;
-    loop_break_addr = -1;
-    loop_continue_addr = -1;
+    RG_DEFER_C(prev_loop = loop) { loop = prev_loop; };
+    LoopContext ctx = { *offset_ptr, -1, -1 };
+    loop = &ctx;
 
     // Parse body
     if (PeekToken(bk_TokenKind::Do)) {
@@ -1491,28 +1480,28 @@ void bk_Parser::ParseWhile()
     // Append loop outro
     if (fold) {
         if (fold_test) {
-            FixJumps(loop_continue_addr, branch_addr);
-            ir.Append({bk_Opcode::Jump, {}, {.i = branch_addr - ir.len}});
-            FixJumps(loop_break_addr, ir.len);
+            FixJumps(ctx.continue_addr, branch_addr);
+            IR.Append({bk_Opcode::Jump, {}, {.i = branch_addr - IR.len}});
+            FixJumps(ctx.break_addr, IR.len);
         } else {
-            TrimInstructions(ir.len - branch_addr);
+            TrimInstructions(IR.len - branch_addr);
         }
     } else {
-        FixJumps(loop_continue_addr, ir.len);
+        FixJumps(ctx.continue_addr, IR.len);
 
         // Copy the condition expression, and the IR/line map information
         for (Size i = condition_line_idx; i < src->lines.len &&
                                           src->lines[i].addr < branch_addr; i++) {
             const bk_SourceMap::Line &line = src->lines[i];
-            src->lines.Append({ir.len + (line.addr - condition_addr), line.line});
+            src->lines.Append({IR.len + (line.addr - condition_addr), line.line});
         }
-        ir.Grow(branch_addr - condition_addr);
-        ir.Append(ir.Take(condition_addr, branch_addr - condition_addr));
+        IR.Grow(branch_addr - condition_addr);
+        IR.Append(IR.Take(condition_addr, branch_addr - condition_addr));
 
-        ir.Append({bk_Opcode::BranchIfTrue, {}, {.i = branch_addr - ir.len + 1}});
-        ir[branch_addr].u.i = ir.len - branch_addr;
+        IR.Append({bk_Opcode::BranchIfTrue, {}, {.i = branch_addr - IR.len + 1}});
+        IR[branch_addr].u.i = IR.len - branch_addr;
 
-        FixJumps(loop_break_addr, ir.len);
+        FixJumps(ctx.break_addr, IR.len);
     }
 }
 
@@ -1526,11 +1515,14 @@ void bk_Parser::ParseFor()
     for_pos += it->mut;
     definitions_map.Set(it, pos);
     it->name = ConsumeIdentifier();
-    it->scope = bk_VariableInfo::Scope::Local;
+    it->scope = current_func ? bk_VariableInfo::Scope::Local : bk_VariableInfo::Scope::Global;
+    it->ir = ir;
 
     std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(it);
     if (RG_UNLIKELY(!ret.second)) {
         const bk_VariableInfo *prev_var = *ret.first;
+
+        *ret.first = it;
         it->shadow = prev_var;
 
         if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
@@ -1539,7 +1531,7 @@ void bk_Parser::ParseFor()
         } else if (current_func && prev_var->scope == bk_VariableInfo::Scope::Global) {
             MarkError(for_pos, "Iterator '%1' is not allowed to hide global variable", it->name);
             HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
-        } else {
+        } else if (current_func && prev_var->ir == &current_func->ir) {
             MarkError(for_pos, "Variable '%1' already exists", it->name);
             HintDefinition(prev_var, "Previous variable '%1' is defined here", prev_var->name);
         }
@@ -1553,31 +1545,24 @@ void bk_Parser::ParseFor()
     ParseExpression(bk_IntType);
 
     // Make sure start and end value remain on the stack
-    it->offset = var_offset + 2;
-    var_offset += 3;
+    it->offset = *offset_ptr + 2;
+    *offset_ptr += 3;
 
     // Put iterator value on the stack
-    ir.Append({bk_Opcode::LoadLocal, {}, {.i = it->offset - 2}});
+    IR.Append({bk_Opcode::LoadLocal, {}, {.i = it->offset - 2}});
     it->type = bk_IntType;
 
-    Size body_addr = ir.len;
+    Size body_addr = IR.len;
 
-    ir.Append({bk_Opcode::LoadLocal, {}, {.i = it->offset}});
-    ir.Append({bk_Opcode::LoadLocal, {}, {.i = it->offset - 1}});
-    ir.Append({bk_Opcode::LessThanInt});
-    ir.Append({bk_Opcode::BranchIfFalse});
+    IR.Append({bk_Opcode::LoadLocal, {}, {.i = it->offset}});
+    IR.Append({bk_Opcode::LoadLocal, {}, {.i = it->offset - 1}});
+    IR.Append({bk_Opcode::LessThanInt});
+    IR.Append({bk_Opcode::BranchIfFalse});
 
-    // Break and continue need to apply to for loop blocks
-    RG_DEFER_C(prev_offset = loop_offset,
-               prev_break_addr = loop_break_addr,
-               prev_continue_addr = loop_continue_addr) {
-        loop_offset = prev_offset;
-        loop_break_addr = prev_break_addr;
-        loop_continue_addr = prev_continue_addr;
-    };
-    loop_offset = var_offset;
-    loop_break_addr = -1;
-    loop_continue_addr = -1;
+    // Break and continue need to apply to while loop blocks
+    RG_DEFER_C(prev_loop = loop) { loop = prev_loop; };
+    LoopContext ctx = { *offset_ptr, -1, -1 };
+    loop = &ctx;
 
     // Parse body
     if (PeekToken(bk_TokenKind::Do)) {
@@ -1588,54 +1573,54 @@ void bk_Parser::ParseFor()
     }
 
     // Loop outro
-    if (ir.len > body_addr + 4) {
-        FixJumps(loop_continue_addr, ir.len);
+    if (IR.len > body_addr + 4) {
+        FixJumps(ctx.continue_addr, IR.len);
 
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = 1}});
-        ir.Append({bk_Opcode::AddInt});
-        ir.Append({bk_Opcode::Jump, {}, {.i = body_addr - ir.len}});
-        ir[body_addr + 3].u.i = ir.len - (body_addr + 3);
+        IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = 1}});
+        IR.Append({bk_Opcode::AddInt});
+        IR.Append({bk_Opcode::Jump, {}, {.i = body_addr - IR.len}});
+        IR[body_addr + 3].u.i = IR.len - (body_addr + 3);
 
-        FixJumps(loop_break_addr, ir.len);
+        FixJumps(ctx.break_addr, IR.len);
         EmitPop(3);
     } else {
-        TrimInstructions(ir.len - body_addr + 1);
+        TrimInstructions(IR.len - body_addr + 1);
         DiscardResult(2);
     }
 
     // Destroy iterator and range values
     DestroyVariables(program->variables.len - 1);
-    var_offset -= 3;
+    *offset_ptr -= 3;
 }
 
 void bk_Parser::ParseBreak()
 {
     Size break_pos = pos++;
 
-    if (loop_offset < 0) {
+    if (RG_UNLIKELY(!loop)) {
         MarkError(break_pos, "Break statement outside of loop");
         return;
     }
 
-    EmitPop(var_offset - loop_offset);
+    EmitPop(*offset_ptr - loop->offset);
 
-    ir.Append({bk_Opcode::Jump, {}, {.i = loop_break_addr}});
-    loop_break_addr = ir.len - 1;
+    IR.Append({bk_Opcode::Jump, {}, {.i = loop->break_addr}});
+    loop->break_addr = IR.len - 1;
 }
 
 void bk_Parser::ParseContinue()
 {
     Size continue_pos = pos++;
 
-    if (loop_offset < 0) {
+    if (RG_UNLIKELY(!loop)) {
         MarkError(continue_pos, "Continue statement outside of loop");
         return;
     }
 
-    EmitPop(var_offset - loop_offset);
+    EmitPop(*offset_ptr - loop->offset);
 
-    ir.Append({bk_Opcode::Jump, {}, {.i = loop_continue_addr}});
-    loop_continue_addr = ir.len - 1;
+    IR.Append({bk_Opcode::Jump, {}, {.i = loop->continue_addr}});
+    loop->continue_addr = IR.len - 1;
 }
 
 static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
@@ -1776,7 +1761,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                     goto unexpected;
                 expect_value = false;
 
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Boolean, {.b = tok.u.b}});
+                IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Boolean, {.b = tok.u.b}});
                 stack.Append({bk_BoolType});
             } break;
             case bk_TokenKind::Integer: {
@@ -1784,7 +1769,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                     goto unexpected;
                 expect_value = false;
 
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = tok.u.i}});
+                IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = tok.u.i}});
                 stack.Append({bk_IntType});
             } break;
             case bk_TokenKind::Float: {
@@ -1792,7 +1777,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                     goto unexpected;
                 expect_value = false;
 
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Float, {.d = tok.u.d}});
+                IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Float, {.d = tok.u.d}});
                 stack.Append({bk_FloatType});
             } break;
             case bk_TokenKind::String: {
@@ -1803,7 +1788,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                 const char *str = InternString(tok.u.str);
                 str = str[0] ? str : nullptr;
 
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::String, {.str = str}});
+                IR.Append({bk_Opcode::Push, bk_PrimitiveKind::String, {.str = str}});
                 stack.Append({bk_StringType});
             } break;
 
@@ -1814,7 +1799,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
 
                 const bk_TypeInfo *type = ParseFunctionType();
 
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
+                IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
                 stack.Append({bk_TypeType});
             } break;
 
@@ -1824,7 +1809,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
 
                     const bk_TypeInfo *type = ParseArrayType();
 
-                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
+                    IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
                     stack.Append({bk_TypeType});
                 } else if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Array) {
                     ParseArraySubscript();
@@ -1842,8 +1827,8 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                         ParseRecordDot();
                         break;
                     } else if (primitive == bk_PrimitiveKind::Type &&
-                               ir[ir.len - 1].code == bk_Opcode::Push &&
-                               ir[ir.len - 1].u.type->primitive == bk_PrimitiveKind::Enum) {
+                               IR[IR.len - 1].code == bk_Opcode::Push &&
+                               IR[IR.len - 1].u.type->primitive == bk_PrimitiveKind::Enum) {
                         ParseEnumDot();
                     } else {
                         MarkError(pos - 1, "Cannot use dot operator on value of type '%1'", stack[stack.len - 1].type->signature);
@@ -1864,6 +1849,51 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                 Size var_pos = pos - 1;
                 bool call = MatchToken(bk_TokenKind::LeftParenthesis);
 
+                if (!var) {
+                    const HoistedInfo *hoist = hoisted_map.FindValue(name, nullptr);
+
+                    RG_DEFER_C(prev_ir = ir,
+                               prev_src = src,
+                               prev_offset = offset_ptr) {
+                        ir = prev_ir;
+                        src = prev_src;
+                        offset_ptr = prev_offset;
+                    };
+                    src = &program->sources[program->sources.len - 1];
+                    ir = &program->main;
+                    offset_ptr = &main_offset;
+
+                    while (hoist) {
+                        RG_DEFER_C(prev_pos = pos,
+                                   prev_errors = show_errors,
+                                   prev_loop = loop) {
+                            pos = prev_pos;
+                            show_errors = prev_errors;
+                            loop = prev_loop;
+                        };
+                        pos = hoist->pos;
+                        show_errors = true;
+                        loop = nullptr;
+
+                        switch (hoist->kind) {
+                            case bk_TokenKind::Func: { ParseFunction(false, true); } break;
+                            case bk_TokenKind::Record: { ParseFunction(true, true); } break;
+                            case bk_TokenKind::Enum: { ParseEnum(true); } break;
+
+                            default: { RG_UNREACHABLE(); } break;
+                        }
+
+                        hoist = hoist->next;
+                    }
+
+                    var = program->variables_map.FindValue(name, nullptr);
+                }
+
+                while (var && var->scope == bk_VariableInfo::Scope::Local &&
+                              var->ir != &current_func->ir) {
+                    var = (bk_VariableInfo *)var->shadow;
+                }
+
                 if (RG_LIKELY(var)) {
                     show_errors &= !poisoned_set.Find(var);
 
@@ -1872,10 +1902,10 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
 
                         if (var->scope == bk_VariableInfo::Scope::Module) {
                             if (var->type->primitive == bk_PrimitiveKind::Function) {
-                                RG_ASSERT(ir[ir.len - 1].code == bk_Opcode::Push &&
-                                          ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
+                                RG_ASSERT(IR[IR.len - 1].code == bk_Opcode::Push &&
+                                          IR[IR.len - 1].primitive == bk_PrimitiveKind::Function);
 
-                                bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
+                                bk_FunctionInfo *func = (bk_FunctionInfo *)IR[IR.len - 1].u.func;
 
                                 if (!call) {
                                     if (RG_UNLIKELY(func->overload_next != func)) {
@@ -1895,19 +1925,16 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                                     }
                                 }
                             }
-                        } else if (RG_UNLIKELY(preparse)) {
-                            MarkError(var_pos, "Top-level declaration (prototype) cannot reference variable '%1'", var->name);
-                            goto error;
                         }
 
                         if (call) {
                             bk_PrimitiveKind primitive = var->type->primitive;
 
                             if (primitive == bk_PrimitiveKind::Function) {
-                                if (ir[ir.len - 1].code == bk_Opcode::Push) {
-                                    RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
+                                if (IR[IR.len - 1].code == bk_Opcode::Push) {
+                                    RG_ASSERT(IR[IR.len - 1].primitive == bk_PrimitiveKind::Function);
 
-                                    bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
+                                    bk_FunctionInfo *func = (bk_FunctionInfo *)IR[IR.len - 1].u.func;
                                     bool overload = (var->scope == bk_VariableInfo::Scope::Module);
 
                                     TrimInstructions(1);
@@ -1920,10 +1947,10 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                                         goto error;
                                 }
                             } else if (primitive == bk_PrimitiveKind::Type) {
-                                if (ir[ir.len - 1].code == bk_Opcode::Push) {
-                                    RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Type);
+                                if (IR[IR.len - 1].code == bk_Opcode::Push) {
+                                    RG_ASSERT(IR[IR.len - 1].primitive == bk_PrimitiveKind::Type);
 
-                                    const bk_TypeInfo *type = ir[ir.len - 1].u.type;
+                                    const bk_TypeInfo *type = IR[IR.len - 1].u.type;
 
                                     if (RG_LIKELY(type->primitive == bk_PrimitiveKind::Record)) {
                                         const bk_RecordTypeInfo *record_type = type->AsRecordType();
@@ -1953,9 +1980,6 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                     }
                 } else {
                     MarkError(var_pos, "Reference to unknown identifier '%1'", name);
-                    if (preparse) {
-                        Hint(-1, "Top-level declarations (prototypes) cannot reference variables");
-                    }
                     HintSuggestions(name, program->variables);
 
                     goto error;
@@ -2026,11 +2050,11 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                     Size trim = std::min(stack[stack.len - 1].type->size, (Size)2);
                     TrimInstructions(trim);
                 } else if (tok.kind == bk_TokenKind::AndAnd) {
-                    op.branch_addr = ir.len;
-                    ir.Append({bk_Opcode::SkipIfFalse});
+                    op.branch_addr = IR.len;
+                    IR.Append({bk_Opcode::SkipIfFalse});
                 } else if (tok.kind == bk_TokenKind::OrOr) {
-                    op.branch_addr = ir.len;
-                    ir.Append({bk_Opcode::SkipIfTrue});
+                    op.branch_addr = IR.len;
+                    IR.Append({bk_Opcode::SkipIfTrue});
                 }
 
                 if (RG_UNLIKELY(!operators.Available())) {
@@ -2217,18 +2241,18 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             // In order for StoreIndirectK to work, the variable address must remain on the stack.
             // To do so, replace LoadIndirect (which removes them) with LoadIndirectK.
             if (op.kind != bk_TokenKind::Reassign) {
-                RG_ASSERT(ir[dest.indirect_addr].code == bk_Opcode::LoadIndirect);
-                ir[dest.indirect_addr].code = bk_Opcode::LoadIndirectK;
+                RG_ASSERT(IR[dest.indirect_addr].code == bk_Opcode::LoadIndirect);
+                IR[dest.indirect_addr].code = bk_Opcode::LoadIndirectK;
             }
 
-            ir.Append({bk_Opcode::StoreIndirectK, {}, {.i = dest.type->size}});
+            IR.Append({bk_Opcode::StoreIndirectK, {}, {.i = dest.type->size}});
         } else if (dest.type->size == 1) {
             bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::StoreK : bk_Opcode::StoreLocalK;
-            ir.Append({code, {}, {.i = dest.var->offset}});
+            IR.Append({code, {}, {.i = dest.var->offset}});
         } else if (dest.type->size) {
             bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
-            ir.Append({code, {}, {.i = dest.var->offset}});
-            ir.Append({bk_Opcode::StoreRevK, {}, {.i = dest.type->size}});
+            IR.Append({code, {}, {.i = dest.var->offset}});
+            IR.Append({bk_Opcode::StoreRevK, {}, {.i = dest.type->size}});
         }
     } else { // Other operators
         switch (op.kind) {
@@ -2243,7 +2267,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             } break;
             case bk_TokenKind::Minus: {
                 if (op.unary) {
-                    bk_Instruction *inst = &ir[ir.len - 1];
+                    bk_Instruction *inst = &IR[IR.len - 1];
 
                     if (inst->code == bk_Opcode::NegateInt || inst->code == bk_Opcode::NegateFloat) {
                         TrimInstructions(1);
@@ -2340,14 +2364,14 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             case bk_TokenKind::AndAnd: {
                 success = EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::AndBool, stack[stack.len - 2].type);
 
-                RG_ASSERT(op.branch_addr && ir[op.branch_addr].code == bk_Opcode::SkipIfFalse);
-                ir[op.branch_addr].u.i = ir.len - op.branch_addr;
+                RG_ASSERT(op.branch_addr && IR[op.branch_addr].code == bk_Opcode::SkipIfFalse);
+                IR[op.branch_addr].u.i = IR.len - op.branch_addr;
             } break;
             case bk_TokenKind::OrOr: {
                 success = EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::OrBool, stack[stack.len - 2].type);
 
-                RG_ASSERT(op.branch_addr && ir[op.branch_addr].code == bk_Opcode::SkipIfTrue);
-                ir[op.branch_addr].u.i = ir.len - op.branch_addr;
+                RG_ASSERT(op.branch_addr && IR[op.branch_addr].code == bk_Opcode::SkipIfTrue);
+                IR[op.branch_addr].u.i = IR.len - op.branch_addr;
             } break;
 
             default: { RG_UNREACHABLE(); } break;
@@ -2374,7 +2398,7 @@ bool bk_Parser::EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, con
     const bk_TypeInfo *type = stack[stack.len - 1].type;
 
     if (type->primitive == in_primitive) {
-        ir.Append({code});
+        IR.Append({code});
         FoldInstruction(1, out_type);
 
         stack[stack.len - 1] = {out_type};
@@ -2391,7 +2415,7 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
     const bk_TypeInfo *type2 = stack[stack.len - 1].type;
 
     if (type1->primitive == in_primitive && type1 == type2) {
-        ir.Append({code});
+        IR.Append({code});
         FoldInstruction(2, out_type);
 
         stack[--stack.len - 1] = {out_type};
@@ -2482,8 +2506,8 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
         if (RG_LIKELY(type == bk_IntType)) {
             // Once we start to implement constant folding and CTFE, more complex expressions
             // should work without any change here.
-            if (RG_LIKELY(ir[ir.len - 1].code == bk_Opcode::Push)) {
-                type_buf.len = ir[ir.len - 1].u.i;
+            if (RG_LIKELY(IR[IR.len - 1].code == bk_Opcode::Push)) {
+                type_buf.len = IR[IR.len - 1].u.i;
                 TrimInstructions(1);
             } else {
                 MarkError(def_pos, "Complex 'Int' expression cannot be resolved statically");
@@ -2542,10 +2566,10 @@ void bk_Parser::ParseArraySubscript()
             // If an array gets loaded from a variable, its address is already on the stack
             // because of EmitLoad. But if it is a temporary value, we need to do it now.
 
-            ir.Append({bk_Opcode::LeaRel, {}, {.i = -stack[stack.len - 1].type->size}});
-            stack[stack.len - 1].indirect_addr = ir.len;
+            IR.Append({bk_Opcode::LeaRel, {}, {.i = -stack[stack.len - 1].type->size}});
+            stack[stack.len - 1].indirect_addr = IR.len;
         } else {
-            stack[stack.len - 1].indirect_addr = ir.len - 1;
+            stack[stack.len - 1].indirect_addr = IR.len - 1;
         }
     }
 
@@ -2554,7 +2578,7 @@ void bk_Parser::ParseArraySubscript()
         const bk_TypeInfo *unit_type = array_type->unit_type;
 
         // Kill the load instructions, we need to adjust the index
-        TrimInstructions(ir.len - stack[stack.len - 1].indirect_addr);
+        TrimInstructions(IR.len - stack[stack.len - 1].indirect_addr);
 
         Size idx_pos = pos;
 
@@ -2568,42 +2592,42 @@ void bk_Parser::ParseArraySubscript()
         }
 
         // Compute array index
-        if (ir[ir.len - 1].code == bk_Opcode::Push) {
-            int64_t idx = ir[ir.len - 1].u.i;
+        if (IR[IR.len - 1].code == bk_Opcode::Push) {
+            int64_t idx = IR[IR.len - 1].u.i;
             int64_t offset = idx * unit_type->size;
 
             if (show_errors) {
-                RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Integer);
+                RG_ASSERT(IR[IR.len - 1].primitive == bk_PrimitiveKind::Integer);
 
                 if (idx < 0 || idx >= array_type->len) {
                     MarkError(idx_pos, "Index is out of range: %1 (array length %2)", idx, array_type->len);
                 }
             }
 
-            if (ir[ir.len - 2].code == bk_Opcode::Lea ||
-                    ir[ir.len - 2].code == bk_Opcode::LeaRel) {
+            if (IR[IR.len - 2].code == bk_Opcode::Lea ||
+                    IR[IR.len - 2].code == bk_Opcode::LeaRel) {
                 TrimInstructions(1);
-                ir[ir.len - 1].u.i += offset;
+                IR[IR.len - 1].u.i += offset;
             } else {
-                ir[ir.len - 1].u.i = offset;
+                IR[IR.len - 1].u.i = offset;
             }
         } else {
-            ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
+            IR.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
             if (unit_type->size != 1) {
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = unit_type->size}});
-                ir.Append({bk_Opcode::MultiplyInt});
+                IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = unit_type->size}});
+                IR.Append({bk_Opcode::MultiplyInt});
             }
-            ir.Append({bk_Opcode::AddInt});
+            IR.Append({bk_Opcode::AddInt});
         }
 
         // Load value
-        stack[stack.len - 1].indirect_addr = ir.len;
-        ir.Append({bk_Opcode::LoadIndirect, {}, {.i = unit_type->size}});
+        stack[stack.len - 1].indirect_addr = IR.len;
+        IR.Append({bk_Opcode::LoadIndirect, {}, {.i = unit_type->size}});
 
         // Clean up temporary value (if any)
         if (!stack[stack.len - 1].var) {
-            ir.Append({bk_Opcode::LeaRel, {}, {.i = -unit_type->size - array_type->size}});
-            ir.Append({bk_Opcode::StoreRev, {}, {.i = unit_type->size}});
+            IR.Append({bk_Opcode::LeaRel, {}, {.i = -unit_type->size - array_type->size}});
+            IR.Append({bk_Opcode::StoreRev, {}, {.i = unit_type->size}});
 
             stack[stack.len - 1].indirect_imbalance += array_type->size - unit_type->size;
             EmitPop(stack[stack.len - 1].indirect_imbalance);
@@ -2627,15 +2651,15 @@ void bk_Parser::ParseRecordDot()
             // If a record gets loaded from a variable, its address is already on the stack
             // because of EmitLoad. But if it is a temporary value, we need to do it now.
 
-            ir.Append({bk_Opcode::LeaRel, {}, {.i = -record_type->size}});
-            stack[stack.len - 1].indirect_addr = ir.len;
+            IR.Append({bk_Opcode::LeaRel, {}, {.i = -record_type->size}});
+            stack[stack.len - 1].indirect_addr = IR.len;
         } else {
-            stack[stack.len - 1].indirect_addr = ir.len - 1;
+            stack[stack.len - 1].indirect_addr = IR.len - 1;
         }
     }
 
     // Kill the load instructions, we need to adjust the index
-    TrimInstructions(ir.len - stack[stack.len - 1].indirect_addr);
+    TrimInstructions(IR.len - stack[stack.len - 1].indirect_addr);
 
     const char *name = ConsumeIdentifier();
     const bk_RecordTypeInfo::Member *member =
@@ -2651,23 +2675,23 @@ void bk_Parser::ParseRecordDot()
 
     // Resolve member
     if (member->offset) {
-        if (ir[ir.len - 1].code == bk_Opcode::Lea ||
-                ir[ir.len - 1].code == bk_Opcode::LeaRel) {
-            ir[ir.len - 1].u.i += member->offset;
+        if (IR[IR.len - 1].code == bk_Opcode::Lea ||
+                IR[IR.len - 1].code == bk_Opcode::LeaRel) {
+            IR[IR.len - 1].u.i += member->offset;
         } else {
-            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = member->offset}});
-            ir.Append({bk_Opcode::AddInt});
+            IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = member->offset}});
+            IR.Append({bk_Opcode::AddInt});
         }
     }
 
     // Load value
-    stack[stack.len - 1].indirect_addr = ir.len;
-    ir.Append({bk_Opcode::LoadIndirect, {}, {.i = member->type->size}});
+    stack[stack.len - 1].indirect_addr = IR.len;
+    IR.Append({bk_Opcode::LoadIndirect, {}, {.i = member->type->size}});
 
     // Clean up temporary value (if any)
     if (!stack[stack.len - 1].var) {
-        ir.Append({bk_Opcode::LeaRel, {}, {.i = -member->type->size - record_type->size}});
-        ir.Append({bk_Opcode::StoreRev, {}, {.i = member->type->size}});
+        IR.Append({bk_Opcode::LeaRel, {}, {.i = -member->type->size - record_type->size}});
+        IR.Append({bk_Opcode::StoreRev, {}, {.i = member->type->size}});
 
         stack[stack.len - 1].indirect_imbalance += record_type->size - member->type->size;
         EmitPop(stack[stack.len - 1].indirect_imbalance);
@@ -2680,9 +2704,9 @@ void bk_Parser::ParseEnumDot()
 {
     Size label_pos = pos;
 
-    RG_ASSERT(ir[ir.len - 1].code == bk_Opcode::Push &&
-              ir[ir.len - 1].primitive == bk_PrimitiveKind::Type);
-    const bk_EnumTypeInfo *enum_type = ir.ptr[--ir.len].u.type->AsEnumType();
+    RG_ASSERT(IR[IR.len - 1].code == bk_Opcode::Push &&
+              IR[IR.len - 1].primitive == bk_PrimitiveKind::Type);
+    const bk_EnumTypeInfo *enum_type = IR.ptr[--IR.len].u.type->AsEnumType();
 
     const char *name = ConsumeIdentifier();
     const bk_EnumTypeInfo::Label *label = enum_type->labels_map.FindValue(name, nullptr);
@@ -2694,7 +2718,7 @@ void bk_Parser::ParseEnumDot()
         return;
     }
 
-    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Enum, {.i = label->value}});
+    IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Enum, {.i = label->value}});
 
     stack[stack.len - 1] = {enum_type};
 }
@@ -2705,7 +2729,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     LocalArray<const bk_TypeInfo *, RG_LEN(bk_FunctionTypeInfo::params.data)> args;
 
     Size call_pos = pos - 1;
-    Size call_addr = ir.len;
+    Size call_addr = IR.len;
 
     // Parse arguments
     Size args_size = 0;
@@ -2719,14 +2743,14 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
             }
 
             if (func_type->variadic && args.len >= func_type->params.len) {
-                Size type_addr = ir.len;
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type});
+                Size type_addr = IR.len;
+                IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Type});
 
                 const bk_TypeInfo *type = ParseExpression(false, true).type;
                 args.Append(type);
                 args_size += 1 + type->size;
 
-                ir[type_addr].u.type = type;
+                IR[type_addr].u.type = type;
             } else {
                 const bk_TypeInfo *type = ParseExpression(false, true).type;
                 args.Append(type);
@@ -2738,7 +2762,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         ConsumeToken(bk_TokenKind::RightParenthesis);
     }
     if (func_type->variadic) {
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args_size - func_type->params.len}});
+        IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args_size - func_type->params.len}});
         args_size++;
     }
 
@@ -2786,7 +2810,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     // Emit intrinsic or call
     if (!func) {
         Size offset = 1 + args_size;
-        ir.Append({bk_Opcode::CallIndirect, {}, {.i = -offset}});
+        IR.Append({bk_Opcode::CallIndirect, {}, {.i = -offset}});
 
         stack.len--;
     } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
@@ -2794,9 +2818,9 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     } else if (func->mode == bk_FunctionInfo::Mode::Record) {
         // Nothing to do, the object stack
     } else {
-        ir.Append({bk_Opcode::Call, {}, {.func = func}});
+        IR.Append({bk_Opcode::Call, {}, {.func = func}});
 
-        if (!func->impure && func != current_func) {
+        if (!func->impure && func->complete) {
             show_errors &= func->valid;
             FoldInstruction(args_size, func_type->ret_type);
         }
@@ -2810,12 +2834,12 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 {
     if (TestStr(name, "toFloat")) {
         if (args[0] == bk_IntType) {
-            ir.Append({bk_Opcode::IntToFloat});
+            IR.Append({bk_Opcode::IntToFloat});
             FoldInstruction(1, bk_FloatType);
         }
     } else if (TestStr(name, "toInt")) {
         if (args[0] == bk_FloatType) {
-            ir.Append({bk_Opcode::FloatToInt});
+            IR.Append({bk_Opcode::FloatToInt});
             FoldInstruction(1, bk_IntType);
         }
     } else if (TestStr(name, "typeOf")) {
@@ -2827,9 +2851,9 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
         }
 
         // typeOf() does not execute anything!
-        TrimInstructions(ir.len - call_addr);
+        TrimInstructions(IR.len - call_addr);
 
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = args[0]}});
+        IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = args[0]}});
     } else {
         RG_UNREACHABLE();
     }
@@ -2843,20 +2867,16 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
         bool stable = var->constant && (!var->mut || var->scope == bk_VariableInfo::Scope::Local);
 
         if (stable) {
-            // We use std::swap on IR when we parse functions
-            Span<const bk_Instruction> var_ir =
-                (current_func && var->scope != bk_VariableInfo::Scope::Local) ? current_func->ir : program->ir;
-
-            bk_Instruction inst = var_ir[var->ready_addr - 1];
-            ir.Append(inst);
+            bk_Instruction inst = (*var->ir)[var->ready_addr - 1];
+            IR.Append(inst);
         } else {
             bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
-            ir.Append({code, {}, {.i = var->offset}});
+            IR.Append({code, {}, {.i = var->offset}});
         }
     } else if (var->type->size) {
         bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
-        ir.Append({code, {}, {.i = var->offset}});
-        ir.Append({bk_Opcode::LoadIndirect, {}, {.i = var->type->size}});
+        IR.Append({code, {}, {.i = var->offset}});
+        IR.Append({bk_Opcode::LoadIndirect, {}, {.i = var->type->size}});
     }
 
     if (current_func) {
@@ -2880,12 +2900,12 @@ const bk_TypeInfo *bk_Parser::ParseType()
         }
     }
 
-    if (RG_UNLIKELY(ir[ir.len - 1].code != bk_Opcode::Push)) {
+    if (RG_UNLIKELY(IR[IR.len - 1].code != bk_Opcode::Push)) {
         MarkError(type_pos, "Complex 'Type' expression cannot be resolved statically");
         return bk_NullType;
     }
 
-    const bk_TypeInfo *type = ir[ir.len - 1].u.type;
+    const bk_TypeInfo *type = IR[IR.len - 1].u.type;
     TrimInstructions(1);
 
     return type;
@@ -2896,14 +2916,15 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
     if (out_type->size > 1)
         return;
     for (Size i = 0; i < count; i++) {
-        if ((ir[ir.len - 2 - i].code != bk_Opcode::Push))
+        if ((IR[IR.len - 2 - i].code != bk_Opcode::Push))
             return;
     }
 
-    ir.Append({bk_Opcode::End, {}, {.i = out_type->size}});
+    IR.Append({bk_Opcode::End, {}, {.i = out_type->size}});
 
     folder.frames.RemoveFrom(1);
-    folder.frames[0].pc = ir.len - 2 - count;
+    folder.frames[0].func = current_func;
+    folder.frames[0].pc = IR.len - 2 - count;
     folder.stack.RemoveFrom(0);
 
     bool folded = folder.Run((int)bk_RunFlag::HideErrors);
@@ -2915,17 +2936,17 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
             bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
             bk_PrimitiveKind primitive = out_type->primitive;
 
-            ir.Append({bk_Opcode::Push, primitive, value});
+            IR.Append({bk_Opcode::Push, primitive, value});
         }
     } else {
-        ir.len--;
+        IR.len--;
     }
 }
 
 void bk_Parser::DiscardResult(Size size)
 {
     while (size > 0) {
-        switch (ir[ir.len - 1].code) {
+        switch (IR[IR.len - 1].code) {
             case bk_Opcode::Push:
             case bk_Opcode::Lea:
             case bk_Opcode::LeaLocal:
@@ -2937,18 +2958,18 @@ void bk_Parser::DiscardResult(Size size)
             } break;
 
             case bk_Opcode::PushZero: {
-                if (size >= ir[ir.len - 1].u.i) {
+                if (size >= IR[IR.len - 1].u.i) {
                     TrimInstructions(1);
-                    size -= ir[ir.len - 1].u.i;
+                    size -= IR[IR.len - 1].u.i;
                 } else {
                     EmitPop(size);
                     return;
                 }
             } break;
             case bk_Opcode::PushBig: {
-                if (size >= ir[ir.len - 1].u.i) {
+                if (size >= IR[IR.len - 1].u.i) {
                     TrimInstructions(1);
-                    size -= ir[ir.len - 1].u.i - 1;
+                    size -= IR[IR.len - 1].u.i - 1;
                 } else {
                     EmitPop(size);
                     return;
@@ -2957,15 +2978,15 @@ void bk_Parser::DiscardResult(Size size)
 
             case bk_Opcode::StoreK:
             case bk_Opcode::StoreLocalK: {
-                ir[ir.len - 1].code = (bk_Opcode)((int)ir[ir.len - 1].code - 1);
+                IR[IR.len - 1].code = (bk_Opcode)((int)IR[IR.len - 1].code - 1);
                 size--;
             } break;
 
             case bk_Opcode::StoreIndirectK:
             case bk_Opcode::StoreRevK: {
-                if (size >= ir[ir.len - 1].u.i) {
-                    ir[ir.len - 1].code = (bk_Opcode)((int)ir[ir.len - 1].code - 1);
-                    size -= ir[ir.len - 1].u.i;
+                if (size >= IR[IR.len - 1].u.i) {
+                    IR[IR.len - 1].code = (bk_Opcode)((int)IR[IR.len - 1].code - 1);
+                    size -= IR[IR.len - 1].u.i;
                 } else {
                     EmitPop(size);
                     return;
@@ -2973,7 +2994,7 @@ void bk_Parser::DiscardResult(Size size)
             } break;
 
             case bk_Opcode::Call: {
-                const bk_FunctionInfo *func = ir[ir.len - 1].u.func;
+                const bk_FunctionInfo *func = IR[IR.len - 1].u.func;
                 const bk_FunctionTypeInfo *func_type = func->type;
 
                 if (!func->side_effects && !func_type->variadic && size >= func_type->ret_type->size) {
@@ -3000,9 +3021,9 @@ bool bk_Parser::CopyBigConstant(Size size)
     program->ro.Grow(size);
 
     for (Size i = 0, remain = size; remain > 0; i++) {
-        switch (ir[ir.len - 1 - i].code) {
+        switch (IR[IR.len - 1 - i].code) {
             case bk_Opcode::Push: {
-                program->ro.ptr[program->ro.len + i].i = ir[ir.len - 1 - i].u.i;
+                program->ro.ptr[program->ro.len + i].i = IR[IR.len - 1 - i].u.i;
                 remain--;
             } break;
             case bk_Opcode::PushZero: { RG_UNREACHABLE(); } break;
@@ -3012,8 +3033,8 @@ bool bk_Parser::CopyBigConstant(Size size)
     }
 
     TrimInstructions(size);
-    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = program->ro.len}});
-    ir.Append({bk_Opcode::PushBig, {}, {.i = size}});
+    IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = program->ro.len}});
+    IR.Append({bk_Opcode::PushBig, {}, {.i = size}});
     program->ro.len += size;
 
     return true;
@@ -3024,7 +3045,7 @@ void bk_Parser::EmitPop(int64_t count)
     RG_ASSERT(count >= 0 || !valid);
 
     if (count) {
-        ir.Append({bk_Opcode::Pop, {}, {.i = count}});
+        IR.Append({bk_Opcode::Pop, {}, {.i = count}});
     }
 }
 
@@ -3033,21 +3054,21 @@ void bk_Parser::EmitReturn(Size size)
     RG_ASSERT(current_func);
 
     // We support tail recursion elimination (TRE)
-    if (ir[ir.len - 1].code == bk_Opcode::Call && ir[ir.len - 1].u.func == current_func) {
-        ir.len--;
+    if (IR[IR.len - 1].code == bk_Opcode::Call && IR[IR.len - 1].u.func == current_func) {
+        IR.len--;
 
         if (current_func->type->params_size == 1) {
-            ir.Append({bk_Opcode::StoreLocal, {}, {.i = 0}});
+            IR.Append({bk_Opcode::StoreLocal, {}, {.i = 0}});
         } else if (current_func->type->params_size > 1) {
-            ir.Append({bk_Opcode::LeaLocal, {}, {.i = 0}});
-            ir.Append({bk_Opcode::StoreRev, {}, {.i = current_func->type->params_size}});
+            IR.Append({bk_Opcode::LeaLocal, {}, {.i = 0}});
+            IR.Append({bk_Opcode::StoreRev, {}, {.i = current_func->type->params_size}});
         }
-        EmitPop(var_offset - current_func->type->params_size);
-        ir.Append({bk_Opcode::Jump, {}, {.i = -ir.len}});
+        EmitPop(*offset_ptr - current_func->type->params_size);
+        IR.Append({bk_Opcode::Jump, {}, {.i = -IR.len}});
 
         current_func->tre = true;
     } else {
-        ir.Append({bk_Opcode::Return, {}, {.i = size}});
+        IR.Append({bk_Opcode::Return, {}, {.i = size}});
     }
 }
 
@@ -3085,32 +3106,31 @@ void bk_Parser::DestroyTypes(BucketArray<T> *types, Size first_idx)
 void bk_Parser::FixJumps(Size jump_addr, Size target_addr)
 {
     while (jump_addr >= 0) {
-        Size next_addr = ir[jump_addr].u.i;
-        ir[jump_addr].u.i = target_addr - jump_addr;
+        Size next_addr = IR[jump_addr].u.i;
+        IR[jump_addr].u.i = target_addr - jump_addr;
         jump_addr = next_addr;
     }
 }
 
 void bk_Parser::TrimInstructions(Size count)
 {
+    Size trim_addr = IR.len - count;
+    Size min_addr = current_func ? 0 : prev_main_len;
+
     // Don't trim previously compiled code
-    {
-        Size min_ir_len = current_func ? 0 : prev_ir_len;
-
-        if (RG_UNLIKELY(ir.len - count < min_ir_len)) {
-            RG_ASSERT(!valid);
-            return;
-        }
+    if (RG_UNLIKELY(trim_addr < min_addr)) {
+        RG_ASSERT(!valid);
+        return;
     }
-
-    Size trim_addr = ir.len - count;
 
     // Remove potential jump sources
-    while (loop_break_addr >= trim_addr) {
-        loop_break_addr = ir[loop_break_addr].u.i;
-    }
-    while (loop_continue_addr >= trim_addr) {
-        loop_continue_addr = ir[loop_continue_addr].u.i;
+    if (loop) {
+        while (loop->break_addr >= trim_addr) {
+            loop->break_addr = IR[loop->break_addr].u.i;
+        }
+        while (loop->continue_addr >= trim_addr) {
+            loop->continue_addr = IR[loop->continue_addr].u.i;
+        }
     }
 
     // Adjust IR-line map
@@ -3125,7 +3145,7 @@ void bk_Parser::TrimInstructions(Size count)
         src->lines.Append(line);
     }
 
-    ir.RemoveFrom(trim_addr);
+    IR.RemoveFrom(trim_addr);
 }
 
 bool bk_Parser::TestOverload(const bk_FunctionTypeInfo &func_type, Span<const bk_TypeInfo *const> params)
@@ -3229,7 +3249,7 @@ bool bk_Parser::SkipNewLines()
         while (MatchToken(bk_TokenKind::EndOfLine));
 
         if (RG_LIKELY(pos < tokens.len)) {
-            src->lines.Append({ir.len, tokens[pos].line});
+            src->lines.Append({IR.len, tokens[pos].line});
         }
 
         return true;
@@ -3257,5 +3277,7 @@ void bk_Parser::RecurseDec()
 {
     recursion--;
 }
+
+#undef IR
 
 }

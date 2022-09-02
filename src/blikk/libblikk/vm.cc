@@ -34,7 +34,7 @@ bool bk_VirtualMachine::Run(unsigned int flags)
     bk_CallFrame *frame = &frames[frames.len - 1];
     Size pc = frame->pc;
     Size bp = frame->bp;
-    Span<const bk_Instruction> ir = frame->func ? frame->func->ir : program->ir;
+    Span<const bk_Instruction> ir = frame->func ? frame->func->ir : program->main;
     RG_ASSERT(pc < ir.len);
 
     // Save PC on exit
@@ -663,7 +663,7 @@ bool bk_VirtualMachine::Run(unsigned int flags)
             frame = &frames[frames.len - 1];
             pc = frame->pc;
             bp = frame->bp;
-            ir = frame->func ? frame->func->ir : program->ir;
+            ir = frame->func ? frame->func->ir : program->main;
 
             DISPATCH(++pc);
         }

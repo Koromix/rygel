@@ -230,7 +230,7 @@ int RunInteractive(const Config &config)
             vm.stack.RemoveFrom(prev_stack_len);
 
             vm.frames.RemoveFrom(1);
-            vm.frames[0].pc = program.ir.len;
+            vm.frames[0].pc = program.main.len;
         }
     }
 

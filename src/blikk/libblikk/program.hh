@@ -208,6 +208,7 @@ struct bk_FunctionInfo {
     bk_SourceMap src;
     bool tre;
 
+    bool complete;
     bool valid;
     bool impure;
     bool side_effects;
@@ -215,10 +216,6 @@ struct bk_FunctionInfo {
     // Linked list
     bk_FunctionInfo *overload_prev;
     bk_FunctionInfo *overload_next;
-
-    // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
-    Size earliest_ref_pos;
-    Size earliest_ref_addr;
 
     RG_HASHTABLE_HANDLER(bk_FunctionInfo, name);
 };
@@ -236,10 +233,9 @@ struct bk_VariableInfo {
     bool constant;
 
     Scope scope;
+    const HeapArray<bk_Instruction> *ir;
+    Size ready_addr; // Only set for globals and locals (not parameters, loop iterators, etc.)
     Size offset; // Stack
-
-    // Only set for globals and locals (not parameters, loop iterators, etc.)
-    Size ready_addr;
 
     const bk_VariableInfo *shadow;
 
@@ -254,7 +250,8 @@ struct bk_CallFrame {
 };
 
 struct bk_Program {
-    HeapArray<bk_Instruction> ir;
+    HeapArray<bk_Instruction> globals;
+    HeapArray<bk_Instruction> main;
     HeapArray<bk_SourceMap> sources;
 
     BucketArray<bk_FunctionTypeInfo> function_types;
