@@ -196,15 +196,13 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
 #ifdef _M_ARM64EC
                 if (func->variadic) {
-                    int gpr_count = (param.type->size + 7) / 8;
-
-                    if (IsRegular(param.type->size) && gpr_count <= gpr_avail) {
-                        param.gpr_count = (int8_t)gpr_count;
-                        gpr_avail -= gpr_count;
+                    if (IsRegular(param.type->size) && gpr_avail) {
+                        param.gpr_count = 1;
+                        gpr_avail--;
                     } else {
                         if (gpr_avail) {
                             param.gpr_count = 1;
-                            gpr_avail -= 1;
+                            gpr_avail--;
                         }
                         param.use_memory = true;
                     }
@@ -244,7 +242,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                     // Big types (more than 16 bytes) are replaced by a pointer
                     if (gpr_avail) {
                         param.gpr_count = 1;
-                        gpr_avail -= 1;
+                        gpr_avail--;
                     }
                     param.use_memory = true;
                 }
