@@ -3020,13 +3020,29 @@ bool bk_Parser::CopyBigConstant(Size size)
 
     program->ro.Grow(size);
 
-    for (Size i = 0, remain = size; remain > 0; i++) {
-        switch (IR[IR.len - 1 - i].code) {
+    for (Size addr = IR.len - 1, offset = size - 1; offset >= 0; addr--) {
+        switch (IR[addr].code) {
             case bk_Opcode::Push: {
-                program->ro.ptr[program->ro.len + i].i = IR[IR.len - 1 - i].u.i;
-                remain--;
+                program->ro.ptr[program->ro.len + offset].i = IR[addr].u.i;
+                offset--;
             } break;
-            case bk_Opcode::PushZero: { RG_UNREACHABLE(); } break;
+            case bk_Opcode::PushZero: {
+                if (IR[addr].u.i > offset)
+                    return false;
+
+                memset(program->ro.ptr + offset, 0, IR[addr].u.i);
+                offset -= IR[addr].u.i;
+            } break;
+            case bk_Opcode::PushBig: {
+                if (IR[addr].u.i > offset)
+                    return false;
+                if (IR[addr - 1].code != bk_Opcode::Push ||
+                        IR[addr - 1].primitive != bk_PrimitiveKind::Integer)
+                    return false;
+
+                memcpy(program->ro.ptr + offset, program->ro.ptr + IR[addr - 1].u.i, IR[addr].u.i);
+                offset -= IR[addr--].u.i;
+            } break;
 
             default: return false;
         }
