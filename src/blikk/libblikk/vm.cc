@@ -715,8 +715,8 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
                 case bk_PrimitiveKind::Opaque: { PrintLn(stderr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u.opaque).Pad0(-RG_SIZE(void *) * 2), stack.len); } break;
             }
         } break;
-        case bk_Opcode::PushZero:
-        case bk_Opcode::PushBig: { PrintLn(stderr, " %!Y..[%1]%!0 |%2", bk_PrimitiveKindNames[(int)inst.primitive], inst.u.i); } break;
+        case bk_Opcode::PushZero: { PrintLn(stderr, " |%1 %!M..>%2%!0", inst.u.i, stack.len); } break;
+        case bk_Opcode::PushBig: { PrintLn(stderr, " |%1 %!M..>%2%!0", inst.u.i, stack.len); } break;
         case bk_Opcode::Pop: { PrintLn(stderr, " %1", inst.u.i); } break;
 
         case bk_Opcode::Lea: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", inst.u.i, stack.len); } break;
