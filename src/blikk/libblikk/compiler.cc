@@ -2878,14 +2878,14 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 
 void bk_Parser::EmitLoad(bk_VariableInfo *var)
 {
-    if (var->constant) {
+    if (!var->type->size) {
+        stack.Append({var->type, var, false});
+    } else if (var->constant) {
         bk_Instruction inst = (*var->ir)[var->ready_addr - 1];
         IR.Append(inst);
 
         stack.Append({var->type, var, false});
     } else if (!var->type->IsComposite()) {
-        RG_ASSERT(var->type->size == 1);
-
         bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
         IR.Append({code, {}, {.i = var->offset}});
 
