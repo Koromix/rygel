@@ -983,40 +983,35 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
     // Publish function
     {
         std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
-        bk_FunctionInfo *proto0 = *ret.first;
+        bk_FunctionInfo *overload = *ret.first;
 
         if (ret.second) {
-            proto0->overload_prev = proto0;
-            proto0->overload_next = proto0;
+            func->overload_prev = func;
+            func->overload_next = func;
         } else if (!record) {
-            proto0->overload_prev->overload_next = func;
-            func->overload_next = proto0;
-            func->overload_prev = proto0->overload_prev;
-            proto0->overload_prev = func;
+            overload->overload_prev->overload_next = func;
+            func->overload_next = overload;
+            func->overload_prev = overload->overload_prev;
+            overload->overload_prev = func;
+
+            while (overload != func) {
+                if (TestOverload(*overload->type, func->type->params)) {
+                    if (overload->type->ret_type == func->type->ret_type) {
+                        MarkError(func_pos, "Function '%1' is already defined", func->prototype);
+                    } else {
+                        MarkError(func_pos, "Function '%1' only differs from previously defined '%2' by return type",
+                                  func->prototype, overload->prototype);
+                    }
+                    HintDefinition(overload, "Previous definition is here");
+                }
+
+                overload = overload->overload_next;
+            }
         } else {
             MarkError(func_pos, "Duplicate type '%1'", func->name);
 
             func->overload_prev = func;
             func->overload_next = func;
-        }
-    }
-
-    // XXX: Check for incompatible function overloadings
-    if (!record) {
-        bk_FunctionInfo *overload = program->functions_map.FindValue(func->name, nullptr);
-
-        while (overload != func) {
-            if (TestOverload(*overload->type, func->type->params)) {
-                if (overload->type->ret_type == func->type->ret_type) {
-                    MarkError(func_pos, "Function '%1' is already defined", func->prototype);
-                } else {
-                    MarkError(func_pos, "Function '%1' only differs from previously defined '%2' by return type",
-                              func->prototype, overload->prototype);
-                }
-                HintDefinition(overload, "Previous definition is here");
-            }
-
-            overload = overload->overload_next;
         }
     }
 
@@ -1036,78 +1031,78 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
         }
     }
 
-    Size func_offset = 0;
-
-    RG_DEFER_C(prev_func = current_func,
-               prev_variables = program->variables.len,
-               prev_offset = offset_ptr) {
-        // Variables inside the function are destroyed at the end of the block.
-        // This destroys the parameters.
-        DestroyVariables(prev_variables);
-        offset_ptr = prev_offset;
-        current_func = prev_func;
-    };
-    offset_ptr = &func_offset;
-    current_func = func;
-
-    // Create parameter variables
-    for (const bk_FunctionInfo::Parameter &param: func->params) {
-        bk_VariableInfo *var = program->variables.AppendDefault();
-        Size param_pos = definitions_map.FindValue(&param, -1);
-        definitions_map.Set(var, param_pos);
-
-        var->name = param.name;
-        var->type = param.type;
-        var->mut = param.mut;
-        var->scope = bk_VariableInfo::Scope::Local;
-        var->ir = &func->ir;
-
-        var->offset = func_offset;
-        func_offset += param.type->size;
-
-        std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
-        if (RG_UNLIKELY(!ret.second)) {
-            const bk_VariableInfo *prev_var = *ret.first;
-
-            *ret.first = var;
-            var->shadow = prev_var;
-
-            if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
-                MarkError(param_pos, "Parameter '%1' is not allowed to hide function", var->name);
-                HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
-            } else if (prev_var->scope == bk_VariableInfo::Scope::Global) {
-                MarkError(param_pos, "Parameter '%1' is not allowed to hide global variable", var->name);
-                HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
-            } else if (prev_var->ir == &func->ir) {
-                MarkError(param_pos, "Parameter named '%1' already exists", var->name);
-            }
-        }
-
-        if (RG_UNLIKELY(poisoned_set.Find(&param))) {
-            poisoned_set.Set(var);
-        }
-    }
-
     func->valid = true;
     func->impure = false;
     func->side_effects = false;
 
-    // Parse function body
     if (!record) {
-        RG_DEFER_C(prev_src = src,
+        Size func_offset = 0;
+
+        RG_DEFER_C(prev_func = current_func,
+                   prev_variables = program->variables.len,
+                   prev_offset = offset_ptr,
+                   prev_src = src,
                    prev_ir = ir) {
+            // Variables inside the function are destroyed at the end of the block.
+            // This destroys the parameters.
+            DestroyVariables(prev_variables);
+            offset_ptr = prev_offset;
+            current_func = prev_func;
+
             src = prev_src;
             ir = prev_ir;
         };
+        offset_ptr = &func_offset;
+        current_func = func;
+
         func->src.filename = src->filename;
         func->src.lines.Append((bk_SourceMap::Line) {0, pos < tokens.len ? tokens[pos].line : 0});
         src = &func->src;
         ir = &func->ir;
 
+        // Create parameter variables
+        for (const bk_FunctionInfo::Parameter &param: func->params) {
+            bk_VariableInfo *var = program->variables.AppendDefault();
+            Size param_pos = definitions_map.FindValue(&param, -1);
+            definitions_map.Set(var, param_pos);
+
+            var->name = param.name;
+            var->type = param.type;
+            var->mut = param.mut;
+            var->scope = bk_VariableInfo::Scope::Local;
+            var->ir = &func->ir;
+
+            var->offset = func_offset;
+            func_offset += param.type->size;
+
+            std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
+            if (RG_UNLIKELY(!ret.second)) {
+                const bk_VariableInfo *prev_var = *ret.first;
+
+                *ret.first = var;
+                var->shadow = prev_var;
+
+                if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
+                    MarkError(param_pos, "Parameter '%1' is not allowed to hide function", var->name);
+                    HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
+                } else if (prev_var->scope == bk_VariableInfo::Scope::Global) {
+                    MarkError(param_pos, "Parameter '%1' is not allowed to hide global variable", var->name);
+                    HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
+                } else if (prev_var->ir == &func->ir) {
+                    MarkError(param_pos, "Parameter named '%1' already exists", var->name);
+                }
+            }
+
+            if (RG_UNLIKELY(poisoned_set.Find(&param))) {
+                poisoned_set.Set(var);
+            }
+        }
+
+        // Most code assumes at least one instruction exists
         IR.Append({bk_Opcode::Nop});
 
+        // Parse function body
         bool has_return = false;
-
         if (PeekToken(bk_TokenKind::Do)) {
             has_return = ParseDo();
         } else if (RG_LIKELY(EndStatement())) {
@@ -1120,6 +1115,20 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
                 EmitReturn(0);
             } else {
                 MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
+            }
+        }
+    } else {
+        HashMap<const char *, const bk_FunctionInfo::Parameter *> names;
+
+        for (const bk_FunctionInfo::Parameter &param: func->params) {
+            std::pair<const bk_FunctionInfo::Parameter **, bool> ret = names.TrySet(param.name, &param);
+
+            if (RG_UNLIKELY(!ret.second)) {
+                Size param_pos = definitions_map.FindValue(&param, -1);
+                Size previous_pos = definitions_map.FindValue(*ret.first, -1); 
+
+                MarkError(param_pos, "Duplicate member name '%1'", param.name);
+                Hint(previous_pos, "Previous member was declared here");
             }
         }
     }
