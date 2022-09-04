@@ -644,16 +644,7 @@ void bk_Parser::Preparse(Span<const Size> positions)
 
             if (!ret.second) {
                 HoistedInfo *prev = *ret.first;
-
-                if (RG_LIKELY(prev->kind == bk_TokenKind::Func &&
-                              hoist->kind == bk_TokenKind::Func)) {
-                    prev->next = hoist;
-                } else if (prev->kind != hoist->kind) {
-                    MarkError(hoist_pos + 1, "Cannot reuse name '%1' for %2 and %3 types",
-                              bk_TokenKindNames[(int)prev->kind], bk_TokenKindNames[(int)hoist->kind]);
-                } else {
-                    MarkError(hoist_pos + 1, "Duplicate type name '%1'", hoist->name);
-                }
+                prev->next = hoist;
             }
         }
     }
@@ -951,8 +942,9 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
             definitions_map.Set(member, param_pos);
         }
 
-        // We don't need to check for uniqueness
-        program->types_map.TrySet(record_type);
+        if (RG_UNLIKELY(!program->types_map.TrySet(record_type).second)) {
+            MarkError(func_pos, "Duplicate type name '%1'", record_type->signature);
+        }
 
         type_buf.ret_type = record_type;
 
@@ -985,7 +977,7 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
         std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
         bk_FunctionInfo *overload = *ret.first;
 
-        if (ret.second) {
+        if (ret.second || record) {
             func->overload_prev = func;
             func->overload_next = func;
         } else if (!record) {
@@ -1007,11 +999,6 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
 
                 overload = overload->overload_next;
             }
-        } else {
-            MarkError(func_pos, "Duplicate type '%1'", func->name);
-
-            func->overload_prev = func;
-            func->overload_next = func;
         }
     }
 
@@ -1020,10 +1007,28 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
         const bk_VariableInfo *var;
         if (record) {
             var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, false, bk_VariableInfo::Scope::Module);
-        } else {
+            definitions_map.TrySet(var, func_pos);
+        } else if (func->overload_next == func) {
             var = AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
+            definitions_map.TrySet(var, func_pos);
+        } else {
+            var = program->variables_map.FindValue(func->name, nullptr);
+            RG_ASSERT(var);
         }
-        definitions_map.Set(var, func_pos);
+
+        // When we preparse, it means that the symbol did not exist or it we would have found something,
+        // so no need to show any kind of error.
+        if (RG_UNLIKELY(!preparse && !var)) {
+            const bk_VariableInfo *prev_var = var->shadow;
+
+            if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
+                MarkError(func_pos, "Function '%1' is not allowed to hide function", var->name);
+                HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
+            } else {
+                MarkError(func_pos, "Variable '%1' already exists", var->name);
+                HintDefinition(prev_var, "Previous variable '%1' is defined here", prev_var->name);
+            }
+        }
 
         // Expressions involving this prototype (function or record) won't issue (visible) errors
         if (RG_UNLIKELY(!show_errors)) {
@@ -1195,8 +1200,8 @@ void bk_Parser::ParseEnum(bool preparse)
     *skip_ptr = pos;
 
     // Publish enum
-    if (!program->types_map.TrySet(enum_type).second) {
-        MarkError(enum_pos, "Duplicate type '%1'", enum_type->signature);
+    if (RG_UNLIKELY(!program->types_map.TrySet(enum_type).second)) {
+        MarkError(enum_pos, "Duplicate type name '%1'", enum_type->signature);
     }
 
     const bk_VariableInfo *var = AddGlobal(enum_type->signature, bk_TypeType, {{.type = enum_type}}, false, bk_VariableInfo::Scope::Module);
