@@ -43,6 +43,7 @@ struct PendingOperator {
 struct StackSlot {
     const bk_TypeInfo *type;
     bk_VariableInfo *var;
+    bool lea;
     Size indirect_addr;
     Size indirect_imbalance;
 };
@@ -1289,11 +1290,11 @@ void bk_Parser::ParseLet()
             IR.Append({bk_Opcode::PushZero, {}, {.i = type->size}});
             slot = {type};
 
-            var->constant = true;
+            var->constant = !var->mut;
         }
     }
 
-    if (!var->constant) {
+    if (!var->constant && !var->mut) {
         if (slot.type->size == 1) {
             var->constant = (IR[IR.len - 1].code == bk_Opcode::Push);
         } else if (slot.type->size) {
@@ -1308,6 +1309,7 @@ void bk_Parser::ParseLet()
         // We're about to alias var to slot.var... we need to drop the load instructions
         TrimInstructions(IR.len - prev_addr);
 
+        var->constant = slot.var->constant;
         var->scope = slot.var->scope;
         var->ir = slot.var->ir;
         var->ready_addr = slot.var->ready_addr;
@@ -2235,7 +2237,6 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
         if (current_func) {
             current_func->side_effects |= (dest.var->scope != bk_VariableInfo::Scope::Local);
         }
-        dest.var->constant = false;
 
         if (dest.indirect_addr) {
             // In order for StoreIndirectK to work, the variable address must remain on the stack.
@@ -2562,7 +2563,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
 void bk_Parser::ParseArraySubscript()
 {
     if (!stack[stack.len - 1].indirect_addr) {
-        if (!stack[stack.len - 1].var) {
+        if (!stack[stack.len - 1].lea) {
             // If an array gets loaded from a variable, its address is already on the stack
             // because of EmitLoad. But if it is a temporary value, we need to do it now.
 
@@ -2605,6 +2606,7 @@ void bk_Parser::ParseArraySubscript()
             }
 
             if (IR[IR.len - 2].code == bk_Opcode::Lea ||
+                    IR[IR.len - 2].code == bk_Opcode::LeaLocal ||
                     IR[IR.len - 2].code == bk_Opcode::LeaRel) {
                 TrimInstructions(1);
                 IR[IR.len - 1].u.i += offset;
@@ -2625,7 +2627,7 @@ void bk_Parser::ParseArraySubscript()
         IR.Append({bk_Opcode::LoadIndirect, {}, {.i = unit_type->size}});
 
         // Clean up temporary value (if any)
-        if (!stack[stack.len - 1].var) {
+        if (!stack[stack.len - 1].lea) {
             IR.Append({bk_Opcode::LeaRel, {}, {.i = -unit_type->size - array_type->size}});
             IR.Append({bk_Opcode::StoreRev, {}, {.i = unit_type->size}});
 
@@ -2647,7 +2649,7 @@ void bk_Parser::ParseRecordDot()
     const bk_RecordTypeInfo *record_type = stack[stack.len - 1].type->AsRecordType();
 
     if (!stack[stack.len - 1].indirect_addr) {
-        if (!stack[stack.len - 1].var) {
+        if (!stack[stack.len - 1].lea) {
             // If a record gets loaded from a variable, its address is already on the stack
             // because of EmitLoad. But if it is a temporary value, we need to do it now.
 
@@ -2676,6 +2678,7 @@ void bk_Parser::ParseRecordDot()
     // Resolve member
     if (member->offset) {
         if (IR[IR.len - 1].code == bk_Opcode::Lea ||
+                IR[IR.len - 1].code == bk_Opcode::LeaLocal ||
                 IR[IR.len - 1].code == bk_Opcode::LeaRel) {
             IR[IR.len - 1].u.i += member->offset;
         } else {
@@ -2689,7 +2692,7 @@ void bk_Parser::ParseRecordDot()
     IR.Append({bk_Opcode::LoadIndirect, {}, {.i = member->type->size}});
 
     // Clean up temporary value (if any)
-    if (!stack[stack.len - 1].var) {
+    if (!stack[stack.len - 1].lea) {
         IR.Append({bk_Opcode::LeaRel, {}, {.i = -member->type->size - record_type->size}});
         IR.Append({bk_Opcode::StoreRev, {}, {.i = member->type->size}});
 
@@ -2861,29 +2864,29 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 
 void bk_Parser::EmitLoad(bk_VariableInfo *var)
 {
-    if (var->type->size == 1) {
-        // Mutable global variables can change at any time, unlike local variables which can only change linearily.
-        // The constant status of global variable will only be fully known once all the code has been parsed.
-        bool stable = var->constant && (!var->mut || var->scope == bk_VariableInfo::Scope::Local);
+    if (var->constant) {
+        bk_Instruction inst = (*var->ir)[var->ready_addr - 1];
+        IR.Append(inst);
 
-        if (stable) {
-            bk_Instruction inst = (*var->ir)[var->ready_addr - 1];
-            IR.Append(inst);
-        } else {
-            bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
-            IR.Append({code, {}, {.i = var->offset}});
-        }
+        stack.Append({var->type, var, false});
+    } else if (!var->type->IsComposite()) {
+        RG_ASSERT(var->type->size == 1);
+
+        bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
+        IR.Append({code, {}, {.i = var->offset}});
+
+        stack.Append({var->type, var, false});
     } else if (var->type->size) {
         bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
         IR.Append({code, {}, {.i = var->offset}});
         IR.Append({bk_Opcode::LoadIndirect, {}, {.i = var->type->size}});
+
+        stack.Append({var->type, var, true});
     }
 
     if (current_func) {
         current_func->impure |= var->mut && (var->scope != bk_VariableInfo::Scope::Local);
     }
-
-    stack.Append({var->type, var});
 }
 
 const bk_TypeInfo *bk_Parser::ParseType()

@@ -709,8 +709,8 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
                 case bk_PrimitiveKind::String: { PrintLn(stderr, " %!Y..[String]%!0 '%1' %!M..>%2%!0", inst.u.str ? inst.u.str : "", stack.len); } break;
                 case bk_PrimitiveKind::Type: { PrintLn(stderr, " %!Y..[Type]%!0 '%1' %!M..>%2%!0", inst.u.type->signature, stack.len); } break;
                 case bk_PrimitiveKind::Function: { PrintLn(stderr, " %!Y..[Function]%!0 '%1' %!M..>%2%!0", inst.u.func->prototype, stack.len); } break;
-                case bk_PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
-                case bk_PrimitiveKind::Record: { RG_UNREACHABLE(); } break;
+                case bk_PrimitiveKind::Array: { PrintLn(stderr, " %!Y..[Array]%!0 %!M..>%1%!0", stack.len); } break;
+                case bk_PrimitiveKind::Record: { PrintLn(stderr, " %!Y..[Record]%!0 %!M..>%1%!0", stack.len); } break;
                 case bk_PrimitiveKind::Enum: { PrintLn(stderr, " %!Y..[Enum]%!0 %1 %!M..>%2%!0", inst.u.i, stack.len); } break;
                 case bk_PrimitiveKind::Opaque: { PrintLn(stderr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u.opaque).Pad0(-RG_SIZE(void *) * 2), stack.len); } break;
             }

@@ -66,6 +66,8 @@ struct bk_TypeInfo {
 
     // Reference types will come later (maybe)
     bool PassByReference() const { return false; }
+    bool IsComposite() const { return primitive == bk_PrimitiveKind::Array ||
+                                      primitive == bk_PrimitiveKind::Record; }
 
     struct bk_FunctionTypeInfo *AsFunctionType()
     {
