@@ -20,15 +20,21 @@
 
 namespace RG {
 
-struct HoistedInfo {
+struct ForwardInfo {
     const char *name;
 
     bk_TokenKind kind;
     Size pos;
 
-    const HoistedInfo *next;
+    const ForwardInfo *next;
 
-    RG_HASHTABLE_HANDLER(HoistedInfo, name);
+    RG_HASHTABLE_HANDLER(ForwardInfo, name);
+};
+
+struct LoopContext {
+    Size offset;
+    Size break_addr;
+    Size continue_addr;
 };
 
 struct PendingOperator {
@@ -48,12 +54,6 @@ struct StackSlot {
     Size indirect_imbalance;
 };
 
-struct LoopContext {
-    Size offset;
-    Size break_addr;
-    Size continue_addr;
-};
-
 static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2);
 
 class bk_Parser {
@@ -70,17 +70,17 @@ class bk_Parser {
     bool valid;
     bool show_errors;
     bool show_hints;
-    bk_SourceMap *src;
 
     // Transient mappings
-    BucketArray<HoistedInfo> hoisted;
-    HashTable<const char *, HoistedInfo *> hoisted_map;
+    BucketArray<ForwardInfo> forwards;
+    HashTable<const char *, ForwardInfo *> forwards_map;
     HashMap<Size, Size> skip_map;
     HashMap<const void *, Size> definitions_map;
     HashSet<const void *> poisoned_set;
 
     // Global or function context
     HeapArray<bk_Instruction> *ir;
+    bk_SourceMap *src;
     Size *offset_ptr;
     int depth = 0;
     int recursion = 0;
@@ -424,7 +424,8 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     show_errors = true;
     show_hints = false;
 
-    hoisted_map.Clear();
+    forwards.Clear();
+    forwards_map.Clear();
     skip_map.Clear();
     definitions_map.Clear();
     poisoned_set.Clear();
@@ -624,27 +625,27 @@ void bk_Parser::AddOpaque(const char *name)
 
 void bk_Parser::Preparse(Span<const Size> positions)
 {
-    RG_ASSERT(!hoisted.len);
+    RG_ASSERT(!forwards.len);
     RG_ASSERT(pos == 0);
 
     for (Size i = 0; i < positions.len; i++) {
-        Size hoist_pos = positions[i];
+        Size fwd_pos = positions[i];
 
-        pos = hoist_pos + 1;
+        pos = fwd_pos + 1;
         show_errors = true;
 
         if (MatchToken(bk_TokenKind::Identifier)) {
-            HoistedInfo *hoist = hoisted.AppendDefault();
+            ForwardInfo *fwd = forwards.AppendDefault();
 
-            hoist->name = InternString(tokens[pos - 1].u.str);
-            hoist->kind = tokens[hoist_pos].kind;
-            hoist->pos = hoist_pos;
+            fwd->name = InternString(tokens[pos - 1].u.str);
+            fwd->kind = tokens[fwd_pos].kind;
+            fwd->pos = fwd_pos;
 
-            std::pair<HoistedInfo **, bool> ret = hoisted_map.TrySet(hoist);
+            std::pair<ForwardInfo **, bool> ret = forwards_map.TrySet(fwd);
 
             if (!ret.second) {
-                HoistedInfo *prev = *ret.first;
-                prev->next = hoist;
+                ForwardInfo *prev = *ret.first;
+                prev->next = fwd;
             }
         }
     }
@@ -1866,7 +1867,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                 bool call = MatchToken(bk_TokenKind::LeftParenthesis);
 
                 if (!var) {
-                    const HoistedInfo *hoist = hoisted_map.FindValue(name, nullptr);
+                    const ForwardInfo *fwd = forwards_map.FindValue(name, nullptr);
 
                     RG_DEFER_C(prev_ir = ir,
                                prev_src = src,
@@ -1879,7 +1880,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                     ir = &program->main;
                     offset_ptr = &main_offset;
 
-                    while (hoist) {
+                    while (fwd) {
                         RG_DEFER_C(prev_pos = pos,
                                    prev_errors = show_errors,
                                    prev_loop = loop) {
@@ -1887,11 +1888,11 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                             show_errors = prev_errors;
                             loop = prev_loop;
                         };
-                        pos = hoist->pos;
+                        pos = fwd->pos;
                         show_errors = true;
                         loop = nullptr;
 
-                        switch (hoist->kind) {
+                        switch (fwd->kind) {
                             case bk_TokenKind::Func: { ParseFunction(false, true); } break;
                             case bk_TokenKind::Record: { ParseFunction(true, true); } break;
                             case bk_TokenKind::Enum: { ParseEnum(true); } break;
@@ -1899,7 +1900,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                             default: { RG_UNREACHABLE(); } break;
                         }
 
-                        hoist = hoist->next;
+                        fwd = fwd->next;
                     }
 
                     var = program->variables_map.FindValue(name, nullptr);
