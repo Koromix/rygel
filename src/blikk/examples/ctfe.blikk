@@ -4,6 +4,10 @@
 let null_type = Null
 let null_type2 = null_type
 
+let a: get_type("string") = "Hello!"
+let b: get_type("int") = 1
+let c: get_type("fail")
+
 func get_type(str: String): Type
     # If you uncomment this print statement, compilation will fail because
     # I/O functions such as print are impure, and not eligible to CTFE.
@@ -16,10 +20,6 @@ func get_type(str: String): Type
     # as mutable (let mut null_type).
     return null_type2
 end
-
-let a: get_type("string") = "Hello!"
-let b: get_type("int") = 1
-let c: get_type("fail")
 
 printLn("a = ", a, " (", typeOf(a), ")")
 printLn("b = ", b, " (", typeOf(b), ")")
