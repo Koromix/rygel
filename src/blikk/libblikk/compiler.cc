@@ -1610,10 +1610,10 @@ void bk_Parser::ParseFor()
 
 void bk_Parser::ParseBreak()
 {
-    Size break_pos = pos++;
+    Size break_pos = ++pos;
 
     if (RG_UNLIKELY(!loop)) {
-        MarkError(break_pos, "Break statement outside of loop");
+        MarkError(break_pos - 1, "Break statement outside of loop");
         return;
     }
 
@@ -1625,10 +1625,10 @@ void bk_Parser::ParseBreak()
 
 void bk_Parser::ParseContinue()
 {
-    Size continue_pos = pos++;
+    Size continue_pos = ++pos;
 
     if (RG_UNLIKELY(!loop)) {
-        MarkError(continue_pos, "Continue statement outside of loop");
+        MarkError(continue_pos - 1, "Continue statement outside of loop");
         return;
     }
 
