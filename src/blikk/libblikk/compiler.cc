@@ -50,7 +50,9 @@ struct PendingOperator {
 struct StackSlot {
     const bk_TypeInfo *type;
     bk_VariableInfo *var;
+
     bool lea;
+
     Size indirect_addr;
     Size indirect_imbalance;
 };
