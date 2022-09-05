@@ -26,6 +26,7 @@ struct ForwardInfo {
     bk_TokenKind kind;
     Size pos;
     Size skip;
+    bk_VariableInfo *var;
 
     ForwardInfo *next;
 
@@ -153,6 +154,9 @@ private:
     void EmitPop(int64_t count);
     void EmitReturn(Size size);
 
+    bk_VariableInfo *CreateGlobal(const char *name, const bk_TypeInfo *type,
+                                  Span<const bk_PrimitiveValue> values, bk_VariableInfo::Scope scope);
+    void MapVariable(bk_VariableInfo *var);
     void DestroyVariables(Size first_idx);
     template<typename T>
     void DestroyTypes(BucketArray<T> *types, Size first_idx);
@@ -590,27 +594,8 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
 bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
                                       Span<const bk_PrimitiveValue> values, bk_VariableInfo::Scope scope)
 {
-    bk_VariableInfo *var = program->variables.AppendDefault();
-
-    var->name = InternString(name);
-    var->type = type;
-    var->mut = false;
-    var->constant = true;
-    var->scope = scope;
-    var->ir = &program->globals;
-
-    for (const bk_PrimitiveValue &value: values) {
-        program->globals.Append({bk_Opcode::Push, type->primitive, value});
-    }
-    var->ready_addr = program->globals.len;
-
-    std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
-    if (RG_UNLIKELY(!ret.second)) {
-        const bk_VariableInfo *prev_var = *ret.first;
-
-        *ret.first = var;
-        var->shadow = prev_var;
-    }
+    bk_VariableInfo *var = CreateGlobal(name, type, values, scope);
+    MapVariable(var);
 
     return var;
 }
@@ -625,39 +610,41 @@ void bk_Parser::AddOpaque(const char *name)
     type_buf.size = 1;
 
     const bk_TypeInfo *type = InsertType(type_buf, &program->bare_types);
-    const bk_VariableInfo *var = AddGlobal(type_buf.signature, bk_TypeType, {{.type = type}}, bk_VariableInfo::Scope::Module);
-    RG_ASSERT(!var->shadow);
+
+    bk_VariableInfo *var = CreateGlobal(type_buf.signature, bk_TypeType, {{.type = type}}, bk_VariableInfo::Scope::Module);
+    MapVariable(var);
 }
 
 void bk_Parser::Preparse(Span<const Size> positions)
 {
     RG_ASSERT(!forwards.len);
-    RG_ASSERT(pos == 0);
 
-    for (Size i = 0; i < positions.len; i++) {
+    for (Size i = positions.len - 1; i >= 0; i--) {
         Size fwd_pos = positions[i];
+        Size id_pos = fwd_pos + 1;
 
-        pos = fwd_pos + 1;
-        show_errors = true;
-
-        if (MatchToken(bk_TokenKind::Identifier)) {
+        if (id_pos < tokens.len && tokens[id_pos].kind == bk_TokenKind::Identifier) {
             ForwardInfo *fwd = forwards.AppendDefault();
 
-            fwd->name = InternString(tokens[pos - 1].u.str);
+            fwd->name = InternString(tokens[id_pos].u.str);
             fwd->kind = tokens[fwd_pos].kind;
             fwd->pos = fwd_pos;
             fwd->skip = -1;
 
             std::pair<ForwardInfo **, bool> ret = forwards_map.TrySet(fwd);
 
-            if (!ret.second) {
+            if (ret.second) {
+                fwd->var = CreateGlobal(fwd->name, bk_NullType, {{}}, bk_VariableInfo::Scope::Module);
+            } else {
                 ForwardInfo *prev = *ret.first;
-                prev->next = fwd;
+
+                *ret.first = fwd;
+                fwd->next = prev;
+
+                fwd->var = prev->var;
             }
         }
     }
-
-    pos = 0;
 }
 
 template<typename T>
@@ -1008,21 +995,25 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
     // Publish symbol
     {
-        const bk_VariableInfo *var;
+        bk_VariableInfo *var = fwd->var ? fwd->var : CreateGlobal(func->name, bk_NullType, {{}}, bk_VariableInfo::Scope::Module);
+
         if (record) {
-            var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, bk_VariableInfo::Scope::Module);
+            var->type = bk_TypeType;
+            var->ir->ptr[var->ready_addr - 1].primitive = bk_PrimitiveKind::Type;
+            var->ir->ptr[var->ready_addr - 1].u.type = type_buf.ret_type;
+
+            MapVariable(var);
             definitions_map.TrySet(var, func_pos);
         } else if (func->overload_next == func) {
-            var = AddGlobal(func->name, func->type, {{.func = func}}, bk_VariableInfo::Scope::Module);
+            var->type = func->type;
+            var->ir->ptr[var->ready_addr - 1].primitive = bk_PrimitiveKind::Function;
+            var->ir->ptr[var->ready_addr - 1].u.func = func;
+
+            MapVariable(var);
             definitions_map.TrySet(var, func_pos);
-        } else {
-            var = program->variables_map.FindValue(func->name, nullptr);
-            RG_ASSERT(var);
         }
 
-        // When we preparse, it means that the symbol did not exist or it we would have found something,
-        // so no need to show any kind of error.
-        if (RG_UNLIKELY(fwd != &fake_fwd && var->shadow)) {
+        if (RG_UNLIKELY(var->shadow)) {
             MarkError(func_pos, "Variable '%1' already exists", var->name);
             HintDefinition(var->shadow, "Previous variable '%1' is defined here", var->name);
         }
@@ -1191,12 +1182,21 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
         MarkError(enum_pos, "Duplicate type name '%1'", enum_type->signature);
     }
 
-    const bk_VariableInfo *var = AddGlobal(enum_type->signature, bk_TypeType, {{.type = enum_type}}, bk_VariableInfo::Scope::Module);
-    definitions_map.Set(var, enum_pos);
+    // Publish symbol
+    {
+        bk_VariableInfo *var = fwd->var ? fwd->var : CreateGlobal(enum_type->signature, bk_NullType, {{}}, bk_VariableInfo::Scope::Module);
 
-    // Expressions involving this prototype (function or record) won't issue (visible) errors
-    if (RG_UNLIKELY(!show_errors)) {
-        poisoned_set.Set(var);
+        var->type = bk_TypeType;
+        var->ir->ptr[var->ready_addr - 1].primitive = bk_PrimitiveKind::Type;
+        var->ir->ptr[var->ready_addr - 1].u.type = enum_type;
+
+        MapVariable(var);
+        definitions_map.TrySet(var, enum_pos);
+
+        // Expressions involving this prototype (function or record) won't issue (visible) errors
+        if (RG_UNLIKELY(!show_errors)) {
+            poisoned_set.Set(var);
+        }
     }
 
     fwd->skip = pos;
@@ -2392,7 +2392,10 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
     bk_VariableInfo *var = program->variables_map.FindValue(name, nullptr);
 
     if (!var) {
-        ForwardInfo *fwd = forwards_map.FindValue(name, nullptr);
+        ForwardInfo **ptr = forwards_map.Find(name);
+
+        if (RG_UNLIKELY(!ptr))
+            return nullptr;
 
         RG_DEFER_C(prev_ir = ir,
                    prev_src = src,
@@ -2405,7 +2408,10 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
         ir = &program->main;
         offset_ptr = &main_offset;
 
-        while (fwd) {
+        ForwardInfo *fwd0 = *ptr;
+        ForwardInfo *fwd = fwd0;
+
+        do {
             RG_DEFER_C(prev_pos = pos,
                        prev_errors = show_errors,
                        prev_loop = loop) {
@@ -2426,9 +2432,10 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
             }
 
             fwd = fwd->next;
-        }
+        } while (fwd);
 
-        var = program->variables_map.FindValue(name, nullptr);
+        var = (fwd0 && fwd0->var->type != bk_IntType) ? fwd0->var : nullptr;
+        forwards_map.Remove(ptr);
     }
 
     return var;
@@ -3096,6 +3103,46 @@ void bk_Parser::EmitReturn(Size size)
     } else {
         IR.Append({bk_Opcode::Return, {}, {.i = size}});
     }
+}
+
+bk_VariableInfo *bk_Parser::CreateGlobal(const char *name, const bk_TypeInfo *type,
+                                         Span<const bk_PrimitiveValue> values, bk_VariableInfo::Scope scope)
+{
+    bk_VariableInfo *var = program->variables.AppendDefault();
+
+    var->name = InternString(name);
+    var->type = type;
+    var->mut = false;
+    var->constant = true;
+    var->scope = scope;
+    var->ir = &program->globals;
+
+    for (const bk_PrimitiveValue &value: values) {
+        program->globals.Append({bk_Opcode::Push, type->primitive, value});
+    }
+    var->ready_addr = program->globals.len;
+
+    return var;
+}
+
+void bk_Parser::MapVariable(bk_VariableInfo *var)
+{
+    RG_ASSERT(!var->shadow);
+    RG_ASSERT(var != program->variables_map.FindValue(var->name, nullptr));
+
+    std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySetDefault(var->name);
+
+    bk_VariableInfo **ptr = ret.first;
+    bk_VariableInfo *it = ret.second ? nullptr : *ptr;
+
+    while (it && (int)it->scope < (int)var->scope) {
+        ptr = (bk_VariableInfo **)&it->shadow;
+        var = it;
+        it = (bk_VariableInfo *)it->shadow;
+    }
+
+    *ptr = var;
+    var->shadow = it;
 }
 
 void bk_Parser::DestroyVariables(Size first_idx)
