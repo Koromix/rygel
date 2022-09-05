@@ -3958,6 +3958,40 @@ static inline int CountUtf8Bytes(char c)
     return std::min(std::max(ones, 1), 4);
 }
 
+static inline Size DecodeUtf8(const char *str, int32_t *out_c)
+{
+    RG_ASSERT(str[0]);
+
+    const uint8_t *ptr = (const uint8_t *)str;
+
+    if (ptr[0] < 0x80) {
+        *out_c = ptr[0];
+        return 1;
+    } else if (RG_UNLIKELY(ptr[0] - 0xC2 > 0xF4 - 0xC2)) {
+        return 0;
+    } else if (RG_LIKELY(ptr[1])) {
+        if (ptr[0] < 0xE0 && (ptr[1] & 0xC0) == 0x80) {
+            *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+            return 2;
+        } else if (RG_LIKELY(ptr[2])) {
+            if (ptr[0] < 0xF0 && (ptr[1] & 0xC0) == 0x80 &&
+                                 (ptr[2] & 0xC0) == 0x80) {
+                *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+                return 3;
+            } else if (RG_LIKELY(ptr[3])) {
+                if ((ptr[1] & 0xC0) == 0x80 &&
+                        (ptr[2] & 0xC0) == 0x80 &&
+                        (ptr[3] & 0xC0) == 0x80) {
+                    *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+                    return 4;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
 static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
 {
     RG_ASSERT(offset < str.len);

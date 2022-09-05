@@ -104,7 +104,7 @@ static const char *spatial_sequences[26] = {
 static int32_t DecodeUtf8Unsafe(const char *str)
 {
     int32_t uc = -1;
-    Size bytes = DecodeUtf8(str, 0, &uc);
+    Size bytes = DecodeUtf8(str, &uc);
 
     RG_ASSERT(bytes > 0);
     RG_ASSERT(!str[bytes]);

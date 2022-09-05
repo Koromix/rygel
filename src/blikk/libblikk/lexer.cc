@@ -393,7 +393,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                         next++;
                     } else {
                         int32_t uc;
-                        Size bytes = DecodeUtf8(code.ptr, next, &uc);
+                        Size bytes = DecodeUtf8(code, next, &uc);
 
                         if (RG_UNLIKELY(!bytes)) {
                             MarkError(next, "Invalid UTF-8 sequence");
@@ -450,7 +450,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     // Go on!
                 } else if ((uint8_t)code[offset] >= 128) {
                     int32_t uc = 0;
-                    Size bytes = DecodeUtf8(code.ptr, offset, &uc);
+                    Size bytes = DecodeUtf8(code, offset, &uc);
 
                     if (RG_UNLIKELY(!TestUnicodeTable(bk_UnicodeIdStartTable, uc))) {
                         MarkUnexpected(offset, "Identifiers cannot start with");
@@ -468,7 +468,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                         next++;
                     } else if (RG_UNLIKELY((uint8_t)code[next] >= 128)) {
                         int32_t uc = 0;
-                        Size bytes = DecodeUtf8(code.ptr, next, &uc);
+                        Size bytes = DecodeUtf8(code, next, &uc);
 
                         if (!TestUnicodeTable(bk_UnicodeIdContinueTable, uc)) {
                             MarkUnexpected(next, "Identifiers cannot contain");
