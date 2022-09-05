@@ -134,6 +134,7 @@ private:
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
     bool EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
+    bk_VariableInfo *FindVariable(const char *name);
     const bk_FunctionTypeInfo *ParseFunctionType();
     const bk_ArrayTypeInfo *ParseArrayType();
     void ParseArraySubscript();
@@ -1859,50 +1860,12 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                 expect_value = false;
 
                 const char *name = tok.u.str;
-                bk_VariableInfo *var = program->variables_map.FindValue(name, nullptr);
                 Size var_pos = pos - 1;
                 bool call = MatchToken(bk_TokenKind::LeftParenthesis);
 
-                if (!var) {
-                    ForwardInfo *fwd = forwards_map.FindValue(name, nullptr);
+                bk_VariableInfo *var = FindVariable(name);
 
-                    RG_DEFER_C(prev_ir = ir,
-                               prev_src = src,
-                               prev_offset = offset_ptr) {
-                        ir = prev_ir;
-                        src = prev_src;
-                        offset_ptr = prev_offset;
-                    };
-                    src = &program->sources[program->sources.len - 1];
-                    ir = &program->main;
-                    offset_ptr = &main_offset;
-
-                    while (fwd) {
-                        RG_DEFER_C(prev_pos = pos,
-                                   prev_errors = show_errors,
-                                   prev_loop = loop) {
-                            pos = prev_pos;
-                            show_errors = prev_errors;
-                            loop = prev_loop;
-                        };
-                        pos = fwd->pos;
-                        show_errors = true;
-                        loop = nullptr;
-
-                        switch (fwd->kind) {
-                            case bk_TokenKind::Func: { ParseFunction(fwd, false); } break;
-                            case bk_TokenKind::Record: { ParseFunction(fwd, true); } break;
-                            case bk_TokenKind::Enum: { ParseEnum(fwd); } break;
-
-                            default: { RG_UNREACHABLE(); } break;
-                        }
-
-                        fwd = fwd->next;
-                    }
-
-                    var = program->variables_map.FindValue(name, nullptr);
-                }
-
+                // XXX: Remove this hack
                 while (var && var->scope == bk_VariableInfo::Scope::Local &&
                               var->ir != &current_func->ir) {
                     var = (bk_VariableInfo *)var->shadow;
@@ -2437,6 +2400,53 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
     } else {
         return false;
     }
+}
+
+bk_VariableInfo *bk_Parser::FindVariable(const char *name)
+{
+    bk_VariableInfo *var = program->variables_map.FindValue(name, nullptr);
+
+    if (!var) {
+        ForwardInfo *fwd = forwards_map.FindValue(name, nullptr);
+
+        RG_DEFER_C(prev_ir = ir,
+                   prev_src = src,
+                   prev_offset = offset_ptr) {
+            ir = prev_ir;
+            src = prev_src;
+            offset_ptr = prev_offset;
+        };
+        src = &program->sources[program->sources.len - 1];
+        ir = &program->main;
+        offset_ptr = &main_offset;
+
+        while (fwd) {
+            RG_DEFER_C(prev_pos = pos,
+                       prev_errors = show_errors,
+                       prev_loop = loop) {
+                pos = prev_pos;
+                show_errors = prev_errors;
+                loop = prev_loop;
+            };
+            pos = fwd->pos;
+            show_errors = true;
+            loop = nullptr;
+
+            switch (fwd->kind) {
+                case bk_TokenKind::Func: { ParseFunction(fwd, false); } break;
+                case bk_TokenKind::Record: { ParseFunction(fwd, true); } break;
+                case bk_TokenKind::Enum: { ParseEnum(fwd); } break;
+
+                default: { RG_UNREACHABLE(); } break;
+            }
+
+            fwd = fwd->next;
+        }
+
+        var = program->variables_map.FindValue(name, nullptr);
+    }
+
+    return var;
 }
 
 const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
