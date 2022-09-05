@@ -1265,7 +1265,7 @@ void bk_Parser::ParseLet()
         } else if (current_func && prev_var->offset < 0) {
             MarkError(var_pos, "Declaration '%1' is not allowed to hide parameter", var->name);
             HintDefinition(prev_var, "Parameter '%1' is defined here", prev_var->name);
-        } else if (current_func && prev_var->ir != &current_func->ir) {
+        } else {
             MarkError(var_pos, "Variable '%1' already exists", var->name);
             HintDefinition(prev_var, "Previous variable '%1' is defined here", prev_var->name);
         }
@@ -1546,7 +1546,7 @@ void bk_Parser::ParseFor()
         } else if (current_func && prev_var->scope == bk_VariableInfo::Scope::Global) {
             MarkError(for_pos, "Iterator '%1' is not allowed to hide global variable", it->name);
             HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
-        } else if (current_func && prev_var->ir == &current_func->ir) {
+        } else {
             MarkError(for_pos, "Variable '%1' already exists", it->name);
             HintDefinition(prev_var, "Previous variable '%1' is defined here", prev_var->name);
         }
