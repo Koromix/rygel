@@ -39,7 +39,7 @@ public:
     bool Compile(Span<const char> code, const char *filename, bk_CompileReport *out_report = nullptr);
 
     void AddFunction(const char *prototype, unsigned int flags, std::function<bk_NativeFunction> native);
-    void AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values, bool mut = false);
+    void AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values);
     void AddOpaque(const char *name);
 };
 

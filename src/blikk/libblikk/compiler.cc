@@ -106,7 +106,7 @@ public:
 
     void AddFunction(const char *prototype, unsigned int flags, std::function<bk_NativeFunction> native);
     bk_VariableInfo *AddGlobal(const char *name, const bk_TypeInfo *type,
-                               Span<const bk_PrimitiveValue> values, bool mut, bk_VariableInfo::Scope scope);
+                               Span<const bk_PrimitiveValue> values, bk_VariableInfo::Scope scope);
     void AddOpaque(const char *name);
 
 private:
@@ -327,9 +327,9 @@ void bk_Compiler::AddFunction(const char *prototype, unsigned int flags, std::fu
     parser->AddFunction(prototype, flags, native);
 }
 
-void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values, bool mut)
+void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values)
 {
-    parser->AddGlobal(name, type, values, mut, bk_VariableInfo::Scope::Global);
+    parser->AddGlobal(name, type, values, bk_VariableInfo::Scope::Global);
 }
 
 void bk_Compiler::AddOpaque(const char *name)
@@ -350,14 +350,14 @@ bk_Parser::bk_Parser(bk_Program *program)
 
     // Base types
     for (const bk_TypeInfo &type: bk_BaseTypes) {
-        AddGlobal(type.signature, bk_TypeType, {{.type = &type}}, false, bk_VariableInfo::Scope::Module);
+        AddGlobal(type.signature, bk_TypeType, {{.type = &type}}, bk_VariableInfo::Scope::Module);
         program->types_map.Set(&type);
     }
 
     // Special values
-    AddGlobal("Version", bk_StringType, {{.str = FelixVersion}}, false, bk_VariableInfo::Scope::Global);
-    AddGlobal("NaN", bk_FloatType, {{.d = (double)NAN}}, false, bk_VariableInfo::Scope::Global);
-    AddGlobal("Inf", bk_FloatType, {{.d = (double)INFINITY}}, false, bk_VariableInfo::Scope::Global);
+    AddGlobal("Version", bk_StringType, {{.str = FelixVersion}}, bk_VariableInfo::Scope::Global);
+    AddGlobal("NaN", bk_FloatType, {{.d = (double)NAN}}, bk_VariableInfo::Scope::Global);
+    AddGlobal("Inf", bk_FloatType, {{.d = (double)INFINITY}}, bk_VariableInfo::Scope::Global);
 
     // Intrinsics
     AddFunction("toFloat(Int): Float", (int)bk_FunctionFlag::Pure, {});
@@ -582,20 +582,20 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
             func->overload_prev = func;
             func->overload_next = func;
 
-            AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
+            AddGlobal(func->name, func->type, {{.func = func}}, bk_VariableInfo::Scope::Module);
         }
     }
 }
 
 bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
-                                      Span<const bk_PrimitiveValue> values, bool mut, bk_VariableInfo::Scope scope)
+                                      Span<const bk_PrimitiveValue> values, bk_VariableInfo::Scope scope)
 {
     bk_VariableInfo *var = program->variables.AppendDefault();
 
     var->name = InternString(name);
     var->type = type;
-    var->mut = mut;
-    var->constant = !mut;
+    var->mut = false;
+    var->constant = true;
     var->scope = scope;
     var->ir = &program->globals;
 
@@ -625,7 +625,7 @@ void bk_Parser::AddOpaque(const char *name)
     type_buf.size = 1;
 
     const bk_TypeInfo *type = InsertType(type_buf, &program->bare_types);
-    const bk_VariableInfo *var = AddGlobal(type_buf.signature, bk_TypeType, {{.type = type}}, false, bk_VariableInfo::Scope::Module);
+    const bk_VariableInfo *var = AddGlobal(type_buf.signature, bk_TypeType, {{.type = type}}, bk_VariableInfo::Scope::Module);
     RG_ASSERT(!var->shadow);
 }
 
@@ -1012,10 +1012,10 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
     {
         const bk_VariableInfo *var;
         if (record) {
-            var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, false, bk_VariableInfo::Scope::Module);
+            var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, bk_VariableInfo::Scope::Module);
             definitions_map.TrySet(var, func_pos);
         } else if (func->overload_next == func) {
-            var = AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
+            var = AddGlobal(func->name, func->type, {{.func = func}}, bk_VariableInfo::Scope::Module);
             definitions_map.TrySet(var, func_pos);
         } else {
             var = program->variables_map.FindValue(func->name, nullptr);
@@ -1193,7 +1193,7 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
         MarkError(enum_pos, "Duplicate type name '%1'", enum_type->signature);
     }
 
-    const bk_VariableInfo *var = AddGlobal(enum_type->signature, bk_TypeType, {{.type = enum_type}}, false, bk_VariableInfo::Scope::Module);
+    const bk_VariableInfo *var = AddGlobal(enum_type->signature, bk_TypeType, {{.type = enum_type}}, bk_VariableInfo::Scope::Module);
     definitions_map.Set(var, enum_pos);
 
     // Expressions involving this prototype (function or record) won't issue (visible) errors
