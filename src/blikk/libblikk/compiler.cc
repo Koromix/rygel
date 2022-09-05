@@ -1865,12 +1865,6 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
 
                 bk_VariableInfo *var = FindVariable(name);
 
-                // XXX: Remove this hack
-                while (var && var->scope == bk_VariableInfo::Scope::Local &&
-                              var->ir != &current_func->ir) {
-                    var = (bk_VariableInfo *)var->shadow;
-                }
-
                 if (RG_LIKELY(var)) {
                     show_errors &= !poisoned_set.Find(var);
 
