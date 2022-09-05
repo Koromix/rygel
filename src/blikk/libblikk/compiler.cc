@@ -25,8 +25,9 @@ struct ForwardInfo {
 
     bk_TokenKind kind;
     Size pos;
+    Size skip;
 
-    const ForwardInfo *next;
+    ForwardInfo *next;
 
     RG_HASHTABLE_HANDLER(ForwardInfo, name);
 };
@@ -56,6 +57,8 @@ struct StackSlot {
 
 static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2);
 
+static ForwardInfo fake_fwd = {};
+
 class bk_Parser {
     RG_DELETE_COPY(bk_Parser)
 
@@ -74,7 +77,7 @@ class bk_Parser {
     // Transient mappings
     BucketArray<ForwardInfo> forwards;
     HashTable<const char *, ForwardInfo *> forwards_map;
-    HashMap<Size, Size> skip_map;
+    HashMap<Size, ForwardInfo *> skip_map;
     HashMap<const void *, Size> definitions_map;
     HashSet<const void *> poisoned_set;
 
@@ -113,8 +116,8 @@ private:
     bool ParseStatement();
     bool ParseDo();
 
-    void ParseFunction(bool record, bool preparse);
-    void ParseEnum(bool preparse);
+    void ParseFunction(ForwardInfo *fwd, bool record);
+    void ParseEnum(ForwardInfo *fwd);
     void ParseReturn();
     void ParseLet();
     bool ParseIf();
@@ -640,6 +643,7 @@ void bk_Parser::Preparse(Span<const Size> positions)
             fwd->name = InternString(tokens[pos - 1].u.str);
             fwd->kind = tokens[fwd_pos].kind;
             fwd->pos = fwd_pos;
+            fwd->skip = -1;
 
             std::pair<ForwardInfo **, bool> ret = forwards_map.TrySet(fwd);
 
@@ -743,7 +747,8 @@ bool bk_Parser::ParseStatement()
         } break;
         case bk_TokenKind::Func: {
             if (pos + 1 < tokens.len && tokens[pos + 1].kind == bk_TokenKind::Identifier) {
-                ParseFunction(false, false);
+                ForwardInfo *fwd = skip_map.FindValue(pos, &fake_fwd);
+                ParseFunction(fwd, false);
             } else {
                 StackSlot slot = ParseExpression(false, true);
                 DiscardResult(slot.type->size);
@@ -752,11 +757,15 @@ bool bk_Parser::ParseStatement()
             EndStatement();
         } break;
         case bk_TokenKind::Record: {
-            ParseFunction(true, false);
+            ForwardInfo *fwd = skip_map.FindValue(pos, &fake_fwd);
+
+            ParseFunction(fwd, true);
             EndStatement();
         } break;
         case bk_TokenKind::Enum: {
-            ParseEnum(false);
+            ForwardInfo *fwd = skip_map.FindValue(pos, &fake_fwd);
+
+            ParseEnum(fwd);
             EndStatement();
         } break;
         case bk_TokenKind::Return: {
@@ -828,11 +837,16 @@ bool bk_Parser::ParseDo()
     }
 }
 
-void bk_Parser::ParseFunction(bool record, bool preparse)
+void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 {
     Size func_pos = ++pos;
 
-    if (!preparse) {
+    if (fwd != &fake_fwd) {
+        if (fwd->skip >= 0) {
+            pos = fwd->skip;
+            return;
+        }
+    } else {
         if (RG_UNLIKELY(current_func)) {
             if (record) {
                 MarkError(func_pos, "Record types cannot be defined inside functions");
@@ -845,18 +859,6 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
         } else if (RG_UNLIKELY(depth)) {
             MarkError(func_pos, "%1 must be defined in top-level scope", record ? "Records" : "Functions");
         }
-    }
-
-    Size *skip_ptr;
-    {
-        std::pair<Size *, bool> ret = skip_map.TrySet(pos, -1);
-
-        if (!ret.second) {
-            pos = *ret.first;
-            return;
-        }
-
-        skip_ptr = ret.first;
     }
 
     bk_FunctionInfo *func = program->functions.AppendDefault();
@@ -1019,7 +1021,7 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
 
         // When we preparse, it means that the symbol did not exist or it we would have found something,
         // so no need to show any kind of error.
-        if (RG_UNLIKELY(!preparse && !var)) {
+        if (RG_UNLIKELY(fwd != &fake_fwd && !var)) {
             const bk_VariableInfo *prev_var = var->shadow;
 
             if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
@@ -1139,34 +1141,26 @@ void bk_Parser::ParseFunction(bool record, bool preparse)
         }
     }
 
-    *skip_ptr = pos;
+    fwd->skip = pos;
+    skip_map.Set(func_pos - 1, fwd);
 
     func->complete = func->valid;
 }
 
-void bk_Parser::ParseEnum(bool preparse)
+void bk_Parser::ParseEnum(ForwardInfo *fwd)
 {
     Size enum_pos = ++pos;
 
-    if (!preparse) {
-        if (RG_UNLIKELY(current_func)) {
-            MarkError(pos, "Enum types cannot be defined inside functions");
-            Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
-        } else if (RG_UNLIKELY(depth)) {
-            MarkError(pos, "Enums must be defined in top-level scope");
-        }
-    }
-
-    Size *skip_ptr;
-    {
-        std::pair<Size *, bool> ret = skip_map.TrySet(pos, -1);
-
-        if (!ret.second) {
-            pos = *ret.first;
+    if (fwd != &fake_fwd) {
+        if (fwd->skip >= 0) {
+            pos = fwd->skip;
             return;
         }
-
-        skip_ptr = ret.first;
+    } else if (RG_UNLIKELY(current_func)) {
+        MarkError(pos, "Enum types cannot be defined inside functions");
+        Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
+    } else if (RG_UNLIKELY(depth)) {
+        MarkError(pos, "Enums must be defined in top-level scope");
     }
 
     bk_EnumTypeInfo *enum_type = program->enum_types.AppendDefault();
@@ -1198,8 +1192,6 @@ void bk_Parser::ParseEnum(bool preparse)
         MarkError(pos - 1, "Empty enums are not allowed");
     }
 
-    *skip_ptr = pos;
-
     // Publish enum
     if (RG_UNLIKELY(!program->types_map.TrySet(enum_type).second)) {
         MarkError(enum_pos, "Duplicate type name '%1'", enum_type->signature);
@@ -1212,6 +1204,9 @@ void bk_Parser::ParseEnum(bool preparse)
     if (RG_UNLIKELY(!show_errors)) {
         poisoned_set.Set(var);
     }
+
+    fwd->skip = pos;
+    skip_map.Set(enum_pos - 1, fwd);
 }
 
 void bk_Parser::ParseReturn()
@@ -1867,7 +1862,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                 bool call = MatchToken(bk_TokenKind::LeftParenthesis);
 
                 if (!var) {
-                    const ForwardInfo *fwd = forwards_map.FindValue(name, nullptr);
+                    ForwardInfo *fwd = forwards_map.FindValue(name, nullptr);
 
                     RG_DEFER_C(prev_ir = ir,
                                prev_src = src,
@@ -1893,9 +1888,9 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                         loop = nullptr;
 
                         switch (fwd->kind) {
-                            case bk_TokenKind::Func: { ParseFunction(false, true); } break;
-                            case bk_TokenKind::Record: { ParseFunction(true, true); } break;
-                            case bk_TokenKind::Enum: { ParseEnum(true); } break;
+                            case bk_TokenKind::Func: { ParseFunction(fwd, false); } break;
+                            case bk_TokenKind::Record: { ParseFunction(fwd, true); } break;
+                            case bk_TokenKind::Enum: { ParseEnum(fwd); } break;
 
                             default: { RG_UNREACHABLE(); } break;
                         }
