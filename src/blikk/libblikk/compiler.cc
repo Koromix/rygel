@@ -1024,16 +1024,9 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
         // When we preparse, it means that the symbol did not exist or it we would have found something,
         // so no need to show any kind of error.
-        if (RG_UNLIKELY(fwd != &fake_fwd && !var)) {
-            const bk_VariableInfo *prev_var = var->shadow;
-
-            if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
-                MarkError(func_pos, "Function '%1' is not allowed to hide function", var->name);
-                HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
-            } else {
-                MarkError(func_pos, "Variable '%1' already exists", var->name);
-                HintDefinition(prev_var, "Previous variable '%1' is defined here", prev_var->name);
-            }
+        if (RG_UNLIKELY(fwd != &fake_fwd && var->shadow)) {
+            MarkError(func_pos, "Variable '%1' already exists", var->name);
+            HintDefinition(var->shadow, "Previous variable '%1' is defined here", var->name);
         }
 
         // Expressions involving this prototype (function or record) won't issue (visible) errors
