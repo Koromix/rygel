@@ -223,18 +223,14 @@ struct bk_FunctionInfo {
 };
 
 struct bk_VariableInfo {
-    enum class Scope {
-        Module,
-        Global,
-        Local
-    };
-
     const char *name;
     const bk_TypeInfo *type;
+
     bool mut;
     bool constant;
+    bool module;
+    bool local;
 
-    Scope scope;
     const HeapArray<bk_Instruction> *ir;
     Size ready_addr; // Only set for globals and locals (not parameters, loop iterators, etc.)
     Size offset; // Stack
