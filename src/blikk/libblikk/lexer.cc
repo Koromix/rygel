@@ -302,8 +302,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 }
             } break;
 
-            case '"':
-            case '\'': {
+            case '"': {
                 str_buf.RemoveFrom(0);
 
                 for (;;) {
@@ -316,7 +315,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                         return false;
                     }
 
-                    if (code[next] == code[offset]) {
+                    if (code[next] == '"') {
                         next++;
                         break;
                     } else if (code[next] == '\\') {

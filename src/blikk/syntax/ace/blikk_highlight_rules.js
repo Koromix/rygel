@@ -26,9 +26,6 @@ var blikkHighlightRules = function() {
             token: "string",
             regex: '"(?:[^\\\\]|\\\\.)*?"'
         }, {
-            token: "string",
-            regex: "'(?:[^\\\\]|\\\\.)*?'"
-        }, {
             token: "constant.numeric",
             regex: "(0x[0-9a-fA-F_]*|[0-9_]+(\\.?[0-9_]*)?|0o[0-8_]*|0b[01_]*)\\b"
         }, {
