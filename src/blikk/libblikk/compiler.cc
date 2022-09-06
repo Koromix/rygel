@@ -1273,15 +1273,13 @@ void bk_Parser::ParseLet()
 
     var->type = slot.type;
     if (slot.var && !slot.var->mut && !slot.indirect_addr && !var->mut) {
+        const char *name = var->name;
+
         // We're about to alias var to slot.var... we need to drop the load instructions
         TrimInstructions(IR.len - prev_addr);
 
-        var->constant = slot.var->constant;
-        var->module = slot.var->module;
-        var->local = slot.var->local;
-        var->ir = slot.var->ir;
-        var->ready_addr = slot.var->ready_addr;
-        var->offset = slot.var->offset;
+        *var = *slot.var;
+        var->name = name;
     } else {
         var->ready_addr = IR.len;
 
