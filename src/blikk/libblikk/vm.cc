@@ -679,6 +679,13 @@ bool bk_VirtualMachine::Run(unsigned int flags)
             DISPATCH(++pc);
         }
 
+        CASE(InlineIf): {
+            bool b = stack[stack.len - 3].b;
+            stack[stack.len - 3].i = b ? stack[stack.len - 2].i : stack[stack.len - 1].i;
+            stack.len -= 2;
+            DISPATCH(++pc);
+        }
+
         CASE(End): {
             RG_ASSERT(stack.len == inst->u.i);
 

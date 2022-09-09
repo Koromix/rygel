@@ -108,6 +108,7 @@ OPCODE(Return)
 // Intrinsics
 OPCODE(IntToFloat)
 OPCODE(FloatToInt)
+OPCODE(InlineIf)
 
 OPCODE(End)
 

@@ -376,6 +376,7 @@ bk_Parser::bk_Parser(bk_Program *program)
     AddFunction("toInt(Int): Int", (int)bk_FunctionFlag::Pure, {});
     AddFunction("toInt(Float): Int", (int)bk_FunctionFlag::Pure, {});
     AddFunction("typeOf(...): Type", (int)bk_FunctionFlag::Pure, {});
+    AddFunction("iif(Bool, ...)", (int)bk_FunctionFlag::Pure, {});
 }
 
 bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report)
@@ -2685,6 +2686,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
 
     Size call_pos = pos - 1;
     Size call_addr = IR.len;
+    bool variadic = func_type->variadic && (!func || func->mode != bk_FunctionInfo::Mode::Intrinsic);
 
     // Parse arguments
     Size args_size = 0;
@@ -2697,7 +2699,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
                 return false;
             }
 
-            if (func_type->variadic && args.len >= func_type->params.len) {
+            if (variadic && args.len >= func_type->params.len) {
                 Size type_addr = IR.len;
                 IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Type});
 
@@ -2716,7 +2718,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         SkipNewLines();
         ConsumeToken(bk_TokenKind::RightParenthesis);
     }
-    if (func_type->variadic) {
+    if (variadic) {
         IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args_size - func_type->params.len}});
         args_size++;
     }
@@ -2767,11 +2769,11 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         Size offset = 1 + args_size;
         IR.Append({bk_Opcode::CallIndirect, {}, {.i = -offset}});
 
-        stack.len--;
+        stack[stack.len - 1] = {func_type->ret_type};
     } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
         EmitIntrinsic(func->name, call_pos, call_addr, args);
     } else if (func->mode == bk_FunctionInfo::Mode::Record) {
-        // Nothing to do, the object stack
+        stack.Append({func_type->ret_type});
     } else {
         IR.Append({bk_Opcode::Call, {}, {.func = func}});
 
@@ -2779,8 +2781,9 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
             show_errors &= func->valid;
             FoldInstruction(args_size, func_type->ret_type);
         }
+
+        stack.Append({func_type->ret_type});
     }
-    stack.Append({func_type->ret_type});
 
     return true;
 }
@@ -2792,11 +2795,15 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
             IR.Append({bk_Opcode::IntToFloat});
             FoldInstruction(1, bk_FloatType);
         }
+
+        stack.Append({bk_FloatType});
     } else if (TestStr(name, "toInt")) {
         if (args[0] == bk_FloatType) {
             IR.Append({bk_Opcode::FloatToInt});
             FoldInstruction(1, bk_IntType);
         }
+
+        stack.Append({bk_IntType});
     } else if (TestStr(name, "typeOf")) {
         // XXX: We can change the signature from typeOf(...) to typeOf(Any) after Any
         // is implemented, and remove this check.
@@ -2807,8 +2814,23 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 
         // typeOf() does not execute anything!
         TrimInstructions(IR.len - call_addr);
-
         IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = args[0]}});
+
+        stack.Append({bk_TypeType});
+    } else if (TestStr(name, "iif")) {
+        if (RG_UNLIKELY(args.len != 3)) {
+            MarkError(call_pos, "Intrinsic function iif() takes three arguments");
+            return;
+        }
+        if (RG_UNLIKELY(args[1] != args[2])) {
+            MarkError(call_pos, "Type mismatch between arguments 2 and 3");
+            return;
+        }
+
+        IR.Append({bk_Opcode::InlineIf, {}, {.i = args[1]->size}});
+        FoldInstruction(1 + args[1]->size * 2, args[1]);
+
+        stack.Append({args[1]});
     } else {
         RG_UNREACHABLE();
     }
