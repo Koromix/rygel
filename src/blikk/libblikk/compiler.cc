@@ -839,19 +839,18 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 {
     Size func_pos = ++pos;
 
-    if (fwd != &fake_fwd) {
-        if (fwd->skip >= 0) {
-            pos = fwd->skip;
-            return;
-        }
-    } else if (RG_UNLIKELY(current_func)) {
+    if (fwd != &fake_fwd && fwd->skip >= 0) {
+        pos = fwd->skip;
+        return;
+    }
+
+    if (RG_UNLIKELY(current_func)) {
         if (record) {
             MarkError(func_pos, "Record types cannot be defined inside functions");
             Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
         } else {
             MarkError(func_pos, "Nested functions are not supported");
             Hint(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
-
         }
     } else if (RG_UNLIKELY(depth)) {
         MarkError(func_pos, "%1 must be defined in top-level scope", record ? "Records" : "Functions");
@@ -1125,12 +1124,12 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
 {
     Size enum_pos = ++pos;
 
-    if (fwd != &fake_fwd) {
-        if (fwd->skip >= 0) {
-            pos = fwd->skip;
-            return;
-        }
-    } else if (RG_UNLIKELY(current_func)) {
+    if (fwd != &fake_fwd && fwd->skip >= 0) {
+        pos = fwd->skip;
+        return;
+    }
+
+    if (RG_UNLIKELY(current_func)) {
         MarkError(pos, "Enum types cannot be defined inside functions");
         Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
     } else if (RG_UNLIKELY(depth)) {
@@ -2338,13 +2337,19 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
 
         RG_DEFER_C(prev_ir = ir,
                    prev_src = src,
+                   prev_func = current_func,
+                   prev_depth = depth,
                    prev_offset = offset_ptr) {
             ir = prev_ir;
             src = prev_src;
+            current_func = prev_func;
+            depth = prev_depth;
             offset_ptr = prev_offset;
         };
         src = &program->sources[program->sources.len - 1];
         ir = &program->main;
+        current_func = nullptr;
+        depth = 0;
         offset_ptr = &main_offset;
 
         ForwardInfo *fwd0 = *ptr;
