@@ -88,6 +88,8 @@ int RunCommand(Span<const char> code, const Config &config)
     bk_Compiler compiler(&program);
     bk_ImportAll(&compiler);
 
+    BK_ADD_FUNCTION(compiler, "__debug(...)", 0, { bk_DoPrint(vm, args, true); PrintLn(); });
+
     // Try to parse with fake print first...
     bool valid_with_fake_print;
     if (config.try_expression) {
