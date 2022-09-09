@@ -2261,16 +2261,16 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                 success = EmitOperator1(bk_PrimitiveKind::Boolean, bk_Opcode::NotBool, stack[stack.len - 1].type);
             } break;
             case bk_TokenKind::AndAnd: {
-                success = EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::AndBool, stack[stack.len - 2].type);
-
                 RG_ASSERT(op.branch_addr && IR[op.branch_addr].code == bk_Opcode::SkipIfFalse);
-                IR[op.branch_addr].u.i = IR.len - op.branch_addr;
+                IR[op.branch_addr].u.i = IR.len - op.branch_addr + 1;
+
+                success = EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::AndBool, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::OrOr: {
-                success = EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::OrBool, stack[stack.len - 2].type);
-
                 RG_ASSERT(op.branch_addr && IR[op.branch_addr].code == bk_Opcode::SkipIfTrue);
-                IR[op.branch_addr].u.i = IR.len - op.branch_addr;
+                IR[op.branch_addr].u.i = IR.len - op.branch_addr + 1;
+
+                success = EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::OrBool, stack[stack.len - 2].type);
             } break;
 
             default: { RG_UNREACHABLE(); } break;
@@ -2897,8 +2897,23 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
 {
     if (out_type->size > 1)
         return;
-    for (Size i = 0; i < count; i++) {
-        if ((IR[IR.len - 2 - i].code != bk_Opcode::Push))
+
+    Size addr = IR.len - 2;
+
+    for (Size remain = count;; addr--) {
+        bk_Opcode code = IR[addr].code;
+
+        if (code == bk_Opcode::SkipIfTrue ||
+                code == bk_Opcode::SkipIfFalse) {
+            // Go on
+        } else if (code == bk_Opcode::Push) {
+            if (!--remain)
+                break;
+        } else {
+            return;
+        }
+
+        if (RG_UNLIKELY(addr <= 1))
             return;
     }
 
@@ -2906,13 +2921,13 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
 
     folder.frames.RemoveFrom(1);
     folder.frames[0].func = current_func;
-    folder.frames[0].pc = IR.len - 2 - count;
+    folder.frames[0].pc = addr;
     folder.stack.RemoveFrom(0);
 
     bool folded = folder.Run((int)bk_RunFlag::HideErrors);
 
     if (folded) {
-        TrimInstructions(2 + count);
+        TrimInstructions(IR.len - addr);
 
         if (out_type->size == 1) {
             bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
