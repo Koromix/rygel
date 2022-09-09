@@ -678,11 +678,11 @@ bool bk_VirtualMachine::Run(unsigned int flags)
             stack[stack.len - 1].i = (int64_t)d;
             DISPATCH(++pc);
         }
-
         CASE(InlineIf): {
-            bool b = stack[stack.len - 3].b;
-            stack[stack.len - 3].i = b ? stack[stack.len - 2].i : stack[stack.len - 1].i;
-            stack.len -= 2;
+            Size ptr = stack.len - 2 * inst->u.i - 1;
+            Size src = stack[ptr].b ? (ptr + 1) : (ptr + 1 + inst->u.i);
+            memcpy_safe(stack.ptr + ptr, stack.ptr + src, inst->u.i * RG_SIZE(*stack.ptr));
+            stack.len = ptr + inst->u.i;
             DISPATCH(++pc);
         }
 

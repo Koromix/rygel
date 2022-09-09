@@ -227,9 +227,9 @@ struct bk_VariableInfo {
     const bk_TypeInfo *type;
 
     bool mut;
-    bool constant;
     bool module;
     bool local;
+    int constant;
 
     const HeapArray<bk_Instruction> *ir;
     Size ready_addr; // Only set for globals and locals (not parameters, loop iterators, etc.)

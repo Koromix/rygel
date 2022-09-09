@@ -1257,7 +1257,7 @@ void bk_Parser::ParseLet()
             IR.Append({bk_Opcode::PushZero, {}, {.i = type->size}});
             slot = {type};
 
-            var->constant = !var->mut;
+            var->constant = !var->mut && type->size;
         }
     }
 
@@ -1265,9 +1265,7 @@ void bk_Parser::ParseLet()
         if (slot.type->size == 1) {
             var->constant = (IR[IR.len - 1].code == bk_Opcode::Push);
         } else if (slot.type->size) {
-            var->constant = CopyBigConstant(slot.type->size);
-        } else {
-            var->constant = true;
+            var->constant = CopyBigConstant(slot.type->size) ? 2 : 0;
         }
     }
 
@@ -2846,8 +2844,8 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
     if (!var->type->size) {
         stack.Append({var->type, var, false});
     } else if (var->constant) {
-        bk_Instruction inst = (*var->ir)[var->ready_addr - 1];
-        IR.Append(inst);
+        Span<const bk_Instruction> instructions = var->ir->Take(var->ready_addr - var->constant, var->constant);
+        IR.Append(instructions);
 
         stack.Append({var->type, var, false});
     } else if (!var->type->IsComposite()) {
@@ -3093,12 +3091,21 @@ bk_VariableInfo *bk_Parser::CreateGlobal(const char *name, const bk_TypeInfo *ty
     var->name = InternString(name);
     var->type = type;
     var->mut = false;
-    var->constant = true;
     var->module = module;
     var->ir = &program->globals;
 
-    for (const bk_PrimitiveValue &value: values) {
-        program->globals.Append({bk_Opcode::Push, type->primitive, value});
+    if (values.len > 1) {
+        Size ptr = program->ro.len;
+
+        program->ro.Append(values);
+
+        IR.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = ptr}});
+        IR.Append({bk_Opcode::PushBig, {}, {.i = values.len}});
+
+        var->constant = 2;
+    } else if (values.len == 1) {
+        program->globals.Append({bk_Opcode::Push, type->primitive, values[0]});
+        var->constant = 1;
     }
     var->ready_addr = program->globals.len;
 
