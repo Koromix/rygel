@@ -2849,11 +2849,15 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
 
         stack.Append({var->type, var, false});
     } else if (!var->type->IsComposite()) {
+        RG_ASSERT(var->offset >= 0);
+
         bk_Opcode code = var->local ? bk_Opcode::LoadLocal : bk_Opcode::Load;
         IR.Append({code, {}, {.i = var->offset}});
 
         stack.Append({var->type, var, false});
     } else if (var->type->size) {
+        RG_ASSERT(var->offset >= 0);
+
         bk_Opcode code = var->local ? bk_Opcode::LeaLocal : bk_Opcode::Lea;
         IR.Append({code, {}, {.i = var->offset}});
         IR.Append({bk_Opcode::LoadIndirect, {}, {.i = var->type->size}});
@@ -3093,6 +3097,7 @@ bk_VariableInfo *bk_Parser::CreateGlobal(const char *name, const bk_TypeInfo *ty
     var->mut = false;
     var->module = module;
     var->ir = &program->globals;
+    var->offset = -1;
 
     if (values.len > 1) {
         Size ptr = program->ro.len;
