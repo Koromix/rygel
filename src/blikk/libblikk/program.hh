@@ -163,9 +163,15 @@ static const char *const bk_OpcodeNames[] = {
 
 struct bk_Instruction {
     bk_Opcode code;
-    bk_PrimitiveKind primitive; // Only set for Push
-    bk_PrimitiveValue u;
+
+    union {
+        bk_PrimitiveKind primitive;
+        int32_t i;
+    } u2;
+
+    bk_PrimitiveValue u1; // First operand is 64-bit, put it behind to avoid padding
 };
+RG_STATIC_ASSERT(RG_SIZE(bk_Instruction) == 16);
 
 struct bk_SourceMap {
     struct Line {
@@ -229,7 +235,7 @@ struct bk_VariableInfo {
     bool mut;
     bool module;
     bool local;
-    int constant;
+    bool constant;
 
     const HeapArray<bk_Instruction> *ir;
     Size ready_addr; // Only set for globals and locals (not parameters, loop iterators, etc.)
