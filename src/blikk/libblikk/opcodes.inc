@@ -17,10 +17,10 @@
 
 OPCODE(Nop)
 
-// Immediate values
+// Constant values
 OPCODE(Push)
-OPCODE(PushZero)
-OPCODE(PushBig)
+OPCODE(Reserve)
+OPCODE(Fetch)
 OPCODE(Pop)
 
 // Load/store
