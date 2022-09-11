@@ -730,7 +730,7 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
         case bk_Opcode::LeaRel: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", stack.len + inst.u1.i, stack.len); } break;
         case bk_Opcode::Load: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", inst.u1.i, stack.len); } break;
         case bk_Opcode::LoadLocal: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", bp + inst.u1.i, stack.len); } break;
-        case bk_Opcode::LoadIndirect:
+        case bk_Opcode::LoadIndirect: { PrintLn(stderr, " |%1 %!M..>%2%!0", inst.u1.i, stack.len - 1); } break;
         case bk_Opcode::LoadIndirectK: { PrintLn(stderr, " |%1 %!M..>%2%!0", inst.u1.i, stack.len); } break;
         case bk_Opcode::Store:
         case bk_Opcode::StoreK: { PrintLn(stderr, " %!M..>%1%!0", inst.u1.i); } break;
@@ -754,6 +754,8 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
             PrintLn(stderr, " %!G..'%1'%!0", func->prototype);
         } break;
         case bk_Opcode::Return: { PrintLn(stderr, " %1", inst.u1.i); } break;
+
+        case bk_Opcode::InlineIf: { PrintLn(stderr, " |%1 %!M..>%2%!0", inst.u1.i, stack.len - 2 * inst.u1.i - 1); } break;
 
         case bk_Opcode::End: { PrintLn(stderr, " (%1)", inst.u1.i); } break;
 
