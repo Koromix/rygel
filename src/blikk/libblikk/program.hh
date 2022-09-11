@@ -167,9 +167,8 @@ struct bk_Instruction {
     union {
         bk_PrimitiveKind primitive;
         int32_t i;
-    } u2;
-
-    bk_PrimitiveValue u1; // First operand is 64-bit, put it behind to avoid padding
+    } u1;
+    bk_PrimitiveValue u2;
 };
 RG_STATIC_ASSERT(RG_SIZE(bk_Instruction) == 16);
 
