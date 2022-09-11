@@ -1026,14 +1026,14 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
         if (record) {
             var->type = bk_TypeType;
-            var->ir->ptr[var->ready_addr - 1].u1.type = type_buf.ret_type;
-            var->ir->ptr[var->ready_addr - 1].u2.primitive = bk_PrimitiveKind::Type;
+            var->ir->ptr[var->ir_addr - 1].u1.type = type_buf.ret_type;
+            var->ir->ptr[var->ir_addr - 1].u2.primitive = bk_PrimitiveKind::Type;
 
             MapVariable(var, func_pos);
         } else if (func->overload_next == func) {
             var->type = func->type;
-            var->ir->ptr[var->ready_addr - 1].u1.func = func;
-            var->ir->ptr[var->ready_addr - 1].u2.primitive = bk_PrimitiveKind::Function;
+            var->ir->ptr[var->ir_addr - 1].u1.func = func;
+            var->ir->ptr[var->ir_addr - 1].u2.primitive = bk_PrimitiveKind::Function;
 
             MapVariable(var, func_pos);
         }
@@ -1193,8 +1193,8 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
         bk_VariableInfo *var = fwd->var ? fwd->var : CreateGlobal(enum_type->signature, bk_NullType, {{}}, true);
 
         var->type = bk_TypeType;
-        var->ir->ptr[var->ready_addr - 1].u1.type = enum_type;
-        var->ir->ptr[var->ready_addr - 1].u2.primitive = bk_PrimitiveKind::Type;
+        var->ir->ptr[var->ir_addr - 1].u1.type = enum_type;
+        var->ir->ptr[var->ir_addr - 1].u2.primitive = bk_PrimitiveKind::Type;
 
         MapVariable(var, enum_pos);
 
@@ -1243,7 +1243,6 @@ void bk_Parser::ParseLet()
     var_pos += var->mut;
     var->name = ConsumeIdentifier();
     var->local = !!current_func;
-    var->ir = ir;
 
     Size prev_addr = IR.len;
 
@@ -1276,34 +1275,51 @@ void bk_Parser::ParseLet()
 
             Emit(bk_Opcode::Reserve, type->size);
             slot = {type};
-
-            var->constant = !var->mut && type->size;
         }
     }
 
-    if (!var->constant && !var->mut) {
+    if (!var->mut) {
+        if (slot.var && !slot.var->mut && !slot.indirect_addr) {
+            const char *name = var->name;
+
+            // We're about to alias var to slot.var... we need to drop the load instructions
+            TrimInstructions(IR.len - prev_addr);
+
+            *var = *slot.var;
+            var->name = name;
+
+            MapVariable(var, var_pos);
+            return;
+        }
+
         if (slot.type->size == 1) {
-            var->constant = (IR[IR.len - 1].code == bk_Opcode::Push);
+            if (IR[IR.len - 1].code == bk_Opcode::Push ||
+                    IR[IR.len - 1].code == bk_Opcode::Reserve) {
+                program->globals.Append(IR[IR.len - 1]);
+                TrimInstructions(1);
+
+                var->constant = true;
+            }
         } else if (slot.type->size) {
-            var->constant = CopyBigConstant(slot.type->size);
+            if (IR[IR.len - 1].code == bk_Opcode::Reserve &&
+                    IR[IR.len - 1].u1.i == slot.type->size) {
+                program->globals.Append(IR[IR.len - 1]);
+                TrimInstructions(1);
+
+                var->constant = true;
+            } else {
+                var->constant = CopyBigConstant(slot.type->size);
+            }
+        } else {
+            var->constant = true;
         }
     }
 
     var->type = slot.type;
-    if (slot.var && !slot.var->mut && !slot.indirect_addr && !var->mut) {
-        const char *name = var->name;
-
-        // We're about to alias var to slot.var... we need to drop the load instructions
-        TrimInstructions(IR.len - prev_addr);
-
-        *var = *slot.var;
-        var->name = name;
-    } else {
-        var->ready_addr = IR.len;
-
-        var->offset = *offset_ptr;
-        *offset_ptr += slot.type->size;
-    }
+    var->ir = var->constant ? &program->globals : ir;
+    var->ir_addr = var->ir->len;
+    var->offset = var->constant ? -1 : *offset_ptr;
+    *offset_ptr += var->constant ? 0 : slot.type->size;
 
     MapVariable(var, var_pos);
 
@@ -2864,18 +2880,11 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
     if (!var->type->size) {
         stack.Append({var->type, var, false});
     } else if (var->constant) {
-        bk_Instruction inst = (*var->ir)[var->ready_addr - 1];
+        bk_Instruction inst = (*var->ir)[var->ir_addr - 1];
         IR.Append(inst);
 
         stack.Append({var->type, var, false});
-    } else if (!var->type->IsComposite()) {
-        RG_ASSERT(var->offset >= 0);
-
-        bk_Opcode code = var->local ? bk_Opcode::LoadLocal : bk_Opcode::Load;
-        Emit(code, var->offset);
-
-        stack.Append({var->type, var, false});
-    } else if (var->type->size) {
+    } else if (var->type->IsComposite()) {
         RG_ASSERT(var->offset >= 0);
 
         bk_Opcode code = var->local ? bk_Opcode::LeaLocal : bk_Opcode::Lea;
@@ -2883,6 +2892,13 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
         Emit(bk_Opcode::LoadIndirect, var->type->size);
 
         stack.Append({var->type, var, true});
+    } else {
+        RG_ASSERT(var->offset >= 0);
+
+        bk_Opcode code = var->local ? bk_Opcode::LoadLocal : bk_Opcode::Load;
+        Emit(code, var->offset);
+
+        stack.Append({var->type, var, false});
     }
 
     if (current_func) {
@@ -3044,25 +3060,25 @@ bool bk_Parser::CopyBigConstant(Size size)
 
     program->ro.Grow(size);
 
-    for (Size addr = IR.len - 1, offset = size - 1; offset >= 0; addr--) {
+    for (Size addr = IR.len - 1, offset = size; offset > 0; addr--) {
         switch (IR[addr].code) {
             case bk_Opcode::Push: {
-                program->ro.ptr[program->ro.len + offset].i = IR[addr].u1.i;
                 offset--;
+                program->ro.ptr[program->ro.len + offset].i = IR[addr].u1.i;
             } break;
             case bk_Opcode::Reserve: {
                 if (IR[addr].u1.i > offset)
                     return false;
 
-                memset(program->ro.ptr + offset, 0, IR[addr].u1.i);
                 offset -= IR[addr].u1.i;
+                memset_safe(program->ro.end() + offset, 0, IR[addr].u1.i * RG_SIZE(bk_PrimitiveValue));
             } break;
             case bk_Opcode::Fetch: {
                 if (IR[addr].u2.i > offset)
                     return false;
 
-                memcpy(program->ro.ptr + offset, program->ro.ptr + IR[addr].u1.i, IR[addr].u2.i);
                 offset -= IR[addr].u2.i;
+                memcpy_safe(program->ro.end() + offset, program->ro.ptr + IR[addr].u1.i, IR[addr].u2.i * RG_SIZE(bk_PrimitiveValue));
             } break;
 
             default: return false;
@@ -3070,7 +3086,7 @@ bool bk_Parser::CopyBigConstant(Size size)
     }
 
     TrimInstructions(size);
-    Emit(bk_Opcode::Fetch, program->ro.len, {.i = (int32_t)size});
+    program->globals.Append({bk_Opcode::Fetch, {.i = (int32_t)size}, {.i = program->ro.len}});
     program->ro.len += size;
 
     return true;
@@ -3132,7 +3148,7 @@ bk_VariableInfo *bk_Parser::CreateGlobal(const char *name, const bk_TypeInfo *ty
     } else if (values.len == 1) {
         program->globals.Append({bk_Opcode::Push, {.primitive = type->primitive}, values[0]});
     }
-    var->ready_addr = program->globals.len;
+    var->ir_addr = program->globals.len;
 
     return var;
 }

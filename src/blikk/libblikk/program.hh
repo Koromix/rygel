@@ -238,7 +238,7 @@ struct bk_VariableInfo {
     bool constant;
 
     const HeapArray<bk_Instruction> *ir;
-    Size ready_addr; // Only set for globals and locals (not parameters, loop iterators, etc.)
+    Size ir_addr; // Only set for globals and locals (not parameters, loop iterators, etc.)
     Size offset; // Stack
 
     const bk_VariableInfo *shadow;
