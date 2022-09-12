@@ -209,13 +209,11 @@ struct bk_FunctionInfo {
     LocalArray<Parameter, RG_LEN(bk_FunctionTypeInfo::params.data)> params;
 
     Mode mode;
-    std::function<bk_NativeFunction> native;
+    std::function<bk_NativeFunction> native; // Native only
+    HeapArray<bk_Instruction> ir; // Blikk only
+    bk_SourceMap src; // Blikk only
 
-    HeapArray<bk_Instruction> ir;
-    bk_SourceMap src;
     bool tre;
-
-    bool complete;
     bool valid;
     bool impure;
     bool side_effects;

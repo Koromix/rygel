@@ -1137,7 +1137,8 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
     fwd->skip = pos;
     skip_map.Set(func_pos - 1, fwd);
 
-    func->complete = func->valid;
+    // Prevent CTFE of invalid functions
+    func->impure |= !func->valid;
 }
 
 void bk_Parser::ParseEnum(ForwardInfo *fwd)
@@ -2816,7 +2817,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     } else {
         Emit(bk_Opcode::Call, func);
 
-        if (!func->impure && func->complete) {
+        if (!func->impure) {
             show_errors &= func->valid;
             FoldInstruction(args_size, func_type->ret_type);
         }
