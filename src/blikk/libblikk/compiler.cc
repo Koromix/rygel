@@ -1038,11 +1038,6 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
             MapVariable(var, func_pos);
         }
 
-        if (RG_UNLIKELY(var->shadow)) {
-            MarkError(func_pos, "Variable '%1' already exists", var->name);
-            HintDefinition(var->shadow, "Previous variable '%1' is defined here", var->name);
-        }
-
         // Expressions involving this prototype (function or record) won't issue (visible) errors
         if (RG_UNLIKELY(!show_errors)) {
             poisoned_set.Set(var);
