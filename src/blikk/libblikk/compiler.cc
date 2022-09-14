@@ -3206,10 +3206,16 @@ void bk_Parser::DestroyVariables(Size first_idx)
         const bk_VariableInfo &var = program->variables[i];
         bk_VariableInfo **ptr = program->variables_map.Find(var.name);
 
-        if (var.shadow) {
-            *ptr = (bk_VariableInfo *)var.shadow;
-        } else {
-            program->variables_map.Remove(ptr);
+        if (RG_LIKELY(ptr)) {
+            if (*ptr == &var && !var.shadow) {
+                program->variables_map.Remove(ptr);
+            } else {
+                 while (*ptr && *ptr != &var) {
+                    ptr = (bk_VariableInfo **)&(*ptr)->shadow;
+                }
+
+                *ptr = (bk_VariableInfo *)var.shadow;
+            }
         }
 
         poisoned_set.Remove(&var);
