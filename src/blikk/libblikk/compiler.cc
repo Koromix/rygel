@@ -137,7 +137,7 @@ private:
     void ParseBreak();
     void ParseContinue();
 
-    StackSlot ParseExpression(unsigned int flags = 0);
+    StackSlot ParseExpression(unsigned int flags = 0, const bk_TypeInfo *hint = nullptr);
     bool ParseExpression(const bk_TypeInfo *type);
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
@@ -1262,7 +1262,7 @@ void bk_Parser::ParseLet()
             SkipNewLines();
 
             Size expr_pos = pos;
-            slot = ParseExpression();
+            slot = ParseExpression(0, type);
 
             if (RG_UNLIKELY(slot.type != type)) {
                 MarkError(expr_pos - 1, "Cannot assign '%1' value to variable '%2' (defined as '%3')",
@@ -1661,7 +1661,7 @@ static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
     }
 }
 
-StackSlot bk_Parser::ParseExpression(unsigned int flags)
+StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint)
 {
     Size start_stack_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_stack_len); };
@@ -1835,90 +1835,102 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags)
 
                 bk_VariableInfo *var = FindVariable(name);
 
-                if (RG_LIKELY(var)) {
-                    show_errors &= !poisoned_set.Find(var);
-
-                    EmitLoad(var);
-
-                    if (var->module) {
-                        if (var->type->primitive == bk_PrimitiveKind::Function) {
-                            RG_ASSERT(IR[IR.len - 1].code == bk_Opcode::Push &&
-                                      IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Function);
-
-                            bk_FunctionInfo *func = (bk_FunctionInfo *)IR[IR.len - 1].u2.func;
-
-                            if (!call) {
-                                if (RG_UNLIKELY(func->overload_next != func)) {
-                                    MarkError(var_pos, "Ambiguous reference to overloaded function '%1'", var->name);
-
-                                    // Show all candidate functions with same name
-                                    const bk_FunctionInfo *it = func;
-                                    do {
-                                        Hint(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
-                                        it = it->overload_next;
-                                    } while (it != func);
-
-                                    goto error;
-                                } else if (RG_UNLIKELY(func->mode == bk_FunctionInfo::Mode::Intrinsic)) {
-                                    MarkError(var_pos, "Intrinsic functions can only be called directly");
-                                    goto error;
-                                }
-                            }
-                        }
-                    }
-
-                    if (call) {
-                        bk_PrimitiveKind primitive = var->type->primitive;
-
-                        if (primitive == bk_PrimitiveKind::Function) {
-                            if (IR[IR.len - 1].code == bk_Opcode::Push) {
-                                RG_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Function);
-
-                                bk_FunctionInfo *func = (bk_FunctionInfo *)IR[IR.len - 1].u2.func;
-                                bool overload = var->module;
-
-                                TrimInstructions(1);
-                                stack.len--;
-
-                                if (!ParseCall(var->type->AsFunctionType(), func, overload))
-                                    goto error;
-                            } else {
-                                if (!ParseCall(var->type->AsFunctionType(), nullptr, false))
-                                    goto error;
-                            }
-                        } else if (primitive == bk_PrimitiveKind::Type) {
-                            if (IR[IR.len - 1].code == bk_Opcode::Push) {
-                                RG_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Type);
-
-                                const bk_TypeInfo *type = IR[IR.len - 1].u2.type;
-
-                                if (RG_LIKELY(type->primitive == bk_PrimitiveKind::Record)) {
-                                    const bk_RecordTypeInfo *record_type = type->AsRecordType();
-                                    bk_FunctionInfo *func = (bk_FunctionInfo *)record_type->func;
-
-                                    TrimInstructions(1);
-                                    stack.len--;
-
-                                    if (!ParseCall(func->type, func, false))
-                                        goto error;
-                                } else {
-                                    MarkError(var_pos, "Variable '%1' is not a function and cannot be called", var->name);
-                                    goto error;
-                                }
-                            } else {
-                                MarkError(var_pos, "Record constructors can only be called directly");
-                                goto error;
-                            }
-                        } else {
-                            MarkError(var_pos, "Variable '%1' is not a function and cannot be called", var->name);
-                            goto error;
-                        }
-                    }
-                } else {
+                if (RG_UNLIKELY(!var)) {
                     MarkError(var_pos, "Reference to unknown identifier '%1'", name);
                     HintSuggestions(name, program->variables);
 
                     goto error;
+                }
+
+                EmitLoad(var);
+                show_errors &= !poisoned_set.Find(var);
+
+                if (call) {
+                    bk_PrimitiveKind primitive = var->type->primitive;
+
+                    if (primitive == bk_PrimitiveKind::Function) {
+                        if (IR[IR.len - 1].code == bk_Opcode::Push) {
+                            RG_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Function);
+
+                            bk_FunctionInfo *func = (bk_FunctionInfo *)IR[IR.len - 1].u2.func;
+                            bool overload = var->module;
+
+                            TrimInstructions(1);
+                            stack.len--;
+
+                            if (!ParseCall(var->type->AsFunctionType(), func, overload))
+                                goto error;
+                        } else {
+                            if (!ParseCall(var->type->AsFunctionType(), nullptr, false))
+                                goto error;
+                        }
+                    } else if (primitive == bk_PrimitiveKind::Type) {
+                        if (IR[IR.len - 1].code == bk_Opcode::Push) {
+                            RG_ASSERT(IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Type);
+
+                            const bk_TypeInfo *type = IR[IR.len - 1].u2.type;
+
+                            if (RG_LIKELY(type->primitive == bk_PrimitiveKind::Record)) {
+                                const bk_RecordTypeInfo *record_type = type->AsRecordType();
+                                bk_FunctionInfo *func = (bk_FunctionInfo *)record_type->func;
+
+                                TrimInstructions(1);
+                                stack.len--;
+
+                                if (!ParseCall(func->type, func, false))
+                                    goto error;
+                            } else {
+                                MarkError(var_pos, "Variable '%1' is not a function and cannot be called", var->name);
+                                goto error;
+                            }
+                        } else {
+                            MarkError(var_pos, "Record constructors can only be called directly");
+                            goto error;
+                        }
+                    } else {
+                        MarkError(var_pos, "Variable '%1' is not a function and cannot be called", var->name);
+                        goto error;
+                    }
+                } else if (!call && var->module && var->type->primitive == bk_PrimitiveKind::Function) {
+                    RG_ASSERT(IR[IR.len - 1].code == bk_Opcode::Push &&
+                              IR[IR.len - 1].u1.primitive == bk_PrimitiveKind::Function);
+
+                    bk_FunctionInfo *func = (bk_FunctionInfo *)IR[IR.len - 1].u2.func;
+
+                    if (func->overload_next != func) {
+                        bool ambiguous = true;
+
+                        if (hint) {
+                            bk_FunctionInfo *it = func;
+                            do {
+                                if (it->type == hint) {
+                                    IR[IR.len - 1].u2.func = it;
+                                    stack[stack.len - 1] = {it->type};
+
+                                    ambiguous = false;
+                                    break;
+                                }
+
+                                it = it->overload_next;
+                            } while (it != func);
+                        }
+
+                        if (ambiguous) {
+                            MarkError(var_pos, "Ambiguous reference to overloaded function '%1'", var->name);
+
+                            // Show all candidate functions with same name
+                            const bk_FunctionInfo *it = func;
+                            do {
+                                Hint(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
+                                it = it->overload_next;
+                            } while (it != func);
+
+                            goto error;
+                        }
+                    } else if (RG_UNLIKELY(func->mode == bk_FunctionInfo::Mode::Intrinsic)) {
+                        MarkError(var_pos, "Intrinsic functions can only be called directly");
+                        goto error;
+                    }
                 }
             } break;
 
