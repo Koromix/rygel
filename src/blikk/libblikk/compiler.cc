@@ -3189,7 +3189,7 @@ bool bk_Parser::MapVariable(bk_VariableInfo *var, Size var_pos)
             MarkError(var_pos, "Parameter '%1' already exists", var->name);
             HintDefinition(it_pos, "Previous parameter '%1' is defined here", it->name);
         } else {
-            MarkError(var_pos, "%1 '%2' is not allowed to hide %3", GetVariableKind(var, true), var->name, GetVariableKind(it, false));
+            MarkError(var_pos, "%1 '%2' cannot hide previous %3", GetVariableKind(var, true), var->name, GetVariableKind(it, false));
             HintDefinition(it_pos, "Previous %1 '%2' is defined here", GetVariableKind(it, false), it->name);
         }
     }
