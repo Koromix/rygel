@@ -1288,6 +1288,7 @@ void bk_Parser::ParseLet()
 
             *var = *slot.var;
             var->name = name;
+            var->module = false;
 
             MapVariable(var, var_pos);
             return;
