@@ -204,6 +204,8 @@ Options:
 
 int Main(int argc, char **argv)
 {
+    RG_CRITICAL(argc >= 1, "First argument is missing");
+
     // Options
     HeapArray<const char *> src_filenames;
 
