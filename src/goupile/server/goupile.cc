@@ -1090,37 +1090,34 @@ int Main(int argc, char **argv)
         return 1;
     }
 
-    int (*cmd_func)(Span<const char *> arguments);
-    Span<const char *> arguments;
+    const char *cmd = nullptr;
+    Span<const char *> arguments = {};
 
     if (argc >= 2) {
-        const char *cmd = argv[1];
+        cmd = argv[1];
 
-        if (TestStr(cmd, "init")) {
-            cmd_func = RunInit;
-            arguments = MakeSpan((const char **)argv + 2, argc - 2);
-        } else if (TestStr(cmd, "migrate")) {
-            cmd_func = RunMigrate;
-            arguments = MakeSpan((const char **)argv + 2, argc - 2);
-        } else if (TestStr(cmd, "unseal")) {
-            cmd_func = RunUnseal;
-            arguments = MakeSpan((const char **)argv + 2, argc - 2);
-        } else if (TestStr(cmd, "serve")) {
-            cmd_func = RunServe;
-            arguments = MakeSpan((const char **)argv + 2, argc - 2);
-        } else if (cmd[0] == '-') {
-            cmd_func = RunServe;
+        if (cmd[0] == '-') {
+            cmd = "serve";
             arguments = MakeSpan((const char **)argv + 1, argc - 1);
         } else {
-            LogError("Unknown command '%1'", cmd);
-            return 1;
+            arguments = MakeSpan((const char **)argv + 2, argc - 2);
         }
     } else {
-        cmd_func = RunServe;
-        arguments = {};
+        cmd = "serve";
     }
 
-    return cmd_func(arguments);
+    if (TestStr(cmd, "init")) {
+        return RunInit(arguments);
+    } else if (TestStr(cmd, "migrate")) {
+        return RunMigrate(arguments);
+    } else if (TestStr(cmd, "unseal")) {
+        return RunUnseal(arguments);
+    } else if (TestStr(cmd, "serve")) {
+        return RunServe(arguments);
+    } else {
+        LogError("Unknown command '%1'", cmd);
+        return 1;
+    }
 }
 
 }

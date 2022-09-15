@@ -39,26 +39,30 @@ int Main(int argc, char **argv)
         }
     }
 
-    int (*cmd_func)(Span<const char *> arguments);
-    Span<const char *> arguments;
+    const char *cmd = nullptr;
+    Span<const char *> arguments = {};
+
     if (argc >= 2) {
-        const char *cmd = argv[1];
-        if (TestStr(cmd, "build")) {
-            cmd_func = RunBuild;
-            arguments = MakeSpan((const char **)argv + 2, argc - 2);
-        } else if (TestStr(cmd, "pack")) {
-            cmd_func = RunPack;
-            arguments = MakeSpan((const char **)argv + 2, argc - 2);
-        } else {
-            cmd_func = RunBuild;
+        cmd = argv[1];
+
+        if (cmd[0] == '-') {
+            cmd = "build";
             arguments = MakeSpan((const char **)argv + 1, argc - 1);
+        } else {
+            arguments = MakeSpan((const char **)argv + 2, argc - 2);
         }
     } else {
-        cmd_func = RunBuild;
-        arguments = {};
+        cmd = "build";
     }
 
-    return cmd_func(arguments);
+    if (TestStr(cmd, "build")) {
+        return RunBuild(arguments);
+    } else if (TestStr(cmd, "pack")) {
+        return RunPack(arguments);
+    } else {
+        arguments = MakeSpan((const char **)argv + 1, argc - 1);
+        return RunBuild(arguments);
+    }
 }
 
 }
