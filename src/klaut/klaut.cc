@@ -12,51 +12,159 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
+#include "chunker.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/curl/include/curl/curl.h"
 
 namespace RG {
+
+static inline void FormatBlakeHex(Span<const uint8_t> hash, char out_hash[65])
+{
+    RG_ASSERT(hash.len == 32);
+    Fmt(MakeSpan(out_hash, 65), "%1", FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2));
+}
+
+static int RunSplit(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    Span<const char> dest_directory = {};
+    bool verbose = false;
+    const char *filename = nullptr;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 split <filename> [-O <dir>]%!0
+
+Options:
+    %!..+-O, --output_dir <dir>%!0       Put file fragments in <dir>
+
+    %!..+-v, --verbose%!0                Show precise chunk size
+
+If no output directory is provided, the chunks are simply detected.)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
+                dest_directory = opt.current_value;
+            } else if (opt.Test("-v", "--verbose")) {
+                verbose = true;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        filename = opt.ConsumeNonOption();
+        dest_directory = TrimStrRight(dest_directory, RG_PATH_SEPARATORS);
+
+        if (!filename) {
+            LogError("No filename provided");
+            return 1;
+        }
+    }
+
+    // Now, split the file
+    {
+        StreamReader st(filename);
+        kt_Chunker chunker(Kibibytes(256), Kibibytes(128), Kibibytes(768));
+        HeapArray<uint8_t> buf;
+
+        do {
+            Size processed = 0;
+
+            do {
+                buf.Grow(Mebibytes(1));
+
+                Size read = st.Read(buf.TakeAvailable());
+                if (read < 0)
+                    return 1;
+                buf.len += read;
+
+                processed = chunker.Process(buf, st.IsEOF(), [&](Size total, Span<const uint8_t> chunk) {
+                    uint8_t hash[32];
+                    char hash_hex[65];
+
+                    crypto_generichash_blake2b(hash, RG_SIZE(hash), chunk.ptr, chunk.len, nullptr, 0);
+                    FormatBlakeHex(hash, hash_hex);
+
+                    if (verbose) {
+                        LogInfo("%1 [%2, %3]", hash_hex, FmtHex(total).Pad0(-8), chunk.len);
+                    } else {
+                        LogInfo("%1 (%2)", hash_hex, verbose ? FmtArg(chunk.len) : FmtDiskSize(chunk.len));
+                    }
+
+                    if (dest_directory.ptr) {
+                        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", dest_directory, hash_hex).ptr;
+                        return WriteFile(chunk, dest_filename);
+                    } else {
+                        return true;
+                    }
+                });
+                if (processed < 0)
+                    return 1;
+            } while (!processed);
+
+            memmove_safe(buf.ptr, buf.ptr + processed, buf.len - processed);
+            buf.len -= processed;
+        } while (!st.IsEOF());
+    }
+
+    return 0;
+}
 
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1)", FelixTarget);
+        PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
+
+Commands:
+    %!..+split%!0                        Split file in deduplicated chunks
+
+Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
 
-    // Handle version
-    if (argc >= 2 && TestStr(argv[1], "--version")) {
+    if (argc < 2) {
+        print_usage(stderr);
+        PrintLn(stderr);
+        LogError("No command provided");
+        return 1;
+    }
+
+    const char *cmd = argv[1];
+    Span<const char *> arguments((const char **)argv + 2, argc - 2);
+
+    // Handle help and version arguments
+    if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
+        if (arguments.len && arguments[0][0] != '-') {
+            cmd = arguments[0];
+            arguments[0] = (cmd[0] == '-') ? cmd : "--help";
+        } else {
+            print_usage(stdout);
+            return 0;
+        }
+    } else if (TestStr(cmd, "--version")) {
         PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
         PrintLn("Compiler: %1", FelixCompiler);
         return 0;
     }
 
-    // Parse arguments
-    {
-        OptionParser opt(argc, argv);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(stdout);
-                return 0;
-            } else {
-                opt.LogUnknownError();
-                return 1;
-            }
-        }
-    }
-
-    if (sodium_init() < 0) {
-        LogError("Failed to initialize libsodium");
+    if (TestStr(cmd, "split")) {
+        return RunSplit(arguments);
+    } else {
+        LogError("Unknown command '%1'", cmd);
         return 1;
     }
-    if (curl_global_init(CURL_GLOBAL_ALL)) {
-        LogError("Failed to initialize libcurl");
-        return 1;
-    }
-
-    return 0;
 }
 
 }
