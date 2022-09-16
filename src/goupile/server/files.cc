@@ -649,8 +649,8 @@ void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, 
         return;
     }
 
-    int64_t from_version;
-    int64_t to_version;
+    int64_t from_version = 0;
+    int64_t to_version = 0;
     if (request.GetQueryValue("from") || request.GetQueryValue("to")) {
         bool valid = true;
 

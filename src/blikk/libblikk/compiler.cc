@@ -1074,7 +1074,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         current_func = func;
 
         func->src.filename = src->filename;
-        func->src.lines.Append((bk_SourceMap::Line) {0, pos < tokens.len ? tokens[pos].line : 0});
+        func->src.lines.Append(bk_SourceMap::Line {0, pos < tokens.len ? tokens[pos].line : 0});
         src = &func->src;
         ir = &func->ir;
 
