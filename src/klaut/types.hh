@@ -17,9 +17,10 @@
 
 namespace RG {
 
-struct kt_ObjectID {
-    uint32_t fast; // FastCDC
-    uint8_t slow[64]; // BLAKE2b
+struct kt_Hash {
+    uint8_t hash[32]; // BLAKE2b
+
+    operator FmtArg() const { return FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2); }
 };
 
 struct kt_SnapshotInfo {
@@ -27,7 +28,7 @@ struct kt_SnapshotInfo {
 
     int64_t ctime;
 
-    kt_ObjectID id;
+    kt_Hash id;
 };
 
 enum class kt_EntryType {
@@ -42,7 +43,7 @@ struct kt_EntryInfo {
     int64_t mtime;
     kt_EntryType type;
 
-    kt_ObjectID id;
+    kt_Hash id;
 };
 
 }

@@ -17,17 +17,17 @@
 
 namespace RG {
 
-bool kt_CreateSnapshot(kt_Disk *disk, const char *dir_id, kt_ObjectID *out_id)
+bool kt_CreateSnapshot(kt_Disk *disk, const char *dir_id, kt_Hash *out_id)
 {
     RG_UNREACHABLE();
 }
 
-bool kt_CreateDirectory(kt_Disk *disk, Span<const kt_EntryInfo> entries, kt_ObjectID *out_id)
+bool kt_CreateDirectory(kt_Disk *disk, Span<const kt_EntryInfo> entries, kt_Hash *out_id)
 {
     RG_UNREACHABLE();
 }
 
-bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ObjectID *out_id)
+bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_Hash *out_id)
 {
     RG_UNREACHABLE();
 }

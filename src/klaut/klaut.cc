@@ -13,23 +13,18 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "chunker.hh"
+#include "disk.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/curl/include/curl/curl.h"
 
 namespace RG {
-
-static inline void FormatBlakeHex(Span<const uint8_t> hash, char out_hash[65])
-{
-    RG_ASSERT(hash.len == 32);
-    Fmt(MakeSpan(out_hash, 65), "%1", FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2));
-}
 
 static int RunSplit(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
     // Options
-    Span<const char> dest_directory = {};
+    const char *dest_directory = nullptr;
     bool verbose = false;
     const char *filename = nullptr;
 
@@ -64,13 +59,17 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
         }
 
         filename = opt.ConsumeNonOption();
-        dest_directory = TrimStrRight(dest_directory, RG_PATH_SEPARATORS);
 
         if (!filename) {
             LogError("No filename provided");
             return 1;
         }
     }
+
+    kt_Disk *disk = dest_directory ? kt_OpenLocalDisk(dest_directory) : nullptr;
+    if (dest_directory && !disk)
+        return 1;
+    RG_DEFER { delete disk; };
 
     // Now, split the file
     {
@@ -90,24 +89,19 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
                 buf.len += read;
 
                 processed = chunker.Process(buf, st.IsEOF(), [&](Size total, Span<const uint8_t> chunk) {
-                    uint8_t hash[32];
-                    char hash_hex[65];
-
-                    crypto_generichash_blake2b(hash, RG_SIZE(hash), chunk.ptr, chunk.len, nullptr, 0);
-                    FormatBlakeHex(hash, hash_hex);
+                    kt_Hash id = {};
+                    crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, nullptr, 0);
 
                     if (verbose) {
-                        LogInfo("%1 [%2, %3]", hash_hex, FmtHex(total).Pad0(-8), chunk.len);
+                        LogInfo("%1 [%2, %3]", id, FmtHex(total).Pad0(-8), chunk.len);
                     } else {
-                        LogInfo("%1 (%2)", hash_hex, verbose ? FmtArg(chunk.len) : FmtDiskSize(chunk.len));
+                        LogInfo("%1 (%2)", id, verbose ? FmtArg(chunk.len) : FmtDiskSize(chunk.len));
                     }
 
-                    if (dest_directory.ptr) {
-                        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", dest_directory, hash_hex).ptr;
-                        return WriteFile(chunk, dest_filename);
-                    } else {
-                        return true;
-                    }
+                    if (disk && !disk->WriteChunk(id, chunk))
+                        return false;
+
+                    return true;
                 });
                 if (processed < 0)
                     return 1;

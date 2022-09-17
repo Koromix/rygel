@@ -24,17 +24,17 @@ bool kt_ListSnapshots(kt_Disk *disk, Allocator *alloc, HeapArray<kt_SnapshotInfo
     RG_UNREACHABLE();
 }
 
-bool kt_ReadSnapshot(kt_Disk *disk, const kt_ObjectID &id, Allocator *alloc, kt_SnapshotInfo *out_snapshot)
+bool kt_ReadSnapshot(kt_Disk *disk, const kt_Hash &id, Allocator *alloc, kt_SnapshotInfo *out_snapshot)
 {
     RG_UNREACHABLE();
 }
 
-bool kt_ListDirectory(kt_Disk *disk, const kt_ObjectID &id, Allocator *alloc, HeapArray<kt_EntryInfo> *out_entries)
+bool kt_ListDirectory(kt_Disk *disk, const kt_Hash &id, Allocator *alloc, HeapArray<kt_EntryInfo> *out_entries)
 {
     RG_UNREACHABLE();
 }
 
-bool kt_ExtractFile(kt_Disk *disk, const kt_ObjectID &id, const char *dest_filename)
+bool kt_ExtractFile(kt_Disk *disk, const kt_Hash &id, const char *dest_filename)
 {
     RG_UNREACHABLE();
 }

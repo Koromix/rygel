@@ -24,16 +24,11 @@ public:
 
     virtual bool ListTags(Allocator *alloc, HeapArray<const char *> *out_tags) = 0;
 
-    virtual bool ListChunks(const char *type, HeapArray<kt_ObjectID> *out_ids) = 0;
-    virtual bool ReadChunk(const kt_ObjectID &id, HeapArray<uint8_t> *out_buf) = 0;
-    virtual bool WriteChunk(const kt_ObjectID &id, Span<const uint8_t> buf) = 0;
+    virtual bool ListChunks(const char *type, HeapArray<kt_Hash> *out_ids) = 0;
+    virtual bool ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf) = 0;
+    virtual bool WriteChunk(const kt_Hash &id, Span<const uint8_t> buf) = 0;
 };
 
-enum class kt_OpenMode {
-    WriteOnly,
-    ReadWrite
-};
-
-kt_Disk *kt_OpenLocalDisk(const char *dirname, kt_OpenMode mode, const char *key);
+kt_Disk *kt_OpenLocalDisk(const char *path);
 
 }
