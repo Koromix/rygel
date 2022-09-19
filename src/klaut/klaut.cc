@@ -12,8 +12,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
-#include "chunker.hh"
 #include "disk.hh"
+#include "repository.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/curl/include/curl/curl.h"
 
@@ -80,7 +80,6 @@ static int RunPutFile(Span<const char *> arguments)
     // Options
     const char *repo_directory = nullptr;
     const char *repo_key = nullptr;
-    int verbose = 0;
     const char *filename = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
@@ -89,9 +88,7 @@ R"(Usage: %!..+%1 put_file <filename> [-O <dir>]%!0
 
 Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory
-    %!..+-k, --key <key>%!0              Set repository key
-
-    %!..+-v, --verbose%!0                Increase verbosity level (repeat for more))", FelixTarget);
+    %!..+-k, --key <key>%!0              Set repository key)", FelixTarget);
     };
 
     // Parse arguments
@@ -106,8 +103,6 @@ Options:
                 repo_directory = opt.current_value;
             } else if (opt.Test("-k", "--key", OptionType::Value)) {
                 repo_key = opt.current_value;
-            } else if (opt.Test("-v", "--verbose")) {
-                verbose++;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -139,67 +134,13 @@ Options:
         LogError("You should use the write-only key with this command");
     }
 
-    // Now, split the file
-    HeapArray<uint8_t> summary;
+    kt_ID id = {};
     Size written = 0;
-    {
-        StreamReader st(filename);
+    if (!kt_BackupFile(disk, filename, &id, &written))
+        return 1;
 
-        kt_Chunker chunker(Kibibytes(256), Kibibytes(128), Kibibytes(768));
-        HeapArray<uint8_t> buf;
-
-        do {
-            Size processed = 0;
-
-            do {
-                buf.Grow(Mebibytes(1));
-
-                Size read = st.Read(buf.TakeAvailable());
-                if (read < 0)
-                    return 1;
-                buf.len += read;
-
-                processed = chunker.Process(buf, st.IsEOF(), [&](Size idx, Size total, Span<const uint8_t> chunk) {
-                    kt_ID id = {};
-                    crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, nullptr, 0);
-
-                    if (verbose >= 2) {
-                        LogInfo("Chunk %1: %!..+%2%!0 [0x%3, %4]", idx, id, FmtHex(total).Pad0(-8), chunk.len);
-                    } else if (verbose) {
-                        LogInfo("Chunk %1: %!..+%2%!0 (%3)", idx, id, FmtDiskSize(chunk.len));
-                    }
-
-                    Size ret = disk->WriteChunk(id, chunk);
-                    if (ret < 0)
-                        return false;
-                    written += ret;
-
-                    summary.Append(MakeSpan((const uint8_t *)&id, RG_SIZE(id)));
-
-                    return true;
-                });
-                if (processed < 0)
-                    return 1;
-            } while (!processed);
-
-            memmove_safe(buf.ptr, buf.ptr + processed, buf.len - processed);
-            buf.len -= processed;
-        } while (!st.IsEOF());
-    }
-
-    // Write list of chunks
-    {
-        kt_ID id = {};
-        crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), summary.ptr, summary.len, nullptr, 0);
-
-        Size ret = disk->WriteChunk(id, summary);
-        if (ret < 0)
-            return 1;
-        written += ret;
-
-        LogInfo("Destination: %!..+%1%!0", id);
-        LogInfo("Total written: %!..+%1%!0", verbose >= 2 ? FmtArg(written) : FmtDiskSize(written));
-    }
+    LogInfo("Destination: %!..+%1%!0", id);
+    LogInfo("Total written: %!..+%1%!0", FmtDiskSize(written));
 
     return 0;
 }
@@ -210,7 +151,6 @@ static int RunGetFile(Span<const char *> arguments)
     const char *repo_directory = nullptr;
     const char *repo_key = nullptr;
     const char *dest_filename = nullptr;
-    int verbose = 0;
     const char *name = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
@@ -221,9 +161,7 @@ Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory
     %!..+-k, --repo_key <key>%!0         Set repository key
 
-    %!..+-O, --output_file <dir>%!0      Restore file to <file>
-
-    %!..+-v, --verbose%!0                Increase verbosity level (repeat for more))", FelixTarget);
+    %!..+-O, --output_file <dir>%!0      Restore file to <file>)", FelixTarget);
     };
 
     // Parse arguments
@@ -240,8 +178,6 @@ Options:
                 dest_filename = opt.current_value;
             } else if (opt.Test("-k", "--repo_key", OptionType::Value)) {
                 repo_key = opt.current_value;
-            } else if (opt.Test("-v", "--verbose")) {
-                verbose++;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -260,7 +196,7 @@ Options:
         return 1;
     }
     if (!dest_filename) {
-        LogError("Missing destination file");
+        LogError("Missing destination filename");
         return 1;
     }
     if (!repo_key) {
@@ -278,47 +214,16 @@ Options:
         return 1;
     }
 
-    // Open destination file
-    StreamWriter writer(dest_filename);
-    if (!writer.IsValid())
-        return 1;
-
-    // Read file summary
-    HeapArray<uint8_t> summary;
+    Size file_len = 0;
     {
         kt_ID id = {};
         if (!kt_ParseID(name, &id))
             return 1;
-
-        if (!disk->ReadChunk(id, &summary))
-            return 1;
-        if (summary.len % RG_SIZE(kt_ID)) {
-            LogError("Malformed file summary '%1'", name);
-            return 1;
-        }
-    }
-
-    // Write unencrypted file
-    for (Size idx = 0, offset = 0; offset < summary.len; idx++, offset += RG_SIZE(kt_ID)) {
-        kt_ID id = {};
-        memcpy(&id, summary.ptr + offset, RG_SIZE(id));
-
-        if (verbose) {
-            LogInfo("Chunk %1: %!..+%2%!0", idx, id);
-        }
-
-        HeapArray<uint8_t> buf;
-        if (!disk->ReadChunk(id, &buf))
-            return 1;
-        if (!writer.Write(buf))
+        if (!kt_ExtractFile(disk, id, dest_filename, &file_len))
             return 1;
     }
 
-    if (!writer.Close())
-        return 1;
-
-    Size file_len = writer.GetRawWritten();
-    LogInfo("Restored file: %!..+%1%!0 (%2)", dest_filename, verbose ? FmtArg(file_len) : FmtDiskSize(file_len));
+    LogInfo("Restored file: %!..+%1%!0 (%2)", dest_filename, FmtDiskSize(file_len));
 
     return 0;
 }
