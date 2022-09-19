@@ -35,9 +35,7 @@ Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory
     %!..+-k, --encrypt_key <key>%!0      Set encryption key
 
-    %!..+-v, --verbose%!0                Increase verbosity level (repeat for more)
-
-If no output directory is provided, the chunks are simply detected.)", FelixTarget);
+    %!..+-v, --verbose%!0                Increase verbosity level (repeat for more))", FelixTarget);
     };
 
     // Parse arguments
@@ -178,9 +176,7 @@ Options:
 
     %!..+-O, --output_file <dir>%!0      Restore file to <file>
 
-    %!..+-v, --verbose%!0                Increase verbosity level (repeat for more)
-
-If no output directory is provided, the chunks are simply detected.)", FelixTarget);
+    %!..+-v, --verbose%!0                Increase verbosity level (repeat for more))", FelixTarget);
     };
 
     // Parse arguments
