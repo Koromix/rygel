@@ -31,10 +31,14 @@ struct ChunkIntro {
 
 class LocalDisk: public kt_Disk {
     LocalArray<char, MaxPathSize + 128> directory;
+
+    bool writeonly;
     uint8_t pkey[crypto_box_PUBLICKEYBYTES];
+    uint8_t skey[crypto_box_SECRETKEYBYTES];
 
 public:
-    LocalDisk(Span<const char> directory, uint8_t pkey[crypto_box_PUBLICKEYBYTES]);
+    LocalDisk(Span<const char> directory, uint8_t skey[crypto_box_SECRETKEYBYTES],
+                                          uint8_t pkey[crypto_box_PUBLICKEYBYTES]);
     ~LocalDisk() override;
 
     bool ListTags(Allocator *alloc, HeapArray<const char *> *out_tags) override;
@@ -44,12 +48,20 @@ public:
     Size WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk) override;
 };
 
-LocalDisk::LocalDisk(Span<const char> directory, uint8_t pkey[crypto_box_PUBLICKEYBYTES])
+LocalDisk::LocalDisk(Span<const char> directory, uint8_t skey[crypto_box_SECRETKEYBYTES],
+                                                 uint8_t pkey[crypto_box_PUBLICKEYBYTES])
 {
     RG_ASSERT(directory.len <= MaxPathSize);
 
     this->directory.Append(directory);
     this->directory.data[this->directory.len] = 0;
+
+    if (skey) {
+        memcpy(this->skey, skey, RG_SIZE(this->skey));
+        writeonly = false;
+    } else {
+        writeonly = true;
+    }
     memcpy(this->pkey, pkey, RG_SIZE(this->pkey));
 }
 
@@ -69,7 +81,73 @@ bool LocalDisk::ListChunks(const char *type, HeapArray<kt_Hash> *out_ids)
 
 bool LocalDisk::ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf)
 {
-    RG_UNREACHABLE();
+    RG_ASSERT(!writeonly);
+
+    RG_DEFER_NC(err_guard, len = out_buf->len) { out_buf->RemoveFrom(len); };
+
+    LocalArray<char, MaxPathSize + 128> path;
+    path.len = Fmt(path.data, "%1%/%2%/%3", directory, FmtHex(id.hash[0]).Pad0(-2), id).len;
+
+    StreamReader reader(path.data);
+
+    // Read chunk header
+    ChunkIntro intro;
+    if (reader.Read(RG_SIZE(intro), &intro) != RG_SIZE(intro)) {
+        if (reader.IsValid()) {
+            LogError("Truncated chunk");
+        }
+        return false;
+    }
+
+    // Check signature
+    if (intro.version != CHUNK_VERSION) {
+        LogError("Unexpected chunk version %1 (expected %2)", intro.version, CHUNK_VERSION);
+        return false;
+    }
+
+    // Decrypt symmetric key
+    uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+    if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), pkey, skey) != 0) {
+        LogError("Failed to unseal chunk (wrong key?)");
+        return false;
+    }
+
+    // Init symmetric decryption
+    crypto_secretstream_xchacha20poly1305_state state;
+    if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, key) != 0) {
+        LogError("Failed to initialize symmetric decryption (corrupt chunk?)");
+        return false;
+    }
+
+    // Read chunk
+    for (;;) {
+        LocalArray<uint8_t, CHUNK_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES> cypher;
+        cypher.len = reader.Read(cypher.data);
+        if (cypher.len < 0)
+            return false;
+
+        uint8_t buf[CHUNK_SPLIT];
+        unsigned long long buf_len = 0;
+        uint8_t tag;
+        if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
+                                                       cypher.data, cypher.len, nullptr, 0) != 0) {
+            LogError("Failed during symmetric decryption (corrupt chunk?)");
+            return false;
+        }
+
+        out_buf->Append(MakeSpan(buf, (Size)buf_len));
+
+        if (reader.IsEOF()) {
+            if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
+                LogError("Truncated chunk");
+                return false;
+            }
+            break;
+        }
+    }
+
+    err_guard.Disable();
+    return true;
 }
 
 Size LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
@@ -145,7 +223,7 @@ Size LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
     return writer.GetRawWritten();
 }
 
-kt_Disk *kt_OpenLocalDisk(const char *path, const char *encrypt_key)
+kt_Disk *kt_OpenLocalDisk(const char *path, kt_DiskMode mode, const char *key)
 {
     Span<const char> directory = TrimStrRight(path, RG_PATH_SEPARATORS);
 
@@ -158,22 +236,45 @@ kt_Disk *kt_OpenLocalDisk(const char *path, const char *encrypt_key)
         return nullptr;
     }
 
-    // Derive asymmetric keys
-    uint8_t pkey[crypto_box_PUBLICKEYBYTES];
-    {
-        RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
+    switch (mode) {
+        case kt_DiskMode::WriteOnly: {
+            uint8_t pkey[crypto_box_PUBLICKEYBYTES];
+            RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
 
-        size_t key_len;
-        int ret = sodium_base642bin(pkey, RG_SIZE(pkey), encrypt_key, strlen(encrypt_key), nullptr, &key_len,
-                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
-        if (ret || key_len != 32) {
-            LogError("Malformed encryption key");
-            return nullptr;
-        }
+            size_t key_len;
+            int ret = sodium_base642bin(pkey, RG_SIZE(pkey), key, strlen(key), nullptr, &key_len,
+                                        nullptr, sodium_base64_VARIANT_ORIGINAL);
+            if (ret || key_len != 32) {
+                LogError("Malformed encryption key");
+                return nullptr;
+            }
+
+            kt_Disk *disk = new LocalDisk(directory, nullptr, pkey);
+            return disk;
+        } break;
+
+        case kt_DiskMode::ReadWrite: {
+            uint8_t skey[crypto_box_SECRETKEYBYTES];
+            uint8_t pkey[crypto_box_PUBLICKEYBYTES];
+            RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
+            RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
+
+            size_t key_len;
+            int ret = sodium_base642bin(skey, RG_SIZE(skey), key, strlen(key), nullptr, &key_len,
+                                        nullptr, sodium_base64_VARIANT_ORIGINAL);
+            if (ret || key_len != 32) {
+                LogError("Malformed decryption key");
+                return nullptr;
+            }
+
+            crypto_scalarmult_base(pkey, skey);
+
+            kt_Disk *disk = new LocalDisk(directory, skey, pkey);
+            return disk;
+        } break;
     }
 
-    kt_Disk *disk = new LocalDisk(directory, pkey);
-    return disk;
+    RG_UNREACHABLE();
 }
 
 }

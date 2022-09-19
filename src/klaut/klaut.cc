@@ -19,20 +19,20 @@
 
 namespace RG {
 
-static int RunStore(Span<const char *> arguments)
+static int RunPutFile(Span<const char *> arguments)
 {
     // Options
-    const char *dest_directory = nullptr;
+    const char *repo_directory = nullptr;
     const char *encrypt_key = nullptr;
     int verbose = 0;
     const char *filename = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 store <filename> [-O <dir>]%!0
+R"(Usage: %!..+%1 put_file <filename> [-O <dir>]%!0
 
 Options:
-    %!..+-O, --output_dir <dir>%!0       Put file fragments in <dir>
+    %!..+-R, --repository_dir <dir>%!0   Set repository directory
     %!..+-k, --encrypt_key <key>%!0      Set encryption key
 
     %!..+-v, --verbose%!0                Increase verbosity level (repeat for more)
@@ -48,8 +48,8 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
-                dest_directory = opt.current_value;
+            } else if (opt.Test("-R", "--repository_dir", OptionType::Value)) {
+                repo_directory = opt.current_value;
             } else if (opt.Test("-k", "--encrypt_key", OptionType::Value)) {
                 encrypt_key = opt.current_value;
             } else if (opt.Test("-v", "--verbose")) {
@@ -67,8 +67,8 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
         LogError("No filename provided");
         return 1;
     }
-    if (!dest_directory) {
-        LogError("Missing destination directory");
+    if (!repo_directory) {
+        LogError("Missing repository directory");
         return 1;
     }
     if (!encrypt_key) {
@@ -76,7 +76,7 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
         return 1;
     }
 
-    kt_Disk *disk = kt_OpenLocalDisk(dest_directory, encrypt_key);
+    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, kt_DiskMode::WriteOnly, encrypt_key);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
@@ -146,6 +146,145 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
     return 0;
 }
 
+static inline int ParseHexadecimalChar(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    } else if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    } else {
+        return -1;
+    }
+}
+
+static int RunGetFile(Span<const char *> arguments)
+{
+    // Options
+    const char *repo_directory = nullptr;
+    const char *dest_filename = nullptr;
+    const char *decrypt_key = nullptr;
+    int verbose = 0;
+    const char *name = nullptr;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 get_file <name> [-O <file>]%!0
+
+Options:
+    %!..+-R, --repository_dir <dir>%!0   Set repository directory
+    %!..+-k, --decrypt_key <key>%!0      Set decryption key
+
+    %!..+-O, --output_file <dir>%!0      Restore file to <file>
+
+    %!..+-v, --verbose%!0                Increase verbosity level (repeat for more)
+
+If no output directory is provided, the chunks are simply detected.)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-R", "--repository_dir", OptionType::Value)) {
+                repo_directory = opt.current_value;
+            } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
+                dest_filename = opt.current_value;
+            } else if (opt.Test("-k", "--decrypt_key", OptionType::Value)) {
+                decrypt_key = opt.current_value;
+            } else if (opt.Test("-v", "--verbose")) {
+                verbose++;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        name = opt.ConsumeNonOption();
+    }
+
+    if (!repo_directory) {
+        LogError("Missing repository directory");
+        return 1;
+    }
+    if (!name) {
+        LogError("No name provided");
+        return 1;
+    }
+    if (!dest_filename) {
+        LogError("Missing destination file");
+        return 1;
+    }
+    if (!decrypt_key) {
+        LogError("Missing decryption key");
+        return 1;
+    }
+
+    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, kt_DiskMode::ReadWrite, decrypt_key);
+    if (!disk)
+        return 1;
+    RG_DEFER { delete disk; };
+
+    // Open destination file
+    StreamWriter writer(dest_filename);
+    if (!writer.IsValid())
+        return 1;
+
+    // Read file summary
+    HeapArray<uint8_t> summary;
+    {
+        kt_Hash id = {};
+
+        for (Size i = 0, j = 0; name[j]; i++, j += 2) {
+            int high = ParseHexadecimalChar(name[j]);
+            int low = (high >= 0) ? ParseHexadecimalChar(name[j + 1]) : -1;
+
+            if (low < 0) {
+                LogError("Malformed object name '%1'", name);
+                return 1;
+            }
+
+            id.hash[i] = (uint8_t)((high << 4) | low);
+        }
+
+        if (!disk->ReadChunk(id, &summary))
+            return 1;
+        if (summary.len % RG_SIZE(kt_Hash)) {
+            LogError("Malformed file summary '%1'", name);
+            return 1;
+        }
+    }
+
+    // Write unencrypted file
+    for (Size idx = 0, offset = 0; offset < summary.len; idx++, offset += RG_SIZE(kt_Hash)) {
+        kt_Hash id = {};
+        memcpy(&id, summary.ptr + offset, RG_SIZE(id));
+
+        if (verbose) {
+            LogInfo("Chunk %1: %!..+%2%!0", idx, id);
+        }
+
+        HeapArray<uint8_t> buf;
+        if (!disk->ReadChunk(id, &buf))
+            return 1;
+        if (!writer.Write(buf))
+            return 1;
+    }
+
+    if (!writer.Close())
+        return 1;
+
+    Size file_len = writer.GetRawWritten();
+    LogInfo("Restored file: %!..+%1%!0 (%2)", dest_filename, verbose ? FmtArg(file_len) : FmtDiskSize(file_len));
+
+    return 0;
+}
+
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
@@ -154,7 +293,8 @@ int Main(int argc, char **argv)
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 
 Commands:
-    %!..+store%!0                        Store file in deduplicated chunks
+    %!..+put_file%!0                     Store encrypted file to storage
+    %!..+get_file%!0                     Get and decrypt file from storage
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
@@ -184,8 +324,10 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return 0;
     }
 
-    if (TestStr(cmd, "store")) {
-        return RunStore(arguments);
+    if (TestStr(cmd, "put_file")) {
+        return RunPutFile(arguments);
+    } else if (TestStr(cmd, "get_file")) {
+        return RunGetFile(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
