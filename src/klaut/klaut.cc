@@ -25,6 +25,7 @@ static int RunSplit(Span<const char *> arguments)
 
     // Options
     const char *dest_directory = nullptr;
+    const char *encrypt_key = nullptr;
     bool verbose = false;
     const char *filename = nullptr;
 
@@ -34,6 +35,7 @@ R"(Usage: %!..+%1 split <filename> [-O <dir>]%!0
 
 Options:
     %!..+-O, --output_dir <dir>%!0       Put file fragments in <dir>
+    %!..+-k, --encrypt_key <key>%!0      Set encryption key
 
     %!..+-v, --verbose%!0                Show precise chunk size
 
@@ -50,6 +52,8 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
                 return 0;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 dest_directory = opt.current_value;
+            } else if (opt.Test("-k", "--encrypt_key", OptionType::Value)) {
+                encrypt_key = opt.current_value;
             } else if (opt.Test("-v", "--verbose")) {
                 verbose = true;
             } else {
@@ -64,9 +68,17 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
             LogError("No filename provided");
             return 1;
         }
+
+        if (dest_directory && !encrypt_key) {
+            LogError("Missing encryption key");
+            return 1;
+        } else if (encrypt_key && !dest_directory) {
+            LogError("Missing destination directory");
+            return 1;
+        }
     }
 
-    kt_Disk *disk = dest_directory ? kt_OpenLocalDisk(dest_directory) : nullptr;
+    kt_Disk *disk = dest_directory ? kt_OpenLocalDisk(dest_directory, encrypt_key) : nullptr;
     if (dest_directory && !disk)
         return 1;
     RG_DEFER { delete disk; };

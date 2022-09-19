@@ -26,9 +26,9 @@ public:
 
     virtual bool ListChunks(const char *type, HeapArray<kt_Hash> *out_ids) = 0;
     virtual bool ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf) = 0;
-    virtual bool WriteChunk(const kt_Hash &id, Span<const uint8_t> buf) = 0;
+    virtual bool WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk) = 0;
 };
 
-kt_Disk *kt_OpenLocalDisk(const char *path);
+kt_Disk *kt_OpenLocalDisk(const char *path, const char *encrypt_key);
 
 }

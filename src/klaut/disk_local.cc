@@ -13,6 +13,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "disk.hh"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -20,24 +21,26 @@ static const int MaxPathSize = 4096 - 128;
 
 class LocalDisk: public kt_Disk {
     LocalArray<char, MaxPathSize + 128> directory;
+    uint8_t pkey[crypto_box_PUBLICKEYBYTES];
 
 public:
-    LocalDisk(Span<const char> directory);
+    LocalDisk(Span<const char> directory, uint8_t pkey[crypto_box_PUBLICKEYBYTES]);
     ~LocalDisk() override;
 
     bool ListTags(Allocator *alloc, HeapArray<const char *> *out_tags) override;
 
     bool ListChunks(const char *type, HeapArray<kt_Hash> *out_ids) override;
     bool ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf) override;
-    bool WriteChunk(const kt_Hash &id, Span<const uint8_t> buf) override;
+    bool WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk) override;
 };
 
-LocalDisk::LocalDisk(Span<const char> directory)
+LocalDisk::LocalDisk(Span<const char> directory, uint8_t pkey[crypto_box_PUBLICKEYBYTES])
 {
     RG_ASSERT(directory.len <= MaxPathSize);
 
     this->directory.Append(directory);
     this->directory.data[this->directory.len] = 0;
+    memcpy(this->pkey, pkey, RG_SIZE(this->pkey));
 }
 
 LocalDisk::~LocalDisk()
@@ -59,21 +62,67 @@ bool LocalDisk::ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf)
     RG_UNREACHABLE();
 }
 
-bool LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> buf)
+bool LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
 {
-    LocalArray<char, 4096> path;
+    StreamWriter writer;
 
-    path.len += Fmt(path.TakeAvailable(), "%1%/%2", directory, FmtHex(id.hash[0]).Pad0(-2)).len;
-    if (!MakeDirectory(path.data, false))
-        return false;
-    path.len += Fmt(path.TakeAvailable(), "%/%1", id).len;
-    if (!WriteFile(buf, path.data))
-        return false;
+    // Open destination file
+    {
+        LocalArray<char, MaxPathSize + 128> path;
 
-    return true;
+        path.len += Fmt(path.TakeAvailable(), "%1%/%2", directory, FmtHex(id.hash[0]).Pad0(-2)).len;
+        if (!MakeDirectory(path.data, false))
+            return false;
+        path.len += Fmt(path.TakeAvailable(), "%/%1", id).len;
+        if (!writer.Open(path.data))
+            return false;
+    }
+
+    // Prepare random symetric key
+    uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+    crypto_secretstream_xchacha20poly1305_keygen(key);
+
+    // Encrypt and write the symetric key
+    {
+        uint8_t cipher[RG_SIZE(key) + crypto_box_SEALBYTES];
+        crypto_box_seal(cipher, key, RG_SIZE(key), pkey);
+
+        if (!writer.Write(cipher))
+            return false;
+    }
+
+    // Init symetric encryption
+    crypto_secretstream_xchacha20poly1305_state state;
+    {
+        uint8_t header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
+        crypto_secretstream_xchacha20poly1305_init_push(&state, header, key);
+
+        if (!writer.Write(header))
+            return false;
+    }
+
+    // Encrypt chunk data
+    while (chunk.len) {
+        uint8_t cipher[Kibibytes(16) + crypto_secretstream_xchacha20poly1305_ABYTES];
+
+        Span<const uint8_t> buf;
+        buf.len = std::min(Kibibytes(16), chunk.len);
+        buf.ptr = chunk.ptr;
+
+        chunk.ptr += buf.len;
+        chunk.len -= buf.len;
+
+        unsigned char tag = buf.len ? 0 : crypto_secretstream_xchacha20poly1305_TAG_FINAL;
+        crypto_secretstream_xchacha20poly1305_push(&state, cipher, nullptr, buf.ptr, buf.len, nullptr, 0, tag);
+
+        if (!writer.Write(cipher, buf.len + crypto_secretstream_xchacha20poly1305_ABYTES))
+            return false;
+    }
+
+    return writer.Close();
 }
 
-kt_Disk *kt_OpenLocalDisk(const char *path)
+kt_Disk *kt_OpenLocalDisk(const char *path, const char *encrypt_key)
 {
     Span<const char> directory = TrimStrRight(path, RG_PATH_SEPARATORS);
 
@@ -86,7 +135,21 @@ kt_Disk *kt_OpenLocalDisk(const char *path)
         return nullptr;
     }
 
-    kt_Disk *disk = new LocalDisk(directory);
+    // Derive asymmetric keys
+    uint8_t pkey[crypto_box_PUBLICKEYBYTES];
+    {
+        RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
+
+        size_t key_len;
+        int ret = sodium_base642bin(pkey, RG_SIZE(pkey), encrypt_key, strlen(encrypt_key), nullptr, &key_len,
+                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
+        if (ret || key_len != 32) {
+            LogError("Malformed encryption key");
+            return nullptr;
+        }
+    }
+
+    kt_Disk *disk = new LocalDisk(directory, pkey);
     return disk;
 }
 
