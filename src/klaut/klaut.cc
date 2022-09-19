@@ -99,14 +99,14 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
                     return 1;
                 buf.len += read;
 
-                processed = chunker.Process(buf, st.IsEOF(), [&](Size total, Span<const uint8_t> chunk) {
+                processed = chunker.Process(buf, st.IsEOF(), [&](Size idx, Size total, Span<const uint8_t> chunk) {
                     kt_Hash id = {};
                     crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, nullptr, 0);
 
                     if (verbose >= 2) {
-                        LogInfo("Chunk %!..+%1%!0 [0x%2, %3]", id, FmtHex(total).Pad0(-8), chunk.len);
+                        LogInfo("Chunk %1: %!..+%2%!0 [0x%3, %4]", idx, id, FmtHex(total).Pad0(-8), chunk.len);
                     } else if (verbose) {
-                        LogInfo("Chunk %!..+%1%!0 (%2)", id, FmtDiskSize(chunk.len));
+                        LogInfo("Chunk %1: %!..+%2%!0 (%3)", idx, id, FmtDiskSize(chunk.len));
                     }
 
                     if (disk) {
