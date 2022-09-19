@@ -21,8 +21,6 @@ namespace RG {
 
 static int RunStore(Span<const char *> arguments)
 {
-    BlockAllocator temp_alloc;
-
     // Options
     const char *dest_directory = nullptr;
     const char *encrypt_key = nullptr;
