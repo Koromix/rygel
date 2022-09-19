@@ -61,23 +61,23 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
         }
 
         filename = opt.ConsumeNonOption();
-
-        if (!filename) {
-            LogError("No filename provided");
-            return 1;
-        }
-
-        if (dest_directory && !encrypt_key) {
-            LogError("Missing encryption key");
-            return 1;
-        } else if (encrypt_key && !dest_directory) {
-            LogError("Missing destination directory");
-            return 1;
-        }
     }
 
-    kt_Disk *disk = dest_directory ? kt_OpenLocalDisk(dest_directory, encrypt_key) : nullptr;
-    if (dest_directory && !disk)
+    if (!filename) {
+        LogError("No filename provided");
+        return 1;
+    }
+    if (!dest_directory) {
+        LogError("Missing destination directory");
+        return 1;
+    }
+    if (!encrypt_key) {
+        LogError("Missing encryption key");
+        return 1;
+    }
+
+    kt_Disk *disk = kt_OpenLocalDisk(dest_directory, encrypt_key);
+    if (!disk)
         return 1;
     RG_DEFER { delete disk; };
 
@@ -111,12 +111,10 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
                         LogInfo("Chunk %1: %!..+%2%!0 (%3)", idx, id, FmtDiskSize(chunk.len));
                     }
 
-                    if (disk) {
-                        Size ret = disk->WriteChunk(id, chunk);
-                        if (ret < 0)
-                            return false;
-                        written += ret;
-                    }
+                    Size ret = disk->WriteChunk(id, chunk);
+                    if (ret < 0)
+                        return false;
+                    written += ret;
 
                     summary.Append(MakeSpan((const uint8_t *)&id, RG_SIZE(id)));
 
@@ -132,7 +130,7 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
     }
 
     // Write list of chunks
-    if (disk) {
+    {
         kt_Hash id = {};
         crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), summary.ptr, summary.len, nullptr, 0);
 
