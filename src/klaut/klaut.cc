@@ -82,9 +82,11 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
     RG_DEFER { delete disk; };
 
     // Now, split the file
+    HeapArray<uint8_t> summary;
     Size written = 0;
     {
         StreamReader st(filename);
+
         kt_Chunker chunker(Kibibytes(256), Kibibytes(128), Kibibytes(768));
         HeapArray<uint8_t> buf;
 
@@ -116,6 +118,8 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
                         written += ret;
                     }
 
+                    summary.Append(MakeSpan((const uint8_t *)&id, RG_SIZE(id)));
+
                     return true;
                 });
                 if (processed < 0)
@@ -127,7 +131,17 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
         } while (!st.IsEOF());
     }
 
+    // Write list of chunks
     if (disk) {
+        kt_Hash id = {};
+        crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), summary.ptr, summary.len, nullptr, 0);
+
+        Size ret = disk->WriteChunk(id, summary);
+        if (ret < 0)
+            return 1;
+        written += ret;
+
+        LogInfo("Destination: %!..+%1%!0", id);
         LogInfo("Total written: %!..+%1%!0", verbose >= 2 ? FmtArg(written) : FmtDiskSize(written));
     }
 
