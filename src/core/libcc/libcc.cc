@@ -2968,47 +2968,47 @@ static bool CheckForDumbTerm()
 
 int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 {
-    RG_ASSERT(!out_exists || (flags & (int)OpenFileFlag::Exclusive));
+    RG_ASSERT(!out_exists || (flags & (int)OpenFlag::Exclusive));
 
     DWORD access = 0;
     DWORD share = 0;
     DWORD creation = 0;
     int oflags = -1;
-    switch (flags & ((int)OpenFileFlag::Read |
-                     (int)OpenFileFlag::Write |
-                     (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: {
+    switch (flags & ((int)OpenFlag::Read |
+                     (int)OpenFlag::Write |
+                     (int)OpenFlag::Append)) {
+        case (int)OpenFlag::Read: {
             access = GENERIC_READ;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
             creation = OPEN_EXISTING;
 
             oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT;
         } break;
-        case (int)OpenFileFlag::Write: {
+        case (int)OpenFlag::Write: {
             access = GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
+            creation = (flags & (int)OpenFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
 
             oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: {
+        case (int)OpenFlag::Read | (int)OpenFlag::Write: {
             access = GENERIC_READ | GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
+            creation = (flags & (int)OpenFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
 
             oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
-        case (int)OpenFileFlag::Append: {
+        case (int)OpenFlag::Append: {
             access = GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
+            creation = (flags & (int)OpenFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
 
             oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
         } break;
     }
     RG_ASSERT(oflags >= 0);
 
-    if (flags & (int)OpenFileFlag::Exclusive) {
+    if (flags & (int)OpenFlag::Exclusive) {
         oflags |= (int)_O_EXCL;
     }
     share |= FILE_SHARE_DELETE;
@@ -3067,13 +3067,13 @@ int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
 {
     char mode[16] = {};
-    switch (flags & ((int)OpenFileFlag::Read |
-                     (int)OpenFileFlag::Write |
-                     (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: { CopyString("rbc", mode); } break;
-        case (int)OpenFileFlag::Write: { CopyString("wbc", mode); } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { CopyString("w+bc", mode); } break;
-        case (int)OpenFileFlag::Append: { CopyString("abc", mode); } break;
+    switch (flags & ((int)OpenFlag::Read |
+                     (int)OpenFlag::Write |
+                     (int)OpenFlag::Append)) {
+        case (int)OpenFlag::Read: { CopyString("rbc", mode); } break;
+        case (int)OpenFlag::Write: { CopyString("wbc", mode); } break;
+        case (int)OpenFlag::Read | (int)OpenFlag::Write: { CopyString("w+bc", mode); } break;
+        case (int)OpenFlag::Append: { CopyString("abc", mode); } break;
     }
     RG_ASSERT(mode[0]);
 
@@ -3297,20 +3297,20 @@ error:
 
 int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 {
-    RG_ASSERT(!out_exists || (flags & (int)OpenFileFlag::Exclusive));
+    RG_ASSERT(!out_exists || (flags & (int)OpenFlag::Exclusive));
 
     int oflags = -1;
-    switch (flags & ((int)OpenFileFlag::Read |
-                     (int)OpenFileFlag::Write |
-                     (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: { oflags = O_RDONLY | O_CLOEXEC; } break;
-        case (int)OpenFileFlag::Write: { oflags = O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { oflags = O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
-        case (int)OpenFileFlag::Append: { oflags = O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC; } break;
+    switch (flags & ((int)OpenFlag::Read |
+                     (int)OpenFlag::Write |
+                     (int)OpenFlag::Append)) {
+        case (int)OpenFlag::Read: { oflags = O_RDONLY | O_CLOEXEC; } break;
+        case (int)OpenFlag::Write: { oflags = O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
+        case (int)OpenFlag::Read | (int)OpenFlag::Write: { oflags = O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
+        case (int)OpenFlag::Append: { oflags = O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC; } break;
     }
     RG_ASSERT(oflags >= 0);
 
-    if (flags & (int)OpenFileFlag::Exclusive) {
+    if (flags & (int)OpenFlag::Exclusive) {
         oflags |= O_EXCL;
     }
 
@@ -3342,13 +3342,13 @@ int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
 {
     const char *mode = nullptr;
-    switch (flags & ((int)OpenFileFlag::Read |
-                     (int)OpenFileFlag::Write |
-                     (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: { mode = "rbe"; } break;
-        case (int)OpenFileFlag::Write: { mode = "wbe"; } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { mode = "w+be"; } break;
-        case (int)OpenFileFlag::Append: { mode = "abe"; } break;
+    switch (flags & ((int)OpenFlag::Read |
+                     (int)OpenFlag::Write |
+                     (int)OpenFlag::Append)) {
+        case (int)OpenFlag::Read: { mode = "rbe"; } break;
+        case (int)OpenFlag::Write: { mode = "wbe"; } break;
+        case (int)OpenFlag::Read | (int)OpenFlag::Write: { mode = "w+be"; } break;
+        case (int)OpenFlag::Append: { mode = "abe"; } break;
     }
     RG_ASSERT(mode);
 
@@ -4620,8 +4620,8 @@ const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, 
                                 Allocator *alloc, FILE **out_fp)
 {
     return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
-        int flags = (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
-                    (int)OpenFileFlag::Exclusive;
+        int flags = (int)OpenFlag::Read | (int)OpenFlag::Write |
+                    (int)OpenFlag::Exclusive;
 
         FILE *fp = OpenFile(path, flags);
 
@@ -5727,7 +5727,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::File;
-    source.u.file.fp = OpenFile(filename, (int)OpenFileFlag::Read);
+    source.u.file.fp = OpenFile(filename, (int)OpenFlag::Read);
     if (!source.u.file.fp)
         return false;
     source.u.file.owned = true;
@@ -6436,8 +6436,8 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         Span<const char> directory = GetPathDirectory(filename);
 
         if (flags & (int)StreamWriterFlag::Exclusive) {
-            FILE *fp = OpenFile(filename, (int)OpenFileFlag::Write |
-                                          (int)OpenFileFlag::Exclusive);
+            FILE *fp = OpenFile(filename, (int)OpenFlag::Write |
+                                          (int)OpenFlag::Exclusive);
             if (!fp)
                 return false;
             fclose(fp);
@@ -6450,8 +6450,8 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
             return false;
         dest.u.file.owned = true;
     } else {
-        unsigned int open_flags = (int)OpenFileFlag::Write;
-        open_flags |= (flags & (int)StreamWriterFlag::Exclusive) ? (int)OpenFileFlag::Exclusive : 0;
+        unsigned int open_flags = (int)OpenFlag::Write;
+        open_flags |= (flags & (int)StreamWriterFlag::Exclusive) ? (int)OpenFlag::Exclusive : 0;
 
         dest.u.file.fp = OpenFile(filename, open_flags);
         if (!dest.u.file.fp)

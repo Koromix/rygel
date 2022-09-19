@@ -578,7 +578,7 @@ BENCHMARK_FUNCTION("libcc/BenchFmt")
 #ifdef _WIN32
     FILE *fp = fopen("\\\\.\\NUL", "wb");
 #else
-    FILE *fp = OpenFile("/dev/null", (int)OpenFileFlag::Write);
+    FILE *fp = OpenFile("/dev/null", (int)OpenFlag::Write);
 #endif
     RG_ASSERT(fp);
     RG_DEFER { fclose(fp); };

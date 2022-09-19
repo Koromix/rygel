@@ -708,7 +708,7 @@ bool http_IO::AttachFile(int code, const char *filename)
     if (!StatFile(filename, &file_info))
         return false;
 
-    int fd = OpenDescriptor(filename, (int)OpenFileFlag::Read);
+    int fd = OpenDescriptor(filename, (int)OpenFlag::Read);
     if (fd < 0)
         return false;
 

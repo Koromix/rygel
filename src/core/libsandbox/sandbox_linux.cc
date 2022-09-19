@@ -358,7 +358,7 @@ bool sb_SandboxBuilder::Apply()
                         if (!EnsureDirectoryExists(dest))
                             return false;
 
-                        FILE *fp = OpenFile(dest, (int)OpenFileFlag::Write);
+                        FILE *fp = OpenFile(dest, (int)OpenFlag::Write);
                         if (!fp)
                             return false;
                         fclose(fp);

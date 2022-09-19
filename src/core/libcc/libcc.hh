@@ -4139,7 +4139,7 @@ bool UnlinkDirectory(const char *directory, bool error_if_missing = false);
 bool UnlinkFile(const char *filename, bool error_if_missing = false);
 bool EnsureDirectoryExists(const char *filename);
 
-enum class OpenFileFlag {
+enum class OpenFlag {
     Read = 1 << 0,
     Write = 1 << 1,
     Append = 1 << 2,
