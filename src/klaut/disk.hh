@@ -25,18 +25,21 @@ enum class kt_DiskMode {
 
 class kt_Disk {
     kt_DiskMode mode;
+    uint8_t pkey[32];
+    uint8_t skey[32];
 
 public:
-    kt_Disk(kt_DiskMode mode) : mode(mode) {}
+    kt_Disk(kt_DiskMode mode, uint8_t skey[32], uint8_t pkey[32]);
     virtual ~kt_Disk() = default;
 
     kt_DiskMode GetMode() const { return mode; }
 
-    virtual bool ListTags(Allocator *alloc, HeapArray<const char *> *out_tags) = 0;
+    bool ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_chunk);
+    Size WriteChunk(const kt_ID &id, Span<const uint8_t> chunk);
 
-    virtual bool ListChunks(const char *type, HeapArray<kt_ID> *out_ids) = 0;
-    virtual bool ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_buf) = 0;
-    virtual Size WriteChunk(const kt_ID &id, Span<const uint8_t> chunk) = 0;
+protected:
+    virtual bool ReadBlob(const char *path, HeapArray<uint8_t> *out_blob) = 0;
+    virtual Size WriteBlob(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
 };
 
 bool kt_CreateLocalDisk(const char *path, const char *password);

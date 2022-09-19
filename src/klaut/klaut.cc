@@ -58,8 +58,8 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
         RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
         RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
 
-        uint8_t pk[crypto_box_PUBLICKEYBYTES];
-        uint8_t sk[crypto_box_SECRETKEYBYTES];
+        uint8_t pk[32];
+        uint8_t sk[32];
         crypto_box_keypair(pk, sk);
 
         sodium_bin2base64(write_key, RG_SIZE(write_key), pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
