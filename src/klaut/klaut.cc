@@ -19,7 +19,7 @@
 
 namespace RG {
 
-static int RunSplit(Span<const char *> arguments)
+static int RunStore(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -31,7 +31,7 @@ static int RunSplit(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 split <filename> [-O <dir>]%!0
+R"(Usage: %!..+%1 store <filename> [-O <dir>]%!0
 
 Options:
     %!..+-O, --output_dir <dir>%!0       Put file fragments in <dir>
@@ -135,7 +135,7 @@ int Main(int argc, char **argv)
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 
 Commands:
-    %!..+split%!0                        Split file in deduplicated chunks
+    %!..+store%!0                        Store file in deduplicated chunks
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
@@ -165,8 +165,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return 0;
     }
 
-    if (TestStr(cmd, "split")) {
-        return RunSplit(arguments);
+    if (TestStr(cmd, "store")) {
+        return RunStore(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
