@@ -2905,6 +2905,7 @@ public:
         { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
 
     int64_t ComputeRawLen();
+    int64_t GetRawRead() const { return raw_read; }
 
 private:
     bool Close(bool implicit);
@@ -3039,6 +3040,8 @@ class StreamWriter {
         } u;
     } compression;
 
+    int64_t raw_written = 0;
+
     BlockAllocator str_alloc;
 
 public:
@@ -3087,6 +3090,8 @@ public:
     bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }
     bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
+
+    int64_t GetRawWritten() const { return raw_written; }
 
 private:
     bool Close(bool implicit);

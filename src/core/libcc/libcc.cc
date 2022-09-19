@@ -5680,6 +5680,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_read = 0;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
@@ -5700,6 +5701,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_read = 0;
 
     RG_ASSERT(fp);
     RG_ASSERT(filename);
@@ -5722,6 +5724,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_read = 0;
 
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
@@ -5746,6 +5749,7 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_read = 0;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
 
@@ -5816,7 +5820,6 @@ bool StreamReader::Close(bool implicit)
     source.eof = false;
     eof = false;
     raw_len = -1;
-    raw_read = 0;
     str_alloc.ReleaseAll();
 
     return ret;
@@ -6379,6 +6382,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_written = 0;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
@@ -6401,6 +6405,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename,
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_written = 0;
 
     RG_ASSERT(fp);
     RG_ASSERT(filename);
@@ -6425,6 +6430,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_written = 0;
 
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
@@ -6474,6 +6480,7 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_written = 0;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
 
@@ -6837,7 +6844,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             memcpy_safe(dest.u.mem.memory->ptr + dest.u.mem.memory->len, buf.ptr, (size_t)buf.len);
             dest.u.mem.memory->len += buf.len;
 
-            return true;
+            raw_written += buf.len;
         } break;
 
         case DestinationType::File: {
@@ -6856,9 +6863,9 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
                 buf.ptr += write_len;
                 buf.len -= write_len;
-            }
 
-            return true;
+                raw_written += write_len;
+            }
         } break;
 
         case DestinationType::Function: {
@@ -6866,13 +6873,16 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             if (!buf.len)
                 return true;
 
-            bool ret = dest.u.func(buf);
-            error |= !ret;
-            return ret;
+            if (!dest.u.func(buf)) {
+                error = true;
+                return false;
+            }
+
+            raw_written += buf.len;
         } break;
     }
 
-    RG_UNREACHABLE();
+    return true;
 }
 
 bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)
