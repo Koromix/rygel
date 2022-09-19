@@ -1082,10 +1082,8 @@ bool RF24::_init_radio()
     // sizes must never be used. See datasheet for a more complete explanation.
     setRetries(5, 15);
 
-    // Then set the data rate to the slowest (and most reliable) speed supported by all
-    // hardware. Since this value occupies the same register as the PA level value, set
-    // the PA level to MAX
-    setRadiation(RF24_PA_MAX, RF24_1MBPS); // LNA enabled by default
+    // Then set the data rate to the slowest (and most reliable) speed supported by all hardware.
+    setDataRate(RF24_1MBPS);
 
     // detect if is a plus variant & use old toggle features command accordingly
     uint8_t before_toggle = read_register(FEATURE);
@@ -1349,7 +1347,7 @@ bool RF24::writeFast(const void* buf, uint8_t len, const bool multicast)
     while ((get_status() & (_BV(TX_FULL)))) {
         if (status & _BV(MAX_RT)) {
             return 0; //Return 0. The previous payload has not been retransmitted
-            // From the user perspective, if you get a 0, just keep trying to send the same payload
+            // From the user perspective, if you get a 0, call txStandBy()
         }
 #if defined(FAILURE_HANDLING) || defined(RF24_LINUX)
         if (millis() - timer > 95) {
