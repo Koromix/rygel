@@ -2966,8 +2966,10 @@ static bool CheckForDumbTerm()
 
 #ifdef _WIN32
 
-int OpenDescriptor(const char *filename, unsigned int flags)
+int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 {
+    RG_ASSERT(!out_exists || (flags & (int)OpenFileFlag::Exclusive));
+
     DWORD access = 0;
     DWORD share = 0;
     DWORD creation = 0;
@@ -3016,8 +3018,12 @@ int OpenDescriptor(const char *filename, unsigned int flags)
         h = CreateFileA(filename, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
     } else {
         wchar_t filename_w[4096];
-        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0) {
+            if (out_exists) {
+                *out_exists = false;
+            }
             return -1;
+        }
 
         h = CreateFileW(filename_w, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
     }
@@ -3025,9 +3031,17 @@ int OpenDescriptor(const char *filename, unsigned int flags)
         DWORD err = GetLastError();
 
         if (err == ERROR_FILE_EXISTS) {
-            LogError("File '%1' already exists", filename);
+            if (out_exists) {
+                *out_exists = true;
+            } else {
+                LogError("File '%1' already exists", filename);
+            }
         } else {
             LogError("Cannot open '%1': %2", filename, GetWin32ErrorString(err));
+
+            if (out_exists) {
+                *out_exists = false;
+            }
         }
 
         return -1;
@@ -3038,13 +3052,19 @@ int OpenDescriptor(const char *filename, unsigned int flags)
         LogError("Cannot open '%1': %2", filename, strerror(errno));
         CloseHandle(h);
 
+        if (out_exists) {
+            *out_exists = false;
+        }
         return -1;
     }
 
+    if (out_exists) {
+        *out_exists = false;
+    }
     return fd;
 }
 
-FILE *OpenFile(const char *filename, unsigned int flags)
+FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
 {
     char mode[16] = {};
     switch (flags & ((int)OpenFileFlag::Read |
@@ -3062,7 +3082,7 @@ FILE *OpenFile(const char *filename, unsigned int flags)
     strcat(mode, "N");
 #endif
 
-    int fd = OpenDescriptor(filename, flags);
+    int fd = OpenDescriptor(filename, flags, out_exists);
     if (fd < 0)
         return nullptr;
 
@@ -3072,6 +3092,9 @@ FILE *OpenFile(const char *filename, unsigned int flags)
         _close(fd);
     }
 
+    if (out_exists) {
+        *out_exists = false;
+    }
     return fp;
 }
 
@@ -3272,8 +3295,10 @@ error:
 
 #else
 
-int OpenDescriptor(const char *filename, unsigned int flags)
+int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 {
+    RG_ASSERT(!out_exists || (flags & (int)OpenFileFlag::Exclusive));
+
     int oflags = -1;
     switch (flags & ((int)OpenFileFlag::Read |
                      (int)OpenFileFlag::Write |
@@ -3292,17 +3317,29 @@ int OpenDescriptor(const char *filename, unsigned int flags)
     int fd = RG_POSIX_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {
         if (errno == EEXIST) {
-            LogError("File '%1' already exists", filename);
+            if (out_exists) {
+                *out_exists = true;
+            } else {
+                LogError("File '%1' already exists", filename);
+            }
         } else {
             LogError("Cannot open '%1': %2", filename, strerror(errno));
+
+            if (out_exists) {
+                *out_exists = false;
+            }
         }
+
         return -1;
     }
 
+    if (out_exists) {
+        *out_exists = false;
+    }
     return fd;
 }
 
-FILE *OpenFile(const char *filename, unsigned int flags)
+FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
 {
     const char *mode = nullptr;
     switch (flags & ((int)OpenFileFlag::Read |
@@ -3315,7 +3352,7 @@ FILE *OpenFile(const char *filename, unsigned int flags)
     }
     RG_ASSERT(mode);
 
-    int fd = OpenDescriptor(filename, flags);
+    int fd = OpenDescriptor(filename, flags, out_exists);
     if (fd < 0)
         return nullptr;
 
@@ -3325,6 +3362,9 @@ FILE *OpenFile(const char *filename, unsigned int flags)
         close(fd);
     }
 
+    if (out_exists) {
+        *out_exists = false;
+    }
     return fp;
 }
 

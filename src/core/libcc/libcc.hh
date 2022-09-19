@@ -4147,8 +4147,8 @@ enum class OpenFileFlag {
     Exclusive = 1 << 3
 };
 
-int OpenDescriptor(const char *filename, unsigned int flags);
-FILE *OpenFile(const char *filename, unsigned int flags);
+int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists = nullptr);
+FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists = nullptr);
 bool FlushFile(FILE *fp, const char *filename);
 
 bool FileIsVt100(FILE *fp);
