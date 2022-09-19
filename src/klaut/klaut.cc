@@ -93,9 +93,9 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
                     crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, nullptr, 0);
 
                     if (verbose) {
-                        LogInfo("%1 [%2, %3]", id, FmtHex(total).Pad0(-8), chunk.len);
+                        PrintLn("%!..+%1%!0 0x%2 %3", id, FmtHex(total).Pad0(-8), chunk.len);
                     } else {
-                        LogInfo("%1 (%2)", id, verbose ? FmtArg(chunk.len) : FmtDiskSize(chunk.len));
+                        PrintLn("%!..+%1%!0 %2", id, verbose ? FmtArg(chunk.len) : FmtDiskSize(chunk.len));
                     }
 
                     if (disk && !disk->WriteChunk(id, chunk))
