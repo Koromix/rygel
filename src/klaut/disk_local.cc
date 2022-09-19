@@ -82,45 +82,44 @@ Size LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
     RG_DEFER { fclose(fp); };
 
     StreamWriter writer(fp, path.data);
-
-    // Prepare random symetric key
-    uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-    crypto_secretstream_xchacha20poly1305_keygen(key);
-
-    // Encrypt and write the symetric key
-    {
-        uint8_t cipher[RG_SIZE(key) + crypto_box_SEALBYTES];
-        crypto_box_seal(cipher, key, RG_SIZE(key), pkey);
-
-        if (!writer.Write(cipher))
-            return -1;
-    }
-
-    // Init symetric encryption
     crypto_secretstream_xchacha20poly1305_state state;
-    {
-        uint8_t header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
-        crypto_secretstream_xchacha20poly1305_init_push(&state, header, key);
 
-        if (!writer.Write(header))
-            return -1;
+    // Write chunk intro
+    {
+        ChunkIntro intro = {};
+
+        intro.version = CHUNK_VERSION;
+
+        uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+        crypto_secretstream_xchacha20poly1305_keygen(key);
+        if (crypto_secretstream_xchacha20poly1305_init_push(&state, intro.header, key) != 0) {
+            LogError("Failed to initialize symmetric encryption");
+            return false;
+        }
+        if (crypto_box_seal(intro.ekey, key, RG_SIZE(key), pkey) != 0) {
+            LogError("Failed to seal symmetric key");
+            return false;
+        }
+
+        if (!writer.Write(&intro, RG_SIZE(intro)))
+            return false;
     }
 
     // Encrypt chunk data
     while (chunk.len) {
-        uint8_t cipher[Kibibytes(16) + crypto_secretstream_xchacha20poly1305_ABYTES];
+        uint8_t cypher[CHUNK_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES];
 
         Span<const uint8_t> buf;
-        buf.len = std::min(Kibibytes(16), chunk.len);
+        buf.len = std::min(CHUNK_SPLIT, chunk.len);
         buf.ptr = chunk.ptr;
 
         chunk.ptr += buf.len;
         chunk.len -= buf.len;
 
-        unsigned char tag = buf.len ? 0 : crypto_secretstream_xchacha20poly1305_TAG_FINAL;
-        crypto_secretstream_xchacha20poly1305_push(&state, cipher, nullptr, buf.ptr, buf.len, nullptr, 0, tag);
+        unsigned char tag = chunk.len ? 0 : crypto_secretstream_xchacha20poly1305_TAG_FINAL;
+        crypto_secretstream_xchacha20poly1305_push(&state, cypher, nullptr, buf.ptr, buf.len, nullptr, 0, tag);
 
-        if (!writer.Write(cipher, buf.len + crypto_secretstream_xchacha20poly1305_ABYTES))
+        if (!writer.Write(cypher, buf.len + crypto_secretstream_xchacha20poly1305_ABYTES))
             return -1;
     }
 
