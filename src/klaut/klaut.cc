@@ -100,7 +100,7 @@ Options:
                 buf.len += read;
 
                 processed = chunker.Process(buf, st.IsEOF(), [&](Size idx, Size total, Span<const uint8_t> chunk) {
-                    kt_Hash id = {};
+                    kt_ID id = {};
                     crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, nullptr, 0);
 
                     if (verbose >= 2) {
@@ -129,7 +129,7 @@ Options:
 
     // Write list of chunks
     {
-        kt_Hash id = {};
+        kt_ID id = {};
         crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), summary.ptr, summary.len, nullptr, 0);
 
         Size ret = disk->WriteChunk(id, summary);
@@ -142,19 +142,6 @@ Options:
     }
 
     return 0;
-}
-
-static inline int ParseHexadecimalChar(char c)
-{
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    } else if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    } else if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    } else {
-        return -1;
-    }
 }
 
 static int RunGetFile(Span<const char *> arguments)
@@ -234,31 +221,21 @@ Options:
     // Read file summary
     HeapArray<uint8_t> summary;
     {
-        kt_Hash id = {};
-
-        for (Size i = 0, j = 0; name[j]; i++, j += 2) {
-            int high = ParseHexadecimalChar(name[j]);
-            int low = (high >= 0) ? ParseHexadecimalChar(name[j + 1]) : -1;
-
-            if (low < 0) {
-                LogError("Malformed object name '%1'", name);
-                return 1;
-            }
-
-            id.hash[i] = (uint8_t)((high << 4) | low);
-        }
+        kt_ID id = {};
+        if (!kt_ParseID(name, &id))
+            return 1;
 
         if (!disk->ReadChunk(id, &summary))
             return 1;
-        if (summary.len % RG_SIZE(kt_Hash)) {
+        if (summary.len % RG_SIZE(kt_ID)) {
             LogError("Malformed file summary '%1'", name);
             return 1;
         }
     }
 
     // Write unencrypted file
-    for (Size idx = 0, offset = 0; offset < summary.len; idx++, offset += RG_SIZE(kt_Hash)) {
-        kt_Hash id = {};
+    for (Size idx = 0, offset = 0; offset < summary.len; idx++, offset += RG_SIZE(kt_ID)) {
+        kt_ID id = {};
         memcpy(&id, summary.ptr + offset, RG_SIZE(id));
 
         if (verbose) {

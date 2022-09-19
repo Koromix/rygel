@@ -17,8 +17,8 @@
 
 namespace RG {
 
-struct kt_Hash {
-    uint8_t hash[32]; // BLAKE2b
+struct kt_ID {
+    uint8_t hash[32];
 
     operator FmtArg() const { return FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2); }
 };
@@ -28,7 +28,7 @@ struct kt_SnapshotInfo {
 
     int64_t ctime;
 
-    kt_Hash id;
+    kt_ID id;
 };
 
 enum class kt_EntryType {
@@ -43,7 +43,18 @@ struct kt_EntryInfo {
     int64_t mtime;
     kt_EntryType type;
 
-    kt_Hash id;
+    kt_ID id;
 };
+
+static inline void kt_FormatID(const kt_ID &id, char out_hex[65])
+{
+    Fmt(MakeSpan(out_hex, 65), "%1", FmtSpan(id.hash, FmtType::Hexadecimal, "").Pad0(-2));
+}
+static inline FmtArg kt_FormatID(const kt_ID &id)
+{
+    return (FmtArg)id;
+}
+
+bool kt_ParseID(const char *str, kt_ID *out_id);
 
 }

@@ -19,9 +19,9 @@
 namespace RG {
 
 bool kt_ListSnapshots(kt_Disk *disk, Allocator *alloc, HeapArray<kt_SnapshotInfo> *out_snapshots);
-bool kt_ReadSnapshot(kt_Disk *disk, const kt_Hash &id, Allocator *alloc, kt_SnapshotInfo *out_snapshot);
+bool kt_ReadSnapshot(kt_Disk *disk, const kt_ID &id, Allocator *alloc, kt_SnapshotInfo *out_snapshot);
 
-bool kt_ListDirectory(kt_Disk *disk, const kt_Hash &id, Allocator *alloc, HeapArray<kt_EntryInfo> *out_entries);
-bool kt_ExtractFile(kt_Disk *disk, const kt_Hash &id, const char *dest_filename);
+bool kt_ListDirectory(kt_Disk *disk, const kt_ID &id, Allocator *alloc, HeapArray<kt_EntryInfo> *out_entries);
+bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename);
 
 }

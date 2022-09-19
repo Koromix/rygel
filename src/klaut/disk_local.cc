@@ -43,9 +43,9 @@ public:
 
     bool ListTags(Allocator *alloc, HeapArray<const char *> *out_tags) override;
 
-    bool ListChunks(const char *type, HeapArray<kt_Hash> *out_ids) override;
-    bool ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf) override;
-    Size WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk) override;
+    bool ListChunks(const char *type, HeapArray<kt_ID> *out_ids) override;
+    bool ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_buf) override;
+    Size WriteChunk(const kt_ID &id, Span<const uint8_t> chunk) override;
 };
 
 LocalDisk::LocalDisk(Span<const char> directory, uint8_t skey[crypto_box_SECRETKEYBYTES],
@@ -74,12 +74,12 @@ bool LocalDisk::ListTags(Allocator *alloc, HeapArray<const char *> *out_tags)
     RG_UNREACHABLE();
 }
 
-bool LocalDisk::ListChunks(const char *type, HeapArray<kt_Hash> *out_ids)
+bool LocalDisk::ListChunks(const char *type, HeapArray<kt_ID> *out_ids)
 {
     RG_UNREACHABLE();
 }
 
-bool LocalDisk::ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf)
+bool LocalDisk::ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_buf)
 {
     RG_ASSERT(!writeonly);
 
@@ -150,7 +150,7 @@ bool LocalDisk::ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf)
     return true;
 }
 
-Size LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
+Size LocalDisk::WriteChunk(const kt_ID &id, Span<const uint8_t> chunk)
 {
     // Open destination file
     FILE *fp;

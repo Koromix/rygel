@@ -12,24 +12,38 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
-#include "disk.hh"
-#include "write.hh"
+#include "types.hh"
 
 namespace RG {
 
-bool kt_CreateSnapshot(kt_Disk *disk, const char *dir_id, kt_ID *out_id)
+static inline int ParseHexadecimalChar(char c)
 {
-    RG_UNREACHABLE();
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    } else if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    } else {
+        return -1;
+    }
 }
 
-bool kt_CreateDirectory(kt_Disk *disk, Span<const kt_EntryInfo> entries, kt_ID *out_id)
+bool kt_ParseID(const char *str, kt_ID *out_id)
 {
-    RG_UNREACHABLE();
-}
+    for (Size i = 0, j = 0; str[j]; i++, j += 2) {
+        int high = ParseHexadecimalChar(str[j]);
+        int low = (high >= 0) ? ParseHexadecimalChar(str[j + 1]) : -1;
 
-bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id)
-{
-    RG_UNREACHABLE();
+        if (low < 0) {
+            LogError("Malformed ID string '%1'", str);
+            return false;
+        }
+
+        out_id->hash[i] = (uint8_t)((high << 4) | low);
+    }
+
+    return true;
 }
 
 }

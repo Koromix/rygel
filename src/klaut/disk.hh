@@ -24,9 +24,9 @@ public:
 
     virtual bool ListTags(Allocator *alloc, HeapArray<const char *> *out_tags) = 0;
 
-    virtual bool ListChunks(const char *type, HeapArray<kt_Hash> *out_ids) = 0;
-    virtual bool ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf) = 0;
-    virtual Size WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk) = 0;
+    virtual bool ListChunks(const char *type, HeapArray<kt_ID> *out_ids) = 0;
+    virtual bool ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_buf) = 0;
+    virtual Size WriteChunk(const kt_ID &id, Span<const uint8_t> chunk) = 0;
 };
 
 enum class kt_DiskMode {
