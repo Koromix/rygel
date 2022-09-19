@@ -18,9 +18,19 @@
 
 namespace RG {
 
+enum class kt_DiskMode {
+    WriteOnly,
+    ReadWrite
+};
+
 class kt_Disk {
+    kt_DiskMode mode;
+
 public:
+    kt_Disk(kt_DiskMode mode) : mode(mode) {}
     virtual ~kt_Disk() = default;
+
+    kt_DiskMode GetMode() const { return mode; }
 
     virtual bool ListTags(Allocator *alloc, HeapArray<const char *> *out_tags) = 0;
 
@@ -29,11 +39,7 @@ public:
     virtual Size WriteChunk(const kt_ID &id, Span<const uint8_t> chunk) = 0;
 };
 
-enum class kt_DiskMode {
-    WriteOnly,
-    ReadWrite
-};
-
-kt_Disk *kt_OpenLocalDisk(const char *path, kt_DiskMode mode, const char *key);
+bool kt_CreateLocalDisk(const char *path, const char *password);
+kt_Disk *kt_OpenLocalDisk(const char *path, const char *password);
 
 }

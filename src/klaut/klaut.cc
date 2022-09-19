@@ -19,11 +19,67 @@
 
 namespace RG {
 
+static int RunInit(Span<const char *> arguments)
+{
+    // Options
+    const char *repo_directory = nullptr;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        repo_directory = opt.ConsumeNonOption();
+    }
+
+    if (!repo_directory) {
+        LogError("Missing repository directory");
+        return 1;
+    }
+
+    // Generate repository keys
+    char write_key[45] = {};
+    char full_key[45] = {};
+    {
+        RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
+        RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
+
+        uint8_t pk[crypto_box_PUBLICKEYBYTES];
+        uint8_t sk[crypto_box_SECRETKEYBYTES];
+        crypto_box_keypair(pk, sk);
+
+        sodium_bin2base64(write_key, RG_SIZE(write_key), pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(full_key, RG_SIZE(full_key), sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
+    }
+
+    if (!kt_CreateLocalDisk(repo_directory, full_key))
+        return 1;
+
+    LogInfo("Repository full key: %!..+%1%!0", full_key);
+    LogInfo("     write-only key: %!..+%1%!0", write_key);
+
+    return 0;
+}
+
 static int RunPutFile(Span<const char *> arguments)
 {
     // Options
     const char *repo_directory = nullptr;
-    const char *encrypt_key = nullptr;
+    const char *repo_key = nullptr;
     int verbose = 0;
     const char *filename = nullptr;
 
@@ -33,7 +89,7 @@ R"(Usage: %!..+%1 put_file <filename> [-O <dir>]%!0
 
 Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory
-    %!..+-k, --encrypt_key <key>%!0      Set encryption key
+    %!..+-k, --key <key>%!0              Set repository key
 
     %!..+-v, --verbose%!0                Increase verbosity level (repeat for more))", FelixTarget);
     };
@@ -48,8 +104,8 @@ Options:
                 return 0;
             } else if (opt.Test("-R", "--repository_dir", OptionType::Value)) {
                 repo_directory = opt.current_value;
-            } else if (opt.Test("-k", "--encrypt_key", OptionType::Value)) {
-                encrypt_key = opt.current_value;
+            } else if (opt.Test("-k", "--key", OptionType::Value)) {
+                repo_key = opt.current_value;
             } else if (opt.Test("-v", "--verbose")) {
                 verbose++;
             } else {
@@ -69,15 +125,19 @@ Options:
         LogError("Missing repository directory");
         return 1;
     }
-    if (!encrypt_key) {
-        LogError("Missing encryption key");
+    if (!repo_key) {
+        LogError("Missing repository key");
         return 1;
     }
 
-    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, kt_DiskMode::WriteOnly, encrypt_key);
+    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, repo_key);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
+
+    if (disk->GetMode() != kt_DiskMode::WriteOnly) {
+        LogError("You should use the write-only key with this command");
+    }
 
     // Now, split the file
     HeapArray<uint8_t> summary;
@@ -148,8 +208,8 @@ static int RunGetFile(Span<const char *> arguments)
 {
     // Options
     const char *repo_directory = nullptr;
+    const char *repo_key = nullptr;
     const char *dest_filename = nullptr;
-    const char *decrypt_key = nullptr;
     int verbose = 0;
     const char *name = nullptr;
 
@@ -159,7 +219,7 @@ R"(Usage: %!..+%1 get_file <name> [-O <file>]%!0
 
 Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory
-    %!..+-k, --decrypt_key <key>%!0      Set decryption key
+    %!..+-k, --repo_key <key>%!0         Set repository key
 
     %!..+-O, --output_file <dir>%!0      Restore file to <file>
 
@@ -178,8 +238,8 @@ Options:
                 repo_directory = opt.current_value;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 dest_filename = opt.current_value;
-            } else if (opt.Test("-k", "--decrypt_key", OptionType::Value)) {
-                decrypt_key = opt.current_value;
+            } else if (opt.Test("-k", "--repo_key", OptionType::Value)) {
+                repo_key = opt.current_value;
             } else if (opt.Test("-v", "--verbose")) {
                 verbose++;
             } else {
@@ -203,15 +263,20 @@ Options:
         LogError("Missing destination file");
         return 1;
     }
-    if (!decrypt_key) {
+    if (!repo_key) {
         LogError("Missing decryption key");
         return 1;
     }
 
-    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, kt_DiskMode::ReadWrite, decrypt_key);
+    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, repo_key);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
+
+    if (disk->GetMode() != kt_DiskMode::ReadWrite) {
+        LogError("Cannot decrypt with write-only key");
+        return 1;
+    }
 
     // Open destination file
     StreamWriter writer(dest_filename);
@@ -297,7 +362,9 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return 0;
     }
 
-    if (TestStr(cmd, "put_file")) {
+    if (TestStr(cmd, "init")) {
+        return RunInit(arguments);
+    } else if (TestStr(cmd, "put_file")) {
         return RunPutFile(arguments);
     } else if (TestStr(cmd, "get_file")) {
         return RunGetFile(arguments);

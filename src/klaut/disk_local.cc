@@ -32,13 +32,12 @@ struct ChunkIntro {
 class LocalDisk: public kt_Disk {
     LocalArray<char, MaxPathSize + 128> directory;
 
-    bool writeonly;
     uint8_t pkey[crypto_box_PUBLICKEYBYTES];
     uint8_t skey[crypto_box_SECRETKEYBYTES];
 
 public:
-    LocalDisk(Span<const char> directory, uint8_t skey[crypto_box_SECRETKEYBYTES],
-                                          uint8_t pkey[crypto_box_PUBLICKEYBYTES]);
+    LocalDisk(Span<const char> directory, kt_DiskMode mode,
+              uint8_t skey[crypto_box_SECRETKEYBYTES], uint8_t pkey[crypto_box_PUBLICKEYBYTES]);
     ~LocalDisk() override;
 
     bool ListTags(Allocator *alloc, HeapArray<const char *> *out_tags) override;
@@ -48,20 +47,16 @@ public:
     Size WriteChunk(const kt_ID &id, Span<const uint8_t> chunk) override;
 };
 
-LocalDisk::LocalDisk(Span<const char> directory, uint8_t skey[crypto_box_SECRETKEYBYTES],
-                                                 uint8_t pkey[crypto_box_PUBLICKEYBYTES])
+LocalDisk::LocalDisk(Span<const char> directory, kt_DiskMode mode,
+                     uint8_t skey[crypto_box_SECRETKEYBYTES], uint8_t pkey[crypto_box_PUBLICKEYBYTES])
+    : kt_Disk(mode)
 {
     RG_ASSERT(directory.len <= MaxPathSize);
 
     this->directory.Append(directory);
     this->directory.data[this->directory.len] = 0;
 
-    if (skey) {
-        memcpy(this->skey, skey, RG_SIZE(this->skey));
-        writeonly = false;
-    } else {
-        writeonly = true;
-    }
+    memcpy(this->skey, skey, RG_SIZE(this->skey));
     memcpy(this->pkey, pkey, RG_SIZE(this->pkey));
 }
 
@@ -81,12 +76,12 @@ bool LocalDisk::ListChunks(const char *type, HeapArray<kt_ID> *out_ids)
 
 bool LocalDisk::ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_buf)
 {
-    RG_ASSERT(!writeonly);
+    RG_ASSERT(GetMode() == kt_DiskMode::ReadWrite);
 
     RG_DEFER_NC(err_guard, len = out_buf->len) { out_buf->RemoveFrom(len); };
 
     LocalArray<char, MaxPathSize + 128> path;
-    path.len = Fmt(path.data, "%1%/%2%/%3", directory, FmtHex(id.hash[0]).Pad0(-2), id).len;
+    path.len = Fmt(path.data, "%1%/chunks%/%2%/%3", directory, FmtHex(id.hash[0]).Pad0(-2), id).len;
 
     StreamReader reader(path.data);
 
@@ -119,7 +114,7 @@ bool LocalDisk::ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_buf)
         return false;
     }
 
-    // Read chunk
+    // Read and decrypt chunk
     for (;;) {
         LocalArray<uint8_t, CHUNK_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES> cypher;
         cypher.len = reader.Read(cypher.data);
@@ -156,7 +151,7 @@ Size LocalDisk::WriteChunk(const kt_ID &id, Span<const uint8_t> chunk)
     FILE *fp;
     LocalArray<char, MaxPathSize + 128> path;
     {
-        path.len += Fmt(path.TakeAvailable(), "%1%/%2", directory, FmtHex(id.hash[0]).Pad0(-2)).len;
+        path.len += Fmt(path.TakeAvailable(), "%1%/chunks%/%2", directory, FmtHex(id.hash[0]).Pad0(-2)).len;
         if (!MakeDirectory(path.data, false))
             return -1;
         path.len += Fmt(path.TakeAvailable(), "%/%1", id).len;
@@ -223,8 +218,100 @@ Size LocalDisk::WriteChunk(const kt_ID &id, Span<const uint8_t> chunk)
     return writer.GetRawWritten();
 }
 
-kt_Disk *kt_OpenLocalDisk(const char *path, kt_DiskMode mode, const char *key)
+static bool ParseKey(const char *password, uint8_t out_key[32])
 {
+    size_t key_len;
+    int ret = sodium_base642bin(out_key, 32, password, strlen(password), nullptr, &key_len,
+                                nullptr, sodium_base64_VARIANT_ORIGINAL);
+    if (ret || key_len != 32) {
+        LogError("Malformed repository key");
+        return false;
+    }
+
+    return true;
+}
+
+bool kt_CreateLocalDisk(const char *path, const char *password)
+{
+    BlockAllocator temp_alloc;
+
+    uint8_t key[32];
+    if (!ParseKey(password, key))
+        return false;
+
+    Span<const char> directory = TrimStrRight(path, RG_PATH_SEPARATORS);
+
+    if (TestFile(path, FileType::Directory)) {
+        LogError("Directory '%1' already exists", directory);
+        return false;
+    }
+    if (directory.len > MaxPathSize) {
+        LogError("Directory path '%1' is too long", directory);
+        return false;
+    }
+
+    // Drop created files and directories if anything fails
+    HeapArray<const char *> directories;
+    HeapArray<const char *> files;
+    RG_DEFER_N(root_guard) {
+        for (const char *filename: files) {
+            UnlinkFile(filename);
+        }
+        for (Size i = directories.len - 1; i >= 0; i--) {
+            UnlinkDirectory(directories[i]);
+        }
+    };
+
+    // Create repository directories
+    {
+        const auto make_directory = [&](const char *suffix) {
+            const char *path = Fmt(&temp_alloc, "%1%2", directory, suffix).ptr;
+
+            if (!MakeDirectory(path))
+                return false;
+            directories.Append(path);
+
+            return true;
+        };
+
+        if (!make_directory(""))
+            return false;
+        if (!make_directory("/chunks"))
+            return false;
+        if (!make_directory("/info"))
+            return false;
+    }
+
+    // Write control file
+    {
+        uint8_t version = CHUNK_VERSION;
+
+        const char *version_filename = Fmt(&temp_alloc, "%1%/info/version", directory).ptr;
+
+        uint8_t pkey[crypto_box_PUBLICKEYBYTES];
+        uint8_t cypher[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + 1];
+
+        crypto_scalarmult_base(pkey, key);
+        randombytes_buf(cypher, crypto_secretbox_NONCEBYTES);
+        crypto_secretbox_easy(cypher + crypto_secretbox_NONCEBYTES, &version, RG_SIZE(version), cypher, pkey);
+
+        if (!WriteFile(cypher, version_filename))
+            return false;
+        files.Append(version_filename);
+    }
+
+    root_guard.Disable();
+    return true;
+}
+
+kt_Disk *kt_OpenLocalDisk(const char *path, const char *password)
+{
+    BlockAllocator temp_alloc;
+
+    uint8_t key[32];
+    if (!ParseKey(password, key))
+        return nullptr;
+
     Span<const char> directory = TrimStrRight(path, RG_PATH_SEPARATORS);
 
     if (!TestFile(path, FileType::Directory)) {
@@ -236,45 +323,50 @@ kt_Disk *kt_OpenLocalDisk(const char *path, kt_DiskMode mode, const char *key)
         return nullptr;
     }
 
-    switch (mode) {
-        case kt_DiskMode::WriteOnly: {
-            uint8_t pkey[crypto_box_PUBLICKEYBYTES];
-            RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
+    uint8_t cypher[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + 1];
+    {
+        const char *version_filename = Fmt(&temp_alloc, "%1%/info/version", directory).ptr;
 
-            size_t key_len;
-            int ret = sodium_base642bin(pkey, RG_SIZE(pkey), key, strlen(key), nullptr, &key_len,
-                                        nullptr, sodium_base64_VARIANT_ORIGINAL);
-            if (ret || key_len != 32) {
-                LogError("Malformed encryption key");
-                return nullptr;
-            }
-
-            kt_Disk *disk = new LocalDisk(directory, nullptr, pkey);
-            return disk;
-        } break;
-
-        case kt_DiskMode::ReadWrite: {
-            uint8_t skey[crypto_box_SECRETKEYBYTES];
-            uint8_t pkey[crypto_box_PUBLICKEYBYTES];
-            RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
-            RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
-
-            size_t key_len;
-            int ret = sodium_base642bin(skey, RG_SIZE(skey), key, strlen(key), nullptr, &key_len,
-                                        nullptr, sodium_base64_VARIANT_ORIGINAL);
-            if (ret || key_len != 32) {
-                LogError("Malformed decryption key");
-                return nullptr;
-            }
-
-            crypto_scalarmult_base(pkey, skey);
-
-            kt_Disk *disk = new LocalDisk(directory, skey, pkey);
-            return disk;
-        } break;
+        Size read = ReadFile(version_filename, cypher);
+        if (read < 0)
+            return nullptr;
+        if (read < RG_SIZE(cypher)) {
+            LogError("Truncated version file");
+            return nullptr;
+        }
     }
 
-    RG_UNREACHABLE();
+    // Open disk and determine mode
+    kt_DiskMode mode;
+    uint8_t skey[crypto_box_SECRETKEYBYTES];
+    uint8_t pkey[crypto_box_PUBLICKEYBYTES];
+    {
+        mode = kt_DiskMode::WriteOnly;
+        memcpy(pkey, key, RG_SIZE(pkey));
+
+        uint8_t version = 0;
+
+        if (crypto_secretbox_open_easy(&version, cypher + crypto_secretbox_NONCEBYTES,
+                                       RG_SIZE(cypher) - crypto_secretbox_NONCEBYTES, cypher, pkey) != 0) {
+            mode = kt_DiskMode::ReadWrite;
+            memcpy(skey, key, RG_SIZE(pkey));
+            crypto_scalarmult_base(pkey, key);
+
+            if (crypto_secretbox_open_easy(&version, cypher + crypto_secretbox_NONCEBYTES,
+                                           RG_SIZE(cypher) - crypto_secretbox_NONCEBYTES, cypher, pkey) != 0) {
+                LogError("Failed to open repository (wrong key?)");
+                return nullptr;
+            }
+        }
+
+        if (version != CHUNK_VERSION) {
+            LogError("Unexpected repository version %1 (expected %2)", version, CHUNK_VERSION);
+            return nullptr;
+        }
+    }
+
+    kt_Disk *disk = new LocalDisk(directory, mode, skey, pkey);
+    return disk;
 }
 
 }
