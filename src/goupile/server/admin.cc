@@ -784,7 +784,7 @@ static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, co
             return UnsealResult::Error;
 
         uint8_t buf[4096];
-        unsigned long long buf_len = 5;
+        unsigned long long buf_len = 0;
         uint8_t tag;
         if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
                                                        cypher.data, cypher.len, nullptr, 0) != 0) {
