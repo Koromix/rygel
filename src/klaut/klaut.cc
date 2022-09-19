@@ -82,6 +82,7 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
     RG_DEFER { delete disk; };
 
     // Now, split the file
+    Size written = 0;
     {
         StreamReader st(filename);
         kt_Chunker chunker(Kibibytes(256), Kibibytes(128), Kibibytes(768));
@@ -103,13 +104,17 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
                     crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, nullptr, 0);
 
                     if (verbose) {
-                        PrintLn("%!..+%1%!0 0x%2 %3", id, FmtHex(total).Pad0(-8), chunk.len);
+                        LogInfo("Chunk %!..+%1%!0 [0x%2, %3]", id, FmtHex(total).Pad0(-8), chunk.len);
                     } else {
-                        PrintLn("%!..+%1%!0 %2", id, verbose ? FmtArg(chunk.len) : FmtDiskSize(chunk.len));
+                        LogInfo("Chunk %!..+%1%!0 (%2)", id, verbose ? FmtArg(chunk.len) : FmtDiskSize(chunk.len));
                     }
 
-                    if (disk && !disk->WriteChunk(id, chunk))
-                        return false;
+                    if (disk) {
+                        Size ret = disk->WriteChunk(id, chunk);
+                        if (ret < 0)
+                            return false;
+                        written += ret;
+                    }
 
                     return true;
                 });
@@ -120,6 +125,10 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
             memmove_safe(buf.ptr, buf.ptr + processed, buf.len - processed);
             buf.len -= processed;
         } while (!st.IsEOF());
+    }
+
+    if (disk) {
+        LogInfo("Total written: %!..+%1%!0", verbose ? FmtArg(written) : FmtDiskSize(written));
     }
 
     return 0;

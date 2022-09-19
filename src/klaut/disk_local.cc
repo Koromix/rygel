@@ -31,7 +31,7 @@ public:
 
     bool ListChunks(const char *type, HeapArray<kt_Hash> *out_ids) override;
     bool ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf) override;
-    bool WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk) override;
+    Size WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk) override;
 };
 
 LocalDisk::LocalDisk(Span<const char> directory, uint8_t pkey[crypto_box_PUBLICKEYBYTES])
@@ -62,21 +62,26 @@ bool LocalDisk::ReadChunk(const kt_Hash &id, HeapArray<uint8_t> *out_buf)
     RG_UNREACHABLE();
 }
 
-bool LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
+Size LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
 {
-    StreamWriter writer;
-
     // Open destination file
+    FILE *fp;
+    LocalArray<char, MaxPathSize + 128> path;
     {
-        LocalArray<char, MaxPathSize + 128> path;
-
         path.len += Fmt(path.TakeAvailable(), "%1%/%2", directory, FmtHex(id.hash[0]).Pad0(-2)).len;
         if (!MakeDirectory(path.data, false))
-            return false;
+            return -1;
         path.len += Fmt(path.TakeAvailable(), "%/%1", id).len;
-        if (!writer.Open(path.data))
-            return false;
+
+        bool exists = false;
+        fp = OpenFile(path.data, (int)OpenFlag::Write | (int)OpenFlag::Exclusive, &exists);
+
+        if (!fp)
+            return exists ? 0 : -1;
     }
+    RG_DEFER { fclose(fp); };
+
+    StreamWriter writer(fp, path.data);
 
     // Prepare random symetric key
     uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
@@ -88,7 +93,7 @@ bool LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
         crypto_box_seal(cipher, key, RG_SIZE(key), pkey);
 
         if (!writer.Write(cipher))
-            return false;
+            return -1;
     }
 
     // Init symetric encryption
@@ -98,7 +103,7 @@ bool LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
         crypto_secretstream_xchacha20poly1305_init_push(&state, header, key);
 
         if (!writer.Write(header))
-            return false;
+            return -1;
     }
 
     // Encrypt chunk data
@@ -116,10 +121,13 @@ bool LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
         crypto_secretstream_xchacha20poly1305_push(&state, cipher, nullptr, buf.ptr, buf.len, nullptr, 0, tag);
 
         if (!writer.Write(cipher, buf.len + crypto_secretstream_xchacha20poly1305_ABYTES))
-            return false;
+            return -1;
     }
 
-    return writer.Close();
+    if (!writer.Close())
+        return -1;
+
+    return writer.GetRawWritten();
 }
 
 kt_Disk *kt_OpenLocalDisk(const char *path, const char *encrypt_key)
