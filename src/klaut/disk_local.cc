@@ -19,6 +19,16 @@ namespace RG {
 
 static const int MaxPathSize = 4096 - 128;
 
+#pragma pack(push, 1)
+struct ChunkIntro {
+    int8_t version;
+    uint8_t ekey[crypto_secretstream_xchacha20poly1305_KEYBYTES + crypto_box_SEALBYTES];
+    uint8_t header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
+};
+#pragma pack(pop)
+#define CHUNK_VERSION 1
+#define CHUNK_SPLIT Kibibytes(8)
+
 class LocalDisk: public kt_Disk {
     LocalArray<char, MaxPathSize + 128> directory;
     uint8_t pkey[crypto_box_PUBLICKEYBYTES];
@@ -106,21 +116,27 @@ Size LocalDisk::WriteChunk(const kt_Hash &id, Span<const uint8_t> chunk)
     }
 
     // Encrypt chunk data
-    while (chunk.len) {
-        uint8_t cypher[CHUNK_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES];
+    {
+        bool complete = false;
 
-        Span<const uint8_t> buf;
-        buf.len = std::min(CHUNK_SPLIT, chunk.len);
-        buf.ptr = chunk.ptr;
+        do {
+            Span<const uint8_t> frag;
+            frag.len = std::min(CHUNK_SPLIT, chunk.len);
+            frag.ptr = chunk.ptr;
 
-        chunk.ptr += buf.len;
-        chunk.len -= buf.len;
+            complete |= (frag.len < CHUNK_SPLIT);
 
-        unsigned char tag = chunk.len ? 0 : crypto_secretstream_xchacha20poly1305_TAG_FINAL;
-        crypto_secretstream_xchacha20poly1305_push(&state, cypher, nullptr, buf.ptr, buf.len, nullptr, 0, tag);
+            uint8_t cypher[CHUNK_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES];
+            unsigned char tag = complete ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
+            unsigned long long cypher_len;
+            crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, frag.ptr, frag.len, nullptr, 0, tag);
 
-        if (!writer.Write(cypher, buf.len + crypto_secretstream_xchacha20poly1305_ABYTES))
-            return -1;
+            if (!writer.Write(cypher, (Size)cypher_len))
+                return -1;
+
+            chunk.ptr += frag.len;
+            chunk.len -= frag.len;
+        } while (!complete);
     }
 
     if (!writer.Close())
