@@ -24,7 +24,7 @@ static int RunStore(Span<const char *> arguments)
     // Options
     const char *dest_directory = nullptr;
     const char *encrypt_key = nullptr;
-    bool verbose = false;
+    int verbose = 0;
     const char *filename = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
@@ -35,7 +35,7 @@ Options:
     %!..+-O, --output_dir <dir>%!0       Put file fragments in <dir>
     %!..+-k, --encrypt_key <key>%!0      Set encryption key
 
-    %!..+-v, --verbose%!0                Show precise chunk size
+    %!..+-v, --verbose%!0                Increase verbosity level (repeat for more)
 
 If no output directory is provided, the chunks are simply detected.)", FelixTarget);
     };
@@ -53,7 +53,7 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
             } else if (opt.Test("-k", "--encrypt_key", OptionType::Value)) {
                 encrypt_key = opt.current_value;
             } else if (opt.Test("-v", "--verbose")) {
-                verbose = true;
+                verbose++;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -103,10 +103,10 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
                     kt_Hash id = {};
                     crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, nullptr, 0);
 
-                    if (verbose) {
+                    if (verbose >= 2) {
                         LogInfo("Chunk %!..+%1%!0 [0x%2, %3]", id, FmtHex(total).Pad0(-8), chunk.len);
-                    } else {
-                        LogInfo("Chunk %!..+%1%!0 (%2)", id, verbose ? FmtArg(chunk.len) : FmtDiskSize(chunk.len));
+                    } else if (verbose) {
+                        LogInfo("Chunk %!..+%1%!0 (%2)", id, FmtDiskSize(chunk.len));
                     }
 
                     if (disk) {
@@ -128,7 +128,7 @@ If no output directory is provided, the chunks are simply detected.)", FelixTarg
     }
 
     if (disk) {
-        LogInfo("Total written: %!..+%1%!0", verbose ? FmtArg(written) : FmtDiskSize(written));
+        LogInfo("Total written: %!..+%1%!0", verbose >= 2 ? FmtArg(written) : FmtDiskSize(written));
     }
 
     return 0;
