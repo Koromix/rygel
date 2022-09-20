@@ -139,7 +139,7 @@ Options:
     if (!kt_BackupFile(disk, filename, &id, &written))
         return 1;
 
-    LogInfo("Destination: %!..+%1%!0", id);
+    LogInfo("File ID: %!..+%1%!0", id);
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(written));
 
     return 0;
@@ -155,7 +155,7 @@ static int RunGetFile(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 get_file <name> [-O <file>]%!0
+R"(Usage: %!..+%1 get_file <ID> [-O <file>]%!0
 
 Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory

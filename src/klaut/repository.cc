@@ -60,6 +60,9 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, S
 
 bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size *out_written)
 {
+    crypto_generichash_blake2b_state state;
+    crypto_generichash_blake2b_init(&state, nullptr, 0, 32);
+
     // Split the file
     HeapArray<uint8_t> summary;
     Size written = 0;
@@ -90,6 +93,7 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
                     written += ret;
 
                     summary.Append(MakeSpan((const uint8_t *)&id, RG_SIZE(id)));
+                    crypto_generichash_blake2b_update(&state, chunk.ptr, (size_t)chunk.len);
 
                     return true;
                 });
@@ -105,7 +109,7 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
     // Write list of chunks
     kt_ID id = {};
     {
-        crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), summary.ptr, summary.len, nullptr, 0);
+        crypto_generichash_final(&state, id.hash, RG_SIZE(id.hash));
 
         Size ret = disk->WriteChunk(id, summary);
         if (ret < 0)
