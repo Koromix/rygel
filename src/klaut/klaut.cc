@@ -51,26 +51,26 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
         return 1;
     }
 
-    // Generate repository keys
-    char write_key[45] = {};
-    char full_key[45] = {};
+    // Generate repository passwords
+    char full_pwd[45] = {};
+    char write_pwd[45] = {};
     {
-        RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
-        RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
+        uint8_t full_key[32];
+        uint8_t write_key[32];
 
-        uint8_t pk[32];
-        uint8_t sk[32];
-        crypto_box_keypair(pk, sk);
+        randombytes_buf(full_key, RG_SIZE(full_key));
+        randombytes_buf(write_key, RG_SIZE(write_key));
 
-        sodium_bin2base64(write_key, RG_SIZE(write_key), pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
-        sodium_bin2base64(full_key, RG_SIZE(full_key), sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(full_pwd, RG_SIZE(full_pwd), full_key, RG_SIZE(full_key), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(write_pwd, RG_SIZE(write_pwd), write_key, RG_SIZE(write_key), sodium_base64_VARIANT_ORIGINAL);
     }
 
-    if (!kt_CreateLocalDisk(repo_directory, full_key))
+    if (!kt_CreateLocalDisk(repo_directory, full_pwd, write_pwd))
         return 1;
 
-    LogInfo("Repository full key: %!..+%1%!0", full_key);
-    LogInfo("     write-only key: %!..+%1%!0", write_key);
+    LogInfo("Repository: %!..+%1%!0", TrimStrRight(repo_directory, RG_PATH_SEPARATORS));
+    LogInfo("Default full password: %!..+%1%!0", full_pwd);
+    LogInfo("  write-only password: %!..+%1%!0", write_pwd);
 
     return 0;
 }
@@ -79,7 +79,7 @@ static int RunPutFile(Span<const char *> arguments)
 {
     // Options
     const char *repo_directory = nullptr;
-    const char *repo_key = nullptr;
+    const char *repo_pwd = nullptr;
     const char *filename = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
@@ -88,7 +88,7 @@ R"(Usage: %!..+%1 put_file <filename> [-O <dir>]%!0
 
 Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory
-    %!..+-k, --key <key>%!0              Set repository key)", FelixTarget);
+    %!..+-p, --password <pwd>%!0         Set repository password)", FelixTarget);
     };
 
     // Parse arguments
@@ -101,8 +101,8 @@ Options:
                 return 0;
             } else if (opt.Test("-R", "--repository_dir", OptionType::Value)) {
                 repo_directory = opt.current_value;
-            } else if (opt.Test("-k", "--key", OptionType::Value)) {
-                repo_key = opt.current_value;
+            } else if (opt.Test("-p", "--password", OptionType::Value)) {
+                repo_pwd = opt.current_value;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -120,12 +120,12 @@ Options:
         LogError("Missing repository directory");
         return 1;
     }
-    if (!repo_key) {
-        LogError("Missing repository key");
+    if (!repo_pwd) {
+        LogError("Missing repository password");
         return 1;
     }
 
-    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, repo_key);
+    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, repo_pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
@@ -149,7 +149,7 @@ static int RunGetFile(Span<const char *> arguments)
 {
     // Options
     const char *repo_directory = nullptr;
-    const char *repo_key = nullptr;
+    const char *repo_pwd = nullptr;
     const char *dest_filename = nullptr;
     const char *name = nullptr;
 
@@ -159,7 +159,7 @@ R"(Usage: %!..+%1 get_file <name> [-O <file>]%!0
 
 Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory
-    %!..+-k, --repo_key <key>%!0         Set repository key
+    %!..+-p, --password <pwd>%!0         Set repository password
 
     %!..+-O, --output_file <dir>%!0      Restore file to <file>)", FelixTarget);
     };
@@ -174,10 +174,10 @@ Options:
                 return 0;
             } else if (opt.Test("-R", "--repository_dir", OptionType::Value)) {
                 repo_directory = opt.current_value;
+            } else if (opt.Test("-p", "--password", OptionType::Value)) {
+                repo_pwd = opt.current_value;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 dest_filename = opt.current_value;
-            } else if (opt.Test("-k", "--repo_key", OptionType::Value)) {
-                repo_key = opt.current_value;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -199,12 +199,12 @@ Options:
         LogError("Missing destination filename");
         return 1;
     }
-    if (!repo_key) {
+    if (!repo_pwd) {
         LogError("Missing decryption key");
         return 1;
     }
 
-    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, repo_key);
+    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, repo_pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };

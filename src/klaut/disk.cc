@@ -17,6 +17,10 @@
 
 namespace RG {
 
+RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
+RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
+RG_STATIC_ASSERT(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
+
 #pragma pack(push, 1)
 struct ChunkIntro {
     int8_t version;

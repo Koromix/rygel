@@ -42,7 +42,7 @@ protected:
     virtual Size WriteBlob(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
 };
 
-bool kt_CreateLocalDisk(const char *path, const char *password);
-kt_Disk *kt_OpenLocalDisk(const char *path, const char *password);
+bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
+kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd);
 
 }
