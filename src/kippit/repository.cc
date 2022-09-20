@@ -64,8 +64,10 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, S
 
 bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size *out_written)
 {
+    Span<const uint8_t> salt = disk->GetSalt();
+
     crypto_generichash_blake2b_state state;
-    crypto_generichash_blake2b_init(&state, nullptr, 0, 32);
+    crypto_generichash_blake2b_init(&state, salt.ptr, (size_t)salt.len, 32);
 
     // Split the file
     HeapArray<uint8_t> summary;
@@ -89,7 +91,7 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
 
                 processed = chunker.Process(buf, st.IsEOF(), [&](Size idx, Size total, Span<const uint8_t> chunk) {
                     kt_ID id = {};
-                    crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, nullptr, 0);
+                    crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, salt.ptr, salt.len);
 
                     Size ret = disk->Write(id, chunk);
                     if (ret < 0)

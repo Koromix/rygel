@@ -22,16 +22,14 @@ static const uint8_t RepoVersion = 1;
 
 class LocalDisk: public kt_Disk {
 public:
-    LocalDisk(Span<const char> directory, kt_DiskMode mode,
-              uint8_t skey[crypto_box_SECRETKEYBYTES], uint8_t pkey[crypto_box_PUBLICKEYBYTES]);
+    LocalDisk(Span<const char> directory, kt_DiskMode mode, const uint8_t skey[32], const uint8_t pkey[32]);
     ~LocalDisk() override;
 
     bool ReadObject(const char *path, HeapArray<uint8_t> *out_obj) override;
     Size WriteObject(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
 };
 
-LocalDisk::LocalDisk(Span<const char> directory, kt_DiskMode mode,
-                     uint8_t skey[crypto_box_SECRETKEYBYTES], uint8_t pkey[crypto_box_PUBLICKEYBYTES])
+LocalDisk::LocalDisk(Span<const char> directory, kt_DiskMode mode, const uint8_t skey[32], const uint8_t pkey[32])
 {
     RG_ASSERT(directory.len <= MaxPathSize);
 
