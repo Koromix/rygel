@@ -28,8 +28,8 @@ public:
               uint8_t skey[crypto_box_SECRETKEYBYTES], uint8_t pkey[crypto_box_PUBLICKEYBYTES]);
     ~LocalDisk() override;
 
-    bool ReadBlob(const char *path, HeapArray<uint8_t> *out_blob) override;
-    Size WriteBlob(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    bool ReadObject(const char *path, HeapArray<uint8_t> *out_obj) override;
+    Size WriteObject(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
 };
 
 LocalDisk::LocalDisk(Span<const char> directory, kt_DiskMode mode,
@@ -46,15 +46,15 @@ LocalDisk::~LocalDisk()
 {
 }
 
-bool LocalDisk::ReadBlob(const char *path, HeapArray<uint8_t> *out_blob)
+bool LocalDisk::ReadObject(const char *path, HeapArray<uint8_t> *out_obj)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", directory, path).len;
 
-    return ReadFile(filename.data, Mebibytes(16), out_blob) >= 0;
+    return ReadFile(filename.data, Mebibytes(16), out_obj) >= 0;
 }
 
-Size LocalDisk::WriteBlob(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
+Size LocalDisk::WriteObject(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", directory, path).len;
@@ -195,7 +195,7 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
             return true;
         };
 
-        if (!make_directory("chunks"))
+        if (!make_directory("blobs"))
             return false;
         if (!make_directory("info"))
             return false;

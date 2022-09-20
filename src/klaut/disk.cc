@@ -38,7 +38,7 @@ kt_Disk::kt_Disk(kt_DiskMode mode, uint8_t skey[32], uint8_t pkey[32])
     memcpy(this->pkey, pkey, RG_SIZE(this->pkey));
 }
 
-bool kt_Disk::ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
+bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
 {
     RG_ASSERT(mode == kt_DiskMode::ReadWrite);
 
@@ -46,30 +46,30 @@ bool kt_Disk::ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
     RG_DEFER_N(err_guard) { out_chunk->RemoveFrom(prev_len); };
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "chunks%/%1%/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
+    path.len = Fmt(path.data, "blobs%/%1%/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
-    // Read the blob, we use the same buffer for the cypher and the decrypted data,
+    // Read the object, we use the same buffer for the cypher and the decrypted data,
     // just 512 bytes apart which is more than enough for ChaCha20 (64-byte blocks).
-    Span<const uint8_t> blob;
+    Span<const uint8_t> obj;
     {
         out_chunk->Grow(512);
         out_chunk->len += 512;
 
         Size offset = out_chunk->len;
-        if (!ReadBlob(path.data, out_chunk))
+        if (!ReadObject(path.data, out_chunk))
             return false;
-        blob = MakeSpan(out_chunk->ptr + offset, out_chunk->len - offset);
+        obj = MakeSpan(out_chunk->ptr + offset, out_chunk->len - offset);
     }
 
     // Init chunk decryption
     crypto_secretstream_xchacha20poly1305_state state;
     {
         ChunkIntro intro;
-        if (blob.len < RG_SIZE(intro)) {
+        if (obj.len < RG_SIZE(intro)) {
             LogError("Truncated chunk");
             return false;
         }
-        memcpy(&intro, blob.ptr, RG_SIZE(intro));
+        memcpy(&intro, obj.ptr, RG_SIZE(intro));
 
         if (intro.version != CHUNK_VERSION) {
             LogError("Unexpected chunk version %1 (expected %2)", intro.version, CHUNK_VERSION);
@@ -87,17 +87,17 @@ bool kt_Disk::ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
             return false;
         }
 
-        blob.ptr += RG_SIZE(ChunkIntro);
-        blob.len -= RG_SIZE(ChunkIntro);
+        obj.ptr += RG_SIZE(ChunkIntro);
+        obj.len -= RG_SIZE(ChunkIntro);
     }
 
     // Read and decrypt chunk
     Size new_len = prev_len;
-    while (blob.len) {
-        Size in_len = std::min(blob.len, (Size)CHUNK_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES);
+    while (obj.len) {
+        Size in_len = std::min(obj.len, (Size)CHUNK_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES);
         Size out_len = in_len - crypto_secretstream_xchacha20poly1305_ABYTES;
 
-        Span<const uint8_t> cypher = MakeSpan(blob.ptr, in_len);
+        Span<const uint8_t> cypher = MakeSpan(obj.ptr, in_len);
         uint8_t *buf = out_chunk->ptr + new_len;
 
         unsigned long long buf_len = 0;
@@ -108,11 +108,11 @@ bool kt_Disk::ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
             return false;
         }
 
-        blob.ptr += cypher.len;
-        blob.len -= cypher.len;
+        obj.ptr += cypher.len;
+        obj.len -= cypher.len;
         new_len += out_len;
 
-        if (!blob.len) {
+        if (!obj.len) {
             if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
                 LogError("Truncated chunk");
                 return false;
@@ -126,12 +126,12 @@ bool kt_Disk::ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
     return true;
 }
 
-Size kt_Disk::WriteChunk(const kt_ID &id, Span<const uint8_t> chunk)
+Size kt_Disk::Write(const kt_ID &id, Span<const uint8_t> chunk)
 {
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "chunks%/%1%/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
+    path.len = Fmt(path.data, "blobs%/%1%/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
-    Size written = WriteBlob(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
+    Size written = WriteObject(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
         // Write chunk intro
         crypto_secretstream_xchacha20poly1305_state state;
         {

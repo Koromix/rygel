@@ -33,7 +33,7 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, S
     // Read file summary
     HeapArray<uint8_t> summary;
     {
-        if (!disk->ReadChunk(id, &summary))
+        if (!disk->Read(id, &summary))
             return false;
         if (summary.len % RG_SIZE(kt_ID)) {
             LogError("Malformed file summary '%1'", id);
@@ -47,7 +47,7 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, S
         memcpy(&id, summary.ptr + offset, RG_SIZE(id));
 
         HeapArray<uint8_t> buf;
-        if (!disk->ReadChunk(id, &buf))
+        if (!disk->Read(id, &buf))
             return false;
         if (!writer.Write(buf))
             return false;
@@ -91,7 +91,7 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
                     kt_ID id = {};
                     crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, nullptr, 0);
 
-                    Size ret = disk->WriteChunk(id, chunk);
+                    Size ret = disk->Write(id, chunk);
                     if (ret < 0)
                         return false;
                     written += ret;
@@ -115,7 +115,7 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
     {
         crypto_generichash_final(&state, id.hash, RG_SIZE(id.hash));
 
-        Size ret = disk->WriteChunk(id, summary);
+        Size ret = disk->Write(id, summary);
         if (ret < 0)
             return false;
         written += ret;

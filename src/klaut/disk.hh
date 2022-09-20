@@ -34,12 +34,12 @@ public:
 
     kt_DiskMode GetMode() const { return mode; }
 
-    bool ReadChunk(const kt_ID &id, HeapArray<uint8_t> *out_chunk);
-    Size WriteChunk(const kt_ID &id, Span<const uint8_t> chunk);
+    bool Read(const kt_ID &id, HeapArray<uint8_t> *out_chunk);
+    Size Write(const kt_ID &id, Span<const uint8_t> chunk);
 
 protected:
-    virtual bool ReadBlob(const char *path, HeapArray<uint8_t> *out_blob) = 0;
-    virtual Size WriteBlob(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
+    virtual bool ReadObject(const char *path, HeapArray<uint8_t> *out_blob) = 0;
+    virtual Size WriteObject(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
 };
 
 bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
