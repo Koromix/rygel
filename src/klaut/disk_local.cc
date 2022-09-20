@@ -83,13 +83,11 @@ Size LocalDisk::WriteBlob(const char *path, FunctionRef<bool(FunctionRef<bool(Sp
     return writer.GetRawWritten();
 }
 
-static bool DeriveKey(const char *pwd, uint8_t out_key[32])
+static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
 {
-    // XXX: Use proper per-repository salt
-    static const char *Salt = "SALTsaltSALTsalt";
-    RG_ASSERT(strlen(Salt) == crypto_pwhash_SALTBYTES);
+    RG_STATIC_ASSERT(crypto_pwhash_SALTBYTES == 16);
 
-    if (crypto_pwhash(out_key, 32, pwd, strlen(pwd), (const uint8_t *)Salt, crypto_pwhash_OPSLIMIT_INTERACTIVE,
+    if (crypto_pwhash(out_key, 32, pwd, strlen(pwd), salt, crypto_pwhash_OPSLIMIT_INTERACTIVE,
                       crypto_pwhash_MEMLIMIT_INTERACTIVE, crypto_pwhash_ALG_ARGON2ID13) != 0) {
         LogError("Failed to derive key from password (exhausted resource?)");
         return false;
@@ -124,20 +122,33 @@ static bool ReadControl(const char *filename, const uint8_t key[32],
         return false;
     }
 
-    if (len - crypto_secretbox_NONCEBYTES - crypto_secretbox_MACBYTES != out_data.len) {
-        LogError("Unexpected size for '%1'", filename);
+    if (key) {
+        if (len - crypto_secretbox_NONCEBYTES - crypto_secretbox_MACBYTES != out_data.len) {
+            LogError("Unexpected size for '%1'", filename);
 
-        if (out_error) {
-            *out_error = true;
+            if (out_error) {
+                *out_error = true;
+            }
+            return false;
         }
-        return false;
-    }
-    if (crypto_secretbox_open_easy(out_data.ptr, cypher + crypto_secretbox_NONCEBYTES,
-                                   len - crypto_secretbox_NONCEBYTES, cypher, key) != 0) {
-        if (!out_error) {
-            LogError("Failed to decrypt control file");
+        if (crypto_secretbox_open_easy(out_data.ptr, cypher + crypto_secretbox_NONCEBYTES,
+                                       len - crypto_secretbox_NONCEBYTES, cypher, key) != 0) {
+            if (!out_error) {
+                LogError("Failed to decrypt control file");
+            }
+            return false;
         }
-        return false;
+    } else {
+        if (len != out_data.len) {
+            LogError("Unexpected size for '%1'", filename);
+
+            if (out_error) {
+                *out_error = true;
+            }
+            return false;
+        }
+
+        memcpy_safe(out_data.ptr, cypher, len);
     }
 
     return true;
@@ -190,12 +201,16 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
             return false;
     }
 
+    // Repository salt
+    uint8_t salt[16];
+    randombytes_buf(salt, RG_SIZE(salt));
+
     // Derive password keys
     uint8_t full_key[32];
     uint8_t write_key[32];
-    if (!DeriveKey(full_pwd, full_key))
+    if (!DeriveKey(full_pwd, salt, full_key))
         return false;
-    if (!DeriveKey(write_pwd, write_key))
+    if (!DeriveKey(write_pwd, salt, write_key))
         return false;
 
     // Generate secure keypair
@@ -205,10 +220,14 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
 
     // Write control files
     {
+        const char *salt_filename = Fmt(&temp_alloc, "%1%/info/salt", directory).ptr;
         const char *version_filename = Fmt(&temp_alloc, "%1%/info/version", directory).ptr;
         const char *full_filename = Fmt(&temp_alloc, "%1%/info/full", directory).ptr;
         const char *write_filename = Fmt(&temp_alloc, "%1%/info/write", directory).ptr;
 
+        if (!WriteFile(salt, salt_filename))
+            return false;
+        files.Append(salt_filename);
         if (!WriteControl(version_filename, pkey, RepoVersion))
             return false;
         files.Append(version_filename);
@@ -240,13 +259,20 @@ kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)
         return nullptr;
     }
 
-    uint8_t key[32];
-    if (!DeriveKey(pwd, key))
-        return nullptr;
-
+    const char *salt_filename = Fmt(&temp_alloc, "%1%/info/salt", directory).ptr;
     const char *version_filename = Fmt(&temp_alloc, "%1%/info/version", directory).ptr;
     const char *full_filename = Fmt(&temp_alloc, "%1%/info/full", directory).ptr;
     const char *write_filename = Fmt(&temp_alloc, "%1%/info/write", directory).ptr;
+
+    uint8_t key[32];
+    {
+        uint8_t salt[16];
+        if (!ReadControl(salt_filename, nullptr, salt))
+            return nullptr;
+
+        if (!DeriveKey(pwd, salt, key))
+            return nullptr;
+    }
 
     // Open disk and determine mode
     kt_DiskMode mode;
