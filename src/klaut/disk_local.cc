@@ -59,9 +59,6 @@ Size LocalDisk::WriteObject(const char *path, FunctionRef<bool(FunctionRef<bool(
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", directory, path).len;
 
-    if (!EnsureDirectoryExists(filename.data))
-        return -1;
-
     // Open destination file
     FILE *fp;
     {
@@ -195,10 +192,18 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
             return true;
         };
 
-        if (!make_directory("blobs"))
-            return false;
         if (!make_directory("info"))
             return false;
+        if (!make_directory("blobs"))
+            return false;
+
+        for (int i = 0; i < 256; i++) {
+            char name[128];
+            Fmt(name, "blobs/%1", FmtHex(i).Pad0(-2));
+
+            if (!make_directory(name))
+                return false;
+        }
     }
 
     // Repository salt
