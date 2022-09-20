@@ -19,6 +19,10 @@
 
 namespace RG {
 
+static const Size ChunkAverage = Kibibytes(512);
+static const Size ChunkMin = Kibibytes(256);
+static const Size ChunkMax = Kibibytes(1280);
+
 bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, Size *out_len)
 {
     // Open destination file
@@ -69,7 +73,7 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
     {
         StreamReader st(src_filename);
 
-        kt_Chunker chunker(Kibibytes(256), Kibibytes(128), Kibibytes(768));
+        kt_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
         HeapArray<uint8_t> buf;
 
         do {
