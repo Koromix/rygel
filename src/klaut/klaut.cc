@@ -90,9 +90,11 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
 
 static int RunPutFile(Span<const char *> arguments)
 {
+    BlockAllocator temp_alloc;
+
     // Options
     const char *repo_directory = nullptr;
-    const char *repo_pwd = nullptr;
+    const char *pwd = nullptr;
     const char *filename = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
@@ -101,7 +103,7 @@ R"(Usage: %!..+%1 put_file <filename> [-O <dir>]%!0
 
 Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory
-    %!..+-p, --password <pwd>%!0         Set repository password)", FelixTarget);
+        %!..+--password <pwd>%!0         Set repository password)", FelixTarget);
     };
 
     // Parse arguments
@@ -114,8 +116,8 @@ Options:
                 return 0;
             } else if (opt.Test("-R", "--repository_dir", OptionType::Value)) {
                 repo_directory = opt.current_value;
-            } else if (opt.Test("-p", "--password", OptionType::Value)) {
-                repo_pwd = opt.current_value;
+            } else if (opt.Test("--password", OptionType::Value)) {
+                pwd = opt.current_value;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -133,12 +135,15 @@ Options:
         LogError("Missing repository directory");
         return 1;
     }
-    if (!repo_pwd) {
-        LogError("Missing repository password");
-        return 1;
+
+    if (!pwd) {
+        pwd = Prompt("Repository password: ", nullptr, "*", &temp_alloc);
+        if (!pwd)
+            return 1;
+        LogInfo();
     }
 
-    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, repo_pwd);
+    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
@@ -160,9 +165,11 @@ Options:
 
 static int RunGetFile(Span<const char *> arguments)
 {
+    BlockAllocator temp_alloc;
+
     // Options
     const char *repo_directory = nullptr;
-    const char *repo_pwd = nullptr;
+    const char *pwd = nullptr;
     const char *dest_filename = nullptr;
     const char *name = nullptr;
 
@@ -172,7 +179,7 @@ R"(Usage: %!..+%1 get_file <ID> [-O <file>]%!0
 
 Options:
     %!..+-R, --repository_dir <dir>%!0   Set repository directory
-    %!..+-p, --password <pwd>%!0         Set repository password
+        %!..+--password <pwd>%!0         Set repository password
 
     %!..+-O, --output_file <dir>%!0      Restore file to <file>)", FelixTarget);
     };
@@ -187,8 +194,8 @@ Options:
                 return 0;
             } else if (opt.Test("-R", "--repository_dir", OptionType::Value)) {
                 repo_directory = opt.current_value;
-            } else if (opt.Test("-p", "--password", OptionType::Value)) {
-                repo_pwd = opt.current_value;
+            } else if (opt.Test("--password", OptionType::Value)) {
+                pwd = opt.current_value;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 dest_filename = opt.current_value;
             } else {
@@ -212,12 +219,15 @@ Options:
         LogError("Missing destination filename");
         return 1;
     }
-    if (!repo_pwd) {
-        LogError("Missing decryption key");
-        return 1;
+
+    if (!pwd) {
+        pwd = Prompt("Repository password: ", nullptr, "*", &temp_alloc);
+        if (!pwd)
+            return 1;
+        LogInfo();
     }
 
-    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, repo_pwd);
+    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
