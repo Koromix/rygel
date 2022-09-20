@@ -99,10 +99,10 @@ static int RunPutFile(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 put_file <filename> [-O <dir>]%!0
+R"(Usage: %!..+%1 put_file -R <dir> <filename>%!0
 
 Options:
-    %!..+-R, --repository_dir <dir>%!0   Set repository directory
+    %!..+-R, --repository <dir>%!0       Set repository directory
         %!..+--password <pwd>%!0         Set repository password)", FelixTarget);
     };
 
@@ -114,7 +114,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-R", "--repository_dir", OptionType::Value)) {
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 repo_directory = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
@@ -175,13 +175,13 @@ static int RunGetFile(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 get_file <ID> [-O <file>]%!0
+R"(Usage: %!..+%1 get_file -R <repo> -O <file> <ID>%!0
 
 Options:
-    %!..+-R, --repository_dir <dir>%!0   Set repository directory
+    %!..+-R, --repository <dir>%!0       Set repository directory
         %!..+--password <pwd>%!0         Set repository password
 
-    %!..+-O, --output_file <dir>%!0      Restore file to <file>)", FelixTarget);
+    %!..+-O, --output_file <file>%!0     Restore file to <file>)", FelixTarget);
     };
 
     // Parse arguments
@@ -192,7 +192,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-R", "--repository_dir", OptionType::Value)) {
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 repo_directory = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
