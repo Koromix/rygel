@@ -31,15 +31,9 @@ struct ChunkIntro {
 #define CHUNK_VERSION 1
 #define CHUNK_SPLIT Kibibytes(8)
 
-kt_Disk::kt_Disk(kt_DiskMode mode, uint8_t skey[32], uint8_t pkey[32])
-    : mode(mode)
-{
-    memcpy(this->skey, skey, RG_SIZE(this->skey));
-    memcpy(this->pkey, pkey, RG_SIZE(this->pkey));
-}
-
 bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
 {
+    RG_ASSERT(url);
     RG_ASSERT(mode == kt_DiskMode::ReadWrite);
 
     Size prev_len = out_chunk->len;
@@ -128,6 +122,8 @@ bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
 
 Size kt_Disk::Write(const kt_ID &id, Span<const uint8_t> chunk)
 {
+    RG_ASSERT(url);
+
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs%/%1%/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 

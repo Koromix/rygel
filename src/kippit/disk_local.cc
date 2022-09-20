@@ -21,8 +21,6 @@ static const int MaxPathSize = 4096 - 128;
 static const uint8_t RepoVersion = 1;
 
 class LocalDisk: public kt_Disk {
-    LocalArray<char, MaxPathSize + 128> directory;
-
 public:
     LocalDisk(Span<const char> directory, kt_DiskMode mode,
               uint8_t skey[crypto_box_SECRETKEYBYTES], uint8_t pkey[crypto_box_PUBLICKEYBYTES]);
@@ -34,12 +32,14 @@ public:
 
 LocalDisk::LocalDisk(Span<const char> directory, kt_DiskMode mode,
                      uint8_t skey[crypto_box_SECRETKEYBYTES], uint8_t pkey[crypto_box_PUBLICKEYBYTES])
-    : kt_Disk(mode, skey, pkey)
 {
     RG_ASSERT(directory.len <= MaxPathSize);
 
-    this->directory.Append(directory);
-    this->directory.data[this->directory.len] = 0;
+    this->url = NormalizePath(directory, GetWorkingDirectory(), &str_alloc).ptr;
+
+    this->mode = mode;
+    memcpy(this->skey, skey, RG_SIZE(this->skey));
+    memcpy(this->pkey, pkey, RG_SIZE(this->pkey));
 }
 
 LocalDisk::~LocalDisk()
@@ -49,7 +49,7 @@ LocalDisk::~LocalDisk()
 bool LocalDisk::ReadObject(const char *path, HeapArray<uint8_t> *out_obj)
 {
     LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", directory, path).len;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
     return ReadFile(filename.data, Mebibytes(16), out_obj) >= 0;
 }
@@ -57,7 +57,7 @@ bool LocalDisk::ReadObject(const char *path, HeapArray<uint8_t> *out_obj)
 Size LocalDisk::WriteObject(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
     LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", directory, path).len;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
     // Open destination file
     FILE *fp;

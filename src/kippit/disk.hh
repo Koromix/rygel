@@ -22,16 +22,27 @@ enum class kt_DiskMode {
     WriteOnly,
     ReadWrite
 };
+static const char *const kt_DiskModeNames[] = {
+    "WriteOnly",
+    "ReadWrite"
+};
 
 class kt_Disk {
+protected:
+    const char *url = nullptr;
+
     kt_DiskMode mode;
     uint8_t pkey[32];
     uint8_t skey[32];
 
+    BlockAllocator str_alloc;
+
+    kt_Disk() = default;
+
 public:
-    kt_Disk(kt_DiskMode mode, uint8_t skey[32], uint8_t pkey[32]);
     virtual ~kt_Disk() = default;
 
+    const char *GetURL() const { return url; }
     kt_DiskMode GetMode() const { return mode; }
 
     bool Read(const kt_ID &id, HeapArray<uint8_t> *out_chunk);

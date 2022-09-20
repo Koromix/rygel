@@ -140,7 +140,6 @@ Options:
         pwd = Prompt("Repository password: ", nullptr, "*", &temp_alloc);
         if (!pwd)
             return 1;
-        LogInfo();
     }
 
     kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
@@ -148,9 +147,13 @@ Options:
         return 1;
     RG_DEFER { delete disk; };
 
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), kt_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != kt_DiskMode::WriteOnly) {
         LogError("You should use the write-only key with this command");
     }
+
+    LogInfo();
+    LogInfo("Backing up...");
 
     kt_ID id = {};
     Size written = 0;
@@ -224,7 +227,6 @@ Options:
         pwd = Prompt("Repository password: ", nullptr, "*", &temp_alloc);
         if (!pwd)
             return 1;
-        LogInfo();
     }
 
     kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
@@ -232,10 +234,14 @@ Options:
         return 1;
     RG_DEFER { delete disk; };
 
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), kt_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != kt_DiskMode::ReadWrite) {
         LogError("Cannot decrypt with write-only key");
         return 1;
     }
+
+    LogInfo();
+    LogInfo("Extracting file...");
 
     Size file_len = 0;
     {
