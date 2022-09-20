@@ -8,7 +8,7 @@
 | *felix*    | Small build system made specifically for this repository                   | Good             |
 | *goupile*  | Programmable electronic data capture application                           | Work in progress |
 | *heimdall* | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
-| *klaut*    | Public-key backup tool with deduplication                                  | Work in progress |
+| *kippit*   | Public-key backup tool with deduplication                                  | Work in progress |
 | *mael*     | Mael robot code for 'Coupe de France de Robotique 2022' competition        | Work in progress |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
