@@ -19,23 +19,6 @@
 
 namespace RG {
 
-class kt_Disk;
-
-bool kt_ListSnapshots(kt_Disk *disk, Allocator *alloc, HeapArray<kt_SnapshotInfo> *out_snapshots)
-{
-    RG_UNREACHABLE();
-}
-
-bool kt_ReadSnapshot(kt_Disk *disk, const kt_ID &id, Allocator *alloc, kt_SnapshotInfo *out_snapshot)
-{
-    RG_UNREACHABLE();
-}
-
-bool kt_ListDirectory(kt_Disk *disk, const kt_ID &id, Allocator *alloc, HeapArray<kt_EntryInfo> *out_entries)
-{
-    RG_UNREACHABLE();
-}
-
 bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, Size *out_len)
 {
     // Open destination file
@@ -73,16 +56,6 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, S
         *out_len = writer.GetRawWritten();
     }
     return true;
-}
-
-bool kt_CreateSnapshot(kt_Disk *disk, const char *dir_id, kt_ID *out_id)
-{
-    RG_UNREACHABLE();
-}
-
-bool kt_CreateDirectory(kt_Disk *disk, Span<const kt_EntryInfo> entries, kt_ID *out_id)
-{
-    RG_UNREACHABLE();
 }
 
 bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size *out_written)
