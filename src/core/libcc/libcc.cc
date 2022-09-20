@@ -1279,12 +1279,13 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtType::Random: {
-                RG_ASSERT(arg.u.random_len <= RG_SIZE(out_buf.data));
+                static const char *const DefaultChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+                Span<const char> chars = arg.u.random.chars ? arg.u.random.chars : DefaultChars;
 
-                for (Size j = 0; j < arg.u.random_len; j++) {
-                    static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+                RG_ASSERT(arg.u.random.len <= RG_SIZE(out_buf.data));
 
-                    int rnd = GetRandomIntSafe(0, (int)strlen(chars));
+                for (Size j = 0; j < arg.u.random.len; j++) {
+                    int rnd = GetRandomIntSafe(0, chars.len);
                     out_buf.Append(chars[rnd]);
                 }
 

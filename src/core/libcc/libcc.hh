@@ -3177,7 +3177,10 @@ public:
         const void *ptr;
         LocalDate date;
         TimeSpec time;
-        Size random_len;
+        struct {
+            Size len;
+            const char *chars;
+        } random;
         struct {
             uint64_t flags;
             union {
@@ -3295,14 +3298,15 @@ static inline FmtArg FmtTimeNice(TimeSpec spec)
     return arg;
 }
 
-static inline FmtArg FmtRandom(Size len)
+static inline FmtArg FmtRandom(Size len, const char *chars = nullptr)
 {
     RG_ASSERT(len < 256);
     len = std::min(len, (Size)256);
 
     FmtArg arg;
     arg.type = FmtType::Random;
-    arg.u.random_len = len;
+    arg.u.random.len = len;
+    arg.u.random.chars = chars;
     return arg;
 }
 

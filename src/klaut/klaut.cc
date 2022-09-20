@@ -14,10 +14,26 @@
 #include "src/core/libcc/libcc.hh"
 #include "disk.hh"
 #include "repository.hh"
+#include "src/core/libpasswd/libpasswd.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/curl/include/curl/curl.h"
 
 namespace RG {
+
+static bool GeneratePassword(Span<char> out_pwd)
+{
+    static const char *const AllowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#%&()*+,-./:;<=>?[]_{}|";
+
+    for (Size i = 0; i < 1000; i++) {
+        Fmt(out_pwd, "%1", FmtRandom(out_pwd.len - 1, AllowedChars));
+
+        if (pwd_CheckPassword(out_pwd))
+            return true;
+    }
+
+    LogError("Failed to generate secure password");
+    return false;
+}
 
 static int RunInit(Span<const char *> arguments)
 {
@@ -52,25 +68,22 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
     }
 
     // Generate repository passwords
-    char full_pwd[45] = {};
-    char write_pwd[45] = {};
-    {
-        uint8_t full_key[32];
-        uint8_t write_key[32];
-
-        randombytes_buf(full_key, RG_SIZE(full_key));
-        randombytes_buf(write_key, RG_SIZE(write_key));
-
-        sodium_bin2base64(full_pwd, RG_SIZE(full_pwd), full_key, RG_SIZE(full_key), sodium_base64_VARIANT_ORIGINAL);
-        sodium_bin2base64(write_pwd, RG_SIZE(write_pwd), write_key, RG_SIZE(write_key), sodium_base64_VARIANT_ORIGINAL);
-    }
+    char full_pwd[33] = {};
+    char write_pwd[33] = {};
+    if (!GeneratePassword(full_pwd))
+        return 1;
+    if (!GeneratePassword(write_pwd))
+        return 1;
 
     if (!kt_CreateLocalDisk(repo_directory, full_pwd, write_pwd))
         return 1;
 
     LogInfo("Repository: %!..+%1%!0", TrimStrRight(repo_directory, RG_PATH_SEPARATORS));
+    LogInfo();
     LogInfo("Default full password: %!..+%1%!0", full_pwd);
     LogInfo("  write-only password: %!..+%1%!0", write_pwd);
+    LogInfo();
+    LogInfo("Please write them down, they cannot be recovered and the backup will be lost if you lose them.");
 
     return 0;
 }
