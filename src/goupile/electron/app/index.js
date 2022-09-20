@@ -3,7 +3,7 @@
 const settings = require('./package.json');
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, MenuItem } = require('electron');
 const { autoUpdater } = require('electron-updater');
 
 if (app.requestSingleInstanceLock()) {
@@ -53,8 +53,17 @@ if (app.requestSingleInstanceLock()) {
                 nodeIntegration: true
             }
         });
-        //if (isPackaged())
-            //win.setMenu(null);
+
+        let menu = Menu.buildFromTemplate(Menu.getApplicationMenu().items);
+        menu.insert(menu.items.length - 1, new MenuItem({
+            label: 'Print',
+            click: () => win.webContents.print({
+                silent: false,
+                printBackground: true,
+            })
+        }));
+        win.setMenu(menu);
+
         win.loadURL(settings.homepage);
     });
 
