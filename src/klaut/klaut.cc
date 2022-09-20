@@ -258,7 +258,10 @@ int Main(int argc, char **argv)
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 
-Commands:
+Main commands:
+    %!..+init%!0                         Init new backup repository
+
+Specialized commands:
     %!..+put_file%!0                     Store encrypted file to storage
     %!..+get_file%!0                     Get and decrypt file from storage
 
