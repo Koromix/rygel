@@ -286,6 +286,10 @@ public:
         if (host == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
+        supported |= (int)CompileFeature::SSE41;
+        supported |= (int)CompileFeature::SSE42;
+        supported |= (int)CompileFeature::AVX2;
+        supported |= (int)CompileFeature::AVX512;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -416,7 +420,20 @@ public:
         if (features & (int)CompileFeature::HotAssets) {
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
-#ifdef __i386__
+#if defined(__x86_64__)
+        if (features & (int)CompileFeature::SSE41) {
+            Fmt(&buf, " -msse4.1");
+        }
+        if (features & (int)CompileFeature::SSE42) {
+            Fmt(&buf, " -msse4.2");
+        }
+        if (features & (int)CompileFeature::AVX2) {
+            Fmt(&buf, " -mavx2");
+        }
+        if (features & (int)CompileFeature::AVX512) {
+            Fmt(&buf, " -mavx512f -mavx512vl");
+        }
+#elif defined(__i386__)
         Fmt(&buf, " -msse2");
 #endif
 
@@ -746,6 +763,10 @@ public:
         if (host == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
+        supported |= (int)CompileFeature::SSE41;
+        supported |= (int)CompileFeature::SSE42;
+        supported |= (int)CompileFeature::AVX2;
+        supported |= (int)CompileFeature::AVX512;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -871,7 +892,20 @@ public:
         if (features & (int)CompileFeature::HotAssets) {
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
-#ifdef __i386__
+#if defined(__x86_64__)
+        if (features & (int)CompileFeature::SSE41) {
+            Fmt(&buf, " -msse4.1");
+        }
+        if (features & (int)CompileFeature::SSE42) {
+            Fmt(&buf, " -msse4.2");
+        }
+        if (features & (int)CompileFeature::AVX2) {
+            Fmt(&buf, " -mavx2");
+        }
+        if (features & (int)CompileFeature::AVX512) {
+            Fmt(&buf, " -mavx512f -mavx512vl");
+        }
+#elif defined(__i386__)
         Fmt(&buf, " -msse2");
 #endif
 
@@ -1120,6 +1154,10 @@ public:
         if (host == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
+        supported |= (int)CompileFeature::SSE41;
+        supported |= (int)CompileFeature::SSE42;
+        supported |= (int)CompileFeature::AVX2;
+        supported |= (int)CompileFeature::AVX512;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -1249,6 +1287,14 @@ public:
         if (features & (int)CompileFeature::CFI) {
             Fmt(&buf, " /guard:cf /guard:ehcont");
         }
+#ifdef __x86_64__
+        if (features & (int)CompileFeature::AVX2) {
+            Fmt(&buf, " /arch:AVX2");
+        }
+        if (features & (int)CompileFeature::AVX512) {
+            Fmt(&buf, " /arch:AVX512");
+        }
+#endif
 
         // Sources and definitions
         Fmt(&buf, " /DFELIX /c /utf-8 \"%1\"", src_filename);

@@ -93,7 +93,12 @@ enum class CompileFeature {
     CFI = 1 << 13,
     ShuffleCode = 1 << 14,
     Cxx17 = 1 << 15,
-    NoConsole = 1 << 16
+    NoConsole = 1 << 16,
+
+    SSE41 = 1 << 17,
+    SSE42 = 1 << 18,
+    AVX2 = 1 << 19,
+    AVX512 = 1 << 20
 };
 static const OptionDesc CompileFeatureOptions[] = {
     {"PCH",           "Use precompiled headers for faster compilation"},
@@ -112,7 +117,12 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"CFI",           "Enable forward-edge CFI protection (Clang LTO)"},
     {"ShuffleCode",   "Randomize ordering of data and functions (Clang)"},
     {"C++17",         "Use C++17 standard instead of C++20"},
-    {"NoConsole",     "Link with /subsystem:windows (only for Windows)"}
+    {"NoConsole",     "Link with /subsystem:windows (only for Windows)"},
+
+    {"SSE41",         "Enable SSE4.1 generation and instrinsics (x86_64)"},
+    {"SSE42",         "Enable SSE4.2 generation and instrinsics (x86_64)"},
+    {"AVX2",          "Enable AVX2 generation and instrinsics (x86_64)"},
+    {"AVX512",        "Enable AVX512 generation and instrinsics (x86_64)"}
 };
 
 enum class SourceType {
