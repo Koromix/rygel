@@ -157,6 +157,9 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_enable, uint3
         if (part.len && part[0] == '-') {
             part = part.Take(1, part.len - 1);
             enable = false;
+        } else if (part.len && part[0] == '+') {
+            part = part.Take(1, part.len - 1);
+            enable = true;
         } else {
             enable = true;
         }
