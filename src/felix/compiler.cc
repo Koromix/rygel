@@ -416,6 +416,9 @@ public:
         if (features & (int)CompileFeature::HotAssets) {
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
+#ifdef __i386__
+        Fmt(&buf, " -msse2");
+#endif
 
         // Platform flags
         switch (host) {
@@ -868,6 +871,9 @@ public:
         if (features & (int)CompileFeature::HotAssets) {
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
+#ifdef __i386__
+        Fmt(&buf, " -msse2");
+#endif
 
         // Platform flags
         switch (host) {
