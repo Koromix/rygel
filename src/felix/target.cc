@@ -23,6 +23,11 @@ struct FileSet {
     HeapArray<const char *> ignore;
 };
 
+struct SourceFeatures {
+    uint32_t enable_features;
+    uint32_t disable_features;
+};
+
 // Temporary struct used until target is created
 struct TargetConfig {
     const char *name;
@@ -33,6 +38,7 @@ struct TargetConfig {
     const char *icon_filename;
 
     FileSet src_file_set;
+    HashMap<const char *, SourceFeatures> src_features;
     const char *c_pch_filename;
     const char *cxx_pch_filename;
 
@@ -140,6 +146,34 @@ static bool CheckTargetName(Span<const char> name)
     return true;
 }
 
+static bool ParseFeatureString(Span<const char> str, uint32_t *out_enable, uint32_t *out_disable)
+{
+    bool valid = true;
+
+    while (str.len) {
+        Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str));
+
+        bool enable;
+        if (part.len && part[0] == '-') {
+            part = part.Take(1, part.len - 1);
+            enable = false;
+        } else {
+            enable = true;
+        }
+
+        if (part.len) {
+            uint32_t *dest = enable ? out_enable : out_disable;
+
+            if (!OptionToFlag(CompileFeatureOptions, part, dest)) {
+                LogError("Unknown target feature '%1'", part);
+                valid = false;
+            }
+        }
+    }
+
+    return valid;
+}
+
 bool TargetSetBuilder::LoadIni(StreamReader *st)
 {
     RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
@@ -228,8 +262,17 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         valid &= AppendNormalizedPath(prop.value,
                                                       &set.str_alloc, &target_config.src_file_set.directories_rec);
                     } else if (prop.key == "SourceFile") {
-                        valid &= AppendNormalizedPath(prop.value,
-                                                      &set.str_alloc, &target_config.src_file_set.filenames);
+                        Span<const char> path = SplitStr(prop.value, ' ', &prop.value);
+
+                        SourceFeatures features = {};
+                        valid &= ParseFeatureString(prop.value, &features.enable_features, &features.disable_features);
+
+                        path = NormalizePath(path, &set.str_alloc);
+                        target_config.src_file_set.filenames.Append(path.ptr);
+
+                        if (features.enable_features || features.disable_features) {
+                            target_config.src_features.Set(path.ptr, features);
+                        }
                     } else if (prop.key == "SourceIgnore") {
                         while (prop.value.len) {
                             Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
@@ -263,26 +306,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "ExportDefinitions") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.export_definitions);
                     } else if (prop.key == "Features") {
-                        while (prop.value.len) {
-                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-
-                            bool enable;
-                            if (part.len && part[0] == '-') {
-                                part = part.Take(1, part.len - 1);
-                                enable = false;
-                            } else {
-                                enable = true;
-                            }
-
-                            if (part.len) {
-                                uint32_t *dest = enable ? &target_config.enable_features : &target_config.disable_features;
-
-                                if (!OptionToFlag(CompileFeatureOptions, part, dest)) {
-                                    LogError("Unknown target feature '%1'", part);
-                                    valid = false;
-                                }
-                            }
-                        }
+                        valid &= ParseFeatureString(prop.value, &target_config.enable_features, &target_config.disable_features);
                     } else if (prop.key == "Link") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
                     } else if (prop.key == "AssetDirectory") {
@@ -294,7 +318,6 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "AssetFile") {
                         valid &= AppendNormalizedPath(prop.value,
                                                       &set.str_alloc, &target_config.pack_file_set.filenames);
-
                     } else if (prop.key == "AssetIgnore") {
                         while (prop.value.len) {
                             Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
@@ -353,7 +376,7 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
 }
 
 // We steal stuff from TargetConfig so it's not reusable after that
-const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
+TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
     RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
 
@@ -421,7 +444,14 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             if (!DetermineSourceType(src_filename, &src_type))
                 continue;
 
-            const SourceFileInfo *src = CreateSource(target, src_filename, src_type);
+            SourceFileInfo *src = CreateSource(target, src_filename, src_type);
+            const SourceFeatures *features = target_config->src_features.Find(src_filename);
+
+            if (features) {
+                src->enable_features = features->enable_features;
+                src->disable_features = features->disable_features;
+            }
+
             target->sources.Append(src);
         }
     }
@@ -485,7 +515,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     return target;
 }
 
-const SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, const char *filename, SourceType type)
+SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, const char *filename, SourceType type)
 {
     std::pair<SourceFileInfo **, bool> ret = set.sources_map.TrySetDefault(filename);
 

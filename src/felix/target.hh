@@ -35,6 +35,17 @@ struct SourceFileInfo {
     const char *filename;
     SourceType type;
 
+    uint32_t enable_features;
+    uint32_t disable_features;
+
+    uint32_t CombineFeatures(uint32_t defaults) const
+    {
+        defaults |= enable_features;
+        defaults &= ~disable_features;
+
+        return defaults;
+    }
+
     RG_HASHTABLE_HANDLER(SourceFileInfo, filename);
 };
 
@@ -107,8 +118,8 @@ public:
     void Finish(TargetSet *out_set);
 
 private:
-    const TargetInfo *CreateTarget(TargetConfig *target_config);
-    const SourceFileInfo *CreateSource(const TargetInfo *target, const char *filename, SourceType type);
+    TargetInfo *CreateTarget(TargetConfig *target_config);
+    SourceFileInfo *CreateSource(const TargetInfo *target, const char *filename, SourceType type);
 
     bool MatchHostSuffix(Span<const char> str, bool *out_match);
 };

@@ -523,7 +523,10 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
         obj_filename = BuildObjectPath(ns, src.filename, cache_directory,
                                        build.compiler->GetObjectExtension(), &str_alloc);
         bool warnings = (src.target->type != TargetType::ExternalLibrary);
-        uint32_t features = src.target->CombineFeatures(build.features);
+
+        uint32_t features = build.features;
+        features = src.target->CombineFeatures(features);
+        features = src.CombineFeatures(features);
 
         Command cmd = {};
         build.compiler->MakeObjectCommand(src.filename, src.type, warnings,
