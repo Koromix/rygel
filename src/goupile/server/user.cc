@@ -825,8 +825,12 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 
         return true;
     });
-    if (!success)
+    if (!success) {
+        // The FOREIGN KEY check is deferred so the error happens on COMMIT
+        LogError("Token contains invalid claims");
+        io->AttachError(422);
         return false;
+    }
 
     sessions.Open(request, io, session);
 
