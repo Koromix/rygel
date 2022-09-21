@@ -15,7 +15,7 @@
 #include "chunker.hh"
 #include "disk.hh"
 #include "repository.hh"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/blake3/c/blake3.h"
 
 namespace RG {
 
@@ -65,9 +65,10 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, S
 bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size *out_written)
 {
     Span<const uint8_t> salt = disk->GetSalt();
+    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
-    crypto_generichash_blake2b_state state;
-    crypto_generichash_blake2b_init(&state, salt.ptr, (size_t)salt.len, 32);
+    blake3_hasher file_hasher;
+    blake3_hasher_init_keyed(&file_hasher, salt.ptr);
 
     // Split the file
     HeapArray<uint8_t> summary;
@@ -91,7 +92,12 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
 
                 processed = chunker.Process(buf, st.IsEOF(), [&](Size idx, Size total, Span<const uint8_t> chunk) {
                     kt_ID id = {};
-                    crypto_generichash_blake2b(id.hash, RG_SIZE(id.hash), chunk.ptr, chunk.len, salt.ptr, salt.len);
+                    {
+                        blake3_hasher hasher;
+                        blake3_hasher_init_keyed(&hasher, salt.ptr);
+                        blake3_hasher_update(&hasher, chunk.ptr, chunk.len);
+                        blake3_hasher_finalize(&hasher, id.hash, RG_SIZE(id.hash));
+                    }
 
                     Size ret = disk->Write(id, chunk);
                     if (ret < 0)
@@ -99,7 +105,7 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
                     written += ret;
 
                     summary.Append(MakeSpan((const uint8_t *)&id, RG_SIZE(id)));
-                    crypto_generichash_blake2b_update(&state, chunk.ptr, (size_t)chunk.len);
+                    blake3_hasher_update(&file_hasher, chunk.ptr, (size_t)chunk.len);
 
                     return true;
                 });
@@ -115,7 +121,7 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
     // Write list of chunks
     kt_ID id = {};
     {
-        crypto_generichash_final(&state, id.hash, RG_SIZE(id.hash));
+        blake3_hasher_finalize(&file_hasher, id.hash, RG_SIZE(id.hash));
 
         Size ret = disk->Write(id, summary);
         if (ret < 0)
