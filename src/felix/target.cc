@@ -59,15 +59,13 @@ struct TargetConfig {
     RG_HASHTABLE_HANDLER(TargetConfig, name);
 };
 
-static bool AppendNormalizedPath(Span<const char> path,
+static void AppendNormalizedPath(Span<const char> path,
                                  Allocator *alloc, HeapArray<const char *> *out_paths)
 {
     RG_ASSERT(alloc);
 
     const char *norm_path = NormalizePath(path, alloc).ptr;
     out_paths->Append(norm_path);
-
-    return true;
 }
 
 static void AppendListValues(Span<const char> str,
@@ -249,21 +247,17 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "IconFile") {
                         target_config.icon_filename = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "SourceDirectory") {
-                        valid &= AppendNormalizedPath(prop.value,
-                                                      &set.str_alloc, &target_config.src_file_set.directories);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.src_file_set.directories);
                     } else if (prop.key == "SourceDirectoryInc") {
                         HeapArray<const char *> *directories = &target_config.src_file_set.directories;
                         Size start_len = directories->len;
 
-                        if (AppendNormalizedPath(prop.value, &set.str_alloc, directories)) {
-                            Span<const char *> copy = directories->Take(start_len, directories->len - start_len);
-                            target_config.include_directories.Append(copy);
-                        } else {
-                            valid = false;
-                        }
+                        AppendNormalizedPath(prop.value, &set.str_alloc, directories);
+
+                        Span<const char *> copy = directories->Take(start_len, directories->len - start_len);
+                        target_config.include_directories.Append(copy);
                     } else if (prop.key == "SourceDirectoryRec") {
-                        valid &= AppendNormalizedPath(prop.value,
-                                                      &set.str_alloc, &target_config.src_file_set.directories_rec);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.src_file_set.directories_rec);
                     } else if (prop.key == "SourceFile") {
                         Span<const char> path = SplitStr(prop.value, ' ', &prop.value);
 
@@ -295,11 +289,9 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                             }
                         }
                     } else if (prop.key == "IncludeDirectory") {
-                        valid &= AppendNormalizedPath(prop.value, &set.str_alloc,
-                                                      &target_config.include_directories);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.include_directories);
                     } else if (prop.key == "ForceInclude") {
-                        valid &= AppendNormalizedPath(prop.value, &set.str_alloc,
-                                                      &target_config.include_files);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.include_files);
                     } else if (prop.key == "PrecompileC") {
                         target_config.c_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "PrecompileCXX") {
@@ -313,14 +305,11 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "Link") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
                     } else if (prop.key == "AssetDirectory") {
-                        valid &= AppendNormalizedPath(prop.value,
-                                                      &set.str_alloc, &target_config.pack_file_set.directories);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.pack_file_set.directories);
                     } else if (prop.key == "AssetDirectoryRec") {
-                        valid &= AppendNormalizedPath(prop.value,
-                                                      &set.str_alloc, &target_config.pack_file_set.directories_rec);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.pack_file_set.directories_rec);
                     } else if (prop.key == "AssetFile") {
-                        valid &= AppendNormalizedPath(prop.value,
-                                                      &set.str_alloc, &target_config.pack_file_set.filenames);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.pack_file_set.filenames);
                     } else if (prop.key == "AssetIgnore") {
                         while (prop.value.len) {
                             Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
