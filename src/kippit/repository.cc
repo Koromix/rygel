@@ -68,70 +68,96 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     blake3_hasher file_hasher;
+    HeapArray<uint8_t> chunk_ids;
     blake3_hasher_init_keyed(&file_hasher, salt.ptr);
 
     // Split the file
-    HeapArray<uint8_t> summary;
-    Size written = 0;
+    std::atomic<Size> written = 0;
     {
         StreamReader st(src_filename);
 
         kt_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
-        HeapArray<uint8_t> buf;
 
-        buf.Grow(Mebibytes(4));
+        HeapArray<uint8_t> buf;
+        buf.SetCapacity(Mebibytes(256));
 
         do {
-            Size processed = 0;
+            Async async;
+
+            // Fill buffer
+            Span<const uint8_t> read;
+            read.ptr = buf.end();
+            read.len = st.Read(buf.TakeAvailable());
+            if (read.len < 0)
+                return false;
+            buf.len += read.len;
+
+            // Update global file hash
+            async.Run([&]() {
+                blake3_hasher_update(&file_hasher, read.ptr, (size_t)read.len);
+                return true;
+            });
+
+            Span<const uint8_t> remain = buf;
+
+            // We can't relocate in the inner loop
+            chunk_ids.Grow((remain.len / ChunkMin + 1) * RG_SIZE(kt_ID));
 
             do {
-                buf.Grow(Mebibytes(2));
+                Size processed = chunker.Process(remain, st.IsEOF(), [&](Size idx, Size total, Span<const uint8_t> chunk) {
+                    RG_ASSERT(idx * 32 == chunk_ids.len);
+                    chunk_ids.len += 32;
 
-                Size read = st.Read(buf.TakeAvailable());
-                if (read < 0)
-                    return false;
-                buf.len += read;
+                    async.Run([=, &written, &chunk_ids]() {
+                        kt_ID id = {};
+                        {
+                            blake3_hasher hasher;
+                            blake3_hasher_init_keyed(&hasher, salt.ptr);
+                            blake3_hasher_update(&hasher, chunk.ptr, chunk.len);
+                            blake3_hasher_finalize(&hasher, id.hash, RG_SIZE(id.hash));
+                        }
 
-                processed = chunker.Process(buf, st.IsEOF(), [&](Size idx, Size total, Span<const uint8_t> chunk) {
-                    kt_ID id = {};
-                    {
-                        blake3_hasher hasher;
-                        blake3_hasher_init_keyed(&hasher, salt.ptr);
-                        blake3_hasher_update(&hasher, chunk.ptr, chunk.len);
-                        blake3_hasher_finalize(&hasher, id.hash, RG_SIZE(id.hash));
-                    }
+                        Size ret = disk->Write(id, chunk);
+                        if (ret < 0)
+                            return false;
+                        written += ret;
 
-                    Size ret = disk->Write(id, chunk);
-                    if (ret < 0)
-                        return false;
-                    written += ret;
+                        memcpy(chunk_ids.ptr + idx * RG_SIZE(id), &id, RG_SIZE(id));
 
-                    summary.Append(MakeSpan((const uint8_t *)&id, RG_SIZE(id)));
-                    blake3_hasher_update(&file_hasher, chunk.ptr, (size_t)chunk.len);
+                        return true;
+                    });
 
                     return true;
                 });
                 if (processed < 0)
                     return false;
-            } while (!processed);
+                if (!processed)
+                    break;
 
-            memmove_safe(buf.ptr, buf.ptr + processed, buf.len - processed);
-            buf.len -= processed;
-        } while (!st.IsEOF());
+                remain.ptr += processed;
+                remain.len -= processed;
+            } while (remain.len);
+
+            if (!async.Sync())
+                return false;
+
+            memmove_safe(buf.ptr, remain.ptr, remain.len);
+            buf.len = remain.len;
+        } while (!st.IsEOF() || buf.len);
     }
 
     // Write list of chunks
-    kt_ID id = {};
+    kt_ID file_id = {};
     {
-        blake3_hasher_finalize(&file_hasher, id.hash, RG_SIZE(id.hash));
+        blake3_hasher_finalize(&file_hasher, file_id.hash, RG_SIZE(file_id.hash));
 
-        Size ret = disk->Write(id, summary);
+        Size ret = disk->Write(file_id, chunk_ids);
         if (ret < 0)
             return false;
         written += ret;
     }
 
-    *out_id = id;
+    *out_id = file_id;
     if (out_written) {
         *out_written = written;
     }
