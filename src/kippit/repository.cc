@@ -19,9 +19,9 @@
 
 namespace RG {
 
-static const Size ChunkAverage = Kibibytes(512);
-static const Size ChunkMin = Kibibytes(256);
-static const Size ChunkMax = Kibibytes(1280);
+static const Size ChunkAverage = Kibibytes(1024);
+static const Size ChunkMin = Kibibytes(512);
+static const Size ChunkMax = Kibibytes(2048);
 
 bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, Size *out_len)
 {
@@ -79,11 +79,13 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
         kt_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
         HeapArray<uint8_t> buf;
 
+        buf.Grow(Mebibytes(4));
+
         do {
             Size processed = 0;
 
             do {
-                buf.Grow(Mebibytes(1));
+                buf.Grow(Mebibytes(2));
 
                 Size read = st.Read(buf.TakeAvailable());
                 if (read < 0)
