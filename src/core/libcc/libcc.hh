@@ -2896,6 +2896,9 @@ public:
     bool IsValid() const { return filename && !error; }
     bool IsEOF() const { return eof; }
 
+    FILE *GetFile() const;
+    int GetDescriptor() const;
+
     Size Read(Span<uint8_t> out_buf);
     Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
     Size Read(Size max_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, max_len)); }
@@ -3085,6 +3088,9 @@ public:
     CompressionType GetCompressionType() const { return compression.type; }
     bool IsVt100() const { return dest.vt100; }
     bool IsValid() const { return filename && !error; }
+
+    FILE *GetFile() const;
+    int GetDescriptor() const;
 
     bool Write(Span<const uint8_t> buf);
     bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }

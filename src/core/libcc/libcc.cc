@@ -5880,6 +5880,23 @@ bool StreamReader::Rewind()
     return true;
 }
 
+FILE *StreamReader::GetFile() const
+{
+    RG_ASSERT(source.type == SourceType::File);
+    return source.u.file.fp;
+}
+
+int StreamReader::GetDescriptor() const
+{
+    RG_ASSERT(source.type == SourceType::File);
+
+#ifdef _WIN32
+    return _fileno(source.u.file.fp);
+#else
+    return fileno(source.u.file.fp);
+#endif
+}
+
 Size StreamReader::Read(Span<uint8_t> out_buf)
 {
     if (RG_UNLIKELY(error))
@@ -6508,6 +6525,23 @@ bool StreamWriter::Flush()
     }
 
     RG_UNREACHABLE();
+}
+
+FILE *StreamWriter::GetFile() const
+{
+    RG_ASSERT(dest.type == DestinationType::File);
+    return dest.u.file.fp;
+}
+
+int StreamWriter::GetDescriptor() const
+{
+    RG_ASSERT(dest.type == DestinationType::File);
+
+#ifdef _WIN32
+    return _fileno(dest.u.file.fp);
+#else
+    return fileno(dest.u.file.fp);
+#endif
 }
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
