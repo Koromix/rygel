@@ -20,6 +20,7 @@ namespace RG {
 
 struct TargetConfig;
 struct TargetInfo;
+struct SourceFeatures;
 
 enum class TargetType {
     Executable,
@@ -118,8 +119,9 @@ public:
     void Finish(TargetSet *out_set);
 
 private:
-    TargetInfo *CreateTarget(TargetConfig *target_config);
-    SourceFileInfo *CreateSource(const TargetInfo *target, const char *filename, SourceType type);
+    const TargetInfo *CreateTarget(TargetConfig *target_config);
+    const SourceFileInfo *CreateSource(const TargetInfo *target, const char *filename,
+                                       SourceType type, const SourceFeatures *features);
 
     bool MatchHostSuffix(Span<const char> str, bool *out_match);
 };

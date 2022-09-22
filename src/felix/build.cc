@@ -483,7 +483,10 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
 
                 const char *cache_filename = build.compiler->GetPchCache(pch_filename, &str_alloc);
                 bool warnings = (pch->target->type != TargetType::ExternalLibrary);
-                uint32_t features = pch->target->CombineFeatures(build.features);
+
+                uint32_t features = build.features;
+                features = pch->target->CombineFeatures(features);
+                features = pch->CombineFeatures(features);
 
                 Command cmd = {};
                 build.compiler->MakePchCommand(pch_filename, pch->type, warnings,

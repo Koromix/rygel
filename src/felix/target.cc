@@ -38,7 +38,6 @@ struct TargetConfig {
     const char *icon_filename;
 
     FileSet src_file_set;
-    HashMap<const char *, SourceFeatures> src_features;
     const char *c_pch_filename;
     const char *cxx_pch_filename;
 
@@ -50,6 +49,8 @@ struct TargetConfig {
     HeapArray<const char *> include_files;
     HeapArray<const char *> libraries;
 
+    HashMap<const char *, SourceFeatures> src_features;
+
     uint32_t enable_features;
     uint32_t disable_features;
 
@@ -59,17 +60,15 @@ struct TargetConfig {
     RG_HASHTABLE_HANDLER(TargetConfig, name);
 };
 
-static void AppendNormalizedPath(Span<const char> path,
-                                 Allocator *alloc, HeapArray<const char *> *out_paths)
+static void AppendNormalizedPath(Span<const char> path, Allocator *alloc, HeapArray<const char *> *out_paths)
 {
     RG_ASSERT(alloc);
 
-    const char *norm_path = NormalizePath(path, alloc).ptr;
-    out_paths->Append(norm_path);
+    path = NormalizePath(path, alloc);
+    out_paths->Append(path.ptr);
 }
 
-static void AppendListValues(Span<const char> str,
-                             Allocator *alloc, HeapArray<const char *> *out_libraries)
+static void AppendListValues(Span<const char> str, Allocator *alloc, HeapArray<const char *> *out_libraries)
 {
     RG_ASSERT(alloc);
 
@@ -261,14 +260,14 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "SourceFile") {
                         Span<const char> path = SplitStr(prop.value, ' ', &prop.value);
 
+                        const char *filename = NormalizePath(path, &set.str_alloc).ptr;
+                        target_config.src_file_set.filenames.Append(filename);
+
                         SourceFeatures features = {};
                         valid &= ParseFeatureString(prop.value, &features.enable_features, &features.disable_features);
 
-                        path = NormalizePath(path, &set.str_alloc);
-                        target_config.src_file_set.filenames.Append(path.ptr);
-
                         if (features.enable_features || features.disable_features) {
-                            target_config.src_features.Set(path.ptr, features);
+                            target_config.src_features.TrySet(filename, features);
                         }
                     } else if (prop.key == "SourceIgnore") {
                         while (prop.value.len) {
@@ -293,9 +292,27 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "ForceInclude") {
                         AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.include_files);
                     } else if (prop.key == "PrecompileC") {
-                        target_config.c_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
+                        Span<const char> path = SplitStr(prop.value, ' ', &prop.value);
+
+                        target_config.c_pch_filename = NormalizePath(path, &set.str_alloc).ptr;
+
+                        SourceFeatures features = {};
+                        valid &= ParseFeatureString(prop.value, &features.enable_features, &features.disable_features);
+
+                        if (features.enable_features || features.disable_features) {
+                            target_config.src_features.TrySet(target_config.c_pch_filename, features);
+                        }
                     } else if (prop.key == "PrecompileCXX") {
-                        target_config.cxx_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
+                        Span<const char> path = SplitStr(prop.value, ' ', &prop.value);
+
+                        target_config.cxx_pch_filename = NormalizePath(path, &set.str_alloc).ptr;
+
+                        SourceFeatures features = {};
+                        valid &= ParseFeatureString(prop.value, &features.enable_features, &features.disable_features);
+
+                        if (features.enable_features || features.disable_features) {
+                            target_config.src_features.TrySet(target_config.cxx_pch_filename, features);
+                        }
                     } else if (prop.key == "Definitions") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
                     } else if (prop.key == "ExportDefinitions") {
@@ -368,7 +385,7 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
 }
 
 // We steal stuff from TargetConfig so it's not reusable after that
-TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
+const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
     RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
 
@@ -432,29 +449,28 @@ TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             return nullptr;
 
         for (const char *src_filename: src_filenames) {
+            const SourceFeatures *features = target_config->src_features.Find(src_filename);
+
             SourceType src_type;
             if (!DetermineSourceType(src_filename, &src_type))
                 continue;
 
-            SourceFileInfo *src = CreateSource(target, src_filename, src_type);
-            const SourceFeatures *features = target_config->src_features.Find(src_filename);
-
-            if (features) {
-                src->enable_features = features->enable_features;
-                src->disable_features = features->disable_features;
-            }
-
+            const SourceFileInfo *src = CreateSource(target, src_filename, src_type, features);
             target->sources.Append(src);
         }
     }
 
     // PCH
     if (target_config->c_pch_filename) {
-        target->c_pch_src = CreateSource(target, target_config->c_pch_filename, SourceType::C);
+        const SourceFeatures *features = target_config->src_features.Find(target_config->c_pch_filename);
+
+        target->c_pch_src = CreateSource(target, target_config->c_pch_filename, SourceType::C, features);
         target->pchs.Append(target->c_pch_src->filename);
     }
     if (target_config->cxx_pch_filename) {
-        target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::CXX);
+        const SourceFeatures *features = target_config->src_features.Find(target_config->cxx_pch_filename);
+
+        target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::CXX, features);
         target->pchs.Append(target->cxx_pch_src->filename);
     }
 
@@ -507,7 +523,8 @@ TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     return target;
 }
 
-SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, const char *filename, SourceType type)
+const SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, const char *filename,
+                                                     SourceType type, const SourceFeatures *features)
 {
     std::pair<SourceFileInfo **, bool> ret = set.sources_map.TrySetDefault(filename);
 
@@ -517,6 +534,11 @@ SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, const c
         src->target = target;
         src->filename = DuplicateString(filename, &set.str_alloc).ptr;
         src->type = type;
+
+        if (features) {
+            src->enable_features = features->enable_features;
+            src->disable_features = features->disable_features;
+        }
 
         *ret.first = src;
     }
