@@ -5124,6 +5124,8 @@ class AsyncPool {
 public:
     AsyncPool(int threads, bool leak);
 
+    int GetWorkerCount() const { return (int)queues.len; }
+
     void RegisterAsync();
     void UnregisterAsync();
 
@@ -5193,6 +5195,11 @@ bool Async::IsTaskRunning()
 int Async::GetWorkerIdx()
 {
     return async_running_worker_idx;
+}
+
+int Async::GetWorkerCount()
+{
+    return async_running_pool->GetWorkerCount();
 }
 
 AsyncPool::AsyncPool(int threads, bool leak)

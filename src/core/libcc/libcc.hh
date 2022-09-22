@@ -4337,6 +4337,7 @@ public:
 
     static bool IsTaskRunning();
     static int GetWorkerIdx();
+    static int GetWorkerCount();
 
     friend class AsyncPool;
 };
