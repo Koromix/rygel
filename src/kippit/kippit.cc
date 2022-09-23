@@ -35,6 +35,32 @@ static bool GeneratePassword(Span<char> out_pwd)
     return false;
 }
 
+static const char *FillRepository(const char *repo_directory)
+{
+    if (!repo_directory) {
+        repo_directory = GetQualifiedEnv("REPOSITORY");
+
+        if (!repo_directory) {
+            LogError("Missing repository directory");
+        }
+    }
+
+    return repo_directory;
+}
+
+static const char *FillPassword(const char *pwd, Allocator *alloc)
+{
+    if (!pwd) {
+        pwd = GetQualifiedEnv("PASSWORD");
+
+        if (!pwd) {
+            pwd = Prompt("Repository password: ", nullptr, "*", alloc);
+        }
+    }
+
+    return pwd;
+}
+
 static int RunInit(Span<const char *> arguments)
 {
     // Options
@@ -131,16 +157,12 @@ Options:
         LogError("No filename provided");
         return 1;
     }
-    if (!repo_directory) {
-        LogError("Missing repository directory");
+    repo_directory = FillRepository(repo_directory);
+    if (!repo_directory)
         return 1;
-    }
-
-    if (!pwd) {
-        pwd = Prompt("Repository password: ", nullptr, "*", &temp_alloc);
-        if (!pwd)
-            return 1;
-    }
+    pwd = FillPassword(pwd, &temp_alloc);
+    if (!pwd)
+        return 1;
 
     kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
     if (!disk)
@@ -210,10 +232,6 @@ Options:
         name = opt.ConsumeNonOption();
     }
 
-    if (!repo_directory) {
-        LogError("Missing repository directory");
-        return 1;
-    }
     if (!name) {
         LogError("No name provided");
         return 1;
@@ -222,12 +240,12 @@ Options:
         LogError("Missing destination filename");
         return 1;
     }
-
-    if (!pwd) {
-        pwd = Prompt("Repository password: ", nullptr, "*", &temp_alloc);
-        if (!pwd)
-            return 1;
-    }
+    repo_directory = FillRepository(repo_directory);
+    if (!repo_directory)
+        return 1;
+    pwd = FillPassword(pwd, &temp_alloc);
+    if (!pwd)
+        return 1;
 
     kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
     if (!disk)
