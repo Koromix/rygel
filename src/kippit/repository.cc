@@ -23,6 +23,14 @@ static const Size ChunkAverage = Kibibytes(1024);
 static const Size ChunkMin = Kibibytes(512);
 static const Size ChunkMax = Kibibytes(2048);
 
+#pragma pack(push, 1)
+struct ChunkEntry {
+    int64_t offset; // Little Endian
+    kt_ID id;
+};
+#pragma pack(pop)
+RG_STATIC_ASSERT(RG_SIZE(ChunkEntry) == 40);
+
 bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, Size *out_len)
 {
     // Open destination file
@@ -30,24 +38,33 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, S
     if (!writer.IsValid())
         return false;
 
-    // Read file summary
-    HeapArray<uint8_t> summary;
+    // Read file object
+    HeapArray<uint8_t> file_obj;
     {
-        if (!disk->Read(id, &summary))
+        if (!disk->Read(id, &file_obj))
             return false;
-        if (summary.len % RG_SIZE(kt_ID)) {
-            LogError("Malformed file summary '%1'", id);
+        if (file_obj.len % RG_SIZE(ChunkEntry) != RG_SIZE(int64_t)) {
+            LogError("Malformed file object '%1'", id);
             return false;
         }
     }
+    file_obj.len -= RG_SIZE(int64_t);
+
+    int64_t file_len = LittleEndian(*(const int64_t *)file_obj.end());
+    if (file_len < 0) {
+        LogError("Malformed file object '%1'", id);
+        return false;
+    }
 
     // Write unencrypted file
-    for (Size idx = 0, offset = 0; offset < summary.len; idx++, offset += RG_SIZE(kt_ID)) {
-        kt_ID id = {};
-        memcpy(&id, summary.ptr + offset, RG_SIZE(id));
+    for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(ChunkEntry)) {
+        ChunkEntry entry = {};
+
+        memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
+        entry.offset = LittleEndian(entry.offset);
 
         HeapArray<uint8_t> buf;
-        if (!disk->Read(id, &buf))
+        if (!disk->Read(entry.id, &buf))
             return false;
         if (!writer.Write(buf))
             return false;
@@ -72,7 +89,7 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
         return false;
 
     blake3_hasher file_hasher;
-    HeapArray<uint8_t> chunk_ids;
+    HeapArray<uint8_t> file_obj;
     blake3_hasher_init_keyed(&file_hasher, salt.ptr);
 
     // Split the file
@@ -82,10 +99,10 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
 
         HeapArray<uint8_t> buf;
         {
-            Size capacity = (st.ComputeRawLen() >= 0) ? st.ComputeRawLen() : Mebibytes(16);
-            capacity = std::clamp(capacity, Mebibytes(2), Mebibytes(128));
+            Size needed = (st.ComputeRawLen() >= 0) ? st.ComputeRawLen() : Mebibytes(16);
+            needed = std::clamp(needed, Mebibytes(2), Mebibytes(128));
 
-            buf.SetCapacity(capacity);
+            buf.SetCapacity(needed);
         }
 
         do {
@@ -108,28 +125,33 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
             Span<const uint8_t> remain = buf;
 
             // We can't relocate in the inner loop
-            chunk_ids.Grow((remain.len / ChunkMin + 1) * RG_SIZE(kt_ID));
+            Size needed = (remain.len / ChunkMin + 1) * RG_SIZE(ChunkEntry) + 8;
+            file_obj.Grow(needed);
 
             do {
-                Size processed = chunker.Process(remain, st.IsEOF(), [&](Size idx, Size total, Span<const uint8_t> chunk) {
-                    RG_ASSERT(idx * 32 == chunk_ids.len);
-                    chunk_ids.len += 32;
+                Size processed = chunker.Process(remain, st.IsEOF(), [&](Size idx, int64_t total, Span<const uint8_t> chunk) {
+                    RG_ASSERT(idx * RG_SIZE(ChunkEntry) == file_obj.len);
+                    file_obj.len += RG_SIZE(ChunkEntry);
 
-                    async.Run([=, &written, &chunk_ids]() {
-                        kt_ID id = {};
+                    async.Run([=, &written, &file_obj]() {
+                        ChunkEntry entry = {};
+
+                        entry.offset = LittleEndian(total);
+
+                        // Hash chunk data
                         {
                             blake3_hasher hasher;
                             blake3_hasher_init_keyed(&hasher, salt.ptr);
                             blake3_hasher_update(&hasher, chunk.ptr, chunk.len);
-                            blake3_hasher_finalize(&hasher, id.hash, RG_SIZE(id.hash));
+                            blake3_hasher_finalize(&hasher, entry.id.hash, RG_SIZE(entry.id.hash));
                         }
 
-                        Size ret = disk->Write(id, chunk);
+                        Size ret = disk->Write(entry.id, chunk);
                         if (ret < 0)
                             return false;
                         written += ret;
 
-                        memcpy(chunk_ids.ptr + idx * RG_SIZE(id), &id, RG_SIZE(id));
+                        memcpy(file_obj.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
 
                         return true;
                     });
@@ -155,12 +177,15 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
         RG_ASSERT(st.IsEOF());
     }
 
+    int64_t len_64le = LittleEndian(st.GetRawRead());
+    file_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
+
     // Write list of chunks
     kt_ID file_id = {};
     {
         blake3_hasher_finalize(&file_hasher, file_id.hash, RG_SIZE(file_id.hash));
 
-        Size ret = disk->Write(file_id, chunk_ids);
+        Size ret = disk->Write(file_id, file_obj);
         if (ret < 0)
             return false;
         written += ret;

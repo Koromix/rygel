@@ -115,7 +115,7 @@ kt_Chunker::kt_Chunker(Size avg, Size min, Size max)
 }
 
 Size kt_Chunker::Process(Span<const uint8_t> buf, bool last,
-                         FunctionRef<bool(Size idx, Size total, Span<const uint8_t> chunk)> func)
+                         FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func)
 {
     Size processed = 0;
 

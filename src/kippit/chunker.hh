@@ -38,13 +38,13 @@ class kt_Chunker {
     uint32_t mask2;
 
     Size idx = 0;
-    Size total = 0;
+    int64_t total = 0;
 
 public:
     kt_Chunker(Size avg, Size min, Size max);
 
     Size Process(Span<const uint8_t> buf, bool last,
-                 FunctionRef<bool(Size idx, Size total, Span<const uint8_t> chunk)> func);
+                 FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func);
 
 private:
     Size Cut(Span<const uint8_t> buf, bool last);
