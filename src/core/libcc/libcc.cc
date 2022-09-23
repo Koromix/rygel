@@ -3099,6 +3099,20 @@ FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
     return fp;
 }
 
+bool FlushFile(int fd, const char *filename)
+{
+    RG_ASSERT(filename);
+
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+    if (!FlushFileBuffers(h)) {
+        LogError("Failed to sync '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
 bool FlushFile(FILE *fp, const char *filename)
 {
     RG_ASSERT(filename);
@@ -3367,6 +3381,22 @@ FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
         *out_exists = false;
     }
     return fp;
+}
+
+bool FlushFile(int fd, const char *filename)
+{
+    RG_ASSERT(filename);
+
+#ifdef __APPLE__
+    if (fsync(fd) < 0 && errno != EINVAL && errno != ENOTSUP) {
+#else
+    if (fsync(fd) < 0 && errno != EINVAL) {
+#endif
+        LogError("Failed to sync '%1': %2", filename, strerror(errno));
+        return false;
+    }
+
+    return true;
 }
 
 bool FlushFile(FILE *fp, const char *filename)

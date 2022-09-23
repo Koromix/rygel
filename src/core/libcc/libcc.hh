@@ -4164,6 +4164,7 @@ enum class OpenFlag {
 
 int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists = nullptr);
 FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists = nullptr);
+bool FlushFile(int fd, const char *filename);
 bool FlushFile(FILE *fp, const char *filename);
 
 bool FileIsVt100(FILE *fp);
