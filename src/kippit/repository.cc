@@ -17,6 +17,19 @@
 #include "repository.hh"
 #include "vendor/blake3/c/blake3.h"
 
+#ifdef _WIN32
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+    #include <io.h>
+#else
+    #include <unistd.h>
+#endif
+
 namespace RG {
 
 static const Size ChunkAverage = Kibibytes(1024);
@@ -31,11 +44,61 @@ struct ChunkEntry {
 #pragma pack(pop)
 RG_STATIC_ASSERT(RG_SIZE(ChunkEntry) == 40);
 
+#ifdef _WIN32
+
+static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
+{
+    RG_ASSERT(buf.len < UINT32_MAX);
+
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+    while (buf.len) {
+        OVERLAPPED ov = {};
+        DWORD written = 0;
+
+        ov.OffsetHigh = (uint32_t)((offset & 0xFFFFFFFF00000000ll) >> 32);
+        ov.Offset = (uint32_t)(offset & 0xFFFFFFFFll);
+
+        if (!WriteFile(h, buf.ptr, buf.len, &written, &ov)) {
+            LogError("Failed to write to '%1': %2", filename, GetWin32ErrorString());
+            return false;
+        }
+
+        offset += (Size)written;
+        buf.ptr += (Size)written;
+        buf.len -= (Size)written;
+    }
+
+    return true;
+}
+
+#else
+
+static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
+{
+    while (buf.len) {
+        Size written = RG_POSIX_RESTART_EINTR(pwrite(fd, buf.ptr, buf.len, (off_t)offset), < 0);
+
+        if (written < 0) {
+            LogError("Failed to write to '%1': %2", filename, strerror(errno));
+            return false;
+        }
+
+        offset += written;
+        buf.ptr += written;
+        buf.len -= written;
+    }
+
+    return true;
+}
+
+#endif
+
 bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len)
 {
     // Open destination file
-    StreamWriter writer(dest_filename);
-    if (!writer.IsValid())
+    int fd = OpenDescriptor(dest_filename, (int)OpenFlag::Write);
+    if (fd < 0)
         return false;
 
     // Read file object
@@ -50,31 +113,44 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, i
     }
     file_obj.len -= RG_SIZE(int64_t);
 
+    // Get file length
     int64_t file_len = LittleEndian(*(const int64_t *)file_obj.end());
     if (file_len < 0) {
         LogError("Malformed file object '%1'", id);
         return false;
     }
 
+    Async async;
+
     // Write unencrypted file
     for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(ChunkEntry)) {
-        ChunkEntry entry = {};
+        async.Run([=]() {
+            ChunkEntry entry = {};
 
-        memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
-        entry.offset = LittleEndian(entry.offset);
+            memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
+            entry.offset = LittleEndian(entry.offset);
 
-        HeapArray<uint8_t> buf;
-        if (!disk->Read(entry.id, &buf))
-            return false;
-        if (!writer.Write(buf))
-            return false;
+            HeapArray<uint8_t> buf;
+            if (!disk->Read(entry.id, &buf))
+                return false;
+
+            if (!WriteAt(fd, dest_filename, entry.offset, buf)) {
+                LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
+                return false;
+            }
+
+            return true;
+        });
     }
 
-    if (!writer.Close())
+    // Sync
+    if (!async.Sync())
+        return false;
+    if (!FlushFile(fd, dest_filename))
         return false;
 
     if (out_len) {
-        *out_len = writer.GetRawWritten();
+        *out_len = file_len;
     }
     return true;
 }
