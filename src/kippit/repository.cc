@@ -31,7 +31,7 @@ struct ChunkEntry {
 #pragma pack(pop)
 RG_STATIC_ASSERT(RG_SIZE(ChunkEntry) == 40);
 
-bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, Size *out_len)
+bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len)
 {
     // Open destination file
     StreamWriter writer(dest_filename);
@@ -79,7 +79,7 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, S
     return true;
 }
 
-bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size *out_written)
+bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written)
 {
     Span<const uint8_t> salt = disk->GetSalt();
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes

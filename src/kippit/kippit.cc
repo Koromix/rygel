@@ -156,7 +156,7 @@ Options:
     LogInfo("Backing up...");
 
     kt_ID id = {};
-    Size written = 0;
+    int64_t written = 0;
     if (!kt_BackupFile(disk, filename, &id, &written))
         return 1;
 
@@ -243,7 +243,7 @@ Options:
     LogInfo();
     LogInfo("Extracting file...");
 
-    Size file_len = 0;
+    int64_t file_len = 0;
     {
         kt_ID id = {};
         if (!kt_ParseID(name, &id))

@@ -20,7 +20,7 @@ namespace RG {
 
 class kt_Disk;
 
-bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, Size *out_len = nullptr);
-bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size *out_written = nullptr);
+bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len = nullptr);
+bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written = nullptr);
 
 }
