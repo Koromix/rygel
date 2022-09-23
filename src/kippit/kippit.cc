@@ -22,7 +22,7 @@ namespace RG {
 
 static bool GeneratePassword(Span<char> out_pwd)
 {
-    static const char *const AllowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#%&()*+,-./:;<=>?[]_{}|";
+    static const char *const AllowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&()*+,-./:;<=>?[]_{}|";
 
     for (Size i = 0; i < 1000; i++) {
         Fmt(out_pwd, "%1", FmtRandom(out_pwd.len - 1, AllowedChars));
