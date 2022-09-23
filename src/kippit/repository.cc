@@ -46,6 +46,29 @@ RG_STATIC_ASSERT(RG_SIZE(ChunkEntry) == 40);
 
 #ifdef _WIN32
 
+static bool ReserveFile(int fd, const char *filename, int64_t len)
+{
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+    LARGE_INTEGER prev_pos = {};
+    if (!SetFilePointerEx(h, prev_pos, &prev_pos, FILE_CURRENT)) {
+        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+    RG_DEFER { SetFilePointerEx(h, prev_pos, nullptr, FILE_BEGIN); };
+
+    if (!SetFilePointerEx(h, {.QuadPart = len}, nullptr, FILE_BEGIN)) {
+        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+    if (!SetEndOfFile(h)) {
+        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
 static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
 {
     RG_ASSERT(buf.len < UINT32_MAX);
@@ -73,6 +96,16 @@ static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uin
 }
 
 #else
+
+static bool ReserveFile(int fd, const char *filename, int64_t len)
+{
+    if (ftruncate(fd, len) < 0) {
+        LogError("Failed to reserve file '%1': %2", filename, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
 
 static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
 {
@@ -113,12 +146,14 @@ bool kt_ExtractFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, i
     }
     file_obj.len -= RG_SIZE(int64_t);
 
-    // Get file length
+    // Prepare destination file
     int64_t file_len = LittleEndian(*(const int64_t *)file_obj.end());
     if (file_len < 0) {
         LogError("Malformed file object '%1'", id);
         return false;
     }
+    if (!ReserveFile(fd, dest_filename, file_len))
+        return false;
 
     Async async;
 
