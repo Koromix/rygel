@@ -67,6 +67,10 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
     Span<const uint8_t> salt = disk->GetSalt();
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
+    StreamReader st(src_filename);
+    if (!st.IsValid())
+        return false;
+
     blake3_hasher file_hasher;
     HeapArray<uint8_t> chunk_ids;
     blake3_hasher_init_keyed(&file_hasher, salt.ptr);
@@ -74,12 +78,15 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
     // Split the file
     std::atomic<Size> written = 0;
     {
-        StreamReader st(src_filename);
-
         kt_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
 
         HeapArray<uint8_t> buf;
-        buf.SetCapacity(Mebibytes(256));
+        {
+            Size capacity = (st.ComputeRawLen() >= 0) ? st.ComputeRawLen() : Mebibytes(16);
+            capacity = std::clamp(capacity, Mebibytes(2), Mebibytes(128));
+
+            buf.SetCapacity(capacity);
+        }
 
         do {
             Async async;
@@ -143,7 +150,9 @@ bool kt_BackupFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, Size 
 
             memmove_safe(buf.ptr, remain.ptr, remain.len);
             buf.len = remain.len;
-        } while (!st.IsEOF() || buf.len);
+        } while (buf.len);
+
+        RG_ASSERT(st.IsEOF());
     }
 
     // Write list of chunks
