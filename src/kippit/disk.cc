@@ -22,22 +22,22 @@ RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
 RG_STATIC_ASSERT(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
 
 #pragma pack(push, 1)
-struct ChunkIntro {
+struct ObjectIntro {
     int8_t version;
     uint8_t ekey[crypto_secretstream_xchacha20poly1305_KEYBYTES + crypto_box_SEALBYTES];
     uint8_t header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
 };
 #pragma pack(pop)
-#define CHUNK_VERSION 1
-#define CHUNK_SPLIT Kibibytes(8)
+#define OBJECT_VERSION 1
+#define OBJECT_SPLIT Kibibytes(8)
 
-bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
+bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_obj)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == kt_DiskMode::ReadWrite);
 
-    Size prev_len = out_chunk->len;
-    RG_DEFER_N(err_guard) { out_chunk->RemoveFrom(prev_len); };
+    Size prev_len = out_obj->len;
+    RG_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
 
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs%/%1%/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
@@ -46,59 +46,59 @@ bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
     // just 512 bytes apart which is more than enough for ChaCha20 (64-byte blocks).
     Span<const uint8_t> obj;
     {
-        out_chunk->Grow(512);
-        out_chunk->len += 512;
+        out_obj->Grow(512);
+        out_obj->len += 512;
 
-        Size offset = out_chunk->len;
-        if (!ReadObject(path.data, out_chunk))
+        Size offset = out_obj->len;
+        if (!ReadObject(path.data, out_obj))
             return false;
-        obj = MakeSpan(out_chunk->ptr + offset, out_chunk->len - offset);
+        obj = MakeSpan(out_obj->ptr + offset, out_obj->len - offset);
     }
 
-    // Init chunk decryption
+    // Init object decryption
     crypto_secretstream_xchacha20poly1305_state state;
     {
-        ChunkIntro intro;
+        ObjectIntro intro;
         if (obj.len < RG_SIZE(intro)) {
-            LogError("Truncated chunk");
+            LogError("Truncated object");
             return false;
         }
         memcpy(&intro, obj.ptr, RG_SIZE(intro));
 
-        if (intro.version != CHUNK_VERSION) {
-            LogError("Unexpected chunk version %1 (expected %2)", intro.version, CHUNK_VERSION);
+        if (intro.version != OBJECT_VERSION) {
+            LogError("Unexpected object version %1 (expected %2)", intro.version, OBJECT_VERSION);
             return false;
         }
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
         if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), pkey, skey) != 0) {
-            LogError("Failed to unseal chunk (wrong key?)");
+            LogError("Failed to unseal object (wrong key?)");
             return false;
         }
 
         if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, key) != 0) {
-            LogError("Failed to initialize symmetric decryption (corrupt chunk?)");
+            LogError("Failed to initialize symmetric decryption (corrupt object?)");
             return false;
         }
 
-        obj.ptr += RG_SIZE(ChunkIntro);
-        obj.len -= RG_SIZE(ChunkIntro);
+        obj.ptr += RG_SIZE(ObjectIntro);
+        obj.len -= RG_SIZE(ObjectIntro);
     }
 
-    // Read and decrypt chunk
+    // Read and decrypt object
     Size new_len = prev_len;
     while (obj.len) {
-        Size in_len = std::min(obj.len, (Size)CHUNK_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES);
+        Size in_len = std::min(obj.len, (Size)OBJECT_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES);
         Size out_len = in_len - crypto_secretstream_xchacha20poly1305_ABYTES;
 
         Span<const uint8_t> cypher = MakeSpan(obj.ptr, in_len);
-        uint8_t *buf = out_chunk->ptr + new_len;
+        uint8_t *buf = out_obj->ptr + new_len;
 
         unsigned long long buf_len = 0;
         uint8_t tag;
         if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
                                                        cypher.ptr, cypher.len, nullptr, 0) != 0) {
-            LogError("Failed during symmetric decryption (corrupt chunk?)");
+            LogError("Failed during symmetric decryption (corrupt object?)");
             return false;
         }
 
@@ -108,19 +108,19 @@ bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_chunk)
 
         if (!obj.len) {
             if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
-                LogError("Truncated chunk");
+                LogError("Truncated object");
                 return false;
             }
             break;
         }
     }
-    out_chunk->len = new_len;
+    out_obj->len = new_len;
 
     err_guard.Disable();
     return true;
 }
 
-Size kt_Disk::Write(const kt_ID &id, Span<const uint8_t> chunk)
+Size kt_Disk::Write(const kt_ID &id, Span<const uint8_t> obj)
 {
     RG_ASSERT(url);
 
@@ -128,12 +128,12 @@ Size kt_Disk::Write(const kt_ID &id, Span<const uint8_t> chunk)
     path.len = Fmt(path.data, "blobs%/%1%/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
     Size written = WriteObject(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
-        // Write chunk intro
+        // Write object intro
         crypto_secretstream_xchacha20poly1305_state state;
         {
-            ChunkIntro intro = {};
+            ObjectIntro intro = {};
 
-            intro.version = CHUNK_VERSION;
+            intro.version = OBJECT_VERSION;
 
             uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
             crypto_secretstream_xchacha20poly1305_keygen(key);
@@ -151,18 +151,18 @@ Size kt_Disk::Write(const kt_ID &id, Span<const uint8_t> chunk)
                 return false;
         }
 
-        // Encrypt chunk data
+        // Encrypt object data
         {
             bool complete = false;
 
             do {
                 Span<const uint8_t> frag;
-                frag.len = std::min(CHUNK_SPLIT, chunk.len);
-                frag.ptr = chunk.ptr;
+                frag.len = std::min(OBJECT_SPLIT, obj.len);
+                frag.ptr = obj.ptr;
 
-                complete |= (frag.len < CHUNK_SPLIT);
+                complete |= (frag.len < OBJECT_SPLIT);
 
-                uint8_t cypher[CHUNK_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES];
+                uint8_t cypher[OBJECT_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES];
                 unsigned char tag = complete ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
                 unsigned long long cypher_len;
                 crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, frag.ptr, frag.len, nullptr, 0, tag);
@@ -170,8 +170,8 @@ Size kt_Disk::Write(const kt_ID &id, Span<const uint8_t> chunk)
                 if (!func(MakeSpan(cypher, (Size)cypher_len)))
                     return false;
 
-                chunk.ptr += frag.len;
-                chunk.len -= frag.len;
+                obj.ptr += frag.len;
+                obj.len -= frag.len;
             } while (!complete);
         }
 
