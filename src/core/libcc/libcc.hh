@@ -4282,6 +4282,22 @@ private:
     uint64_t Next();
 };
 
+template <int Min = 0, int Max = INT_MAX>
+class FastRandomInt {
+    RG_STATIC_ASSERT(Min >= 0);
+    RG_STATIC_ASSERT(Max > Min);
+
+    FastRandom rng;
+
+public:
+    typedef int result_type;
+
+    static constexpr int min() { return Min; }
+    static constexpr int max() { return Max; }
+
+    int operator()() { return rng.GetInt(Min, Max); }
+};
+
 void ZeroMemorySafe(void *ptr, Size len);
 void FillRandomSafe(void *buf, Size len);
 static inline void FillRandomSafe(Span<uint8_t> buf) { FillRandomSafe(buf.ptr, buf.len); }

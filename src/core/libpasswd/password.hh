@@ -17,6 +17,19 @@
 
 namespace RG {
 
+enum class pwd_GenerateFlag {
+    Uppers = 1 << 0,
+    Lowers = 1 << 1,
+    Numbers = 1 << 2,
+    Specials = 1 << 3,
+    Ambiguous = 1 << 4,
+    Check = 1 << 5
+};
+
 bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blacklist = {});
+
+bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password);
+static inline bool pwd_GeneratePassword(Span<char> out_password)
+    { return pwd_GeneratePassword(UINT_MAX, out_password); }
 
 }

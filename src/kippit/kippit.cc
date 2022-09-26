@@ -20,21 +20,6 @@
 
 namespace RG {
 
-static bool GeneratePassword(Span<char> out_pwd)
-{
-    static const char *const AllowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&()*+,-./:;<=>?[]_{}|";
-
-    for (Size i = 0; i < 1000; i++) {
-        Fmt(out_pwd, "%1", FmtRandom(out_pwd.len - 1, AllowedChars));
-
-        if (pwd_CheckPassword(out_pwd))
-            return true;
-    }
-
-    LogError("Failed to generate secure password");
-    return false;
-}
-
 static const char *FillRepository(const char *repo_directory)
 {
     if (!repo_directory) {
@@ -96,9 +81,9 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
     // Generate repository passwords
     char full_pwd[33] = {};
     char write_pwd[33] = {};
-    if (!GeneratePassword(full_pwd))
+    if (!pwd_GeneratePassword(full_pwd))
         return 1;
-    if (!GeneratePassword(write_pwd))
+    if (!pwd_GeneratePassword(write_pwd))
         return 1;
 
     if (!kt_CreateLocalDisk(repo_directory, full_pwd, write_pwd))

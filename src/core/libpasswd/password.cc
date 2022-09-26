@@ -337,4 +337,47 @@ bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blackl
     return true;
 }
 
+bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
+{
+    static const char *const AllChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    static const char *const UpperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static const char *const UpperCharsNoAmbi = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    static const char *const LowerChars = "abcdefghijklmnopqrstuvwxyz";
+    static const char *const LowerCharsNoAmbi = "abcdefghijkmnopqrstuvwxyz";
+    static const char *const NumberChars = "0123456789";
+    static const char *const NumberCharsNoAmbi = "23456789";
+    static const char *const SpecialChars = "!@#$%^&*";
+
+    if (out_password.len < 9) {
+        LogError("Refusing to generate password less than 8 characters");
+        return false;
+    }
+
+    int uppers = (flags & (int)pwd_GenerateFlag::Uppers) ? 1 : 0;
+    int lowers = (flags & (int)pwd_GenerateFlag::Lowers) ? 1 : 0;
+    int numbers = (flags & (int)pwd_GenerateFlag::Numbers) ? 1 : 0;
+    int specials = (flags & (int)pwd_GenerateFlag::Specials) ? 1 : 0;
+    Size all = out_password.len - uppers - lowers - numbers - specials;
+    bool ambiguous = flags & (int)pwd_GenerateFlag::Ambiguous;
+
+    for (Size i = 0; i < 1000; i++) {
+        Fmt(out_password, "%1%2%3%4%5", FmtRandom(uppers, ambiguous ? UpperChars : UpperCharsNoAmbi),
+                                        FmtRandom(lowers, ambiguous ? LowerChars : LowerCharsNoAmbi),
+                                        FmtRandom(numbers, ambiguous ? NumberChars : NumberCharsNoAmbi),
+                                        FmtRandom(specials, SpecialChars),
+                                        FmtRandom(all, AllChars));
+
+        FastRandomInt rng;
+        std::shuffle(out_password.begin(), out_password.end() - 1, rng);
+
+        if ((flags & (int)pwd_GenerateFlag::Check) && !pwd_CheckPassword(out_password.ptr))
+            continue;
+
+        return true;
+    }
+
+    LogError("Failed to generate secure password");
+    return false;
+}
+
 }
