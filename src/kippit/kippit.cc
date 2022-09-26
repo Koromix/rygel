@@ -179,7 +179,7 @@ Options:
 
     kt_ID id = {};
     int64_t written = 0;
-    if (!kt_BackupFile(disk, filename, &id, &written))
+    if (!kt_PutFile(disk, filename, &id, &written))
         return 1;
 
     LogInfo("File ID: %!..+%1%!0", id);
@@ -266,7 +266,7 @@ Options:
         kt_ID id = {};
         if (!kt_ParseID(name, &id))
             return 1;
-        if (!kt_ExtractFile(disk, id, dest_filename, &file_len))
+        if (!kt_GetFile(disk, id, dest_filename, &file_len))
             return 1;
     }
 
