@@ -4103,6 +4103,14 @@ enum class FileType {
     Pipe,
     Socket
 };
+static const char *const FileTypeNames[] = {
+    "Directory",
+    "File",
+    "Link",
+    "Device",
+    "Pipe",
+    "Socket"
+};
 
 struct FileInfo {
     FileType type;
