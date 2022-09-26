@@ -46,8 +46,8 @@ public:
     Span<const uint8_t> GetSalt() const { return pkey; }
     kt_DiskMode GetMode() const { return mode; }
 
-    bool Read(const kt_ID &id, HeapArray<uint8_t> *out_obj);
-    Size Write(const kt_ID &id, Span<const uint8_t> obj);
+    bool Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj);
+    Size Write(const kt_ID &id, int8_t type, Span<const uint8_t> obj);
 
 protected:
     virtual bool ReadObject(const char *path, HeapArray<uint8_t> *out_blob) = 0;

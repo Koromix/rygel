@@ -36,6 +36,11 @@ static const Size ChunkAverage = Kibibytes(1024);
 static const Size ChunkMin = Kibibytes(512);
 static const Size ChunkMax = Kibibytes(2048);
 
+enum class ObjectType: int8_t {
+    Chunk = 0,
+    ChunkList = 1
+};
+
 #pragma pack(push, 1)
 struct ChunkEntry {
     int64_t offset; // Little Endian
@@ -195,7 +200,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
                             blake3_hasher_finalize(&hasher, entry.id.hash, RG_SIZE(entry.id.hash));
                         }
 
-                        Size ret = disk->Write(entry.id, chunk);
+                        Size ret = disk->Write(entry.id, (int8_t)ObjectType::Chunk, chunk);
                         if (ret < 0)
                             return false;
                         written += ret;
@@ -234,7 +239,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
     {
         blake3_hasher_finalize(&file_hasher, file_id.hash, RG_SIZE(file_id.hash));
 
-        Size ret = disk->Write(file_id, file_obj);
+        Size ret = disk->Write(file_id, (int8_t)ObjectType::ChunkList, file_obj);
         if (ret < 0)
             return false;
         written += ret;
@@ -257,12 +262,20 @@ bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64
     // Read file object
     HeapArray<uint8_t> file_obj;
     {
-        if (!disk->Read(id, &file_obj))
+        int8_t type;
+
+        if (!disk->Read(id, &type, &file_obj))
             return false;
+
+        if (type != (int8_t)ObjectType::ChunkList) {
+            LogError("Object '%1' is not a file", id);
+            return false;
+        }
         if (file_obj.len % RG_SIZE(ChunkEntry) != RG_SIZE(int64_t)) {
             LogError("Malformed file object '%1'", id);
             return false;
         }
+
     }
     file_obj.len -= RG_SIZE(int64_t);
 
@@ -285,10 +298,15 @@ bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64
             memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
             entry.offset = LittleEndian(entry.offset);
 
+            int8_t type;
             HeapArray<uint8_t> buf;
-            if (!disk->Read(entry.id, &buf))
+            if (!disk->Read(entry.id, &type, &buf))
                 return false;
 
+            if (RG_UNLIKELY(type != (int8_t)ObjectType::Chunk)) {
+                LogError("Object '%1' is not a chunk", entry.id);
+                return false;
+            }
             if (!WriteAt(fd, dest_filename, entry.offset, buf)) {
                 LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
                 return false;

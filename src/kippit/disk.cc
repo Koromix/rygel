@@ -24,6 +24,7 @@ RG_STATIC_ASSERT(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
 #pragma pack(push, 1)
 struct ObjectIntro {
     int8_t version;
+    int8_t type;
     uint8_t ekey[crypto_secretstream_xchacha20poly1305_KEYBYTES + crypto_box_SEALBYTES];
     uint8_t header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
 };
@@ -31,7 +32,7 @@ struct ObjectIntro {
 #define OBJECT_VERSION 1
 #define OBJECT_SPLIT Kibibytes(32)
 
-bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_obj)
+bool kt_Disk::Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == kt_DiskMode::ReadWrite);
@@ -57,6 +58,7 @@ bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_obj)
 
     // Init object decryption
     crypto_secretstream_xchacha20poly1305_state state;
+    int8_t type;
     {
         ObjectIntro intro;
         if (obj.len < RG_SIZE(intro)) {
@@ -69,6 +71,7 @@ bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_obj)
             LogError("Unexpected object version %1 (expected %2)", intro.version, OBJECT_VERSION);
             return false;
         }
+        type = intro.type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
         if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), pkey, skey) != 0) {
@@ -116,11 +119,12 @@ bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_obj)
     }
     out_obj->len = new_len;
 
+    *out_type = type;
     err_guard.Disable();
     return true;
 }
 
-Size kt_Disk::Write(const kt_ID &id, Span<const uint8_t> obj)
+Size kt_Disk::Write(const kt_ID &id, int8_t type, Span<const uint8_t> obj)
 {
     RG_ASSERT(url);
 
@@ -134,6 +138,7 @@ Size kt_Disk::Write(const kt_ID &id, Span<const uint8_t> obj)
             ObjectIntro intro = {};
 
             intro.version = OBJECT_VERSION;
+            intro.type = type;
 
             uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
             crypto_secretstream_xchacha20poly1305_keygen(key);
