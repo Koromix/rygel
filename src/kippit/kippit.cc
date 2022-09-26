@@ -162,30 +162,10 @@ Options:
     LogInfo();
     LogInfo("Backing up...");
 
-    FileInfo file_info;
-    if (!StatFile(filename, (int)StatFlag::FollowSymlink, &file_info))
-        return 1;
-
     kt_ID id = {};
     int64_t written = 0;
-    switch (file_info.type) {
-        case FileType::Directory: {
-            if (!kt_PutDirectory(disk, filename, &id, &written))
-                return 1;
-        } break;
-        case FileType::File: {
-            if (!kt_PutFile(disk, filename, &id, &written))
-                return 1;
-        } break;
-
-        case FileType::Link:
-        case FileType::Device:
-        case FileType::Pipe:
-        case FileType::Socket: {
-            LogError("Cannot backup special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
-            return 1;
-        } break;
-    }
+    if (!kt_Put(disk, filename, &id, &written))
+        return 1;
 
     LogInfo("Backup ID: %!..+%1%!0", id);
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(written));

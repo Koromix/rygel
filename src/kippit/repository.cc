@@ -435,4 +435,26 @@ bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64
     return true;
 }
 
+bool kt_Put(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written)
+{
+    FileInfo file_info;
+    if (!StatFile(src_filename, (int)StatFlag::FollowSymlink, &file_info))
+        return false;
+
+    switch (file_info.type) {
+        case FileType::Directory: return kt_PutDirectory(disk, src_filename, out_id, out_written);
+        case FileType::File: return kt_PutFile(disk, src_filename, out_id, out_written);
+
+        case FileType::Link:
+        case FileType::Device:
+        case FileType::Pipe:
+        case FileType::Socket: {
+            LogError("Cannot backup special file '%1' (%2)", src_filename, FileTypeNames[(int)file_info.type]);
+            return false;
+        } break;
+    }
+
+    RG_UNREACHABLE();
+}
+
 }

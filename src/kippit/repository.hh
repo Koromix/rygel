@@ -25,4 +25,6 @@ bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int6
 bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written = nullptr);
 bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len = nullptr);
 
+bool kt_Put(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int64_t *out_written = nullptr);
+
 }
