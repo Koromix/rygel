@@ -45,10 +45,11 @@ enum class ObjectType: int8_t {
 #pragma pack(push, 1)
 struct FileEntry {
     kt_ID id;
+    int8_t type; // FileType
     char basename[];
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(FileEntry) == 32);
+RG_STATIC_ASSERT(RG_SIZE(FileEntry) == 33);
 
 #pragma pack(push, 1)
 struct ChunkEntry {
@@ -157,8 +158,9 @@ bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int6
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
 
         Size entry_len = RG_SIZE(FileEntry) + strlen(basename) + 1;
-        FileEntry *entry = (FileEntry *)AllocateRaw(&temp_alloc, entry_len);
+        FileEntry *entry = (FileEntry *)dir_obj.AppendDefault(entry_len);
 
+        entry->type = (int8_t)file_type;
         switch (file_type) {
             case FileType::Directory: {
                 int64_t written = 0;
@@ -182,8 +184,6 @@ bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int6
             } break;
         }
         CopyString(basename, MakeSpan(entry->basename, entry_len - RG_SIZE(FileEntry)));
-
-        dir_obj.Append(MakeSpan((const uint8_t *)entry, entry_len));
 
         return true;
     });
