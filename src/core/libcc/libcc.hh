@@ -3448,6 +3448,8 @@ static inline void LogDebug(Args...) {}
 template <typename... Args>
 static inline void LogInfo(Args... args) { Log(LogLevel::Info, nullptr, args...); }
 template <typename... Args>
+static inline void LogWarning(Args... args) { Log(LogLevel::Warning, "Warning", args...); }
+template <typename... Args>
 static inline void LogError(Args... args) { Log(LogLevel::Error, "Error", args...); }
 
 void SetLogHandler(const std::function<LogFunc> &func);
