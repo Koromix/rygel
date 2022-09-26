@@ -218,6 +218,72 @@ bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int6
     return true;
 }
 
+bool GetDirectory(kt_Disk *disk, const kt_ID &id, int8_t type, Span<const uint8_t> dir_obj,
+                  const char *dest_dirname, int64_t *out_len)
+{
+    BlockAllocator temp_alloc;
+
+    if (!MakeDirectory(dest_dirname, false))
+        return false;
+    if (!IsDirectoryEmpty(dest_dirname)) {
+        LogError("Directory '%1' is not empty", dest_dirname);
+        return false;
+    }
+
+    if (type != (int8_t)ObjectType::Directory) {
+        LogError("Object '%1' is not a directory", id);
+        return false;
+    }
+
+    // Extract directory entries
+    std::atomic<int64_t> dir_len = 0;
+    for (Size offset = 0; offset < dir_obj.len;) {
+        const FileEntry *entry = (const FileEntry *)(dir_obj.ptr + offset);
+
+        Size next = offset + RG_SIZE(FileEntry)
+                           + (Size)strnlen(entry->basename, dir_obj.end() - (const uint8_t *)entry->basename) + 1;
+
+        // Sanity checks
+        if (next > dir_obj.len) {
+            LogError("Malformed entry in directory object '%1'", id);
+            return false;
+        }
+        if (entry->type != (int8_t)FileType::Directory && entry->type != (int8_t)FileType::File) {
+            LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
+            return false;
+        }
+        if (strpbrk(entry->basename, RG_PATH_SEPARATORS) || TestStr(entry->basename, ".") ||
+                                                            TestStr(entry->basename, "..")) {
+            LogError("Unsafe file name '%1'", entry->basename);
+            return false;
+        }
+
+        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->basename).ptr;
+
+        int64_t len = 0;
+        if (!kt_Get(disk, entry->id, dest_filename, &len))
+            return false;
+        dir_len += len;
+
+        offset = next;
+    }
+
+    if (out_len) {
+        *out_len += dir_len;
+    }
+    return true;
+}
+
+bool kt_GetDirectory(kt_Disk *disk, const kt_ID &id, const char *dest_dirname, int64_t *out_len)
+{
+    int8_t type;
+    HeapArray<uint8_t> dir_obj;
+    if (!disk->Read(id, &type, &dir_obj))
+        return false;
+
+    return GetDirectory(disk, id, type, dir_obj, dest_dirname, out_len);
+}
+
 bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written)
 {
     Span<const uint8_t> salt = disk->GetSalt();
@@ -328,17 +394,12 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
     return true;
 }
 
-bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len)
+static bool GetFile(kt_Disk *disk, const kt_ID &id, int8_t type,
+                    Span<const uint8_t> file_obj, const char *dest_filename, int64_t *out_len)
 {
     // Open destination file
     int fd = OpenDescriptor(dest_filename, (int)OpenFlag::Write);
     if (fd < 0)
-        return false;
-
-    // Read file object
-    int8_t type;
-    HeapArray<uint8_t> file_obj;
-    if (!disk->Read(id, &type, &file_obj))
         return false;
 
     int64_t file_len = -1;
@@ -421,9 +482,19 @@ bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64
         return false;
 
     if (out_len) {
-        *out_len = file_len;
+        *out_len += file_len;
     }
     return true;
+}
+
+bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len)
+{
+    int8_t type;
+    HeapArray<uint8_t> file_obj;
+    if (!disk->Read(id, &type, &file_obj))
+        return false;
+
+    return GetFile(disk, id, type, file_obj, dest_filename, out_len);
 }
 
 bool kt_Put(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written)
@@ -446,6 +517,23 @@ bool kt_Put(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out
     }
 
     RG_UNREACHABLE();
+}
+
+bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len)
+{
+    int8_t type;
+    HeapArray<uint8_t> obj;
+    if (!disk->Read(id, &type, &obj))
+        return false;
+
+    if (type == (int8_t)ObjectType::Chunk || type == (int8_t)ObjectType::ChunkList) {
+        return GetFile(disk, id, type, obj, dest_filename, out_len);
+    } else if (type == (int8_t)ObjectType::Directory) {
+        return GetDirectory(disk, id, type, obj, dest_filename, out_len);
+    } else {
+        LogError("Unknown object type %1 for '%2'", FmtHex(type), id);
+        return false;
+    }
 }
 
 }

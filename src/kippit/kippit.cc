@@ -244,18 +244,18 @@ Options:
     }
 
     LogInfo();
-    LogInfo("Extracting file...");
+    LogInfo("Extracting...");
 
     int64_t file_len = 0;
     {
         kt_ID id = {};
         if (!kt_ParseID(name, &id))
             return 1;
-        if (!kt_GetFile(disk, id, dest_filename, &file_len))
+        if (!kt_Get(disk, id, dest_filename, &file_len))
             return 1;
     }
 
-    LogInfo("Restored file: %!..+%1%!0 (%2)", dest_filename, FmtDiskSize(file_len));
+    LogInfo("Restored: %!..+%1%!0 (%2)", dest_filename, FmtDiskSize(file_len));
 
     return 0;
 }
