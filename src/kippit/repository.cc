@@ -231,18 +231,21 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
         RG_ASSERT(st.IsEOF());
     }
 
-    int64_t len_64le = LittleEndian(st.GetRawRead());
-    file_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
-
-    // Write list of chunks
+    // Write list of chunks (unless there is exactly one)
     kt_ID file_id = {};
-    {
+    if (file_obj.len != RG_SIZE(ChunkEntry)) {
+        int64_t len_64le = LittleEndian(st.GetRawRead());
+        file_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
+
         blake3_hasher_finalize(&file_hasher, file_id.hash, RG_SIZE(file_id.hash));
 
         Size ret = disk->Write(file_id, (int8_t)ObjectType::ChunkList, file_obj);
         if (ret < 0)
             return false;
         written += ret;
+    } else {
+        const ChunkEntry *entry0 = (const ChunkEntry *)file_obj.ptr;
+        file_id = entry0->id;
     }
 
     *out_id = file_id;
@@ -260,65 +263,71 @@ bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64
         return false;
 
     // Read file object
+    int8_t type;
     HeapArray<uint8_t> file_obj;
-    {
-        int8_t type;
+    if (!disk->Read(id, &type, &file_obj))
+        return false;
 
-        if (!disk->Read(id, &type, &file_obj))
-            return false;
-
-        if (type != (int8_t)ObjectType::ChunkList) {
-            LogError("Object '%1' is not a file", id);
-            return false;
-        }
+    int64_t file_len = -1;
+    if (type == (int8_t)ObjectType::ChunkList) {
         if (file_obj.len % RG_SIZE(ChunkEntry) != RG_SIZE(int64_t)) {
             LogError("Malformed file object '%1'", id);
             return false;
         }
 
-    }
-    file_obj.len -= RG_SIZE(int64_t);
+        file_obj.len -= RG_SIZE(int64_t);
 
-    // Prepare destination file
-    int64_t file_len = LittleEndian(*(const int64_t *)file_obj.end());
-    if (file_len < 0) {
-        LogError("Malformed file object '%1'", id);
+        // Prepare destination file
+        file_len = LittleEndian(*(const int64_t *)file_obj.end());
+        if (file_len < 0) {
+            LogError("Malformed file object '%1'", id);
+            return false;
+        }
+        if (!ReserveFile(fd, dest_filename, file_len))
+            return false;
+
+        Async async;
+
+        // Write unencrypted file
+        for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(ChunkEntry)) {
+            async.Run([=]() {
+                ChunkEntry entry = {};
+
+                memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
+                entry.offset = LittleEndian(entry.offset);
+
+                int8_t type;
+                HeapArray<uint8_t> buf;
+                if (!disk->Read(entry.id, &type, &buf))
+                    return false;
+
+                if (RG_UNLIKELY(type != (int8_t)ObjectType::Chunk)) {
+                    LogError("Object '%1' is not a chunk", entry.id);
+                    return false;
+                }
+                if (!WriteAt(fd, dest_filename, entry.offset, buf)) {
+                    LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
+                    return false;
+                }
+
+                return true;
+            });
+        }
+
+        if (!async.Sync())
+            return false;
+    } else if (type == (int8_t)ObjectType::Chunk) {
+        file_len = file_obj.len;
+
+        if (!WriteAt(fd, dest_filename, 0, file_obj)) {
+            LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
+            return false;
+        }
+    } else {
+        LogError("Object '%1' is not a file", id);
         return false;
     }
-    if (!ReserveFile(fd, dest_filename, file_len))
-        return false;
 
-    Async async;
-
-    // Write unencrypted file
-    for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(ChunkEntry)) {
-        async.Run([=]() {
-            ChunkEntry entry = {};
-
-            memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
-            entry.offset = LittleEndian(entry.offset);
-
-            int8_t type;
-            HeapArray<uint8_t> buf;
-            if (!disk->Read(entry.id, &type, &buf))
-                return false;
-
-            if (RG_UNLIKELY(type != (int8_t)ObjectType::Chunk)) {
-                LogError("Object '%1' is not a chunk", entry.id);
-                return false;
-            }
-            if (!WriteAt(fd, dest_filename, entry.offset, buf)) {
-                LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
-                return false;
-            }
-
-            return true;
-        });
-    }
-
-    // Sync
-    if (!async.Sync())
-        return false;
     if (!FlushFile(fd, dest_filename))
         return false;
 
