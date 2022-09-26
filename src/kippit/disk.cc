@@ -29,7 +29,7 @@ struct ObjectIntro {
 };
 #pragma pack(pop)
 #define OBJECT_VERSION 1
-#define OBJECT_SPLIT Kibibytes(8)
+#define OBJECT_SPLIT Kibibytes(32)
 
 bool kt_Disk::Read(const kt_ID &id, HeapArray<uint8_t> *out_obj)
 {
