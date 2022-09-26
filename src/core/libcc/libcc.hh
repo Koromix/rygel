@@ -3848,7 +3848,7 @@ static inline Span<const char> SplitStrReverseAny(const char *str, const char *s
 
 static inline Span<char> TrimStrLeft(Span<char> str, const char *trim_chars = " \t\r\n")
 {
-    while (str.len && strchr(trim_chars, str[0])) {
+    while (str.len && strchr(trim_chars, str[0]) && str[0]) {
         str.ptr++;
         str.len--;
     }
@@ -3857,7 +3857,7 @@ static inline Span<char> TrimStrLeft(Span<char> str, const char *trim_chars = " 
 }
 static inline Span<char> TrimStrRight(Span<char> str, const char *trim_chars = " \t\r\n")
 {
-    while (str.len && strchr(trim_chars, str[str.len - 1])) {
+    while (str.len && strchr(trim_chars, str[str.len - 1]) && str[str.len - 1]) {
         str.len--;
     }
 
