@@ -401,6 +401,7 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, int8_t type,
     int fd = OpenDescriptor(dest_filename, (int)OpenFlag::Write);
     if (fd < 0)
         return false;
+    RG_DEFER { close(fd); };
 
     int64_t file_len = -1;
     if (type == (int8_t)ObjectType::ChunkList) {
