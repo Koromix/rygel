@@ -267,11 +267,11 @@ int Main(int argc, char **argv)
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 
-Main commands:
+Commands:
     %!..+init%!0                         Init new backup repository
 
-    %!..+put%!0                          Store encrypted directory or file to storage
-    %!..+get%!0                          Get and decrypt directory or file from storage
+    %!..+put%!0                          Store encrypted directory or file
+    %!..+get%!0                          Get and decrypt directory or file
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
