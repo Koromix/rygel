@@ -143,6 +143,15 @@ static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uin
 
 #endif
 
+static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, kt_ID *out_id)
+{
+    blake3_hasher hasher;
+
+    blake3_hasher_init_keyed(&hasher, salt);
+    blake3_hasher_update(&hasher, buf.ptr, buf.len);
+    blake3_hasher_finalize(&hasher, out_id->hash, RG_SIZE(out_id->hash));
+}
+
 bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int64_t *out_written)
 {
     BlockAllocator temp_alloc;
@@ -194,11 +203,7 @@ bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int6
 
     kt_ID dir_id = {};
     {
-        blake3_hasher hasher;
-
-        blake3_hasher_init_keyed(&hasher, salt.ptr);
-        blake3_hasher_update(&hasher, dir_obj.ptr, dir_obj.len);
-        blake3_hasher_finalize(&hasher, dir_id.hash, RG_SIZE(dir_id.hash));
+        HashBlake3(dir_obj, salt.ptr, &dir_id);
 
         Size ret = disk->Write(dir_id, (int8_t)ObjectType::Directory, dir_obj);
         if (ret < 0)
@@ -222,11 +227,8 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
     if (!st.IsValid())
         return false;
 
-    blake3_hasher file_hasher;
     HeapArray<uint8_t> file_obj;
     std::atomic<int64_t> file_written = 0;
-
-    blake3_hasher_init_keyed(&file_hasher, salt.ptr);
 
     // Split the file
     {
@@ -251,12 +253,6 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
                 return false;
             buf.len += read.len;
 
-            // Update global file hash
-            async.Run([&]() {
-                blake3_hasher_update(&file_hasher, read.ptr, (size_t)read.len);
-                return true;
-            });
-
             Span<const uint8_t> remain = buf;
 
             // We can't relocate in the inner loop
@@ -275,14 +271,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
                         entry.offset = LittleEndian(total);
                         entry.len = LittleEndian((int32_t)chunk.len);
 
-                        // Hash chunk data
-                        {
-                            blake3_hasher hasher;
-
-                            blake3_hasher_init_keyed(&hasher, salt.ptr);
-                            blake3_hasher_update(&hasher, chunk.ptr, chunk.len);
-                            blake3_hasher_finalize(&hasher, entry.id.hash, RG_SIZE(entry.id.hash));
-                        }
+                        HashBlake3(chunk, salt.ptr, &entry.id);
 
                         Size ret = disk->Write(entry.id, (int8_t)ObjectType::Chunk, chunk);
                         if (ret < 0)
@@ -321,7 +310,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
         int64_t len_64le = LittleEndian(st.GetRawRead());
         file_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-        blake3_hasher_finalize(&file_hasher, file_id.hash, RG_SIZE(file_id.hash));
+        HashBlake3(file_obj, salt.ptr, &file_id);
 
         Size ret = disk->Write(file_id, (int8_t)ObjectType::ChunkList, file_obj);
         if (ret < 0)
