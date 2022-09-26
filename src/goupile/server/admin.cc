@@ -487,11 +487,11 @@ Options:
     // Make or check instance directory
     if (TestFile(root_directory)) {
         if (!IsDirectoryEmpty(root_directory)) {
-            LogError("Directory '%1' is not empty", root_directory);
+            LogError("Directory '%1' exists and is not empty", root_directory);
             return 1;
         }
     } else {
-        if (!MakeDirectory(root_directory, false))
+        if (!MakeDirectory(root_directory))
             return 1;
         directories.Append(root_directory);
     }

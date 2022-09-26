@@ -174,9 +174,18 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
     };
 
     // Make main directory
-    if (!MakeDirectory(path))
+    if (TestFile(path)) {
+        if (!IsDirectoryEmpty(path)) {
+            LogError("Directory '%1' exists and is not empty", path);
+            return false;
+        }
+    } else {
+        if (!MakeDirectory(path))
+            return false;
+        directories.Append(path);
+    }
+    if (!MakeDirectory(path, false))
         return false;
-    directories.Append(path);
 
     // Create repository directories
     {

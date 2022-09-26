@@ -223,11 +223,14 @@ bool GetDirectory(kt_Disk *disk, const kt_ID &id, int8_t type, Span<const uint8_
 {
     BlockAllocator temp_alloc;
 
-    if (!MakeDirectory(dest_dirname, false))
-        return false;
-    if (!IsDirectoryEmpty(dest_dirname)) {
-        LogError("Directory '%1' is not empty", dest_dirname);
-        return false;
+    if (TestFile(dest_dirname)) {
+        if (!IsDirectoryEmpty(dest_dirname)) {
+            LogError("Directory '%1' exists and is not empty", dest_dirname);
+            return false;
+        }
+    } else {
+        if (!MakeDirectory(dest_dirname))
+            return false;
     }
 
     if (type != (int8_t)ObjectType::Directory) {
