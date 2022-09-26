@@ -199,7 +199,7 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
             return true;
         };
 
-        if (!make_directory("info"))
+        if (!make_directory("meta"))
             return false;
         if (!make_directory("blobs"))
             return false;
@@ -232,10 +232,10 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
 
     // Write control files
     {
-        const char *salt_filename = Fmt(&temp_alloc, "%1%/info/salt", directory).ptr;
-        const char *version_filename = Fmt(&temp_alloc, "%1%/info/version", directory).ptr;
-        const char *full_filename = Fmt(&temp_alloc, "%1%/info/full", directory).ptr;
-        const char *write_filename = Fmt(&temp_alloc, "%1%/info/write", directory).ptr;
+        const char *salt_filename = Fmt(&temp_alloc, "%1%/meta/salt", directory).ptr;
+        const char *version_filename = Fmt(&temp_alloc, "%1%/meta/version", directory).ptr;
+        const char *full_filename = Fmt(&temp_alloc, "%1%/meta/full", directory).ptr;
+        const char *write_filename = Fmt(&temp_alloc, "%1%/meta/write", directory).ptr;
 
         if (!WriteFile(salt, salt_filename))
             return false;
@@ -271,10 +271,10 @@ kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)
         return nullptr;
     }
 
-    const char *salt_filename = Fmt(&temp_alloc, "%1%/info/salt", directory).ptr;
-    const char *version_filename = Fmt(&temp_alloc, "%1%/info/version", directory).ptr;
-    const char *full_filename = Fmt(&temp_alloc, "%1%/info/full", directory).ptr;
-    const char *write_filename = Fmt(&temp_alloc, "%1%/info/write", directory).ptr;
+    const char *salt_filename = Fmt(&temp_alloc, "%1%/meta/salt", directory).ptr;
+    const char *version_filename = Fmt(&temp_alloc, "%1%/meta/version", directory).ptr;
+    const char *full_filename = Fmt(&temp_alloc, "%1%/meta/full", directory).ptr;
+    const char *write_filename = Fmt(&temp_alloc, "%1%/meta/write", directory).ptr;
 
     uint8_t key[32];
     {
@@ -310,8 +310,6 @@ kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)
     // Read encrypted version file
     uint8_t test[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + 1];
     {
-        const char *version_filename = Fmt(&temp_alloc, "%1%/info/version", directory).ptr;
-
         Size read = ReadFile(version_filename, test);
         if (read < 0)
             return nullptr;
