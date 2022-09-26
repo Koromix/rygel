@@ -99,7 +99,7 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
     return 0;
 }
 
-static int RunPutFile(Span<const char *> arguments)
+static int RunPut(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -110,7 +110,7 @@ static int RunPutFile(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 put_file -R <dir> <filename>%!0
+R"(Usage: %!..+%1 put [-R <dir>] <filename>%!0
 
 Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
@@ -162,18 +162,38 @@ Options:
     LogInfo();
     LogInfo("Backing up...");
 
-    kt_ID id = {};
-    int64_t written = 0;
-    if (!kt_PutFile(disk, filename, &id, &written))
+    FileInfo file_info;
+    if (!StatFile(filename, (int)StatFlag::FollowSymlink, &file_info))
         return 1;
 
-    LogInfo("File ID: %!..+%1%!0", id);
+    kt_ID id = {};
+    int64_t written = 0;
+    switch (file_info.type) {
+        case FileType::Directory: {
+            if (!kt_PutDirectory(disk, filename, &id, &written))
+                return 1;
+        } break;
+        case FileType::File: {
+            if (!kt_PutFile(disk, filename, &id, &written))
+                return 1;
+        } break;
+
+        case FileType::Link:
+        case FileType::Device:
+        case FileType::Pipe:
+        case FileType::Socket: {
+            LogError("Cannot backup special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
+            return 1;
+        } break;
+    }
+
+    LogInfo("Backup ID: %!..+%1%!0", id);
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(written));
 
     return 0;
 }
 
-static int RunGetFile(Span<const char *> arguments)
+static int RunGet(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -270,9 +290,8 @@ int Main(int argc, char **argv)
 Main commands:
     %!..+init%!0                         Init new backup repository
 
-Specialized commands:
-    %!..+put_file%!0                     Store encrypted file to storage
-    %!..+get_file%!0                     Get and decrypt file from storage
+    %!..+put%!0                          Store encrypted directory or file to storage
+    %!..+get%!0                          Get and decrypt directory or file from storage
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
@@ -304,10 +323,10 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
 
     if (TestStr(cmd, "init")) {
         return RunInit(arguments);
-    } else if (TestStr(cmd, "put_file")) {
-        return RunPutFile(arguments);
-    } else if (TestStr(cmd, "get_file")) {
-        return RunGetFile(arguments);
+    } else if (TestStr(cmd, "put")) {
+        return RunPut(arguments);
+    } else if (TestStr(cmd, "get")) {
+        return RunGet(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

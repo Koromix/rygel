@@ -38,8 +38,17 @@ static const Size ChunkMax = Kibibytes(2048);
 
 enum class ObjectType: int8_t {
     Chunk = 0,
-    ChunkList = 1
+    ChunkList = 1,
+    Directory = 2
 };
+
+#pragma pack(push, 1)
+struct FileEntry {
+    kt_ID id;
+    char basename[];
+};
+#pragma pack(pop)
+RG_STATIC_ASSERT(RG_SIZE(FileEntry) == 32);
 
 #pragma pack(push, 1)
 struct ChunkEntry {
@@ -133,6 +142,75 @@ static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uin
 
 #endif
 
+bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int64_t *out_written)
+{
+    BlockAllocator temp_alloc;
+
+    Span<const uint8_t> salt = disk->GetSalt();
+    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
+
+    HeapArray<uint8_t> dir_obj;
+    std::atomic<int64_t> dir_written = 0;
+
+    EnumStatus status = EnumerateDirectory(src_dirname, nullptr, -1,
+                                           [&](const char *basename, FileType file_type) {
+        const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
+
+        Size entry_len = RG_SIZE(FileEntry) + strlen(basename) + 1;
+        FileEntry *entry = (FileEntry *)AllocateRaw(&temp_alloc, entry_len);
+
+        switch (file_type) {
+            case FileType::Directory: {
+                int64_t written = 0;
+                if (!kt_PutDirectory(disk, filename, &entry->id, &written))
+                    return false;
+                dir_written += written;
+            } break;
+            case FileType::File: {
+                int64_t written = 0;
+                if (!kt_PutFile(disk, filename, &entry->id, &written))
+                    return false;
+                dir_written += written;
+            } break;
+
+            case FileType::Link:
+            case FileType::Device:
+            case FileType::Pipe:
+            case FileType::Socket: {
+                LogError("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_type]);
+                return true;
+            } break;
+        }
+        CopyString(basename, MakeSpan(entry->basename, entry_len - RG_SIZE(FileEntry)));
+
+        dir_obj.Append(MakeSpan((const uint8_t *)entry, entry_len));
+
+        return true;
+    });
+    if (status != EnumStatus::Complete)
+        return false;
+
+    kt_ID dir_id = {};
+    {
+        blake3_hasher hasher;
+
+        blake3_hasher_init_keyed(&hasher, salt.ptr);
+        blake3_hasher_update(&hasher, dir_obj.ptr, dir_obj.len);
+        blake3_hasher_finalize(&hasher, dir_id.hash, RG_SIZE(dir_id.hash));
+
+        Size ret = disk->Write(dir_id, (int8_t)ObjectType::Directory, dir_obj);
+        if (ret < 0)
+            return false;
+        dir_written += ret;
+    }
+
+    *out_id = dir_id;
+    if (out_written) {
+        *out_written += dir_written;
+    }
+    return true;
+}
+
 bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written)
 {
     Span<const uint8_t> salt = disk->GetSalt();
@@ -144,10 +222,11 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
 
     blake3_hasher file_hasher;
     HeapArray<uint8_t> file_obj;
+    std::atomic<int64_t> file_written = 0;
+
     blake3_hasher_init_keyed(&file_hasher, salt.ptr);
 
     // Split the file
-    std::atomic<Size> written = 0;
     {
         kt_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
 
@@ -188,7 +267,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
                     RG_ASSERT(idx * RG_SIZE(ChunkEntry) == file_obj.len);
                     file_obj.len += RG_SIZE(ChunkEntry);
 
-                    async.Run([=, &written, &file_obj]() {
+                    async.Run([=, &file_written, &file_obj]() {
                         ChunkEntry entry = {};
 
                         entry.offset = LittleEndian(total);
@@ -197,6 +276,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
                         // Hash chunk data
                         {
                             blake3_hasher hasher;
+
                             blake3_hasher_init_keyed(&hasher, salt.ptr);
                             blake3_hasher_update(&hasher, chunk.ptr, chunk.len);
                             blake3_hasher_finalize(&hasher, entry.id.hash, RG_SIZE(entry.id.hash));
@@ -205,7 +285,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
                         Size ret = disk->Write(entry.id, (int8_t)ObjectType::Chunk, chunk);
                         if (ret < 0)
                             return false;
-                        written += ret;
+                        file_written += ret;
 
                         memcpy(file_obj.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
 
@@ -244,7 +324,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
         Size ret = disk->Write(file_id, (int8_t)ObjectType::ChunkList, file_obj);
         if (ret < 0)
             return false;
-        written += ret;
+        file_written += ret;
     } else {
         const ChunkEntry *entry0 = (const ChunkEntry *)file_obj.ptr;
         file_id = entry0->id;
@@ -252,7 +332,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
 
     *out_id = file_id;
     if (out_written) {
-        *out_written = written;
+        *out_written += file_written;
     }
     return true;
 }
