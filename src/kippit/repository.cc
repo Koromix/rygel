@@ -180,6 +180,8 @@ bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int6
             case FileType::Pipe:
             case FileType::Socket: {
                 LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_type]);
+
+                dir_obj.RemoveLast(entry_len);
                 return true;
             } break;
         }
