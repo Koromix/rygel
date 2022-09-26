@@ -156,7 +156,7 @@ Options:
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), kt_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != kt_DiskMode::WriteOnly) {
-        LogError("You should use the write-only key with this command");
+        LogWarning("You should use the write-only key with this command");
     }
 
     LogInfo();

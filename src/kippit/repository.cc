@@ -177,7 +177,7 @@ bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int6
             case FileType::Device:
             case FileType::Pipe:
             case FileType::Socket: {
-                LogError("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_type]);
+                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_type]);
                 return true;
             } break;
         }
