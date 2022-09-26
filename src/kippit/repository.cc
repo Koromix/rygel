@@ -44,10 +44,11 @@ enum class ObjectType: int8_t {
 #pragma pack(push, 1)
 struct ChunkEntry {
     int64_t offset; // Little Endian
+    int32_t len;    // Little Endian
     kt_ID id;
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(ChunkEntry) == 40);
+RG_STATIC_ASSERT(RG_SIZE(ChunkEntry) == 44);
 
 #ifdef _WIN32
 
@@ -191,6 +192,7 @@ bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t 
                         ChunkEntry entry = {};
 
                         entry.offset = LittleEndian(total);
+                        entry.len = LittleEndian((int32_t)chunk.len);
 
                         // Hash chunk data
                         {
@@ -295,6 +297,7 @@ bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64
 
                 memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
                 entry.offset = LittleEndian(entry.offset);
+                entry.len = LittleEndian(entry.len);
 
                 int8_t type;
                 HeapArray<uint8_t> buf;
@@ -303,6 +306,10 @@ bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64
 
                 if (RG_UNLIKELY(type != (int8_t)ObjectType::Chunk)) {
                     LogError("Object '%1' is not a chunk", entry.id);
+                    return false;
+                }
+                if (RG_UNLIKELY(buf.len != entry.len)) {
+                    LogError("Chunk size mismatch for '%1'", entry.id);
                     return false;
                 }
                 if (!WriteAt(fd, dest_filename, entry.offset, buf)) {
@@ -316,6 +323,17 @@ bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64
 
         if (!async.Sync())
             return false;
+
+        // Check actual file size
+        if (file_obj.len) {
+            const ChunkEntry *entry = (const ChunkEntry *)(file_obj.end() - RG_SIZE(ChunkEntry));
+            int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
+
+            if (RG_UNLIKELY(len != file_len)) {
+                LogError("File size mismatch for '%1'", entry->id);
+                return false;
+            }
+        }
     } else if (type == (int8_t)ObjectType::Chunk) {
         file_len = file_obj.len;
 
