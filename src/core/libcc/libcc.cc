@@ -87,19 +87,11 @@
 #ifdef __APPLE__
     #include <sys/random.h>
     #include <mach-o/dyld.h>
-
-    #define off64_t off_t
-    #define fseeko64 fseeko
-    #define ftello64 ftello
 #endif
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
     #include <pthread_np.h>
     #include <sys/param.h>
     #include <sys/sysctl.h>
-
-    #define off64_t off_t
-    #define fseeko64 fseeko
-    #define ftello64 ftello
 #endif
 #include <chrono>
 #include <random>
