@@ -41,7 +41,7 @@ bool kt_Disk::Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_ob
     RG_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs%/%1%/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
+    path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
     // Read the object, we use the same buffer for the cypher and the decrypted data,
     // just 512 bytes apart which is more than enough for ChaCha20 (64-byte blocks).
@@ -129,7 +129,7 @@ Size kt_Disk::Write(const kt_ID &id, int8_t type, Span<const uint8_t> obj)
     RG_ASSERT(url);
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs%/%1%/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
+    path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
     Size written = WriteObject(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
         // Write object intro
