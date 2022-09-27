@@ -110,7 +110,7 @@ static int RunPut(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 put [-R <dir>] <filename>%!0
+R"(Usage: %!..+%1 put [-R <repo>] <filename>%!0
 
 Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
@@ -199,13 +199,13 @@ static int RunGet(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 get_file -R <repo> -O <file> <ID>%!0
+R"(Usage: %!..+%1 get [-R <repo>] <ID> -O <path>%!0
 
 Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
         %!..+--password <pwd>%!0         Set repository password
 
-    %!..+-O, --output_file <file>%!0     Restore file to <file>)", FelixTarget);
+    %!..+-O, --output <path>%!0          Restore file or directory to path)", FelixTarget);
     };
 
     // Parse arguments
@@ -220,7 +220,7 @@ Options:
                 repo_directory = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
-            } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
+            } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 dest_filename = opt.current_value;
             } else {
                 opt.LogUnknownError();
