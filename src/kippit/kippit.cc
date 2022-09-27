@@ -73,10 +73,9 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
         repo_directory = opt.ConsumeNonOption();
     }
 
-    if (!repo_directory) {
-        LogError("Missing repository directory");
+    repo_directory = FillRepository(repo_directory);
+    if (!repo_directory)
         return 1;
-    }
 
     // Generate repository passwords
     char full_pwd[33] = {};
