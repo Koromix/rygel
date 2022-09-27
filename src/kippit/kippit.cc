@@ -161,13 +161,19 @@ Options:
     LogInfo();
     LogInfo("Backing up...");
 
+    int64_t now = GetMonotonicTime();
+
     kt_ID id = {};
     int64_t written = 0;
     if (!kt_Put(disk, filename, &id, &written))
         return 1;
 
+    double time = (double)(GetMonotonicTime() - now) / 1000.0;
+
+    LogInfo();
     LogInfo("Backup ID: %!..+%1%!0", id);
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(written));
+    LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
     return 0;
 }
@@ -245,6 +251,8 @@ Options:
     LogInfo();
     LogInfo("Extracting...");
 
+    int64_t now = GetMonotonicTime();
+
     int64_t file_len = 0;
     {
         kt_ID id = {};
@@ -254,7 +262,11 @@ Options:
             return 1;
     }
 
+    double time = (double)(GetMonotonicTime() - now) / 1000.0;
+
+    LogInfo();
     LogInfo("Restored: %!..+%1%!0 (%2)", dest_filename, FmtDiskSize(file_len));
+    LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
     return 0;
 }
