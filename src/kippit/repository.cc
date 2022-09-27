@@ -39,8 +39,17 @@ static const Size ChunkMax = Kibibytes(2048);
 enum class ObjectType: int8_t {
     Chunk = 0,
     ChunkList = 1,
-    Directory = 2
+    Directory = 2,
+    Snapshot = 3
 };
+
+#pragma pack(push, 1)
+struct SnapshotData {
+    char name[512];
+    int64_t time; // Little Endian
+    kt_ID root;
+};
+#pragma pack(pop)
 
 #pragma pack(push, 1)
 struct FileEntry {
@@ -501,15 +510,37 @@ bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64
     return GetFile(disk, id, type, file_obj, dest_filename, out_len);
 }
 
-bool kt_Put(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written)
+bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filename, kt_ID *out_id, int64_t *out_written)
 {
+    if (settings.raw && settings.name) {
+        LogError("Cannot use snapshot name in raw mode");
+        return false;
+    }
+    if (settings.name && strlen(settings.name) >= RG_SIZE(SnapshotData::name)) {
+        LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotData::name));
+        return false;
+    }
+
+    Span<const uint8_t> salt = disk->GetSalt();
+    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
+
     FileInfo file_info;
     if (!StatFile(src_filename, (int)StatFlag::FollowSymlink, &file_info))
         return false;
 
+    int64_t now = GetUnixTime();
+
+    kt_ID root = {};
+    int64_t written = 0;
     switch (file_info.type) {
-        case FileType::Directory: return kt_PutDirectory(disk, src_filename, out_id, out_written);
-        case FileType::File: return kt_PutFile(disk, src_filename, out_id, out_written);
+        case FileType::Directory: {
+            if (!kt_PutDirectory(disk, src_filename, &root, &written))
+                return false;
+        } break;
+        case FileType::File: {
+            if (!kt_PutFile(disk, src_filename, &root, &written))
+                return false;
+        } break;
 
         case FileType::Link:
         case FileType::Device:
@@ -520,7 +551,30 @@ bool kt_Put(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out
         } break;
     }
 
-    RG_UNREACHABLE();
+    kt_ID id = {};
+    if (!settings.raw) {
+        SnapshotData snapshot = {};
+        Span<const uint8_t> raw = MakeSpan((const uint8_t *)&snapshot, RG_SIZE(snapshot));
+
+        CopyString(settings.name ? settings.name : "", snapshot.name);
+        snapshot.time = LittleEndian(now);
+        snapshot.root = root;
+
+        HashBlake3(raw, salt.ptr, &id);
+
+        Size ret = disk->Write(id, (int8_t)ObjectType::Snapshot, raw);
+        if (ret < 0)
+            return false;
+        written += ret;
+    } else {
+        id = root;
+    }
+
+    *out_id = id;
+    if (out_written) {
+        *out_written += written;
+    }
+    return true;
 }
 
 bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len)
@@ -530,12 +584,28 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *
     if (!disk->Read(id, &type, &obj))
         return false;
 
+    if (type == (int8_t)ObjectType::Snapshot) {
+        SnapshotData snapshot = {};
+
+        if (obj.len != RG_SIZE(snapshot)) {
+            LogError("Malformed snapshot object '%1'", id);
+            return false;
+        }
+        obj.len = 0;
+
+        memcpy(&snapshot, obj.ptr, RG_SIZE(snapshot));
+        snapshot.time = LittleEndian(snapshot.time);
+
+        if (!disk->Read(snapshot.root, &type, &obj))
+            return false;
+    }
+
     if (type == (int8_t)ObjectType::Chunk || type == (int8_t)ObjectType::ChunkList) {
         return GetFile(disk, id, type, obj, dest_filename, out_len);
     } else if (type == (int8_t)ObjectType::Directory) {
         return GetDirectory(disk, id, type, obj, dest_filename, out_len);
     } else {
-        LogError("Unknown object type %1 for '%2'", FmtHex(type), id);
+        LogError("Unknown object type 0x%1 for '%2'", FmtHex(type), id);
         return false;
     }
 }

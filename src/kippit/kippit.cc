@@ -103,6 +103,7 @@ static int RunPut(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
+    kt_PutSettings settings;
     const char *repo_directory = nullptr;
     const char *pwd = nullptr;
     const char *filename = nullptr;
@@ -113,7 +114,11 @@ R"(Usage: %!..+%1 put [-R <dir>] <filename>%!0
 
 Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
-        %!..+--password <pwd>%!0         Set repository password)", FelixTarget);
+        %!..+--password <pwd>%!0         Set repository password
+
+    %!..+-n, --name <name>%!0            Set user friendly name (optional)
+
+        %!..+--raw%!0                    Skip snapshot object and report data ID)", FelixTarget);
     };
 
     // Parse arguments
@@ -128,6 +133,10 @@ Options:
                 repo_directory = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
+            } else if (opt.Test("-n", "--name", OptionType::Value)) {
+                settings.name = opt.current_value;
+            } else if (opt.Test("--raw")) {
+                settings.raw = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -165,13 +174,13 @@ Options:
 
     kt_ID id = {};
     int64_t written = 0;
-    if (!kt_Put(disk, filename, &id, &written))
+    if (!kt_Put(disk, settings, filename, &id, &written))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
 
     LogInfo();
-    LogInfo("Backup ID: %!..+%1%!0", id);
+    LogInfo("%1 ID: %!..+%2%!0", settings.raw ? "Data" : "Snapshot", id);
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(written));
     LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
