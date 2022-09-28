@@ -38,7 +38,7 @@ static const Size ChunkMax = Kibibytes(2048);
 
 enum class ObjectType: int8_t {
     Chunk = 0,
-    ChunkList = 1,
+    File = 1,
     Directory = 2,
     Snapshot = 3
 };
@@ -255,7 +255,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
 
         HashBlake3(file_obj, salt.ptr, &file_id);
 
-        Size ret = disk->Write(file_id, (int8_t)ObjectType::ChunkList, file_obj);
+        Size ret = disk->Write(file_id, (int8_t)ObjectType::File, file_obj);
         if (ret < 0)
             return false;
         file_written += ret;
@@ -281,7 +281,7 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, int8_t type,
     RG_DEFER { close(fd); };
 
     int64_t file_len = -1;
-    if (type == (int8_t)ObjectType::ChunkList) {
+    if (type == (int8_t)ObjectType::File) {
         if (file_obj.len % RG_SIZE(ChunkEntry) != RG_SIZE(int64_t)) {
             LogError("Malformed file object '%1'", id);
             return false;
@@ -580,7 +580,7 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *
             return false;
     }
 
-    if (type == (int8_t)ObjectType::Chunk || type == (int8_t)ObjectType::ChunkList) {
+    if (type == (int8_t)ObjectType::Chunk || type == (int8_t)ObjectType::File) {
         return GetFile(disk, id, type, obj, dest_filename, out_len);
     } else if (type == (int8_t)ObjectType::Directory) {
         return GetDirectory(disk, id, type, obj, dest_filename, out_len);
