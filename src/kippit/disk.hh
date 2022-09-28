@@ -49,6 +49,8 @@ public:
     bool ReadObject(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj);
     Size WriteObject(const kt_ID &id, int8_t type, Span<const uint8_t> obj);
 
+    Size WriteTag(const kt_ID &id);
+
 protected:
     virtual bool ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
     virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;

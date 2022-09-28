@@ -548,10 +548,21 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filen
 
         HashBlake3(raw, salt.ptr, &id);
 
-        Size ret = disk->WriteObject(id, (int8_t)ObjectType::Snapshot, raw);
-        if (ret < 0)
-            return false;
-        written += ret;
+        // Write snapshot object
+        {
+            Size ret = disk->WriteObject(id, (int8_t)ObjectType::Snapshot, raw);
+            if (ret < 0)
+                return false;
+            written += ret;
+        }
+
+        // Create tag file
+        {
+            Size ret = disk->WriteTag(id);
+            if (ret < 0)
+                return false;
+            written += ret;
+        }
     } else {
         id = root;
     }

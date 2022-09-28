@@ -187,4 +187,31 @@ Size kt_Disk::WriteObject(const kt_ID &id, int8_t type, Span<const uint8_t> obj)
     return written;
 }
 
+Size kt_Disk::WriteTag(const kt_ID &id)
+{
+    // Prepare sealed ID
+    uint8_t cypher[crypto_box_SEALBYTES + 32];
+    if (crypto_box_seal(cypher, id.hash, RG_SIZE(id.hash), pkey) != 0) {
+        LogError("Failed to seal ID");
+        return -1;
+    }
+
+    // Write tag file with random name, retry if name is already used
+    for (Size i = 0; i < 1000; i++) {
+        LocalArray<char, 256> path;
+        path.len = Fmt(path.data, "tags/%1", FmtRandom(8)).len;
+
+        Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(cypher); });
+
+        if (written > 0)
+            return written;
+        if (written < 0)
+            return -1;
+    }
+
+    // We really really should never reach this...
+    LogError("Failed to create tag for '%1'", id);
+    return -1;
+}
+
 }

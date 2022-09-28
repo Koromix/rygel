@@ -191,6 +191,8 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
 
         if (!make_directory("keys"))
             return false;
+        if (!make_directory("tags"))
+            return false;
         if (!make_directory("blobs"))
             return false;
 
