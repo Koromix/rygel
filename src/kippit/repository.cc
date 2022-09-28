@@ -55,10 +55,12 @@ struct SnapshotData {
 struct FileEntry {
     kt_ID id;
     int8_t type; // FileType
+    int64_t mtime;
+    uint32_t mode;
     char basename[];
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(FileEntry) == 33);
+RG_STATIC_ASSERT(RG_SIZE(FileEntry) == 45);
 
 #pragma pack(push, 1)
 struct ChunkEntry {
@@ -376,14 +378,21 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     std::atomic<int64_t> dir_written = 0;
 
     EnumStatus status = EnumerateDirectory(src_dirname, nullptr, -1,
-                                           [&](const char *basename, FileType file_type) {
+                                           [&](const char *basename, FileType) {
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
 
         Size entry_len = RG_SIZE(FileEntry) + strlen(basename) + 1;
         FileEntry *entry = (FileEntry *)dir_obj.AppendDefault(entry_len);
 
-        entry->type = (int8_t)file_type;
-        switch (file_type) {
+        FileInfo file_info;
+        if (!StatFile(filename, &file_info))
+            return false;
+
+        entry->type = (int8_t)file_info.type;
+        entry->mtime = file_info.mtime;
+        entry->mode = (uint32_t)file_info.mode;
+
+        switch (file_info.type) {
             case FileType::Directory: {
                 int64_t written = 0;
                 if (!PutDirectory(disk, filename, &entry->id, &written))
@@ -401,12 +410,13 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
             case FileType::Device:
             case FileType::Pipe:
             case FileType::Socket: {
-                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_type]);
+                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
 
                 dir_obj.RemoveLast(entry_len);
                 return true;
             } break;
         }
+
         CopyString(basename, MakeSpan(entry->basename, entry_len - RG_SIZE(FileEntry)));
 
         return true;
