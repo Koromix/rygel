@@ -18,7 +18,6 @@
 namespace RG {
 
 static const int MaxPathSize = 4096 - 128;
-static const uint8_t RepoVersion = 1;
 
 class LocalDisk: public kt_Disk {
 public:
@@ -91,62 +90,53 @@ static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[3
     return true;
 }
 
-static bool WriteControl(const char *filename, const uint8_t key[32], Span<const uint8_t> data)
+#pragma pack(push, 1)
+struct KeyData {
+    uint8_t salt[16];
+    uint8_t nonce[crypto_secretbox_NONCEBYTES];
+    uint8_t cypher[crypto_secretbox_MACBYTES + 32];
+};
+#pragma pack(pop)
+
+static bool WriteKey(const char *filename, const char *pwd, const uint8_t payload[32])
 {
-    uint8_t cypher[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + Kibibytes(16)];
-    RG_ASSERT(data.len <= Kibibytes(16));
+    KeyData data;
 
-    randombytes_buf(cypher, crypto_secretbox_NONCEBYTES);
-    crypto_secretbox_easy(cypher + crypto_secretbox_NONCEBYTES, data.ptr, (size_t)data.len, cypher, key);
+    randombytes_buf(data.salt, RG_SIZE(data.salt));
+    randombytes_buf(data.nonce, RG_SIZE(data.nonce));
 
-    Span<const uint8_t> buf = MakeSpan(cypher, crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + data.len);
+    uint8_t key[32];
+    if (!DeriveKey(pwd, data.salt, key))
+        return false;
+
+    crypto_secretbox_easy(data.cypher, payload, 32, data.nonce, key);
+
+    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
     return WriteFile(buf, filename);
 }
 
-static bool ReadControl(const char *filename, const uint8_t key[32],
-                        Span<uint8_t> out_data, bool *out_error = nullptr)
+static bool ReadKey(const char *filename, const char *pwd, uint8_t *out_payload, bool *out_error)
 {
-    uint8_t cypher[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + Kibibytes(16)];
-    RG_ASSERT(out_data.len <= Kibibytes(16));
+    KeyData data;
 
-    Size len = ReadFile(filename, cypher);
-    if (len < 0) {
-        if (out_error) {
+    // Read file data
+    {
+        Span<uint8_t> buf = MakeSpan((uint8_t *)&data, RG_SIZE(data));
+
+        if (!ReadFile(filename, buf)) {
             *out_error = true;
+            return false;
         }
+    }
+
+    uint8_t key[32];
+    if (!DeriveKey(pwd, data.salt, key)) {
+        *out_error = true;
         return false;
     }
 
-    if (key) {
-        if (len - crypto_secretbox_NONCEBYTES - crypto_secretbox_MACBYTES != out_data.len) {
-            LogError("Unexpected size for '%1'", filename);
-
-            if (out_error) {
-                *out_error = true;
-            }
-            return false;
-        }
-        if (crypto_secretbox_open_easy(out_data.ptr, cypher + crypto_secretbox_NONCEBYTES,
-                                       len - crypto_secretbox_NONCEBYTES, cypher, key) != 0) {
-            if (!out_error) {
-                LogError("Failed to decrypt control file");
-            }
-            return false;
-        }
-    } else {
-        if (len != out_data.len) {
-            LogError("Unexpected size for '%1'", filename);
-
-            if (out_error) {
-                *out_error = true;
-            }
-            return false;
-        }
-
-        memcpy_safe(out_data.ptr, cypher, len);
-    }
-
-    return true;
+    bool success = !crypto_secretbox_open_easy(out_payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key);
+    return success;
 }
 
 bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd)
@@ -199,7 +189,7 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
             return true;
         };
 
-        if (!make_directory("meta"))
+        if (!make_directory("keys"))
             return false;
         if (!make_directory("blobs"))
             return false;
@@ -213,43 +203,21 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
         }
     }
 
-    // Repository salt
-    uint8_t salt[16];
-    randombytes_buf(salt, RG_SIZE(salt));
+    const char *full_filename = Fmt(&temp_alloc, "%1%/keys/full", directory).ptr;
+    const char *write_filename = Fmt(&temp_alloc, "%1%/keys/write", directory).ptr;
 
-    // Derive password keys
-    uint8_t full_key[32];
-    uint8_t write_key[32];
-    if (!DeriveKey(full_pwd, salt, full_key))
-        return false;
-    if (!DeriveKey(write_pwd, salt, write_key))
-        return false;
-
-    // Generate secure keypair
+    // Generate master keys
     uint8_t skey[32];
     uint8_t pkey[32];
     crypto_box_keypair(pkey, skey);
 
     // Write control files
-    {
-        const char *salt_filename = Fmt(&temp_alloc, "%1%/meta/salt", directory).ptr;
-        const char *version_filename = Fmt(&temp_alloc, "%1%/meta/version", directory).ptr;
-        const char *full_filename = Fmt(&temp_alloc, "%1%/meta/full", directory).ptr;
-        const char *write_filename = Fmt(&temp_alloc, "%1%/meta/write", directory).ptr;
-
-        if (!WriteFile(salt, salt_filename))
-            return false;
-        files.Append(salt_filename);
-        if (!WriteControl(version_filename, pkey, RepoVersion))
-            return false;
-        files.Append(version_filename);
-        if (!WriteControl(full_filename, full_key, skey))
-            return false;
-        files.Append(full_filename);
-        if (!WriteControl(write_filename, write_key, pkey))
-            return false;
-        files.Append(write_filename);
-    }
+    if (!WriteKey(full_filename, full_pwd, skey))
+        return false;
+    files.Append(full_filename);
+    if (!WriteKey(write_filename, write_pwd, pkey))
+        return false;
+    files.Append(write_filename);
 
     root_guard.Disable();
     return true;
@@ -271,20 +239,8 @@ kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)
         return nullptr;
     }
 
-    const char *salt_filename = Fmt(&temp_alloc, "%1%/meta/salt", directory).ptr;
-    const char *version_filename = Fmt(&temp_alloc, "%1%/meta/version", directory).ptr;
-    const char *full_filename = Fmt(&temp_alloc, "%1%/meta/full", directory).ptr;
-    const char *write_filename = Fmt(&temp_alloc, "%1%/meta/write", directory).ptr;
-
-    uint8_t key[32];
-    {
-        uint8_t salt[16];
-        if (!ReadControl(salt_filename, nullptr, salt))
-            return nullptr;
-
-        if (!DeriveKey(pwd, salt, key))
-            return nullptr;
-    }
+    const char *full_filename = Fmt(&temp_alloc, "%1%/keys/full", directory).ptr;
+    const char *write_filename = Fmt(&temp_alloc, "%1%/keys/write", directory).ptr;
 
     // Open disk and determine mode
     kt_DiskMode mode;
@@ -293,41 +249,16 @@ kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)
     {
         bool error = false;
 
-        if (ReadControl(write_filename, key, pkey, &error)) {
+        if (ReadKey(write_filename, pwd, pkey, &error)) {
             mode = kt_DiskMode::WriteOnly;
-            memset(skey, 0, RG_SIZE(key));
-        } else if (ReadControl(full_filename, key, skey, &error)) {
+            memset(skey, 0, RG_SIZE(skey));
+        } else if (ReadKey(full_filename, pwd, skey, &error)) {
             mode = kt_DiskMode::ReadWrite;
             crypto_scalarmult_base(pkey, skey);
         } else {
             if (!error) {
                 LogError("Failed to open repository (wrong password?)");
             }
-            return nullptr;
-        }
-    }
-
-    // Read encrypted version file
-    uint8_t test[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + 1];
-    {
-        Size read = ReadFile(version_filename, test);
-        if (read < 0)
-            return nullptr;
-        if (read < RG_SIZE(test)) {
-            LogError("Truncated version file");
-            return nullptr;
-        }
-    }
-
-    // Check version
-    {
-        uint8_t version = 0;
-
-        if (!ReadControl(version_filename, pkey, version))
-            return nullptr;
-
-        if (version != RepoVersion) {
-            LogError("Unexpected repository version %1 (expected %2)", version, RepoVersion);
             return nullptr;
         }
     }
