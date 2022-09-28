@@ -323,8 +323,8 @@ bool DomainHolder::Open(const char *filename)
     // Make sure tmp and instances live on the same volume, because we need to
     // perform atomic renames in some cases.
     {
-        const char *tmp_filename1 = CreateTemporaryFile(config.tmp_directory, "", ".tmp", &config.str_alloc);
-        const char *tmp_filename2 = CreateTemporaryFile(config.instances_directory, "", ".tmp", &config.str_alloc);
+        const char *tmp_filename1 = CreateUniqueFile(config.tmp_directory, "", ".tmp", &config.str_alloc);
+        const char *tmp_filename2 = CreateUniqueFile(config.instances_directory, "", ".tmp", &config.str_alloc);
         RG_DEFER { UnlinkFile(tmp_filename2); };
 
         if (!RenameFile(tmp_filename1, tmp_filename2, true)) {

@@ -4607,8 +4607,8 @@ const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const 
     return filename;
 }
 
-static const char *CreateTemporaryPath(Span<const char> directory, const char *prefix, const char *extension,
-                                       Allocator *alloc, FunctionRef<bool(const char *path)> create)
+static const char *CreateUniquePath(Span<const char> directory, const char *prefix, const char *extension,
+                                    Allocator *alloc, FunctionRef<bool(const char *path)> create)
 {
     RG_ASSERT(alloc);
 
@@ -4641,10 +4641,10 @@ static const char *CreateTemporaryPath(Span<const char> directory, const char *p
     return nullptr;
 }
 
-const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
-                                Allocator *alloc, FILE **out_fp)
+const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
+                             Allocator *alloc, FILE **out_fp)
 {
-    return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
+    return CreateUniquePath(directory, prefix, extension, alloc, [&](const char *path) {
         int flags = (int)OpenFlag::Read | (int)OpenFlag::Write |
                     (int)OpenFlag::Exclusive;
 
@@ -4664,9 +4664,9 @@ const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, 
     });
 }
 
-const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc)
+const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix, Allocator *alloc)
 {
-    return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) {
+    return CreateUniquePath(directory, prefix, "", alloc, [&](const char *path) {
         return MakeDirectory(path);
     });
 }
@@ -6506,7 +6506,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
             dest.u.file.tmp_exclusive = true;
         }
 
-        dest.u.file.tmp_filename = CreateTemporaryFile(directory, "", ".tmp", &str_alloc, &dest.u.file.fp);
+        dest.u.file.tmp_filename = CreateUniqueFile(directory, "", ".tmp", &str_alloc, &dest.u.file.fp);
         if (!dest.u.file.tmp_filename)
             return false;
         dest.u.file.owned = true;

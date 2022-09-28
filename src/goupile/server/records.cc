@@ -1042,7 +1042,7 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
                                       ORDER BY f.anchor)", &stmt))
             return;
 
-        const char *export_filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator);
+        const char *export_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator);
         RG_DEFER { UnlinkFile(export_filename); };
 
         RecordExporter exporter(instance);

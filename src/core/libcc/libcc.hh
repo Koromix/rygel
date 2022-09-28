@@ -4269,9 +4269,9 @@ const char *GetTemporaryDirectory();
 
 const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const char *, 4> *out_possibilities = nullptr);
 
-const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
-                                Allocator *alloc, FILE **out_fp = nullptr);
-const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
+const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
+                             Allocator *alloc, FILE **out_fp = nullptr);
+const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
 
 // ------------------------------------------------------------------------
 // Random

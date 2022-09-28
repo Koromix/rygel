@@ -1064,7 +1064,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
         }
     }
     for (BackupEntry &entry: entries) {
-        entry.filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &temp_alloc);
+        entry.filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", &temp_alloc);
         if (!entry.filename)
             return false;
     }
@@ -2091,7 +2091,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         }
 
         // Create directory for instance files
-        const char *tmp_directory = CreateTemporaryDirectory(gp_domain.config.tmp_directory, "", &io->allocator);
+        const char *tmp_directory = CreateUniqueDirectory(gp_domain.config.tmp_directory, "", &io->allocator);
         HeapArray<const char *> tmp_filenames;
         RG_DEFER {
             for (const char *filename: tmp_filenames) {
@@ -2108,7 +2108,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             const char *src_filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
             FILE *fp = nullptr;
-            extract_filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fp);
+            extract_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fp);
             if (!extract_filename)
                 return;
             tmp_filenames.Append(extract_filename);
@@ -2150,7 +2150,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         sq_Database main_db;
         {
             FILE *fp = nullptr;
-            const char *main_filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fp);
+            const char *main_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fp);
             if (!main_filename)
                 return;
             tmp_filenames.Append(main_filename);

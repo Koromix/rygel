@@ -327,7 +327,7 @@ bool sb_SandboxBuilder::Apply()
             }
 
             // Create root FS with tmpfs
-            const char *fs_root = CreateTemporaryDirectory("/tmp/sandbox", "", &str_alloc);
+            const char *fs_root = CreateUniqueDirectory("/tmp/sandbox", "", &str_alloc);
             if (!fs_root)
                 return false;
             if (mount("tmpfs", fs_root, "tmpfs", 0, "size=1M,mode=0700") < 0) {
