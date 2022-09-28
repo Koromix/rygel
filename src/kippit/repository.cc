@@ -191,12 +191,10 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
             Async async;
 
             // Fill buffer
-            Span<const uint8_t> read;
-            read.ptr = buf.end();
-            read.len = st.Read(buf.TakeAvailable());
-            if (read.len < 0)
+            Size read = st.Read(buf.TakeAvailable());
+            if (read < 0)
                 return false;
-            buf.len += read.len;
+            buf.len += read;
 
             Span<const uint8_t> remain = buf;
 
@@ -244,9 +242,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
 
             memmove_safe(buf.ptr, remain.ptr, remain.len);
             buf.len = remain.len;
-        } while (buf.len);
-
-        RG_ASSERT(st.IsEOF());
+        } while (!st.IsEOF() || buf.len);
     }
 
     // Write list of chunks (unless there is exactly one)
