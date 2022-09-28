@@ -6549,7 +6549,12 @@ bool StreamWriter::Flush()
 
     switch (dest.type) {
         case DestinationType::Memory: return true;
-        case DestinationType::File: return FlushFile(dest.u.file.fp, filename);
+        case DestinationType::File: {
+            if (!FlushFile(dest.u.file.fp, filename)) {
+                error = true;
+                return false;
+            }
+        } break;
         case DestinationType::Function: return true;
     }
 
@@ -6712,14 +6717,14 @@ bool StreamWriter::Close(bool implicit)
         case DestinationType::Memory: { dest.u.mem = {}; } break;
 
         case DestinationType::File: {
-            if (IsValid() && !FlushFile(dest.u.file.fp, filename)) {
-                error = true;
-            }
-
             if (dest.u.file.tmp_filename) {
-                if (IsValid() && implicit) {
-                    LogDebug("Deleting implicitly closed file '%1'", filename);
-                    error = true;
+                if (IsValid()) {
+                    if (implicit) {
+                        LogDebug("Deleting implicitly closed file '%1'", filename);
+                        error = true;
+                    } else if (!FlushFile(dest.u.file.fp, filename)) {
+                        error = true;
+                    }
                 }
 
                 if (IsValid()) {
