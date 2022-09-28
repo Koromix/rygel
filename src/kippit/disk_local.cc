@@ -24,8 +24,8 @@ public:
     LocalDisk(Span<const char> directory, kt_DiskMode mode, const uint8_t skey[32], const uint8_t pkey[32]);
     ~LocalDisk() override;
 
-    bool ReadObject(const char *path, HeapArray<uint8_t> *out_obj) override;
-    Size WriteObject(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
+    Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
 };
 
 LocalDisk::LocalDisk(Span<const char> directory, kt_DiskMode mode, const uint8_t skey[32], const uint8_t pkey[32])
@@ -43,7 +43,7 @@ LocalDisk::~LocalDisk()
 {
 }
 
-bool LocalDisk::ReadObject(const char *path, HeapArray<uint8_t> *out_obj)
+bool LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -51,7 +51,7 @@ bool LocalDisk::ReadObject(const char *path, HeapArray<uint8_t> *out_obj)
     return ReadFile(filename.data, Mebibytes(16), out_obj) >= 0;
 }
 
-Size LocalDisk::WriteObject(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
+Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;

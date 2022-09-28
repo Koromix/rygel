@@ -46,12 +46,12 @@ public:
     Span<const uint8_t> GetSalt() const { return pkey; }
     kt_DiskMode GetMode() const { return mode; }
 
-    bool Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj);
-    Size Write(const kt_ID &id, int8_t type, Span<const uint8_t> obj);
+    bool ReadObject(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj);
+    Size WriteObject(const kt_ID &id, int8_t type, Span<const uint8_t> obj);
 
 protected:
-    virtual bool ReadObject(const char *path, HeapArray<uint8_t> *out_blob) = 0;
-    virtual Size WriteObject(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
+    virtual bool ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
+    virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
 };
 
 bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);

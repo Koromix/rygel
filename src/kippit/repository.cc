@@ -216,7 +216,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
 
                         HashBlake3(chunk, salt.ptr, &entry.id);
 
-                        Size ret = disk->Write(entry.id, (int8_t)ObjectType::Chunk, chunk);
+                        Size ret = disk->WriteObject(entry.id, (int8_t)ObjectType::Chunk, chunk);
                         if (ret < 0)
                             return false;
                         file_written += ret;
@@ -253,7 +253,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
 
         HashBlake3(file_obj, salt.ptr, &file_id);
 
-        Size ret = disk->Write(file_id, (int8_t)ObjectType::File, file_obj);
+        Size ret = disk->WriteObject(file_id, (int8_t)ObjectType::File, file_obj);
         if (ret < 0)
             return false;
         file_written += ret;
@@ -309,7 +309,7 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, int8_t type,
 
                 int8_t type;
                 HeapArray<uint8_t> buf;
-                if (!disk->Read(entry.id, &type, &buf))
+                if (!disk->ReadObject(entry.id, &type, &buf))
                     return false;
 
                 if (RG_UNLIKELY(type != (int8_t)ObjectType::Chunk)) {
@@ -424,7 +424,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     {
         HashBlake3(dir_obj, salt.ptr, &dir_id);
 
-        Size ret = disk->Write(dir_id, (int8_t)ObjectType::Directory, dir_obj);
+        Size ret = disk->WriteObject(dir_id, (int8_t)ObjectType::Directory, dir_obj);
         if (ret < 0)
             return false;
         dir_written += ret;
@@ -548,7 +548,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filen
 
         HashBlake3(raw, salt.ptr, &id);
 
-        Size ret = disk->Write(id, (int8_t)ObjectType::Snapshot, raw);
+        Size ret = disk->WriteObject(id, (int8_t)ObjectType::Snapshot, raw);
         if (ret < 0)
             return false;
         written += ret;
@@ -567,7 +567,7 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *
 {
     int8_t type;
     HeapArray<uint8_t> obj;
-    if (!disk->Read(id, &type, &obj))
+    if (!disk->ReadObject(id, &type, &obj))
         return false;
 
     if (type == (int8_t)ObjectType::Snapshot) {
@@ -582,7 +582,7 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *
         memcpy(&snapshot, obj.ptr, RG_SIZE(snapshot));
         snapshot.time = LittleEndian(snapshot.time);
 
-        if (!disk->Read(snapshot.root, &type, &obj))
+        if (!disk->ReadObject(snapshot.root, &type, &obj))
             return false;
     }
 

@@ -33,7 +33,7 @@ struct ObjectIntro {
 static const int ObjectVersion = 1;
 static const Size ObjectSplit = Kibibytes(32);
 
-bool kt_Disk::Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj)
+bool kt_Disk::ReadObject(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == kt_DiskMode::ReadWrite);
@@ -52,7 +52,7 @@ bool kt_Disk::Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_ob
         out_obj->len += 512;
 
         Size offset = out_obj->len;
-        if (!ReadObject(path.data, out_obj))
+        if (!ReadRaw(path.data, out_obj))
             return false;
         obj = MakeSpan(out_obj->ptr + offset, out_obj->len - offset);
     }
@@ -125,14 +125,14 @@ bool kt_Disk::Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_ob
     return true;
 }
 
-Size kt_Disk::Write(const kt_ID &id, int8_t type, Span<const uint8_t> obj)
+Size kt_Disk::WriteObject(const kt_ID &id, int8_t type, Span<const uint8_t> obj)
 {
     RG_ASSERT(url);
 
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
-    Size written = WriteObject(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
+    Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
         // Write object intro
         crypto_secretstream_xchacha20poly1305_state state;
         {
