@@ -161,142 +161,7 @@ static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, kt_ID *out_
     blake3_hasher_finalize(&hasher, out_id->hash, RG_SIZE(out_id->hash));
 }
 
-bool kt_PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int64_t *out_written)
-{
-    BlockAllocator temp_alloc;
-
-    Span<const uint8_t> salt = disk->GetSalt();
-    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
-
-    HeapArray<uint8_t> dir_obj;
-    std::atomic<int64_t> dir_written = 0;
-
-    EnumStatus status = EnumerateDirectory(src_dirname, nullptr, -1,
-                                           [&](const char *basename, FileType file_type) {
-        const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
-
-        Size entry_len = RG_SIZE(FileEntry) + strlen(basename) + 1;
-        FileEntry *entry = (FileEntry *)dir_obj.AppendDefault(entry_len);
-
-        entry->type = (int8_t)file_type;
-        switch (file_type) {
-            case FileType::Directory: {
-                int64_t written = 0;
-                if (!kt_PutDirectory(disk, filename, &entry->id, &written))
-                    return false;
-                dir_written += written;
-            } break;
-            case FileType::File: {
-                int64_t written = 0;
-                if (!kt_PutFile(disk, filename, &entry->id, &written))
-                    return false;
-                dir_written += written;
-            } break;
-
-            case FileType::Link:
-            case FileType::Device:
-            case FileType::Pipe:
-            case FileType::Socket: {
-                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_type]);
-
-                dir_obj.RemoveLast(entry_len);
-                return true;
-            } break;
-        }
-        CopyString(basename, MakeSpan(entry->basename, entry_len - RG_SIZE(FileEntry)));
-
-        return true;
-    });
-    if (status != EnumStatus::Complete)
-        return false;
-
-    kt_ID dir_id = {};
-    {
-        HashBlake3(dir_obj, salt.ptr, &dir_id);
-
-        Size ret = disk->Write(dir_id, (int8_t)ObjectType::Directory, dir_obj);
-        if (ret < 0)
-            return false;
-        dir_written += ret;
-    }
-
-    *out_id = dir_id;
-    if (out_written) {
-        *out_written += dir_written;
-    }
-    return true;
-}
-
-bool GetDirectory(kt_Disk *disk, const kt_ID &id, int8_t type, Span<const uint8_t> dir_obj,
-                  const char *dest_dirname, int64_t *out_len)
-{
-    BlockAllocator temp_alloc;
-
-    if (TestFile(dest_dirname)) {
-        if (!IsDirectoryEmpty(dest_dirname)) {
-            LogError("Directory '%1' exists and is not empty", dest_dirname);
-            return false;
-        }
-    } else {
-        if (!MakeDirectory(dest_dirname))
-            return false;
-    }
-
-    if (type != (int8_t)ObjectType::Directory) {
-        LogError("Object '%1' is not a directory", id);
-        return false;
-    }
-
-    // Extract directory entries
-    std::atomic<int64_t> dir_len = 0;
-    for (Size offset = 0; offset < dir_obj.len;) {
-        const FileEntry *entry = (const FileEntry *)(dir_obj.ptr + offset);
-
-        Size next = offset + RG_SIZE(FileEntry)
-                           + (Size)strnlen(entry->basename, dir_obj.end() - (const uint8_t *)entry->basename) + 1;
-
-        // Sanity checks
-        if (next > dir_obj.len) {
-            LogError("Malformed entry in directory object '%1'", id);
-            return false;
-        }
-        if (entry->type != (int8_t)FileType::Directory && entry->type != (int8_t)FileType::File) {
-            LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
-            return false;
-        }
-        if (strpbrk(entry->basename, RG_PATH_SEPARATORS) || TestStr(entry->basename, ".") ||
-                                                            TestStr(entry->basename, "..")) {
-            LogError("Unsafe file name '%1'", entry->basename);
-            return false;
-        }
-
-        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->basename).ptr;
-
-        int64_t len = 0;
-        if (!kt_Get(disk, entry->id, dest_filename, &len))
-            return false;
-        dir_len += len;
-
-        offset = next;
-    }
-
-    if (out_len) {
-        *out_len += dir_len;
-    }
-    return true;
-}
-
-bool kt_GetDirectory(kt_Disk *disk, const kt_ID &id, const char *dest_dirname, int64_t *out_len)
-{
-    int8_t type;
-    HeapArray<uint8_t> dir_obj;
-    if (!disk->Read(id, &type, &dir_obj))
-        return false;
-
-    return GetDirectory(disk, id, type, dir_obj, dest_dirname, out_len);
-}
-
-bool kt_PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written)
+static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written)
 {
     Span<const uint8_t> salt = disk->GetSalt();
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
@@ -500,14 +365,129 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, int8_t type,
     return true;
 }
 
-bool kt_GetFile(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len)
+static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int64_t *out_written)
 {
-    int8_t type;
-    HeapArray<uint8_t> file_obj;
-    if (!disk->Read(id, &type, &file_obj))
+    BlockAllocator temp_alloc;
+
+    Span<const uint8_t> salt = disk->GetSalt();
+    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
+
+    HeapArray<uint8_t> dir_obj;
+    std::atomic<int64_t> dir_written = 0;
+
+    EnumStatus status = EnumerateDirectory(src_dirname, nullptr, -1,
+                                           [&](const char *basename, FileType file_type) {
+        const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
+
+        Size entry_len = RG_SIZE(FileEntry) + strlen(basename) + 1;
+        FileEntry *entry = (FileEntry *)dir_obj.AppendDefault(entry_len);
+
+        entry->type = (int8_t)file_type;
+        switch (file_type) {
+            case FileType::Directory: {
+                int64_t written = 0;
+                if (!PutDirectory(disk, filename, &entry->id, &written))
+                    return false;
+                dir_written += written;
+            } break;
+            case FileType::File: {
+                int64_t written = 0;
+                if (!PutFile(disk, filename, &entry->id, &written))
+                    return false;
+                dir_written += written;
+            } break;
+
+            case FileType::Link:
+            case FileType::Device:
+            case FileType::Pipe:
+            case FileType::Socket: {
+                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_type]);
+
+                dir_obj.RemoveLast(entry_len);
+                return true;
+            } break;
+        }
+        CopyString(basename, MakeSpan(entry->basename, entry_len - RG_SIZE(FileEntry)));
+
+        return true;
+    });
+    if (status != EnumStatus::Complete)
         return false;
 
-    return GetFile(disk, id, type, file_obj, dest_filename, out_len);
+    kt_ID dir_id = {};
+    {
+        HashBlake3(dir_obj, salt.ptr, &dir_id);
+
+        Size ret = disk->Write(dir_id, (int8_t)ObjectType::Directory, dir_obj);
+        if (ret < 0)
+            return false;
+        dir_written += ret;
+    }
+
+    *out_id = dir_id;
+    if (out_written) {
+        *out_written += dir_written;
+    }
+    return true;
+}
+
+static bool GetDirectory(kt_Disk *disk, const kt_ID &id, int8_t type, Span<const uint8_t> dir_obj,
+                         const char *dest_dirname, int64_t *out_len)
+{
+    BlockAllocator temp_alloc;
+
+    if (TestFile(dest_dirname)) {
+        if (!IsDirectoryEmpty(dest_dirname)) {
+            LogError("Directory '%1' exists and is not empty", dest_dirname);
+            return false;
+        }
+    } else {
+        if (!MakeDirectory(dest_dirname))
+            return false;
+    }
+
+    if (type != (int8_t)ObjectType::Directory) {
+        LogError("Object '%1' is not a directory", id);
+        return false;
+    }
+
+    // Extract directory entries
+    std::atomic<int64_t> dir_len = 0;
+    for (Size offset = 0; offset < dir_obj.len;) {
+        const FileEntry *entry = (const FileEntry *)(dir_obj.ptr + offset);
+
+        Size next = offset + RG_SIZE(FileEntry)
+                           + (Size)strnlen(entry->basename, dir_obj.end() - (const uint8_t *)entry->basename) + 1;
+
+        // Sanity checks
+        if (next > dir_obj.len) {
+            LogError("Malformed entry in directory object '%1'", id);
+            return false;
+        }
+        if (entry->type != (int8_t)FileType::Directory && entry->type != (int8_t)FileType::File) {
+            LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
+            return false;
+        }
+        if (strpbrk(entry->basename, RG_PATH_SEPARATORS) || TestStr(entry->basename, ".") ||
+                                                            TestStr(entry->basename, "..")) {
+            LogError("Unsafe file name '%1'", entry->basename);
+            return false;
+        }
+
+        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->basename).ptr;
+
+        int64_t len = 0;
+        if (!kt_Get(disk, entry->id, dest_filename, &len))
+            return false;
+        dir_len += len;
+
+        offset = next;
+    }
+
+    if (out_len) {
+        *out_len += dir_len;
+    }
+    return true;
 }
 
 bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filename, kt_ID *out_id, int64_t *out_written)
@@ -534,11 +514,11 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filen
     int64_t written = 0;
     switch (file_info.type) {
         case FileType::Directory: {
-            if (!kt_PutDirectory(disk, src_filename, &root, &written))
+            if (!PutDirectory(disk, src_filename, &root, &written))
                 return false;
         } break;
         case FileType::File: {
-            if (!kt_PutFile(disk, src_filename, &root, &written))
+            if (!PutFile(disk, src_filename, &root, &written))
                 return false;
         } break;
 
