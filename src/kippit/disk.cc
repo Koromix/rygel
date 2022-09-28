@@ -29,8 +29,9 @@ struct ObjectIntro {
     uint8_t header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
 };
 #pragma pack(pop)
-#define OBJECT_VERSION 1
-#define OBJECT_SPLIT Kibibytes(32)
+
+static const int ObjectVersion = 1;
+static const Size ObjectSplit = Kibibytes(32);
 
 bool kt_Disk::Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj)
 {
@@ -67,8 +68,8 @@ bool kt_Disk::Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_ob
         }
         memcpy(&intro, obj.ptr, RG_SIZE(intro));
 
-        if (intro.version != OBJECT_VERSION) {
-            LogError("Unexpected object version %1 (expected %2)", intro.version, OBJECT_VERSION);
+        if (intro.version != ObjectVersion) {
+            LogError("Unexpected object version %1 (expected %2)", intro.version, ObjectVersion);
             return false;
         }
         type = intro.type;
@@ -91,7 +92,7 @@ bool kt_Disk::Read(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_ob
     // Read and decrypt object
     Size new_len = prev_len;
     while (obj.len) {
-        Size in_len = std::min(obj.len, (Size)OBJECT_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES);
+        Size in_len = std::min(obj.len, ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES);
         Size out_len = in_len - crypto_secretstream_xchacha20poly1305_ABYTES;
 
         Span<const uint8_t> cypher = MakeSpan(obj.ptr, in_len);
@@ -137,7 +138,7 @@ Size kt_Disk::Write(const kt_ID &id, int8_t type, Span<const uint8_t> obj)
         {
             ObjectIntro intro = {};
 
-            intro.version = OBJECT_VERSION;
+            intro.version = ObjectVersion;
             intro.type = type;
 
             uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
@@ -162,12 +163,12 @@ Size kt_Disk::Write(const kt_ID &id, int8_t type, Span<const uint8_t> obj)
 
             do {
                 Span<const uint8_t> frag;
-                frag.len = std::min(OBJECT_SPLIT, obj.len);
+                frag.len = std::min(ObjectSplit, obj.len);
                 frag.ptr = obj.ptr;
 
-                complete |= (frag.len < OBJECT_SPLIT);
+                complete |= (frag.len < ObjectSplit);
 
-                uint8_t cypher[OBJECT_SPLIT + crypto_secretstream_xchacha20poly1305_ABYTES];
+                uint8_t cypher[ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
                 unsigned char tag = complete ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
                 unsigned long long cypher_len;
                 crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, frag.ptr, frag.len, nullptr, 0, tag);
