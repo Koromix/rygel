@@ -4119,6 +4119,7 @@ struct FileInfo {
 
     int64_t size;
     int64_t mtime;
+    unsigned int mode;
 };
 
 enum class EnumStatus {
@@ -4361,6 +4362,9 @@ public:
 
     void Run(const std::function<bool()> &f);
     bool Sync();
+    bool Throttle(int limit, int restart);
+
+    int CountPendingTasks();
 
     static bool IsTaskRunning();
     static int GetWorkerIdx();

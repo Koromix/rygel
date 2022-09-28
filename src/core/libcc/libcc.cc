@@ -2059,6 +2059,7 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
     out_info->type = FileAttributesToType(attr.dwFileAttributes);
     out_info->size = ((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
     out_info->mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
+    out_info->mode = (out_info->type == FileType::Directory) ? 0755 : 0644;
 
     return true;
 }
@@ -2222,6 +2223,7 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 #else
     out_info->mtime = (int64_t)sb.st_mtime * 1000;
 #endif
+    out_info->mode = (unsigned int)sb.st_mode;
 
     return true;
 }
@@ -5147,6 +5149,7 @@ public:
     AsyncPool(int threads, bool leak);
 
     int GetWorkerCount() const { return (int)queues.len; }
+    int CountPendingTasks() const { return pending_tasks; }
 
     void RegisterAsync();
     void UnregisterAsync();
@@ -5207,6 +5210,11 @@ bool Async::Sync()
 {
     pool->SyncOn(this);
     return success;
+}
+
+int Async::CountPendingTasks()
+{
+    return pool->CountPendingTasks();
 }
 
 bool Async::IsTaskRunning()
