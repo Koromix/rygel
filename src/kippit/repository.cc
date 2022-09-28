@@ -36,13 +36,6 @@ static const Size ChunkAverage = Kibibytes(1024);
 static const Size ChunkMin = Kibibytes(512);
 static const Size ChunkMax = Kibibytes(2048);
 
-enum class ObjectType: int8_t {
-    Chunk = 0,
-    File = 1,
-    Directory = 2,
-    Snapshot = 3
-};
-
 #pragma pack(push, 1)
 struct SnapshotData {
     char name[512];
@@ -216,7 +209,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
 
                         HashBlake3(chunk, salt.ptr, &entry.id);
 
-                        Size ret = disk->WriteObject(entry.id, (int8_t)ObjectType::Chunk, chunk);
+                        Size ret = disk->WriteObject(entry.id, kt_ObjectType::Chunk, chunk);
                         if (ret < 0)
                             return false;
                         file_written += ret;
@@ -253,7 +246,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
 
         HashBlake3(file_obj, salt.ptr, &file_id);
 
-        Size ret = disk->WriteObject(file_id, (int8_t)ObjectType::File, file_obj);
+        Size ret = disk->WriteObject(file_id, kt_ObjectType::File, file_obj);
         if (ret < 0)
             return false;
         file_written += ret;
@@ -269,9 +262,11 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
     return true;
 }
 
-static bool GetFile(kt_Disk *disk, const kt_ID &id, int8_t type,
+static bool GetFile(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
                     Span<const uint8_t> file_obj, const char *dest_filename, int64_t *out_len)
 {
+    RG_ASSERT(type == kt_ObjectType::File || type == kt_ObjectType::Chunk);
+
     // Open destination file
     int fd = OpenDescriptor(dest_filename, (int)OpenFlag::Write);
     if (fd < 0)
@@ -279,79 +274,83 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, int8_t type,
     RG_DEFER { close(fd); };
 
     int64_t file_len = -1;
-    if (type == (int8_t)ObjectType::File) {
-        if (file_obj.len % RG_SIZE(ChunkEntry) != RG_SIZE(int64_t)) {
-            LogError("Malformed file object '%1'", id);
-            return false;
-        }
-
-        file_obj.len -= RG_SIZE(int64_t);
-
-        // Prepare destination file
-        file_len = LittleEndian(*(const int64_t *)file_obj.end());
-        if (file_len < 0) {
-            LogError("Malformed file object '%1'", id);
-            return false;
-        }
-        if (!ReserveFile(fd, dest_filename, file_len))
-            return false;
-
-        Async async;
-
-        // Write unencrypted file
-        for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(ChunkEntry)) {
-            async.Run([=]() {
-                ChunkEntry entry = {};
-
-                memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
-                entry.offset = LittleEndian(entry.offset);
-                entry.len = LittleEndian(entry.len);
-
-                int8_t type;
-                HeapArray<uint8_t> buf;
-                if (!disk->ReadObject(entry.id, &type, &buf))
-                    return false;
-
-                if (RG_UNLIKELY(type != (int8_t)ObjectType::Chunk)) {
-                    LogError("Object '%1' is not a chunk", entry.id);
-                    return false;
-                }
-                if (RG_UNLIKELY(buf.len != entry.len)) {
-                    LogError("Chunk size mismatch for '%1'", entry.id);
-                    return false;
-                }
-                if (!WriteAt(fd, dest_filename, entry.offset, buf)) {
-                    LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
-                    return false;
-                }
-
-                return true;
-            });
-        }
-
-        if (!async.Sync())
-            return false;
-
-        // Check actual file size
-        if (file_obj.len) {
-            const ChunkEntry *entry = (const ChunkEntry *)(file_obj.end() - RG_SIZE(ChunkEntry));
-            int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
-
-            if (RG_UNLIKELY(len != file_len)) {
-                LogError("File size mismatch for '%1'", entry->id);
+    switch (type) {
+        case kt_ObjectType::File: {
+            if (file_obj.len % RG_SIZE(ChunkEntry) != RG_SIZE(int64_t)) {
+                LogError("Malformed file object '%1'", id);
                 return false;
             }
-        }
-    } else if (type == (int8_t)ObjectType::Chunk) {
-        file_len = file_obj.len;
 
-        if (!WriteAt(fd, dest_filename, 0, file_obj)) {
-            LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
-            return false;
-        }
-    } else {
-        LogError("Object '%1' is not a file", id);
-        return false;
+            file_obj.len -= RG_SIZE(int64_t);
+
+            // Prepare destination file
+            file_len = LittleEndian(*(const int64_t *)file_obj.end());
+            if (file_len < 0) {
+                LogError("Malformed file object '%1'", id);
+                return false;
+            }
+            if (!ReserveFile(fd, dest_filename, file_len))
+                return false;
+
+            Async async;
+
+            // Write unencrypted file
+            for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(ChunkEntry)) {
+                async.Run([=]() {
+                    ChunkEntry entry = {};
+
+                    memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
+                    entry.offset = LittleEndian(entry.offset);
+                    entry.len = LittleEndian(entry.len);
+
+                    kt_ObjectType type;
+                    HeapArray<uint8_t> buf;
+                    if (!disk->ReadObject(entry.id, &type, &buf))
+                        return false;
+
+                    if (RG_UNLIKELY(type != kt_ObjectType::Chunk)) {
+                        LogError("Object '%1' is not a chunk", entry.id);
+                        return false;
+                    }
+                    if (RG_UNLIKELY(buf.len != entry.len)) {
+                        LogError("Chunk size mismatch for '%1'", entry.id);
+                        return false;
+                    }
+                    if (!WriteAt(fd, dest_filename, entry.offset, buf)) {
+                        LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
+                        return false;
+                    }
+
+                    return true;
+                });
+            }
+
+            if (!async.Sync())
+                return false;
+
+            // Check actual file size
+            if (file_obj.len) {
+                const ChunkEntry *entry = (const ChunkEntry *)(file_obj.end() - RG_SIZE(ChunkEntry));
+                int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
+
+                if (RG_UNLIKELY(len != file_len)) {
+                    LogError("File size mismatch for '%1'", entry->id);
+                    return false;
+                }
+            }
+        } break;
+
+        case kt_ObjectType::Chunk: {
+            file_len = file_obj.len;
+
+            if (!WriteAt(fd, dest_filename, 0, file_obj)) {
+                LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
+                return false;
+            }
+        } break;
+
+        case kt_ObjectType::Directory:
+        case kt_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
     }
 
     if (!FlushFile(fd, dest_filename))
@@ -424,7 +423,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     {
         HashBlake3(dir_obj, salt.ptr, &dir_id);
 
-        Size ret = disk->WriteObject(dir_id, (int8_t)ObjectType::Directory, dir_obj);
+        Size ret = disk->WriteObject(dir_id, kt_ObjectType::Directory, dir_obj);
         if (ret < 0)
             return false;
         dir_written += ret;
@@ -437,9 +436,11 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     return true;
 }
 
-static bool GetDirectory(kt_Disk *disk, const kt_ID &id, int8_t type, Span<const uint8_t> dir_obj,
-                         const char *dest_dirname, int64_t *out_len)
+static bool GetDirectory(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
+                         Span<const uint8_t> dir_obj, const char *dest_dirname, int64_t *out_len)
 {
+    RG_ASSERT(type == kt_ObjectType::Directory);
+
     BlockAllocator temp_alloc;
 
     if (TestFile(dest_dirname)) {
@@ -450,11 +451,6 @@ static bool GetDirectory(kt_Disk *disk, const kt_ID &id, int8_t type, Span<const
     } else {
         if (!MakeDirectory(dest_dirname))
             return false;
-    }
-
-    if (type != (int8_t)ObjectType::Directory) {
-        LogError("Object '%1' is not a directory", id);
-        return false;
     }
 
     // Extract directory entries
@@ -550,7 +546,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filen
 
         // Write snapshot object
         {
-            Size ret = disk->WriteObject(id, (int8_t)ObjectType::Snapshot, raw);
+            Size ret = disk->WriteObject(id, kt_ObjectType::Snapshot, raw);
             if (ret < 0)
                 return false;
             written += ret;
@@ -576,12 +572,12 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filen
 
 bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len)
 {
-    int8_t type;
+    kt_ObjectType type;
     HeapArray<uint8_t> obj;
     if (!disk->ReadObject(id, &type, &obj))
         return false;
 
-    if (type == (int8_t)ObjectType::Snapshot) {
+    if (type == kt_ObjectType::Snapshot) {
         SnapshotData snapshot = {};
 
         if (obj.len != RG_SIZE(snapshot)) {
@@ -597,14 +593,19 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *
             return false;
     }
 
-    if (type == (int8_t)ObjectType::Chunk || type == (int8_t)ObjectType::File) {
-        return GetFile(disk, id, type, obj, dest_filename, out_len);
-    } else if (type == (int8_t)ObjectType::Directory) {
-        return GetDirectory(disk, id, type, obj, dest_filename, out_len);
-    } else {
-        LogError("Unknown object type 0x%1 for '%2'", FmtHex(type), id);
-        return false;
+    switch (type) {
+        case kt_ObjectType::Snapshot: {
+            LogError("Unexpected snapshot object '%1'", id);
+            return false;
+        } break;
+
+        case kt_ObjectType::Chunk:
+        case kt_ObjectType::File: return GetFile(disk, id, type, obj, dest_filename, out_len);
+
+        case kt_ObjectType::Directory: return GetDirectory(disk, id, type, obj, dest_filename, out_len);
     }
+
+    RG_UNREACHABLE();
 }
 
 }

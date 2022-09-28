@@ -27,6 +27,19 @@ static const char *const kt_DiskModeNames[] = {
     "ReadWrite"
 };
 
+enum class kt_ObjectType: int8_t {
+    Chunk = 0,
+    File = 1,
+    Directory = 2,
+    Snapshot = 3
+};
+static const char *const kt_ObjectTypeNames[] = {
+    "Chunk",
+    "File",
+    "Directory",
+    "Snapshot"
+};
+
 class kt_Disk {
 protected:
     const char *url = nullptr;
@@ -46,8 +59,8 @@ public:
     Span<const uint8_t> GetSalt() const { return pkey; }
     kt_DiskMode GetMode() const { return mode; }
 
-    bool ReadObject(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj);
-    Size WriteObject(const kt_ID &id, int8_t type, Span<const uint8_t> obj);
+    bool ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
+    Size WriteObject(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> obj);
 
     Size WriteTag(const kt_ID &id);
 

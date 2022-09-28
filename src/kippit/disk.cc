@@ -33,7 +33,7 @@ struct ObjectIntro {
 static const int ObjectVersion = 1;
 static const Size ObjectSplit = Kibibytes(32);
 
-bool kt_Disk::ReadObject(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *out_obj)
+bool kt_Disk::ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uint8_t> *out_obj)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == kt_DiskMode::ReadWrite);
@@ -59,7 +59,7 @@ bool kt_Disk::ReadObject(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *
 
     // Init object decryption
     crypto_secretstream_xchacha20poly1305_state state;
-    int8_t type;
+    kt_ObjectType type;
     {
         ObjectIntro intro;
         if (obj.len < RG_SIZE(intro)) {
@@ -72,7 +72,11 @@ bool kt_Disk::ReadObject(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *
             LogError("Unexpected object version %1 (expected %2)", intro.version, ObjectVersion);
             return false;
         }
-        type = intro.type;
+        if (intro.type < 0 || intro.type >= RG_LEN(kt_ObjectTypeNames)) {
+            LogError("Invalid object type 0x%1", FmtHex(intro.type));
+            return false;
+        }
+        type = (kt_ObjectType)intro.type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
         if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), pkey, skey) != 0) {
@@ -125,7 +129,7 @@ bool kt_Disk::ReadObject(const kt_ID &id, int8_t *out_type, HeapArray<uint8_t> *
     return true;
 }
 
-Size kt_Disk::WriteObject(const kt_ID &id, int8_t type, Span<const uint8_t> obj)
+Size kt_Disk::WriteObject(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> obj)
 {
     RG_ASSERT(url);
 
@@ -139,7 +143,7 @@ Size kt_Disk::WriteObject(const kt_ID &id, int8_t type, Span<const uint8_t> obj)
             ObjectIntro intro = {};
 
             intro.version = ObjectVersion;
-            intro.type = type;
+            intro.type = (int8_t)type;
 
             uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
             crypto_secretstream_xchacha20poly1305_keygen(key);
