@@ -4362,7 +4362,6 @@ public:
 
     void Run(const std::function<bool()> &f);
     bool Sync();
-    bool Throttle(int limit, int restart);
 
     int CountPendingTasks();
 
