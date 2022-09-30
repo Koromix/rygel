@@ -4076,7 +4076,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         }
 
         // Try to read
-        if (out_revents & (POLLHUP | POLLERR)) {
+        if (out_revents & POLLERR) {
             break;
         } else if (out_revents & POLLIN) {
             RG_ASSERT(out_func.IsValid());
@@ -4093,6 +4093,9 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
                 LogError("Failed to read process output: %1", strerror(errno));
                 break;
             }
+        } else if (out_revents & POLLHUP) {
+            // Only deal with this once POLLIN goes down to avoid truncated output
+            break;
         }
 
         if (term_revents) {
