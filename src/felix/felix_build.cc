@@ -249,14 +249,36 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
             } else {
                 BuildPreset *preset = std::find_if(out_presets->begin(), out_presets->end(),
                                                    [&](const BuildPreset &preset) { return TestStr(preset.name, prop.section); });
+
                 if (preset == out_presets->end()) {
                     preset = out_presets->AppendDefault();
                     preset->name = DuplicateString(prop.section, alloc).ptr;
                     preset->platform_spec = *out_platform_spec;
                 }
 
+                if (prop.key == "Template") {
+                    const BuildPreset *base = std::find_if(out_presets->begin(), preset,
+                                                           [&](const BuildPreset &preset) { return TestStr(preset.name, prop.value); });
+
+                    if (base < preset) {
+                        const char *name = preset->name;
+
+                        *preset = *base;
+                        preset->name = name;
+                    } else {
+                        LogError("Preset '%1' does not exist", prop.value);
+                        valid = false;
+                    }
+
+                    if (!ini.NextInSection(&prop))
+                        continue;
+                }
+
                 do {
-                    if (prop.key == "Directory") {
+                    if (prop.key == "Template") {
+                        LogError("Preset template cannot be changed");
+                        valid = false;
+                    } else if (prop.key == "Directory") {
                         preset->build.output_directory = NormalizePath(prop.value, GetWorkingDirectory(), alloc).ptr;
                     } else if (prop.key == "Host") {
                         valid &= ParseHostString(prop.value, alloc, &preset->platform_spec);
