@@ -87,19 +87,11 @@
 #ifdef __APPLE__
     #include <sys/random.h>
     #include <mach-o/dyld.h>
-
-    #define off64_t off_t
-    #define fseeko64 fseeko
-    #define ftello64 ftello
 #endif
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
     #include <pthread_np.h>
     #include <sys/param.h>
     #include <sys/sysctl.h>
-
-    #define off64_t off_t
-    #define fseeko64 fseeko
-    #define ftello64 ftello
 #endif
 #include <chrono>
 #include <random>
@@ -1279,12 +1271,13 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtType::Random: {
-                RG_ASSERT(arg.u.random_len <= RG_SIZE(out_buf.data));
+                static const char *const DefaultChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+                Span<const char> chars = arg.u.random.chars ? arg.u.random.chars : DefaultChars;
 
-                for (Size j = 0; j < arg.u.random_len; j++) {
-                    static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+                RG_ASSERT(arg.u.random.len <= RG_SIZE(out_buf.data));
 
-                    int rnd = GetRandomIntSafe(0, (int)strlen(chars));
+                for (Size j = 0; j < arg.u.random.len; j++) {
+                    int rnd = GetRandomIntSafe(0, chars.len);
                     out_buf.Append(chars[rnd]);
                 }
 
@@ -2066,6 +2059,7 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
     out_info->type = FileAttributesToType(attr.dwFileAttributes);
     out_info->size = ((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
     out_info->mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
+    out_info->mode = (out_info->type == FileType::Directory) ? 0755 : 0644;
 
     return true;
 }
@@ -2229,6 +2223,7 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 #else
     out_info->mtime = (int64_t)sb.st_mtime * 1000;
 #endif
+    out_info->mode = (unsigned int)sb.st_mode;
 
     return true;
 }
@@ -2966,47 +2961,49 @@ static bool CheckForDumbTerm()
 
 #ifdef _WIN32
 
-int OpenDescriptor(const char *filename, unsigned int flags)
+int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 {
+    RG_ASSERT(!out_exists || (flags & (int)OpenFlag::Exclusive));
+
     DWORD access = 0;
     DWORD share = 0;
     DWORD creation = 0;
     int oflags = -1;
-    switch (flags & ((int)OpenFileFlag::Read |
-                     (int)OpenFileFlag::Write |
-                     (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: {
+    switch (flags & ((int)OpenFlag::Read |
+                     (int)OpenFlag::Write |
+                     (int)OpenFlag::Append)) {
+        case (int)OpenFlag::Read: {
             access = GENERIC_READ;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
             creation = OPEN_EXISTING;
 
             oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT;
         } break;
-        case (int)OpenFileFlag::Write: {
+        case (int)OpenFlag::Write: {
             access = GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
+            creation = (flags & (int)OpenFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
 
             oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: {
+        case (int)OpenFlag::Read | (int)OpenFlag::Write: {
             access = GENERIC_READ | GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
+            creation = (flags & (int)OpenFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
 
             oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
-        case (int)OpenFileFlag::Append: {
+        case (int)OpenFlag::Append: {
             access = GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
+            creation = (flags & (int)OpenFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
 
             oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
         } break;
     }
     RG_ASSERT(oflags >= 0);
 
-    if (flags & (int)OpenFileFlag::Exclusive) {
+    if (flags & (int)OpenFlag::Exclusive) {
         oflags |= (int)_O_EXCL;
     }
     share |= FILE_SHARE_DELETE;
@@ -3016,8 +3013,12 @@ int OpenDescriptor(const char *filename, unsigned int flags)
         h = CreateFileA(filename, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
     } else {
         wchar_t filename_w[4096];
-        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0) {
+            if (out_exists) {
+                *out_exists = false;
+            }
             return -1;
+        }
 
         h = CreateFileW(filename_w, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
     }
@@ -3025,9 +3026,17 @@ int OpenDescriptor(const char *filename, unsigned int flags)
         DWORD err = GetLastError();
 
         if (err == ERROR_FILE_EXISTS) {
-            LogError("File '%1' already exists", filename);
+            if (out_exists) {
+                *out_exists = true;
+            } else {
+                LogError("File '%1' already exists", filename);
+            }
         } else {
             LogError("Cannot open '%1': %2", filename, GetWin32ErrorString(err));
+
+            if (out_exists) {
+                *out_exists = false;
+            }
         }
 
         return -1;
@@ -3038,22 +3047,28 @@ int OpenDescriptor(const char *filename, unsigned int flags)
         LogError("Cannot open '%1': %2", filename, strerror(errno));
         CloseHandle(h);
 
+        if (out_exists) {
+            *out_exists = false;
+        }
         return -1;
     }
 
+    if (out_exists) {
+        *out_exists = false;
+    }
     return fd;
 }
 
-FILE *OpenFile(const char *filename, unsigned int flags)
+FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
 {
     char mode[16] = {};
-    switch (flags & ((int)OpenFileFlag::Read |
-                     (int)OpenFileFlag::Write |
-                     (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: { CopyString("rbc", mode); } break;
-        case (int)OpenFileFlag::Write: { CopyString("wbc", mode); } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { CopyString("w+bc", mode); } break;
-        case (int)OpenFileFlag::Append: { CopyString("abc", mode); } break;
+    switch (flags & ((int)OpenFlag::Read |
+                     (int)OpenFlag::Write |
+                     (int)OpenFlag::Append)) {
+        case (int)OpenFlag::Read: { CopyString("rbc", mode); } break;
+        case (int)OpenFlag::Write: { CopyString("wbc", mode); } break;
+        case (int)OpenFlag::Read | (int)OpenFlag::Write: { CopyString("w+bc", mode); } break;
+        case (int)OpenFlag::Append: { CopyString("abc", mode); } break;
     }
     RG_ASSERT(mode[0]);
 
@@ -3062,7 +3077,7 @@ FILE *OpenFile(const char *filename, unsigned int flags)
     strcat(mode, "N");
 #endif
 
-    int fd = OpenDescriptor(filename, flags);
+    int fd = OpenDescriptor(filename, flags, out_exists);
     if (fd < 0)
         return nullptr;
 
@@ -3072,7 +3087,24 @@ FILE *OpenFile(const char *filename, unsigned int flags)
         _close(fd);
     }
 
+    if (out_exists) {
+        *out_exists = false;
+    }
     return fp;
+}
+
+bool FlushFile(int fd, const char *filename)
+{
+    RG_ASSERT(filename);
+
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+    if (!FlushFileBuffers(h)) {
+        LogError("Failed to sync '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
 }
 
 bool FlushFile(FILE *fp, const char *filename)
@@ -3272,50 +3304,64 @@ error:
 
 #else
 
-int OpenDescriptor(const char *filename, unsigned int flags)
+int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 {
+    RG_ASSERT(!out_exists || (flags & (int)OpenFlag::Exclusive));
+
     int oflags = -1;
-    switch (flags & ((int)OpenFileFlag::Read |
-                     (int)OpenFileFlag::Write |
-                     (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: { oflags = O_RDONLY | O_CLOEXEC; } break;
-        case (int)OpenFileFlag::Write: { oflags = O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { oflags = O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
-        case (int)OpenFileFlag::Append: { oflags = O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC; } break;
+    switch (flags & ((int)OpenFlag::Read |
+                     (int)OpenFlag::Write |
+                     (int)OpenFlag::Append)) {
+        case (int)OpenFlag::Read: { oflags = O_RDONLY | O_CLOEXEC; } break;
+        case (int)OpenFlag::Write: { oflags = O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
+        case (int)OpenFlag::Read | (int)OpenFlag::Write: { oflags = O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
+        case (int)OpenFlag::Append: { oflags = O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC; } break;
     }
     RG_ASSERT(oflags >= 0);
 
-    if (flags & (int)OpenFileFlag::Exclusive) {
+    if (flags & (int)OpenFlag::Exclusive) {
         oflags |= O_EXCL;
     }
 
     int fd = RG_POSIX_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {
         if (errno == EEXIST) {
-            LogError("File '%1' already exists", filename);
+            if (out_exists) {
+                *out_exists = true;
+            } else {
+                LogError("File '%1' already exists", filename);
+            }
         } else {
             LogError("Cannot open '%1': %2", filename, strerror(errno));
+
+            if (out_exists) {
+                *out_exists = false;
+            }
         }
+
         return -1;
     }
 
+    if (out_exists) {
+        *out_exists = false;
+    }
     return fd;
 }
 
-FILE *OpenFile(const char *filename, unsigned int flags)
+FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
 {
     const char *mode = nullptr;
-    switch (flags & ((int)OpenFileFlag::Read |
-                     (int)OpenFileFlag::Write |
-                     (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: { mode = "rbe"; } break;
-        case (int)OpenFileFlag::Write: { mode = "wbe"; } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { mode = "w+be"; } break;
-        case (int)OpenFileFlag::Append: { mode = "abe"; } break;
+    switch (flags & ((int)OpenFlag::Read |
+                     (int)OpenFlag::Write |
+                     (int)OpenFlag::Append)) {
+        case (int)OpenFlag::Read: { mode = "rbe"; } break;
+        case (int)OpenFlag::Write: { mode = "wbe"; } break;
+        case (int)OpenFlag::Read | (int)OpenFlag::Write: { mode = "w+be"; } break;
+        case (int)OpenFlag::Append: { mode = "abe"; } break;
     }
     RG_ASSERT(mode);
 
-    int fd = OpenDescriptor(filename, flags);
+    int fd = OpenDescriptor(filename, flags, out_exists);
     if (fd < 0)
         return nullptr;
 
@@ -3325,7 +3371,26 @@ FILE *OpenFile(const char *filename, unsigned int flags)
         close(fd);
     }
 
+    if (out_exists) {
+        *out_exists = false;
+    }
     return fp;
+}
+
+bool FlushFile(int fd, const char *filename)
+{
+    RG_ASSERT(filename);
+
+#ifdef __APPLE__
+    if (fsync(fd) < 0 && errno != EINVAL && errno != ENOTSUP) {
+#else
+    if (fsync(fd) < 0 && errno != EINVAL) {
+#endif
+        LogError("Failed to sync '%1': %2", filename, strerror(errno));
+        return false;
+    }
+
+    return true;
 }
 
 bool FlushFile(FILE *fp, const char *filename)
@@ -4542,8 +4607,8 @@ const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const 
     return filename;
 }
 
-static const char *CreateTemporaryPath(Span<const char> directory, const char *prefix, const char *extension,
-                                       Allocator *alloc, FunctionRef<bool(const char *path)> create)
+static const char *CreateUniquePath(Span<const char> directory, const char *prefix, const char *extension,
+                                    Allocator *alloc, FunctionRef<bool(const char *path)> create)
 {
     RG_ASSERT(alloc);
 
@@ -4576,12 +4641,12 @@ static const char *CreateTemporaryPath(Span<const char> directory, const char *p
     return nullptr;
 }
 
-const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
-                                Allocator *alloc, FILE **out_fp)
+const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
+                             Allocator *alloc, FILE **out_fp)
 {
-    return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
-        int flags = (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
-                    (int)OpenFileFlag::Exclusive;
+    return CreateUniquePath(directory, prefix, extension, alloc, [&](const char *path) {
+        int flags = (int)OpenFlag::Read | (int)OpenFlag::Write |
+                    (int)OpenFlag::Exclusive;
 
         FILE *fp = OpenFile(path, flags);
 
@@ -4599,9 +4664,9 @@ const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, 
     });
 }
 
-const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc)
+const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix, Allocator *alloc)
 {
-    return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) {
+    return CreateUniquePath(directory, prefix, "", alloc, [&](const char *path) {
         return MakeDirectory(path);
     });
 }
@@ -5083,6 +5148,9 @@ class AsyncPool {
 public:
     AsyncPool(int threads, bool leak);
 
+    int GetWorkerCount() const { return (int)queues.len; }
+    int CountPendingTasks() const { return pending_tasks; }
+
     void RegisterAsync();
     void UnregisterAsync();
 
@@ -5144,6 +5212,11 @@ bool Async::Sync()
     return success;
 }
 
+int Async::CountPendingTasks()
+{
+    return pool->CountPendingTasks();
+}
+
 bool Async::IsTaskRunning()
 {
     return async_running_task;
@@ -5152,6 +5225,11 @@ bool Async::IsTaskRunning()
 int Async::GetWorkerIdx()
 {
     return async_running_worker_idx;
+}
+
+int Async::GetWorkerCount()
+{
+    return async_running_pool->GetWorkerCount();
 }
 
 AsyncPool::AsyncPool(int threads, bool leak)
@@ -5640,6 +5718,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_read = 0;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
@@ -5660,6 +5739,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_read = 0;
 
     RG_ASSERT(fp);
     RG_ASSERT(filename);
@@ -5682,12 +5762,13 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_read = 0;
 
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::File;
-    source.u.file.fp = OpenFile(filename, (int)OpenFileFlag::Read);
+    source.u.file.fp = OpenFile(filename, (int)OpenFlag::Read);
     if (!source.u.file.fp)
         return false;
     source.u.file.owned = true;
@@ -5706,6 +5787,7 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_read = 0;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
 
@@ -5776,7 +5858,6 @@ bool StreamReader::Close(bool implicit)
     source.eof = false;
     eof = false;
     raw_len = -1;
-    raw_read = 0;
     str_alloc.ReleaseAll();
 
     return ret;
@@ -5834,6 +5915,23 @@ bool StreamReader::Rewind()
     eof = false;
 
     return true;
+}
+
+FILE *StreamReader::GetFile() const
+{
+    RG_ASSERT(source.type == SourceType::File);
+    return source.u.file.fp;
+}
+
+int StreamReader::GetDescriptor() const
+{
+    RG_ASSERT(source.type == SourceType::File);
+
+#ifdef _WIN32
+    return _fileno(source.u.file.fp);
+#else
+    return fileno(source.u.file.fp);
+#endif
 }
 
 Size StreamReader::Read(Span<uint8_t> out_buf)
@@ -6339,6 +6437,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_written = 0;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
@@ -6361,6 +6460,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename,
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_written = 0;
 
     RG_ASSERT(fp);
     RG_ASSERT(filename);
@@ -6385,6 +6485,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_written = 0;
 
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
@@ -6396,8 +6497,8 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         Span<const char> directory = GetPathDirectory(filename);
 
         if (flags & (int)StreamWriterFlag::Exclusive) {
-            FILE *fp = OpenFile(filename, (int)OpenFileFlag::Write |
-                                          (int)OpenFileFlag::Exclusive);
+            FILE *fp = OpenFile(filename, (int)OpenFlag::Write |
+                                          (int)OpenFlag::Exclusive);
             if (!fp)
                 return false;
             fclose(fp);
@@ -6405,13 +6506,13 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
             dest.u.file.tmp_exclusive = true;
         }
 
-        dest.u.file.tmp_filename = CreateTemporaryFile(directory, "", ".tmp", &str_alloc, &dest.u.file.fp);
+        dest.u.file.tmp_filename = CreateUniqueFile(directory, "", ".tmp", &str_alloc, &dest.u.file.fp);
         if (!dest.u.file.tmp_filename)
             return false;
         dest.u.file.owned = true;
     } else {
-        unsigned int open_flags = (int)OpenFileFlag::Write;
-        open_flags |= (flags & (int)StreamWriterFlag::Exclusive) ? (int)OpenFileFlag::Exclusive : 0;
+        unsigned int open_flags = (int)OpenFlag::Write;
+        open_flags |= (flags & (int)StreamWriterFlag::Exclusive) ? (int)OpenFlag::Exclusive : 0;
 
         dest.u.file.fp = OpenFile(filename, open_flags);
         if (!dest.u.file.fp)
@@ -6434,6 +6535,7 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
+    raw_written = 0;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
 
@@ -6455,11 +6557,33 @@ bool StreamWriter::Flush()
 
     switch (dest.type) {
         case DestinationType::Memory: return true;
-        case DestinationType::File: return FlushFile(dest.u.file.fp, filename);
+        case DestinationType::File: {
+            if (!FlushFile(dest.u.file.fp, filename)) {
+                error = true;
+                return false;
+            }
+        } break;
         case DestinationType::Function: return true;
     }
 
     RG_UNREACHABLE();
+}
+
+FILE *StreamWriter::GetFile() const
+{
+    RG_ASSERT(dest.type == DestinationType::File);
+    return dest.u.file.fp;
+}
+
+int StreamWriter::GetDescriptor() const
+{
+    RG_ASSERT(dest.type == DestinationType::File);
+
+#ifdef _WIN32
+    return _fileno(dest.u.file.fp);
+#else
+    return fileno(dest.u.file.fp);
+#endif
 }
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
@@ -6601,14 +6725,14 @@ bool StreamWriter::Close(bool implicit)
         case DestinationType::Memory: { dest.u.mem = {}; } break;
 
         case DestinationType::File: {
-            if (IsValid() && !FlushFile(dest.u.file.fp, filename)) {
-                error = true;
-            }
-
             if (dest.u.file.tmp_filename) {
-                if (IsValid() && implicit) {
-                    LogDebug("Deleting implicitly closed file '%1'", filename);
-                    error = true;
+                if (IsValid()) {
+                    if (implicit) {
+                        LogDebug("Deleting implicitly closed file '%1'", filename);
+                        error = true;
+                    } else if (!FlushFile(dest.u.file.fp, filename)) {
+                        error = true;
+                    }
                 }
 
                 if (IsValid()) {
@@ -6797,7 +6921,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             memcpy_safe(dest.u.mem.memory->ptr + dest.u.mem.memory->len, buf.ptr, (size_t)buf.len);
             dest.u.mem.memory->len += buf.len;
 
-            return true;
+            raw_written += buf.len;
         } break;
 
         case DestinationType::File: {
@@ -6816,9 +6940,9 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
                 buf.ptr += write_len;
                 buf.len -= write_len;
-            }
 
-            return true;
+                raw_written += write_len;
+            }
         } break;
 
         case DestinationType::Function: {
@@ -6826,13 +6950,16 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             if (!buf.len)
                 return true;
 
-            bool ret = dest.u.func(buf);
-            error |= !ret;
-            return ret;
+            if (!dest.u.func(buf)) {
+                error = true;
+                return false;
+            }
+
+            raw_written += buf.len;
         } break;
     }
 
-    RG_UNREACHABLE();
+    return true;
 }
 
 bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)

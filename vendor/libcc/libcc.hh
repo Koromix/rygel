@@ -2896,6 +2896,9 @@ public:
     bool IsValid() const { return filename && !error; }
     bool IsEOF() const { return eof; }
 
+    FILE *GetFile() const;
+    int GetDescriptor() const;
+
     Size Read(Span<uint8_t> out_buf);
     Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
     Size Read(Size max_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, max_len)); }
@@ -2905,6 +2908,7 @@ public:
         { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
 
     int64_t ComputeRawLen();
+    int64_t GetRawRead() const { return raw_read; }
 
 private:
     bool Close(bool implicit);
@@ -3039,6 +3043,8 @@ class StreamWriter {
         } u;
     } compression;
 
+    int64_t raw_written = 0;
+
     BlockAllocator str_alloc;
 
 public:
@@ -3083,10 +3089,15 @@ public:
     bool IsVt100() const { return dest.vt100; }
     bool IsValid() const { return filename && !error; }
 
+    FILE *GetFile() const;
+    int GetDescriptor() const;
+
     bool Write(Span<const uint8_t> buf);
     bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }
     bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
+
+    int64_t GetRawWritten() const { return raw_written; }
 
 private:
     bool Close(bool implicit);
@@ -3172,7 +3183,10 @@ public:
         const void *ptr;
         LocalDate date;
         TimeSpec time;
-        Size random_len;
+        struct {
+            Size len;
+            const char *chars;
+        } random;
         struct {
             uint64_t flags;
             union {
@@ -3290,14 +3304,15 @@ static inline FmtArg FmtTimeNice(TimeSpec spec)
     return arg;
 }
 
-static inline FmtArg FmtRandom(Size len)
+static inline FmtArg FmtRandom(Size len, const char *chars = nullptr)
 {
     RG_ASSERT(len < 256);
     len = std::min(len, (Size)256);
 
     FmtArg arg;
     arg.type = FmtType::Random;
-    arg.u.random_len = len;
+    arg.u.random.len = len;
+    arg.u.random.chars = chars;
     return arg;
 }
 
@@ -3432,6 +3447,8 @@ static inline void LogDebug(Args...) {}
 #endif
 template <typename... Args>
 static inline void LogInfo(Args... args) { Log(LogLevel::Info, nullptr, args...); }
+template <typename... Args>
+static inline void LogWarning(Args... args) { Log(LogLevel::Warning, "Warning", args...); }
 template <typename... Args>
 static inline void LogError(Args... args) { Log(LogLevel::Error, "Error", args...); }
 
@@ -3833,7 +3850,7 @@ static inline Span<const char> SplitStrReverseAny(const char *str, const char *s
 
 static inline Span<char> TrimStrLeft(Span<char> str, const char *trim_chars = " \t\r\n")
 {
-    while (str.len && strchr(trim_chars, str[0])) {
+    while (str.len && strchr(trim_chars, str[0]) && str[0]) {
         str.ptr++;
         str.len--;
     }
@@ -3842,7 +3859,7 @@ static inline Span<char> TrimStrLeft(Span<char> str, const char *trim_chars = " 
 }
 static inline Span<char> TrimStrRight(Span<char> str, const char *trim_chars = " \t\r\n")
 {
-    while (str.len && strchr(trim_chars, str[str.len - 1])) {
+    while (str.len && strchr(trim_chars, str[str.len - 1]) && str[str.len - 1]) {
         str.len--;
     }
 
@@ -3958,6 +3975,40 @@ static inline int CountUtf8Bytes(char c)
     return std::min(std::max(ones, 1), 4);
 }
 
+static inline Size DecodeUtf8(const char *str, int32_t *out_c)
+{
+    RG_ASSERT(str[0]);
+
+    const uint8_t *ptr = (const uint8_t *)str;
+
+    if (ptr[0] < 0x80) {
+        *out_c = ptr[0];
+        return 1;
+    } else if (RG_UNLIKELY(ptr[0] - 0xC2 > 0xF4 - 0xC2)) {
+        return 0;
+    } else if (RG_LIKELY(ptr[1])) {
+        if (ptr[0] < 0xE0 && (ptr[1] & 0xC0) == 0x80) {
+            *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+            return 2;
+        } else if (RG_LIKELY(ptr[2])) {
+            if (ptr[0] < 0xF0 && (ptr[1] & 0xC0) == 0x80 &&
+                                 (ptr[2] & 0xC0) == 0x80) {
+                *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+                return 3;
+            } else if (RG_LIKELY(ptr[3])) {
+                if ((ptr[1] & 0xC0) == 0x80 &&
+                        (ptr[2] & 0xC0) == 0x80 &&
+                        (ptr[3] & 0xC0) == 0x80) {
+                    *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+                    return 4;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
 static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
 {
     RG_ASSERT(offset < str.len);
@@ -4054,12 +4105,21 @@ enum class FileType {
     Pipe,
     Socket
 };
+static const char *const FileTypeNames[] = {
+    "Directory",
+    "File",
+    "Link",
+    "Device",
+    "Pipe",
+    "Socket"
+};
 
 struct FileInfo {
     FileType type;
 
     int64_t size;
     int64_t mtime;
+    unsigned int mode;
 };
 
 enum class EnumStatus {
@@ -4105,7 +4165,7 @@ bool UnlinkDirectory(const char *directory, bool error_if_missing = false);
 bool UnlinkFile(const char *filename, bool error_if_missing = false);
 bool EnsureDirectoryExists(const char *filename);
 
-enum class OpenFileFlag {
+enum class OpenFlag {
     Read = 1 << 0,
     Write = 1 << 1,
     Append = 1 << 2,
@@ -4113,8 +4173,9 @@ enum class OpenFileFlag {
     Exclusive = 1 << 3
 };
 
-int OpenDescriptor(const char *filename, unsigned int flags);
-FILE *OpenFile(const char *filename, unsigned int flags);
+int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists = nullptr);
+FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists = nullptr);
+bool FlushFile(int fd, const char *filename);
 bool FlushFile(FILE *fp, const char *filename);
 
 bool FileIsVt100(FILE *fp);
@@ -4208,9 +4269,9 @@ const char *GetTemporaryDirectory();
 
 const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const char *, 4> *out_possibilities = nullptr);
 
-const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
-                                Allocator *alloc, FILE **out_fp = nullptr);
-const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
+const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
+                             Allocator *alloc, FILE **out_fp = nullptr);
+const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
 
 // ------------------------------------------------------------------------
 // Random
@@ -4230,6 +4291,22 @@ public:
 
 private:
     uint64_t Next();
+};
+
+template <int Min = 0, int Max = INT_MAX>
+class FastRandomInt {
+    RG_STATIC_ASSERT(Min >= 0);
+    RG_STATIC_ASSERT(Max > Min);
+
+    FastRandom rng;
+
+public:
+    typedef int result_type;
+
+    static constexpr int min() { return Min; }
+    static constexpr int max() { return Max; }
+
+    int operator()() { return rng.GetInt(Min, Max); }
 };
 
 void ZeroMemorySafe(void *ptr, Size len);
@@ -4286,8 +4363,11 @@ public:
     void Run(const std::function<bool()> &f);
     bool Sync();
 
+    int CountPendingTasks();
+
     static bool IsTaskRunning();
     static int GetWorkerIdx();
+    static int GetWorkerCount();
 
     friend class AsyncPool;
 };
