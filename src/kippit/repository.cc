@@ -161,9 +161,14 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
     Span<const uint8_t> salt = disk->GetSalt();
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
-    StreamReader st(src_filename);
-    if (!st.IsValid())
-        return false;
+    StreamReader st;
+    {
+        OpenResult ret = st.Open(src_filename);
+        if (ret != OpenResult::Success) {
+            bool ignore = (ret == OpenResult::AccessDenied || ret == OpenResult::MissingPath);
+            return ignore;
+        }
+    }
 
     HeapArray<uint8_t> file_obj;
     std::atomic<int64_t> file_written = 0;
@@ -380,8 +385,13 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
         FileEntry *entry = (FileEntry *)dir_obj.AppendDefault(entry_len);
 
         FileInfo file_info;
-        if (StatFile(filename, &file_info) != StatResult::Success)
-            return false;
+        {
+            StatResult ret = StatFile(filename, &file_info);
+            if (ret != StatResult::Success) {
+                bool ignore = (ret == StatResult::AccessDenied || ret == StatResult::MissingPath);
+                return ignore;
+            }
+        }
 
         entry->type = (int8_t)file_info.type;
         entry->mtime = file_info.mtime;
@@ -416,8 +426,10 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
 
         return true;
     });
-    if (ret != EnumResult::Success)
-        return false;
+    if (ret != EnumResult::Success) {
+        bool ignore = (ret == EnumResult::AccessDenied || ret == EnumResult::MissingPath);
+        return ignore;
+    }
 
     kt_ID dir_id = {};
     {
