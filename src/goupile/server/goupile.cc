@@ -772,7 +772,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
         const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
 
         FileInfo file_info;
-        if (!StatFile(filename, &file_info)) {
+        if (StatFile(filename, &file_info) != OpenResult::Success) {
             complete = false;
             return true;
         }

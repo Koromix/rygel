@@ -22,7 +22,7 @@ static bool ListSnapshotFiles(OptionParser *opt, bool recursive,
     if (recursive) {
         for (const char *filename; (filename = opt->ConsumeNonOption()); ) {
             FileInfo file_info;
-            if (!StatFile(filename, &file_info))
+            if (StatFile(filename, &file_info) != OpenResult::Success)
                 return false;
 
             if (file_info.type == FileType::Directory &&

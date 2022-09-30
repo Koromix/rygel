@@ -2023,7 +2023,7 @@ static FileType FileAttributesToType(uint32_t attr)
     }
 }
 
-bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
+OpenResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
     // We don't detect symbolic links, but since they are much less of a hazard
     // than on POSIX systems we care a lot less about them.
@@ -2035,25 +2035,38 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
     } else {
         wchar_t filename_w[4096];
         if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
-            return false;
+            return OpenResult::OtherError;
 
         h = CreateFileW(filename_w, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                         nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
     }
     if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
-        if (!(flags & (int)StatFlag::IgnoreMissing) ||
-                (err != ERROR_FILE_NOT_FOUND && err != ERROR_PATH_NOT_FOUND)) {
-            LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+
+        switch (err) {
+            case ERROR_FILE_NOT_FOUND:
+            case ERROR_PATH_NOT_FOUND: {
+                if (!(flags & (int)StatFlag::IgnoreMissing)) {
+                    LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+                }
+                return OpenResult::MissingPath;
+            } break;
+            case ERROR_ACCESS_DENIED: {
+                LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+                return OpenResult::AccessDenied;
+            }
+            default: {
+                LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+                return OpenResult::OtherError;
+            } break;
         }
-        return false;
     }
     RG_DEFER { CloseHandle(h); };
 
     BY_HANDLE_FILE_INFORMATION attr;
     if (!GetFileInformationByHandle(h, &attr)) {
         LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString());
-        return false;
+        return OpenResult::OtherError;
     }
 
     out_info->type = FileAttributesToType(attr.dwFileAttributes);
@@ -2061,7 +2074,7 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
     out_info->mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
     out_info->mode = (out_info->type == FileType::Directory) ? 0755 : 0644;
 
-    return true;
+    return OpenResult::Success;
 }
 
 bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool)
@@ -2207,16 +2220,28 @@ static FileType FileModeToType(mode_t mode)
     }
 }
 
-bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
+OpenResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
 
     struct stat sb;
     if (fstatat(AT_FDCWD, filename, &sb, stat_flags) < 0) {
-        if (!(flags & (int)StatFlag::IgnoreMissing) || errno != ENOENT) {
-            LogError("Cannot stat '%1': %2", filename, strerror(errno));
+        switch (errno) {
+            case ENOENT: {
+                if (!(flags & (int)StatFlag::IgnoreMissing)) {
+                    LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                }
+                return OpenResult::MissingPath;
+            } break;
+            case EACCES: {
+                LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                return OpenResult::AccessDenied;
+            } break;
+            default: {
+                LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                return OpenResult::OtherError;
+            } break;
         }
-        return false;
     }
 
     out_info->type = FileModeToType(sb.st_mode);
@@ -2232,7 +2257,7 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 #endif
     out_info->mode = (unsigned int)sb.st_mode;
 
-    return true;
+    return OpenResult::Success;
 }
 
 static bool SyncFileDirectory(const char *filename)
@@ -2420,7 +2445,10 @@ bool IsDirectoryEmpty(const char *dirname)
 bool TestFile(const char *filename)
 {
     FileInfo file_info;
-    return StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+    OpenResult ret = StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+
+    bool exists = (ret == OpenResult::Success);
+    return exists;
 }
 
 bool TestFile(const char *filename, FileType type)
@@ -2428,7 +2456,7 @@ bool TestFile(const char *filename, FileType type)
     RG_ASSERT(type != FileType::Link);
 
     FileInfo file_info;
-    if (!StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info))
+    if (StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info) != OpenResult::Success)
         return false;
 
     // Don't follow, but don't warn if we just wanted a file
@@ -7115,7 +7143,7 @@ bool ReloadAssets()
     // Check library time
     {
         FileInfo file_info;
-        if (!StatFile(assets_filename, &file_info))
+        if (StatFile(assets_filename, &file_info) != OpenResult::Success)
             return false;
 
         if (assets_last_check == file_info.mtime)

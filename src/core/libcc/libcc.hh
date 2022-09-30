@@ -4141,8 +4141,8 @@ enum class EnumResult {
     OtherError
 };
 
-bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info);
-static inline bool StatFile(const char *filename, FileInfo *out_info)
+OpenResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info);
+static inline OpenResult StatFile(const char *filename, FileInfo *out_info)
     { return StatFile(filename, 0, out_info); }
 
 // Sync failures are logged but not reported as errors (function returns true)
