@@ -1899,7 +1899,7 @@ bool mco_LoadTableSet(Span<const char *const> table_directories,
 
                 if (file_type == FileType::Link) {
                     FileInfo file_info;
-                    if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != OpenResult::Success)
+                    if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
                         return true;
                     file_type = file_info.type;
                 }

@@ -705,7 +705,7 @@ void http_IO::AttachError(int code, const char *details)
 bool http_IO::AttachFile(int code, const char *filename)
 {
     FileInfo file_info;
-    if (StatFile(filename, &file_info) != OpenResult::Success)
+    if (StatFile(filename, &file_info) != StatResult::Success)
         return false;
 
     int fd = OpenDescriptor(filename, (int)OpenFlag::Read);

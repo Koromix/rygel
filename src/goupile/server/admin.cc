@@ -1862,7 +1862,7 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
             const char *filename = Fmt(&buf, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
             FileInfo file_info;
-            if (StatFile(filename, &file_info) != OpenResult::Success)
+            if (StatFile(filename, &file_info) != StatResult::Success)
                 return false;
 
             // Don't list archives currently in creation

@@ -380,7 +380,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
         FileEntry *entry = (FileEntry *)dir_obj.AppendDefault(entry_len);
 
         FileInfo file_info;
-        if (StatFile(filename, &file_info) != OpenResult::Success)
+        if (StatFile(filename, &file_info) != StatResult::Success)
             return false;
 
         entry->type = (int8_t)file_info.type;
@@ -507,7 +507,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filen
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     FileInfo file_info;
-    if (StatFile(src_filename, (int)StatFlag::FollowSymlink, &file_info) != OpenResult::Success)
+    if (StatFile(src_filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
         return false;
 
     int64_t now = GetUnixTime();

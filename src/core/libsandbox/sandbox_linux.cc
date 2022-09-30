@@ -348,7 +348,7 @@ bool sb_SandboxBuilder::Apply()
                 // Ensure destination exists
                 {
                     FileInfo src_info;
-                    if (StatFile(bind.src, &src_info) != OpenResult::Success)
+                    if (StatFile(bind.src, &src_info) != StatResult::Success)
                         return false;
 
                     if (src_info.type == FileType::Directory) {
