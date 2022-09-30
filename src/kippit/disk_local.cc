@@ -59,10 +59,10 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
     // Open destination file
     FILE *fp;
     {
-        bool exists = false;
-        fp = OpenFile(filename.data, (int)OpenFlag::Write | (int)OpenFlag::Exclusive, &exists);
-        if (!fp)
-            return exists ? 0 : -1;
+        OpenResult ret = OpenFile(filename.data, (int)OpenFlag::Write | (int)OpenFlag::Exclusive,
+                                                 (int)OpenResult::FileExists, &fp);
+        if (ret != OpenResult::Success)
+            return (ret == OpenResult::FileExists) ? 0 : -1;
     }
     RG_DEFER { fclose(fp); };
 

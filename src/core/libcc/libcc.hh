@@ -2816,6 +2816,15 @@ enum class CompressionSpeed {
     Fast
 };
 
+enum class OpenResult {
+    Success = 0,
+
+    MissingPath = 1 << 0,
+    FileExists = 1 << 1,
+    AccessDenied = 1 << 2,
+    OtherError = 1 << 3
+};
+
 class StreamReader {
     RG_DELETE_COPY(StreamReader)
 
@@ -2883,7 +2892,7 @@ public:
               CompressionType compression_type = CompressionType::None);
     bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None);
-    bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    OpenResult Open(const char *filename, CompressionType compression_type = CompressionType::None);
     bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Close() { return Close(false); }
@@ -4173,8 +4182,28 @@ enum class OpenFlag {
     Exclusive = 1 << 3
 };
 
-int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists = nullptr);
-FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists = nullptr);
+OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int silent, int *out_fd);
+OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, FILE **out_fp);
+
+static inline OpenResult OpenDescriptor(const char *filename, unsigned int flags, int *out_fd)
+    { return OpenDescriptor(filename, flags, 0, out_fd); }
+static inline OpenResult OpenFile(const char *filename, unsigned int flags, FILE **out_fp)
+    { return OpenFile(filename, flags, 0, out_fp); }
+static inline int OpenDescriptor(const char *filename, unsigned int flags)
+{
+    int fd = -1;
+    if (OpenDescriptor(filename, flags, &fd) != OpenResult::Success)
+        return -1;
+    return fd;
+}
+static inline FILE *OpenFile(const char *filename, unsigned int flags)
+{
+    FILE *fp;
+    if (OpenFile(filename, flags, &fp) != OpenResult::Success)
+        return nullptr;
+    return fp;
+}
+
 bool FlushFile(int fd, const char *filename);
 bool FlushFile(FILE *fp, const char *filename);
 

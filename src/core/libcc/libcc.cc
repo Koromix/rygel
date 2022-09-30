@@ -2961,9 +2961,9 @@ static bool CheckForDumbTerm()
 
 #ifdef _WIN32
 
-int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
+OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
 {
-    RG_ASSERT(!out_exists || (flags & (int)OpenFlag::Exclusive));
+    RG_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
 
     DWORD access = 0;
     DWORD share = 0;
@@ -3013,33 +3013,27 @@ int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
         h = CreateFileA(filename, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
     } else {
         wchar_t filename_w[4096];
-        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0) {
-            if (out_exists) {
-                *out_exists = false;
-            }
-            return -1;
-        }
+        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+            return OpenResult::OtherError;
 
         h = CreateFileW(filename_w, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
     }
     if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
 
-        if (err == ERROR_FILE_EXISTS) {
-            if (out_exists) {
-                *out_exists = true;
-            } else {
-                LogError("File '%1' already exists", filename);
-            }
-        } else {
-            LogError("Cannot open '%1': %2", filename, GetWin32ErrorString(err));
-
-            if (out_exists) {
-                *out_exists = false;
-            }
+        OpenResult ret;
+        switch (err) {
+            case ERROR_FILE_NOT_FOUND:
+            case ERROR_PATH_NOT_FOUND: { ret = OpenResult::MissingPath; } break;
+            case ERROR_FILE_EXISTS: { ret = OpenResult::FileExists; } break;
+            case ERROR_ACCESS_DENIED: { ret = OpenResult::AccessDenied; } break;
+            default: { ret = OpenResult::OtherError; } break;
         }
 
-        return -1;
+        if (!(silent & (int)ret)) {
+            LogError("Cannot open '%1': %2", filename, GetWin32ErrorString(err));
+        }
+        return ret;
     }
 
     int fd = _open_osfhandle((intptr_t)h, oflags);
@@ -3047,19 +3041,14 @@ int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
         LogError("Cannot open '%1': %2", filename, strerror(errno));
         CloseHandle(h);
 
-        if (out_exists) {
-            *out_exists = false;
-        }
-        return -1;
+        return OpenResult::OtherError;
     }
 
-    if (out_exists) {
-        *out_exists = false;
-    }
-    return fd;
+    *out_fd = fd;
+    return OpenResult::Success;
 }
 
-FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
+OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, FILE **out_fp)
 {
     char mode[16] = {};
     switch (flags & ((int)OpenFlag::Read |
@@ -3077,20 +3066,21 @@ FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
     strcat(mode, "N");
 #endif
 
-    int fd = OpenDescriptor(filename, flags, out_exists);
-    if (fd < 0)
-        return nullptr;
+    int fd = -1;
+    OpenResult ret = OpenDescriptor(filename, flags, silent, &fd);
+    if (ret != OpenResult::Success)
+        return ret;
 
     FILE *fp = _fdopen(fd, mode);
     if (!fp) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
         _close(fd);
+
+        return OpenResult::OtherError;
     }
 
-    if (out_exists) {
-        *out_exists = false;
-    }
-    return fp;
+    *out_fp = fp;
+    return OpenResult::Success;
 }
 
 bool FlushFile(int fd, const char *filename)
@@ -3304,9 +3294,9 @@ error:
 
 #else
 
-int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
+OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
 {
-    RG_ASSERT(!out_exists || (flags & (int)OpenFlag::Exclusive));
+    RG_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
 
     int oflags = -1;
     switch (flags & ((int)OpenFlag::Read |
@@ -3325,30 +3315,25 @@ int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 
     int fd = RG_POSIX_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {
-        if (errno == EEXIST) {
-            if (out_exists) {
-                *out_exists = true;
-            } else {
-                LogError("File '%1' already exists", filename);
-            }
-        } else {
-            LogError("Cannot open '%1': %2", filename, strerror(errno));
-
-            if (out_exists) {
-                *out_exists = false;
-            }
+        OpenResult ret;
+        switch (errno) {
+            case ENOENT: { ret = OpenResult::MissingPath; } break;
+            case EEXIST: { ret = OpenResult::FileExists; } break;
+            case EACCES: { ret = OpenResult::AccessDenied; } break;
+            default: { ret = OpenResult::OtherError; } break;
         }
 
-        return -1;
+        if (!(silent & (int)ret)) {
+            LogError("Cannot open '%1': %2", filename, strerror(errno));
+        }
+        return ret;
     }
 
-    if (out_exists) {
-        *out_exists = false;
-    }
-    return fd;
+    *out_fd = fd;
+    return OpenResult::Success;
 }
 
-FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
+OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, FILE **out_fp)
 {
     const char *mode = nullptr;
     switch (flags & ((int)OpenFlag::Read |
@@ -3361,20 +3346,21 @@ FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
     }
     RG_ASSERT(mode);
 
-    int fd = OpenDescriptor(filename, flags, out_exists);
-    if (fd < 0)
-        return nullptr;
+    int fd = -1;
+    OpenResult ret = OpenDescriptor(filename, flags, silent, &fd);
+    if (ret != OpenResult::Success)
+        return ret;
 
     FILE *fp = fdopen(fd, mode);
     if (!fp) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
         close(fd);
+
+        return OpenResult::OtherError;
     }
 
-    if (out_exists) {
-        *out_exists = false;
-    }
-    return fp;
+    *out_fp = fp;
+    return OpenResult::Success;
 }
 
 bool FlushFile(int fd, const char *filename)
@@ -5759,7 +5745,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     return true;
 }
 
-bool StreamReader::Open(const char *filename, CompressionType compression_type)
+OpenResult StreamReader::Open(const char *filename, CompressionType compression_type)
 {
     Close(true);
 
@@ -5771,16 +5757,18 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::File;
-    source.u.file.fp = OpenFile(filename, (int)OpenFlag::Read);
-    if (!source.u.file.fp)
-        return false;
+    {
+        OpenResult ret = OpenFile(filename, (int)OpenFlag::Read, &source.u.file.fp);
+        if (ret != OpenResult::Success)
+            return ret;
+    }
     source.u.file.owned = true;
 
     if (!InitDecompressor(compression_type))
-        return false;
+        return OpenResult::OtherError;
 
     err_guard.Disable();
-    return true;
+    return OpenResult::Success;
 }
 
 bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename,

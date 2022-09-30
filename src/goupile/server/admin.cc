@@ -717,9 +717,9 @@ Options:
 }
 
 enum class UnsealResult {
-    Error,
+    Success,
     WrongKey,
-    Success
+    Error
 };
 
 static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, const char *decrypt_key)

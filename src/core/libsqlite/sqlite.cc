@@ -139,7 +139,7 @@ bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay
         return false;
 
     // Open permanent WAL stream
-    if (!snapshot_wal_reader.Open(wal_filename))
+    if (snapshot_wal_reader.Open(wal_filename) != OpenResult::Success)
         return false;
 
     // Set up WAL hook to copy new pages
