@@ -360,7 +360,7 @@ bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
     Size all = out_password.len - uppers - lowers - numbers - specials;
     bool ambiguous = flags & (int)pwd_GenerateFlag::Ambiguous;
 
-    for (Size i = 0; i < 1000; i++) {
+    for (int i = 0; i < 1000; i++) {
         Fmt(out_password, "%1%2%3%4%5", FmtRandom(uppers, ambiguous ? UpperChars : UpperCharsNoAmbi),
                                         FmtRandom(lowers, ambiguous ? LowerChars : LowerCharsNoAmbi),
                                         FmtRandom(numbers, ambiguous ? NumberChars : NumberCharsNoAmbi),

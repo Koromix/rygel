@@ -201,7 +201,7 @@ Size kt_Disk::WriteTag(const kt_ID &id)
     }
 
     // Write tag file with random name, retry if name is already used
-    for (Size i = 0; i < 1000; i++) {
+    for (int i = 0; i < 1000; i++) {
         LocalArray<char, 256> path;
         path.len = Fmt(path.data, "tags/%1", FmtRandom(8)).len;
 
