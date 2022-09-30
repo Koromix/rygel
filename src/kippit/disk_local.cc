@@ -56,15 +56,39 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-    // Open destination file
+    if (TestFile(filename.data, FileType::File))
+        return 0;
+
+    // Create temporary file
     FILE *fp;
+    LocalArray<char, MaxPathSize + 128> tmp;
     {
-        OpenResult ret = OpenFile(filename.data, (int)OpenFlag::Write | (int)OpenFlag::Exclusive,
-                                                 (int)OpenResult::FileExists, &fp);
-        if (ret != OpenResult::Success)
-            return (ret == OpenResult::FileExists) ? 0 : -1;
+        tmp.len = Fmt(tmp.data, "%1%/", url).len;
+
+        OpenResult ret = OpenResult::OtherError;
+
+        for (int i = 0; i < 1000; i++) {
+            Size len = Fmt(tmp.TakeAvailable(), "%1.tmp", FmtRandom(24)).len;
+
+            ret = OpenFile(tmp.data, (int)OpenFlag::Write | (int)OpenFlag::Exclusive,
+                                     (int)OpenResult::FileExists, &fp);
+
+            if (RG_LIKELY(ret == OpenResult::Success)) {
+                tmp.len += len;
+                break;
+            } else if (ret != OpenResult::FileExists) {
+                return -1;
+            }
+        }
+        if (RG_UNLIKELY(ret == OpenResult::FileExists)) {
+            LogError("Failed to create temporoary file in '%1'", tmp);
+            return -1;
+        }
+
+        RG_ASSERT(ret == OpenResult::Success);
     }
-    RG_DEFER { fclose(fp); };
+    RG_DEFER_N(file_guard) { fclose(fp); };
+    RG_DEFER_N(tmp_guard) { UnlinkFile(tmp.data); };
 
     StreamWriter writer(fp, filename.data);
 
@@ -73,6 +97,15 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
         return -1;
     if (!writer.Close())
         return -1;
+
+    // File is complete
+    fclose(fp);
+    file_guard.Disable();
+
+    // Atomic rename
+    if (!RenameFile(tmp.data, filename.data, true, false))
+        return -1;
+    tmp_guard.Disable();
 
     return writer.GetRawWritten();
 }
