@@ -103,7 +103,7 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
     file_guard.Disable();
 
     // Atomic rename
-    if (!RenameFile(tmp.data, filename.data, true, false))
+    if (!RenameFile(tmp.data, filename.data, (int)RenameFlag::Overwrite))
         return -1;
     tmp_guard.Disable();
 

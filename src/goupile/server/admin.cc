@@ -2329,13 +2329,15 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 #endif
                 swap_directory = Fmt(&io->allocator, "%1%/%2", gp_domain.config.tmp_directory, FmtRandom(24)).ptr;
 
+                unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
+
                 // Non atomic swap but it is hard to do better here
-                if (!RenameFile(gp_domain.config.instances_directory, swap_directory, true))
+                if (!RenameFile(gp_domain.config.instances_directory, swap_directory, flags))
                     return false;
-                if (!RenameFile(tmp_directory, gp_domain.config.instances_directory, true)) {
+                if (!RenameFile(tmp_directory, gp_domain.config.instances_directory, flags)) {
                     // If this goes wrong, we're completely screwed :)
                     // At least on Linux we have some hope to avoid this problem
-                    RenameFile(swap_directory, gp_domain.config.instances_directory, true);
+                    RenameFile(swap_directory, gp_domain.config.instances_directory, flags);
                     return false;
                 }
             } else {

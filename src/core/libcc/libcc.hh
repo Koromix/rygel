@@ -3812,8 +3812,13 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
 static inline StatResult StatFile(const char *filename, FileInfo *out_info)
     { return StatFile(filename, 0, out_info); }
 
+enum class RenameFlag {
+    Overwrite = 1 << 0,
+    Sync = 1 << 1
+};
+
 // Sync failures are logged but not reported as errors (function returns true)
-bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool sync = true);
+bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags);
 
 enum class EnumResult {
     Success,

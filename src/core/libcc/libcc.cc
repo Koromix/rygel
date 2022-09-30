@@ -2091,12 +2091,12 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
     return StatResult::Success;
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool)
+bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags)
 {
-    DWORD flags = overwrite ? MOVEFILE_REPLACE_EXISTING : 0;
+    DWORD move_flags = (flags & (int)RenameFlag::Overwrite) ? MOVEFILE_REPLACE_EXISTING : 0;
 
     if (win32_utf8) {
-        if (!MoveFileExA(src_filename, dest_filename, flags))
+        if (!MoveFileExA(src_filename, dest_filename, move_flags))
             goto error;
     } else {
         wchar_t src_filename_w[4096];
@@ -2106,7 +2106,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, bool overwr
         if (ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w) < 0)
             return false;
 
-        if (!MoveFileExW(src_filename_w, dest_filename_w, flags))
+        if (!MoveFileExW(src_filename_w, dest_filename_w, move_flags))
             goto error;
     }
 
@@ -2301,10 +2301,10 @@ static bool SyncFileDirectory(const char *filename)
     return true;
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool sync)
+bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags)
 {
     int fd = -1;
-    if (!overwrite) {
+    if (!(flags & (int)RenameFlag::Overwrite)) {
         fd = open(dest_filename, O_CREAT | O_EXCL, 0644);
         if (fd < 0) {
             if (errno == EEXIST) {
@@ -2325,7 +2325,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, bool overwr
 
     // Not much we can do if fsync fails (I think), so ignore errors.
     // Hope for the best: that's the spirit behind the POSIX filesystem API (...).
-    if (sync) {
+    if (flags & (int)RenameFlag::Sync) {
         SyncFileDirectory(src_filename);
         SyncFileDirectory(dest_filename);
     }
@@ -6786,7 +6786,9 @@ bool StreamWriter::Close(bool implicit)
                     fclose(dest.u.file.fp);
                     dest.u.file.owned = false;
 
-                    if (RenameFile(dest.u.file.tmp_filename, filename, true)) {
+                    unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
+
+                    if (RenameFile(dest.u.file.tmp_filename, filename, flags)) {
                         dest.u.file.tmp_filename = nullptr;
                         dest.u.file.tmp_exclusive = false;
                     } else {
