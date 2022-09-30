@@ -106,8 +106,8 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
     HeapArray<const char *> filenames;
     {
         const auto enumerate_directory_files = [&](const char *dir) {
-            EnumStatus status = EnumerateDirectory(dir, nullptr, 1024,
-                                                   [&](const char *basename, FileType file_type) {
+            EnumResult ret = EnumerateDirectory(dir, nullptr, 1024,
+                                                [&](const char *basename, FileType file_type) {
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", dir, basename).ptr;
 
                 CompressionType compression_type;
@@ -128,7 +128,8 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
                 return true;
             });
 
-            return status != EnumStatus::Error;
+            bool success = (ret == EnumResult::Success || ret == EnumResult::PartialEnum);
+            return success;
         };
 
         bool success = true;

@@ -822,8 +822,8 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     if (!db->Prepare("INSERT INTO dom_instances (instance) VALUES (?)", &stmt))
                         return false;
 
-                    EnumStatus status = EnumerateDirectory(instances_directory, "*.db", -1,
-                                                           [&](const char *filename, FileType) {
+                    EnumResult ret = EnumerateDirectory(instances_directory, "*.db", -1,
+                                                        [&](const char *filename, FileType) {
                         Span<const char> key = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
                         key = SplitStr(key, '.');
 
@@ -832,7 +832,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
                         return stmt.Run();
                     });
-                    if (status != EnumStatus::Complete)
+                    if (ret != EnumResult::Success)
                         return false;
                 }
 

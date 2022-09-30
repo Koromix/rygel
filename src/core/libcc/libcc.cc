@@ -2090,7 +2090,7 @@ error:
     return false;
 }
 
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
     if (filter) {
@@ -2104,18 +2104,20 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         char find_filter[4096];
         if (snprintf(find_filter, RG_SIZE(find_filter), "%s\\%s", dirname, filter) >= RG_SIZE(find_filter)) {
             LogError("Cannot enumerate directory '%1': Path too long", dirname);
-            return EnumStatus::Error;
+            return EnumResult::OtherError;
         }
 
         if (ConvertUtf8ToWin32Wide(find_filter, find_filter_w) < 0)
-            return EnumStatus::Error;
+            return EnumResult::OtherError;
     }
 
     WIN32_FIND_DATAW find_data;
     HANDLE handle = FindFirstFileExW(find_filter_w, FindExInfoBasic, &find_data,
                                      FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
     if (handle == INVALID_HANDLE_VALUE) {
-        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+        DWORD err = GetLastError();
+
+        if (err == ERROR_FILE_NOT_FOUND) {
             // Erase the filter part from the buffer, we are about to exit anyway.
             // And no, I don't want to include wchar.h
             Size len = 0;
@@ -2125,12 +2127,17 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
             DWORD attrib = GetFileAttributesW(find_filter_w);
             if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY))
-                return EnumStatus::Complete;
+                return EnumResult::Success;
         }
 
-        LogError("Cannot enumerate directory '%1': %2", dirname,
-                 GetWin32ErrorString());
-        return EnumStatus::Error;
+        LogError("Cannot enumerate directory '%1': %2", dirname, GetWin32ErrorString());
+
+        switch (err) {
+            case ERROR_FILE_NOT_FOUND:
+            case ERROR_PATH_NOT_FOUND: return EnumResult::MissingPath;
+            case ERROR_ACCESS_DENIED: return EnumResult::AccessDenied;
+            default: return EnumResult::OtherError;
+        }
     }
     RG_DEFER { FindClose(handle); };
 
@@ -2142,26 +2149,26 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
         if (RG_UNLIKELY(count++ >= max_files && max_files >= 0)) {
             LogError("Partial enumation of directory '%1'", dirname);
-            return EnumStatus::Partial;
+            return EnumResult::PartialEnum;
         }
 
         char filename[512];
         if (ConvertWin32WideToUtf8(find_data.cFileName, filename) < 0)
-            return EnumStatus::Error;
+            return EnumResult::OtherError;
 
         FileType file_type = FileAttributesToType(find_data.dwFileAttributes);
 
         if (!func(filename, file_type))
-            return EnumStatus::Stopped;
+            return EnumResult::CallbackFail;
     } while (FindNextFileW(handle, &find_data));
 
     if (GetLastError() != ERROR_NO_MORE_FILES) {
         LogError("Error while enumerating directory '%1': %2", dirname,
                  GetWin32ErrorString());
-        return EnumStatus::Error;
+        return EnumResult::OtherError;
     }
 
-    return EnumStatus::Complete;
+    return EnumResult::Success;
 }
 
 #else
@@ -2287,13 +2294,18 @@ bool RenameFile(const char *src_filename, const char *dest_filename, bool overwr
     return true;
 }
 
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
     DIR *dirp = RG_POSIX_RESTART_EINTR(opendir(dirname), == nullptr);
     if (!dirp) {
         LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
-        return EnumStatus::Error;
+
+        switch (errno) {
+            case ENOENT: return EnumResult::MissingPath;
+            case EACCES: return EnumResult::AccessDenied;
+            default: return EnumResult::OtherError;
+        }
     }
     RG_DEFER { closedir(dirp); };
 
@@ -2310,7 +2322,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         if (!filter || !fnmatch(filter, dent->d_name, FNM_PERIOD)) {
             if (RG_UNLIKELY(count++ >= max_files && max_files >= 0)) {
                 LogError("Partial enumation of directory '%1'", dirname);
-                return EnumStatus::Partial;
+                return EnumResult::PartialEnum;
             }
 
             FileType file_type;
@@ -2343,7 +2355,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
             }
 
             if (!func(dent->d_name, file_type))
-                return EnumStatus::Stopped;
+                return EnumResult::CallbackFail;
         }
 
         errno = 0;
@@ -2351,10 +2363,10 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
     if (errno) {
         LogError("Error while enumerating directory '%1': %2", dirname, strerror(errno));
-        return EnumStatus::Error;
+        return EnumResult::OtherError;
     }
 
-    return EnumStatus::Complete;
+    return EnumResult::Success;
 }
 
 #endif
@@ -2364,8 +2376,8 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 {
     RG_DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
-    EnumStatus status = EnumerateDirectory(dirname, nullptr, max_files,
-                                           [&](const char *basename, FileType file_type) {
+    EnumResult ret = EnumerateDirectory(dirname, nullptr, max_files,
+                                        [&](const char *basename, FileType file_type) {
         switch (file_type) {
             case FileType::Directory: {
                 if (max_depth) {
@@ -2390,7 +2402,7 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 
         return true;
     });
-    if (status == EnumStatus::Error)
+    if (ret != EnumResult::Success && ret != EnumResult::PartialEnum)
         return false;
 
     out_guard.Disable();
@@ -2399,8 +2411,10 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 
 bool IsDirectoryEmpty(const char *dirname)
 {
-    EnumStatus status = EnumerateDirectory(dirname, nullptr, -1, [](const char *, FileType) { return false; });
-    return status == EnumStatus::Complete;
+    EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [](const char *, FileType) { return false; });
+
+    bool empty = (ret == EnumResult::Success);
+    return empty;
 }
 
 bool TestFile(const char *filename)

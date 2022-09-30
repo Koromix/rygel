@@ -372,8 +372,8 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     HeapArray<uint8_t> dir_obj;
     std::atomic<int64_t> dir_written = 0;
 
-    EnumStatus status = EnumerateDirectory(src_dirname, nullptr, -1,
-                                           [&](const char *basename, FileType) {
+    EnumResult ret = EnumerateDirectory(src_dirname, nullptr, -1,
+                                        [&](const char *basename, FileType) {
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
 
         Size entry_len = RG_SIZE(FileEntry) + strlen(basename) + 1;
@@ -416,7 +416,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
 
         return true;
     });
-    if (status != EnumStatus::Complete)
+    if (ret != EnumResult::Success)
         return false;
 
     kt_ID dir_id = {};

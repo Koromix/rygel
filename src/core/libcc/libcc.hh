@@ -4131,11 +4131,14 @@ struct FileInfo {
     unsigned int mode;
 };
 
-enum class EnumStatus {
-    Error,
-    Partial,
-    Stopped,
-    Complete
+enum class EnumResult {
+    Success,
+
+    MissingPath,
+    AccessDenied,
+    PartialEnum,
+    CallbackFail,
+    OtherError
 };
 
 bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info);
@@ -4145,7 +4148,7 @@ static inline bool StatFile(const char *filename, FileInfo *out_info)
 // Sync failures are logged but not reported as errors (function returns true)
 bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool sync = true);
 
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func);
 bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
                     Allocator *str_alloc, HeapArray<const char *> *out_files);

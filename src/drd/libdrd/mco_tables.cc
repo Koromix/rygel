@@ -1890,8 +1890,8 @@ bool mco_LoadTableSet(Span<const char *const> table_directories,
     HeapArray<const char *> filenames;
     {
         const auto enumerate_directory_files = [&](const char *dir) {
-            EnumStatus status = EnumerateDirectory(dir, nullptr, 1024,
-                                                   [&](const char *basename, FileType file_type) {
+            EnumResult ret = EnumerateDirectory(dir, nullptr, 1024,
+                                                [&](const char *basename, FileType file_type) {
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", dir, basename).ptr;
 
                 CompressionType compression_type;
@@ -1911,7 +1911,8 @@ bool mco_LoadTableSet(Span<const char *const> table_directories,
                 return true;
             });
 
-            return status != EnumStatus::Error;
+            bool success = (ret == EnumResult::Success || ret == EnumResult::PartialEnum);
+            return success;
         };
 
         bool success = true;

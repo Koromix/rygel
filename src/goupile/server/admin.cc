@@ -1852,8 +1852,8 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
     HeapArray<char> buf;
 
     json.StartArray();
-    EnumStatus status = EnumerateDirectory(gp_domain.config.archive_directory, nullptr, -1,
-                                           [&](const char *basename, FileType) {
+    EnumResult ret = EnumerateDirectory(gp_domain.config.archive_directory, nullptr, -1,
+                                        [&](const char *basename, FileType) {
         Span<const char> extension = GetPathExtension(basename);
 
         if (extension == ".goarch" || extension == ".goupilearchive") {
@@ -1877,7 +1877,7 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
 
         return true;
     });
-    if (status != EnumStatus::Complete)
+    if (ret != EnumResult::Success)
         return;
     json.EndArray();
 

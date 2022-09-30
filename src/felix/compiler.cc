@@ -1507,8 +1507,8 @@ public:
         }
         RG_ASSERT(dirname);
 
-        EnumStatus status = EnumerateDirectory(dirname, nullptr, 1024,
-                                               [&](const char *basename, FileType) {
+        EnumResult ret = EnumerateDirectory(dirname, nullptr, 1024,
+                                            [&](const char *basename, FileType) {
             if (TestStr(basename, "Blink.cc"))
                 return true;
 
@@ -1519,7 +1519,7 @@ public:
 
             return true;
         });
-        if (status != EnumStatus::Complete)
+        if (ret != EnumResult::Success)
             return false;
 
         uint64_t hash = 0;
