@@ -824,15 +824,15 @@ static inline constexpr Strider<T> MakeStrider(T (&arr)[N])
     return Strider<T>(arr, RG_SIZE(T));
 }
 
+enum class AllocFlag {
+    Zero = 1,
+    Resizable = 2
+};
+
 class Allocator {
     RG_DELETE_COPY(Allocator)
 
 public:
-    enum class Flag {
-        Zero = 1,
-        Resizable = 2
-    };
-
     Allocator() = default;
     virtual ~Allocator() = default;
 
@@ -2299,7 +2299,7 @@ private:
         if (new_capacity) {
             used = (size_t *)AllocateRaw(allocator,
                                          (new_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t),
-                                         (int)Allocator::Flag::Zero);
+                                         (int)AllocFlag::Zero);
             data = (ValueType *)AllocateRaw(allocator, new_capacity * RG_SIZE(ValueType));
             for (Size i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType();

@@ -133,7 +133,7 @@ protected:
         void *ptr = malloc((size_t)size);
         RG_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
 
-        if (flags & (int)Allocator::Flag::Zero) {
+        if (flags & (int)AllocFlag::Zero) {
             memset_safe(ptr, 0, (size_t)size);
         }
 
@@ -150,7 +150,7 @@ protected:
             RG_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
                                               FmtMemSize(old_size), FmtMemSize(new_size));
 
-            if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
+            if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
                 memset_safe((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
             }
 
@@ -295,14 +295,14 @@ void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
     } else {
         if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
             current_bucket = (Bucket *)AllocateRaw(alloc, RG_SIZE(Bucket) + block_size,
-                                                   flags & ~(int)Allocator::Flag::Zero);
+                                                   flags & ~(int)AllocFlag::Zero);
             current_bucket->used = 0;
         }
 
         uint8_t *ptr = current_bucket->data + current_bucket->used;
         current_bucket->used += aligned_size;
 
-        if (flags & (int)Allocator::Flag::Zero) {
+        if (flags & (int)AllocFlag::Zero) {
             memset_safe(ptr, 0, size);
         }
 
@@ -334,18 +334,18 @@ void *BlockAllocatorBase::Resize(void *ptr, Size old_size, Size new_size, unsign
                 !AllocateSeparately(aligned_new_size)) {
             current_bucket->used += aligned_delta;
 
-            if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
+            if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
                 memset_safe((uint8_t *)ptr + old_size, 0, new_size - old_size);
             }
         } else if (AllocateSeparately(aligned_old_size)) {
             LinkedAllocator *alloc = GetAllocator();
             ptr = ResizeRaw(alloc, ptr, old_size, new_size, flags);
         } else {
-            void *new_ptr = Allocate(new_size, flags & ~(int)Allocator::Flag::Zero);
+            void *new_ptr = Allocate(new_size, flags & ~(int)AllocFlag::Zero);
             if (new_size > old_size) {
                 memcpy_safe(new_ptr, ptr, old_size);
 
-                if (flags & (int)Allocator::Flag::Zero) {
+                if (flags & (int)AllocFlag::Zero) {
                     memset_safe((uint8_t *)ptr + old_size, 0, new_size - old_size);
                 }
             } else {
@@ -6076,7 +6076,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            compression.u.miniz = AllocateOne<MinizInflateContext>(nullptr, (int)Allocator::Flag::Zero);
+            compression.u.miniz = AllocateOne<MinizInflateContext>(nullptr, (int)AllocFlag::Zero);
             tinfl_init(&compression.u.miniz->inflator);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 #else
@@ -6088,7 +6088,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
 
         case CompressionType::Brotli: {
 #ifdef BROTLI_DEFAULT_MODE
-            compression.u.brotli = AllocateOne<BrotliDecompressContext>(nullptr, (int)Allocator::Flag::Zero);
+            compression.u.brotli = AllocateOne<BrotliDecompressContext>(nullptr, (int)AllocFlag::Zero);
             compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
 #else
             LogError("Brotli decompression not available for '%1'", filename);
@@ -6790,7 +6790,7 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            compression.u.miniz = AllocateOne<MinizDeflateContext>(nullptr, (int)Allocator::Flag::Zero);
+            compression.u.miniz = AllocateOne<MinizDeflateContext>(nullptr, (int)AllocFlag::Zero);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 
             int flags = 0;
