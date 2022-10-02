@@ -25,7 +25,7 @@ struct kt_PutSettings {
     bool raw = false;
 };
 
-bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_dirname, kt_ID *out_id, int64_t *out_written = nullptr);
-bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_dirname, int64_t *out_len = nullptr);
+bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames, kt_ID *out_id, int64_t *out_written = nullptr);
+bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_len = nullptr);
 
 }

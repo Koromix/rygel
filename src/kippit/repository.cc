@@ -37,10 +37,9 @@ static const Size ChunkMin = Kibibytes(512);
 static const Size ChunkMax = Kibibytes(2048);
 
 #pragma pack(push, 1)
-struct SnapshotData {
+struct SnapshotHeader {
     char name[512];
     int64_t time; // Little Endian
-    kt_ID root;
 };
 #pragma pack(pop)
 
@@ -50,7 +49,7 @@ struct FileEntry {
     int8_t type; // FileType
     int64_t mtime;
     uint32_t mode;
-    char basename[];
+    char name[];
 };
 #pragma pack(pop)
 RG_STATIC_ASSERT(RG_SIZE(FileEntry) == 45);
@@ -422,7 +421,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
             } break;
         }
 
-        CopyString(basename, MakeSpan(entry->basename, entry_len - RG_SIZE(FileEntry)));
+        CopyString(basename, MakeSpan(entry->name, entry_len - RG_SIZE(FileEntry)));
 
         return true;
     });
@@ -470,11 +469,10 @@ static bool GetDirectory(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
     for (Size offset = 0; offset < dir_obj.len;) {
         const FileEntry *entry = (const FileEntry *)(dir_obj.ptr + offset);
 
-        Size next = offset + RG_SIZE(FileEntry)
-                           + (Size)strnlen(entry->basename, dir_obj.end() - (const uint8_t *)entry->basename) + 1;
+        offset += RG_SIZE(FileEntry) + (Size)strnlen(entry->name, dir_obj.end() - (const uint8_t *)entry->name) + 1;
 
         // Sanity checks
-        if (next > dir_obj.len) {
+        if (offset > dir_obj.len) {
             LogError("Malformed entry in directory object '%1'", id);
             return false;
         }
@@ -482,20 +480,18 @@ static bool GetDirectory(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
             LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
             return false;
         }
-        if (strpbrk(entry->basename, RG_PATH_SEPARATORS) || TestStr(entry->basename, ".") ||
-                                                            TestStr(entry->basename, "..")) {
-            LogError("Unsafe file name '%1'", entry->basename);
+        if (strpbrk(entry->name, RG_PATH_SEPARATORS) || TestStr(entry->name, ".") ||
+                                                        TestStr(entry->name, "..")) {
+            LogError("Unsafe file name '%1'", entry->name);
             return false;
         }
 
-        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->basename).ptr;
+        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->name).ptr;
 
         int64_t len = 0;
         if (!kt_Get(disk, entry->id, dest_filename, &len))
             return false;
         dir_len += len;
-
-        offset = next;
     }
 
     if (out_len) {
@@ -504,61 +500,80 @@ static bool GetDirectory(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
     return true;
 }
 
-bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filename, kt_ID *out_id, int64_t *out_written)
+bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames, kt_ID *out_id, int64_t *out_written)
 {
+    RG_ASSERT(filenames.len >= 1);
+
     if (settings.raw && settings.name) {
         LogError("Cannot use snapshot name in raw mode");
         return false;
     }
-    if (settings.name && strlen(settings.name) >= RG_SIZE(SnapshotData::name)) {
-        LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotData::name));
+    if (settings.raw && filenames.len != 1) {
+        LogError("Only one object can be backup up in raw mode");
+        return false;
+    }
+    if (settings.name && strlen(settings.name) >= RG_SIZE(SnapshotHeader::name)) {
+        LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotHeader::name));
         return false;
     }
 
     Span<const uint8_t> salt = disk->GetSalt();
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
-    FileInfo file_info;
-    if (StatFile(src_filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
-        return false;
-
-    int64_t now = GetUnixTime();
-
-    kt_ID root = {};
+    HeapArray<uint8_t> snapshot_obj;
     int64_t written = 0;
-    switch (file_info.type) {
-        case FileType::Directory: {
-            if (!PutDirectory(disk, src_filename, &root, &written))
-                return false;
-        } break;
-        case FileType::File: {
-            if (!PutFile(disk, src_filename, &root, &written))
-                return false;
-        } break;
 
-        case FileType::Link:
-        case FileType::Device:
-        case FileType::Pipe:
-        case FileType::Socket: {
-            LogError("Cannot backup special file '%1' (%2)", src_filename, FileTypeNames[(int)file_info.type]);
+    // Snapshot header
+    {
+        SnapshotHeader *header = (SnapshotHeader *)snapshot_obj.AppendDefault(RG_SIZE(SnapshotHeader));
+
+        CopyString(settings.name ? settings.name : "", header->name);
+        header->time = LittleEndian(GetUnixTime());
+    }
+
+    // Process snapshot entries
+    for (const char *filename: filenames) {
+        FileInfo file_info;
+        if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
             return false;
-        } break;
+
+        Size entry_len = RG_SIZE(FileEntry) + strlen(filename) + 1;
+        FileEntry *entry = (FileEntry *)snapshot_obj.AppendDefault(entry_len);
+
+        entry->type = (int8_t)file_info.type;
+        entry->mtime = file_info.mtime;
+        entry->mode = (uint32_t)file_info.mode;
+
+        switch (file_info.type) {
+            case FileType::Directory: {
+                if (!PutDirectory(disk, filename, &entry->id, &written))
+                    return false;
+            } break;
+            case FileType::File: {
+                if (!PutFile(disk, filename, &entry->id, &written))
+                    return false;
+            } break;
+
+            case FileType::Link:
+            case FileType::Device:
+            case FileType::Pipe:
+            case FileType::Socket: {
+                LogError("Cannot backup special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
+                return false;
+            } break;
+        }
+
+        // XXX: Remove root / and reformat drive prefix on Windows
+        CopyString(filename, MakeSpan(entry->name, entry_len - RG_SIZE(FileEntry)));
     }
 
     kt_ID id = {};
     if (!settings.raw) {
-        SnapshotData snapshot = {};
-        Span<const uint8_t> raw = MakeSpan((const uint8_t *)&snapshot, RG_SIZE(snapshot));
-
-        CopyString(settings.name ? settings.name : "", snapshot.name);
-        snapshot.time = LittleEndian(now);
-        snapshot.root = root;
-
-        HashBlake3(raw, salt.ptr, &id);
+        HashBlake3(snapshot_obj, salt.ptr, &id);
 
         // Write snapshot object
         {
-            Size ret = disk->WriteObject(id, kt_ObjectType::Snapshot, raw);
+            Size ret = disk->WriteObject(id, kt_ObjectType::Snapshot, snapshot_obj);
             if (ret < 0)
                 return false;
             written += ret;
@@ -572,7 +587,8 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filen
             written += ret;
         }
     } else {
-        id = root;
+        const FileEntry *entry = (const FileEntry *)(snapshot_obj.ptr + RG_SIZE(SnapshotHeader));
+        id = entry->id;
     }
 
     *out_id = id;
@@ -582,42 +598,89 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, const char *src_filen
     return true;
 }
 
-bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_filename, int64_t *out_len)
+bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_len)
 {
     kt_ObjectType type;
     HeapArray<uint8_t> obj;
     if (!disk->ReadObject(id, &type, &obj))
         return false;
 
-    if (type == kt_ObjectType::Snapshot) {
-        SnapshotData snapshot = {};
-
-        if (obj.len != RG_SIZE(snapshot)) {
-            LogError("Malformed snapshot object '%1'", id);
-            return false;
-        }
-        obj.len = 0;
-
-        memcpy(&snapshot, obj.ptr, RG_SIZE(snapshot));
-        snapshot.time = LittleEndian(snapshot.time);
-
-        if (!disk->ReadObject(snapshot.root, &type, &obj))
-            return false;
-    }
-
     switch (type) {
-        case kt_ObjectType::Snapshot: {
-            LogError("Unexpected snapshot object '%1'", id);
-            return false;
-        } break;
-
         case kt_ObjectType::Chunk:
-        case kt_ObjectType::File: return GetFile(disk, id, type, obj, dest_filename, out_len);
+        case kt_ObjectType::File: return GetFile(disk, id, type, obj, dest_path, out_len);
 
-        case kt_ObjectType::Directory: return GetDirectory(disk, id, type, obj, dest_filename, out_len);
+        case kt_ObjectType::Directory: return GetDirectory(disk, id, type, obj, dest_path, out_len);
+
+        case kt_ObjectType::Snapshot: {
+            BlockAllocator temp_alloc;
+
+            if (obj.len < RG_SIZE(SnapshotHeader)) {
+                LogError("Malformed snapshot object '%1'", id);
+                return false;
+            }
+
+            SnapshotHeader *header = (SnapshotHeader *)obj.ptr;
+            header->time = LittleEndian(header->time);
+
+            for (Size offset = RG_SIZE(SnapshotHeader); offset < obj.len;) {
+                const FileEntry *entry = (const FileEntry *)(obj.ptr + offset);
+
+                offset += RG_SIZE(FileEntry) + (Size)strnlen(entry->name, obj.end() - (const uint8_t *)entry->name) + 1;
+
+                // Sanity checks
+                // XXX: Make sure each path does not clobber a previous one
+                if (offset > obj.len) {
+                    LogError("Malformed entry in snapshot object '%1'", id);
+                    return false;
+                }
+                if (entry->type != (int8_t)FileType::Directory && entry->type != (int8_t)FileType::File) {
+                    LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
+                    return false;
+                }
+                if (!entry->name[0] || PathContainsDotDot(entry->name)) {
+                    LogError("Unsafe file name '%1'", entry->name);
+                    return false;
+                }
+
+                kt_ObjectType entry_type;
+                HeapArray<uint8_t> entry_obj;
+                if (!disk->ReadObject(entry->id, &entry_type, &entry_obj))
+                    return false;
+
+                const char *entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_path, entry->name).ptr;
+                if (!EnsureDirectoryExists(entry_filename))
+                    return false;
+
+                switch (entry->type) {
+                    case (int8_t)FileType::Directory: {
+                        if (entry_type != kt_ObjectType::Directory) {
+                            LogError("Object '%1' is not a directory", entry->id);
+                            return false;
+                        }
+
+                        if (!GetDirectory(disk, entry->id, entry_type, entry_obj, entry_filename, out_len))
+                            return false;
+                    } break;
+                    case (int8_t)FileType::File: {
+                        if (entry_type != kt_ObjectType::File && entry_type != kt_ObjectType::Chunk) {
+                            LogError("Object '%1' is not a file", entry->id);
+                            return false;
+                        }
+
+                        if (!GetFile(disk, entry->id, entry_type, entry_obj, entry_filename, out_len))
+                            return false;
+                    } break;
+
+                    default: {
+                        LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
+                        return false;
+                    } break;
+                }
+            }
+        } break;
     }
 
-    RG_UNREACHABLE();
+    return true;
 }
 
 }

@@ -106,11 +106,11 @@ static int RunPut(Span<const char *> arguments)
     kt_PutSettings settings;
     const char *repo_directory = nullptr;
     const char *pwd = nullptr;
-    const char *filename = nullptr;
+    HeapArray<const char *> filenames;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 put [-R <repo>] <filename>%!0
+R"(Usage: %!..+%1 put [-R <repo>] <filename> ...%!0
 
 Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
@@ -143,10 +143,10 @@ Options:
             }
         }
 
-        filename = opt.ConsumeNonOption();
+        opt.ConsumeNonOptions(&filenames);
     }
 
-    if (!filename) {
+    if (!filenames.len) {
         LogError("No filename provided");
         return 1;
     }
@@ -174,7 +174,7 @@ Options:
 
     kt_ID id = {};
     int64_t written = 0;
-    if (!kt_Put(disk, settings, filename, &id, &written))
+    if (!kt_Put(disk, settings, filenames, &id, &written))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
