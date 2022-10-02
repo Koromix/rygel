@@ -448,11 +448,87 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
 }
 
 static bool GetDirectory(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
+                         Span<const uint8_t> dir_obj, const char *dest_dirname, int64_t *out_len);
+
+static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool allow_sep,
+                               const char *dest_dirname, int64_t *out_len)
+{
+    BlockAllocator temp_alloc;
+
+    // XXX: Make sure each path does not clobber a previous one
+
+    for (Size offset = 0; offset < entries.len;) {
+        const FileEntry *entry = (const FileEntry *)(entries.ptr + offset);
+
+        // Skip to next entry
+        Size entry_len = RG_SIZE(FileEntry) + (Size)strnlen(entry->name, entries.end() - (const uint8_t *)entry->name) + 1;
+        offset += entry_len;
+
+        // Sanity checks
+        if (offset > entries.len) {
+            LogError("Malformed entry in directory object");
+            return false;
+        }
+        if (entry->type != (int8_t)FileType::Directory && entry->type != (int8_t)FileType::File) {
+            LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
+            return false;
+        }
+        if (!entry->name[0] || PathContainsDotDot(entry->name)) {
+            LogError("Unsafe file name '%1'", entry->name);
+            return false;
+        }
+        if (PathIsAbsolute(entry->name)) {
+            LogError("Unsafe file name '%1'", entry->name);
+            return false;
+        }
+        if (!allow_sep && strpbrk(entry->name, RG_PATH_SEPARATORS)) {
+            LogError("Unsafe file name '%1'", entry->name);
+            return false;
+        }
+
+        kt_ObjectType entry_type;
+        HeapArray<uint8_t> entry_obj;
+        if (!disk->ReadObject(entry->id, &entry_type, &entry_obj))
+            return false;
+
+        const char *entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->name).ptr;
+        if (!EnsureDirectoryExists(entry_filename))
+            return false;
+
+        switch (entry->type) {
+            case (int8_t)FileType::Directory: {
+                if (entry_type != kt_ObjectType::Directory) {
+                    LogError("Object '%1' is not a directory", entry->id);
+                    return false;
+                }
+
+                if (!GetDirectory(disk, entry->id, entry_type, entry_obj, entry_filename, out_len))
+                    return false;
+            } break;
+            case (int8_t)FileType::File: {
+                if (entry_type != kt_ObjectType::File && entry_type != kt_ObjectType::Chunk) {
+                    LogError("Object '%1' is not a file", entry->id);
+                    return false;
+                }
+
+                if (!GetFile(disk, entry->id, entry_type, entry_obj, entry_filename, out_len))
+                    return false;
+            } break;
+
+            default: {
+                LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
+                return false;
+            } break;
+        }
+    }
+
+    return true;
+}
+
+static bool GetDirectory(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
                          Span<const uint8_t> dir_obj, const char *dest_dirname, int64_t *out_len)
 {
     RG_ASSERT(type == kt_ObjectType::Directory);
-
-    BlockAllocator temp_alloc;
 
     if (TestFile(dest_dirname)) {
         if (!IsDirectoryEmpty(dest_dirname)) {
@@ -464,40 +540,8 @@ static bool GetDirectory(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
             return false;
     }
 
-    // Extract directory entries
-    std::atomic<int64_t> dir_len = 0;
-    for (Size offset = 0; offset < dir_obj.len;) {
-        const FileEntry *entry = (const FileEntry *)(dir_obj.ptr + offset);
-
-        offset += RG_SIZE(FileEntry) + (Size)strnlen(entry->name, dir_obj.end() - (const uint8_t *)entry->name) + 1;
-
-        // Sanity checks
-        if (offset > dir_obj.len) {
-            LogError("Malformed entry in directory object '%1'", id);
-            return false;
-        }
-        if (entry->type != (int8_t)FileType::Directory && entry->type != (int8_t)FileType::File) {
-            LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
-            return false;
-        }
-        if (strpbrk(entry->name, RG_PATH_SEPARATORS) || TestStr(entry->name, ".") ||
-                                                        TestStr(entry->name, "..")) {
-            LogError("Unsafe file name '%1'", entry->name);
-            return false;
-        }
-
-        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->name).ptr;
-
-        int64_t len = 0;
-        if (!kt_Get(disk, entry->id, dest_filename, &len))
-            return false;
-        dir_len += len;
-    }
-
-    if (out_len) {
-        *out_len += dir_len;
-    }
-    return true;
+    bool success = ExtractFileEntries(disk, dir_obj, false, dest_dirname, out_len);
+    return success;
 }
 
 bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames, kt_ID *out_id, int64_t *out_written)
@@ -612,75 +656,20 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_
         case kt_ObjectType::Directory: return GetDirectory(disk, id, type, obj, dest_path, out_len);
 
         case kt_ObjectType::Snapshot: {
-            BlockAllocator temp_alloc;
-
-            if (obj.len < RG_SIZE(SnapshotHeader)) {
+            // There must be at least one entry
+            if (obj.len <= RG_SIZE(SnapshotHeader)) {
                 LogError("Malformed snapshot object '%1'", id);
                 return false;
             }
 
-            SnapshotHeader *header = (SnapshotHeader *)obj.ptr;
-            header->time = LittleEndian(header->time);
+            Span<const uint8_t> entries = obj.Take(RG_SIZE(SnapshotHeader), obj.len - RG_SIZE(SnapshotHeader));
 
-            for (Size offset = RG_SIZE(SnapshotHeader); offset < obj.len;) {
-                const FileEntry *entry = (const FileEntry *)(obj.ptr + offset);
-
-                offset += RG_SIZE(FileEntry) + (Size)strnlen(entry->name, obj.end() - (const uint8_t *)entry->name) + 1;
-
-                // Sanity checks
-                // XXX: Make sure each path does not clobber a previous one
-                if (offset > obj.len) {
-                    LogError("Malformed entry in snapshot object '%1'", id);
-                    return false;
-                }
-                if (entry->type != (int8_t)FileType::Directory && entry->type != (int8_t)FileType::File) {
-                    LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
-                    return false;
-                }
-                if (!entry->name[0] || PathContainsDotDot(entry->name)) {
-                    LogError("Unsafe file name '%1'", entry->name);
-                    return false;
-                }
-
-                kt_ObjectType entry_type;
-                HeapArray<uint8_t> entry_obj;
-                if (!disk->ReadObject(entry->id, &entry_type, &entry_obj))
-                    return false;
-
-                const char *entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_path, entry->name).ptr;
-                if (!EnsureDirectoryExists(entry_filename))
-                    return false;
-
-                switch (entry->type) {
-                    case (int8_t)FileType::Directory: {
-                        if (entry_type != kt_ObjectType::Directory) {
-                            LogError("Object '%1' is not a directory", entry->id);
-                            return false;
-                        }
-
-                        if (!GetDirectory(disk, entry->id, entry_type, entry_obj, entry_filename, out_len))
-                            return false;
-                    } break;
-                    case (int8_t)FileType::File: {
-                        if (entry_type != kt_ObjectType::File && entry_type != kt_ObjectType::Chunk) {
-                            LogError("Object '%1' is not a file", entry->id);
-                            return false;
-                        }
-
-                        if (!GetFile(disk, entry->id, entry_type, entry_obj, entry_filename, out_len))
-                            return false;
-                    } break;
-
-                    default: {
-                        LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
-                        return false;
-                    } break;
-                }
-            }
+            bool success = ExtractFileEntries(disk, entries, true, dest_path, out_len);
+            return success;
         } break;
     }
 
-    return true;
+    RG_UNREACHABLE();
 }
 
 }
