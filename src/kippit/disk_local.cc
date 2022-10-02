@@ -30,9 +30,8 @@ public:
 
 LocalDisk::LocalDisk(Span<const char> directory, kt_DiskMode mode, const uint8_t skey[32], const uint8_t pkey[32])
 {
-    RG_ASSERT(directory.len <= MaxPathSize);
-
-    this->url = NormalizePath(directory, GetWorkingDirectory(), &str_alloc).ptr;
+    directory = NormalizePath(directory, GetWorkingDirectory(), &str_alloc);
+    url = (directory.len <= MaxPathSize) ? directory.ptr : nullptr;
 
     this->mode = mode;
     memcpy(this->skey, skey, RG_SIZE(this->skey));
@@ -176,7 +175,7 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
 {
     BlockAllocator temp_alloc;
 
-    Span<const char> directory = TrimStrRight(path, RG_PATH_SEPARATORS);
+    Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &temp_alloc);
 
     // Sanity checks
     if (directory.len > MaxPathSize) {
@@ -269,10 +268,6 @@ kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)
         LogError("Directory '%1' does not exist", directory);
         return nullptr;
     }
-    if (directory.len > MaxPathSize) {
-        LogError("Directory path '%1' is too long", directory);
-        return nullptr;
-    }
 
     const char *full_filename = Fmt(&temp_alloc, "%1%/keys/full", directory).ptr;
     const char *write_filename = Fmt(&temp_alloc, "%1%/keys/write", directory).ptr;
@@ -299,6 +294,13 @@ kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)
     }
 
     kt_Disk *disk = new LocalDisk(directory, mode, skey, pkey);
+    if (!disk->GetURL()) {
+        delete disk;
+
+        LogError("Directory path '%1' is too long", directory);
+        return nullptr;
+    }
+
     return disk;
 }
 

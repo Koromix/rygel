@@ -27,7 +27,13 @@ static const char *FillRepository(const char *repo_directory)
 
         if (!repo_directory) {
             LogError("Missing repository directory");
+            return nullptr;
         }
+    }
+
+    if (!PathIsAbsolute(repo_directory)) {
+        LogError("Repository path '%1' is not absolute", repo_directory);
+        return nullptr;
     }
 
     return repo_directory;
