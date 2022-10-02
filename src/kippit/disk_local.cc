@@ -47,7 +47,7 @@ bool LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-    return ReadFile(filename.data, Mebibytes(16), out_obj) >= 0;
+    return ReadFile(filename.data, Mebibytes(256), out_obj) >= 0;
 }
 
 Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
