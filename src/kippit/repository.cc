@@ -447,9 +447,6 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     return true;
 }
 
-static bool GetDirectory(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
-                         Span<const uint8_t> dir_obj, const char *dest_dirname, int64_t *out_len);
-
 static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool allow_sep,
                                const char *dest_dirname, int64_t *out_len)
 {
@@ -492,7 +489,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
             return false;
 
         const char *entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->name).ptr;
-        if (!EnsureDirectoryExists(entry_filename))
+        if (allow_sep && !EnsureDirectoryExists(entry_filename))
             return false;
 
         switch (entry->type) {
@@ -502,7 +499,9 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
                     return false;
                 }
 
-                if (!GetDirectory(disk, entry->id, entry_type, entry_obj, entry_filename, out_len))
+                if (!MakeDirectory(entry_filename, false))
+                    return false;
+                if (!ExtractFileEntries(disk, entry_obj, false, entry_filename, out_len))
                     return false;
             } break;
             case (int8_t)FileType::File: {
@@ -523,25 +522,6 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
     }
 
     return true;
-}
-
-static bool GetDirectory(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
-                         Span<const uint8_t> dir_obj, const char *dest_dirname, int64_t *out_len)
-{
-    RG_ASSERT(type == kt_ObjectType::Directory);
-
-    if (TestFile(dest_dirname)) {
-        if (!IsDirectoryEmpty(dest_dirname)) {
-            LogError("Directory '%1' exists and is not empty", dest_dirname);
-            return false;
-        }
-    } else {
-        if (!MakeDirectory(dest_dirname))
-            return false;
-    }
-
-    bool success = ExtractFileEntries(disk, dir_obj, false, dest_dirname, out_len);
-    return success;
 }
 
 bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames, kt_ID *out_id, int64_t *out_written)
@@ -690,11 +670,40 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_
 
     switch (type) {
         case kt_ObjectType::Chunk:
-        case kt_ObjectType::File: return GetFile(disk, id, type, obj, dest_path, out_len);
+        case kt_ObjectType::File: {
+            if (TestFile(dest_path) && !IsDirectoryEmpty(dest_path)) {
+                LogError("File '%1' already exists", dest_path);
+                return false;
+            }
 
-        case kt_ObjectType::Directory: return GetDirectory(disk, id, type, obj, dest_path, out_len);
+            return GetFile(disk, id, type, obj, dest_path, out_len);
+        } break;
+
+        case kt_ObjectType::Directory: {
+            if (TestFile(dest_path, FileType::Directory)) {
+                if (!IsDirectoryEmpty(dest_path)) {
+                    LogError("Directory '%1' exists and is not empty", dest_path);
+                    return false;
+                }
+            } else {
+                if (!MakeDirectory(dest_path))
+                    return false;
+            }
+
+            return ExtractFileEntries(disk, obj, false, dest_path, out_len);
+        }
 
         case kt_ObjectType::Snapshot: {
+            if (TestFile(dest_path, FileType::Directory)) {
+                if (!IsDirectoryEmpty(dest_path)) {
+                    LogError("Directory '%1' exists and is not empty", dest_path);
+                    return false;
+                }
+            } else {
+                if (!MakeDirectory(dest_path))
+                    return false;
+            }
+
             // There must be at least one entry
             if (obj.len <= RG_SIZE(SnapshotHeader)) {
                 LogError("Malformed snapshot object '%1'", id);
@@ -702,9 +711,7 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_
             }
 
             Span<const uint8_t> entries = obj.Take(RG_SIZE(SnapshotHeader), obj.len - RG_SIZE(SnapshotHeader));
-
-            bool success = ExtractFileEntries(disk, entries, true, dest_path, out_len);
-            return success;
+            return ExtractFileEntries(disk, entries, true, dest_path, out_len);
         } break;
     }
 
