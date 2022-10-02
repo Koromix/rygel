@@ -577,12 +577,53 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
 
     // Process snapshot entries
     for (const char *filename: filenames) {
+        Size entry_len = RG_SIZE(FileEntry) + strlen(filename) + 1;
+        FileEntry *entry = (FileEntry *)snapshot_obj.AppendDefault(entry_len);
+
+        const char *name;
+        {
+            Span<char> dest = MakeSpan(entry->name, entry_len - RG_SIZE(FileEntry));
+            bool changed = false;
+
+            name = filename;
+
+            // Change Windows paths, even on non-Windows platforms
+            if (IsAsciiAlpha(name[0]) && name[1] == ':') {
+                entry->name[0] = LowerAscii(name[0]);
+                entry->name[1] = '/';
+
+                dest = dest.Take(2, dest.len - 2);
+                name += 2;
+                changed = true;
+            }
+
+            while (strchr("/\\", name[0])) {
+                snapshot_obj.len--;
+                entry_len--;
+
+                name++;
+
+                changed = true;
+            }
+
+            if (!name[0]) {
+                LogError("Cannot backup empty filename");
+                return false;
+            }
+
+            for (Size i = 0; name[i]; i++) {
+                int c = name[i];
+                dest[i] = (char)(c == '\\' ? '/' : c);
+            }
+
+            if (changed) {
+                LogWarning("Storing '%1' as '%2'", filename, entry->name);
+            }
+        }
+
         FileInfo file_info;
         if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
             return false;
-
-        Size entry_len = RG_SIZE(FileEntry) + strlen(filename) + 1;
-        FileEntry *entry = (FileEntry *)snapshot_obj.AppendDefault(entry_len);
 
         entry->type = (int8_t)file_info.type;
         entry->mtime = file_info.mtime;
@@ -607,8 +648,6 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             } break;
         }
 
-        // XXX: Remove root / and reformat drive prefix on Windows
-        CopyString(filename, MakeSpan(entry->name, entry_len - RG_SIZE(FileEntry)));
     }
 
     kt_ID id = {};
