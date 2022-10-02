@@ -152,12 +152,6 @@ int RunInteractive(const Config &config)
         }
     });
 
-    // Make sure the prelude runs successfully
-    {
-        bool success = compiler.Compile("", "<inline>", 0) && vm.Run(flags);
-        RG_ASSERT(success);
-    }
-
     ConsolePrompter prompter;
 
     while (run && prompter.Read()) {
