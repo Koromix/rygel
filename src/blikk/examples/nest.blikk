@@ -18,13 +18,13 @@ for iter in 1:11
 
     # Les variables doivent être déclarées à l'aide du mot-clé let.
 
-    let test = (5 == 8)
+    let test = (5 = 8)
     let mut p = 8
 
     # Pour modifier la valeur d'une variable déjà créée il faut utiliser l'opérateur := (et non =)
     # Je ne suis pas sûr pour ça, mais le but est d'éviter les erreurs dans les expressions,
     # comme par exemple en JS ou en C quand on fait : if (a = 1) {}. C'est une source fréquente de
-    # bug, car au lieu de tester si a == 1 (ce qu'on voulait probablement faire), on assigne la
+    # bug, car au lieu de tester si a = 1 (ce qu'on voulait probablement faire), on assigne la
     # valeur 1 à la variable a.
 
     let mut i = 0

@@ -9,7 +9,7 @@ let x = 2 + 8 * 5 - (0x1444 << 5) > 2 and true
 # Les variables doivent être déclarées à l'aide du mot-clé let. Par défaut, leur valeur
 # ne pas être modifiée par la suite à moins d'utiliser "let mut".
 
-let test = (5 == 8)
+let test = (5 = 8)
 let mut p = 8
 
 # Les noms de variables et de fonctions peuvent utiliser des caractères Unicode reconnus
@@ -34,7 +34,7 @@ end
 # Pour modifier la valeur d'une variable déjà créée il faut utiliser l'opérateur := (et non =)
 # Je ne suis pas sûr pour ça, mais le but est d'éviter les erreurs dans les expressions,
 # comme par exemple en JS ou en C quand on fait : if (a = 1) {}. C'est une source fréquente de
-# bug, car au lieu de tester si a == 1 (ce qu'on voulait probablement faire), on assigne la
+# bug, car au lieu de tester si a = 1 (ce qu'on voulait probablement faire), on assigne la
 # valeur 1 à la variable a.
 
 let mut blop = 0
@@ -53,11 +53,11 @@ p := 5
 printLn("Testing break and continue")
 for i in 1:8
     print("Outler loop ", i)
-    if i == 3
+    if i = 3
         printLn("    [SKIPPING!!]")
         continue
     end
-    if i == 5
+    if i = 5
         printLn("    [ABORT!!]")
         break
     end
@@ -66,8 +66,8 @@ for i in 1:8
     let mut j = 0
     while (j := j + 1) < 10
         printLn("  Hello: ", j)
-        if j == 3 do continue
-        if j == 7 do break
+        if j = 3 do continue
+        if j = 7 do break
         printLn("  Going strong!")
     end
 
@@ -212,8 +212,8 @@ zzz("ALIASED printLn")
 zzz2("ALIASED printLn 2")
 
 func get_math_function(name: String): typeOf(asin)
-    if name == "asin" do return asin
-    if name == "acos" do return acos
+    if name = "asin" do return asin
+    if name = "acos" do return acos
 
     printLn("Erroneous function name '", name, "'")
     return fake_math_function

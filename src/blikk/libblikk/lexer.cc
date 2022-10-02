@@ -434,7 +434,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     return false;
                 };
             } break;
-            case '=': { Token2('=', bk_TokenKind::Equal) || Token1(bk_TokenKind::Assign); } break;
+            case '=': { Token1(bk_TokenKind::Equal); } break;
             case '>': { Token4('>', '>', '=', bk_TokenKind::RightRotateAssign) || Token3('>', '>', bk_TokenKind::RightRotate) ||
                         Token3('>', '=', bk_TokenKind::RightShiftAssign) || Token2('>', bk_TokenKind::RightShift) ||
                         Token2('=', bk_TokenKind::GreaterOrEqual) || Token1(bk_TokenKind::Greater); } break;

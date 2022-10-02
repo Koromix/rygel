@@ -59,8 +59,7 @@ struct StackSlot {
 };
 
 enum class ExpressionFlag {
-    NoEqualHint = 1 << 0,
-    StopOperator = 1 << 1
+    StopOperator = 1 << 0
 };
 
 static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2);
@@ -1248,7 +1247,7 @@ void bk_Parser::ParseLet()
     Size prev_addr = IR.len;
 
     StackSlot slot;
-    if (MatchToken(bk_TokenKind::Assign)) {
+    if (MatchToken(bk_TokenKind::Equal)) {
         SkipNewLines();
         slot = ParseExpression();
     } else {
@@ -1258,7 +1257,7 @@ void bk_Parser::ParseLet()
         // cannot use this variable.
         const bk_TypeInfo *type = ParseType();
 
-        if (MatchToken(bk_TokenKind::Assign)) {
+        if (MatchToken(bk_TokenKind::Equal)) {
             SkipNewLines();
 
             Size expr_pos = pos;
@@ -1957,13 +1956,6 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                             pos++;
                             goto unexpected;
                         }
-                    } else if (RG_UNLIKELY(!(flags & (int)ExpressionFlag::NoEqualHint) &&
-                                           tok.kind == bk_TokenKind::Assign)) {
-                        MarkError(pos - 1, "Unexpected token '=', did you mean '==' or ':='?");
-
-                        // Pretend the user meant '==' to recover
-                        op.kind = bk_TokenKind::Equal;
-                        op.prec = GetOperatorPrecedence(bk_TokenKind::Equal, expect_value);
                     } else {
                         pos--;
                         goto end;
@@ -2503,7 +2495,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
 
     // Parse array length
     {
-        const bk_TypeInfo *type = ParseExpression((int)ExpressionFlag::NoEqualHint).type;
+        const bk_TypeInfo *type = ParseExpression().type;
 
         if (MatchToken(bk_TokenKind::Comma)) {
             multi = true;
@@ -2593,7 +2585,7 @@ void bk_Parser::ParseArraySubscript()
 
         // Parse index expression
         {
-            const bk_TypeInfo *type = ParseExpression((int)ExpressionFlag::NoEqualHint).type;
+            const bk_TypeInfo *type = ParseExpression().type;
 
             if (RG_UNLIKELY(type != bk_IntType)) {
                 MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
@@ -2928,8 +2920,7 @@ const bk_TypeInfo *bk_Parser::ParseType()
 
     // Parse type expression
     {
-        unsigned int flags = (int)ExpressionFlag::NoEqualHint | (int)ExpressionFlag::StopOperator;
-        const bk_TypeInfo *type = ParseExpression(flags).type;
+        const bk_TypeInfo *type = ParseExpression((int)ExpressionFlag::StopOperator).type;
 
         if (RG_UNLIKELY(type != bk_TypeType)) {
             MarkError(type_pos, "Expected a 'Type' expression, not '%1'", type->signature);

@@ -13,8 +13,8 @@ func get_type(str: String): Type
     # I/O functions such as print are impure, and not eligible to CTFE.
     # printLn(str)
 
-    if str == "string" do return String
-    if str == "int" do return typeOf(1)
+    if str = "string" do return String
+    if str = "int" do return typeOf(1)
 
     # CTFE will fail if a global variable (such as null_type or null_type2) is marked
     # as mutable (let mut null_type).
@@ -29,25 +29,25 @@ printLn("c = ", c, " (", typeOf(c), ")")
 # lorsque c'est possible. Dans l'exemple qui suit, les instructions de branchement
 # et le code des branches non utilisées est retiré lors de la compilation.
 
-if get_type("string") == String
+if get_type("string") = String
     printLn("1A")
-else if get_type("int") == Int
+else if get_type("int") = Int
     printLn("1B")
 else
     printLn("1C")
 end
 
-if get_type("foo") == String
+if get_type("foo") = String
     printLn("2A")
-else if get_type("string") == Int
+else if get_type("string") = Int
     printLn("2B")
 else
     printLn("2C")
 end
 
-if get_type("foo") == String
+if get_type("foo") = String
     printLn("3A")
-else if get_type("int") == Int
+else if get_type("int") = Int
     printLn("3B")
 else
     printLn("3C")
@@ -61,8 +61,8 @@ enum Enum2 (Bar1, Bar2, Bar3)
 let enum2_type = Enum2
 
 func get_enum(name: String): Type
-    if name == "Enum1" do return Enum1
-    if name == "Enum2" do return enum2_type
+    if name = "Enum1" do return Enum1
+    if name = "Enum2" do return enum2_type
     return Null
 end
 
