@@ -40,8 +40,11 @@ static const Size ChunkMax = Kibibytes(2048);
 struct SnapshotHeader {
     char name[512];
     int64_t time; // Little Endian
+    int64_t len; // Little Endian
+    int64_t stored; // Little Endian
 };
 #pragma pack(pop)
+RG_STATIC_ASSERT(RG_SIZE(SnapshotHeader) == 536);
 
 #pragma pack(push, 1)
 struct FileEntry {
@@ -52,8 +55,8 @@ struct FileEntry {
 
     kt_ID id;
     int8_t kind; // Kind
-    int64_t mtime;
-    uint32_t mode;
+    int64_t mtime; // Little Endian
+    uint32_t mode; // Little Endian
     char name[];
 };
 #pragma pack(pop)
@@ -165,7 +168,7 @@ static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, kt_ID *out_
     blake3_hasher_finalize(&hasher, out_id->hash, RG_SIZE(out_id->hash));
 }
 
-static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_written)
+static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_len, int64_t *out_written)
 {
     Span<const uint8_t> salt = disk->GetSalt();
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
@@ -180,6 +183,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
     }
 
     HeapArray<uint8_t> file_obj;
+    int64_t file_len = 0;
     std::atomic<int64_t> file_written = 0;
 
     // Split the file
@@ -202,6 +206,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
             if (read < 0)
                 return false;
             buf.len += read;
+            file_len += read;
 
             Span<const uint8_t> remain = buf;
 
@@ -270,6 +275,9 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
     }
 
     *out_id = file_id;
+    if (out_len) {
+        *out_len += file_len;
+    }
     if (out_written) {
         *out_written += file_written;
     }
@@ -376,7 +384,7 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
     return true;
 }
 
-static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int64_t *out_written)
+static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int64_t *out_len, int64_t *out_written)
 {
     BlockAllocator temp_alloc;
 
@@ -384,7 +392,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     HeapArray<uint8_t> dir_obj;
-    std::atomic<int64_t> dir_written = 0;
+    int64_t total_written = 0;
 
     EnumResult ret = EnumerateDirectory(src_dirname, nullptr, -1,
                                         [&](const char *basename, FileType) {
@@ -406,18 +414,14 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
             case FileType::Directory: {
                 entry->kind = (int8_t)FileEntry::Kind::Directory;
 
-                int64_t written = 0;
-                if (!PutDirectory(disk, filename, &entry->id, &written))
+                if (!PutDirectory(disk, filename, &entry->id, out_len, &total_written))
                     return false;
-                dir_written += written;
             } break;
             case FileType::File: {
                 entry->kind = (int8_t)FileEntry::Kind::File;
 
-                int64_t written = 0;
-                if (!PutFile(disk, filename, &entry->id, &written))
+                if (!PutFile(disk, filename, &entry->id, out_len, &total_written))
                     return false;
-                dir_written += written;
             } break;
 
             case FileType::Link:
@@ -449,12 +453,12 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
         Size ret = disk->WriteObject(dir_id, kt_ObjectType::Directory, dir_obj);
         if (ret < 0)
             return false;
-        dir_written += ret;
+        total_written += ret;
     }
 
     *out_id = dir_id;
     if (out_written) {
-        *out_written += dir_written;
+        *out_written += total_written;
     }
     return true;
 }
@@ -542,7 +546,8 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
     return true;
 }
 
-bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames, kt_ID *out_id, int64_t *out_written)
+bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames,
+            kt_ID *out_id, int64_t *out_len, int64_t *out_written)
 {
     RG_ASSERT(filenames.len >= 1);
 
@@ -563,15 +568,13 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     HeapArray<uint8_t> snapshot_obj;
-    int64_t written = 0;
+    SnapshotHeader *header = (SnapshotHeader *)snapshot_obj.AppendDefault(RG_SIZE(SnapshotHeader));
 
-    // Snapshot header
-    {
-        SnapshotHeader *header = (SnapshotHeader *)snapshot_obj.AppendDefault(RG_SIZE(SnapshotHeader));
+    CopyString(settings.name ? settings.name : "", header->name);
+    header->time = LittleEndian(GetUnixTime());
 
-        CopyString(settings.name ? settings.name : "", header->name);
-        header->time = LittleEndian(GetUnixTime());
-    }
+    int64_t total_len = 0;
+    int64_t total_written = 0;
 
     // Process snapshot entries
     for (const char *filename: filenames) {
@@ -627,13 +630,13 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             case FileType::Directory: {
                 entry->kind = (int8_t)FileEntry::Kind::Directory;
 
-                if (!PutDirectory(disk, filename, &entry->id, &written))
+                if (!PutDirectory(disk, filename, &entry->id, &total_len, &total_written))
                     return false;
             } break;
             case FileType::File: {
                 entry->kind = (int8_t)FileEntry::Kind::File;
 
-                if (!PutFile(disk, filename, &entry->id, &written))
+                if (!PutFile(disk, filename, &entry->id, &total_len, &total_written))
                     return false;
             } break;
 
@@ -652,6 +655,9 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
 
     kt_ID id = {};
     if (!settings.raw) {
+        header->len = total_len;
+        header->stored = total_written;
+
         HashBlake3(snapshot_obj, salt.ptr, &id);
 
         // Write snapshot object
@@ -659,7 +665,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             Size ret = disk->WriteObject(id, kt_ObjectType::Snapshot, snapshot_obj);
             if (ret < 0)
                 return false;
-            written += ret;
+            total_written += ret;
         }
 
         // Create tag file
@@ -667,7 +673,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             Size ret = disk->WriteTag(id);
             if (ret < 0)
                 return false;
-            written += ret;
+            total_written += ret;
         }
     } else {
         const FileEntry *entry = (const FileEntry *)(snapshot_obj.ptr + RG_SIZE(SnapshotHeader));
@@ -675,8 +681,11 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
     }
 
     *out_id = id;
+    if (out_len) {
+        *out_len += total_len;
+    }
     if (out_written) {
-        *out_written += written;
+        *out_written += total_written;
     }
     return true;
 }
@@ -717,6 +726,8 @@ bool kt_List(kt_Disk *disk, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *ou
             snapshot.id = id;
             snapshot.name = header->name[0] ? DuplicateString(header->name, str_alloc).ptr : nullptr;
             snapshot.time = LittleEndian(header->time);
+            snapshot.len = header->len;
+            snapshot.stored = header->stored;
 
             out_snapshots->Append(snapshot);
         }

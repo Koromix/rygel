@@ -179,15 +179,17 @@ Options:
     int64_t now = GetMonotonicTime();
 
     kt_ID id = {};
-    int64_t written = 0;
-    if (!kt_Put(disk, settings, filenames, &id, &written))
+    int64_t total_len = 0;
+    int64_t total_written = 0;
+    if (!kt_Put(disk, settings, filenames, &id, &total_len, &total_written))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
 
     LogInfo();
     LogInfo("%1 ID: %!..+%2%!0", settings.raw ? "Data" : "Snapshot", id);
-    LogInfo("Total written: %!..+%1%!0", FmtDiskSize(written));
+    LogInfo("Stored size: %!..+%1%!0", FmtDiskSize(total_len));
+    LogInfo("Total written: %!..+%1%!0", FmtDiskSize(total_written));
     LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
     return 0;
@@ -358,6 +360,8 @@ Options:
                 LogInfo("+ Name: %!..+%1%!0", snapshot.name);
             }
             LogInfo("+ Time: %!..+%1%!0", FmtTimeNice(spec));
+            LogInfo("+ Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
+            LogInfo("+ Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
         }
     } else {
         LogInfo();
