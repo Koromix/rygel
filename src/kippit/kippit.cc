@@ -198,6 +198,7 @@ static int RunGet(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
+    kt_GetSettings settings;
     const char *repo_directory = nullptr;
     const char *pwd = nullptr;
     const char *dest_filename = nullptr;
@@ -211,7 +212,8 @@ Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
         %!..+--password <pwd>%!0         Set repository password
 
-    %!..+-O, --output <path>%!0          Restore file or directory to path)", FelixTarget);
+    %!..+-O, --output <path>%!0          Restore file or directory to path
+        %!..+--flat%!0                   Use flat names for snapshot files)", FelixTarget);
     };
 
     // Parse arguments
@@ -228,6 +230,8 @@ Options:
                 pwd = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 dest_filename = opt.current_value;
+            } else if (opt.Test("--flat")) {
+                settings.flat = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -273,7 +277,7 @@ Options:
         kt_ID id = {};
         if (!kt_ParseID(name, &id))
             return 1;
-        if (!kt_Get(disk, id, dest_filename, &file_len))
+        if (!kt_Get(disk, id, settings, dest_filename, &file_len))
             return 1;
     }
 

@@ -68,6 +68,11 @@ struct ChunkEntry {
 #pragma pack(pop)
 RG_STATIC_ASSERT(RG_SIZE(ChunkEntry) == 44);
 
+enum class ExtractFlag {
+    AllowSeparators = 1 << 0,
+    FlattenName = 1 << 1
+};
+
 #ifdef _WIN32
 
 static bool ReserveFile(int fd, const char *filename, int64_t len)
@@ -454,7 +459,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     return true;
 }
 
-static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool allow_sep,
+static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsigned int flags,
                                const char *dest_dirname, int64_t *out_len)
 {
     BlockAllocator temp_alloc;
@@ -477,7 +482,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
             LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
             return false;
         }
-        if (!entry->name[0] || PathContainsDotDot(entry->name)) {
+        if (!entry->name[0] || PathContainsDotDot(entry->name) || strchr(entry->name, '\\')) {
             LogError("Unsafe file name '%1'", entry->name);
             return false;
         }
@@ -485,7 +490,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
             LogError("Unsafe file name '%1'", entry->name);
             return false;
         }
-        if (!allow_sep && strpbrk(entry->name, RG_PATH_SEPARATORS)) {
+        if (!(flags & (int)ExtractFlag::AllowSeparators) && strpbrk(entry->name, RG_PATH_SEPARATORS)) {
             LogError("Unsafe file name '%1'", entry->name);
             return false;
         }
@@ -495,9 +500,15 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
         if (!disk->ReadObject(entry->id, &entry_type, &entry_obj))
             return false;
 
-        const char *entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->name).ptr;
-        if (allow_sep && !EnsureDirectoryExists(entry_filename))
-            return false;
+        const char *entry_filename;
+        if (flags & (int)ExtractFlag::FlattenName) {
+            entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, SplitStrReverse(entry->name, '/')).ptr;
+        } else {
+            entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->name).ptr;
+
+            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry_filename))
+                return false;
+        }
 
         switch (entry->kind) {
             case (int8_t)FileEntry::Kind::Directory: {
@@ -508,7 +519,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
 
                 if (!MakeDirectory(entry_filename, false))
                     return false;
-                if (!ExtractFileEntries(disk, entry_obj, false, entry_filename, out_len))
+                if (!ExtractFileEntries(disk, entry_obj, 0, entry_filename, out_len))
                     return false;
             } break;
             case (int8_t)FileEntry::Kind::File: {
@@ -718,7 +729,7 @@ bool kt_List(kt_Disk *disk, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *ou
     return true;
 }
 
-bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_len)
+bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, const char *dest_path, int64_t *out_len)
 {
     kt_ObjectType type;
     HeapArray<uint8_t> obj;
@@ -747,7 +758,7 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_
                     return false;
             }
 
-            return ExtractFileEntries(disk, obj, false, dest_path, out_len);
+            return ExtractFileEntries(disk, obj, 0, dest_path, out_len);
         }
 
         case kt_ObjectType::Snapshot: {
@@ -767,8 +778,10 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_
                 return false;
             }
 
-            Span<const uint8_t> entries = obj.Take(RG_SIZE(SnapshotHeader), obj.len - RG_SIZE(SnapshotHeader));
-            return ExtractFileEntries(disk, entries, true, dest_path, out_len);
+            Span<uint8_t> entries = obj.Take(RG_SIZE(SnapshotHeader), obj.len - RG_SIZE(SnapshotHeader));
+            unsigned int flags = (int)ExtractFlag::AllowSeparators | (settings.flat ? (int)ExtractFlag::FlattenName : 0);
+
+            return ExtractFileEntries(disk, entries, flags, dest_path, out_len);
         } break;
     }
 

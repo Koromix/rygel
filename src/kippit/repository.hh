@@ -32,9 +32,13 @@ struct kt_SnapshotInfo {
     int64_t time;
 };
 
+struct kt_GetSettings {
+    bool flat = false;
+};
+
 bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames, kt_ID *out_id, int64_t *out_written = nullptr);
 
 bool kt_List(kt_Disk *disk, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *out_snapshots);
-bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_len = nullptr);
+bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, const char *dest_path, int64_t *out_len = nullptr);
 
 }
