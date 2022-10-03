@@ -19,18 +19,44 @@ namespace RG {
 
 struct kt_ID {
     uint8_t hash[32];
-
     operator FmtArg() const { return FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2); }
 };
+RG_STATIC_ASSERT(RG_SIZE(kt_ID) == 32);
 
-static inline void kt_FormatID(const kt_ID &id, char out_hex[65])
-{
-    Fmt(MakeSpan(out_hex, 65), "%1", FmtSpan(id.hash, FmtType::Hexadecimal, "").Pad0(-2));
-}
-static inline FmtArg kt_FormatID(const kt_ID &id)
-{
-    return (FmtArg)id;
-}
+#pragma pack(push, 1)
+struct kt_SnapshotHeader {
+    char name[512];
+    int64_t time; // Little Endian
+    int64_t len; // Little Endian
+    int64_t stored; // Little Endian
+};
+#pragma pack(pop)
+RG_STATIC_ASSERT(RG_SIZE(kt_SnapshotHeader) == 536);
+
+#pragma pack(push, 1)
+struct kt_FileEntry {
+    enum class Kind {
+        Directory = 0,
+        File = 1
+    };
+
+    kt_ID id;
+    int8_t kind; // Kind
+    int64_t mtime; // Little Endian
+    uint32_t mode; // Little Endian
+    char name[];
+};
+#pragma pack(pop)
+RG_STATIC_ASSERT(RG_SIZE(kt_FileEntry) == 45);
+
+#pragma pack(push, 1)
+struct kt_ChunkEntry {
+    int64_t offset; // Little Endian
+    int32_t len;    // Little Endian
+    kt_ID id;
+};
+#pragma pack(pop)
+RG_STATIC_ASSERT(RG_SIZE(kt_ChunkEntry) == 44);
 
 bool kt_ParseID(const char *str, kt_ID *out_id);
 
