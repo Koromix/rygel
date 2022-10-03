@@ -158,6 +158,8 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     HeapArray<uint8_t> dir_obj;
     int64_t total_written = 0;
 
+    src_dirname = DuplicateString(TrimStrRight(src_dirname, RG_PATH_SEPARATORS), &temp_alloc).ptr;
+
     EnumResult ret = EnumerateDirectory(src_dirname, nullptr, -1,
                                         [&](const char *basename, FileType) {
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
@@ -262,38 +264,38 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
         Size entry_len = RG_SIZE(kt_FileEntry) + strlen(filename) + 1;
         kt_FileEntry *entry = (kt_FileEntry *)snapshot_obj.AppendDefault(entry_len);
 
-        const char *name;
+        Span<const char> name;
         {
             Span<char> dest = MakeSpan(entry->name, entry_len - RG_SIZE(kt_FileEntry));
             bool changed = false;
 
-            name = filename;
+            name = TrimStrRight(filename, RG_PATH_SEPARATORS);
 
             // Change Windows paths, even on non-Windows platforms
-            if (IsAsciiAlpha(name[0]) && name[1] == ':') {
+            if (IsAsciiAlpha(name.ptr[0]) && name.ptr[1] == ':') {
                 entry->name[0] = LowerAscii(name[0]);
                 entry->name[1] = '/';
 
                 dest = dest.Take(2, dest.len - 2);
-                name += 2;
+                name = name.Take(2, name.len - 2);
                 changed = true;
             }
 
-            while (strchr("/\\", name[0])) {
+            while (strchr("/\\", name.ptr[0])) {
                 snapshot_obj.len--;
                 entry_len--;
 
-                name++;
+                name = name.Take(1, name.len - 1);
 
                 changed = true;
             }
 
-            if (!name[0]) {
+            if (!name.len) {
                 LogError("Cannot backup empty filename");
                 return false;
             }
 
-            for (Size i = 0; name[i]; i++) {
+            for (Size i = 0; i < name.len; i++) {
                 int c = name[i];
                 dest[i] = (char)(c == '\\' ? '/' : c);
             }
@@ -336,8 +338,8 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
 
     kt_ID id = {};
     if (!settings.raw) {
-        header->len = total_len;
-        header->stored = total_written;
+        header->len = LittleEndian(total_len);
+        header->stored = LittleEndian(total_written);
 
         HashBlake3(snapshot_obj, salt.ptr, &id);
 
