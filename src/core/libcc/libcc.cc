@@ -688,7 +688,7 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode)
     switch (mode) {
         case TimeMode::Local: {
             localtime_r(&time64, &ti);
-            offset = ti.tm_gmtoff + ti.tm_isdst * 3600;
+            offset = ti.tm_gmtoff;
         } break;
 
         case TimeMode::UTC: {
