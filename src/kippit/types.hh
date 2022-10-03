@@ -37,7 +37,8 @@ RG_STATIC_ASSERT(RG_SIZE(kt_SnapshotHeader) == 536);
 struct kt_FileEntry {
     enum class Kind {
         Directory = 0,
-        File = 1
+        File = 1,
+        Link = 2
     };
 
     kt_ID id;

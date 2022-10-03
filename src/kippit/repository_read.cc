@@ -206,7 +206,8 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
         } break;
 
         case kt_ObjectType::Directory:
-        case kt_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
+        case kt_ObjectType::Snapshot:
+        case kt_ObjectType::Link: { RG_UNREACHABLE(); } break;
     }
 
     if (!FlushFile(fd, dest_filename))
@@ -218,12 +219,31 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
     return true;
 }
 
+static bool CreateSymbolicLink(const char *filename, const char *target)
+{
+#ifdef _WIN32
+    LogWarning("Ignoring symbolic link '%1' to '%2'", filename, target);
+    return true;
+#else
+    if (symlink(target, filename) < 0) {
+        LogError("Failed to create symbolic link '%1': %2", filename, strerror(errno));
+        return false;
+    }
+
+    return true;
+#endif
+}
+
 static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsigned int flags,
                                const char *dest_dirname, int64_t *out_len)
 {
     BlockAllocator temp_alloc;
 
     // XXX: Make sure each path does not clobber a previous one
+
+    // Reuse for performance
+    kt_ObjectType entry_type;
+    HeapArray<uint8_t> entry_obj;
 
     for (Size offset = 0; offset < entries.len;) {
         const kt_FileEntry *entry = (const kt_FileEntry *)(entries.ptr + offset);
@@ -237,7 +257,9 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
             LogError("Malformed entry in directory object");
             return false;
         }
-        if (entry->kind != (int8_t)kt_FileEntry::Kind::Directory && entry->kind != (int8_t)kt_FileEntry::Kind::File) {
+        if (entry->kind != (int8_t)kt_FileEntry::Kind::Directory &&
+                entry->kind != (int8_t)kt_FileEntry::Kind::File &&
+                entry->kind != (int8_t)kt_FileEntry::Kind::Link) {
             LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
             return false;
         }
@@ -254,8 +276,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
             return false;
         }
 
-        kt_ObjectType entry_type;
-        HeapArray<uint8_t> entry_obj;
+        entry_obj.RemoveFrom(0);
         if (!disk->ReadObject(entry->id, &entry_type, &entry_obj))
             return false;
 
@@ -288,6 +309,18 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
                 }
 
                 if (!GetFile(disk, entry->id, entry_type, entry_obj, entry_filename, out_len))
+                    return false;
+            } break;
+            case (int8_t)kt_FileEntry::Kind::Link: {
+                if (entry_type != kt_ObjectType::Link) {
+                    LogError("Object '%1' is not a link", entry->id);
+                    return false;
+                }
+
+                // NUL terminate the path
+                entry_obj.Append(0);
+
+                if (!CreateSymbolicLink(entry_filename, (const char *)entry_obj.ptr))
                     return false;
             } break;
 
@@ -404,6 +437,11 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
             unsigned int flags = (int)ExtractFlag::AllowSeparators | (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
             return ExtractFileEntries(disk, entries, flags, dest_path, out_len);
+        } break;
+
+        case kt_ObjectType::Link: {
+            obj.Append(0);
+            return CreateSymbolicLink(dest_path, (const char *)obj.ptr);
         } break;
     }
 

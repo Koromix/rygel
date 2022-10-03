@@ -31,13 +31,15 @@ enum class kt_ObjectType: int8_t {
     Chunk = 0,
     File = 1,
     Directory = 2,
-    Snapshot = 3
+    Snapshot = 3,
+    Link = 4
 };
 static const char *const kt_ObjectTypeNames[] = {
     "Chunk",
     "File",
     "Directory",
-    "Snapshot"
+    "Snapshot",
+    "Link"
 };
 
 class kt_Disk {

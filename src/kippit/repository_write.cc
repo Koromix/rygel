@@ -17,6 +17,10 @@
 #include "repository.hh"
 #include "vendor/blake3/c/blake3.h"
 
+#ifndef _WIN32
+    #include <unistd.h>
+#endif
+
 namespace RG {
 
 static const Size ChunkAverage = Kibibytes(1024);
@@ -207,7 +211,38 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname,
                 }
             } break;
 
-            case FileType::Link:
+            case FileType::Link: {
+                entry->kind = (int8_t)kt_FileEntry::Kind::Link;
+
+#ifdef _WIN32
+                RG_UNREACHABLE();
+#else
+                LocalArray<uint8_t, 4096> target;
+                {
+                    ssize_t ret = readlink(filename, (char *)target.data, RG_SIZE(target.data));
+
+                    if (ret < 0) {
+                        LogError("Failed to read symbolic link '%1': %2", filename, strerror(errno));
+
+                        bool ignore = (errno == EACCES || errno == ENOENT);
+                        return ignore;
+                    } else if (ret >= RG_SIZE(target)) {
+                        LogError("Failed to read symbolic link '%1': target too long", filename);
+                        return false;
+                    }
+
+                    target.len = (Size)ret;
+                }
+
+                HashBlake3(target, salt.ptr, &entry->id);
+
+                Size ret = disk->WriteObject(entry->id, kt_ObjectType::Link, target);
+                if (ret < 0)
+                    return false;
+                total_written += ret;
+#endif
+            } break;
+
             case FileType::Device:
             case FileType::Pipe:
             case FileType::Socket: {
@@ -346,7 +381,8 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
                     return false;
             } break;
 
-            case FileType::Link:
+            case FileType::Link: { RG_UNREACHABLE(); } break;
+
             case FileType::Device:
             case FileType::Pipe:
             case FileType::Socket: {
