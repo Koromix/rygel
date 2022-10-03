@@ -45,8 +45,13 @@ struct SnapshotHeader {
 
 #pragma pack(push, 1)
 struct FileEntry {
+    enum class Kind {
+        Directory = 0,
+        File = 1
+    };
+
     kt_ID id;
-    int8_t type; // FileType
+    int8_t kind; // Kind
     int64_t mtime;
     uint32_t mode;
     char name[];
@@ -392,18 +397,18 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
             }
         }
 
-        entry->type = (int8_t)file_info.type;
-        entry->mtime = file_info.mtime;
-        entry->mode = (uint32_t)file_info.mode;
-
         switch (file_info.type) {
             case FileType::Directory: {
+                entry->kind = (int8_t)FileEntry::Kind::Directory;
+
                 int64_t written = 0;
                 if (!PutDirectory(disk, filename, &entry->id, &written))
                     return false;
                 dir_written += written;
             } break;
             case FileType::File: {
+                entry->kind = (int8_t)FileEntry::Kind::File;
+
                 int64_t written = 0;
                 if (!PutFile(disk, filename, &entry->id, &written))
                     return false;
@@ -421,6 +426,8 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
             } break;
         }
 
+        entry->mtime = file_info.mtime;
+        entry->mode = (uint32_t)file_info.mode;
         CopyString(basename, MakeSpan(entry->name, entry_len - RG_SIZE(FileEntry)));
 
         return true;
@@ -466,8 +473,8 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
             LogError("Malformed entry in directory object");
             return false;
         }
-        if (entry->type != (int8_t)FileType::Directory && entry->type != (int8_t)FileType::File) {
-            LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
+        if (entry->kind != (int8_t)FileEntry::Kind::Directory && entry->kind != (int8_t)FileEntry::Kind::File) {
+            LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
             return false;
         }
         if (!entry->name[0] || PathContainsDotDot(entry->name)) {
@@ -492,8 +499,8 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
         if (allow_sep && !EnsureDirectoryExists(entry_filename))
             return false;
 
-        switch (entry->type) {
-            case (int8_t)FileType::Directory: {
+        switch (entry->kind) {
+            case (int8_t)FileEntry::Kind::Directory: {
                 if (entry_type != kt_ObjectType::Directory) {
                     LogError("Object '%1' is not a directory", entry->id);
                     return false;
@@ -504,7 +511,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
                 if (!ExtractFileEntries(disk, entry_obj, false, entry_filename, out_len))
                     return false;
             } break;
-            case (int8_t)FileType::File: {
+            case (int8_t)FileEntry::Kind::File: {
                 if (entry_type != kt_ObjectType::File && entry_type != kt_ObjectType::Chunk) {
                     LogError("Object '%1' is not a file", entry->id);
                     return false;
@@ -515,7 +522,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, bool 
             } break;
 
             default: {
-                LogError("Unknown file type 0x%1", FmtHex((unsigned int)entry->type));
+                LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
                 return false;
             } break;
         }
@@ -605,16 +612,16 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
         if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
             return false;
 
-        entry->type = (int8_t)file_info.type;
-        entry->mtime = file_info.mtime;
-        entry->mode = (uint32_t)file_info.mode;
-
         switch (file_info.type) {
             case FileType::Directory: {
+                entry->kind = (int8_t)FileEntry::Kind::Directory;
+
                 if (!PutDirectory(disk, filename, &entry->id, &written))
                     return false;
             } break;
             case FileType::File: {
+                entry->kind = (int8_t)FileEntry::Kind::File;
+
                 if (!PutFile(disk, filename, &entry->id, &written))
                     return false;
             } break;
@@ -628,6 +635,8 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             } break;
         }
 
+        entry->mtime = file_info.mtime;
+        entry->mode = (uint32_t)file_info.mode;
     }
 
     kt_ID id = {};
