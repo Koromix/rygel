@@ -420,6 +420,7 @@ IndirectBlockAllocator& IndirectBlockAllocator::operator=(IndirectBlockAllocator
 
 void IndirectBlockAllocator::ReleaseAll()
 {
+    ForgetCurrentBlock();
     allocator->ReleaseAll();
 }
 
