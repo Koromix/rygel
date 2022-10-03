@@ -218,4 +218,46 @@ Size kt_Disk::WriteTag(const kt_ID &id)
     return -1;
 }
 
+bool kt_Disk::ListTags(HeapArray<kt_ID> *out_ids)
+{
+    BlockAllocator temp_alloc;
+
+    RG_DEFER_NC(out_guard, len = out_ids->len) { out_ids->RemoveFrom(len); };
+
+    RG_ASSERT(url);
+    RG_ASSERT(mode == kt_DiskMode::ReadWrite);
+
+    HeapArray<const char *> filenames;
+    if (!ListRaw("tags", &temp_alloc, &filenames))
+        return false;
+
+    // List snapshots
+    {
+        // Reuse for performance
+        HeapArray<uint8_t> obj;
+
+        for (const char *filename: filenames) {
+            obj.RemoveFrom(0);
+            if (!ReadRaw(filename, &obj))
+                return false;
+
+            if (obj.len != crypto_box_SEALBYTES + 32) {
+                LogError("Malformed tag file '%1' (ignoring)", filename);
+                continue;
+            }
+
+            kt_ID id = {};
+            if (crypto_box_seal_open(id.hash, obj.ptr, (size_t)obj.len, pkey, skey) != 0) {
+                LogError("Failed to unseal tag (ignoring)");
+                continue;
+            }
+
+            out_ids->Append(id);
+        }
+    }
+
+    out_guard.Disable();
+    return true;
+}
+
 }

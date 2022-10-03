@@ -26,6 +26,7 @@ public:
 
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
 };
 
 LocalDisk::LocalDisk(Span<const char> directory, kt_DiskMode mode, const uint8_t skey[32], const uint8_t pkey[32])
@@ -107,6 +108,24 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
     tmp_guard.Disable();
 
     return writer.GetRawWritten();
+}
+
+bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths)
+{
+    Size prev_len = out_paths->len;
+    Size url_len = strlen(url);
+
+    LocalArray<char, MaxPathSize + 128> dirname;
+    dirname.len = Fmt(dirname.data, "%1%/%2", url, path).len;
+
+    if (!EnumerateFiles(dirname.data, nullptr, 0, -1, alloc, out_paths))
+        return false;
+
+    for (Size i = prev_len; i < out_paths->len; i++) {
+        out_paths->ptr[i] += url_len + 1;
+    }
+
+    return true;
 }
 
 static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])

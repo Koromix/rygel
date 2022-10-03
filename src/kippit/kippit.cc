@@ -286,6 +286,83 @@ Options:
     return 0;
 }
 
+static int RunList(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *repo_directory = nullptr;
+    const char *pwd = nullptr;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 list [-R <repo>]%!0
+
+Options:
+    %!..+-R, --repository <dir>%!0       Set repository directory
+        %!..+--password <pwd>%!0         Set repository password)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
+                repo_directory = opt.current_value;
+            } else if (opt.Test("--password", OptionType::Value)) {
+                pwd = opt.current_value;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+    }
+
+    repo_directory = FillRepository(repo_directory);
+    if (!repo_directory)
+        return 1;
+    pwd = FillPassword(pwd, &temp_alloc);
+    if (!pwd)
+        return 1;
+
+    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
+    if (!disk)
+        return 1;
+    RG_DEFER { delete disk; };
+
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), kt_DiskModeNames[(int)disk->GetMode()]);
+    if (disk->GetMode() != kt_DiskMode::ReadWrite) {
+        LogError("Cannot list with write-only key");
+        return 1;
+    }
+
+    HeapArray<kt_SnapshotInfo> snapshots;
+    if (!kt_List(disk, &temp_alloc, &snapshots))
+        return 1;
+
+    if (snapshots.len) {
+        for (const kt_SnapshotInfo &snapshot: snapshots) {
+            TimeSpec spec = DecomposeTime(snapshot.time);
+
+            LogInfo();
+            LogInfo("%!..+%1%!0", snapshot.id);
+            if (snapshot.name) {
+                LogInfo("+ Name: %!..+%1%!0", snapshot.name);
+            }
+            LogInfo("+ Time: %!..+%1%!0", FmtTimeNice(spec));
+        }
+    } else {
+        LogInfo();
+        LogInfo("There does not seem to be any snapshot");
+    }
+
+    return 0;
+}
+
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
@@ -298,6 +375,8 @@ Commands:
 
     %!..+put%!0                          Store encrypted directory or file
     %!..+get%!0                          Get and decrypt directory or file
+
+    %!..+list%!0                         List snapshots
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
@@ -333,6 +412,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunPut(arguments);
     } else if (TestStr(cmd, "get")) {
         return RunGet(arguments);
+    } else if (TestStr(cmd, "list")) {
+        return RunList(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

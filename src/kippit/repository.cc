@@ -670,6 +670,54 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
     return true;
 }
 
+bool kt_List(kt_Disk *disk, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *out_snapshots)
+{
+    Size prev_len = out_snapshots->len;
+    RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
+
+    HeapArray<kt_ID> ids;
+    if (!disk->ListTags(&ids))
+        return false;
+
+    // Gather snapshot information
+    {
+        // Reuse for performance
+        kt_ObjectType type;
+        HeapArray<uint8_t> obj;
+
+        for (const kt_ID &id: ids) {
+            kt_SnapshotInfo snapshot = {};
+
+            obj.RemoveFrom(0);
+            if (!disk->ReadObject(id, &type, &obj))
+                return false;
+
+            if (type != kt_ObjectType::Snapshot) {
+                LogError("Object '%1' is not a snapshot (ignoring)", id);
+                continue;
+            }
+            if (obj.len <= RG_SIZE(SnapshotHeader)) {
+                LogError("Malformed snapshot object '%1' (ignoring)", id);
+                continue;
+            }
+
+            const SnapshotHeader *header = (const SnapshotHeader *)obj.ptr;
+
+            snapshot.id = id;
+            snapshot.name = header->name[0] ? DuplicateString(header->name, str_alloc).ptr : nullptr;
+            snapshot.time = LittleEndian(header->time);
+
+            out_snapshots->Append(snapshot);
+        }
+    }
+
+    std::sort(out_snapshots->ptr + prev_len, out_snapshots->end(),
+              [](const kt_SnapshotInfo &snapshot1, const kt_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
+
+    out_guard.Disable();
+    return true;
+}
+
 bool kt_Get(kt_Disk *disk, const kt_ID &id, const char *dest_path, int64_t *out_len)
 {
     kt_ObjectType type;

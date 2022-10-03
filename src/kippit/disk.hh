@@ -63,10 +63,12 @@ public:
     Size WriteObject(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> obj);
 
     Size WriteTag(const kt_ID &id);
+    bool ListTags(HeapArray<kt_ID> *out_ids);
 
 protected:
     virtual bool ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
     virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
+    virtual bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) = 0;
 };
 
 bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
