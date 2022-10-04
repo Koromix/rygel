@@ -32,7 +32,14 @@ static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, kt_ID *out_
     blake3_hasher_finalize(&hasher, out_id->hash, RG_SIZE(out_id->hash));
 }
 
-static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int64_t *out_len, int64_t *out_written)
+enum class PutResult {
+    Success,
+    Ignore,
+    Error
+};
+
+static PutResult PutFile(kt_Disk *disk, const char *src_filename,
+                         kt_ID *out_id, int64_t *out_len, int64_t *out_written)
 {
     Span<const uint8_t> salt = disk->GetSalt();
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
@@ -42,7 +49,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
         OpenResult ret = st.Open(src_filename);
         if (ret != OpenResult::Success) {
             bool ignore = (ret == OpenResult::AccessDenied || ret == OpenResult::MissingPath);
-            return ignore;
+            return ignore ? PutResult::Ignore : PutResult::Error;
         }
     }
 
@@ -68,7 +75,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
             // Fill buffer
             Size read = st.Read(buf.TakeAvailable());
             if (read < 0)
-                return false;
+                return PutResult::Error;
             buf.len += read;
             file_len += read;
 
@@ -105,7 +112,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
                     return true;
                 });
                 if (processed < 0)
-                    return false;
+                    return PutResult::Error;
                 if (!processed)
                     break;
 
@@ -114,7 +121,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
             } while (remain.len);
 
             if (!async.Sync())
-                return false;
+                return PutResult::Error;
 
             memmove_safe(buf.ptr, remain.ptr, remain.len);
             buf.len = remain.len;
@@ -131,7 +138,7 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
 
         Size ret = disk->WriteObject(file_id, kt_ObjectType::File, file_obj);
         if (ret < 0)
-            return false;
+            return PutResult::Error;
         file_written += ret;
     } else {
         const kt_ChunkEntry *entry0 = (const kt_ChunkEntry *)file_obj.ptr;
@@ -145,10 +152,11 @@ static bool PutFile(kt_Disk *disk, const char *src_filename, kt_ID *out_id, int6
     if (out_written) {
         *out_written += file_written;
     }
-    return true;
+    return PutResult::Success;
 }
 
-static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, int64_t *out_len, int64_t *out_written)
+static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname,
+                              kt_ID *out_id, int64_t *out_len, int64_t *out_written)
 {
     BlockAllocator temp_alloc;
 
@@ -166,6 +174,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
 
         Size entry_len = RG_SIZE(kt_FileEntry) + strlen(basename) + 1;
         kt_FileEntry *entry = (kt_FileEntry *)dir_obj.AppendDefault(entry_len);
+        RG_DEFER_N(entry_guard) { dir_obj.RemoveLast(entry_len); };
 
         FileInfo file_info;
         {
@@ -180,14 +189,22 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
             case FileType::Directory: {
                 entry->kind = (int8_t)kt_FileEntry::Kind::Directory;
 
-                if (!PutDirectory(disk, filename, &entry->id, out_len, &total_written))
-                    return false;
+                PutResult ret = PutDirectory(disk, filename, &entry->id, out_len, &total_written);
+
+                if (ret != PutResult::Success) {
+                    bool ignore = (ret == PutResult::Ignore);
+                    return ignore;
+                }
             } break;
             case FileType::File: {
                 entry->kind = (int8_t)kt_FileEntry::Kind::File;
 
-                if (!PutFile(disk, filename, &entry->id, out_len, &total_written))
-                    return false;
+                PutResult ret = PutFile(disk, filename, &entry->id, out_len, &total_written);
+
+                if (ret != PutResult::Success) {
+                    bool ignore = (ret == PutResult::Ignore);
+                    return ignore;
+                }
             } break;
 
             case FileType::Link:
@@ -195,8 +212,6 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
             case FileType::Pipe:
             case FileType::Socket: {
                 LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
-
-                dir_obj.RemoveLast(entry_len);
                 return true;
             } break;
         }
@@ -205,11 +220,12 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
         entry->mode = (uint32_t)file_info.mode;
         CopyString(basename, MakeSpan(entry->name, entry_len - RG_SIZE(kt_FileEntry)));
 
+        entry_guard.Disable();
         return true;
     });
     if (ret != EnumResult::Success) {
         bool ignore = (ret == EnumResult::AccessDenied || ret == EnumResult::MissingPath);
-        return ignore;
+        return ignore ? PutResult::Ignore : PutResult::Error;
     }
 
     kt_ID dir_id = {};
@@ -218,7 +234,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
 
         Size ret = disk->WriteObject(dir_id, kt_ObjectType::Directory, dir_obj);
         if (ret < 0)
-            return false;
+            return PutResult::Error;
         total_written += ret;
     }
 
@@ -226,7 +242,7 @@ static bool PutDirectory(kt_Disk *disk, const char *src_dirname, kt_ID *out_id, 
     if (out_written) {
         *out_written += total_written;
     }
-    return true;
+    return PutResult::Success;
 }
 
 bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames,
@@ -313,13 +329,13 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             case FileType::Directory: {
                 entry->kind = (int8_t)kt_FileEntry::Kind::Directory;
 
-                if (!PutDirectory(disk, filename, &entry->id, &total_len, &total_written))
+                if (PutDirectory(disk, filename, &entry->id, &total_len, &total_written) != PutResult::Success)
                     return false;
             } break;
             case FileType::File: {
                 entry->kind = (int8_t)kt_FileEntry::Kind::File;
 
-                if (!PutFile(disk, filename, &entry->id, &total_len, &total_written))
+                if (PutFile(disk, filename, &entry->id, &total_len, &total_written) != PutResult::Success)
                     return false;
             } break;
 
