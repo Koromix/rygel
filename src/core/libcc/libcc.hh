@@ -1380,7 +1380,7 @@ public:
         }
     }
 
-    void Grow(Size reserve_capacity = 1)
+    T *Grow(Size reserve_capacity = 1)
     {
         RG_ASSERT(capacity >= 0);
         RG_ASSERT(reserve_capacity >= 0);
@@ -1398,6 +1398,8 @@ public:
 
             SetCapacity(new_capacity);
         }
+
+        return ptr + len;
     }
 
     void Trim(Size extra_capacity = 0) { SetCapacity(len + extra_capacity); }
