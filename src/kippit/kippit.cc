@@ -124,6 +124,7 @@ Options:
 
     %!..+-n, --name <name>%!0            Set user friendly name (optional)
 
+        %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is)
         %!..+--raw%!0                    Skip snapshot object and report data ID)", FelixTarget);
     };
 
@@ -141,6 +142,8 @@ Options:
                 pwd = opt.current_value;
             } else if (opt.Test("-n", "--name", OptionType::Value)) {
                 settings.name = opt.current_value;
+            } else if (opt.Test("--follow_symlinks")) {
+                settings.follow_symlinks = true;
             } else if (opt.Test("--raw")) {
                 settings.raw = true;
             } else {

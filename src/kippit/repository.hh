@@ -22,6 +22,7 @@ class kt_Disk;
 
 struct kt_PutSettings {
     const char *name = nullptr;
+    bool follow_symlinks = false;
     bool raw = false;
 };
 

@@ -159,7 +159,7 @@ static PutResult PutFile(kt_Disk *disk, const char *src_filename,
     return PutResult::Success;
 }
 
-static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname,
+static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follow_symlinks,
                               kt_ID *out_id, int64_t *out_len, int64_t *out_written)
 {
     BlockAllocator temp_alloc;
@@ -182,7 +182,9 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname,
 
         FileInfo file_info;
         {
-            StatResult ret = StatFile(filename, &file_info);
+            unsigned int flags = follow_symlinks ? (int)StatFlag::FollowSymlink : 0;
+            StatResult ret = StatFile(filename, flags, &file_info);
+
             if (ret != StatResult::Success) {
                 bool ignore = (ret == StatResult::AccessDenied || ret == StatResult::MissingPath);
                 return ignore;
@@ -193,7 +195,7 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname,
             case FileType::Directory: {
                 entry->kind = (int8_t)kt_FileEntry::Kind::Directory;
 
-                PutResult ret = PutDirectory(disk, filename, &entry->id, out_len, &total_written);
+                PutResult ret = PutDirectory(disk, filename, follow_symlinks, &entry->id, out_len, &total_written);
 
                 if (ret != PutResult::Success) {
                     bool ignore = (ret == PutResult::Ignore);
@@ -373,7 +375,8 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             case FileType::Directory: {
                 entry->kind = (int8_t)kt_FileEntry::Kind::Directory;
 
-                if (PutDirectory(disk, filename, &entry->id, &total_len, &total_written) != PutResult::Success)
+                if (PutDirectory(disk, filename, settings.follow_symlinks,
+                                 &entry->id, &total_len, &total_written) != PutResult::Success)
                     return false;
             } break;
             case FileType::File: {
