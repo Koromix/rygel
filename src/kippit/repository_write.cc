@@ -283,6 +283,8 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname,
 bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames,
             kt_ID *out_id, int64_t *out_len, int64_t *out_written)
 {
+    BlockAllocator temp_alloc;
+
     RG_ASSERT(filenames.len >= 1);
 
     if (settings.raw && settings.name) {
@@ -312,29 +314,36 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
 
     // Process snapshot entries
     for (const char *filename: filenames) {
-        Span<const char> name = TrimStrRight(filename, RG_PATH_SEPARATORS);
+        Span<char> name = NormalizePath(filename, &temp_alloc);
 
         Size entry_len = RG_SIZE(kt_FileEntry) + name.len + 1;
         kt_FileEntry *entry = (kt_FileEntry *)snapshot_obj.Grow(entry_len);
 
         // Transform name (same length or shorter)
         {
-            char *dest = entry->name;
             bool changed = false;
 
 #ifdef _WIN32
-            if (IsAsciiAlpha(name.ptr[0]) && name.ptr[1] == ':') {
-                entry->name[0] = LowerAscii(name[0]);
-                entry->name[1] = '/';
+            for (char &c: name) {
+                c = (c == '\\') ? '/' : c;
+            }
 
-                name = name.Take(2, name.len - 2);
-                dest += 2;
+            if (IsAsciiAlpha(name.ptr[0]) && name.ptr[1] == ':') {
+                name[1] = LowerAscii(name[0]);
+                name[0] = '/';
 
                 changed = true;
             }
 #endif
 
-            while (strchr(RG_PATH_SEPARATORS, name.ptr[0])) {
+            while (StartsWith(name, "../")) {
+                name = name.Take(3, name.len - 3);
+                changed = true;
+            }
+            if (TestStr(name, "..")) {
+                name = {};
+            }
+            while (name.ptr[0] == '/') {
                 name = name.Take(1, name.len - 1);
                 changed = true;
             }
@@ -344,15 +353,8 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
                 return false;
             }
 
-#ifdef _WIN32
-            for (Size i = 0; i < name.len; i++) {
-                int c = name[i];
-                dest[i] = (char)(c == '\\' ? '/' : c);
-            }
-#else
-            memcpy(dest, name.ptr, name.len);
-#endif
-            dest[name.len] = 0;
+            memcpy(entry->name, name.ptr, name.len);
+            entry->name[name.len] = 0;
 
             if (changed) {
                 LogWarning("Storing '%1' as '%2'", filename, entry->name);
