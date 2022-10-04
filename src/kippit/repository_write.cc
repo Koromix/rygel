@@ -277,32 +277,30 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
 
     // Process snapshot entries
     for (const char *filename: filenames) {
-        Size entry_len = RG_SIZE(kt_FileEntry) + strlen(filename) + 1;
-        kt_FileEntry *entry = (kt_FileEntry *)snapshot_obj.AppendDefault(entry_len);
+        Span<const char> name = TrimStrRight(filename, RG_PATH_SEPARATORS);
 
-        Span<const char> name;
+        Size entry_len = RG_SIZE(kt_FileEntry) + name.len + 1;
+        kt_FileEntry *entry = (kt_FileEntry *)snapshot_obj.Grow(entry_len);
+
+        // Transform name (same length or shorter)
         {
-            Span<char> dest = MakeSpan(entry->name, entry_len - RG_SIZE(kt_FileEntry));
+            char *dest = entry->name;
             bool changed = false;
 
-            name = TrimStrRight(filename, RG_PATH_SEPARATORS);
-
-            // Change Windows paths, even on non-Windows platforms
+#ifdef _WIN32
             if (IsAsciiAlpha(name.ptr[0]) && name.ptr[1] == ':') {
                 entry->name[0] = LowerAscii(name[0]);
                 entry->name[1] = '/';
 
-                dest = dest.Take(2, dest.len - 2);
                 name = name.Take(2, name.len - 2);
+                dest += 2;
+
                 changed = true;
             }
+#endif
 
-            while (strchr("/\\", name.ptr[0])) {
-                snapshot_obj.len--;
-                entry_len--;
-
+            while (strchr(RG_PATH_SEPARATORS, name.ptr[0])) {
                 name = name.Take(1, name.len - 1);
-
                 changed = true;
             }
 
@@ -311,15 +309,24 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
                 return false;
             }
 
+#ifdef _WIN32
             for (Size i = 0; i < name.len; i++) {
                 int c = name[i];
                 dest[i] = (char)(c == '\\' ? '/' : c);
             }
+#else
+            memcpy(dest, name.ptr, name.len);
+#endif
+            dest[name.len] = 0;
 
             if (changed) {
                 LogWarning("Storing '%1' as '%2'", filename, entry->name);
             }
         }
+
+        // Adjust entry length
+        entry_len = RG_SIZE(kt_FileEntry) + name.len + 1;
+        snapshot_obj.len += entry_len;
 
         FileInfo file_info;
         if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
