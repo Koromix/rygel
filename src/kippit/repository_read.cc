@@ -241,7 +241,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
             LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
             return false;
         }
-        if (!entry->name[0] || PathContainsDotDot(entry->name) || strchr(entry->name, '\\')) {
+        if (!entry->name[0] || PathContainsDotDot(entry->name)) {
             LogError("Unsafe file name '%1'", entry->name);
             return false;
         }
