@@ -17,5 +17,6 @@
 #include "http.hh"
 #include "http_misc.hh"
 #include "http_session.hh"
+#include "s3.hh"
 #include "sms.hh"
 #include "smtp.hh"

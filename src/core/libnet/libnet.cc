@@ -15,5 +15,6 @@
 #include "http.cc"
 #include "http_misc.cc"
 #include "http_session.cc"
+#include "s3.cc"
 #include "sms.cc"
 #include "smtp.c"
