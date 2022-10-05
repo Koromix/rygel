@@ -136,7 +136,16 @@ Size kt_Disk::WriteObject(const kt_ID &id, kt_ObjectType type, Span<const uint8_
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
-    Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
+    Size len;
+    {
+        Size parts = obj.len / ObjectSplit;
+        Size remain = obj.len % ObjectSplit;
+
+        len = RG_SIZE(ObjectIntro) + parts * (ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES) +
+                                     remain + crypto_secretstream_xchacha20poly1305_ABYTES;
+    }
+
+    Size written = WriteRaw(path.data, len, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
         // Write object intro
         crypto_secretstream_xchacha20poly1305_state state;
         {
@@ -205,7 +214,7 @@ Size kt_Disk::WriteTag(const kt_ID &id)
         LocalArray<char, 256> path;
         path.len = Fmt(path.data, "tags/%1", FmtRandom(8)).len;
 
-        Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(cypher); });
+        Size written = WriteRaw(path.data, cypher);
 
         if (written > 0)
             return written;
