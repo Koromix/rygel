@@ -222,8 +222,6 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
         success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
         success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
 
-        // curl_easy_setopt is variadic, so we need the + lambda operator to force the
-        // conversion to a C-style function pointers.
         success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
             Span<const uint8_t> *remain = (Span<const uint8_t> *)udata;
             size_t give = std::min(size * nmemb, (size_t)remain->len);
@@ -236,8 +234,6 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
         });
         success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &data);
         success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.len);
-        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                     +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
 
         if (!success) {
             LogError("Failed to set libcurl options");
@@ -296,11 +292,6 @@ bool s3_Session::DeleteObject(Span<const char> key)
         success &= !curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
         success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
         success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
-
-        // curl_easy_setopt is variadic, so we need the + lambda operator to force the
-        // conversion to a C-style function pointers.
-        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                     +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
 
         if (!success) {
             LogError("Failed to set libcurl options");
@@ -389,9 +380,7 @@ bool s3_Session::OpenAccess(const char *id, const char *key)
             success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
             success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
 
-            // curl_easy_setopt is variadic, so we need the + lambda operator to force the
-            // conversion to a C-style function pointers.
-            success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION ,
+            success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
                                          +[](char *buf, size_t, size_t nmemb, void *udata) {
                 s3_Session *session = (s3_Session *)udata;
 
@@ -406,8 +395,6 @@ bool s3_Session::OpenAccess(const char *id, const char *key)
                 return nmemb;
             });
             success &= !curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
-            success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                         +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
 
             if (!success) {
                 LogError("Failed to set libcurl options");
@@ -443,9 +430,7 @@ bool s3_Session::DetermineRegion(const char *url)
 
         success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
 
-        // curl_easy_setopt is variadic, so we need the + lambda operator to force the
-        // conversion to a C-style function pointers.
-        success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION ,
+        success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
                                      +[](char *buf, size_t, size_t nmemb, void *udata) {
             s3_Session *session = (s3_Session *)udata;
 
@@ -460,8 +445,6 @@ bool s3_Session::DetermineRegion(const char *url)
             return nmemb;
         });
         success &= !curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
-        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                     +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
 
         if (!success) {
             LogError("Failed to set libcurl options");

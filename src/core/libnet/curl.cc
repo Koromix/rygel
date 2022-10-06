@@ -41,6 +41,11 @@ CURL *InitCurl()
     success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
     success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
 
+    // curl_easy_setopt is variadic, so we need the + lambda operator to force the
+    // conversion to a C-style function pointers.
+    success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                 +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
+
     if (!success) {
         LogError("Failed to set libcurl options");
         return nullptr;

@@ -100,11 +100,6 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
         success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, config.authid);
         success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, config.token);
 
-        // curl_easy_setopt is variadic, so we need the + lambda operator to force the
-        // conversion to a C-style function pointer.
-        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                     +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
-
         if (!success) {
             LogError("Failed to set libcurl options");
             return false;
