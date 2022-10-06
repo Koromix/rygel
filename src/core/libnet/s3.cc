@@ -654,20 +654,6 @@ static void HmacSha256(Span<const uint8_t> key, Span<const char> message, uint8_
     return HmacSha256(key, message.As<const uint8_t>(), out_digest);
 }
 
-Span<char> s3_Session::MakeAuthorization(const uint8_t signature[32], const TimeSpec &date, Allocator *alloc)
-{
-    RG_ASSERT(!date.offset);
-
-    HeapArray<char> buf(alloc);
-
-    Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
-    Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", access_id, FormatYYYYMMDD(date), region);
-    Fmt(&buf, "SignedHeaders=host;x-amz-content-sha256;x-amz-date, ");
-    Fmt(&buf, "Signature=%1", FormatSha256(signature));
-
-    return buf.TrimAndLeak(1);
-}
-
 void s3_Session::MakeSignature(const char *method, const char *path, const char *query,
                                const TimeSpec &date, const uint8_t sha256[32], uint8_t out_signature[32])
 {
@@ -678,9 +664,7 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
     {
         LocalArray<char, 4096> buf;
 
-        buf.len += Fmt(buf.TakeAvailable(), "%1\n", method).len;
-        buf.len += Fmt(buf.TakeAvailable(), "%1\n", path).len;
-        buf.len += Fmt(buf.TakeAvailable(), "%1\n", query ? query : "").len;
+        buf.len += Fmt(buf.TakeAvailable(), "%1\n%2\n%3\n", method, path, query ? query : "").len;
         buf.len += Fmt(buf.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", host, FormatSha256(sha256), FormatRfcDate(date)).len;
         buf.len += Fmt(buf.TakeAvailable(), "host;x-amz-content-sha256;x-amz-date\n").len;
         buf.len += Fmt(buf.TakeAvailable(), "%1", FormatSha256(sha256)).len;
@@ -712,6 +696,20 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
         HmacSha256(signature, "aws4_request", out_signature);
         HmacSha256(signature, string, out_signature);
     }
+}
+
+Span<char> s3_Session::MakeAuthorization(const uint8_t signature[32], const TimeSpec &date, Allocator *alloc)
+{
+    RG_ASSERT(!date.offset);
+
+    HeapArray<char> buf(alloc);
+
+    Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
+    Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", access_id, FormatYYYYMMDD(date), region);
+    Fmt(&buf, "SignedHeaders=host;x-amz-content-sha256;x-amz-date, ");
+    Fmt(&buf, "Signature=%1", FormatSha256(signature));
+
+    return buf.TrimAndLeak(1);
 }
 
 Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Span<const char> *out_path)
