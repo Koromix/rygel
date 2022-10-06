@@ -38,6 +38,7 @@ public:
     void Close();
 
     bool PutObject(Span<const char> key, Span<const uint8_t> data, const char *mimetype = nullptr);
+    bool DeleteObject(Span<const char> key);
 
 private:
     bool OpenAccess(const char *id, const char *key);

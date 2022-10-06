@@ -256,6 +256,69 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
     return true;
 }
 
+bool s3_Session::DeleteObject(Span<const char> key)
+{
+    BlockAllocator temp_alloc;
+
+    CURL *curl = InitCurl();
+    if (!curl)
+        return false;
+    RG_DEFER { curl_easy_cleanup(curl); };
+
+    int64_t now = GetUnixTime();
+    TimeSpec date = DecomposeTime(now, TimeMode::UTC);
+
+    Span<const char> path;
+    Span<const char> url = MakeURL(key, &temp_alloc, &path);
+
+    // Compute SHA-256 and signature
+    uint8_t signature[32];
+    uint8_t sha256[32];
+    crypto_hash_sha256(sha256, nullptr, 0);
+    MakeSignature("DELETE", path.ptr, nullptr, date, sha256, signature);
+
+    // Prepare request headers
+    LocalArray<curl_slist, 32> headers;
+    {
+        headers.Append({Fmt(&temp_alloc, "Authorization: %1", MakeAuthorization(signature, date, &temp_alloc)).ptr});
+        headers.Append({Fmt(&temp_alloc, "x-amz-date: %1", FormatRfcDate(date)).ptr});
+        headers.Append({Fmt(&temp_alloc, "x-amz-content-sha256: %1", FormatSha256(sha256)).ptr});
+
+        for (Size i = 0; i < headers.len - 1; i++) {
+            headers[i].next = headers.data + i + 1;
+        }
+    }
+
+    // Set CURL options
+    {
+        bool success = true;
+
+        success &= !curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+
+        // curl_easy_setopt is variadic, so we need the + lambda operator to force the
+        // conversion to a C-style function pointers.
+        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                     +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
+
+        if (!success) {
+            LogError("Failed to set libcurl options");
+            return false;
+        }
+    }
+
+    int status = PerformCurl(curl, "S3");
+    if (status < 0)
+        return false;
+    if (status != 204) {
+        LogError("Failed to delete S3 object with status %1", status);
+        return false;
+    }
+
+    return true;
+}
+
 bool s3_Session::OpenAccess(const char *id, const char *key)
 {
     BlockAllocator temp_alloc;
