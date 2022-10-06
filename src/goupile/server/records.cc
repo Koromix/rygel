@@ -494,6 +494,9 @@ class RecordExporter {
         const char *hid;
         Size idx;
 
+        char ctime[32];
+        char mtime[32];
+
         RG_HASHTABLE_HANDLER(Row, ulid);
     };
 
@@ -546,14 +549,16 @@ class RecordExporter {
 public:
     RecordExporter(InstanceHolder *instance);
 
-    bool Parse(const char *root_ulid, const char *ulid, const char *hid, const char *form, Span<const char> json);
+    bool Parse(const char *root_ulid, const char *ulid, const char *hid,
+               const char *form, const char *mtime, Span<const char> json);
     bool Export(const char *filename);
 
 private:
-    bool ParseObject(const char *root_ulid, const char *form, const char *ulid, const char *hid, const char *prefix, int depth);
+    bool ParseObject(const char *root_ulid, const char *form, const char *ulid, const char *hid,
+                     const char *mtime, const char *prefix, int depth);
 
     Table *GetTable(const char *name, bool root);
-    Row *GetRow(Table *table, const char *root_ulid, const char *ulid, const char *hid);
+    Row *GetRow(Table *table, const char *root_ulid, const char *ulid, const char *hid, const char *mtime);
     Column *GetColumn(Table *table, const char *prefix, const char *key, const char *suffix);
 };
 
@@ -590,14 +595,15 @@ static void EncodeSqlName(const char *name, HeapArray<char> *out_buf)
     out_buf->ptr[out_buf->len] = 0;
 }
 
-bool RecordExporter::Parse(const char *root_ulid, const char *ulid, const char *hid, const char *form, Span<const char> json)
+bool RecordExporter::Parse(const char *root_ulid, const char *ulid, const char *hid, const char *form, 
+                           const char *mtime, Span<const char> json)
 {
     StreamReader reader(MakeSpan((const uint8_t *)json.ptr, json.len), "<json>");
     json_Parser parser(&reader, &str_alloc);
 
     this->parser = &parser;
 
-    if (!ParseObject(root_ulid, form, ulid, hid, nullptr, 0))
+    if (!ParseObject(root_ulid, form, ulid, hid, mtime, nullptr, 0))
         return false;
 
     return true;
@@ -658,6 +664,7 @@ bool RecordExporter::Export(const char *filename)
         if (table.root) {
             Fmt(&sql, "__HID, ");
         }
+        Fmt(&sql, "__CTIME, __MTIME, ");
         for (const Column *col: table.ordered_columns) {
             EncodeSqlName(col->name, &sql);
             switch (col->type) {
@@ -683,8 +690,9 @@ bool RecordExporter::Export(const char *filename)
         if (table.root) {
             Fmt(&sql, ", ?3");
         }
+        Fmt(&sql, ", ?4, ?5");
         for (Size i = 0; i < table.ordered_columns.len; i++) {
-            Fmt(&sql, ", ?%1", i + 3 + table.root);
+            Fmt(&sql, ", ?%1", i + 5 + table.root);
         }
         Fmt(&sql, ")");
 
@@ -702,9 +710,11 @@ bool RecordExporter::Export(const char *filename)
             if (table.root) {
                 sqlite3_bind_text(stmt, 3, table.rows[i].hid, -1, SQLITE_STATIC);
             }
+            sqlite3_bind_text(stmt, 4, table.rows[i].ctime, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 5, table.rows[i].mtime, -1, SQLITE_STATIC);
             for (Size j = 0; j < table.ordered_columns.len; j++) {
                 const Column *col = table.ordered_columns[j];
-                sqlite3_bind_text(stmt, (int)j + 3 + table.root, col->values[i], -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, (int)j + 5 + table.root, col->values[i], -1, SQLITE_STATIC);
             }
 
             if (!stmt.Run())
@@ -733,11 +743,11 @@ bool RecordExporter::Export(const char *filename)
 }
 
 bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const char *ulid,
-                                 const char *hid, const char *prefix, int depth)
+                                 const char *hid, const char *mtime, const char *prefix, int depth)
 {
     bool root = TestStr(root_ulid, ulid) && !prefix;
     Table *table = GetTable(form, root);
-    Row *row = GetRow(table, root_ulid, ulid, hid);
+    Row *row = GetRow(table, root_ulid, ulid, hid, mtime);
 
     parser->ParseObject();
     while (parser->InObject()) {
@@ -859,15 +869,15 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                     const char *form2 = Fmt(&str_alloc, "%1.%2", form, prefix).ptr;
                     const char *ulid2 = Fmt(&str_alloc, "%1.%2", ulid, key).ptr;
 
-                    if (!ParseObject(root_ulid, form2, ulid2, nullptr, nullptr, depth + 1))
+                    if (!ParseObject(root_ulid, form2, ulid2, nullptr, mtime, nullptr, depth + 1))
                         return false;
                 } else if (prefix) {
                     const char *prefix2 = Fmt(&str_alloc, "%1.%2", prefix, key).ptr;
 
-                    if (!ParseObject(root_ulid, form, ulid, nullptr, prefix2, depth + 1))
+                    if (!ParseObject(root_ulid, form, ulid, nullptr, mtime, prefix2, depth + 1))
                         return false;
                 } else {
-                    if (!ParseObject(root_ulid, form, ulid, nullptr, key.ptr, depth + 1))
+                    if (!ParseObject(root_ulid, form, ulid, nullptr, mtime, key.ptr, depth + 1))
                         return false;
                 }
             } break;
@@ -990,7 +1000,7 @@ RecordExporter::Table *RecordExporter::GetTable(const char *name, bool root)
 }
 
 RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const char *root_ulid,
-                                            const char *ulid, const char *hid)
+                                            const char *ulid, const char *hid, const char *mtime)
 {
     Row *row = table->rows_map.FindValue(ulid, nullptr);
 
@@ -1001,6 +1011,7 @@ RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const 
         row->ulid = DuplicateString(ulid, &str_alloc).ptr;
         row->hid = hid && hid[0] ? DuplicateString(hid, &str_alloc).ptr : nullptr;
         row->idx = table->rows.len - 1;
+        CopyString(mtime, row->ctime);
 
         table->rows_map.Set(row);
 
@@ -1008,6 +1019,8 @@ RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const 
             col.values.AppendDefault(table->rows.len - col.values.len);
         }
     }
+
+    CopyString(mtime, row->mtime);
 
     return row;
 }
@@ -1035,7 +1048,7 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
 
     io->RunAsync([=]() {
         sq_Statement stmt;
-        if (!instance->db->Prepare(R"(SELECT e.root_ulid, e.ulid, e.hid, lower(e.form), f.type, f.json FROM rec_entries e
+        if (!instance->db->Prepare(R"(SELECT e.root_ulid, e.ulid, e.hid, lower(e.form), f.type, f.mtime, f.json FROM rec_entries e
                                       INNER JOIN rec_entries r ON (r.ulid = e.root_ulid)
                                       INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
                                       WHERE r.deleted = 0
@@ -1053,11 +1066,12 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
             const char *hid = (const char *)sqlite3_column_text(stmt, 2);
             const char *form = (const char *)sqlite3_column_text(stmt, 3);
             const char *type = (const char *)sqlite3_column_text(stmt, 4);
+            const char *mtime = (const char *)sqlite3_column_text(stmt, 5);
 
             if (TestStr(type, "save")) {
-                Span<const char> json = MakeSpan((const char *)sqlite3_column_blob(stmt, 5),
-                                                 sqlite3_column_bytes(stmt, 5));
-                if (!exporter.Parse(root_ulid, ulid, hid, form, json))
+                Span<const char> json = MakeSpan((const char *)sqlite3_column_blob(stmt, 6),
+                                                 sqlite3_column_bytes(stmt, 6));
+                if (!exporter.Parse(root_ulid, ulid, hid, form, mtime, json))
                     return;
             }
         }
