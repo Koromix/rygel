@@ -36,6 +36,14 @@ static bool ListSnapshotFiles(OptionParser *opt, bool recursive,
     return true;
 }
 
+static inline FmtArg FormatSha256(Span<const uint8_t> hash)
+{
+    RG_ASSERT(hash.len == 32);
+
+    FmtArg arg = FmtSpan(hash, FmtType::BigHex, "").Pad0(-2);
+    return arg;
+}
+
 static int RunRestore(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -181,11 +189,8 @@ Options:
                     for (Size j = 0; j < version.frames; j++) {
                         const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx + j];
 
-                        char sha256[65];
-                        FormatSha256(frame.sha256, sha256);
-
                         if (verbosity >= 3) {
-                            PrintLn("    %!D..+ Log:%!0 %1 (%2)", FmtTimeNice(DecomposeTime(frame.mtime)), sha256);
+                            PrintLn("    %!D..+ Log:%!0 %1 (%2)", FmtTimeNice(DecomposeTime(frame.mtime)), FormatSha256(frame.sha256));
                         } else {
                             PrintLn("    %!D..+ Log:%!0 %1", FmtTimeNice(DecomposeTime(frame.mtime)));
                         }
