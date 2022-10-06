@@ -6628,6 +6628,8 @@ bool StreamWriter::Flush()
                 error = true;
                 return false;
             }
+
+            return true;
         } break;
         case DestinationType::Function: return true;
     }
