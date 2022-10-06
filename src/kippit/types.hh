@@ -19,7 +19,7 @@ namespace RG {
 
 struct kt_ID {
     uint8_t hash[32];
-    operator FmtArg() const { return FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2); }
+    operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
 };
 RG_STATIC_ASSERT(RG_SIZE(kt_ID) == 32);
 

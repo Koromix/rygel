@@ -826,9 +826,23 @@ static Span<char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32])
     return MakeSpan(out_buf + offset, 32 - offset);
 }
 
-static Span<char> FormatUnsignedToHex(uint64_t value, char out_buf[32])
+static Span<char> FormatUnsignedToBigHex(uint64_t value, char out_buf[32])
 {
     static const char literals[] = "0123456789ABCDEF";
+
+    Size offset = 32;
+    do {
+        uint64_t digit = value & 0xF;
+        value >>= 4;
+        out_buf[--offset] = literals[digit];
+    } while (value);
+
+    return MakeSpan(out_buf + offset, 32 - offset);
+}
+
+static Span<char> FormatUnsignedToSmallHex(uint64_t value, char out_buf[32])
+{
+    static const char literals[] = "0123456789abcdef";
 
     Size offset = 32;
     do {
@@ -1131,8 +1145,11 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtType::Binary: {
                 out = FormatUnsignedToBinary(arg.u.u, num_buf);
             } break;
-            case FmtType::Hexadecimal: {
-                out = FormatUnsignedToHex(arg.u.u, num_buf);
+            case FmtType::BigHex: {
+                out = FormatUnsignedToBigHex(arg.u.u, num_buf);
+            } break;
+            case FmtType::SmallHex: {
+                out = FormatUnsignedToSmallHex(arg.u.u, num_buf);
             } break;
 
             case FmtType::MemorySize: {
@@ -1332,7 +1349,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::Integer:
                         case FmtType::Unsigned:
                         case FmtType::Binary:
-                        case FmtType::Hexadecimal: {
+                        case FmtType::BigHex:
+                        case FmtType::SmallHex: {
                             switch (arg.u.span.type_len) {
                                 case 8: { arg2.u.u = *(const uint64_t *)ptr; } break;
                                 case 4: { arg2.u.u = *(const uint32_t *)ptr; } break;

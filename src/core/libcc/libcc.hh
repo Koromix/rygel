@@ -2812,7 +2812,8 @@ enum class FmtType {
     Float,
     Double,
     Binary,
-    Hexadecimal,
+    BigHex,
+    SmallHex,
     MemorySize,
     DiskSize,
     Date,
@@ -2891,7 +2892,7 @@ public:
     FmtArg(unsigned long long i) : type(FmtType::Unsigned) { u.u = i; }
     FmtArg(float f) : type(FmtType::Float) { u.f = { f, 0, INT_MAX }; }
     FmtArg(double d) : type(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
-    FmtArg(const void *ptr) : type(FmtType::Hexadecimal) { u.u = (uint64_t)ptr; }
+    FmtArg(const void *ptr) : type(FmtType::BigHex) { u.u = (uint64_t)ptr; }
     FmtArg(const LocalDate &date) : type(FmtType::Date) { u.date = date; }
 
     FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
@@ -2906,10 +2907,12 @@ static inline FmtArg FmtBin(uint64_t u)
     arg.u.u = u;
     return arg;
 }
-static inline FmtArg FmtHex(uint64_t u)
+static inline FmtArg FmtHex(uint64_t u, FmtType type = FmtType::BigHex)
 {
+    RG_ASSERT(type == FmtType::BigHex || type == FmtType::SmallHex);
+
     FmtArg arg;
-    arg.type = FmtType::Hexadecimal;
+    arg.type = type;
     arg.u.u = u;
     return arg;
 }
@@ -3708,7 +3711,7 @@ static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
 static inline void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
 {
     RG_ASSERT(hash.len == 32);
-    Fmt(MakeSpan(out_sha256, 65), "%1", FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2));
+    Fmt(MakeSpan(out_sha256, 65), "%1", FmtSpan(hash, FmtType::BigHex, "").Pad0(-2));
 }
 
 // ------------------------------------------------------------------------
