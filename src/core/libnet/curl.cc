@@ -62,8 +62,11 @@ CURL *InitCurl()
 int PerformCurl(CURL *curl, const char *reason)
 {
     CURLcode res = curl_easy_perform(curl);
+
     if (res != CURLE_OK) {
-        LogError("Failed to perform %1 call: %2", reason, curl_easy_strerror(res));
+        if (res != CURLE_WRITE_ERROR) {
+            LogError("Failed to perform %1 call: %2", reason, curl_easy_strerror(res));
+        }
         return -1;
     }
 

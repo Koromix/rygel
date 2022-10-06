@@ -178,6 +178,76 @@ void s3_Session::Close()
     str_alloc.ReleaseAll();
 }
 
+bool s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj)
+{
+    BlockAllocator temp_alloc;
+
+    RG_DEFER_NC(out_guard, len = out_obj->len) { out_obj->RemoveFrom(len); };
+
+    CURL *curl = InitCurl();
+    if (!curl)
+        return false;
+    RG_DEFER { curl_easy_cleanup(curl); };
+
+    Span<const char> path;
+    Span<const char> url = MakeURL(key, &temp_alloc, &path);
+
+    LocalArray<curl_slist, 32> headers;
+    headers.len = PrepareHeaders("GET", path.ptr, {}, &temp_alloc, headers.data);
+
+    struct GetContext {
+        Span<const char> key;
+        HeapArray<uint8_t> *out;
+        Size max_len;
+        Size total_len;
+    };
+    GetContext ctx = {};
+    ctx.key = key;
+    ctx.out = out_obj;
+    ctx.max_len = max_len;
+
+    // Set CURL options
+    {
+        bool success = true;
+
+        success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+
+        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                     +[](char *ptr, size_t, size_t nmemb, void *udata) {
+            GetContext *ctx = (GetContext *)udata;
+
+            if (ctx->max_len >= 0 && ctx->total_len > ctx->max_len - (Size)nmemb) {
+                LogError("S3 object '%1' is too big (max = %2)", ctx->key, FmtDiskSize(ctx->max_len));
+                return (size_t)0;
+            }
+            ctx->total_len += (Size)nmemb;
+
+            Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+            ctx->out->Append(buf);
+
+            return nmemb;
+        });
+        success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
+
+        if (!success) {
+            LogError("Failed to set libcurl options");
+            return false;
+        }
+    }
+
+    int status = PerformCurl(curl, "S3");
+    if (status < 0)
+        return false;
+    if (status != 200) {
+        LogError("Failed to get S3 object with status %1", status);
+        return false;
+    }
+
+    out_guard.Disable();
+    return true;
+}
+
 bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const char *mimetype)
 {
     BlockAllocator temp_alloc;

@@ -39,6 +39,7 @@ public:
     bool Open(const char *host, const char *region, const char *bucket, const char *id, const char *key);
     void Close();
 
+    bool GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj);
     bool PutObject(Span<const char> key, Span<const uint8_t> data, const char *mimetype = nullptr);
     bool DeleteObject(Span<const char> key);
 
