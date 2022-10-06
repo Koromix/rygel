@@ -269,10 +269,10 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
     {
         HashBlake3(dir_obj, salt.ptr, &dir_id);
 
-        Size ret = disk->WriteObject(dir_id, kt_ObjectType::Directory, dir_obj);
-        if (ret < 0)
+        Size written = disk->WriteObject(dir_id, kt_ObjectType::Directory, dir_obj);
+        if (written < 0)
             return PutResult::Error;
-        total_written += ret;
+        total_written += written;
     }
 
     *out_id = dir_id;

@@ -20,6 +20,11 @@
 
 namespace RG {
 
+// Fix mess caused by windows.h (included by libcurl)
+#ifdef GetObject
+    #undef GetObject
+#endif
+
 static Span<const char> GetUrlPart(CURLU *h, CURLUPart part, Allocator *alloc)
 {
     char *buf = nullptr;

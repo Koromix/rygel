@@ -51,7 +51,7 @@ bool LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
     return ReadFile(filename.data, Mebibytes(256), out_obj) >= 0;
 }
 
-Size LocalDisk::WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
+Size LocalDisk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -107,9 +107,9 @@ Size LocalDisk::WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRe
         return -1;
     tmp_guard.Disable();
 
-    RG_ASSERT(writer.GetRawWritten() == len);
+    RG_ASSERT(writer.GetRawWritten() == total_len);
 
-    return len;
+    return total_len;
 }
 
 bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths)

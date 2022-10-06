@@ -1295,7 +1295,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 RG_ASSERT(arg.u.random.len <= RG_SIZE(out_buf.data));
 
                 for (Size j = 0; j < arg.u.random.len; j++) {
-                    int rnd = GetRandomIntSafe(0, chars.len);
+                    int rnd = GetRandomIntSafe(0, (int)chars.len);
                     out_buf.Append(chars[rnd]);
                 }
 

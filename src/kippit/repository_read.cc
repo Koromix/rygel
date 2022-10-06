@@ -73,7 +73,7 @@ static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uin
         ov.OffsetHigh = (uint32_t)((offset & 0xFFFFFFFF00000000ll) >> 32);
         ov.Offset = (uint32_t)(offset & 0xFFFFFFFFll);
 
-        if (!WriteFile(h, buf.ptr, buf.len, &written, &ov)) {
+        if (!WriteFile(h, buf.ptr, (DWORD)buf.len, &written, &ov)) {
             LogError("Failed to write to '%1': %2", filename, GetWin32ErrorString());
             return false;
         }
