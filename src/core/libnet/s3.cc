@@ -187,32 +187,11 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
 
-    int64_t now = GetUnixTime();
-    TimeSpec date = DecomposeTime(now, TimeMode::UTC);
-
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    // Compute SHA-256 and signature
-    uint8_t signature[32];
-    uint8_t sha256[32];
-    crypto_hash_sha256(sha256, data.ptr, (size_t)data.len);
-    MakeSignature("PUT", path.ptr, nullptr, date, sha256, signature);
-
-    // Prepare request headers
     LocalArray<curl_slist, 32> headers;
-    {
-        headers.Append({Fmt(&temp_alloc, "Authorization: %1", MakeAuthorization(signature, date, &temp_alloc)).ptr});
-        headers.Append({Fmt(&temp_alloc, "x-amz-date: %1", FormatRfcDate(date)).ptr});
-        headers.Append({Fmt(&temp_alloc, "x-amz-content-sha256: %1", FormatSha256(sha256)).ptr});
-        if (mimetype) {
-            headers.Append({Fmt(&temp_alloc, "Content-Type: %1", mimetype).ptr});
-        }
-
-        for (Size i = 0; i < headers.len - 1; i++) {
-            headers[i].next = headers.data + i + 1;
-        }
-    }
+    headers.len = PrepareHeaders("PUT", path.ptr, data, &temp_alloc, headers.data);
 
     // Set CURL options
     {
@@ -261,29 +240,11 @@ bool s3_Session::DeleteObject(Span<const char> key)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
 
-    int64_t now = GetUnixTime();
-    TimeSpec date = DecomposeTime(now, TimeMode::UTC);
-
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    // Compute SHA-256 and signature
-    uint8_t signature[32];
-    uint8_t sha256[32];
-    crypto_hash_sha256(sha256, nullptr, 0);
-    MakeSignature("DELETE", path.ptr, nullptr, date, sha256, signature);
-
-    // Prepare request headers
     LocalArray<curl_slist, 32> headers;
-    {
-        headers.Append({Fmt(&temp_alloc, "Authorization: %1", MakeAuthorization(signature, date, &temp_alloc)).ptr});
-        headers.Append({Fmt(&temp_alloc, "x-amz-date: %1", FormatRfcDate(date)).ptr});
-        headers.Append({Fmt(&temp_alloc, "x-amz-content-sha256: %1", FormatSha256(sha256)).ptr});
-
-        for (Size i = 0; i < headers.len - 1; i++) {
-            headers[i].next = headers.data + i + 1;
-        }
-    }
+    headers.len = PrepareHeaders("DELETE", path.ptr, {}, &temp_alloc, headers.data);
 
     // Set CURL options
     {
@@ -352,26 +313,8 @@ bool s3_Session::OpenAccess(const char *id, const char *key)
             return false;
         RG_DEFER { curl_easy_cleanup(curl); };
 
-        int64_t now = GetUnixTime();
-        TimeSpec date = DecomposeTime(now, TimeMode::UTC);
-
-        // Compute SHA-256 and signature
-        uint8_t signature[32];
-        uint8_t sha256[32];
-        crypto_hash_sha256(sha256, nullptr, 0);
-        MakeSignature("GET", path.ptr, nullptr, date, sha256, signature);
-
-        // Prepare request headers
         LocalArray<curl_slist, 32> headers;
-        {
-            headers.Append({Fmt(&temp_alloc, "Authorization: %1", MakeAuthorization(signature, date, &temp_alloc)).ptr});
-            headers.Append({Fmt(&temp_alloc, "x-amz-date: %1", FormatRfcDate(date)).ptr});
-            headers.Append({Fmt(&temp_alloc, "x-amz-content-sha256: %1", FormatSha256(sha256)).ptr});
-
-            for (Size i = 0; i < headers.len - 1; i++) {
-                headers[i].next = headers.data + i + 1;
-            }
-        }
+        headers.len = PrepareHeaders("GET", path.ptr, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -464,6 +407,34 @@ bool s3_Session::DetermineRegion(const char *url)
     return true;
 }
 
+Size s3_Session::PrepareHeaders(const char *method, const char *path, Span<const uint8_t> body,
+                                Allocator *alloc, Span<curl_slist> out_headers)
+{
+    int64_t now = GetUnixTime();
+    TimeSpec date = DecomposeTime(now, TimeMode::UTC);
+
+    // Compute SHA-256 and signature
+    uint8_t signature[32];
+    uint8_t sha256[32];
+    crypto_hash_sha256(sha256, body.ptr, (size_t)body.len);
+    MakeSignature(method, path, nullptr, date, sha256, signature);
+
+    Size len = 0;
+
+    // Prepare request headers
+    out_headers[len++].data = MakeAuthorization(signature, date, alloc).ptr;
+    out_headers[len++].data = Fmt(alloc, "x-amz-date: %1", FormatRfcDate(date)).ptr;
+    out_headers[len++].data = Fmt(alloc, "x-amz-content-sha256: %1", FormatSha256(sha256)).ptr;
+
+    // Link request headers
+    for (Size i = 0; i < len - 1; i++) {
+        out_headers.ptr[i].next = out_headers.ptr + i + 1;
+    }
+    out_headers[len - 1].next = nullptr;
+
+    return len;
+}
+
 static void HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[32])
 {
     RG_STATIC_ASSERT(crypto_hash_sha256_BYTES == 32);
@@ -521,7 +492,7 @@ Span<char> s3_Session::MakeAuthorization(const uint8_t signature[32], const Time
 
     HeapArray<char> buf(alloc);
 
-    Fmt(&buf, "AWS4-HMAC-SHA256 ");
+    Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
     Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", access_id, FormatYYYYMMDD(date), region);
     Fmt(&buf, "SignedHeaders=host;x-amz-content-sha256;x-amz-date, ");
     Fmt(&buf, "Signature=%1", FormatSha256(signature));

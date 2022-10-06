@@ -15,6 +15,8 @@
 
 #include "src/core/libcc/libcc.hh"
 
+struct curl_slist;
+
 namespace RG {
 
 class s3_Session {
@@ -44,6 +46,8 @@ private:
     bool OpenAccess(const char *id, const char *key);
     bool DetermineRegion(const char *url);
 
+    Size PrepareHeaders(const char *method, const char *path, Span<const uint8_t> body,
+                        Allocator *alloc, Span<curl_slist> out_headers);
     Span<char> MakeAuthorization(const uint8_t signature[32], const TimeSpec &date, Allocator *alloc);
     void MakeSignature(const char *method, const char *path, const char *query,
                        const TimeSpec &date, const uint8_t sha256[32], uint8_t out_signature[32]);
