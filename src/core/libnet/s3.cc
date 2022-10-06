@@ -14,7 +14,9 @@
 #include "src/core/libcc/libcc.hh"
 #include "s3.hh"
 #include "curl.hh"
+#include "http_misc.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/pugixml/src/pugixml.hpp"
 
 namespace RG {
 
@@ -178,6 +180,102 @@ void s3_Session::Close()
     str_alloc.ReleaseAll();
 }
 
+bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<const char *> *out_keys)
+{
+    BlockAllocator temp_alloc;
+
+    RG_DEFER_NC(out_guard, len = out_keys->len) { out_keys->RemoveFrom(len); };
+
+    CURL *curl = InitCurl();
+    if (!curl)
+        return false;
+    RG_DEFER { curl_easy_cleanup(curl); };
+
+    prefix = prefix ? prefix : "";
+
+    Span<const char> path;
+    Span<const char> url = MakeURL({}, &temp_alloc, &path);
+    const char *after = "";
+
+    // Reuse for performance
+    HeapArray<char> query;
+    HeapArray<uint8_t> xml;
+
+    for (;;) {
+        query.RemoveFrom(0);
+        xml.RemoveFrom(0);
+
+        Fmt(&query, "list-type=2&prefix="); http_EncodeUrlSafe(prefix, &query);
+        Fmt(&query, "&start-after="); http_EncodeUrlSafe(after, &query);
+
+        LocalArray<curl_slist, 32> headers;
+        headers.len = PrepareHeaders("GET", path.ptr, query.ptr, {}, &temp_alloc, headers.data);
+
+        // Set CURL options
+        {
+            bool success = true;
+
+            success &= !curl_easy_setopt(curl, CURLOPT_URL, Fmt(&temp_alloc, "%1?%2", url, query).ptr);
+            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+
+            success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                         +[](char *ptr, size_t, size_t nmemb, void *udata) {
+                HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+
+                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                xml->Append(buf);
+
+                return nmemb;
+            });
+            success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
+
+            if (!success) {
+                LogError("Failed to set libcurl options");
+                return false;
+            }
+        }
+
+        int status = PerformCurl(curl, "S3");
+        if (status < 0)
+            return false;
+        if (status != 200) {
+            LogError("Failed to list S3 objects with status %1", status);
+            return false;
+        }
+
+        pugi::xml_document doc;
+        {
+            pugi::xml_parse_result result = doc.load_buffer(xml.ptr, xml.len);
+
+            if (!result) {
+                LogError("Invalid XML returned by S3: %1", result.description());
+                return false;
+            }
+        }
+
+        pugi::xpath_node_set contents = doc.select_nodes("/ListBucketResult/Contents");
+        bool truncated = doc.select_node("/ListBucketResult/IsTruncated").node().text().as_bool();
+
+        for (const pugi::xpath_node &node: contents) {
+            const char *key = node.node().child("Key").text().get();
+
+            if (RG_LIKELY(key && key[0])) {
+                key = DuplicateString(key, alloc).ptr;
+                out_keys->Append(key);
+            }
+        }
+
+        if (!truncated)
+            break;
+        RG_ASSERT(contents.size() > 0);
+
+        after = out_keys->ptr[out_keys->len - 1];
+    }
+
+    out_guard.Disable();
+    return true;
+}
+
 bool s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj)
 {
     BlockAllocator temp_alloc;
@@ -193,7 +291,7 @@ bool s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
     LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("GET", path.ptr, {}, &temp_alloc, headers.data);
+    headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, &temp_alloc, headers.data);
 
     struct GetContext {
         Span<const char> key;
@@ -261,7 +359,7 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
     LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("PUT", path.ptr, data, &temp_alloc, headers.data);
+    headers.len = PrepareHeaders("PUT", path.ptr, nullptr, data, &temp_alloc, headers.data);
 
     // Set CURL options
     {
@@ -314,7 +412,7 @@ bool s3_Session::DeleteObject(Span<const char> key)
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
     LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("DELETE", path.ptr, {}, &temp_alloc, headers.data);
+    headers.len = PrepareHeaders("DELETE", path.ptr, nullptr, {}, &temp_alloc, headers.data);
 
     // Set CURL options
     {
@@ -384,7 +482,7 @@ bool s3_Session::OpenAccess(const char *id, const char *key)
         RG_DEFER { curl_easy_cleanup(curl); };
 
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path.ptr, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -477,8 +575,8 @@ bool s3_Session::DetermineRegion(const char *url)
     return true;
 }
 
-Size s3_Session::PrepareHeaders(const char *method, const char *path, Span<const uint8_t> body,
-                                Allocator *alloc, Span<curl_slist> out_headers)
+Size s3_Session::PrepareHeaders(const char *method, const char *path, const char *query,
+                                Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers)
 {
     int64_t now = GetUnixTime();
     TimeSpec date = DecomposeTime(now, TimeMode::UTC);
@@ -487,7 +585,7 @@ Size s3_Session::PrepareHeaders(const char *method, const char *path, Span<const
     uint8_t signature[32];
     uint8_t sha256[32];
     crypto_hash_sha256(sha256, body.ptr, (size_t)body.len);
-    MakeSignature(method, path, nullptr, date, sha256, signature);
+    MakeSignature(method, path, query, date, sha256, signature);
 
     Size len = 0;
 
