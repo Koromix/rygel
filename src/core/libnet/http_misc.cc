@@ -170,12 +170,12 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
     return true;
 }
 
-void http_EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
+void http_EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArray<char> *out_buf)
 {
-    for (Size i = 0; str[i]; i++) {
-        int c = str[i];
-
+    for (char c: str) {
         if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
+            out_buf->Append((char)c);
+        } else if (passthrough && strchr(passthrough, c)) {
             out_buf->Append((char)c);
         } else {
             Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));

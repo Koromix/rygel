@@ -32,7 +32,9 @@ const char *http_GetMimeType(Span<const char> extension,
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 16> *out_ranges);
 
-void http_EncodeUrlSafe(const char *str, HeapArray<char> *out_buf);
+void http_EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArray<char> *out_buf);
+static inline void http_EncodeUrlSafe(Span<const char> str, HeapArray<char> *out_buf)
+    { return http_EncodeUrlSafe(str, nullptr, out_buf); }
 
 bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io);
 

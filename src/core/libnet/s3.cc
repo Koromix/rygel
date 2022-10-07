@@ -746,10 +746,12 @@ Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Spa
     Size path_offset = buf.len;
 
     if (bucket) {
-        Fmt(&buf, "/%1", bucket);
+        buf.Append('/');
+        http_EncodeUrlSafe(bucket, &buf);
     }
     if (key.len) {
-        Fmt(&buf, "/%1", key);
+        buf.Append('/');
+        http_EncodeUrlSafe(key, "/", &buf);
     }
     if (buf.len == path_offset) {
         Fmt(&buf, "/");
