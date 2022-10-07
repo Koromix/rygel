@@ -2848,7 +2848,10 @@ public:
         } d;
         const void *ptr;
         LocalDate date;
-        TimeSpec time;
+        struct {
+            TimeSpec spec;
+            bool ms;
+        } time;
         struct {
             Size len;
             const char *chars;
@@ -2956,19 +2959,21 @@ static inline FmtArg FmtDiskSize(int64_t size)
     return arg;
 }
 
-static inline FmtArg FmtTimeISO(TimeSpec spec)
+static inline FmtArg FmtTimeISO(TimeSpec spec, bool ms = false)
 {
     FmtArg arg;
     arg.type = FmtType::TimeISO;
-    arg.u.time = spec;
+    arg.u.time.spec = spec;
+    arg.u.time.ms = ms;
     return arg;
 }
 
-static inline FmtArg FmtTimeNice(TimeSpec spec)
+static inline FmtArg FmtTimeNice(TimeSpec spec, bool ms = false)
 {
     FmtArg arg;
     arg.type = FmtType::TimeNice;
-    arg.u.time = spec;
+    arg.u.time.spec = spec;
+    arg.u.time.ms = ms;
     return arg;
 }
 
