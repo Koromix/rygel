@@ -688,9 +688,10 @@ bool RecordExporter::Export(const char *filename)
 
         Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2");
         if (table.root) {
-            Fmt(&sql, ", ?3");
+            Fmt(&sql, ", ?3, ?4, ?5");
+        } else {
+            Fmt(&sql, ", ?3, ?4");
         }
-        Fmt(&sql, ", ?4, ?5");
         for (Size i = 0; i < table.ordered_columns.len; i++) {
             Fmt(&sql, ", ?%1", i + 5 + table.root);
         }
@@ -710,8 +711,8 @@ bool RecordExporter::Export(const char *filename)
             if (table.root) {
                 sqlite3_bind_text(stmt, 3, table.rows[i].hid, -1, SQLITE_STATIC);
             }
-            sqlite3_bind_text(stmt, 4, table.rows[i].ctime, -1, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 5, table.rows[i].mtime, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 3 + table.root, table.rows[i].ctime, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 4 + table.root, table.rows[i].mtime, -1, SQLITE_STATIC);
             for (Size j = 0; j < table.ordered_columns.len; j++) {
                 const Column *col = table.ordered_columns[j];
                 sqlite3_bind_text(stmt, (int)j + 5 + table.root, col->values[i], -1, SQLITE_STATIC);
