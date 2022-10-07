@@ -23,7 +23,9 @@ struct s3_Config {
     const char *scheme = nullptr;
     const char *host = nullptr;
     const char *region = nullptr; // Can be NULL
-    const char *bucket = nullptr; // Can be NULL
+
+    const char *bucket = nullptr;
+    bool path_mode = false;
 
     const char *access_id = nullptr;
     const char *access_key = nullptr;
@@ -38,8 +40,10 @@ bool s3_DecodeURL(const char *url, s3_Config *out_config);
 class s3_Session {
     const char *scheme = nullptr;
     const char *host = nullptr;
-    const char *bucket = nullptr;
     const char *region = nullptr;
+
+    const char *bucket = nullptr;
+    bool path_mode = false;
 
     const char *access_id = nullptr;
     const char *access_key = nullptr;

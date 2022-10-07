@@ -37,6 +37,10 @@ bool s3_Config::Validate() const
         LogError("Missing S3 host");
         valid = false;
     }
+    if (!bucket) {
+        LogError("Missing S3 bucket");
+        valid = false;
+    }
 
     return valid;
 }
@@ -75,34 +79,51 @@ bool s3_DecodeURL(const char *url, s3_Config *out_config)
     Span<const char> host = GetUrlPart(h, CURLUPART_HOST, &config.str_alloc);
     const char *path = GetUrlPart(h, CURLUPART_PATH, &config.str_alloc).ptr;
 
+    // Extract bucket name from path (if any)
     if (path && !TestStr(path, "/")) {
-        Span<const char> bucket = SplitStr(path + 1, '/');
-        config.bucket = DuplicateString(bucket, &config.str_alloc).ptr;
+        Span<const char> remain;
+        Span<const char> name = SplitStr(path + 1, '/', &remain);
+
+        if (remain.len) {
+            LogError("Too many parts in S3 URL '%1'", url);
+            return false;
+        }
+
+        config.bucket = DuplicateString(name, &config.str_alloc).ptr;
+        config.path_mode = true;
     }
-    if (EndsWith(host, ".amazonaws.com")) {
+
+    // Extract bucket and region from host name
+    {
         Span<const char> remain = host;
 
-        // Find bucket name
         if (!StartsWith(remain, "s3.")) {
-            if (config.bucket) {
-                LogError("Duplicate bucket name in S3 URL '%1'", url);
-                return false;
+            Span<const char> part = SplitStr(remain, '.', &remain);
+
+            if (StartsWith(remain, "s3.")) {
+                if (config.path_mode) {
+                    LogError("Duplicate bucket name in S3 URL '%1'", url);
+                    return false;
+                }
+
+                config.bucket = DuplicateString(part, &config.str_alloc).ptr;
+            } else {
+                config.region = DuplicateString(part, &config.str_alloc).ptr;
+            }
+        }
+
+        if (!config.region) {
+            if (StartsWith(remain, "s3.")) {
+                SplitStr(remain, '.', &remain);
             }
 
-            Span<const char> part = SplitStr(remain, '.', &remain);
-            config.bucket = DuplicateString(part, &config.str_alloc).ptr;
-        }
+            Size dots = (Size)std::count_if(remain.begin(), remain.end(), [](char c) { return c == '.'; });
 
-        if (StartsWith(remain, "s3.")) {
-            SplitStr(remain, '.', &remain);
+            if (dots >= 2) {
+                Span<const char> part = SplitStr(remain, '.');
+                config.region = DuplicateString(part, &config.str_alloc).ptr;
+            }
         }
-        if (remain != "amazonaws.com") {
-            Span<const char> part = SplitStr(remain, '.');
-            config.region = DuplicateString(part, &config.str_alloc).ptr;
-        }
-    } else {
-        LogError("Invalid or incomplete S3 URL '%1' (no bucket name)", url);
-        return false;
     }
 
     config.scheme = scheme;
@@ -131,47 +152,6 @@ static FmtArg FormatYYYYMMDD(const TimeSpec &date)
     return arg;
 }
 
-static FmtArg FormatRfcDate(const TimeSpec &date)
-{
-    FmtArg arg;
-
-    const char *week_day = nullptr;
-    switch (date.week_day) {
-        case 1: { week_day = "Mon"; } break;
-        case 2: { week_day = "Tue"; } break;
-        case 3: { week_day = "Wed"; } break;
-        case 4: { week_day = "Thu"; } break;
-        case 5: { week_day = "Fri"; } break;
-        case 6: { week_day = "Sat"; } break;
-        case 7: { week_day = "Sun"; } break;
-    }
-    RG_ASSERT(week_day);
-
-    const char *month = nullptr;
-    switch (date.month) {
-        case 1: { month = "Jan"; } break;
-        case 2: { month = "Feb"; } break;
-        case 3: { month = "Mar"; } break;
-        case 4: { month = "Apr"; } break;
-        case 5: { month = "May"; } break;
-        case 6: { month = "Jun"; } break;
-        case 7: { month = "Jul"; } break;
-        case 8: { month = "Aug"; } break;
-        case 9: { month = "Sep"; } break;
-        case 10: { month = "Oct"; } break;
-        case 11: { month = "Nov"; } break;
-        case 12: { month = "Dec"; } break;
-    }
-    RG_ASSERT(month);
-
-    arg.type = FmtType::Buffer;
-    Fmt(arg.u.buf, "%1, %2 %3 %4 %5:%6:%7 GMT",
-                   week_day, date.day, month, date.year,
-                   FmtArg(date.hour).Pad0(-2), FmtArg(date.min).Pad0(-2), FmtArg(date.sec).Pad0(-2));
-
-    return arg;
-}
-
 bool s3_Session::Open(const s3_Config &config)
 {
     RG_ASSERT(!open);
@@ -187,7 +167,8 @@ bool s3_Session::Open(const s3_Config &config)
         const char *region = getenv("AWS_REGION");
         this->region = region ? DuplicateString(region, &str_alloc).ptr : nullptr;
     }
-    this->bucket = config.bucket ? DuplicateString(config.bucket, &str_alloc).ptr : nullptr;
+    this->bucket = DuplicateString(config.bucket, &str_alloc).ptr;
+    this->path_mode = config.path_mode;
 
     return OpenAccess(config.access_id, config.access_key);
 }
@@ -615,7 +596,7 @@ Size s3_Session::PrepareHeaders(const char *method, const char *path, const char
 
     // Prepare request headers
     out_headers[len++].data = MakeAuthorization(signature, date, alloc).ptr;
-    out_headers[len++].data = Fmt(alloc, "x-amz-date: %1", FormatRfcDate(date)).ptr;
+    out_headers[len++].data = Fmt(alloc, "x-amz-date: %1", FmtTimeISO(date)).ptr;
     out_headers[len++].data = Fmt(alloc, "x-amz-content-sha256: %1", FormatSha256(sha256)).ptr;
 
     // Link request headers
@@ -689,7 +670,7 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
         LocalArray<char, 4096> buf;
 
         buf.len += Fmt(buf.TakeAvailable(), "%1\n%2\n%3\n", method, path, query ? query : "").len;
-        buf.len += Fmt(buf.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", host, FormatSha256(sha256), FormatRfcDate(date)).len;
+        buf.len += Fmt(buf.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", host, FormatSha256(sha256), FmtTimeISO(date)).len;
         buf.len += Fmt(buf.TakeAvailable(), "host;x-amz-content-sha256;x-amz-date\n").len;
         buf.len += Fmt(buf.TakeAvailable(), "%1", FormatSha256(sha256)).len;
 
@@ -700,7 +681,7 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
     LocalArray<char, 4096> string;
     {
         string.len += Fmt(string.TakeAvailable(), "AWS4-HMAC-SHA256\n").len;
-        string.len += Fmt(string.TakeAvailable(), "%1\n", FormatRfcDate(date)).len;
+        string.len += Fmt(string.TakeAvailable(), "%1\n", FmtTimeISO(date)).len;
         string.len += Fmt(string.TakeAvailable(), "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), region).len;
         string.len += Fmt(string.TakeAvailable(), "%1", FormatSha256(canonical)).len;
     }
@@ -745,7 +726,7 @@ Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Spa
     Fmt(&buf, "%1://%2", scheme, host);
     Size path_offset = buf.len;
 
-    if (bucket) {
+    if (path_mode) {
         buf.Append('/');
         http_EncodeUrlSafe(bucket, &buf);
     }
