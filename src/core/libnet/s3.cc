@@ -25,6 +25,22 @@ namespace RG {
     #undef GetObject
 #endif
 
+bool s3_Config::Validate() const
+{
+    bool valid = true;
+
+    if (!scheme) {
+        LogError("Missing S3 protocol");
+        valid = false;
+    }
+    if (!host) {
+        LogError("Missing S3 host");
+        valid = false;
+    }
+
+    return valid;
+}
+
 static Span<const char> GetUrlPart(CURLU *h, CURLUPart part, Allocator *alloc)
 {
     char *buf = nullptr;
@@ -38,8 +54,65 @@ static Span<const char> GetUrlPart(CURLU *h, CURLUPart part, Allocator *alloc)
         Span<const char> str = DuplicateString(buf, alloc);
         return str;
     } else {
-        return "";
+        return {};
     }
+}
+
+bool s3_DecodeURL(const char *url, s3_Config *out_config)
+{
+    s3_Config config;
+
+    CURLU *h = curl_url();
+    RG_DEFER { curl_url_cleanup(h); };
+
+    CURLUcode ret = curl_url_set(h, CURLUPART_URL, url, 0);
+    if (ret != CURLUE_OK) {
+        LogError("Failed to parse URL '%1': %2", url, curl_url_strerror(ret));
+        return false;
+    }
+
+    const char *scheme = GetUrlPart(h, CURLUPART_SCHEME, &config.str_alloc).ptr;
+    Span<const char> host = GetUrlPart(h, CURLUPART_HOST, &config.str_alloc);
+    const char *path = GetUrlPart(h, CURLUPART_PATH, &config.str_alloc).ptr;
+
+    if (path && !TestStr(path, "/")) {
+        Span<const char> bucket = SplitStr(path + 1, '/');
+        config.bucket = DuplicateString(bucket, &config.str_alloc).ptr;
+    }
+    if (EndsWith(host, ".amazonaws.com")) {
+        Span<const char> remain = host;
+
+        // Find bucket name
+        if (!StartsWith(remain, "s3.")) {
+            if (config.bucket) {
+                LogError("Duplicate bucket name in S3 URL '%1'", url);
+                return false;
+            }
+
+            Span<const char> part = SplitStr(remain, '.', &remain);
+            config.bucket = DuplicateString(part, &config.str_alloc).ptr;
+        }
+
+        if (StartsWith(remain, "s3.")) {
+            SplitStr(remain, '.', &remain);
+        }
+        if (remain != "amazonaws.com") {
+            Span<const char> part = SplitStr(remain, '.');
+            config.region = DuplicateString(part, &config.str_alloc).ptr;
+        }
+    } else {
+        LogError("Invalid or incomplete S3 URL '%1' (no bucket name)", url);
+        return false;
+    }
+
+    config.scheme = scheme;
+    config.host = host.ptr;
+
+    if (!config.Validate())
+        return false;
+
+    std::swap(*out_config, config);
+    return true;
 }
 
 static FmtArg FormatSha256(const uint8_t sha256[32])
@@ -99,78 +172,24 @@ static FmtArg FormatRfcDate(const TimeSpec &date)
     return arg;
 }
 
-bool s3_Session::Open(const char *url, const char *id, const char *key)
+bool s3_Session::Open(const s3_Config &config)
 {
     RG_ASSERT(!open);
 
-    CURLU *h = curl_url();
-    RG_DEFER { curl_url_cleanup(h); };
-
-    CURLUcode ret = curl_url_set(h, CURLUPART_URL, url, 0);
-    if (ret != CURLUE_OK) {
-        LogError("Failed to parse URL '%1': %2", url, curl_url_strerror(ret));
+    if (!config.Validate())
         return false;
-    }
 
-    const char *scheme = GetUrlPart(h, CURLUPART_SCHEME, &str_alloc).ptr;
-    Span<const char> host = GetUrlPart(h, CURLUPART_HOST, &str_alloc);
-    const char *path = GetUrlPart(h, CURLUPART_PATH, &str_alloc).ptr;
-
-    if (!host.len) {
-        LogError("Invalid URL host in '%1'", url);
-        return false;
-    }
-
-    if (path && !TestStr(path, "/")) {
-        Span<const char> bucket = SplitStr(path + 1, '/');
-        this->bucket = DuplicateString(bucket, &str_alloc).ptr;
-    }
-    if (EndsWith(host, ".amazonaws.com")) {
-        Span<const char> remain = host;
-
-        // Find bucket name
-        if (!StartsWith(remain, "s3.")) {
-            if (this->bucket) {
-                LogError("Duplicate bucket name in S3 URL '%1'", url);
-                return false;
-            }
-
-            Span<const char> part = SplitStr(remain, '.', &remain);
-            this->bucket = DuplicateString(part, &str_alloc).ptr;
-        }
-
-        if (StartsWith(remain, "s3.")) {
-            SplitStr(remain, '.', &remain);
-        }
-        if (remain != "amazonaws.com") {
-            Span<const char> part = SplitStr(remain, '.');
-            this->region = DuplicateString(part, &str_alloc).ptr;
-        }
+    this->scheme = DuplicateString(config.scheme, &str_alloc).ptr;
+    this->host = DuplicateString(config.host, &str_alloc).ptr;
+    if (config.region) {
+        this->region = DuplicateString(config.region, &str_alloc).ptr;
     } else {
-        LogError("Invalid or incomplete S3 URL '%1' (no bucket name)", url);
-        return false;
+        const char *region = getenv("AWS_REGION");
+        this->region = region ? DuplicateString(region, &str_alloc).ptr : nullptr;
     }
+    this->bucket = config.bucket ? DuplicateString(config.bucket, &str_alloc).ptr : nullptr;
 
-    this->scheme = scheme;
-    this->host = host.ptr;
-
-    return OpenAccess(id, key);
-}
-
-bool s3_Session::Open(const char *host, const char *region, const char *bucket, const char *id, const char *key)
-{
-    RG_ASSERT(!open);
-
-    if (!region) {
-        region = getenv("AWS_REGION");
-    }
-
-    this->scheme = "https";
-    this->host = DuplicateString(host, &str_alloc).ptr;
-    this->region = region ? DuplicateString(region, &str_alloc).ptr : nullptr;
-    this->bucket = bucket ? DuplicateString(bucket, &str_alloc).ptr : nullptr;
-
-    return OpenAccess(id, key);
+    return OpenAccess(config.access_id, config.access_key);
 }
 
 void s3_Session::Close()

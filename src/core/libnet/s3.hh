@@ -19,6 +19,22 @@ struct curl_slist;
 
 namespace RG {
 
+struct s3_Config {
+    const char *scheme = nullptr;
+    const char *host = nullptr;
+    const char *region = nullptr; // Can be NULL
+    const char *bucket = nullptr; // Can be NULL
+
+    const char *access_id = nullptr;
+    const char *access_key = nullptr;
+
+    BlockAllocator str_alloc;
+
+    bool Validate() const;
+};
+
+bool s3_DecodeURL(const char *url, s3_Config *out_config);
+
 class s3_Session {
     const char *scheme = nullptr;
     const char *host = nullptr;
@@ -35,8 +51,7 @@ class s3_Session {
 public:
     ~s3_Session() { Close(); }
 
-    bool Open(const char *url, const char *id, const char *key);
-    bool Open(const char *host, const char *region, const char *bucket, const char *id, const char *key);
+    bool Open(const s3_Config &config);
     void Close();
 
     bool ListObjects(const char *prefix, Allocator *alloc, HeapArray<const char *> *out_keys);
