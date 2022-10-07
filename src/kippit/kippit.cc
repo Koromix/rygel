@@ -399,6 +399,15 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return 1;
     }
 
+    if (sodium_init() < 0) {
+        LogError("Failed to initialize libsodium");
+        return 1;
+    }
+    if (curl_global_init(CURL_GLOBAL_ALL)) {
+        LogError("Failed to initialize libcurl");
+        return 1;
+    }
+
     const char *cmd = argv[1];
     Span<const char *> arguments((const char **)argv + 2, argc - 2);
 
