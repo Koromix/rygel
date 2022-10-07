@@ -224,12 +224,11 @@ xor_buf(unsigned char *out, const unsigned char *in, size_t n)
  * We barely enable anything on Clang because instrinsic pragmas do not
  * work correctly there.
  */
-#if defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86)
+#if defined(__amd64__) || defined(__i386__) || defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86)
 # define NATIVE_LITTLE_ENDIAN 1
 # if defined(__GNUC__)
 #  define HAVE_MEMSET_S    1
 #  define HAVE_ATOMIC_OPS  1
-#  define HAVE_INTRIN_H    1
 #  define HAVE_MMINTRIN_H  1
 #  define HAVE_EMMINTRIN_H 1
 #  define HAVE_PMMINTRIN_H 1
@@ -237,13 +236,14 @@ xor_buf(unsigned char *out, const unsigned char *in, size_t n)
 #  define HAVE_SMMINTRIN_H 1
 #  define HAVE_AVXINTRIN_H 1
 #  define HAVE_WMMINTRIN_H 1
-#  ifdef _M_X64
+#  if defined(__amd64) || defined(_M_X64)
 #   define HAVE_AVX2INTRIN_H 1
 #  endif
-#  if __GNUC__ >= 6 && defined(_M_X64)
-#   define HAVE_AVX512FINTRIN_H
+#  if __GNUC__ >= 6 && (defined(__amd64) || defined(_M_X64))
+#   define HAVE_AVX512FINTRIN_H 1
 #  endif
 #  define HAVE_RDRAND 1
+#  define HAVE_CPUID  1
 # elif defined(__clang__)
 #  include <intrin.h>
 #  define HAVE_MEMSET_S    1
