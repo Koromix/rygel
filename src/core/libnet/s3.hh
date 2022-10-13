@@ -60,6 +60,7 @@ public:
 
     bool ListObjects(const char *prefix, Allocator *alloc, HeapArray<const char *> *out_keys);
     bool GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj);
+    bool HasObject(Span<const char> key);
     bool PutObject(Span<const char> key, Span<const uint8_t> data, const char *mimetype = nullptr);
     bool DeleteObject(Span<const char> key);
 

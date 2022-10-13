@@ -351,6 +351,47 @@ bool s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     return true;
 }
 
+bool s3_Session::HasObject(Span<const char> key)
+{
+    BlockAllocator temp_alloc;
+
+    CURL *curl = InitCurl();
+    if (!curl)
+        return false;
+    RG_DEFER { curl_easy_cleanup(curl); };
+
+    Span<const char> path;
+    Span<const char> url = MakeURL(key, &temp_alloc, &path);
+
+    LocalArray<curl_slist, 32> headers;
+    headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, {}, &temp_alloc, headers.data);
+
+    // Set CURL options
+    {
+        bool success = true;
+
+        success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+        success &= !curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+
+        if (!success) {
+            LogError("Failed to set libcurl options");
+            return false;
+        }
+    }
+
+    int status = PerformCurl(curl, "S3");
+    if (status < 0)
+        return false;
+    if (status != 200 && status != 404) {
+        LogError("Failed to get S3 object with status %1", status);
+        return false;
+    }
+
+    bool exists = (status == 200);
+    return exists;
+}
+
 bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const char *mimetype)
 {
     BlockAllocator temp_alloc;
