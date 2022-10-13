@@ -19,9 +19,17 @@ namespace RG {
 
 static const int MaxPathSize = 4096 - 128;
 
+#pragma pack(push, 1)
+struct KeyData {
+    uint8_t salt[16];
+    uint8_t nonce[crypto_secretbox_NONCEBYTES];
+    uint8_t cypher[crypto_secretbox_MACBYTES + 32];
+};
+#pragma pack(pop)
+
 class LocalDisk: public kt_Disk {
 public:
-    LocalDisk(Span<const char> directory, kt_DiskMode mode, const uint8_t skey[32], const uint8_t pkey[32]);
+    LocalDisk(const char *path, const char *pwd);
     ~LocalDisk() override;
 
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
@@ -29,14 +37,97 @@ public:
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
 };
 
-LocalDisk::LocalDisk(Span<const char> directory, kt_DiskMode mode, const uint8_t skey[32], const uint8_t pkey[32])
+static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
 {
-    directory = NormalizePath(directory, GetWorkingDirectory(), &str_alloc);
-    url = (directory.len <= MaxPathSize) ? directory.ptr : nullptr;
+    RG_STATIC_ASSERT(crypto_pwhash_SALTBYTES == 16);
 
-    this->mode = mode;
-    memcpy(this->skey, skey, RG_SIZE(this->skey));
-    memcpy(this->pkey, pkey, RG_SIZE(this->pkey));
+    if (crypto_pwhash(out_key, 32, pwd, strlen(pwd), salt, crypto_pwhash_OPSLIMIT_INTERACTIVE,
+                      crypto_pwhash_MEMLIMIT_INTERACTIVE, crypto_pwhash_ALG_ARGON2ID13) != 0) {
+        LogError("Failed to derive key from password (exhausted resource?)");
+        return false;
+    }
+
+    return true;
+}
+
+static bool WriteKey(const char *filename, const char *pwd, const uint8_t payload[32])
+{
+    KeyData data;
+
+    randombytes_buf(data.salt, RG_SIZE(data.salt));
+    randombytes_buf(data.nonce, RG_SIZE(data.nonce));
+
+    uint8_t key[32];
+    if (!DeriveKey(pwd, data.salt, key))
+        return false;
+
+    crypto_secretbox_easy(data.cypher, payload, 32, data.nonce, key);
+
+    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
+    return WriteFile(buf, filename);
+}
+
+static bool ReadKey(const char *filename, const char *pwd, uint8_t *out_payload, bool *out_error)
+{
+    KeyData data;
+
+    // Read file data
+    {
+        Span<uint8_t> buf = MakeSpan((uint8_t *)&data, RG_SIZE(data));
+
+        if (!ReadFile(filename, buf)) {
+            *out_error = true;
+            return false;
+        }
+    }
+
+    uint8_t key[32];
+    if (!DeriveKey(pwd, data.salt, key)) {
+        *out_error = true;
+        return false;
+    }
+
+    bool success = !crypto_secretbox_open_easy(out_payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key);
+    return success;
+}
+
+LocalDisk::LocalDisk(const char *path, const char *pwd)
+{
+    Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &str_alloc);
+
+    // Sanity checks
+    if (directory.len > MaxPathSize) {
+        LogError("Directory path '%1' is too long", directory);
+        return;
+    }
+    if (!TestFile(directory.ptr, FileType::Directory)) {
+        LogError("Directory '%1' does not exist", directory);
+        return;
+    }
+
+    const char *full_filename = Fmt(&str_alloc, "%1%/keys/full", directory).ptr;
+    const char *write_filename = Fmt(&str_alloc, "%1%/keys/write", directory).ptr;
+
+    // Open disk and determine mode
+    {
+        bool error = false;
+
+        if (ReadKey(write_filename, pwd, pkey, &error)) {
+            mode = kt_DiskMode::WriteOnly;
+            memset(skey, 0, RG_SIZE(skey));
+        } else if (ReadKey(full_filename, pwd, skey, &error)) {
+            mode = kt_DiskMode::ReadWrite;
+            crypto_scalarmult_base(pkey, skey);
+        } else {
+            if (!error) {
+                LogError("Failed to open repository (wrong password?)");
+            }
+            return;
+        }
+    }
+
+    // We're good!
+    url = directory.ptr;
 }
 
 LocalDisk::~LocalDisk()
@@ -130,68 +221,6 @@ bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char
     return true;
 }
 
-static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
-{
-    RG_STATIC_ASSERT(crypto_pwhash_SALTBYTES == 16);
-
-    if (crypto_pwhash(out_key, 32, pwd, strlen(pwd), salt, crypto_pwhash_OPSLIMIT_INTERACTIVE,
-                      crypto_pwhash_MEMLIMIT_INTERACTIVE, crypto_pwhash_ALG_ARGON2ID13) != 0) {
-        LogError("Failed to derive key from password (exhausted resource?)");
-        return false;
-    }
-
-    return true;
-}
-
-#pragma pack(push, 1)
-struct KeyData {
-    uint8_t salt[16];
-    uint8_t nonce[crypto_secretbox_NONCEBYTES];
-    uint8_t cypher[crypto_secretbox_MACBYTES + 32];
-};
-#pragma pack(pop)
-
-static bool WriteKey(const char *filename, const char *pwd, const uint8_t payload[32])
-{
-    KeyData data;
-
-    randombytes_buf(data.salt, RG_SIZE(data.salt));
-    randombytes_buf(data.nonce, RG_SIZE(data.nonce));
-
-    uint8_t key[32];
-    if (!DeriveKey(pwd, data.salt, key))
-        return false;
-
-    crypto_secretbox_easy(data.cypher, payload, 32, data.nonce, key);
-
-    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
-    return WriteFile(buf, filename);
-}
-
-static bool ReadKey(const char *filename, const char *pwd, uint8_t *out_payload, bool *out_error)
-{
-    KeyData data;
-
-    // Read file data
-    {
-        Span<uint8_t> buf = MakeSpan((uint8_t *)&data, RG_SIZE(data));
-
-        if (!ReadFile(filename, buf)) {
-            *out_error = true;
-            return false;
-        }
-    }
-
-    uint8_t key[32];
-    if (!DeriveKey(pwd, data.salt, key)) {
-        *out_error = true;
-        return false;
-    }
-
-    bool success = !crypto_secretbox_open_easy(out_payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key);
-    return success;
-}
-
 bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd)
 {
     BlockAllocator temp_alloc;
@@ -280,45 +309,10 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
 
 kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)
 {
-    BlockAllocator temp_alloc;
+    kt_Disk *disk = new LocalDisk(path, pwd);
 
-    Span<const char> directory = TrimStrRight(path, RG_PATH_SEPARATORS);
-
-    // Sanity checks
-    if (!TestFile(path, FileType::Directory)) {
-        LogError("Directory '%1' does not exist", directory);
-        return nullptr;
-    }
-
-    const char *full_filename = Fmt(&temp_alloc, "%1%/keys/full", directory).ptr;
-    const char *write_filename = Fmt(&temp_alloc, "%1%/keys/write", directory).ptr;
-
-    // Open disk and determine mode
-    kt_DiskMode mode;
-    uint8_t skey[32];
-    uint8_t pkey[32];
-    {
-        bool error = false;
-
-        if (ReadKey(write_filename, pwd, pkey, &error)) {
-            mode = kt_DiskMode::WriteOnly;
-            memset(skey, 0, RG_SIZE(skey));
-        } else if (ReadKey(full_filename, pwd, skey, &error)) {
-            mode = kt_DiskMode::ReadWrite;
-            crypto_scalarmult_base(pkey, skey);
-        } else {
-            if (!error) {
-                LogError("Failed to open repository (wrong password?)");
-            }
-            return nullptr;
-        }
-    }
-
-    kt_Disk *disk = new LocalDisk(directory, mode, skey, pkey);
     if (!disk->GetURL()) {
         delete disk;
-
-        LogError("Directory path '%1' is too long", directory);
         return nullptr;
     }
 
