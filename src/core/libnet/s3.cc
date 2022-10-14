@@ -247,7 +247,7 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
             }
         }
 
-        int status = PerformCurl(curl, "S3");
+        int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
         if (status < 0)
             return false;
         if (status != 200) {
@@ -337,12 +337,12 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
         }
     }
 
-    int status = PerformCurl(curl, "S3");
+    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
-        return -1;
+        return false;
     if (status != 200) {
         LogError("Failed to get S3 object with status %1", status);
-        return -1;
+        return false;
     }
 
     return ctx.len;
@@ -407,12 +407,12 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
         }
     }
 
-    int status = PerformCurl(curl, "S3");
+    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
-        return -1;
+        return false;
     if (status != 200) {
         LogError("Failed to get S3 object with status %1", status);
-        return -1;
+        return false;
     }
 
     out_guard.Disable();
@@ -448,11 +448,11 @@ bool s3_Session::HasObject(Span<const char> key)
         }
     }
 
-    int status = PerformCurl(curl, "S3");
+    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
         return false;
     if (status != 200 && status != 404) {
-        LogError("Failed to get S3 object with status %1", status);
+        LogError("Failed to test S3 object with status %1", status);
         return false;
     }
 
@@ -502,7 +502,7 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
         }
     }
 
-    int status = PerformCurl(curl, "S3");
+    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
         return false;
     if (status != 200) {
@@ -542,7 +542,7 @@ bool s3_Session::DeleteObject(Span<const char> key)
         }
     }
 
-    int status = PerformCurl(curl, "S3");
+    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
         return false;
     if (status != 204) {
@@ -627,11 +627,11 @@ bool s3_Session::OpenAccess(const char *id, const char *key)
             }
         }
 
-        int status = PerformCurl(curl, "S3");
+        int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
         if (status < 0)
             return false;
         if (status != 200 && status != 201) {
-            LogError("Failed to authenticate to S3 bucket (%1)", status);
+            LogError("Failed to authenticate to S3 bucket with status %1", status);
             return false;
         }
     }
@@ -677,7 +677,7 @@ bool s3_Session::DetermineRegion(const char *url)
         }
     }
 
-    int status = PerformCurl(curl, "S3");
+    int status = PerformCurl(curl, "S3", [&](int i, int) { return i < 5 && !region; });
     if (status < 0)
         return false;
 

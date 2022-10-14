@@ -59,7 +59,7 @@ CURL *InitCurl()
     return curl;
 }
 
-int PerformCurl(CURL *curl, const char *reason)
+int PerformCurl(CURL *curl, const char *reason, FunctionRef<bool(int, int)> retry)
 {
     CURLcode res = curl_easy_perform(curl);
 
@@ -72,17 +72,27 @@ int PerformCurl(CURL *curl, const char *reason)
     LogDebug("Curl: %1 %2", method, url);
 #endif
 
-    if (res != CURLE_OK) {
-        if (res != CURLE_WRITE_ERROR) {
-            LogError("Failed to perform %1 call: %2", reason, curl_easy_strerror(res));
+    for (int i = 0;; i++) {
+        if (res != CURLE_OK) {
+            if (res != CURLE_WRITE_ERROR) {
+                LogError("Failed to perform %1 call: %2", reason, curl_easy_strerror(res));
+            }
+            return -1;
         }
-        return -1;
+
+        long status = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+
+        if (!retry.IsValid() || !retry(i, (int)status))
+            return (int)status;
+
+        int delay = 200 + 200 * (std::min(i, 5) << 3);
+        delay += GetRandomIntSafe(0, delay);
+
+        WaitDelay(delay);
     }
 
-    long status = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
-
-    return (int)status;
+    RG_UNREACHABLE();
 }
 
 }
