@@ -281,15 +281,76 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
     return true;
 }
 
-bool s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj)
+Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 {
     BlockAllocator temp_alloc;
 
-    RG_DEFER_NC(out_guard, len = out_obj->len) { out_obj->RemoveFrom(len); };
+    CURL *curl = InitCurl();
+    if (!curl)
+        return -1;
+    RG_DEFER { curl_easy_cleanup(curl); };
+
+    Span<const char> path;
+    Span<const char> url = MakeURL(key, &temp_alloc, &path);
+
+    LocalArray<curl_slist, 32> headers;
+    headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, &temp_alloc, headers.data);
+
+    struct GetContext {
+        Span<const char> key;
+        Span<uint8_t> out;
+        Size len;
+    };
+    GetContext ctx = {};
+    ctx.key = key;
+    ctx.out = out_buf;
+
+    // Set CURL options
+    {
+        bool success = true;
+
+        success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+
+        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                     +[](char *ptr, size_t, size_t nmemb, void *udata) {
+            GetContext *ctx = (GetContext *)udata;
+
+            Size copy_len = std::min((Size)nmemb, ctx->out.len - ctx->len);
+            memcpy_safe(ctx->out.ptr + ctx->len, ptr, (size_t)copy_len);
+            ctx->len += copy_len;
+
+            return nmemb;
+        });
+        success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
+
+        if (!success) {
+            LogError("Failed to set libcurl options");
+            return -1;
+        }
+    }
+
+    int status = PerformCurl(curl, "S3");
+    if (status < 0)
+        return -1;
+    if (status != 200) {
+        LogError("Failed to get S3 object with status %1", status);
+        return -1;
+    }
+
+    return ctx.len;
+}
+
+Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj)
+{
+    BlockAllocator temp_alloc;
+
+    Size prev_len = out_obj->len;
+    RG_DEFER_N(out_guard) { out_obj->RemoveFrom(prev_len); };
 
     CURL *curl = InitCurl();
     if (!curl)
-        return false;
+        return -1;
     RG_DEFER { curl_easy_cleanup(curl); };
 
     Span<const char> path;
@@ -335,20 +396,20 @@ bool s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
 
         if (!success) {
             LogError("Failed to set libcurl options");
-            return false;
+            return -1;
         }
     }
 
     int status = PerformCurl(curl, "S3");
     if (status < 0)
-        return false;
+        return -1;
     if (status != 200) {
         LogError("Failed to get S3 object with status %1", status);
-        return false;
+        return -1;
     }
 
     out_guard.Disable();
-    return true;
+    return out_obj->len - prev_len;
 }
 
 bool s3_Session::HasObject(Span<const char> key)
