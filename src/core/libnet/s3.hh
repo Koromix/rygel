@@ -23,7 +23,6 @@ struct s3_Config {
     const char *scheme = nullptr;
     const char *host = nullptr;
     const char *region = nullptr; // Can be NULL
-
     const char *bucket = nullptr;
     bool path_mode = false;
 
@@ -41,9 +40,10 @@ class s3_Session {
     const char *scheme = nullptr;
     const char *host = nullptr;
     const char *region = nullptr;
-
     const char *bucket = nullptr;
     bool path_mode = false;
+
+    const char *url = nullptr;
 
     const char *access_id = nullptr;
     const char *access_key = nullptr;
@@ -57,6 +57,9 @@ public:
 
     bool Open(const s3_Config &config);
     void Close();
+
+    bool IsValid() const { return open; }
+    const char *GetURL() const { return url; }
 
     bool ListObjects(const char *prefix, Allocator *alloc, HeapArray<const char *> *out_keys);
     Size GetObject(Span<const char> key, Span<uint8_t> out_buf);

@@ -170,6 +170,12 @@ bool s3_Session::Open(const s3_Config &config)
     this->bucket = DuplicateString(config.bucket, &str_alloc).ptr;
     this->path_mode = config.path_mode;
 
+    if (path_mode) {
+        url = Fmt(&str_alloc, "%1://%2/%3", scheme, host, bucket).ptr;
+    } else {
+        url = Fmt(&str_alloc, "%1://%2/", scheme, host).ptr;
+    }
+
     return OpenAccess(config.access_id, config.access_key);
 }
 
@@ -179,6 +185,7 @@ void s3_Session::Close()
 
     scheme = nullptr;
     host = nullptr;
+    url = nullptr;
     region = nullptr;
     bucket = nullptr;
 
