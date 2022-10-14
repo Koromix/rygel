@@ -241,9 +241,9 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
 
     // XXX: Make sure each path does not clobber a previous one
 
-    // Reuse for performance
-    kt_ObjectType entry_type;
-    HeapArray<uint8_t> entry_obj;
+    std::atomic<int64_t> total_len {0};
+
+    Async async;
 
     for (Size offset = 0; offset < entries.len;) {
         const kt_FileEntry *entry = (const kt_FileEntry *)(entries.ptr + offset);
@@ -276,10 +276,6 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
             return false;
         }
 
-        entry_obj.RemoveFrom(0);
-        if (!disk->ReadObject(entry->id, &entry_type, &entry_obj))
-            return false;
-
         const char *entry_filename;
         if (flags & (int)ExtractFlag::FlattenName) {
             entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, SplitStrReverse(entry->name, '/')).ptr;
@@ -290,47 +286,67 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
                 return false;
         }
 
-        switch (entry->kind) {
-            case (int8_t)kt_FileEntry::Kind::Directory: {
-                if (entry_type != kt_ObjectType::Directory) {
-                    LogError("Object '%1' is not a directory", entry->id);
-                    return false;
-                }
-
-                if (!MakeDirectory(entry_filename, false))
-                    return false;
-                if (!ExtractFileEntries(disk, entry_obj, 0, entry_filename, out_len))
-                    return false;
-            } break;
-            case (int8_t)kt_FileEntry::Kind::File: {
-                if (entry_type != kt_ObjectType::File && entry_type != kt_ObjectType::Chunk) {
-                    LogError("Object '%1' is not a file", entry->id);
-                    return false;
-                }
-
-                if (!GetFile(disk, entry->id, entry_type, entry_obj, entry_filename, out_len))
-                    return false;
-            } break;
-            case (int8_t)kt_FileEntry::Kind::Link: {
-                if (entry_type != kt_ObjectType::Link) {
-                    LogError("Object '%1' is not a link", entry->id);
-                    return false;
-                }
-
-                // NUL terminate the path
-                entry_obj.Append(0);
-
-                if (!CreateSymbolicLink(entry_filename, (const char *)entry_obj.ptr))
-                    return false;
-            } break;
-
-            default: {
-                LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
+        async.Run([&, disk, entry, entry_filename]() {
+            kt_ObjectType entry_type;
+            HeapArray<uint8_t> entry_obj;
+            if (!disk->ReadObject(entry->id, &entry_type, &entry_obj))
                 return false;
-            } break;
-        }
+
+            switch (entry->kind) {
+                case (int8_t)kt_FileEntry::Kind::Directory: {
+                    if (entry_type != kt_ObjectType::Directory) {
+                        LogError("Object '%1' is not a directory", entry->id);
+                        return false;
+                    }
+
+                    if (!MakeDirectory(entry_filename, false))
+                        return false;
+
+                    int64_t len = 0;
+                    if (!ExtractFileEntries(disk, entry_obj, 0, entry_filename, &len))
+                        return false;
+                    total_len += len;
+                } break;
+                case (int8_t)kt_FileEntry::Kind::File: {
+                    if (entry_type != kt_ObjectType::File && entry_type != kt_ObjectType::Chunk) {
+                        LogError("Object '%1' is not a file", entry->id);
+                        return false;
+                    }
+
+                    int64_t len = 0;
+                    if (!GetFile(disk, entry->id, entry_type, entry_obj, entry_filename, &len))
+                        return false;
+                    total_len += len;
+                } break;
+                case (int8_t)kt_FileEntry::Kind::Link: {
+                    if (entry_type != kt_ObjectType::Link) {
+                        LogError("Object '%1' is not a link", entry->id);
+                        return false;
+                    }
+
+                    // NUL terminate the path
+                    entry_obj.Append(0);
+
+                    if (!CreateSymbolicLink(entry_filename, (const char *)entry_obj.ptr))
+                        return false;
+                } break;
+
+                default: {
+                    LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
+                    return false;
+                } break;
+            }
+
+            return true;
+        });
     }
 
+    if (!async.Sync())
+        return false;
+
+    if (out_len) {
+        *out_len = total_len;
+    }
     return true;
 }
 
