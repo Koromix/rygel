@@ -13,9 +13,12 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "disk.hh"
+#include "src/core/libsqlite/libsqlite.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
+
+static const int CacheVersion = 1;
 
 #pragma pack(push, 1)
 struct KeyData {
@@ -27,6 +30,11 @@ struct KeyData {
 
 class S3Disk: public kt_Disk {
     s3_Session s3;
+
+    sq_Database cache_db;
+    std::atomic_int cache_hits {0};
+    int cache_misses {0};
+    std::mutex cache_mutex;
 
 public:
     S3Disk(const s3_Config &config, const char *pwd);
@@ -119,6 +127,54 @@ S3Disk::S3Disk(const s3_Config &config, const char *pwd)
         }
     }
 
+    // Open cache database
+    {
+        const char *cache_dir = GetUserCachePath("kippit", &str_alloc);
+        if (!MakeDirectory(cache_dir, false))
+            return;
+
+        const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(pkey, FmtType::SmallHex, "").Pad0(-2)).ptr;
+        LogDebug("Cache file: %1", cache_filename);
+
+        if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+            return;
+        if (!cache_db.SetWAL(true))
+            return;
+
+        int version;
+        if (!cache_db.GetUserVersion(&version))
+            return;
+
+        if (version > CacheVersion) {
+            LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
+            return;
+        } else if (version < CacheVersion) {
+            bool success = cache_db.Transaction([&]() {
+                switch (version) {
+                    case 0: {
+                        bool success = cache_db.RunMany(R"(
+                            CREATE TABLE objects (
+                                key TEXT NOT NULL
+                            );
+                            CREATE UNIQUE INDEX objects_k ON objects (key);
+                        )");
+                        if (!success)
+                            return false;
+                    } break;
+
+                    RG_STATIC_ASSERT(CacheVersion == 1);
+                }
+
+                if (!cache_db.SetUserVersion(CacheVersion))
+                    return false;
+
+                return true;
+            });
+            if (!success)
+                return;
+        }
+    }
+
     // We're good!
     url = s3.GetURL();
 }
@@ -134,8 +190,54 @@ bool S3Disk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
 
 Size S3Disk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
-    if (s3.HasObject(path))
-        return 0;
+    // Fast detection of known objects
+    {
+        sq_Statement stmt;
+        if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
+            return -1;
+        sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
+
+        if (stmt.Step()) {
+            return 0;
+        } else if (!stmt.IsValid()) {
+            return -1;
+        }
+    }
+
+    // Probabilistic detection and rebuild of outdated cache
+    if (GetRandomIntSafe(0, 20) <= 1) {
+        int hits = ++cache_hits;
+        bool miss = s3.HasObject(path);
+
+        if (miss) {
+            std::lock_guard<std::mutex> lock(cache_mutex);
+
+            cache_misses++;
+
+            if (hits >= 20 && cache_misses >= hits / 5) {
+                BlockAllocator temp_alloc;
+
+                HeapArray<const char *> keys;
+                if (!s3.ListObjects(nullptr, &temp_alloc, &keys))
+                    return -1;
+
+                for (const char *key: keys) {
+                    if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                                         ON CONFLICT (key) DO NOTHING)", key))
+                        return -1;
+                }
+
+                cache_hits = 0;
+                cache_misses = 0;
+            }
+
+            if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                                 ON CONFLICT (key) DO NOTHING)", path))
+                return -1;
+
+            return 0;
+        }
+    }
 
     HeapArray<uint8_t> obj;
     obj.Reserve(total_len);
@@ -144,6 +246,9 @@ Size S3Disk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Functio
     RG_ASSERT(obj.len == total_len);
 
     if (!s3.PutObject(path, obj))
+        return -1;
+    if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                         ON CONFLICT (key) DO NOTHING)", path))
         return -1;
 
     return total_len;
