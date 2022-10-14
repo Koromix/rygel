@@ -15,6 +15,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "types.hh"
+#include "src/core/libnet/s3.hh"
 
 namespace RG {
 
@@ -75,7 +76,10 @@ protected:
     virtual bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) = 0;
 };
 
-bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
+kt_Disk *kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
 kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd);
+
+kt_Disk *kt_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd);
+kt_Disk *kt_OpenS3Disk(const s3_Config &config, const char *pwd);
 
 }

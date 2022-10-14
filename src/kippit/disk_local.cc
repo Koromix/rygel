@@ -74,8 +74,13 @@ static bool ReadKey(const char *filename, const char *pwd, uint8_t *out_payload,
     // Read file data
     {
         Span<uint8_t> buf = MakeSpan((uint8_t *)&data, RG_SIZE(data));
+        Size len = ReadFile(filename, buf);
 
-        if (!ReadFile(filename, buf)) {
+        if (len != RG_SIZE(data)) {
+            if (len >= 0) {
+                LogError("Truncated key file '%1'", filename);
+            }
+
             *out_error = true;
             return false;
         }
@@ -188,6 +193,7 @@ Size LocalDisk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Func
         return -1;
     if (!writer.Close())
         return -1;
+    RG_ASSERT(writer.GetRawWritten() == total_len);
 
     // File is complete
     fclose(fp);
@@ -197,8 +203,6 @@ Size LocalDisk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Func
     if (!RenameFile(tmp.data, filename.data, (int)RenameFlag::Overwrite))
         return -1;
     tmp_guard.Disable();
-
-    RG_ASSERT(writer.GetRawWritten() == total_len);
 
     return total_len;
 }
@@ -221,7 +225,7 @@ bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char
     return true;
 }
 
-bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd)
+kt_Disk *kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd)
 {
     BlockAllocator temp_alloc;
 
@@ -230,7 +234,7 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
     // Sanity checks
     if (directory.len > MaxPathSize) {
         LogError("Directory path '%1' is too long", directory);
-        return false;
+        return nullptr;
     }
 
     // Drop created files and directories if anything fails
@@ -249,15 +253,15 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
     if (TestFile(path)) {
         if (!IsDirectoryEmpty(path)) {
             LogError("Directory '%1' exists and is not empty", path);
-            return false;
+            return nullptr;
         }
     } else {
         if (!MakeDirectory(path))
-            return false;
+            return nullptr;
         directories.Append(path);
     }
     if (!MakeDirectory(path, false))
-        return false;
+        return nullptr;
 
     // Create repository directories
     {
@@ -272,18 +276,18 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
         };
 
         if (!make_directory("keys"))
-            return false;
+            return nullptr;
         if (!make_directory("tags"))
-            return false;
+            return nullptr;
         if (!make_directory("blobs"))
-            return false;
+            return nullptr;
 
         for (int i = 0; i < 256; i++) {
             char name[128];
             Fmt(name, "blobs/%1", FmtHex(i).Pad0(-2));
 
             if (!make_directory(name))
-                return false;
+                return nullptr;
         }
     }
 
@@ -297,14 +301,18 @@ bool kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *writ
 
     // Write control files
     if (!WriteKey(full_filename, full_pwd, skey))
-        return false;
+        return nullptr;
     files.Append(full_filename);
     if (!WriteKey(write_filename, write_pwd, pkey))
-        return false;
+        return nullptr;
     files.Append(write_filename);
 
+    kt_Disk *disk = kt_OpenLocalDisk(directory.ptr, full_pwd);
+    if (!disk)
+        return nullptr;
+
     root_guard.Disable();
-    return true;
+    return disk;
 }
 
 kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)

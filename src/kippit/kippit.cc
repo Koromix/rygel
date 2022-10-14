@@ -20,23 +20,18 @@
 
 namespace RG {
 
-static const char *FillRepository(const char *repo_directory)
+static const char *FillRepository(const char *repository)
 {
-    if (!repo_directory) {
-        repo_directory = GetQualifiedEnv("REPOSITORY");
+    if (!repository) {
+        repository = GetQualifiedEnv("REPOSITORY");
 
-        if (!repo_directory) {
+        if (!repository) {
             LogError("Missing repository directory");
             return nullptr;
         }
     }
 
-    if (!PathIsAbsolute(repo_directory)) {
-        LogError("Repository path '%1' is not absolute", repo_directory);
-        return nullptr;
-    }
-
-    return repo_directory;
+    return repository;
 }
 
 static const char *FillPassword(const char *pwd, Allocator *alloc)
@@ -52,10 +47,36 @@ static const char *FillPassword(const char *pwd, Allocator *alloc)
     return pwd;
 }
 
+static bool LooksLikeURL(const char *str)
+{
+    bool ret = StartsWith(str, "https://") || StartsWith(str, "http://");
+    return ret;
+}
+
+static kt_Disk *OpenRepository(const char *repository, const char *pwd)
+{
+    if (LooksLikeURL(repository)) {
+        s3_Config config;
+        if (!s3_DecodeURL(repository, &config))
+            return nullptr;
+
+        kt_Disk *disk = kt_OpenS3Disk(config, pwd);
+        return disk;
+    } else {
+        if (!PathIsAbsolute(repository)) {
+            LogError("Repository path '%1' is not absolute", repository);
+            return nullptr;
+        }
+
+        kt_Disk *disk = kt_OpenLocalDisk(repository, pwd);
+        return disk;
+    }
+}
+
 static int RunInit(Span<const char *> arguments)
 {
     // Options
-    const char *repo_directory = nullptr;
+    const char *repository = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -76,11 +97,11 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
             }
         }
 
-        repo_directory = opt.ConsumeNonOption();
+        repository = opt.ConsumeNonOption();
     }
 
-    repo_directory = FillRepository(repo_directory);
-    if (!repo_directory)
+    repository = FillRepository(repository);
+    if (!repository)
         return 1;
 
     // Generate repository passwords
@@ -91,10 +112,21 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
     if (!pwd_GeneratePassword(write_pwd))
         return 1;
 
-    if (!kt_CreateLocalDisk(repo_directory, full_pwd, write_pwd))
-        return 1;
+    kt_Disk *disk = nullptr;
+    if (LooksLikeURL(repository)) {
+        s3_Config config;
+        if (!s3_DecodeURL(repository, &config))
+            return 1;
 
-    LogInfo("Repository: %!..+%1%!0", TrimStrRight(repo_directory, RG_PATH_SEPARATORS));
+        disk = kt_CreateS3Disk(config, full_pwd, write_pwd);
+    } else {
+        disk = kt_CreateLocalDisk(repository, full_pwd, write_pwd);
+    }
+    if (!disk)
+        return 1;
+    RG_DEFER { delete disk; };
+
+    LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
     LogInfo("Default full password: %!..+%1%!0", full_pwd);
     LogInfo("  write-only password: %!..+%1%!0", write_pwd);
@@ -110,7 +142,7 @@ static int RunPut(Span<const char *> arguments)
 
     // Options
     kt_PutSettings settings;
-    const char *repo_directory = nullptr;
+    const char *repository = nullptr;
     const char *pwd = nullptr;
     HeapArray<const char *> filenames;
 
@@ -137,7 +169,7 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                repo_directory = opt.current_value;
+                repository = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
             } else if (opt.Test("-n", "--name", OptionType::Value)) {
@@ -159,14 +191,14 @@ Options:
         LogError("No filename provided");
         return 1;
     }
-    repo_directory = FillRepository(repo_directory);
-    if (!repo_directory)
+    repository = FillRepository(repository);
+    if (!repository)
         return 1;
     pwd = FillPassword(pwd, &temp_alloc);
     if (!pwd)
         return 1;
 
-    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
+    kt_Disk *disk = OpenRepository(repository, pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
@@ -204,7 +236,7 @@ static int RunGet(Span<const char *> arguments)
 
     // Options
     kt_GetSettings settings;
-    const char *repo_directory = nullptr;
+    const char *repository = nullptr;
     const char *pwd = nullptr;
     const char *dest_filename = nullptr;
     const char *name = nullptr;
@@ -230,7 +262,7 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                repo_directory = opt.current_value;
+                repository = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
@@ -254,14 +286,14 @@ Options:
         LogError("Missing destination filename");
         return 1;
     }
-    repo_directory = FillRepository(repo_directory);
-    if (!repo_directory)
+    repository = FillRepository(repository);
+    if (!repository)
         return 1;
     pwd = FillPassword(pwd, &temp_alloc);
     if (!pwd)
         return 1;
 
-    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
+    kt_Disk *disk = OpenRepository(repository, pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
@@ -300,7 +332,7 @@ static int RunList(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *repo_directory = nullptr;
+    const char *repository = nullptr;
     const char *pwd = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
@@ -321,7 +353,7 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                repo_directory = opt.current_value;
+                repository = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
             } else {
@@ -331,14 +363,14 @@ Options:
         }
     }
 
-    repo_directory = FillRepository(repo_directory);
-    if (!repo_directory)
+    repository = FillRepository(repository);
+    if (!repository)
         return 1;
     pwd = FillPassword(pwd, &temp_alloc);
     if (!pwd)
         return 1;
 
-    kt_Disk *disk = kt_OpenLocalDisk(repo_directory, pwd);
+    kt_Disk *disk = OpenRepository(repository, pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
