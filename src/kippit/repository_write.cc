@@ -95,7 +95,7 @@ static PutResult PutFile(kt_Disk *disk, const char *src_filename,
                     RG_ASSERT(idx * RG_SIZE(kt_ChunkEntry) == file_obj.len);
                     file_obj.len += RG_SIZE(kt_ChunkEntry);
 
-                    async.Run([=, &file_written, &file_obj]() {
+                    async.Run([&, idx, total, chunk]() {
                         kt_ChunkEntry entry = {};
 
                         entry.offset = LittleEndian(total);
@@ -168,7 +168,8 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     HeapArray<uint8_t> dir_obj;
-    int64_t total_written = 0;
+    std::atomic<int64_t> total_len {0};
+    std::atomic<int64_t> total_written {0};
 
     src_dirname = DuplicateString(TrimStrRight(src_dirname, RG_PATH_SEPARATORS), &temp_alloc).ptr;
 
@@ -192,59 +193,15 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
         }
 
         switch (file_info.type) {
-            case FileType::Directory: {
-                entry->kind = (int8_t)kt_FileEntry::Kind::Directory;
-
-                PutResult ret = PutDirectory(disk, filename, follow_symlinks, &entry->id, out_len, &total_written);
-
-                if (ret != PutResult::Success) {
-                    bool ignore = (ret == PutResult::Ignore);
-                    return ignore;
-                }
-            } break;
-            case FileType::File: {
-                entry->kind = (int8_t)kt_FileEntry::Kind::File;
-
-                PutResult ret = PutFile(disk, filename, &entry->id, out_len, &total_written);
-
-                if (ret != PutResult::Success) {
-                    bool ignore = (ret == PutResult::Ignore);
-                    return ignore;
-                }
-            } break;
-
-            case FileType::Link: {
-                entry->kind = (int8_t)kt_FileEntry::Kind::Link;
+            case FileType::Directory: { entry->kind = (int8_t)kt_FileEntry::Kind::Directory; } break;
+            case FileType::File: { entry->kind = (int8_t)kt_FileEntry::Kind::File; } break;
+#ifndef _WIN32
+            case FileType::Link: { entry->kind = (int8_t)kt_FileEntry::Kind::Link; } break;
+#endif
 
 #ifdef _WIN32
-                RG_UNREACHABLE();
-#else
-                LocalArray<uint8_t, 4096> target;
-                {
-                    ssize_t ret = readlink(filename, (char *)target.data, RG_SIZE(target.data));
-
-                    if (ret < 0) {
-                        LogError("Failed to read symbolic link '%1': %2", filename, strerror(errno));
-
-                        bool ignore = (errno == EACCES || errno == ENOENT);
-                        return ignore;
-                    } else if (ret >= RG_SIZE(target)) {
-                        LogError("Failed to read symbolic link '%1': target too long", filename);
-                        return false;
-                    }
-
-                    target.len = (Size)ret;
-                }
-
-                HashBlake3(target, salt.ptr, &entry->id);
-
-                Size ret = disk->WriteObject(entry->id, kt_ObjectType::Link, target);
-                if (ret < 0)
-                    return false;
-                total_written += ret;
+            case FileType::Link:
 #endif
-            } break;
-
             case FileType::Device:
             case FileType::Pipe:
             case FileType::Socket: {
@@ -265,6 +222,92 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
         return ignore ? PutResult::Ignore : PutResult::Error;
     }
 
+    // Process entries
+    {
+        Async async;
+
+        for (Size offset = 0; offset < dir_obj.len;) {
+            kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
+            const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
+
+            switch ((kt_FileEntry::Kind)entry->kind) {
+                case kt_FileEntry::Kind::Directory: {
+                    async.Run([=, &total_len, &total_written]() {
+                        int64_t len = 0;
+                        int64_t written = 0;
+
+                        PutResult ret = PutDirectory(disk, filename, follow_symlinks, &entry->id, &len, &written);
+
+                        if (ret != PutResult::Success) {
+                            bool ignore = (ret == PutResult::Ignore);
+                            return ignore;
+                        }
+                        total_len += len;
+                        total_written += written;
+
+                        return true;
+                    });
+                } break;
+                case kt_FileEntry::Kind::File: {
+                    async.Run([=, &total_len, &total_written]() {
+                        int64_t len = 0;
+                        int64_t written = 0;
+
+                        PutResult ret = PutFile(disk, filename, &entry->id, &len, &written);
+
+                        if (ret != PutResult::Success) {
+                            bool ignore = (ret == PutResult::Ignore);
+                            return ignore;
+                        }
+                        total_len += len;
+                        total_written += written;
+
+                        return true;
+                    });
+                } break;
+                case kt_FileEntry::Kind::Link: {
+#ifdef _WIN32
+                    RG_UNREACHABLE();
+#else
+                    async.Run([=, &total_len, &total_written]() {
+                        LocalArray<uint8_t, 4096> target;
+                        {
+                            ssize_t ret = readlink(filename, (char *)target.data, RG_SIZE(target.data));
+
+                            if (ret < 0) {
+                                LogError("Failed to read symbolic link '%1': %2", filename, strerror(errno));
+
+                                bool ignore = (errno == EACCES || errno == ENOENT);
+                                return ignore;
+                            } else if (ret >= RG_SIZE(target)) {
+                                LogError("Failed to read symbolic link '%1': target too long", filename);
+                                return false;
+                            }
+
+                            target.len = (Size)ret;
+                        }
+
+                        HashBlake3(target, salt.ptr, &entry->id);
+
+                        Size ret = disk->WriteObject(entry->id, kt_ObjectType::Link, target);
+                        if (ret < 0)
+                            return false;
+                        total_written += ret;
+
+                        return true;
+                    });
+#endif
+                } break;
+            }
+
+            Size entry_len = RG_SIZE(kt_FileEntry) + strlen(entry->name) + 1;
+            offset += entry_len;
+        }
+
+        if (!async.Sync())
+            return PutResult::Error;
+    }
+
     kt_ID dir_id = {};
     {
         HashBlake3(dir_obj, salt.ptr, &dir_id);
@@ -276,6 +319,9 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
     }
 
     *out_id = dir_id;
+    if (out_len) {
+        *out_len += total_len;
+    }
     if (out_written) {
         *out_written += total_written;
     }

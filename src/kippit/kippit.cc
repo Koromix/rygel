@@ -17,6 +17,10 @@
 #include "src/core/libpasswd/libpasswd.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/curl/include/curl/curl.h"
+#ifndef _WIN32
+    #include <sys/time.h>
+    #include <sys/resource.h>
+#endif
 
 namespace RG {
 
@@ -430,6 +434,30 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         LogError("No command provided");
         return 1;
     }
+
+#ifndef _WIN32
+    {
+        const rlim_t max_nofile = 32768;
+        struct rlimit lim;
+
+        // Increase maximum number of open file descriptors
+        if (getrlimit(RLIMIT_NOFILE, &lim) >= 0) {
+            if (lim.rlim_cur < max_nofile) {
+                lim.rlim_cur = std::min(max_nofile, lim.rlim_max);
+
+                if (setrlimit(RLIMIT_NOFILE, &lim) >= 0) {
+                    if (lim.rlim_cur < max_nofile) {
+                        LogError("Maximum number of open descriptors is low: %1 (recommended: %2)", lim.rlim_cur, max_nofile);
+                    }
+                } else {
+                    LogError("Could not raise RLIMIT_NOFILE to %1: %2", max_nofile, strerror(errno));
+                }
+            }
+        } else {
+            LogError("getrlimit(RLIMIT_NOFILE) failed: %1", strerror(errno));
+        }
+    }
+#endif
 
     if (sodium_init() < 0) {
         LogError("Failed to initialize libsodium");
