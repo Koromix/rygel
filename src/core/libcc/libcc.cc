@@ -5287,7 +5287,7 @@ Async::Async(int threads, bool stop_after_error)
 
 Async::~Async()
 {
-    RG_ASSERT(!remaining_tasks);
+    Sync();
     pool->UnregisterAsync();
 }
 
