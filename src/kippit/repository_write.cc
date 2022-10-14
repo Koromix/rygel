@@ -222,7 +222,29 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
         return ignore ? PutResult::Ignore : PutResult::Error;
     }
 
-    // Process entries
+    // Process directory entries
+    for (Size offset = 0; offset < dir_obj.len;) {
+        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
+
+        if (entry->kind == (int8_t)kt_FileEntry::Kind::Directory) {
+            const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
+
+            int64_t len = 0;
+            int64_t written = 0;
+
+            PutResult ret = PutDirectory(disk, filename, follow_symlinks, &entry->id, &len, &written);
+
+            if (ret == PutResult::Error)
+                return PutResult::Error;
+            total_len += len;
+            total_written += written;
+        }
+
+        Size entry_len = RG_SIZE(kt_FileEntry) + strlen(entry->name) + 1;
+        offset += entry_len;
+    }
+
+    // Process other entries
     {
         Async async;
 
@@ -231,23 +253,8 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
             const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
 
             switch ((kt_FileEntry::Kind)entry->kind) {
-                case kt_FileEntry::Kind::Directory: {
-                    async.Run([=, &total_len, &total_written]() {
-                        int64_t len = 0;
-                        int64_t written = 0;
+                case kt_FileEntry::Kind::Directory: {} break; // Already processed
 
-                        PutResult ret = PutDirectory(disk, filename, follow_symlinks, &entry->id, &len, &written);
-
-                        if (ret != PutResult::Success) {
-                            bool ignore = (ret == PutResult::Ignore);
-                            return ignore;
-                        }
-                        total_len += len;
-                        total_written += written;
-
-                        return true;
-                    });
-                } break;
                 case kt_FileEntry::Kind::File: {
                     async.Run([=, &total_len, &total_written]() {
                         int64_t len = 0;
