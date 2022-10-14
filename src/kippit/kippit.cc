@@ -437,7 +437,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
 
 #ifndef _WIN32
     {
-        const rlim_t max_nofile = 32768;
+        const rlim_t max_nofile = 4096;
         struct rlimit lim;
 
         // Increase maximum number of open file descriptors
