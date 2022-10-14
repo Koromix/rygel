@@ -63,6 +63,15 @@ int PerformCurl(CURL *curl, const char *reason)
 {
     CURLcode res = curl_easy_perform(curl);
 
+#if 0
+    const char *method = nullptr;
+    const char *url = nullptr;
+    curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_METHOD, &method);
+    curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
+
+    LogDebug("Curl: %1 %2", method, url);
+#endif
+
     if (res != CURLE_OK) {
         if (res != CURLE_WRITE_ERROR) {
             LogError("Failed to perform %1 call: %2", reason, curl_easy_strerror(res));
