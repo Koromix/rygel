@@ -151,6 +151,10 @@ Size S3Disk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Functio
 
 bool S3Disk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths)
 {
+    if (!EndsWith(path, "/")) {
+        path = Fmt(alloc, "%1/", path).ptr;
+    }
+
     return s3.ListObjects(path, alloc, out_paths);
 }
 
