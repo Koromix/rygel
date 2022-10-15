@@ -27,6 +27,28 @@ static const Size ChunkAverage = Kibibytes(1024);
 static const Size ChunkMin = Kibibytes(512);
 static const Size ChunkMax = Kibibytes(2048);
 
+enum class PutResult {
+    Success,
+    Ignore,
+    Error
+};
+
+class PutContext {
+    kt_Disk *disk;
+
+    std::atomic<int64_t> stat_len {0};
+    std::atomic<int64_t> stat_written {0};
+
+public:
+    PutContext(kt_Disk *disk) : disk(disk) {}
+
+    PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, kt_ID *out_id);
+    PutResult PutFile(const char *src_filename, kt_ID *out_id);
+
+    int64_t GetLen() const { return stat_len; }
+    int64_t GetWritten() const { return stat_written; }
+};
+
 static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, kt_ID *out_id)
 {
     blake3_hasher hasher;
@@ -36,131 +58,7 @@ static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, kt_ID *out_
     blake3_hasher_finalize(&hasher, out_id->hash, RG_SIZE(out_id->hash));
 }
 
-enum class PutResult {
-    Success,
-    Ignore,
-    Error
-};
-
-static PutResult PutFile(kt_Disk *disk, const char *src_filename,
-                         kt_ID *out_id, int64_t *out_len, int64_t *out_written)
-{
-    Span<const uint8_t> salt = disk->GetSalt();
-    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
-
-    StreamReader st;
-    {
-        OpenResult ret = st.Open(src_filename);
-        if (ret != OpenResult::Success) {
-            bool ignore = (ret == OpenResult::AccessDenied || ret == OpenResult::MissingPath);
-            return ignore ? PutResult::Ignore : PutResult::Error;
-        }
-    }
-
-    HeapArray<uint8_t> file_obj;
-    int64_t file_len = 0;
-    std::atomic<int64_t> file_written = 0;
-
-    // Split the file
-    {
-        kt_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
-
-        HeapArray<uint8_t> buf;
-        {
-            Size needed = (st.ComputeRawLen() >= 0) ? st.ComputeRawLen() : Mebibytes(16);
-            needed = std::clamp(needed, Mebibytes(2), Mebibytes(128));
-
-            buf.SetCapacity(needed);
-        }
-
-        do {
-            Async async;
-
-            // Fill buffer
-            Size read = st.Read(buf.TakeAvailable());
-            if (read < 0)
-                return PutResult::Error;
-            buf.len += read;
-            file_len += read;
-
-            Span<const uint8_t> remain = buf;
-
-            // We can't relocate in the inner loop
-            Size needed = (remain.len / ChunkMin + 1) * RG_SIZE(kt_ChunkEntry) + 8;
-            file_obj.Grow(needed);
-
-            // Chunk file and write chunks out in parallel
-            do {
-                Size processed = chunker.Process(remain, st.IsEOF(), [&](Size idx, int64_t total, Span<const uint8_t> chunk) {
-                    RG_ASSERT(idx * RG_SIZE(kt_ChunkEntry) == file_obj.len);
-                    file_obj.len += RG_SIZE(kt_ChunkEntry);
-
-                    async.Run([&, idx, total, chunk]() {
-                        kt_ChunkEntry entry = {};
-
-                        entry.offset = LittleEndian(total);
-                        entry.len = LittleEndian((int32_t)chunk.len);
-
-                        HashBlake3(chunk, salt.ptr, &entry.id);
-
-                        Size ret = disk->WriteObject(entry.id, kt_ObjectType::Chunk, chunk);
-                        if (ret < 0)
-                            return false;
-                        file_written += ret;
-
-                        memcpy(file_obj.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
-
-                        return true;
-                    });
-
-                    return true;
-                });
-                if (processed < 0)
-                    return PutResult::Error;
-                if (!processed)
-                    break;
-
-                remain.ptr += processed;
-                remain.len -= processed;
-            } while (remain.len);
-
-            if (!async.Sync())
-                return PutResult::Error;
-
-            memmove_safe(buf.ptr, remain.ptr, remain.len);
-            buf.len = remain.len;
-        } while (!st.IsEOF() || buf.len);
-    }
-
-    // Write list of chunks (unless there is exactly one)
-    kt_ID file_id = {};
-    if (file_obj.len != RG_SIZE(kt_ChunkEntry)) {
-        int64_t len_64le = LittleEndian(st.GetRawRead());
-        file_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
-
-        HashBlake3(file_obj, salt.ptr, &file_id);
-
-        Size ret = disk->WriteObject(file_id, kt_ObjectType::File, file_obj);
-        if (ret < 0)
-            return PutResult::Error;
-        file_written += ret;
-    } else {
-        const kt_ChunkEntry *entry0 = (const kt_ChunkEntry *)file_obj.ptr;
-        file_id = entry0->id;
-    }
-
-    *out_id = file_id;
-    if (out_len) {
-        *out_len += file_len;
-    }
-    if (out_written) {
-        *out_written += file_written;
-    }
-    return PutResult::Success;
-}
-
-static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follow_symlinks,
-                              kt_ID *out_id, int64_t *out_len, int64_t *out_written)
+PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, kt_ID *out_id)
 {
     BlockAllocator temp_alloc;
 
@@ -168,8 +66,6 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     HeapArray<uint8_t> dir_obj;
-    std::atomic<int64_t> total_len {0};
-    std::atomic<int64_t> total_written {0};
 
     src_dirname = DuplicateString(TrimStrRight(src_dirname, RG_PATH_SEPARATORS), &temp_alloc).ptr;
 
@@ -222,6 +118,63 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
         return ignore ? PutResult::Ignore : PutResult::Error;
     }
 
+    Async async;
+
+    // Process data entries (file, links)
+    for (Size offset = 0; offset < dir_obj.len;) {
+        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
+        const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
+
+        switch ((kt_FileEntry::Kind)entry->kind) {
+            case kt_FileEntry::Kind::Directory: {} break; // Already processed
+
+            case kt_FileEntry::Kind::File: {
+                async.Run([=, this]() {
+                    PutResult ret = PutFile(filename, &entry->id);
+
+                    bool persist = (ret != PutResult::Error);
+                    return persist;
+                });
+            } break;
+            case kt_FileEntry::Kind::Link: {
+#ifdef _WIN32
+                RG_UNREACHABLE();
+#else
+                async.Run([=, this]() {
+                    LocalArray<uint8_t, 4096> target;
+                    {
+                        ssize_t ret = readlink(filename, (char *)target.data, RG_SIZE(target.data));
+
+                        if (ret < 0) {
+                            LogError("Failed to read symbolic link '%1': %2", filename, strerror(errno));
+
+                            bool ignore = (errno == EACCES || errno == ENOENT);
+                            return ignore;
+                        } else if (ret >= RG_SIZE(target)) {
+                            LogError("Failed to read symbolic link '%1': target too long", filename);
+                            return false;
+                        }
+
+                        target.len = (Size)ret;
+                    }
+
+                    HashBlake3(target, salt.ptr, &entry->id);
+
+                    Size ret = disk->WriteObject(entry->id, kt_ObjectType::Link, target);
+                    if (ret < 0)
+                        return false;
+                    stat_written += ret;
+
+                    return true;
+                });
+#endif
+            } break;
+        }
+
+        Size entry_len = RG_SIZE(kt_FileEntry) + strlen(entry->name) + 1;
+        offset += entry_len;
+    }
+
     // Process directory entries
     for (Size offset = 0; offset < dir_obj.len;) {
         kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
@@ -229,92 +182,20 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
         if (entry->kind == (int8_t)kt_FileEntry::Kind::Directory) {
             const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
 
-            int64_t len = 0;
-            int64_t written = 0;
-
-            PutResult ret = PutDirectory(disk, filename, follow_symlinks, &entry->id, &len, &written);
+            PutResult ret = PutDirectory(filename, follow_symlinks, &entry->id);
 
             if (ret == PutResult::Error)
                 return PutResult::Error;
-            total_len += len;
-            total_written += written;
         }
 
         Size entry_len = RG_SIZE(kt_FileEntry) + strlen(entry->name) + 1;
         offset += entry_len;
     }
 
-    // Process other entries
-    {
-        Async async;
+    if (!async.Sync())
+        return PutResult::Error;
 
-        for (Size offset = 0; offset < dir_obj.len;) {
-            kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
-            const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
-
-            switch ((kt_FileEntry::Kind)entry->kind) {
-                case kt_FileEntry::Kind::Directory: {} break; // Already processed
-
-                case kt_FileEntry::Kind::File: {
-                    async.Run([=, &total_len, &total_written]() {
-                        int64_t len = 0;
-                        int64_t written = 0;
-
-                        PutResult ret = PutFile(disk, filename, &entry->id, &len, &written);
-
-                        if (ret != PutResult::Success) {
-                            bool ignore = (ret == PutResult::Ignore);
-                            return ignore;
-                        }
-                        total_len += len;
-                        total_written += written;
-
-                        return true;
-                    });
-                } break;
-                case kt_FileEntry::Kind::Link: {
-#ifdef _WIN32
-                    RG_UNREACHABLE();
-#else
-                    async.Run([=, &total_len, &total_written]() {
-                        LocalArray<uint8_t, 4096> target;
-                        {
-                            ssize_t ret = readlink(filename, (char *)target.data, RG_SIZE(target.data));
-
-                            if (ret < 0) {
-                                LogError("Failed to read symbolic link '%1': %2", filename, strerror(errno));
-
-                                bool ignore = (errno == EACCES || errno == ENOENT);
-                                return ignore;
-                            } else if (ret >= RG_SIZE(target)) {
-                                LogError("Failed to read symbolic link '%1': target too long", filename);
-                                return false;
-                            }
-
-                            target.len = (Size)ret;
-                        }
-
-                        HashBlake3(target, salt.ptr, &entry->id);
-
-                        Size ret = disk->WriteObject(entry->id, kt_ObjectType::Link, target);
-                        if (ret < 0)
-                            return false;
-                        total_written += ret;
-
-                        return true;
-                    });
-#endif
-                } break;
-            }
-
-            Size entry_len = RG_SIZE(kt_FileEntry) + strlen(entry->name) + 1;
-            offset += entry_len;
-        }
-
-        if (!async.Sync())
-            return PutResult::Error;
-    }
-
+    // Upload directory object
     kt_ID dir_id = {};
     {
         HashBlake3(dir_obj, salt.ptr, &dir_id);
@@ -322,16 +203,118 @@ static PutResult PutDirectory(kt_Disk *disk, const char *src_dirname, bool follo
         Size written = disk->WriteObject(dir_id, kt_ObjectType::Directory, dir_obj);
         if (written < 0)
             return PutResult::Error;
-        total_written += written;
+        stat_written += written;
     }
 
     *out_id = dir_id;
-    if (out_len) {
-        *out_len += total_len;
+    return PutResult::Success;
+}
+
+PutResult PutContext::PutFile(const char *src_filename, kt_ID *out_id)
+{
+    Span<const uint8_t> salt = disk->GetSalt();
+    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
+
+    StreamReader st;
+    {
+        OpenResult ret = st.Open(src_filename);
+        if (ret != OpenResult::Success) {
+            bool ignore = (ret == OpenResult::AccessDenied || ret == OpenResult::MissingPath);
+            return ignore ? PutResult::Ignore : PutResult::Error;
+        }
     }
-    if (out_written) {
-        *out_written += total_written;
+
+    HeapArray<uint8_t> file_obj;
+
+    // Split the file
+    {
+        kt_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
+
+        HeapArray<uint8_t> buf;
+        {
+            Size needed = (st.ComputeRawLen() >= 0) ? st.ComputeRawLen() : Mebibytes(16);
+            needed = std::clamp(needed, Mebibytes(2), Mebibytes(128));
+
+            buf.SetCapacity(needed);
+        }
+
+        do {
+            Async async;
+
+            // Fill buffer
+            Size read = st.Read(buf.TakeAvailable());
+            if (read < 0)
+                return PutResult::Error;
+            buf.len += read;
+            stat_len += read;
+
+            Span<const uint8_t> remain = buf;
+
+            // We can't relocate in the inner loop
+            Size needed = (remain.len / ChunkMin + 1) * RG_SIZE(kt_ChunkEntry) + 8;
+            file_obj.Grow(needed);
+
+            // Chunk file and write chunks out in parallel
+            do {
+                Size processed = chunker.Process(remain, st.IsEOF(), [&](Size idx, int64_t total, Span<const uint8_t> chunk) {
+                    RG_ASSERT(idx * RG_SIZE(kt_ChunkEntry) == file_obj.len);
+                    file_obj.len += RG_SIZE(kt_ChunkEntry);
+
+                    async.Run([&, idx, total, chunk]() {
+                        kt_ChunkEntry entry = {};
+
+                        entry.offset = LittleEndian(total);
+                        entry.len = LittleEndian((int32_t)chunk.len);
+
+                        HashBlake3(chunk, salt.ptr, &entry.id);
+
+                        Size ret = disk->WriteObject(entry.id, kt_ObjectType::Chunk, chunk);
+                        if (ret < 0)
+                            return false;
+                        stat_written += ret;
+
+                        memcpy(file_obj.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
+
+                        return true;
+                    });
+
+                    return true;
+                });
+                if (processed < 0)
+                    return PutResult::Error;
+                if (!processed)
+                    break;
+
+                remain.ptr += processed;
+                remain.len -= processed;
+            } while (remain.len);
+
+            if (!async.Sync())
+                return PutResult::Error;
+
+            memmove_safe(buf.ptr, remain.ptr, remain.len);
+            buf.len = remain.len;
+        } while (!st.IsEOF() || buf.len);
     }
+
+    // Write list of chunks (unless there is exactly one)
+    kt_ID file_id = {};
+    if (file_obj.len != RG_SIZE(kt_ChunkEntry)) {
+        int64_t len_64le = LittleEndian(st.GetRawRead());
+        file_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
+
+        HashBlake3(file_obj, salt.ptr, &file_id);
+
+        Size ret = disk->WriteObject(file_id, kt_ObjectType::File, file_obj);
+        if (ret < 0)
+            return PutResult::Error;
+        stat_written += ret;
+    } else {
+        const kt_ChunkEntry *entry0 = (const kt_ChunkEntry *)file_obj.ptr;
+        file_id = entry0->id;
+    }
+
+    *out_id = file_id;
     return PutResult::Success;
 }
 
@@ -364,8 +347,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
     CopyString(settings.name ? settings.name : "", header->name);
     header->time = LittleEndian(GetUnixTime());
 
-    int64_t total_len = 0;
-    int64_t total_written = 0;
+    PutContext put(disk);
 
     // Process snapshot entries
     for (const char *filename: filenames) {
@@ -428,14 +410,13 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             case FileType::Directory: {
                 entry->kind = (int8_t)kt_FileEntry::Kind::Directory;
 
-                if (PutDirectory(disk, filename, settings.follow_symlinks,
-                                 &entry->id, &total_len, &total_written) != PutResult::Success)
+                if (put.PutDirectory(filename, settings.follow_symlinks, &entry->id) != PutResult::Success)
                     return false;
             } break;
             case FileType::File: {
                 entry->kind = (int8_t)kt_FileEntry::Kind::File;
 
-                if (PutFile(disk, filename, &entry->id, &total_len, &total_written) != PutResult::Success)
+                if (put.PutFile(filename, &entry->id) != PutResult::Success)
                     return false;
             } break;
 
@@ -452,6 +433,9 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
         entry->mtime = file_info.mtime;
         entry->mode = (uint32_t)file_info.mode;
     }
+
+    int64_t total_len = put.GetLen();
+    int64_t total_written = put.GetWritten();
 
     kt_ID id = {};
     if (!settings.raw) {
