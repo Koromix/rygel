@@ -345,7 +345,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
         return false;
 
     if (out_len) {
-        *out_len = total_len;
+        *out_len += total_len;
     }
     return true;
 }
