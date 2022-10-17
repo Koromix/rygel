@@ -4085,6 +4085,7 @@ class Async {
 
 public:
     Async(int threads = -1, bool stop_after_error = true);
+    Async(Async *parent, bool stop_after_error = true);
     ~Async();
 
     void Run(const std::function<bool()> &f);

@@ -5285,6 +5285,15 @@ Async::Async(int threads, bool stop_after_error)
     pool->RegisterAsync();
 }
 
+Async::Async(Async *parent, bool stop_after_error)
+    : stop_after_error(stop_after_error)
+{
+    RG_ASSERT(parent);
+
+    pool = parent->pool;
+    pool->RegisterAsync();
+}
+
 Async::~Async()
 {
     Sync();
