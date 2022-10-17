@@ -386,39 +386,48 @@ bool kt_List(kt_Disk *disk, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *ou
     if (!disk->ListTags(&ids))
         return false;
 
+    Async async(GetCoreCount() * 10);
+
     // Gather snapshot information
     {
-        // Reuse for performance
-        kt_ObjectType type;
-        HeapArray<uint8_t> obj;
+        std::mutex mutex;
 
         for (const kt_ID &id: ids) {
-            kt_SnapshotInfo snapshot = {};
+            async.Run([=, &mutex]() {
+                kt_SnapshotInfo snapshot = {};
 
-            obj.RemoveFrom(0);
-            if (!disk->ReadObject(id, &type, &obj))
-                return false;
+                kt_ObjectType type;
+                HeapArray<uint8_t> obj;
+                if (!disk->ReadObject(id, &type, &obj))
+                    return false;
 
-            if (type != kt_ObjectType::Snapshot1 && type != kt_ObjectType::Snapshot2) {
-                LogError("Object '%1' is not a snapshot (ignoring)", id);
-                continue;
-            }
-            if (obj.len <= RG_SIZE(kt_SnapshotHeader)) {
-                LogError("Malformed snapshot object '%1' (ignoring)", id);
-                continue;
-            }
+                if (type != kt_ObjectType::Snapshot1 && type != kt_ObjectType::Snapshot2) {
+                    LogError("Object '%1' is not a snapshot (ignoring)", id);
+                    return true;
+                }
+                if (obj.len <= RG_SIZE(kt_SnapshotHeader)) {
+                    LogError("Malformed snapshot object '%1' (ignoring)", id);
+                    return true;
+                }
 
-            const kt_SnapshotHeader *header = (const kt_SnapshotHeader *)obj.ptr;
+                std::lock_guard lock(mutex);
+                const kt_SnapshotHeader *header = (const kt_SnapshotHeader *)obj.ptr;
 
-            snapshot.id = id;
-            snapshot.name = header->name[0] ? DuplicateString(header->name, str_alloc).ptr : nullptr;
-            snapshot.time = LittleEndian(header->time);
-            snapshot.len = header->len;
-            snapshot.stored = header->stored + obj.len;
+                snapshot.id = id;
+                snapshot.name = header->name[0] ? DuplicateString(header->name, str_alloc).ptr : nullptr;
+                snapshot.time = LittleEndian(header->time);
+                snapshot.len = header->len;
+                snapshot.stored = header->stored + obj.len;
 
-            out_snapshots->Append(snapshot);
+                out_snapshots->Append(snapshot);
+
+                return true;
+            });
         }
     }
+
+    if (!async.Sync())
+        return false;
 
     std::sort(out_snapshots->ptr + prev_len, out_snapshots->end(),
               [](const kt_SnapshotInfo &snapshot1, const kt_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
