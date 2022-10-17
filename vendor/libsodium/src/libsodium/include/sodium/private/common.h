@@ -226,7 +226,15 @@ xor_buf(unsigned char *out, const unsigned char *in, size_t n)
  */
 #if defined(__amd64__) || defined(__i386__) || defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86)
 # define NATIVE_LITTLE_ENDIAN 1
-# if defined(__GNUC__)
+# if defined(__clang__)
+#  define HAVE_MEMSET_S    1
+#  define HAVE_ATOMIC_OPS  1
+#  define HAVE_MMINTRIN_H  1
+#  ifdef _WIN32
+#   include <intrin.h>
+#   define HAVE_INTRIN_H   1
+#  endif
+# elif defined(__GNUC__)
 #  define HAVE_MEMSET_S    1
 #  define HAVE_ATOMIC_OPS  1
 #  define HAVE_MMINTRIN_H  1
@@ -244,12 +252,6 @@ xor_buf(unsigned char *out, const unsigned char *in, size_t n)
 #  endif
 #  define HAVE_RDRAND 1
 #  define HAVE_CPUID  1
-# elif defined(__clang__)
-#  include <intrin.h>
-#  define HAVE_MEMSET_S    1
-#  define HAVE_ATOMIC_OPS  1
-#  define HAVE_INTRIN_H    1
-#  define HAVE_MMINTRIN_H  1
 # elif defined(_MSC_VER)
 #  include <intrin.h>
 #  define HAVE_INTRIN_H    1
