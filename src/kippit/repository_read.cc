@@ -35,6 +35,30 @@ enum class ExtractFlag {
     FlattenName = 1 << 1
 };
 
+class GetContext {
+    kt_Disk *disk;
+    unsigned int flags;
+
+    Async tasks;
+
+    std::atomic<int64_t> stat_len {0};
+
+public:
+    GetContext(kt_Disk *disk);
+
+    bool ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
+    bool GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
+
+    bool Sync() { return tasks.Sync(); }
+
+    int64_t GetLen() const { return stat_len; }
+};
+
+GetContext::GetContext(kt_Disk *disk)
+    : disk(disk), tasks(GetCoreCount() * 10)
+{
+}
+
 #ifdef _WIN32
 
 static bool ReserveFile(int fd, const char *filename, int64_t len)
@@ -86,6 +110,12 @@ static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uin
     return true;
 }
 
+static bool CreateSymbolicLink(const char *filename, const char *target)
+{
+    LogWarning("Ignoring symbolic link '%1' to '%2'", filename, target);
+    return true;
+}
+
 #else
 
 static bool ReserveFile(int fd, const char *filename, int64_t len)
@@ -116,10 +146,138 @@ static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uin
     return true;
 }
 
+static bool CreateSymbolicLink(const char *filename, const char *target)
+{
+    if (symlink(target, filename) < 0) {
+        LogError("Failed to create symbolic link '%1': %2", filename, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
 #endif
 
-static bool GetFile(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
-                    Span<const uint8_t> file_obj, const char *dest_filename, int64_t *out_len)
+bool GetContext::ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries,
+                                unsigned int flags, const char *dest_dirname)
+{
+    // XXX: Make sure each path does not clobber a previous one
+
+    std::shared_ptr<BlockAllocator> temp_alloc = std::make_shared<BlockAllocator>();
+
+    for (Size offset = 0; offset < entries.len;) {
+        const kt_FileEntry *entry = (const kt_FileEntry *)(entries.ptr + offset);
+        const char *name = entry->name;
+
+        if (type == kt_ObjectType::Directory1 || type == kt_ObjectType::Snapshot1) {
+            name = (const char *)entry + 45;
+
+            Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
+            Size entry_len = 45 + name_len + 1;
+
+            offset += entry_len;
+        } else if (type == kt_ObjectType::Directory2 || type == kt_ObjectType::Snapshot2) {
+            Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
+            Size entry_len = RG_SIZE(kt_FileEntry) + name_len + 1;
+
+            offset += entry_len;
+        } else {
+            RG_UNREACHABLE();
+        }
+
+        // Sanity checks
+        if (offset > entries.len) {
+            LogError("Malformed entry in directory object");
+            return false;
+        }
+        if (entry->kind != (int8_t)kt_FileEntry::Kind::Directory &&
+                entry->kind != (int8_t)kt_FileEntry::Kind::File &&
+                entry->kind != (int8_t)kt_FileEntry::Kind::Link) {
+            LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
+            return false;
+        }
+        if (!name[0] || PathContainsDotDot(name)) {
+            LogError("Unsafe file name '%1'", name);
+            return false;
+        }
+        if (PathIsAbsolute(name)) {
+            LogError("Unsafe file name '%1'", name);
+            return false;
+        }
+        if (!(flags & (int)ExtractFlag::AllowSeparators) && strpbrk(name, RG_PATH_SEPARATORS)) {
+            LogError("Unsafe file name '%1'", name);
+            return false;
+        }
+
+        kt_ID entry_id = entry->id;
+        int8_t entry_kind = entry->kind;
+
+        const char *entry_filename;
+        if (flags & (int)ExtractFlag::FlattenName) {
+            entry_filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, SplitStrReverse(name, '/')).ptr;
+        } else {
+            entry_filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, name).ptr;
+
+            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry_filename))
+                return false;
+        }
+
+        tasks.Run([temp_alloc, entry_id, entry_kind, entry_filename, this]() {
+            kt_ObjectType entry_type;
+            HeapArray<uint8_t> entry_obj;
+            if (!disk->ReadObject(entry_id, &entry_type, &entry_obj))
+                return false;
+
+            switch (entry_kind) {
+                case (int8_t)kt_FileEntry::Kind::Directory: {
+                    if (entry_type != kt_ObjectType::Directory1 &&
+                            entry_type != kt_ObjectType::Directory2) {
+                        LogError("Object '%1' is not a directory", entry_id);
+                        return false;
+                    }
+
+                    if (!MakeDirectory(entry_filename, false))
+                        return false;
+
+                    if (!ExtractEntries(entry_type, entry_obj, 0, entry_filename))
+                        return false;
+                } break;
+                case (int8_t)kt_FileEntry::Kind::File: {
+                    if (entry_type != kt_ObjectType::File && entry_type != kt_ObjectType::Chunk) {
+                        LogError("Object '%1' is not a file", entry_id);
+                        return false;
+                    }
+
+                    if (!GetFile(entry_id, entry_type, entry_obj, entry_filename))
+                        return false;
+                } break;
+                case (int8_t)kt_FileEntry::Kind::Link: {
+                    if (entry_type != kt_ObjectType::Link) {
+                        LogError("Object '%1' is not a link", entry_id);
+                        return false;
+                    }
+
+                    // NUL terminate the path
+                    entry_obj.Append(0);
+
+                    if (!CreateSymbolicLink(entry_filename, (const char *)entry_obj.ptr))
+                        return false;
+                } break;
+
+                default: {
+                    LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry_kind));
+                    return false;
+                } break;
+            }
+
+            return true;
+        });
+    }
+
+    return true;
+}
+
+bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename)
 {
     RG_ASSERT(type == kt_ObjectType::File || type == kt_ObjectType::Chunk);
 
@@ -152,7 +310,7 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
 
             // Write unencrypted file
             for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(kt_ChunkEntry)) {
-                async.Run([=]() {
+                async.Run([=, this]() {
                     kt_ChunkEntry entry = {};
 
                     memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
@@ -215,154 +373,7 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
     if (!FlushFile(fd, dest_filename))
         return false;
 
-    if (out_len) {
-        *out_len += file_len;
-    }
-    return true;
-}
-
-static bool CreateSymbolicLink(const char *filename, const char *target)
-{
-#ifdef _WIN32
-    LogWarning("Ignoring symbolic link '%1' to '%2'", filename, target);
-    return true;
-#else
-    if (symlink(target, filename) < 0) {
-        LogError("Failed to create symbolic link '%1': %2", filename, strerror(errno));
-        return false;
-    }
-
-    return true;
-#endif
-}
-
-static bool ExtractFileEntries(kt_Disk *disk, kt_ObjectType type, Span<const uint8_t> entries,
-                               unsigned int flags, const char *dest_dirname, int64_t *out_len)
-{
-    BlockAllocator temp_alloc;
-
-    // XXX: Make sure each path does not clobber a previous one
-
-    std::atomic<int64_t> total_len {0};
-
-    Async async;
-
-    for (Size offset = 0; offset < entries.len;) {
-        const kt_FileEntry *entry = (const kt_FileEntry *)(entries.ptr + offset);
-        const char *name = entry->name;
-
-        if (type == kt_ObjectType::Directory1 || type == kt_ObjectType::Snapshot1) {
-            name = (const char *)entry + 45;
-
-            Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
-            Size entry_len = 45 + name_len + 1;
-
-            offset += entry_len;
-        } else if (type == kt_ObjectType::Directory2 || type == kt_ObjectType::Snapshot2) {
-            Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
-            Size entry_len = RG_SIZE(kt_FileEntry) + name_len + 1;
-
-            offset += entry_len;
-        } else {
-            RG_UNREACHABLE();
-        }
-
-        // Sanity checks
-        if (offset > entries.len) {
-            LogError("Malformed entry in directory object");
-            return false;
-        }
-        if (entry->kind != (int8_t)kt_FileEntry::Kind::Directory &&
-                entry->kind != (int8_t)kt_FileEntry::Kind::File &&
-                entry->kind != (int8_t)kt_FileEntry::Kind::Link) {
-            LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
-            return false;
-        }
-        if (!name[0] || PathContainsDotDot(name)) {
-            LogError("Unsafe file name '%1'", name);
-            return false;
-        }
-        if (PathIsAbsolute(name)) {
-            LogError("Unsafe file name '%1'", name);
-            return false;
-        }
-        if (!(flags & (int)ExtractFlag::AllowSeparators) && strpbrk(name, RG_PATH_SEPARATORS)) {
-            LogError("Unsafe file name '%1'", name);
-            return false;
-        }
-
-        const char *entry_filename;
-        if (flags & (int)ExtractFlag::FlattenName) {
-            entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, SplitStrReverse(name, '/')).ptr;
-        } else {
-            entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, name).ptr;
-
-            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry_filename))
-                return false;
-        }
-
-        async.Run([&, disk, entry, entry_filename]() {
-            kt_ObjectType entry_type;
-            HeapArray<uint8_t> entry_obj;
-            if (!disk->ReadObject(entry->id, &entry_type, &entry_obj))
-                return false;
-
-            switch (entry->kind) {
-                case (int8_t)kt_FileEntry::Kind::Directory: {
-                    if (entry_type != kt_ObjectType::Directory1 &&
-                            entry_type != kt_ObjectType::Directory2) {
-                        LogError("Object '%1' is not a directory", entry->id);
-                        return false;
-                    }
-
-                    if (!MakeDirectory(entry_filename, false))
-                        return false;
-
-                    int64_t len = 0;
-                    if (!ExtractFileEntries(disk, entry_type, entry_obj, 0, entry_filename, &len))
-                        return false;
-                    total_len += len;
-                } break;
-                case (int8_t)kt_FileEntry::Kind::File: {
-                    if (entry_type != kt_ObjectType::File && entry_type != kt_ObjectType::Chunk) {
-                        LogError("Object '%1' is not a file", entry->id);
-                        return false;
-                    }
-
-                    int64_t len = 0;
-                    if (!GetFile(disk, entry->id, entry_type, entry_obj, entry_filename, &len))
-                        return false;
-                    total_len += len;
-                } break;
-                case (int8_t)kt_FileEntry::Kind::Link: {
-                    if (entry_type != kt_ObjectType::Link) {
-                        LogError("Object '%1' is not a link", entry->id);
-                        return false;
-                    }
-
-                    // NUL terminate the path
-                    entry_obj.Append(0);
-
-                    if (!CreateSymbolicLink(entry_filename, (const char *)entry_obj.ptr))
-                        return false;
-                } break;
-
-                default: {
-                    LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
-                    return false;
-                } break;
-            }
-
-            return true;
-        });
-    }
-
-    if (!async.Sync())
-        return false;
-
-    if (out_len) {
-        *out_len += total_len;
-    }
+    stat_len += file_len;
     return true;
 }
 
@@ -423,6 +434,8 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
     if (!disk->ReadObject(id, &type, &obj))
         return false;
 
+    GetContext get(disk);
+
     switch (type) {
         case kt_ObjectType::Chunk:
         case kt_ObjectType::File: {
@@ -431,7 +444,8 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
                 return false;
             }
 
-            return GetFile(disk, id, type, obj, dest_path, out_len);
+            if (!get.GetFile(id, type, obj, dest_path))
+                return false;
         } break;
 
         case kt_ObjectType::Directory1:
@@ -446,8 +460,9 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
                     return false;
             }
 
-            return ExtractFileEntries(disk, type, obj, 0, dest_path, out_len);
-        }
+            if (!get.ExtractEntries(type, obj, 0, dest_path))
+                return false;
+        } break;
 
         case kt_ObjectType::Snapshot1:
         case kt_ObjectType::Snapshot2: {
@@ -470,16 +485,25 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
             Span<uint8_t> entries = obj.Take(RG_SIZE(kt_SnapshotHeader), obj.len - RG_SIZE(kt_SnapshotHeader));
             unsigned int flags = (int)ExtractFlag::AllowSeparators | (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
-            return ExtractFileEntries(disk, type, entries, flags, dest_path, out_len);
+            if (!get.ExtractEntries(type, entries, flags, dest_path))
+                return false;
         } break;
 
         case kt_ObjectType::Link: {
             obj.Append(0);
-            return CreateSymbolicLink(dest_path, (const char *)obj.ptr);
+
+            if (!CreateSymbolicLink(dest_path, (const char *)obj.ptr))
+                return false;
         } break;
     }
 
-    RG_UNREACHABLE();
+    if (!get.Sync())
+        return false;
+
+    if (out_len) {
+        *out_len += get.GetLen();
+    }
+    return true;
 }
 
 }
