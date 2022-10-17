@@ -35,15 +35,21 @@ enum class PutResult {
 
 class PutContext {
     kt_Disk *disk;
+    Span<const uint8_t> salt;
+
+    Async uploads;
 
     std::atomic<int64_t> stat_len {0};
     std::atomic<int64_t> stat_written {0};
 
 public:
-    PutContext(kt_Disk *disk) : disk(disk) {}
+    PutContext(kt_Disk *disk);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, kt_ID *out_id);
+    PutResult PutEntries(const char *src_dirname, bool follow_symlinks, HeapArray<uint8_t> *out_obj);
     PutResult PutFile(const char *src_filename, kt_ID *out_id);
+
+    bool Sync() { return uploads.Sync(); }
 
     int64_t GetLen() const { return stat_len; }
     int64_t GetWritten() const { return stat_written; }
@@ -58,14 +64,63 @@ static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, kt_ID *out_
     blake3_hasher_finalize(&hasher, out_id->hash, RG_SIZE(out_id->hash));
 }
 
+class AsyncUpload {
+    Span<const uint8_t> obj;
+
+public:
+    AsyncUpload(Span<const uint8_t> obj) : obj(obj) {}
+    ~AsyncUpload() { ReleaseRaw(nullptr, obj.ptr, -1); }
+
+    // Fake copy operator that moves the data instead ;) We need this to move the
+    // data into the Async system, which needs std::function to be copy-constructible.
+    AsyncUpload(const AsyncUpload &other)
+    {
+        AsyncUpload *p = (AsyncUpload *)&other;
+
+        obj = p->obj;
+        p->obj = {};
+    }
+    AsyncUpload &operator=(const AsyncUpload &other) = delete;
+
+    Span<const uint8_t> Get() const { return obj; }
+};
+
+PutContext::PutContext(kt_Disk *disk)
+    : disk(disk), salt(disk->GetSalt()), uploads(GetCoreCount() * 10)
+{
+    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
+}
+
 PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, kt_ID *out_id)
 {
-    BlockAllocator temp_alloc;
-
-    Span<const uint8_t> salt = disk->GetSalt();
-    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
-
     HeapArray<uint8_t> dir_obj;
+
+    PutResult ret = PutEntries(src_dirname, follow_symlinks, &dir_obj);
+    if (ret != PutResult::Success)
+        return ret;
+
+    kt_ID dir_id = {};
+    HashBlake3(dir_obj, salt.ptr, &dir_id);
+
+    // Upload directory object
+    uploads.Run([dir_id, data = AsyncUpload(dir_obj.Leak()), this]() {
+        Span<const uint8_t> obj = data.Get();
+
+        Size written = disk->WriteObject(dir_id, kt_ObjectType::Directory, obj);
+        if (written < 0)
+            return false;
+        stat_written += written;
+
+        return true;
+    });
+
+    *out_id = dir_id;
+    return PutResult::Success;
+}
+
+PutResult PutContext::PutEntries(const char *src_dirname, bool follow_symlinks, HeapArray<uint8_t> *out_obj)
+{
+    BlockAllocator temp_alloc;
 
     src_dirname = DuplicateString(TrimStrRight(src_dirname, RG_PATH_SEPARATORS), &temp_alloc).ptr;
 
@@ -74,8 +129,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
 
         Size entry_len = RG_SIZE(kt_FileEntry) + strlen(basename) + 1;
-        kt_FileEntry *entry = (kt_FileEntry *)dir_obj.AppendDefault(entry_len);
-        RG_DEFER_N(entry_guard) { dir_obj.RemoveLast(entry_len); };
+        kt_FileEntry *entry = (kt_FileEntry *)out_obj->AppendDefault(entry_len);
+        RG_DEFER_N(entry_guard) { out_obj->RemoveLast(entry_len); };
 
         FileInfo file_info;
         {
@@ -118,11 +173,11 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         return ignore ? PutResult::Ignore : PutResult::Error;
     }
 
-    Async async;
+    Async async(&uploads);
 
     // Process data entries (file, links)
-    for (Size offset = 0; offset < dir_obj.len;) {
-        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
+    for (Size offset = 0; offset < out_obj->len;) {
+        kt_FileEntry *entry = (kt_FileEntry *)(out_obj->ptr + offset);
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
 
         switch ((kt_FileEntry::Kind)entry->kind) {
@@ -136,6 +191,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     return persist;
                 });
             } break;
+
             case kt_FileEntry::Kind::Link: {
 #ifdef _WIN32
                 RG_UNREACHABLE();
@@ -176,8 +232,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     }
 
     // Process directory entries
-    for (Size offset = 0; offset < dir_obj.len;) {
-        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
+    for (Size offset = 0; offset < out_obj->len;) {
+        kt_FileEntry *entry = (kt_FileEntry *)(out_obj->ptr + offset);
 
         if (entry->kind == (int8_t)kt_FileEntry::Kind::Directory) {
             const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
@@ -192,29 +248,11 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         offset += entry_len;
     }
 
-    if (!async.Sync())
-        return PutResult::Error;
-
-    // Upload directory object
-    kt_ID dir_id = {};
-    {
-        HashBlake3(dir_obj, salt.ptr, &dir_id);
-
-        Size written = disk->WriteObject(dir_id, kt_ObjectType::Directory, dir_obj);
-        if (written < 0)
-            return PutResult::Error;
-        stat_written += written;
-    }
-
-    *out_id = dir_id;
     return PutResult::Success;
 }
 
 PutResult PutContext::PutFile(const char *src_filename, kt_ID *out_id)
 {
-    Span<const uint8_t> salt = disk->GetSalt();
-    RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
-
     StreamReader st;
     {
         OpenResult ret = st.Open(src_filename);
@@ -239,7 +277,7 @@ PutResult PutContext::PutFile(const char *src_filename, kt_ID *out_id)
         }
 
         do {
-            Async async;
+            Async async(&uploads);
 
             // Fill buffer
             Size read = st.Read(buf.TakeAvailable());
@@ -433,6 +471,9 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
         entry->mtime = file_info.mtime;
         entry->mode = (uint32_t)file_info.mode;
     }
+
+    if (!put.Sync())
+        return false;
 
     int64_t total_len = put.GetLen();
     int64_t total_written = put.GetWritten();
