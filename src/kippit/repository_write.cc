@@ -46,7 +46,6 @@ public:
     PutContext(kt_Disk *disk);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, kt_ID *out_id);
-    PutResult PutEntries(const char *src_dirname, bool follow_symlinks, HeapArray<uint8_t> *out_obj);
     PutResult PutFile(const char *src_filename, kt_ID *out_id);
 
     bool Sync() { return uploads.Sync(); }
@@ -93,34 +92,11 @@ PutContext::PutContext(kt_Disk *disk)
 
 PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, kt_ID *out_id)
 {
-    HeapArray<uint8_t> dir_obj;
-
-    PutResult ret = PutEntries(src_dirname, follow_symlinks, &dir_obj);
-    if (ret != PutResult::Success)
-        return ret;
-
-    kt_ID dir_id = {};
-    HashBlake3(dir_obj, salt.ptr, &dir_id);
-
-    // Upload directory object
-    uploads.Run([dir_id, data = AsyncUpload(dir_obj.Leak()), this]() {
-        Span<const uint8_t> obj = data.Get();
-
-        Size written = disk->WriteObject(dir_id, kt_ObjectType::Directory, obj);
-        if (written < 0)
-            return false;
-        stat_written += written;
-
-        return true;
-    });
-
-    *out_id = dir_id;
-    return PutResult::Success;
-}
-
-PutResult PutContext::PutEntries(const char *src_dirname, bool follow_symlinks, HeapArray<uint8_t> *out_obj)
-{
     BlockAllocator temp_alloc;
+
+    sq_Database *db = disk->GetCache();
+
+    HeapArray<uint8_t> dir_obj;
 
     src_dirname = DuplicateString(TrimStrRight(src_dirname, RG_PATH_SEPARATORS), &temp_alloc).ptr;
 
@@ -129,8 +105,8 @@ PutResult PutContext::PutEntries(const char *src_dirname, bool follow_symlinks, 
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
 
         Size entry_len = RG_SIZE(kt_FileEntry) + strlen(basename) + 1;
-        kt_FileEntry *entry = (kt_FileEntry *)out_obj->AppendDefault(entry_len);
-        RG_DEFER_N(entry_guard) { out_obj->RemoveLast(entry_len); };
+        kt_FileEntry *entry = (kt_FileEntry *)dir_obj.AppendDefault(entry_len);
+        RG_DEFER_N(entry_guard) { dir_obj.RemoveLast(entry_len); };
 
         FileInfo file_info;
         {
@@ -145,7 +121,10 @@ PutResult PutContext::PutEntries(const char *src_dirname, bool follow_symlinks, 
 
         switch (file_info.type) {
             case FileType::Directory: { entry->kind = (int8_t)kt_FileEntry::Kind::Directory; } break;
-            case FileType::File: { entry->kind = (int8_t)kt_FileEntry::Kind::File; } break;
+            case FileType::File: {
+                entry->kind = (int8_t)kt_FileEntry::Kind::File;
+                entry->size = LittleEndian(file_info.size);
+            } break;
 #ifndef _WIN32
             case FileType::Link: { entry->kind = (int8_t)kt_FileEntry::Kind::Link; } break;
 #endif
@@ -161,8 +140,8 @@ PutResult PutContext::PutEntries(const char *src_dirname, bool follow_symlinks, 
             } break;
         }
 
-        entry->mtime = file_info.mtime;
-        entry->mode = (uint32_t)file_info.mode;
+        entry->mtime = LittleEndian(file_info.mtime);
+        entry->mode = LittleEndian((uint32_t)file_info.mode);
         CopyString(basename, MakeSpan(entry->name, entry_len - RG_SIZE(kt_FileEntry)));
 
         entry_guard.Disable();
@@ -176,14 +155,43 @@ PutResult PutContext::PutEntries(const char *src_dirname, bool follow_symlinks, 
     Async async(&uploads);
 
     // Process data entries (file, links)
-    for (Size offset = 0; offset < out_obj->len;) {
-        kt_FileEntry *entry = (kt_FileEntry *)(out_obj->ptr + offset);
+    for (Size offset = 0; offset < dir_obj.len;) {
+        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
 
         switch ((kt_FileEntry::Kind)entry->kind) {
             case kt_FileEntry::Kind::Directory: {} break; // Already processed
 
             case kt_FileEntry::Kind::File: {
+                // XXX: absolute path
+
+                // Skip file analysis if metadata is unchanged
+                {
+                    sq_Statement stmt;
+                    if (!db->Prepare("SELECT mtime, mode, size, id FROM stats WHERE path = ?1", &stmt))
+                        return PutResult::Error;
+                    sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
+
+                    if (stmt.Step()) {
+                        int64_t mtime = sqlite3_column_int64(stmt, 0);
+                        uint32_t mode = (uint32_t)sqlite3_column_int64(stmt, 1);
+                        int64_t size = sqlite3_column_int64(stmt, 2);
+                        Span<const uint8_t> id = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 3),
+                                                          sqlite3_column_bytes(stmt, 3));
+
+                        if (id.len == RG_SIZE(kt_ID) && mtime == LittleEndian(entry->mtime) &&
+                                                        mode == LittleEndian(entry->mode) &&
+                                                        size == LittleEndian(entry->size)) {
+                            memcpy(&entry->id, id.ptr, RG_SIZE(kt_ID));
+
+                            if (disk->HasObject(entry->id))
+                                break;
+                        }
+                    } else if (!stmt.IsValid()) {
+                        return PutResult::Error;
+                    }
+                }
+
                 async.Run([=, this]() {
                     PutResult ret = PutFile(filename, &entry->id);
 
@@ -232,8 +240,8 @@ PutResult PutContext::PutEntries(const char *src_dirname, bool follow_symlinks, 
     }
 
     // Process directory entries
-    for (Size offset = 0; offset < out_obj->len;) {
-        kt_FileEntry *entry = (kt_FileEntry *)(out_obj->ptr + offset);
+    for (Size offset = 0; offset < dir_obj.len;) {
+        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
 
         if (entry->kind == (int8_t)kt_FileEntry::Kind::Directory) {
             const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
@@ -248,6 +256,46 @@ PutResult PutContext::PutEntries(const char *src_dirname, bool follow_symlinks, 
         offset += entry_len;
     }
 
+    if (!async.Sync())
+        return PutResult::Error;
+
+    kt_ID dir_id = {};
+    HashBlake3(dir_obj, salt.ptr, &dir_id);
+
+    // Update cached stats
+    for (Size offset = 0; offset < dir_obj.len;) {
+        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
+        const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
+
+        if (entry->kind == (int8_t)kt_FileEntry::Kind::File) {
+            if (!db->Run(R"(INSERT INTO stats (path, mtime, mode, size, id)
+                                VALUES (?1, ?2, ?3, ?4, ?5)
+                                ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
+                                                                 mode = excluded.mode,
+                                                                 size = excluded.size,
+                                                                 id = excluded.id)",
+                         filename, entry->mtime, entry->mode, entry->size,
+                         MakeSpan((const uint8_t *)&entry->id, RG_SIZE(entry->id))))
+                return PutResult::Error;
+        }
+
+        Size entry_len = RG_SIZE(kt_FileEntry) + strlen(entry->name) + 1;
+        offset += entry_len;
+    }
+
+    // Upload directory object
+    uploads.Run([dir_id, data = AsyncUpload(dir_obj.Leak()), this]() {
+        Span<const uint8_t> obj = data.Get();
+
+        Size written = disk->WriteObject(dir_id, kt_ObjectType::Directory2, obj);
+        if (written < 0)
+            return false;
+        stat_written += written;
+
+        return true;
+    });
+
+    *out_id = dir_id;
     return PutResult::Success;
 }
 
@@ -453,6 +501,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             } break;
             case FileType::File: {
                 entry->kind = (int8_t)kt_FileEntry::Kind::File;
+                entry->size = LittleEndian((uint32_t)file_info.size);
 
                 if (put.PutFile(filename, &entry->id) != PutResult::Success)
                     return false;
@@ -468,8 +517,8 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             } break;
         }
 
-        entry->mtime = file_info.mtime;
-        entry->mode = (uint32_t)file_info.mode;
+        entry->mtime = LittleEndian(file_info.mtime);
+        entry->mode = LittleEndian((uint32_t)file_info.mode);
     }
 
     if (!put.Sync())
@@ -487,7 +536,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
 
         // Write snapshot object
         {
-            Size ret = disk->WriteObject(id, kt_ObjectType::Snapshot, snapshot_obj);
+            Size ret = disk->WriteObject(id, kt_ObjectType::Snapshot2, snapshot_obj);
             if (ret < 0)
                 return false;
             total_written += ret;

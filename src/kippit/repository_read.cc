@@ -205,8 +205,10 @@ static bool GetFile(kt_Disk *disk, const kt_ID &id, kt_ObjectType type,
             }
         } break;
 
-        case kt_ObjectType::Directory:
-        case kt_ObjectType::Snapshot:
+        case kt_ObjectType::Directory1:
+        case kt_ObjectType::Directory2:
+        case kt_ObjectType::Snapshot1:
+        case kt_ObjectType::Snapshot2:
         case kt_ObjectType::Link: { RG_UNREACHABLE(); } break;
     }
 
@@ -234,8 +236,8 @@ static bool CreateSymbolicLink(const char *filename, const char *target)
 #endif
 }
 
-static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsigned int flags,
-                               const char *dest_dirname, int64_t *out_len)
+static bool ExtractFileEntries(kt_Disk *disk, kt_ObjectType type, Span<const uint8_t> entries,
+                               unsigned int flags, const char *dest_dirname, int64_t *out_len)
 {
     BlockAllocator temp_alloc;
 
@@ -247,10 +249,23 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
 
     for (Size offset = 0; offset < entries.len;) {
         const kt_FileEntry *entry = (const kt_FileEntry *)(entries.ptr + offset);
+        const char *name = entry->name;
 
-        // Skip to next entry
-        Size entry_len = RG_SIZE(kt_FileEntry) + (Size)strnlen(entry->name, entries.end() - (const uint8_t *)entry->name) + 1;
-        offset += entry_len;
+        if (type == kt_ObjectType::Directory1 || type == kt_ObjectType::Snapshot1) {
+            name = (const char *)entry + 45;
+
+            Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
+            Size entry_len = 45 + name_len + 1;
+
+            offset += entry_len;
+        } else if (type == kt_ObjectType::Directory2 || type == kt_ObjectType::Snapshot2) {
+            Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
+            Size entry_len = RG_SIZE(kt_FileEntry) + name_len + 1;
+
+            offset += entry_len;
+        } else {
+            RG_UNREACHABLE();
+        }
 
         // Sanity checks
         if (offset > entries.len) {
@@ -263,24 +278,24 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
             LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
             return false;
         }
-        if (!entry->name[0] || PathContainsDotDot(entry->name)) {
-            LogError("Unsafe file name '%1'", entry->name);
+        if (!name[0] || PathContainsDotDot(name)) {
+            LogError("Unsafe file name '%1'", name);
             return false;
         }
-        if (PathIsAbsolute(entry->name)) {
-            LogError("Unsafe file name '%1'", entry->name);
+        if (PathIsAbsolute(name)) {
+            LogError("Unsafe file name '%1'", name);
             return false;
         }
-        if (!(flags & (int)ExtractFlag::AllowSeparators) && strpbrk(entry->name, RG_PATH_SEPARATORS)) {
-            LogError("Unsafe file name '%1'", entry->name);
+        if (!(flags & (int)ExtractFlag::AllowSeparators) && strpbrk(name, RG_PATH_SEPARATORS)) {
+            LogError("Unsafe file name '%1'", name);
             return false;
         }
 
         const char *entry_filename;
         if (flags & (int)ExtractFlag::FlattenName) {
-            entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, SplitStrReverse(entry->name, '/')).ptr;
+            entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, SplitStrReverse(name, '/')).ptr;
         } else {
-            entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, entry->name).ptr;
+            entry_filename = Fmt(&temp_alloc, "%1%/%2", dest_dirname, name).ptr;
 
             if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry_filename))
                 return false;
@@ -294,7 +309,8 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
 
             switch (entry->kind) {
                 case (int8_t)kt_FileEntry::Kind::Directory: {
-                    if (entry_type != kt_ObjectType::Directory) {
+                    if (entry_type != kt_ObjectType::Directory1 &&
+                            entry_type != kt_ObjectType::Directory2) {
                         LogError("Object '%1' is not a directory", entry->id);
                         return false;
                     }
@@ -303,7 +319,7 @@ static bool ExtractFileEntries(kt_Disk *disk, Span<const uint8_t> entries, unsig
                         return false;
 
                     int64_t len = 0;
-                    if (!ExtractFileEntries(disk, entry_obj, 0, entry_filename, &len))
+                    if (!ExtractFileEntries(disk, entry_type, entry_obj, 0, entry_filename, &len))
                         return false;
                     total_len += len;
                 } break;
@@ -372,7 +388,7 @@ bool kt_List(kt_Disk *disk, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *ou
             if (!disk->ReadObject(id, &type, &obj))
                 return false;
 
-            if (type != kt_ObjectType::Snapshot) {
+            if (type != kt_ObjectType::Snapshot1 && type != kt_ObjectType::Snapshot2) {
                 LogError("Object '%1' is not a snapshot (ignoring)", id);
                 continue;
             }
@@ -418,7 +434,8 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
             return GetFile(disk, id, type, obj, dest_path, out_len);
         } break;
 
-        case kt_ObjectType::Directory: {
+        case kt_ObjectType::Directory1:
+        case kt_ObjectType::Directory2: {
             if (TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
@@ -429,10 +446,11 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
                     return false;
             }
 
-            return ExtractFileEntries(disk, obj, 0, dest_path, out_len);
+            return ExtractFileEntries(disk, type, obj, 0, dest_path, out_len);
         }
 
-        case kt_ObjectType::Snapshot: {
+        case kt_ObjectType::Snapshot1:
+        case kt_ObjectType::Snapshot2: {
             if (TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
@@ -452,7 +470,7 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
             Span<uint8_t> entries = obj.Take(RG_SIZE(kt_SnapshotHeader), obj.len - RG_SIZE(kt_SnapshotHeader));
             unsigned int flags = (int)ExtractFlag::AllowSeparators | (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
-            return ExtractFileEntries(disk, entries, flags, dest_path, out_len);
+            return ExtractFileEntries(disk, type, entries, flags, dest_path, out_len);
         } break;
 
         case kt_ObjectType::Link: {

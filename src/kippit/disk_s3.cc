@@ -13,12 +13,9 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "disk.hh"
-#include "src/core/libsqlite/libsqlite.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
-
-static const int CacheVersion = 1;
 
 #pragma pack(push, 1)
 struct KeyData {
@@ -31,7 +28,6 @@ struct KeyData {
 class S3Disk: public kt_Disk {
     s3_Session s3;
 
-    sq_Database cache_db;
     std::atomic_int cache_hits {0};
     int cache_misses {0};
     std::mutex cache_mutex;
@@ -43,6 +39,7 @@ public:
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
     Size WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
+    bool TestRaw(const char *path) override;
 };
 
 static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
@@ -127,53 +124,8 @@ S3Disk::S3Disk(const s3_Config &config, const char *pwd)
         }
     }
 
-    // Open cache database
-    {
-        const char *cache_dir = GetUserCachePath("kippit", &str_alloc);
-        if (!MakeDirectory(cache_dir, false))
-            return;
-
-        const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(pkey, FmtType::SmallHex, "").Pad0(-2)).ptr;
-        LogDebug("Cache file: %1", cache_filename);
-
-        if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-            return;
-        if (!cache_db.SetWAL(true))
-            return;
-
-        int version;
-        if (!cache_db.GetUserVersion(&version))
-            return;
-
-        if (version > CacheVersion) {
-            LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
-            return;
-        } else if (version < CacheVersion) {
-            bool success = cache_db.Transaction([&]() {
-                switch (version) {
-                    case 0: {
-                        bool success = cache_db.RunMany(R"(
-                            CREATE TABLE objects (
-                                key TEXT NOT NULL
-                            );
-                            CREATE UNIQUE INDEX objects_k ON objects (key);
-                        )");
-                        if (!success)
-                            return false;
-                    } break;
-
-                    RG_STATIC_ASSERT(CacheVersion == 1);
-                }
-
-                if (!cache_db.SetUserVersion(CacheVersion))
-                    return false;
-
-                return true;
-            });
-            if (!success)
-                return;
-        }
-    }
+    if (!InitCache())
+        return;
 
     // We're good!
     url = s3.GetURL();
@@ -261,6 +213,16 @@ bool S3Disk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *>
     }
 
     return s3.ListObjects(path, alloc, out_paths);
+}
+
+bool S3Disk::TestRaw(const char *path)
+{
+    sq_Statement stmt;
+    if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
+        return -1;
+    sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
+
+    return stmt.Step();
 }
 
 kt_Disk *kt_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd)

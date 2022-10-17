@@ -30,8 +30,75 @@ struct ObjectIntro {
 };
 #pragma pack(pop)
 
-static const int ObjectVersion = 1;
+static const int CacheVersion = 2;
+
+static const int ObjectVersion = 2;
 static const Size ObjectSplit = Kibibytes(32);
+
+bool kt_Disk::InitCache()
+{
+    const char *cache_dir = GetUserCachePath("kippit", &str_alloc);
+    if (!MakeDirectory(cache_dir, false))
+        return false;
+
+    const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(pkey, FmtType::SmallHex, "").Pad0(-2)).ptr;
+    LogDebug("Cache file: %1", cache_filename);
+
+    if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+    if (!cache_db.SetWAL(true))
+        return false;
+
+    int version;
+    if (!cache_db.GetUserVersion(&version))
+        return false;
+
+    if (version > CacheVersion) {
+        LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
+        return false;
+    } else if (version < CacheVersion) {
+        bool success = cache_db.Transaction([&]() {
+            switch (version) {
+                case 0: {
+                    bool success = cache_db.RunMany(R"(
+                        CREATE TABLE objects (
+                            key TEXT NOT NULL
+                        );
+                        CREATE UNIQUE INDEX objects_k ON objects (key);
+                    )");
+                    if (!success)
+                        return false;
+                } [[fallthrough]];
+
+                case 1: {
+                    bool success = cache_db.RunMany(R"(
+                        CREATE TABLE stats (
+                            path TEXT NOT NULL,
+                            mtime INTEGER NOT NULL,
+                            mode INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            id BLOB NOT NULL
+                        );
+                        CREATE UNIQUE INDEX stats_p ON stats (path);
+                    )");
+                    if (!success)
+                        return false;
+                } // [[fallthrough]];
+
+                RG_STATIC_ASSERT(CacheVersion == 2);
+            }
+
+            if (!cache_db.SetUserVersion(CacheVersion))
+                return false;
+
+            return true;
+        });
+        if (!success)
+            return false;
+    }
+
+    return true;
+}
 
 bool kt_Disk::ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uint8_t> *out_obj)
 {
@@ -68,7 +135,7 @@ bool kt_Disk::ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uin
         }
         memcpy(&intro, obj.ptr, RG_SIZE(intro));
 
-        if (intro.version != ObjectVersion) {
+        if (intro.version > ObjectVersion) {
             LogError("Unexpected object version %1 (expected %2)", intro.version, ObjectVersion);
             return false;
         }
@@ -198,6 +265,16 @@ Size kt_Disk::WriteObject(const kt_ID &id, kt_ObjectType type, Span<const uint8_
     });
 
     return written;
+}
+
+bool kt_Disk::HasObject(const kt_ID &id)
+{
+    RG_ASSERT(url);
+
+    LocalArray<char, 256> path;
+    path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
+
+    return TestRaw(path.data);
 }
 
 Size kt_Disk::WriteTag(const kt_ID &id)

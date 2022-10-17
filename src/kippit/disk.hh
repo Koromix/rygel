@@ -16,6 +16,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "types.hh"
 #include "src/core/libnet/s3.hh"
+#include "src/core/libsqlite/libsqlite.hh"
 
 namespace RG {
 
@@ -31,16 +32,20 @@ static const char *const kt_DiskModeNames[] = {
 enum class kt_ObjectType: int8_t {
     Chunk = 0,
     File = 1,
-    Directory = 2,
-    Snapshot = 3,
+    Directory1 = 2,
+    Directory2 = 5,
+    Snapshot1 = 3,
+    Snapshot2 = 6,
     Link = 4
 };
 static const char *const kt_ObjectTypeNames[] = {
     "Chunk",
     "File",
-    "Directory",
-    "Snapshot",
-    "Link"
+    "Directory1",
+    "Snapshot1",
+    "Link",
+    "Directory2",
+    "Snapshot2"
 };
 
 class kt_Disk {
@@ -51,6 +56,8 @@ protected:
     uint8_t pkey[32];
     uint8_t skey[32];
 
+    sq_Database cache_db;
+
     BlockAllocator str_alloc;
 
     kt_Disk() = default;
@@ -58,12 +65,16 @@ protected:
 public:
     virtual ~kt_Disk() = default;
 
+    bool InitCache();
+    sq_Database *GetCache() { return &cache_db; }
+
     const char *GetURL() const { return url; }
     Span<const uint8_t> GetSalt() const { return pkey; }
     kt_DiskMode GetMode() const { return mode; }
 
     bool ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
     Size WriteObject(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> obj);
+    bool HasObject(const kt_ID &id);
 
     Size WriteTag(const kt_ID &id);
     bool ListTags(HeapArray<kt_ID> *out_ids);
@@ -74,6 +85,7 @@ protected:
     Size WriteRaw(const char *path, Span<const uint8_t> buf)
         { return WriteRaw(path, buf.len, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); }); }
     virtual bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) = 0;
+    virtual bool TestRaw(const char *path) = 0;
 };
 
 kt_Disk *kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);

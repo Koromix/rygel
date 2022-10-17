@@ -45,10 +45,11 @@ struct kt_FileEntry {
     int8_t kind; // Kind
     int64_t mtime; // Little Endian
     uint32_t mode; // Little Endian
+    int64_t size; // Little Endian
     char name[];
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(kt_FileEntry) == 45);
+RG_STATIC_ASSERT(RG_SIZE(kt_FileEntry) == 53);
 
 #pragma pack(push, 1)
 struct kt_ChunkEntry {

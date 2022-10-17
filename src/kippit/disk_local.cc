@@ -35,6 +35,7 @@ public:
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
     Size WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
+    bool TestRaw(const char *path) override;
 };
 
 static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
@@ -131,6 +132,9 @@ LocalDisk::LocalDisk(const char *path, const char *pwd)
         }
     }
 
+    if (!InitCache())
+        return;
+
     // We're good!
     url = directory.ptr;
 }
@@ -223,6 +227,12 @@ bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char
     }
 
     return true;
+}
+
+bool LocalDisk::TestRaw(const char *path)
+{
+    bool exists = TestFile(path, FileType::File);
+    return exists;
 }
 
 kt_Disk *kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd)
