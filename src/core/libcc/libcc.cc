@@ -160,9 +160,9 @@ protected:
         return ptr;
     }
 
-    void Release(void *ptr, Size) override
+    void Release(const void *ptr, Size) override
     {
-        free(ptr);
+        free((void *)ptr);
     }
 };
 
@@ -170,7 +170,7 @@ class NullAllocator: public Allocator {
 protected:
     void *Allocate(Size, unsigned int) override { RG_UNREACHABLE(); }
     void *Resize(void *, Size, Size, unsigned int) override { RG_UNREACHABLE(); }
-    void Release(void *, Size) override {}
+    void Release(const void *, Size) override {}
 };
 
 Allocator *GetDefaultAllocator()
@@ -254,10 +254,10 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
     return ptr;
 }
 
-void LinkedAllocator::Release(void *ptr, Size size)
+void LinkedAllocator::Release(const void *ptr, Size size)
 {
     if (ptr) {
-        Bucket *bucket = PointerToBucket(ptr);
+        Bucket *bucket = PointerToBucket((void *)ptr);
 
         if (bucket->head.next) {
             bucket->head.next->prev = bucket->head.prev;
@@ -359,7 +359,7 @@ void *BlockAllocatorBase::Resize(void *ptr, Size old_size, Size new_size, unsign
     return ptr;
 }
 
-void BlockAllocatorBase::Release(void *ptr, Size size)
+void BlockAllocatorBase::Release(const void *ptr, Size size)
 {
     RG_ASSERT(size >= 0);
 

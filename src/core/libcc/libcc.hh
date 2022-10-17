@@ -838,7 +838,7 @@ public:
 
     virtual void *Allocate(Size size, unsigned int flags = 0) = 0;
     virtual void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) = 0;
-    virtual void Release(void *ptr, Size size) = 0;
+    virtual void Release(const void *ptr, Size size) = 0;
 };
 
 Allocator *GetDefaultAllocator();
@@ -899,7 +899,7 @@ static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size n
 
 template <typename T>
 Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len,
-                     unsigned int flags = 0)
+                   unsigned int flags = 0)
 {
     RG_ASSERT(new_len >= 0);
 
@@ -914,7 +914,7 @@ Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len,
     return MakeSpan(mem.ptr, new_len);
 }
 
-static inline void ReleaseRaw(Allocator *alloc, void *ptr, Size size)
+static inline void ReleaseRaw(Allocator *alloc, const void *ptr, Size size)
 {
     if (!alloc) {
         alloc = GetDefaultAllocator();
@@ -972,7 +972,7 @@ public:
 
     void *Allocate(Size size, unsigned int flags = 0) override;
     void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
-    void Release(void *ptr, Size size) override;
+    void Release(const void *ptr, Size size) override;
 
 private:
     static Bucket *PointerToBucket(void *ptr);
@@ -998,7 +998,7 @@ public:
 
     void *Allocate(Size size, unsigned int flags = 0) override;
     void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
-    void Release(void *ptr, Size size) override;
+    void Release(const void *ptr, Size size) override;
 
 protected:
     void CopyFrom(BlockAllocatorBase *other);
