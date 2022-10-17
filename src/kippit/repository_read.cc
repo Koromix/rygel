@@ -416,8 +416,8 @@ bool kt_List(kt_Disk *disk, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *ou
                 snapshot.id = id;
                 snapshot.name = header->name[0] ? DuplicateString(header->name, str_alloc).ptr : nullptr;
                 snapshot.time = LittleEndian(header->time);
-                snapshot.len = header->len;
-                snapshot.stored = header->stored + obj.len;
+                snapshot.len = LittleEndian(header->len);
+                snapshot.stored = LittleEndian(header->stored) + obj.len;
 
                 out_snapshots->Append(snapshot);
 
