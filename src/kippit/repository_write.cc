@@ -98,8 +98,6 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
     HeapArray<uint8_t> dir_obj;
 
-    src_dirname = DuplicateString(TrimStrRight(src_dirname, RG_PATH_SEPARATORS), &temp_alloc).ptr;
-
     EnumResult ret = EnumerateDirectory(src_dirname, nullptr, -1,
                                         [&](const char *basename, FileType) {
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
@@ -163,8 +161,6 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             case kt_FileEntry::Kind::Directory: {} break; // Already processed
 
             case kt_FileEntry::Kind::File: {
-                // XXX: absolute path
-
                 // Skip file analysis if metadata is unchanged
                 {
                     sq_Statement stmt;
@@ -437,7 +433,15 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
 
     // Process snapshot entries
     for (const char *filename: filenames) {
-        Span<char> name = NormalizePath(filename, &temp_alloc);
+        Span<char> name = NormalizePath(filename, GetWorkingDirectory(), &temp_alloc);
+
+        if (!name.len) {
+            LogError("Cannot backup empty filename");
+            return false;
+        }
+
+        RG_ASSERT(PathIsAbsolute(name.ptr));
+        RG_ASSERT(!PathContainsDotDot(name.ptr));
 
         Size entry_len = RG_SIZE(kt_FileEntry) + name.len + 1;
         kt_FileEntry *entry = (kt_FileEntry *)snapshot_obj.Grow(entry_len);
@@ -459,22 +463,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             }
 #endif
 
-            while (StartsWith(name, "../")) {
-                name = name.Take(3, name.len - 3);
-                changed = true;
-            }
-            if (TestStr(name, "..")) {
-                name = {};
-            }
-            while (name.ptr[0] == '/') {
-                name = name.Take(1, name.len - 1);
-                changed = true;
-            }
-
-            if (!name.len) {
-                LogError("Cannot backup empty filename");
-                return false;
-            }
+            name = name.Take(1, name.len - 1);
 
             memcpy(entry->name, name.ptr, name.len);
             entry->name[name.len] = 0;
