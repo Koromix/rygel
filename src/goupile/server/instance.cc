@@ -1592,9 +1592,8 @@ bool MigrateInstance(sq_Database *db)
                     return false;
 
                 sq_Statement stmt;
-                if (!db->Prepare(R"(SELECT rowid, form FROM rec_entries
-                                    WHERE typeof(sequence) == 'text'
-                                    ORDER BY rowid)", &stmt))
+                if (!db->Prepare(R"(SELECT rowid, form, sequence
+                                    FROM rec_entries ORDER BY rowid)", &stmt))
                     return false;
 
                 HashMap<const char *, int64_t> sequences;
@@ -1602,25 +1601,30 @@ bool MigrateInstance(sq_Database *db)
                 while (stmt.Step()) {
                     int64_t rowid = sqlite3_column_int64(stmt, 0);
                     const char *form = (const char *)sqlite3_column_text(stmt, 1);
+                    int type = sqlite3_column_type(stmt, 2);
 
-                    for (;;) {
-                        auto ptr = sequences.table.TrySetDefault(form).first;
+                    auto ptr = sequences.table.TrySetDefault(form).first;
+                    if (!ptr->value) {
+                        ptr->key = DuplicateString(form, &temp_alloc).ptr;
+                    }
 
-                        if (!ptr->value) {
-                            ptr->key = DuplicateString(form, &temp_alloc).ptr;
+                    if (type == SQLITE_TEXT) {
+                        for (;;) {
+                            int64_t counter = ++ptr->value;
+
+                            PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+                            RG_DEFER { PopLogFilter(); };
+
+                            if (db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1", rowid, counter))
+                                break;
+                            if (sqlite3_errcode(*db) != SQLITE_CONSTRAINT) {
+                                LogError("SQLite Error: %1", sqlite3_errmsg(*db));
+                                return false;
+                            }
                         }
-
-                        int64_t counter = ++ptr->value;
-
-                        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-                        RG_DEFER { PopLogFilter(); };
-
-                        if (db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1", rowid, counter))
-                            break;
-                        if (sqlite3_errcode(*db) != SQLITE_CONSTRAINT) {
-                            LogError("SQLite Error: %1", sqlite3_errmsg(*db));
-                            return false;
-                        }
+                    } else if (type == SQLITE_INTEGER) {
+                        int64_t value = sqlite3_column_int64(stmt, 2);
+                        ptr->value = std::max(ptr->value, value);
                     }
                 }
                 if (!stmt.IsValid())
