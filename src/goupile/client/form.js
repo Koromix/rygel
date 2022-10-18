@@ -1209,7 +1209,7 @@ function FormBuilder(state, model, readonly = false) {
     this.section = function(label, func, options = {}) {
         options = expandOptions(options);
 
-        if (label && options.anchor == null && !section_depth) {
+        if (typeof label === 'string' && options.anchor == null && !section_depth) {
             let anchor = label;
 
             anchor = anchor.replace(/[A-Z]/g, c => c.toLowerCase());
