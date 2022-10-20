@@ -4403,10 +4403,12 @@ int GetCoreCount()
         if (env) {
             char *end_ptr;
             long value = strtol(env, &end_ptr, 10);
+
             if (end_ptr > env && !end_ptr[0] && value > 0) {
                 cores = (int)value;
             } else {
                 LogError("OVERRIDE_CORES must be positive number (ignored)");
+                cores = (int)std::thread::hardware_concurrency();
             }
         } else {
             cores = (int)std::thread::hardware_concurrency();
