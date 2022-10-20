@@ -687,11 +687,6 @@ void Builder::SaveCache()
     if (!EnsureDirectoryExists(cache_filename))
         return;
 
-    RG_DEFER_N(unlink_guard) {
-        LogError("Purging cache file '%1'", cache_filename);
-        UnlinkFile(cache_filename);
-    };
-
     StreamWriter st(cache_filename, (int)StreamWriterFlag::Atomic);
     if (!st.IsValid())
         return;
@@ -707,8 +702,6 @@ void Builder::SaveCache()
 
     if (!st.Close())
         return;
-
-    unlink_guard.Disable();
 }
 
 void Builder::LoadCache()
