@@ -43,7 +43,7 @@ class PutContext {
     std::atomic<int64_t> stat_written {0};
 
 public:
-    PutContext(kt_Disk *disk);
+    PutContext(kt_Disk *disk, int threads);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, kt_ID *out_id);
     PutResult PutFile(const char *src_filename, kt_ID *out_id);
@@ -84,8 +84,8 @@ public:
     Span<const uint8_t> Get() const { return obj; }
 };
 
-PutContext::PutContext(kt_Disk *disk)
-    : disk(disk), salt(disk->GetSalt()), uploads(GetCoreCount() * 10)
+PutContext::PutContext(kt_Disk *disk, int threads)
+    : disk(disk), salt(disk->GetSalt()), uploads(threads)
 {
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 }
@@ -429,7 +429,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
     CopyString(settings.name ? settings.name : "", header->name);
     header->time = LittleEndian(GetUnixTime());
 
-    PutContext put(disk);
+    PutContext put(disk, settings.threads);
 
     // Process snapshot entries
     for (const char *filename: filenames) {

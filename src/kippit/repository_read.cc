@@ -44,7 +44,7 @@ class GetContext {
     std::atomic<int64_t> stat_len {0};
 
 public:
-    GetContext(kt_Disk *disk);
+    GetContext(kt_Disk *disk, int threads);
 
     bool ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
     bool GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
@@ -54,8 +54,8 @@ public:
     int64_t GetLen() const { return stat_len; }
 };
 
-GetContext::GetContext(kt_Disk *disk)
-    : disk(disk), tasks(GetCoreCount() * 10)
+GetContext::GetContext(kt_Disk *disk, int threads)
+    : disk(disk), tasks(threads)
 {
 }
 
@@ -306,7 +306,7 @@ bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t
             if (!ReserveFile(fd, dest_filename, file_len))
                 return false;
 
-            Async async;
+            Async async(&tasks);
 
             // Write unencrypted file
             for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(kt_ChunkEntry)) {
@@ -377,65 +377,6 @@ bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t
     return true;
 }
 
-bool kt_List(kt_Disk *disk, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *out_snapshots)
-{
-    Size prev_len = out_snapshots->len;
-    RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
-
-    HeapArray<kt_ID> ids;
-    if (!disk->ListTags(&ids))
-        return false;
-
-    Async async(GetCoreCount() * 10);
-
-    // Gather snapshot information
-    {
-        std::mutex mutex;
-
-        for (const kt_ID &id: ids) {
-            async.Run([=, &mutex]() {
-                kt_SnapshotInfo snapshot = {};
-
-                kt_ObjectType type;
-                HeapArray<uint8_t> obj;
-                if (!disk->ReadObject(id, &type, &obj))
-                    return false;
-
-                if (type != kt_ObjectType::Snapshot1 && type != kt_ObjectType::Snapshot2) {
-                    LogError("Object '%1' is not a snapshot (ignoring)", id);
-                    return true;
-                }
-                if (obj.len <= RG_SIZE(kt_SnapshotHeader)) {
-                    LogError("Malformed snapshot object '%1' (ignoring)", id);
-                    return true;
-                }
-
-                std::lock_guard lock(mutex);
-                const kt_SnapshotHeader *header = (const kt_SnapshotHeader *)obj.ptr;
-
-                snapshot.id = id;
-                snapshot.name = header->name[0] ? DuplicateString(header->name, str_alloc).ptr : nullptr;
-                snapshot.time = LittleEndian(header->time);
-                snapshot.len = LittleEndian(header->len);
-                snapshot.stored = LittleEndian(header->stored) + obj.len;
-
-                out_snapshots->Append(snapshot);
-
-                return true;
-            });
-        }
-    }
-
-    if (!async.Sync())
-        return false;
-
-    std::sort(out_snapshots->ptr + prev_len, out_snapshots->end(),
-              [](const kt_SnapshotInfo &snapshot1, const kt_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
-
-    out_guard.Disable();
-    return true;
-}
-
 bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, const char *dest_path, int64_t *out_len)
 {
     kt_ObjectType type;
@@ -443,7 +384,7 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
     if (!disk->ReadObject(id, &type, &obj))
         return false;
 
-    GetContext get(disk);
+    GetContext get(disk, settings.threads);
 
     switch (type) {
         case kt_ObjectType::Chunk:
@@ -512,6 +453,65 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
     if (out_len) {
         *out_len += get.GetLen();
     }
+    return true;
+}
+
+bool kt_List(kt_Disk *disk, const kt_ListSettings &settings, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *out_snapshots)
+{
+    Size prev_len = out_snapshots->len;
+    RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
+
+    HeapArray<kt_ID> ids;
+    if (!disk->ListTags(&ids))
+        return false;
+
+    Async async(settings.threads);
+
+    // Gather snapshot information
+    {
+        std::mutex mutex;
+
+        for (const kt_ID &id: ids) {
+            async.Run([=, &mutex]() {
+                kt_SnapshotInfo snapshot = {};
+
+                kt_ObjectType type;
+                HeapArray<uint8_t> obj;
+                if (!disk->ReadObject(id, &type, &obj))
+                    return false;
+
+                if (type != kt_ObjectType::Snapshot1 && type != kt_ObjectType::Snapshot2) {
+                    LogError("Object '%1' is not a snapshot (ignoring)", id);
+                    return true;
+                }
+                if (obj.len <= RG_SIZE(kt_SnapshotHeader)) {
+                    LogError("Malformed snapshot object '%1' (ignoring)", id);
+                    return true;
+                }
+
+                std::lock_guard lock(mutex);
+                const kt_SnapshotHeader *header = (const kt_SnapshotHeader *)obj.ptr;
+
+                snapshot.id = id;
+                snapshot.name = header->name[0] ? DuplicateString(header->name, str_alloc).ptr : nullptr;
+                snapshot.time = LittleEndian(header->time);
+                snapshot.len = LittleEndian(header->len);
+                snapshot.stored = LittleEndian(header->stored) + obj.len;
+
+                out_snapshots->Append(snapshot);
+
+                return true;
+            });
+        }
+    }
+
+    if (!async.Sync())
+        return false;
+
+    std::sort(out_snapshots->ptr + prev_len, out_snapshots->end(),
+              [](const kt_SnapshotInfo &snapshot1, const kt_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
+
+    out_guard.Disable();
     return true;
 }
 

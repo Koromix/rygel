@@ -21,9 +21,21 @@ namespace RG {
 class kt_Disk;
 
 struct kt_PutSettings {
+    int threads = kt_ComputeDefaultThreads();
+
     const char *name = nullptr;
     bool follow_symlinks = false;
     bool raw = false;
+};
+
+struct kt_GetSettings {
+    int threads = kt_ComputeDefaultThreads();
+
+    bool flat = false;
+};
+
+struct kt_ListSettings {
+    int threads = kt_ComputeDefaultThreads();
 };
 
 struct kt_SnapshotInfo {
@@ -35,14 +47,10 @@ struct kt_SnapshotInfo {
     int64_t stored;
 };
 
-struct kt_GetSettings {
-    bool flat = false;
-};
-
 bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames,
             kt_ID *out_id, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
 
-bool kt_List(kt_Disk *disk, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *out_snapshots);
 bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, const char *dest_path, int64_t *out_len = nullptr);
+bool kt_List(kt_Disk *disk, const kt_ListSettings &settings, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *out_snapshots);
 
 }

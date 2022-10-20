@@ -161,7 +161,10 @@ Options:
     %!..+-n, --name <name>%!0            Set user friendly name (optional)
 
         %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is)
-        %!..+--raw%!0                    Skip snapshot object and report data ID)", FelixTarget);
+        %!..+--raw%!0                    Skip snapshot object and report data ID
+
+    %!..+-j, --threads <threads>%!0      Change number of threads
+                                 %!D..(default: %2)%!0)", FelixTarget, settings.threads);
     };
 
     // Parse arguments
@@ -182,6 +185,13 @@ Options:
                 settings.follow_symlinks = true;
             } else if (opt.Test("--raw")) {
                 settings.raw = true;
+            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
+                if (!ParseInt(opt.current_value, &settings.threads))
+                    return 1;
+                if (settings.threads < 1) {
+                    LogError("Threads count cannot be < 1");
+                    return 1;
+                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -254,7 +264,10 @@ Options:
         %!..+--password <pwd>%!0         Set repository password
 
     %!..+-O, --output <path>%!0          Restore file or directory to path
-        %!..+--flat%!0                   Use flat names for snapshot files)", FelixTarget);
+        %!..+--flat%!0                   Use flat names for snapshot files
+
+    %!..+-j, --threads <threads>%!0      Change number of threads
+                                 %!D..(default: %2)%!0)", FelixTarget, settings.threads);
     };
 
     // Parse arguments
@@ -273,6 +286,13 @@ Options:
                 dest_filename = opt.current_value;
             } else if (opt.Test("--flat")) {
                 settings.flat = true;
+            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
+                if (!ParseInt(opt.current_value, &settings.threads))
+                    return 1;
+                if (settings.threads < 1) {
+                    LogError("Threads count cannot be < 1");
+                    return 1;
+                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -336,6 +356,7 @@ static int RunList(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
+    kt_ListSettings settings;
     const char *repository = nullptr;
     const char *pwd = nullptr;
 
@@ -345,7 +366,10 @@ R"(Usage: %!..+%1 list [-R <repo>]%!0
 
 Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
-        %!..+--password <pwd>%!0         Set repository password)", FelixTarget);
+        %!..+--password <pwd>%!0         Set repository password
+
+    %!..+-j, --threads <threads>%!0      Change number of threads
+                                 %!D..(default: %2)%!0)", FelixTarget, settings.threads);
     };
 
     // Parse arguments
@@ -360,6 +384,13 @@ Options:
                 repository = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
+            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
+                if (!ParseInt(opt.current_value, &settings.threads))
+                    return 1;
+                if (settings.threads < 1) {
+                    LogError("Threads count cannot be < 1");
+                    return 1;
+                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -386,7 +417,7 @@ Options:
     }
 
     HeapArray<kt_SnapshotInfo> snapshots;
-    if (!kt_List(disk, &temp_alloc, &snapshots))
+    if (!kt_List(disk, settings, &temp_alloc, &snapshots))
         return 1;
 
     if (snapshots.len) {
