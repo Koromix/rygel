@@ -292,7 +292,7 @@ const goupile = new function() {
                 ${method === 'qrcode' ? html`
                     <p>Scannez ce QR code avec une <b>application d'authentification
                     pour mobile</b> puis saississez le code donné par cette application.</p>
-                    <p><i>Applications : FreeOTP, Authy, etc.</i></p>
+                    <p><i>Applications : andOTP, FreeOTP, etc.</i></p>
 
                     <div style="text-align: center; margin-top: 2em;">${qrcode}</div>
                 ` : ''}
