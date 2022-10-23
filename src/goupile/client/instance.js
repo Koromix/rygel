@@ -761,6 +761,7 @@ function InstanceController() {
 
                 form: form_builder,
                 meta: meta,
+                forms: meta.forms,
                 values: form_state.values,
 
                 nav: {
@@ -2206,6 +2207,7 @@ function InstanceController() {
             children: {},
             chain: null, // Will be set later
             map: null, // Will be set later
+            forms: null, // Will be set later
             siblings: null // Same, for multi-children only
         };
         record.ctime = new Date(util.decodeULIDTime(record.ulid));
@@ -2252,6 +2254,7 @@ function InstanceController() {
 
             record.chain = chain;
             record.map = map;
+            record.forms = map;
             chain.push(record);
             map[record.form.key] = record;
 
@@ -2266,6 +2269,7 @@ function InstanceController() {
 
                 parent.chain = chain;
                 parent.map = map;
+                parent.forms = map;
                 chain.push(parent);
                 map[parent.form.key] = parent;
                 it.parent = parent;
