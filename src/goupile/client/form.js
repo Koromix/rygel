@@ -617,6 +617,7 @@ function FormBuilder(state, model, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div style=${'display: inline-block; max-width: 100%; ' + makeInputStyle(options)}>
+                ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 <select id=${id} class="fm_select" ?disabled=${options.disabled}
                         @change=${e => handleEnumDropChange(e, key)}>
                     ${options.untoggle || !props.some(p => p != null && value === p.value) ?
@@ -626,6 +627,7 @@ function FormBuilder(state, model, readonly = false) {
                         html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}
                                      ?disabled=${options.readonly && value !== p.value}>${p.label}</option>`)}
                 </select>
+                ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
             </div>
         `);
 
