@@ -104,6 +104,11 @@ function ApplicationBuilder(app) {
         if (app.forms.has(key))
             throw new Error(`Form key '${key}' is already used`);
 
+        if (options == null && typeof func === 'object') {
+            options = func;
+            func = null;
+        }
+
         let prev_options = Array.from(options_stack);
         let prev_form = form_ref;
 
