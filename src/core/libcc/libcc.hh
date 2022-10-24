@@ -622,7 +622,7 @@ T ApplyMask(T value, U mask, bool enable)
     if (enable) {
         return value | (T)mask;
     } else {
-        return value & (T)~mask;
+        return value & ~(T)mask;
     }
 }
 
