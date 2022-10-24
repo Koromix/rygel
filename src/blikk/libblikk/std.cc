@@ -29,7 +29,7 @@ void bk_ImportPrint(bk_Compiler *out_compiler)
 {
     BK_ADD_FUNCTION(*out_compiler, "print(...)", 0, { bk_DoPrint(vm, args, false); });
     BK_ADD_FUNCTION(*out_compiler, "printLn(...)", 0, { bk_DoPrint(vm, args, false); PrintLn(); });
-    BK_ADD_FUNCTION(*out_compiler, "debug(...)", 0, { bk_DoPrint(vm, args, true); PrintLn(); });
+    BK_ADD_FUNCTION(*out_compiler, "log(...)", 0, { bk_DoPrint(vm, args, true); PrintLn(); });
 }
 
 void bk_ImportMath(bk_Compiler *out_compiler)

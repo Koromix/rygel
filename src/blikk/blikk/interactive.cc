@@ -66,7 +66,7 @@ begin
     let __result =
 )", "<intro>", &intro);
         success &= bk_Tokenize(R"(
-    if typeOf(__result) != Null do __debug(__result)
+    if typeOf(__result) != Null do __log(__result)
 end
 )", "<outro>", &outro);
 
@@ -88,7 +88,7 @@ int RunCommand(Span<const char> code, const Config &config)
     bk_Compiler compiler(&program);
     bk_ImportAll(&compiler);
 
-    BK_ADD_FUNCTION(compiler, "__debug(...)", 0, { bk_DoPrint(vm, args, true); PrintLn(); });
+    BK_ADD_FUNCTION(compiler, "__log(...)", 0, { bk_DoPrint(vm, args, true); PrintLn(); });
 
     // Try to parse with fake print first...
     bool valid_with_fake_print;
@@ -142,7 +142,7 @@ int RunInteractive(const Config &config)
         run = false;
         vm->SetInterrupt();
     });
-    BK_ADD_FUNCTION(compiler, "__debug(...)", 0, {
+    BK_ADD_FUNCTION(compiler, "__log(...)", 0, {
         bk_DoPrint(vm, args, true); PrintLn();
 
         if (args.len && args[0].type->primitive == bk_PrimitiveKind::Function &&
