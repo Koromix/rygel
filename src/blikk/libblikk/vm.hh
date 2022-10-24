@@ -27,9 +27,9 @@ enum class bk_RunFlag {
 class bk_VirtualMachine {
     RG_DELETE_COPY(bk_VirtualMachine)
 
+    unsigned int flags;
     bool run;
     bool error;
-    bool report;
 
 public:
     const bk_Program *const program;
@@ -37,21 +37,24 @@ public:
     HeapArray<bk_CallFrame> frames;
     HeapArray<bk_PrimitiveValue> stack;
 
-    bk_VirtualMachine(const bk_Program *const program);
+    bk_VirtualMachine(const bk_Program *const program, unsigned int flags = 0);
 
-    bool Run(unsigned int flags);
+    bool Run();
 
     void SetInterrupt() { run = false; }
     template <typename... Args>
     void FatalError(const char *fmt, Args... args)
     {
-        if (report) {
+        if (!(flags & (int)bk_RunFlag::HideErrors)) {
             bk_ReportRuntimeError(*program, frames, fmt, args...);
 
             run = false;
             error = true;
         }
     }
+
+    void SetFlags(unsigned int new_flags) { flags = new_flags; }
+    bool GetFlags() const { return flags; }
 
 private:
     void DumpInstruction(const bk_Instruction &inst, Size pc, Size bp) const;

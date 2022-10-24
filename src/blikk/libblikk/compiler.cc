@@ -375,7 +375,7 @@ void bk_Compiler::AddOpaque(const char *name)
 }
 
 bk_Parser::bk_Parser(bk_Program *program)
-    : program(program), folder(program)
+    : program(program), folder(program, (int)bk_RunFlag::HideErrors)
 {
     ir = &program->main;
     offset_ptr = &main_offset;
@@ -2972,7 +2972,7 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
     folder.frames[0].pc = addr;
     folder.stack.RemoveFrom(0);
 
-    bool folded = folder.Run((int)bk_RunFlag::HideErrors);
+    bool folded = folder.Run();
 
     if (folded) {
         TrimInstructions(IR.len - addr);

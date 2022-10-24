@@ -129,8 +129,8 @@ int RunInteractive(const Config &config)
     bk_Compiler compiler(&program);
     bk_ImportAll(&compiler);
 
-    bk_VirtualMachine vm(&program);
     unsigned int flags = config.debug ? (int)bk_RunFlag::Debug : 0;
+    bk_VirtualMachine vm(&program, flags);
     bool run = true;
 
     // Functions specific to interactive mode
@@ -211,7 +211,7 @@ int RunInteractive(const Config &config)
             }
         }
 
-        if (config.execute && !vm.Run(flags)) {
+        if (config.execute && !vm.Run()) {
             // Destroying global variables should be enough, because we execute single statements.
             // Thus, if the user defines a function, pretty much no execution can occur, and
             // execution should not even be able to fail in this case.

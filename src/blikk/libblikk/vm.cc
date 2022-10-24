@@ -17,16 +17,15 @@
 
 namespace RG {
 
-bk_VirtualMachine::bk_VirtualMachine(const bk_Program *const program)
-    : program(program)
+bk_VirtualMachine::bk_VirtualMachine(const bk_Program *const program, unsigned int flags)
+    : flags(flags), program(program)
 {
     frames.AppendDefault();
 }
 
-bool bk_VirtualMachine::Run(unsigned int flags)
+bool bk_VirtualMachine::Run()
 {
     bool debug = flags & (int)bk_RunFlag::Debug;
-    report = !(flags & (int)bk_RunFlag::HideErrors);
 
     run = true;
     error = false;
@@ -765,8 +764,8 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
 
 bool bk_Run(const bk_Program &program, unsigned int flags)
 {
-    bk_VirtualMachine vm(&program);
-    return vm.Run(flags);
+    bk_VirtualMachine vm(&program, flags);
+    return vm.Run();
 }
 
 }

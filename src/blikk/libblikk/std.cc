@@ -30,6 +30,16 @@ void bk_ImportPrint(bk_Compiler *out_compiler)
     BK_ADD_FUNCTION(*out_compiler, "print(...)", 0, { bk_DoPrint(vm, args, false); });
     BK_ADD_FUNCTION(*out_compiler, "printLn(...)", 0, { bk_DoPrint(vm, args, false); PrintLn(); });
     BK_ADD_FUNCTION(*out_compiler, "log(...)", 0, { bk_DoPrint(vm, args, true); PrintLn(); });
+
+    BK_ADD_FUNCTION(*out_compiler, "debug(): Bool", 0, {
+        unsigned int flags = vm->GetFlags();
+        ret[0].b = flags & (int)bk_RunFlag::Debug;
+    });
+    BK_ADD_FUNCTION(*out_compiler, "debug(Bool)", 0, {
+        unsigned int flags = vm->GetFlags();
+        flags = ApplyMask(flags, bk_RunFlag::Debug, args[0].b);
+        vm->SetFlags(flags);
+    });
 }
 
 void bk_ImportMath(bk_Compiler *out_compiler)
