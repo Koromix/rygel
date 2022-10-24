@@ -25,7 +25,7 @@ bk_VirtualMachine::bk_VirtualMachine(const bk_Program *const program)
 
 bool bk_VirtualMachine::Run(unsigned int flags)
 {
-    bool debug = flags & (int)bk_RunFlag::DebugInstructions;
+    bool debug = flags & (int)bk_RunFlag::Debug;
     report = !(flags & (int)bk_RunFlag::HideErrors);
 
     run = true;

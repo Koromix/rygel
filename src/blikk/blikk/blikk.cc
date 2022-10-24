@@ -84,7 +84,7 @@ int RunFile(const char *filename, const Config &config)
             return 1;
     }
 
-    unsigned int flags = config.debug ? (int)bk_RunFlag::DebugInstructions : 0;
+    unsigned int flags = config.debug ? (int)bk_RunFlag::Debug : 0;
     return config.execute ? !bk_Run(program, flags) : 0;
 }
 

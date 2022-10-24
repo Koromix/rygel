@@ -21,7 +21,7 @@ namespace RG {
 
 enum class bk_RunFlag {
     HideErrors = 1 << 0,
-    DebugInstructions = 1 << 1
+    Debug = 1 << 1
 };
 
 class bk_VirtualMachine {

@@ -116,7 +116,7 @@ int RunCommand(Span<const char> code, const Config &config)
             return 1;
     }
 
-    unsigned int flags = config.debug ? (int)bk_RunFlag::DebugInstructions : 0;
+    unsigned int flags = config.debug ? (int)bk_RunFlag::Debug : 0;
     return config.execute ? !bk_Run(program, flags) : 0;
 }
 
@@ -130,7 +130,7 @@ int RunInteractive(const Config &config)
     bk_ImportAll(&compiler);
 
     bk_VirtualMachine vm(&program);
-    unsigned int flags = config.debug ? (int)bk_RunFlag::DebugInstructions : 0;
+    unsigned int flags = config.debug ? (int)bk_RunFlag::Debug : 0;
     bool run = true;
 
     // Functions specific to interactive mode
