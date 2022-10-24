@@ -389,6 +389,11 @@ bk_Parser::bk_Parser(bk_Program *program)
         program->types_map.Set(&type);
     }
 
+    // Not needed because true and flase are keywords, but adding them as symbols
+    // makes them visible when try to help the user with a typo.
+    AddGlobal("true", bk_BoolType, {{ .b = true }}, false);
+    AddGlobal("false", bk_BoolType, {{ .b = false }}, false);
+
     // Special values
     AddGlobal("Version", bk_StringType, {{.str = FelixVersion}}, false);
     AddGlobal("NaN", bk_FloatType, {{.d = (double)NAN}}, false);
