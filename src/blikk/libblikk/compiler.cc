@@ -2796,6 +2796,8 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
                 return false;
             }
         }
+
+        func_type = func->type;
     } else if (!TestOverload(*func_type, args)) {
         LocalArray<char, 1024> buf;
         for (Size i = 0; i < args.len; i++) {
