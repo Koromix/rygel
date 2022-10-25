@@ -133,7 +133,7 @@ protected:
         void *ptr = malloc((size_t)size);
         RG_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
 
-        if (flags & (int)Allocator::Flag::Zero) {
+        if (flags & (int)AllocFlag::Zero) {
             memset_safe(ptr, 0, (size_t)size);
         }
 
@@ -150,7 +150,7 @@ protected:
             RG_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
                                               FmtMemSize(old_size), FmtMemSize(new_size));
 
-            if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
+            if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
                 memset_safe((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
             }
 
@@ -160,9 +160,9 @@ protected:
         return ptr;
     }
 
-    void Release(void *ptr, Size) override
+    void Release(const void *ptr, Size) override
     {
-        free(ptr);
+        free((void *)ptr);
     }
 };
 
@@ -170,7 +170,7 @@ class NullAllocator: public Allocator {
 protected:
     void *Allocate(Size, unsigned int) override { RG_UNREACHABLE(); }
     void *Resize(void *, Size, Size, unsigned int) override { RG_UNREACHABLE(); }
-    void Release(void *, Size) override {}
+    void Release(const void *, Size) override {}
 };
 
 Allocator *GetDefaultAllocator()
@@ -254,10 +254,10 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
     return ptr;
 }
 
-void LinkedAllocator::Release(void *ptr, Size size)
+void LinkedAllocator::Release(const void *ptr, Size size)
 {
     if (ptr) {
-        Bucket *bucket = PointerToBucket(ptr);
+        Bucket *bucket = PointerToBucket((void *)ptr);
 
         if (bucket->head.next) {
             bucket->head.next->prev = bucket->head.prev;
@@ -295,14 +295,14 @@ void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
     } else {
         if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
             current_bucket = (Bucket *)AllocateRaw(alloc, RG_SIZE(Bucket) + block_size,
-                                                   flags & ~(int)Allocator::Flag::Zero);
+                                                   flags & ~(int)AllocFlag::Zero);
             current_bucket->used = 0;
         }
 
         uint8_t *ptr = current_bucket->data + current_bucket->used;
         current_bucket->used += aligned_size;
 
-        if (flags & (int)Allocator::Flag::Zero) {
+        if (flags & (int)AllocFlag::Zero) {
             memset_safe(ptr, 0, size);
         }
 
@@ -334,18 +334,18 @@ void *BlockAllocatorBase::Resize(void *ptr, Size old_size, Size new_size, unsign
                 !AllocateSeparately(aligned_new_size)) {
             current_bucket->used += aligned_delta;
 
-            if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
+            if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
                 memset_safe((uint8_t *)ptr + old_size, 0, new_size - old_size);
             }
         } else if (AllocateSeparately(aligned_old_size)) {
             LinkedAllocator *alloc = GetAllocator();
             ptr = ResizeRaw(alloc, ptr, old_size, new_size, flags);
         } else {
-            void *new_ptr = Allocate(new_size, flags & ~(int)Allocator::Flag::Zero);
+            void *new_ptr = Allocate(new_size, flags & ~(int)AllocFlag::Zero);
             if (new_size > old_size) {
                 memcpy_safe(new_ptr, ptr, old_size);
 
-                if (flags & (int)Allocator::Flag::Zero) {
+                if (flags & (int)AllocFlag::Zero) {
                     memset_safe((uint8_t *)ptr + old_size, 0, new_size - old_size);
                 }
             } else {
@@ -359,7 +359,7 @@ void *BlockAllocatorBase::Resize(void *ptr, Size old_size, Size new_size, unsign
     return ptr;
 }
 
-void BlockAllocatorBase::Release(void *ptr, Size size)
+void BlockAllocatorBase::Release(const void *ptr, Size size)
 {
     RG_ASSERT(size >= 0);
 
@@ -420,6 +420,7 @@ IndirectBlockAllocator& IndirectBlockAllocator::operator=(IndirectBlockAllocator
 
 void IndirectBlockAllocator::ReleaseAll()
 {
+    ForgetCurrentBlock();
     allocator->ReleaseAll();
 }
 
@@ -687,7 +688,7 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode)
     switch (mode) {
         case TimeMode::Local: {
             localtime_r(&time64, &ti);
-            offset = ti.tm_gmtoff + ti.tm_isdst * 3600;
+            offset = ti.tm_gmtoff;
         } break;
 
         case TimeMode::UTC: {
@@ -825,9 +826,23 @@ static Span<char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32])
     return MakeSpan(out_buf + offset, 32 - offset);
 }
 
-static Span<char> FormatUnsignedToHex(uint64_t value, char out_buf[32])
+static Span<char> FormatUnsignedToBigHex(uint64_t value, char out_buf[32])
 {
     static const char literals[] = "0123456789ABCDEF";
+
+    Size offset = 32;
+    do {
+        uint64_t digit = value & 0xF;
+        value >>= 4;
+        out_buf[--offset] = literals[digit];
+    } while (value);
+
+    return MakeSpan(out_buf + offset, 32 - offset);
+}
+
+static Span<char> FormatUnsignedToSmallHex(uint64_t value, char out_buf[32])
+{
+    static const char literals[] = "0123456789abcdef";
 
     Size offset = 32;
     do {
@@ -1130,8 +1145,11 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtType::Binary: {
                 out = FormatUnsignedToBinary(arg.u.u, num_buf);
             } break;
-            case FmtType::Hexadecimal: {
-                out = FormatUnsignedToHex(arg.u.u, num_buf);
+            case FmtType::BigHex: {
+                out = FormatUnsignedToBigHex(arg.u.u, num_buf);
+            } break;
+            case FmtType::SmallHex: {
+                out = FormatUnsignedToSmallHex(arg.u.u, num_buf);
             } break;
 
             case FmtType::MemorySize: {
@@ -1241,32 +1259,58 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtType::TimeISO: {
-                if (arg.u.time.offset) {
-                    int offset_h = arg.u.time.offset / 60;
-                    int offset_m = arg.u.time.offset % 60;
+                const TimeSpec &spec = arg.u.time.spec;
+
+                if (spec.offset && arg.u.time.ms) {
+                    int offset_h = spec.offset / 60;
+                    int offset_m = spec.offset % 60;
 
                     out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6.%7%8%9%10",
-                                      FmtArg(arg.u.time.year).Pad0(-2), FmtArg(arg.u.time.month).Pad0(-2),
-                                      FmtArg(arg.u.time.day).Pad0(-2), FmtArg(arg.u.time.hour).Pad0(-2),
-                                      FmtArg(arg.u.time.min).Pad0(-2), FmtArg(arg.u.time.sec).Pad0(-2), FmtArg(arg.u.time.msec).Pad0(-3),
+                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
+                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
+                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2), FmtArg(spec.msec).Pad0(-3),
                                       offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
-                } else {
+                } else if (spec.offset) {
+                    int offset_h = spec.offset / 60;
+                    int offset_m = spec.offset % 60;
+
+                    out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6%7%8%9",
+                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
+                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
+                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2),
+                                      offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
+                } else if (arg.u.time.ms) {
                     out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6.%7Z",
-                                      FmtArg(arg.u.time.year).Pad0(-2), FmtArg(arg.u.time.month).Pad0(-2),
-                                      FmtArg(arg.u.time.day).Pad0(-2), FmtArg(arg.u.time.hour).Pad0(-2),
-                                      FmtArg(arg.u.time.min).Pad0(-2), FmtArg(arg.u.time.sec).Pad0(-2), FmtArg(arg.u.time.msec).Pad0(-3)).len;
+                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
+                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
+                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2), FmtArg(spec.msec).Pad0(-3)).len;
+                } else {
+                    out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6Z",
+                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
+                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
+                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2)).len;
                 }
                 out = out_buf;
             } break;
             case FmtType::TimeNice: {
-                int offset_h = arg.u.time.offset / 60;
-                int offset_m = arg.u.time.offset % 60;
+                const TimeSpec &spec = arg.u.time.spec;
 
-                out_buf.len = Fmt(out_buf.data, "%1-%2-%3 %4:%5:%6.%7 %8%9%10",
-                                  FmtArg(arg.u.time.year).Pad0(-2), FmtArg(arg.u.time.month).Pad0(-2),
-                                  FmtArg(arg.u.time.day).Pad0(-2), FmtArg(arg.u.time.hour).Pad0(-2),
-                                  FmtArg(arg.u.time.min).Pad0(-2), FmtArg(arg.u.time.sec).Pad0(-2), FmtArg(arg.u.time.msec).Pad0(-3),
-                                  offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
+                int offset_h = spec.offset / 60;
+                int offset_m = spec.offset % 60;
+
+                if (arg.u.time.ms) {
+                    out_buf.len = Fmt(out_buf.data, "%1-%2-%3 %4:%5:%6.%7 %8%9%10",
+                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
+                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
+                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2), FmtArg(spec.msec).Pad0(-3),
+                                      offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
+                } else {
+                    out_buf.len = Fmt(out_buf.data, "%1-%2-%3 %4:%5:%6 %7%8%9",
+                                      FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2),
+                                      FmtArg(spec.day).Pad0(-2), FmtArg(spec.hour).Pad0(-2),
+                                      FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2),
+                                      offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
+                }
                 out = out_buf;
             } break;
 
@@ -1277,7 +1321,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 RG_ASSERT(arg.u.random.len <= RG_SIZE(out_buf.data));
 
                 for (Size j = 0; j < arg.u.random.len; j++) {
-                    int rnd = GetRandomIntSafe(0, chars.len);
+                    int rnd = GetRandomIntSafe(0, (int)chars.len);
                     out_buf.Append(chars[rnd]);
                 }
 
@@ -1331,7 +1375,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::Integer:
                         case FmtType::Unsigned:
                         case FmtType::Binary:
-                        case FmtType::Hexadecimal: {
+                        case FmtType::BigHex:
+                        case FmtType::SmallHex: {
                             switch (arg.u.span.type_len) {
                                 case 8: { arg2.u.u = *(const uint64_t *)ptr; } break;
                                 case 4: { arg2.u.u = *(const uint32_t *)ptr; } break;
@@ -1354,7 +1399,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::DiskSize: { arg2.u.i = *(const int64_t *)ptr; } break;
                         case FmtType::Date: { arg2.u.date = *(const LocalDate *)ptr; } break;
                         case FmtType::TimeISO:
-                        case FmtType::TimeNice: { arg2.u.time = *(const TimeSpec *)ptr; } break;
+                        case FmtType::TimeNice: { arg2.u.time = *(decltype(FmtArg::u.time) *)ptr; } break;
                         case FmtType::Random: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagNames: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagOptions: { RG_UNREACHABLE(); } break;
@@ -1671,6 +1716,20 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 {
     PrintFmt(fmt, args, fp);
     fputc('\n', fp);
+}
+
+// PrintLn variants without format strings
+void PrintLn(StreamWriter *out_st)
+{
+    out_st->Write('\n');
+}
+void PrintLn(FILE *out_fp)
+{
+    fputc('\n', out_fp);
+}
+void PrintLn()
+{
+    putchar('\n');
 }
 
 // ------------------------------------------------------------------------
@@ -2023,7 +2082,7 @@ static FileType FileAttributesToType(uint32_t attr)
     }
 }
 
-bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
+StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
     // We don't detect symbolic links, but since they are much less of a hazard
     // than on POSIX systems we care a lot less about them.
@@ -2035,25 +2094,38 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
     } else {
         wchar_t filename_w[4096];
         if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
-            return false;
+            return StatResult::OtherError;
 
         h = CreateFileW(filename_w, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                         nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
     }
     if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
-        if (!(flags & (int)StatFlag::IgnoreMissing) ||
-                (err != ERROR_FILE_NOT_FOUND && err != ERROR_PATH_NOT_FOUND)) {
-            LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+
+        switch (err) {
+            case ERROR_FILE_NOT_FOUND:
+            case ERROR_PATH_NOT_FOUND: {
+                if (!(flags & (int)StatFlag::IgnoreMissing)) {
+                    LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+                }
+                return StatResult::MissingPath;
+            } break;
+            case ERROR_ACCESS_DENIED: {
+                LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+                return StatResult::AccessDenied;
+            }
+            default: {
+                LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+                return StatResult::OtherError;
+            } break;
         }
-        return false;
     }
     RG_DEFER { CloseHandle(h); };
 
     BY_HANDLE_FILE_INFORMATION attr;
     if (!GetFileInformationByHandle(h, &attr)) {
         LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString());
-        return false;
+        return StatResult::OtherError;
     }
 
     out_info->type = FileAttributesToType(attr.dwFileAttributes);
@@ -2061,15 +2133,15 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
     out_info->mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
     out_info->mode = (out_info->type == FileType::Directory) ? 0755 : 0644;
 
-    return true;
+    return StatResult::Success;
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool)
+bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags)
 {
-    DWORD flags = overwrite ? MOVEFILE_REPLACE_EXISTING : 0;
+    DWORD move_flags = (flags & (int)RenameFlag::Overwrite) ? MOVEFILE_REPLACE_EXISTING : 0;
 
     if (win32_utf8) {
-        if (!MoveFileExA(src_filename, dest_filename, flags))
+        if (!MoveFileExA(src_filename, dest_filename, move_flags))
             goto error;
     } else {
         wchar_t src_filename_w[4096];
@@ -2079,7 +2151,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, bool overwr
         if (ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w) < 0)
             return false;
 
-        if (!MoveFileExW(src_filename_w, dest_filename_w, flags))
+        if (!MoveFileExW(src_filename_w, dest_filename_w, move_flags))
             goto error;
     }
 
@@ -2090,7 +2162,7 @@ error:
     return false;
 }
 
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
     if (filter) {
@@ -2104,18 +2176,20 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         char find_filter[4096];
         if (snprintf(find_filter, RG_SIZE(find_filter), "%s\\%s", dirname, filter) >= RG_SIZE(find_filter)) {
             LogError("Cannot enumerate directory '%1': Path too long", dirname);
-            return EnumStatus::Error;
+            return EnumResult::OtherError;
         }
 
         if (ConvertUtf8ToWin32Wide(find_filter, find_filter_w) < 0)
-            return EnumStatus::Error;
+            return EnumResult::OtherError;
     }
 
     WIN32_FIND_DATAW find_data;
     HANDLE handle = FindFirstFileExW(find_filter_w, FindExInfoBasic, &find_data,
                                      FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
     if (handle == INVALID_HANDLE_VALUE) {
-        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+        DWORD err = GetLastError();
+
+        if (err == ERROR_FILE_NOT_FOUND) {
             // Erase the filter part from the buffer, we are about to exit anyway.
             // And no, I don't want to include wchar.h
             Size len = 0;
@@ -2125,12 +2199,17 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
             DWORD attrib = GetFileAttributesW(find_filter_w);
             if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY))
-                return EnumStatus::Complete;
+                return EnumResult::Success;
         }
 
-        LogError("Cannot enumerate directory '%1': %2", dirname,
-                 GetWin32ErrorString());
-        return EnumStatus::Error;
+        LogError("Cannot enumerate directory '%1': %2", dirname, GetWin32ErrorString());
+
+        switch (err) {
+            case ERROR_FILE_NOT_FOUND:
+            case ERROR_PATH_NOT_FOUND: return EnumResult::MissingPath;
+            case ERROR_ACCESS_DENIED: return EnumResult::AccessDenied;
+            default: return EnumResult::OtherError;
+        }
     }
     RG_DEFER { FindClose(handle); };
 
@@ -2142,26 +2221,26 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
         if (RG_UNLIKELY(count++ >= max_files && max_files >= 0)) {
             LogError("Partial enumation of directory '%1'", dirname);
-            return EnumStatus::Partial;
+            return EnumResult::PartialEnum;
         }
 
         char filename[512];
         if (ConvertWin32WideToUtf8(find_data.cFileName, filename) < 0)
-            return EnumStatus::Error;
+            return EnumResult::OtherError;
 
         FileType file_type = FileAttributesToType(find_data.dwFileAttributes);
 
         if (!func(filename, file_type))
-            return EnumStatus::Stopped;
+            return EnumResult::CallbackFail;
     } while (FindNextFileW(handle, &find_data));
 
     if (GetLastError() != ERROR_NO_MORE_FILES) {
         LogError("Error while enumerating directory '%1': %2", dirname,
                  GetWin32ErrorString());
-        return EnumStatus::Error;
+        return EnumResult::OtherError;
     }
 
-    return EnumStatus::Complete;
+    return EnumResult::Success;
 }
 
 #else
@@ -2200,16 +2279,28 @@ static FileType FileModeToType(mode_t mode)
     }
 }
 
-bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
+StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
 
     struct stat sb;
     if (fstatat(AT_FDCWD, filename, &sb, stat_flags) < 0) {
-        if (!(flags & (int)StatFlag::IgnoreMissing) || errno != ENOENT) {
-            LogError("Cannot stat '%1': %2", filename, strerror(errno));
+        switch (errno) {
+            case ENOENT: {
+                if (!(flags & (int)StatFlag::IgnoreMissing)) {
+                    LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                }
+                return StatResult::MissingPath;
+            } break;
+            case EACCES: {
+                LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                return StatResult::AccessDenied;
+            } break;
+            default: {
+                LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                return StatResult::OtherError;
+            } break;
         }
-        return false;
     }
 
     out_info->type = FileModeToType(sb.st_mode);
@@ -2225,7 +2316,7 @@ bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 #endif
     out_info->mode = (unsigned int)sb.st_mode;
 
-    return true;
+    return StatResult::Success;
 }
 
 static bool SyncFileDirectory(const char *filename)
@@ -2255,10 +2346,10 @@ static bool SyncFileDirectory(const char *filename)
     return true;
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool sync)
+bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags)
 {
     int fd = -1;
-    if (!overwrite) {
+    if (!(flags & (int)RenameFlag::Overwrite)) {
         fd = open(dest_filename, O_CREAT | O_EXCL, 0644);
         if (fd < 0) {
             if (errno == EEXIST) {
@@ -2279,7 +2370,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, bool overwr
 
     // Not much we can do if fsync fails (I think), so ignore errors.
     // Hope for the best: that's the spirit behind the POSIX filesystem API (...).
-    if (sync) {
+    if (flags & (int)RenameFlag::Sync) {
         SyncFileDirectory(src_filename);
         SyncFileDirectory(dest_filename);
     }
@@ -2287,13 +2378,18 @@ bool RenameFile(const char *src_filename, const char *dest_filename, bool overwr
     return true;
 }
 
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
     DIR *dirp = RG_POSIX_RESTART_EINTR(opendir(dirname), == nullptr);
     if (!dirp) {
         LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
-        return EnumStatus::Error;
+
+        switch (errno) {
+            case ENOENT: return EnumResult::MissingPath;
+            case EACCES: return EnumResult::AccessDenied;
+            default: return EnumResult::OtherError;
+        }
     }
     RG_DEFER { closedir(dirp); };
 
@@ -2310,7 +2406,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         if (!filter || !fnmatch(filter, dent->d_name, FNM_PERIOD)) {
             if (RG_UNLIKELY(count++ >= max_files && max_files >= 0)) {
                 LogError("Partial enumation of directory '%1'", dirname);
-                return EnumStatus::Partial;
+                return EnumResult::PartialEnum;
             }
 
             FileType file_type;
@@ -2343,7 +2439,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
             }
 
             if (!func(dent->d_name, file_type))
-                return EnumStatus::Stopped;
+                return EnumResult::CallbackFail;
         }
 
         errno = 0;
@@ -2351,10 +2447,10 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
     if (errno) {
         LogError("Error while enumerating directory '%1': %2", dirname, strerror(errno));
-        return EnumStatus::Error;
+        return EnumResult::OtherError;
     }
 
-    return EnumStatus::Complete;
+    return EnumResult::Success;
 }
 
 #endif
@@ -2364,8 +2460,8 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 {
     RG_DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
-    EnumStatus status = EnumerateDirectory(dirname, nullptr, max_files,
-                                           [&](const char *basename, FileType file_type) {
+    EnumResult ret = EnumerateDirectory(dirname, nullptr, max_files,
+                                        [&](const char *basename, FileType file_type) {
         switch (file_type) {
             case FileType::Directory: {
                 if (max_depth) {
@@ -2390,7 +2486,7 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 
         return true;
     });
-    if (status == EnumStatus::Error)
+    if (ret != EnumResult::Success && ret != EnumResult::PartialEnum)
         return false;
 
     out_guard.Disable();
@@ -2399,14 +2495,19 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 
 bool IsDirectoryEmpty(const char *dirname)
 {
-    EnumStatus status = EnumerateDirectory(dirname, nullptr, -1, [](const char *, FileType) { return false; });
-    return status == EnumStatus::Complete;
+    EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [](const char *, FileType) { return false; });
+
+    bool empty = (ret == EnumResult::Success);
+    return empty;
 }
 
 bool TestFile(const char *filename)
 {
     FileInfo file_info;
-    return StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+    StatResult ret = StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+
+    bool exists = (ret == StatResult::Success);
+    return exists;
 }
 
 bool TestFile(const char *filename, FileType type)
@@ -2414,7 +2515,7 @@ bool TestFile(const char *filename, FileType type)
     RG_ASSERT(type != FileType::Link);
 
     FileInfo file_info;
-    if (!StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info))
+    if (StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info) != StatResult::Success)
         return false;
 
     // Don't follow, but don't warn if we just wanted a file
@@ -2961,9 +3062,9 @@ static bool CheckForDumbTerm()
 
 #ifdef _WIN32
 
-int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
+OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
 {
-    RG_ASSERT(!out_exists || (flags & (int)OpenFlag::Exclusive));
+    RG_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
 
     DWORD access = 0;
     DWORD share = 0;
@@ -3013,33 +3114,27 @@ int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
         h = CreateFileA(filename, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
     } else {
         wchar_t filename_w[4096];
-        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0) {
-            if (out_exists) {
-                *out_exists = false;
-            }
-            return -1;
-        }
+        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+            return OpenResult::OtherError;
 
         h = CreateFileW(filename_w, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
     }
     if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
 
-        if (err == ERROR_FILE_EXISTS) {
-            if (out_exists) {
-                *out_exists = true;
-            } else {
-                LogError("File '%1' already exists", filename);
-            }
-        } else {
-            LogError("Cannot open '%1': %2", filename, GetWin32ErrorString(err));
-
-            if (out_exists) {
-                *out_exists = false;
-            }
+        OpenResult ret;
+        switch (err) {
+            case ERROR_FILE_NOT_FOUND:
+            case ERROR_PATH_NOT_FOUND: { ret = OpenResult::MissingPath; } break;
+            case ERROR_FILE_EXISTS: { ret = OpenResult::FileExists; } break;
+            case ERROR_ACCESS_DENIED: { ret = OpenResult::AccessDenied; } break;
+            default: { ret = OpenResult::OtherError; } break;
         }
 
-        return -1;
+        if (!(silent & (int)ret)) {
+            LogError("Cannot open '%1': %2", filename, GetWin32ErrorString(err));
+        }
+        return ret;
     }
 
     int fd = _open_osfhandle((intptr_t)h, oflags);
@@ -3047,19 +3142,14 @@ int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
         LogError("Cannot open '%1': %2", filename, strerror(errno));
         CloseHandle(h);
 
-        if (out_exists) {
-            *out_exists = false;
-        }
-        return -1;
+        return OpenResult::OtherError;
     }
 
-    if (out_exists) {
-        *out_exists = false;
-    }
-    return fd;
+    *out_fd = fd;
+    return OpenResult::Success;
 }
 
-FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
+OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, FILE **out_fp)
 {
     char mode[16] = {};
     switch (flags & ((int)OpenFlag::Read |
@@ -3077,20 +3167,21 @@ FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
     strcat(mode, "N");
 #endif
 
-    int fd = OpenDescriptor(filename, flags, out_exists);
-    if (fd < 0)
-        return nullptr;
+    int fd = -1;
+    OpenResult ret = OpenDescriptor(filename, flags, silent, &fd);
+    if (ret != OpenResult::Success)
+        return ret;
 
     FILE *fp = _fdopen(fd, mode);
     if (!fp) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
         _close(fd);
+
+        return OpenResult::OtherError;
     }
 
-    if (out_exists) {
-        *out_exists = false;
-    }
-    return fp;
+    *out_fp = fp;
+    return OpenResult::Success;
 }
 
 bool FlushFile(int fd, const char *filename)
@@ -3304,9 +3395,9 @@ error:
 
 #else
 
-int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
+OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
 {
-    RG_ASSERT(!out_exists || (flags & (int)OpenFlag::Exclusive));
+    RG_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
 
     int oflags = -1;
     switch (flags & ((int)OpenFlag::Read |
@@ -3325,30 +3416,25 @@ int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists)
 
     int fd = RG_POSIX_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {
-        if (errno == EEXIST) {
-            if (out_exists) {
-                *out_exists = true;
-            } else {
-                LogError("File '%1' already exists", filename);
-            }
-        } else {
-            LogError("Cannot open '%1': %2", filename, strerror(errno));
-
-            if (out_exists) {
-                *out_exists = false;
-            }
+        OpenResult ret;
+        switch (errno) {
+            case ENOENT: { ret = OpenResult::MissingPath; } break;
+            case EEXIST: { ret = OpenResult::FileExists; } break;
+            case EACCES: { ret = OpenResult::AccessDenied; } break;
+            default: { ret = OpenResult::OtherError; } break;
         }
 
-        return -1;
+        if (!(silent & (int)ret)) {
+            LogError("Cannot open '%1': %2", filename, strerror(errno));
+        }
+        return ret;
     }
 
-    if (out_exists) {
-        *out_exists = false;
-    }
-    return fd;
+    *out_fd = fd;
+    return OpenResult::Success;
 }
 
-FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
+OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, FILE **out_fp)
 {
     const char *mode = nullptr;
     switch (flags & ((int)OpenFlag::Read |
@@ -3361,20 +3447,21 @@ FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists)
     }
     RG_ASSERT(mode);
 
-    int fd = OpenDescriptor(filename, flags, out_exists);
-    if (fd < 0)
-        return nullptr;
+    int fd = -1;
+    OpenResult ret = OpenDescriptor(filename, flags, silent, &fd);
+    if (ret != OpenResult::Success)
+        return ret;
 
     FILE *fp = fdopen(fd, mode);
     if (!fp) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
         close(fd);
+
+        return OpenResult::OtherError;
     }
 
-    if (out_exists) {
-        *out_exists = false;
-    }
-    return fp;
+    *out_fp = fp;
+    return OpenResult::Success;
 }
 
 bool FlushFile(int fd, const char *filename)
@@ -4076,7 +4163,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         }
 
         // Try to read
-        if (out_revents & (POLLHUP | POLLERR)) {
+        if (out_revents & POLLERR) {
             break;
         } else if (out_revents & POLLIN) {
             RG_ASSERT(out_func.IsValid());
@@ -4093,6 +4180,9 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
                 LogError("Failed to read process output: %1", strerror(errno));
                 break;
             }
+        } else if (out_revents & POLLHUP) {
+            // Only deal with this once POLLIN goes down to avoid truncated output
+            break;
         }
 
         if (term_revents) {
@@ -4313,10 +4403,12 @@ int GetCoreCount()
         if (env) {
             char *end_ptr;
             long value = strtol(env, &end_ptr, 10);
+
             if (end_ptr > env && !end_ptr[0] && value > 0) {
                 cores = (int)value;
             } else {
                 LogError("OVERRIDE_CORES must be positive number (ignored)");
+                cores = (int)std::thread::hardware_concurrency();
             }
         } else {
             cores = (int)std::thread::hardware_concurrency();
@@ -5195,9 +5287,18 @@ Async::Async(int threads, bool stop_after_error)
     pool->RegisterAsync();
 }
 
+Async::Async(Async *parent, bool stop_after_error)
+    : stop_after_error(stop_after_error)
+{
+    RG_ASSERT(parent);
+
+    pool = parent->pool;
+    pool->RegisterAsync();
+}
+
 Async::~Async()
 {
-    RG_ASSERT(!remaining_tasks);
+    Sync();
     pool->UnregisterAsync();
 }
 
@@ -5756,7 +5857,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     return true;
 }
 
-bool StreamReader::Open(const char *filename, CompressionType compression_type)
+OpenResult StreamReader::Open(const char *filename, CompressionType compression_type)
 {
     Close(true);
 
@@ -5768,16 +5869,18 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::File;
-    source.u.file.fp = OpenFile(filename, (int)OpenFlag::Read);
-    if (!source.u.file.fp)
-        return false;
+    {
+        OpenResult ret = OpenFile(filename, (int)OpenFlag::Read, &source.u.file.fp);
+        if (ret != OpenResult::Success)
+            return ret;
+    }
     source.u.file.owned = true;
 
     if (!InitDecompressor(compression_type))
-        return false;
+        return OpenResult::OtherError;
 
     err_guard.Disable();
-    return true;
+    return OpenResult::Success;
 }
 
 bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename,
@@ -6076,7 +6179,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            compression.u.miniz = AllocateOne<MinizInflateContext>(nullptr, (int)Allocator::Flag::Zero);
+            compression.u.miniz = AllocateOne<MinizInflateContext>(nullptr, (int)AllocFlag::Zero);
             tinfl_init(&compression.u.miniz->inflator);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 #else
@@ -6088,7 +6191,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
 
         case CompressionType::Brotli: {
 #ifdef BROTLI_DEFAULT_MODE
-            compression.u.brotli = AllocateOne<BrotliDecompressContext>(nullptr, (int)Allocator::Flag::Zero);
+            compression.u.brotli = AllocateOne<BrotliDecompressContext>(nullptr, (int)AllocFlag::Zero);
             compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
 #else
             LogError("Brotli decompression not available for '%1'", filename);
@@ -6562,6 +6665,8 @@ bool StreamWriter::Flush()
                 error = true;
                 return false;
             }
+
+            return true;
         } break;
         case DestinationType::Function: return true;
     }
@@ -6739,7 +6844,9 @@ bool StreamWriter::Close(bool implicit)
                     fclose(dest.u.file.fp);
                     dest.u.file.owned = false;
 
-                    if (RenameFile(dest.u.file.tmp_filename, filename, true)) {
+                    unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
+
+                    if (RenameFile(dest.u.file.tmp_filename, filename, flags)) {
                         dest.u.file.tmp_filename = nullptr;
                         dest.u.file.tmp_exclusive = false;
                     } else {
@@ -6790,7 +6897,7 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            compression.u.miniz = AllocateOne<MinizDeflateContext>(nullptr, (int)Allocator::Flag::Zero);
+            compression.u.miniz = AllocateOne<MinizDeflateContext>(nullptr, (int)AllocFlag::Zero);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 
             int flags = 0;
@@ -7110,7 +7217,7 @@ bool ReloadAssets()
     // Check library time
     {
         FileInfo file_info;
-        if (!StatFile(assets_filename, &file_info))
+        if (StatFile(assets_filename, &file_info) != StatResult::Success)
             return false;
 
         if (assets_last_check == file_info.mtime)

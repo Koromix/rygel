@@ -84,7 +84,7 @@ namespace RG {
 
 #define RG_LINE_READER_STEP_SIZE 65536
 
-#define RG_ASYNC_MAX_THREADS 256
+#define RG_ASYNC_MAX_THREADS 2048
 #define RG_ASYNC_MAX_IDLE_TIME 10000
 #define RG_FIBER_DEFAULT_STACK_SIZE Kibibytes(128)
 
@@ -622,7 +622,7 @@ T ApplyMask(T value, U mask, bool enable)
     if (enable) {
         return value | (T)mask;
     } else {
-        return value & (T)~mask;
+        return value & ~(T)mask;
     }
 }
 
@@ -824,21 +824,21 @@ static inline constexpr Strider<T> MakeStrider(T (&arr)[N])
     return Strider<T>(arr, RG_SIZE(T));
 }
 
+enum class AllocFlag {
+    Zero = 1,
+    Resizable = 2
+};
+
 class Allocator {
     RG_DELETE_COPY(Allocator)
 
 public:
-    enum class Flag {
-        Zero = 1,
-        Resizable = 2
-    };
-
     Allocator() = default;
     virtual ~Allocator() = default;
 
     virtual void *Allocate(Size size, unsigned int flags = 0) = 0;
     virtual void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) = 0;
-    virtual void Release(void *ptr, Size size) = 0;
+    virtual void Release(const void *ptr, Size size) = 0;
 };
 
 Allocator *GetDefaultAllocator();
@@ -899,7 +899,7 @@ static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size n
 
 template <typename T>
 Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len,
-                     unsigned int flags = 0)
+                   unsigned int flags = 0)
 {
     RG_ASSERT(new_len >= 0);
 
@@ -914,7 +914,7 @@ Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len,
     return MakeSpan(mem.ptr, new_len);
 }
 
-static inline void ReleaseRaw(Allocator *alloc, void *ptr, Size size)
+static inline void ReleaseRaw(Allocator *alloc, const void *ptr, Size size)
 {
     if (!alloc) {
         alloc = GetDefaultAllocator();
@@ -972,7 +972,7 @@ public:
 
     void *Allocate(Size size, unsigned int flags = 0) override;
     void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
-    void Release(void *ptr, Size size) override;
+    void Release(const void *ptr, Size size) override;
 
 private:
     static Bucket *PointerToBucket(void *ptr);
@@ -998,7 +998,7 @@ public:
 
     void *Allocate(Size size, unsigned int flags = 0) override;
     void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
-    void Release(void *ptr, Size size) override;
+    void Release(const void *ptr, Size size) override;
 
 protected:
     void CopyFrom(BlockAllocatorBase *other);
@@ -1380,7 +1380,7 @@ public:
         }
     }
 
-    void Grow(Size reserve_capacity = 1)
+    T *Grow(Size reserve_capacity = 1)
     {
         RG_ASSERT(capacity >= 0);
         RG_ASSERT(reserve_capacity >= 0);
@@ -1398,6 +1398,8 @@ public:
 
             SetCapacity(new_capacity);
         }
+
+        return ptr + len;
     }
 
     void Trim(Size extra_capacity = 0) { SetCapacity(len + extra_capacity); }
@@ -2299,7 +2301,7 @@ private:
         if (new_capacity) {
             used = (size_t *)AllocateRaw(allocator,
                                          (new_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t),
-                                         (int)Allocator::Flag::Zero);
+                                         (int)AllocFlag::Zero);
             data = (ValueType *)AllocateRaw(allocator, new_capacity * RG_SIZE(ValueType));
             for (Size i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType();
@@ -2794,347 +2796,10 @@ static const char *const TimeModeNames[] = {
 TimeSpec DecomposeTime(int64_t time, TimeMode mode = TimeMode::Local);
 
 // ------------------------------------------------------------------------
-// Streams
-// ------------------------------------------------------------------------
-
-enum class CompressionType {
-    None,
-    Zlib,
-    Gzip,
-    Brotli
-};
-static const char *const CompressionTypeNames[] = {
-    "None",
-    "Zlib",
-    "Gzip",
-    "Brotli"
-};
-
-enum class CompressionSpeed {
-    Default,
-    Slow,
-    Fast
-};
-
-class StreamReader {
-    RG_DELETE_COPY(StreamReader)
-
-    enum class SourceType {
-        Memory,
-        File,
-        Function
-    };
-
-    const char *filename = nullptr;
-    bool error = true;
-
-    struct {
-        SourceType type = SourceType::Memory;
-        union U {
-            struct {
-                Span<const uint8_t> buf;
-                Size pos;
-            } memory;
-            struct {
-                FILE *fp;
-                bool owned;
-            } file;
-            std::function<Size(Span<uint8_t> buf)> func;
-
-            // StreamReader deals with func destructor
-            U() {}
-            ~U() {}
-        } u;
-
-        bool eof = false;
-    } source;
-
-    struct {
-        CompressionType type = CompressionType::None;
-        union {
-            struct MinizInflateContext *miniz;
-            struct BrotliDecompressContext *brotli;
-        } u;
-    } compression;
-
-    int64_t raw_len = -1;
-    Size raw_read = 0;
-    bool eof = false;
-
-    BlockAllocator str_alloc;
-
-public:
-    StreamReader() { Close(true); }
-    StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(buf, filename, compression_type); }
-    StreamReader(FILE *fp, const char *filename,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(fp, filename, compression_type); }
-    StreamReader(const char *filename,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(filename, compression_type); }
-    StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(func, filename, compression_type); }
-    ~StreamReader() { Close(true); }
-
-    bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None);
-    bool Open(FILE *fp, const char *filename,
-              CompressionType compression_type = CompressionType::None);
-    bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
-    bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None);
-    bool Close() { return Close(false); }
-
-    // File-specific
-    bool Rewind();
-
-    const char *GetFileName() const { return filename; }
-    CompressionType GetCompressionType() const { return compression.type; }
-    bool IsValid() const { return filename && !error; }
-    bool IsEOF() const { return eof; }
-
-    FILE *GetFile() const;
-    int GetDescriptor() const;
-
-    Size Read(Span<uint8_t> out_buf);
-    Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
-    Size Read(Size max_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, max_len)); }
-
-    Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
-    Size ReadAll(Size max_len, HeapArray<char> *out_buf)
-        { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
-
-    int64_t ComputeRawLen();
-    int64_t GetRawRead() const { return raw_read; }
-
-private:
-    bool Close(bool implicit);
-
-    bool InitDecompressor(CompressionType type);
-
-    Size ReadInflate(Size max_len, void *out_buf);
-    Size ReadBrotli(Size max_len, void *out_buf);
-
-    Size ReadRaw(Size max_len, void *out_buf);
-};
-
-static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<uint8_t> out_buf)
-{
-    StreamReader st(filename, compression_type);
-    return st.Read(out_buf);
-}
-static inline Size ReadFile(const char *filename, Span<uint8_t> out_buf)
-{
-    StreamReader st(filename);
-    return st.Read(out_buf);
-}
-static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<char> out_buf)
-{
-    StreamReader st(filename, compression_type);
-    return st.Read(out_buf);
-}
-static inline Size ReadFile(const char *filename, Span<char> out_buf)
-{
-    StreamReader st(filename);
-    return st.Read(out_buf);
-}
-
-static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
-                            HeapArray<uint8_t> *out_buf)
-{
-    StreamReader st(filename, compression_type);
-    return st.ReadAll(max_len, out_buf);
-}
-static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_t> *out_buf)
-{
-    StreamReader st(filename);
-    return st.ReadAll(max_len, out_buf);
-}
-static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
-                            HeapArray<char> *out_buf)
-{
-    StreamReader st(filename, compression_type);
-    return st.ReadAll(max_len, out_buf);
-}
-static inline Size ReadFile(const char *filename, Size max_len, HeapArray<char> *out_buf)
-{
-    StreamReader st(filename);
-    return st.ReadAll(max_len, out_buf);
-}
-
-class LineReader {
-    RG_DELETE_COPY(LineReader)
-
-    HeapArray<char> buf;
-    Span<char> view = {};
-
-    StreamReader *st;
-    bool error;
-    bool eof = false;
-
-    Span<char> line = {};
-    int line_number = 0;
-
-public:
-    LineReader(StreamReader *st) : st(st), error(!st->IsValid()) {}
-
-    const char *GetFileName() const { return st->GetFileName(); }
-    int GetLineNumber() const { return line_number; }
-    bool IsValid() const { return !error; }
-    bool IsEOF() const { return eof; }
-
-    bool Next(Span<char> *out_line);
-    bool Next(Span<const char> *out_line) { return Next((Span<char> *)out_line); }
-
-    void PushLogFilter();
-};
-
-enum class StreamWriterFlag {
-    Exclusive = 1 << 0,
-    Atomic = 1 << 1
-};
-
-class StreamWriter {
-    RG_DELETE_COPY(StreamWriter)
-
-    enum class DestinationType {
-        Memory,
-        File,
-        Function
-    };
-
-    const char *filename = nullptr;
-    bool error = true;
-
-    struct {
-        DestinationType type = DestinationType::Memory;
-        union U {
-            struct {
-                HeapArray<uint8_t> *memory;
-                Size start;
-            } mem;
-            struct {
-                FILE *fp;
-                bool owned;
-
-                // Atomic write mode
-                const char *tmp_filename;
-                bool tmp_exclusive;
-            } file;
-            std::function<bool(Span<const uint8_t>)> func;
-
-            // StreamWriter deals with func destructor
-            U() {}
-            ~U() {}
-        } u;
-
-        bool vt100;
-    } dest;
-
-    struct {
-        CompressionType type = CompressionType::None;
-        CompressionSpeed speed = CompressionSpeed::Default;
-        union {
-            struct MinizDeflateContext *miniz;
-            struct BrotliEncoderStateStruct *brotli;
-        } u;
-    } compression;
-
-    int64_t raw_written = 0;
-
-    BlockAllocator str_alloc;
-
-public:
-    StreamWriter() { Close(true); }
-    StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None,
-                 CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
-    StreamWriter(FILE *fp, const char *filename,
-                 CompressionType compression_type = CompressionType::None,
-                 CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(fp, filename, compression_type, compression_speed); }
-    StreamWriter(const char *filename, unsigned int flags = 0,
-                 CompressionType compression_type = CompressionType::None,
-                 CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(filename, flags, compression_type, compression_speed); }
-    StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None,
-                 CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(func, filename, compression_type, compression_speed); }
-    ~StreamWriter() { Close(true); }
-
-    bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None,
-              CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Open(FILE *fp, const char *filename,
-              CompressionType compression_type = CompressionType::None,
-              CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Open(const char *filename, unsigned int flags = 0,
-              CompressionType compression_type = CompressionType::None,
-              CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None,
-              CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Close() { return Close(false); }
-
-    // For compressed streams, Flush may not be complete and only Close() can finalize the file.
-    bool Flush();
-
-    const char *GetFileName() const { return filename; }
-    CompressionType GetCompressionType() const { return compression.type; }
-    bool IsVt100() const { return dest.vt100; }
-    bool IsValid() const { return filename && !error; }
-
-    FILE *GetFile() const;
-    int GetDescriptor() const;
-
-    bool Write(Span<const uint8_t> buf);
-    bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }
-    bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }
-    bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
-
-    int64_t GetRawWritten() const { return raw_written; }
-
-private:
-    bool Close(bool implicit);
-
-    bool InitCompressor(CompressionType type, CompressionSpeed speed);
-
-    bool WriteDeflate(Span<const uint8_t> buf);
-    bool WriteBrotli(Span<const uint8_t> buf);
-
-    bool WriteRaw(Span<const uint8_t> buf);
-};
-
-static inline bool WriteFile(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0,
-                             CompressionType compression_type = CompressionType::None)
-{
-    StreamWriter st(filename, flags, compression_type);
-    st.Write(buf);
-    return st.Close();
-}
-static inline bool WriteFile(Span<const char> buf, const char *filename, unsigned int flags = 0,
-                             CompressionType compression_type = CompressionType::None)
-{
-    StreamWriter st(filename, flags, compression_type);
-    st.Write(buf);
-    return st.Close();
-}
-
-bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer);
-
-// For convenience, don't close them
-extern StreamReader stdin_st;
-extern StreamWriter stdout_st;
-extern StreamWriter stderr_st;
-
-// ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------
+
+class StreamWriter;
 
 enum class FmtType {
     Str1,
@@ -3147,7 +2812,8 @@ enum class FmtType {
     Float,
     Double,
     Binary,
-    Hexadecimal,
+    BigHex,
+    SmallHex,
     MemorySize,
     DiskSize,
     Date,
@@ -3182,7 +2848,10 @@ public:
         } d;
         const void *ptr;
         LocalDate date;
-        TimeSpec time;
+        struct {
+            TimeSpec spec;
+            bool ms;
+        } time;
         struct {
             Size len;
             const char *chars;
@@ -3226,7 +2895,7 @@ public:
     FmtArg(unsigned long long i) : type(FmtType::Unsigned) { u.u = i; }
     FmtArg(float f) : type(FmtType::Float) { u.f = { f, 0, INT_MAX }; }
     FmtArg(double d) : type(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
-    FmtArg(const void *ptr) : type(FmtType::Hexadecimal) { u.u = (uint64_t)ptr; }
+    FmtArg(const void *ptr) : type(FmtType::BigHex) { u.u = (uint64_t)ptr; }
     FmtArg(const LocalDate &date) : type(FmtType::Date) { u.date = date; }
 
     FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
@@ -3241,10 +2910,12 @@ static inline FmtArg FmtBin(uint64_t u)
     arg.u.u = u;
     return arg;
 }
-static inline FmtArg FmtHex(uint64_t u)
+static inline FmtArg FmtHex(uint64_t u, FmtType type = FmtType::BigHex)
 {
+    RG_ASSERT(type == FmtType::BigHex || type == FmtType::SmallHex);
+
     FmtArg arg;
-    arg.type = FmtType::Hexadecimal;
+    arg.type = type;
     arg.u.u = u;
     return arg;
 }
@@ -3288,19 +2959,21 @@ static inline FmtArg FmtDiskSize(int64_t size)
     return arg;
 }
 
-static inline FmtArg FmtTimeISO(TimeSpec spec)
+static inline FmtArg FmtTimeISO(TimeSpec spec, bool ms = false)
 {
     FmtArg arg;
     arg.type = FmtType::TimeISO;
-    arg.u.time = spec;
+    arg.u.time.spec = spec;
+    arg.u.time.ms = ms;
     return arg;
 }
 
-static inline FmtArg FmtTimeNice(TimeSpec spec)
+static inline FmtArg FmtTimeNice(TimeSpec spec, bool ms = false)
 {
     FmtArg arg;
     arg.type = FmtType::TimeNice;
-    arg.u.time = spec;
+    arg.u.time.spec = spec;
+    arg.u.time.ms = ms;
     return arg;
 }
 
@@ -3405,9 +3078,9 @@ void PrintLn(const char *fmt, Args... args)
 }
 
 // PrintLn variants without format strings
-static inline void PrintLn(StreamWriter *out_st) { out_st->Write('\n'); }
-static inline void PrintLn(FILE *out_fp) { fputc('\n', out_fp); }
-static inline void PrintLn() { putchar('\n'); }
+void PrintLn(StreamWriter *out_st);
+void PrintLn(FILE *out_fp);
+void PrintLn();
 
 // ------------------------------------------------------------------------
 // Debug and errors
@@ -4040,12 +3713,6 @@ static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
     }
 }
 
-static inline void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
-{
-    RG_ASSERT(hash.len == 32);
-    Fmt(MakeSpan(out_sha256, 65), "%1", FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2));
-}
-
 // ------------------------------------------------------------------------
 // System
 // ------------------------------------------------------------------------
@@ -4078,6 +3745,19 @@ static inline bool IsPathSeparator(char c)
     return c == '/';
 #endif
 }
+
+enum class CompressionType {
+    None,
+    Zlib,
+    Gzip,
+    Brotli
+};
+static const char *const CompressionTypeNames[] = {
+    "None",
+    "Zlib",
+    "Gzip",
+    "Brotli"
+};
 
 Span<const char> GetPathDirectory(Span<const char> filename);
 Span<const char> GetPathExtension(Span<const char> filename,
@@ -4122,21 +3802,39 @@ struct FileInfo {
     unsigned int mode;
 };
 
-enum class EnumStatus {
-    Error,
-    Partial,
-    Stopped,
-    Complete
+enum class StatResult {
+    Success,
+
+    MissingPath,
+    AccessDenied,
+    PartialEnum,
+    CallbackFail,
+    OtherError
 };
 
-bool StatFile(const char *filename, unsigned int flags, FileInfo *out_info);
-static inline bool StatFile(const char *filename, FileInfo *out_info)
+StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info);
+static inline StatResult StatFile(const char *filename, FileInfo *out_info)
     { return StatFile(filename, 0, out_info); }
 
-// Sync failures are logged but not reported as errors (function returns true)
-bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool sync = true);
+enum class RenameFlag {
+    Overwrite = 1 << 0,
+    Sync = 1 << 1
+};
 
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+// Sync failures are logged but not reported as errors (function returns true)
+bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags);
+
+enum class EnumResult {
+    Success,
+
+    MissingPath,
+    AccessDenied,
+    PartialEnum,
+    CallbackFail,
+    OtherError
+};
+
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func);
 bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
                     Allocator *str_alloc, HeapArray<const char *> *out_files);
@@ -4173,8 +3871,37 @@ enum class OpenFlag {
     Exclusive = 1 << 3
 };
 
-int OpenDescriptor(const char *filename, unsigned int flags, bool *out_exists = nullptr);
-FILE *OpenFile(const char *filename, unsigned int flags, bool *out_exists = nullptr);
+enum class OpenResult {
+    Success = 0,
+
+    MissingPath = 1 << 0,
+    FileExists = 1 << 1,
+    AccessDenied = 1 << 2,
+    OtherError = 1 << 3
+};
+
+OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int silent, int *out_fd);
+OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, FILE **out_fp);
+
+static inline OpenResult OpenDescriptor(const char *filename, unsigned int flags, int *out_fd)
+    { return OpenDescriptor(filename, flags, 0, out_fd); }
+static inline OpenResult OpenFile(const char *filename, unsigned int flags, FILE **out_fp)
+    { return OpenFile(filename, flags, 0, out_fp); }
+static inline int OpenDescriptor(const char *filename, unsigned int flags)
+{
+    int fd = -1;
+    if (OpenDescriptor(filename, flags, &fd) != OpenResult::Success)
+        return -1;
+    return fd;
+}
+static inline FILE *OpenFile(const char *filename, unsigned int flags)
+{
+    FILE *fp;
+    if (OpenFile(filename, flags, &fp) != OpenResult::Success)
+        return nullptr;
+    return fp;
+}
+
 bool FlushFile(int fd, const char *filename);
 bool FlushFile(FILE *fp, const char *filename);
 
@@ -4358,6 +4085,7 @@ class Async {
 
 public:
     Async(int threads = -1, bool stop_after_error = true);
+    Async(Async *parent, bool stop_after_error = true);
     ~Async();
 
     void Run(const std::function<bool()> &f);
@@ -4418,6 +4146,332 @@ private:
     void Toggle(int to, std::unique_lock<std::mutex> *lock);
 #endif
 };
+
+// ------------------------------------------------------------------------
+// Streams
+// ------------------------------------------------------------------------
+
+enum class CompressionSpeed {
+    Default,
+    Slow,
+    Fast
+};
+
+class StreamReader {
+    RG_DELETE_COPY(StreamReader)
+
+    enum class SourceType {
+        Memory,
+        File,
+        Function
+    };
+
+    const char *filename = nullptr;
+    bool error = true;
+
+    struct {
+        SourceType type = SourceType::Memory;
+        union U {
+            struct {
+                Span<const uint8_t> buf;
+                Size pos;
+            } memory;
+            struct {
+                FILE *fp;
+                bool owned;
+            } file;
+            std::function<Size(Span<uint8_t> buf)> func;
+
+            // StreamReader deals with func destructor
+            U() {}
+            ~U() {}
+        } u;
+
+        bool eof = false;
+    } source;
+
+    struct {
+        CompressionType type = CompressionType::None;
+        union {
+            struct MinizInflateContext *miniz;
+            struct BrotliDecompressContext *brotli;
+        } u;
+    } compression;
+
+    int64_t raw_len = -1;
+    Size raw_read = 0;
+    bool eof = false;
+
+    BlockAllocator str_alloc;
+
+public:
+    StreamReader() { Close(true); }
+    StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        : StreamReader() { Open(buf, filename, compression_type); }
+    StreamReader(FILE *fp, const char *filename,
+                 CompressionType compression_type = CompressionType::None)
+        : StreamReader() { Open(fp, filename, compression_type); }
+    StreamReader(const char *filename,
+                 CompressionType compression_type = CompressionType::None)
+        : StreamReader() { Open(filename, compression_type); }
+    StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        : StreamReader() { Open(func, filename, compression_type); }
+    ~StreamReader() { Close(true); }
+
+    bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
+    bool Open(FILE *fp, const char *filename,
+              CompressionType compression_type = CompressionType::None);
+    OpenResult Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
+    bool Close() { return Close(false); }
+
+    // File-specific
+    bool Rewind();
+
+    const char *GetFileName() const { return filename; }
+    CompressionType GetCompressionType() const { return compression.type; }
+    bool IsValid() const { return filename && !error; }
+    bool IsEOF() const { return eof; }
+
+    FILE *GetFile() const;
+    int GetDescriptor() const;
+
+    Size Read(Span<uint8_t> out_buf);
+    Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
+    Size Read(Size max_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, max_len)); }
+
+    Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
+    Size ReadAll(Size max_len, HeapArray<char> *out_buf)
+        { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
+
+    int64_t ComputeRawLen();
+    int64_t GetRawRead() const { return raw_read; }
+
+private:
+    bool Close(bool implicit);
+
+    bool InitDecompressor(CompressionType type);
+
+    Size ReadInflate(Size max_len, void *out_buf);
+    Size ReadBrotli(Size max_len, void *out_buf);
+
+    Size ReadRaw(Size max_len, void *out_buf);
+};
+
+static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<uint8_t> out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.Read(out_buf);
+}
+static inline Size ReadFile(const char *filename, Span<uint8_t> out_buf)
+{
+    StreamReader st(filename);
+    return st.Read(out_buf);
+}
+static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<char> out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.Read(out_buf);
+}
+static inline Size ReadFile(const char *filename, Span<char> out_buf)
+{
+    StreamReader st(filename);
+    return st.Read(out_buf);
+}
+
+static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
+                            HeapArray<uint8_t> *out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.ReadAll(max_len, out_buf);
+}
+static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_t> *out_buf)
+{
+    StreamReader st(filename);
+    return st.ReadAll(max_len, out_buf);
+}
+static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
+                            HeapArray<char> *out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.ReadAll(max_len, out_buf);
+}
+static inline Size ReadFile(const char *filename, Size max_len, HeapArray<char> *out_buf)
+{
+    StreamReader st(filename);
+    return st.ReadAll(max_len, out_buf);
+}
+
+class LineReader {
+    RG_DELETE_COPY(LineReader)
+
+    HeapArray<char> buf;
+    Span<char> view = {};
+
+    StreamReader *st;
+    bool error;
+    bool eof = false;
+
+    Span<char> line = {};
+    int line_number = 0;
+
+public:
+    LineReader(StreamReader *st) : st(st), error(!st->IsValid()) {}
+
+    const char *GetFileName() const { return st->GetFileName(); }
+    int GetLineNumber() const { return line_number; }
+    bool IsValid() const { return !error; }
+    bool IsEOF() const { return eof; }
+
+    bool Next(Span<char> *out_line);
+    bool Next(Span<const char> *out_line) { return Next((Span<char> *)out_line); }
+
+    void PushLogFilter();
+};
+
+enum class StreamWriterFlag {
+    Exclusive = 1 << 0,
+    Atomic = 1 << 1
+};
+
+class StreamWriter {
+    RG_DELETE_COPY(StreamWriter)
+
+    enum class DestinationType {
+        Memory,
+        File,
+        Function
+    };
+
+    const char *filename = nullptr;
+    bool error = true;
+
+    struct {
+        DestinationType type = DestinationType::Memory;
+        union U {
+            struct {
+                HeapArray<uint8_t> *memory;
+                Size start;
+            } mem;
+            struct {
+                FILE *fp;
+                bool owned;
+
+                // Atomic write mode
+                const char *tmp_filename;
+                bool tmp_exclusive;
+            } file;
+            std::function<bool(Span<const uint8_t>)> func;
+
+            // StreamWriter deals with func destructor
+            U() {}
+            ~U() {}
+        } u;
+
+        bool vt100;
+    } dest;
+
+    struct {
+        CompressionType type = CompressionType::None;
+        CompressionSpeed speed = CompressionSpeed::Default;
+        union {
+            struct MinizDeflateContext *miniz;
+            struct BrotliEncoderStateStruct *brotli;
+        } u;
+    } compression;
+
+    int64_t raw_written = 0;
+
+    BlockAllocator str_alloc;
+
+public:
+    StreamWriter() { Close(true); }
+    StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None,
+                 CompressionSpeed compression_speed = CompressionSpeed::Default)
+        : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
+    StreamWriter(FILE *fp, const char *filename,
+                 CompressionType compression_type = CompressionType::None,
+                 CompressionSpeed compression_speed = CompressionSpeed::Default)
+        : StreamWriter() { Open(fp, filename, compression_type, compression_speed); }
+    StreamWriter(const char *filename, unsigned int flags = 0,
+                 CompressionType compression_type = CompressionType::None,
+                 CompressionSpeed compression_speed = CompressionSpeed::Default)
+        : StreamWriter() { Open(filename, flags, compression_type, compression_speed); }
+    StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None,
+                 CompressionSpeed compression_speed = CompressionSpeed::Default)
+        : StreamWriter() { Open(func, filename, compression_type, compression_speed); }
+    ~StreamWriter() { Close(true); }
+
+    bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None,
+              CompressionSpeed compression_speed = CompressionSpeed::Default);
+    bool Open(FILE *fp, const char *filename,
+              CompressionType compression_type = CompressionType::None,
+              CompressionSpeed compression_speed = CompressionSpeed::Default);
+    bool Open(const char *filename, unsigned int flags = 0,
+              CompressionType compression_type = CompressionType::None,
+              CompressionSpeed compression_speed = CompressionSpeed::Default);
+    bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None,
+              CompressionSpeed compression_speed = CompressionSpeed::Default);
+    bool Close() { return Close(false); }
+
+    // For compressed streams, Flush may not be complete and only Close() can finalize the file.
+    bool Flush();
+
+    const char *GetFileName() const { return filename; }
+    CompressionType GetCompressionType() const { return compression.type; }
+    bool IsVt100() const { return dest.vt100; }
+    bool IsValid() const { return filename && !error; }
+
+    FILE *GetFile() const;
+    int GetDescriptor() const;
+
+    bool Write(Span<const uint8_t> buf);
+    bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }
+    bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }
+    bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
+
+    int64_t GetRawWritten() const { return raw_written; }
+
+private:
+    bool Close(bool implicit);
+
+    bool InitCompressor(CompressionType type, CompressionSpeed speed);
+
+    bool WriteDeflate(Span<const uint8_t> buf);
+    bool WriteBrotli(Span<const uint8_t> buf);
+
+    bool WriteRaw(Span<const uint8_t> buf);
+};
+
+static inline bool WriteFile(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0,
+                             CompressionType compression_type = CompressionType::None)
+{
+    StreamWriter st(filename, flags, compression_type);
+    st.Write(buf);
+    return st.Close();
+}
+static inline bool WriteFile(Span<const char> buf, const char *filename, unsigned int flags = 0,
+                             CompressionType compression_type = CompressionType::None)
+{
+    StreamWriter st(filename, flags, compression_type);
+    st.Write(buf);
+    return st.Close();
+}
+
+bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer);
+
+// For convenience, don't close them
+extern StreamReader stdin_st;
+extern StreamWriter stdout_st;
+extern StreamWriter stderr_st;
 
 // ------------------------------------------------------------------------
 // INI
