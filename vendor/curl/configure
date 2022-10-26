@@ -997,6 +997,8 @@ CURL_DISABLE_FILE
 CURL_DISABLE_FTP
 CURL_DISABLE_RTSP
 CURL_DISABLE_HTTP
+OS_WINDOWS_FALSE
+OS_WINDOWS_TRUE
 USE_WIN32_CRYPTO
 USE_WIN32_SMALL_FILES
 USE_WIN32_LARGE_FILES
@@ -1019,6 +1021,7 @@ CURL_LT_SHLIB_USE_NO_UNDEFINED_FALSE
 CURL_LT_SHLIB_USE_NO_UNDEFINED_TRUE
 CURL_LT_SHLIB_USE_VERSION_INFO_FALSE
 CURL_LT_SHLIB_USE_VERSION_INFO_TRUE
+RC
 LT_SYS_LIBRARY_PATH
 OTOOL64
 OTOOL
@@ -1242,6 +1245,7 @@ with_quiche
 with_msh3
 with_zsh_functions_dir
 with_fish_functions_dir
+with_n64_deprecated
 enable_threaded_resolver
 enable_pthreads
 enable_verbose
@@ -1264,6 +1268,7 @@ enable_get_easy_options
 enable_alt_svc
 enable_headers_api
 enable_hsts
+enable_websockets
 '
       ac_precious_vars='build_alias
 host_alias
@@ -2035,6 +2040,8 @@ Optional Features:
   --disable-headers-api   Disable headers-api support
   --enable-hsts           Enable HSTS support
     --disable-hsts          Disable HSTS support
+  --enable-websockets     Enable WebSockets support
+  --disable-websockets    Disable WebSockets support
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -2150,6 +2157,8 @@ Optional Packages:
                           Install fish completions to PATH
   --without-fish-functions-dir
                           Do not install fish completions
+  --with-n64-deprecated   confirm you realize support for systems without 64
+                          bit data types is going away
 
 Some influential environment variables:
   CC          C compiler command
@@ -3934,13 +3943,15 @@ fi
 
 
 if test -z "$EGREP"; then
-    if echo a | ($GREP -E '(a|b)') >/dev/null 2>&1; then
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for egrep" >&5
-printf %s "checking for egrep... " >&6; }
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking that grep -E works" >&5
+printf %s "checking that grep -E works... " >&6; }
+  if echo a | ($GREP -E '(a|b)') >/dev/null 2>&1; then
     EGREP="$GREP -E"
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $EGREP" >&5
-printf "%s\n" "$EGREP" >&6; }
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
   else
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
     # Extract the first word of "egrep", so it can be a program name with args.
 set dummy egrep; ac_word=$2
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -3991,7 +4002,7 @@ fi
   fi
 fi
 if test -z "$EGREP" || test "$EGREP" = "not_found"; then
-  as_fn_error $? "egrep not found in PATH. Cannot continue without egrep." "$LINENO" 5
+  as_fn_error $? "grep -E is not working and egrep is not found in PATH. Cannot continue." "$LINENO" 5
 fi
 
 
@@ -6639,6 +6650,7 @@ curl_verbose_msg="enabled (--disable-verbose)"
  curl_altsvc_msg="enabled (--disable-alt-svc)"
 curl_headers_msg="enabled (--disable-headers-api)"
    curl_hsts_msg="enabled (--disable-hsts)"
+     curl_ws_msg="no      (--enable-websockets)"
     ssl_backends=
      curl_h1_msg="enabled (internal)"
      curl_h2_msg="no      (--with-nghttp2, --with-hyper)"
@@ -16509,7 +16521,7 @@ esac
 printf "%s\n" "$xc_lt_shlib_use_mimpure_text" >&6; }
 
 #
-# Find out whether libtool libraries would be built wit PIC
+# Find out whether libtool libraries would be built with PIC
 #
 
 case "x$pic_mode" in # ((((
@@ -16572,6 +16584,187 @@ fi
 printf "%s\n" "$xc_lt_build_static_only" >&6; }
 
 
+
+
+if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}windres", so it can be a program name with args.
+set dummy ${ac_tool_prefix}windres; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_prog_RC+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  if test -n "$RC"; then
+  ac_cv_prog_RC="$RC" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_prog_RC="${ac_tool_prefix}windres"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+RC=$ac_cv_prog_RC
+if test -n "$RC"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $RC" >&5
+printf "%s\n" "$RC" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_prog_RC"; then
+  ac_ct_RC=$RC
+  # Extract the first word of "windres", so it can be a program name with args.
+set dummy windres; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_prog_ac_ct_RC+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  if test -n "$ac_ct_RC"; then
+  ac_cv_prog_ac_ct_RC="$ac_ct_RC" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_RC="windres"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_RC=$ac_cv_prog_ac_ct_RC
+if test -n "$ac_ct_RC"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_ct_RC" >&5
+printf "%s\n" "$ac_ct_RC" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+  if test "x$ac_ct_RC" = x; then
+    RC=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+printf "%s\n" "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    RC=$ac_ct_RC
+  fi
+else
+  RC="$ac_cv_prog_RC"
+fi
+
+
+
+
+# Source file extension for RC test sources.
+ac_ext=rc
+
+# Object file extension for compiled RC test sources.
+objext=o
+objext_RC=$objext
+
+# Code to be used in simple compile tests
+lt_simple_compile_test_code='sample MENU { MENUITEM "&Soup", 100, CHECKED }'
+
+# Code to be used in simple link tests
+lt_simple_link_test_code=$lt_simple_compile_test_code
+
+# ltmain only uses $CC for tagged configurations so make sure $CC is set.
+
+
+
+
+
+
+# If no C compiler was specified, use CC.
+LTCC=${LTCC-"$CC"}
+
+# If no C compiler flags were specified, use CFLAGS.
+LTCFLAGS=${LTCFLAGS-"$CFLAGS"}
+
+# Allow CC to be a program name with arguments.
+compiler=$CC
+
+
+# save warnings/boilerplate of simple test code
+ac_outfile=conftest.$ac_objext
+echo "$lt_simple_compile_test_code" >conftest.$ac_ext
+eval "$ac_compile" 2>&1 >/dev/null | $SED '/^$/d; /^ *+/d' >conftest.err
+_lt_compiler_boilerplate=`cat conftest.err`
+$RM conftest*
+
+ac_outfile=conftest.$ac_objext
+echo "$lt_simple_link_test_code" >conftest.$ac_ext
+eval "$ac_link" 2>&1 >/dev/null | $SED '/^$/d; /^ *+/d' >conftest.err
+_lt_linker_boilerplate=`cat conftest.err`
+$RM -r conftest*
+
+
+# Allow CC to be a program name with arguments.
+lt_save_CC=$CC
+lt_save_CFLAGS=$CFLAGS
+lt_save_GCC=$GCC
+GCC=
+CC=${RC-"windres"}
+CFLAGS=
+compiler=$CC
+compiler_RC=$CC
+func_cc_basename $compiler
+cc_basename=$func_cc_basename_result
+
+lt_cv_prog_compiler_c_o_RC=yes
+
+if test -n "$compiler"; then
+  :
+
+
+
+fi
+
+GCC=$lt_save_GCC
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+CC=$lt_save_CC
+CFLAGS=$lt_save_CFLAGS
 
 
 #
@@ -17250,7 +17443,7 @@ printf "%s\n" "no" >&6; }
     compiler_num=`(expr $clangvhi "*" 100 + $clangvlo) 2>/dev/null`
     flags_dbg_yes="-g"
     flags_opt_all="-O -O0 -O1 -O2 -Os -O3 -O4"
-    flags_opt_yes="-Os"
+    flags_opt_yes="-O2"
     flags_opt_off="-O0"
   else
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -18933,6 +19126,7 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
       GNU_C)
         #
         if test "$want_warnings" = "yes"; then
+          tmp_CFLAGS="$tmp_CFLAGS -std=gnu89"
           #
                               if test "x$cross_compiling" != "xyes" ||
             test "$compiler_num" -ge "300"; then
@@ -21007,6 +21201,14 @@ printf "%s\n" "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
+
+ if test "$curl_cv_native_windows" = "yes"; then
+  OS_WINDOWS_TRUE=
+  OS_WINDOWS_FALSE='#'
+else
+  OS_WINDOWS_TRUE='#'
+  OS_WINDOWS_FALSE=
+fi
 
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to support http" >&5
@@ -23104,9 +23306,6 @@ printf "%s\n" "$as_me: WARNING: configure found only the libz header file, not t
     LIBS=$clean_LIBS
   elif test "$HAVE_LIBZ" = "1" && test "$HAVE_ZLIB_H" = "1"
   then
-
-
-printf "%s\n" "#define HAVE_ZLIB_H 1" >>confdefs.h
 
 
 printf "%s\n" "#define HAVE_LIBZ 1" >>confdefs.h
@@ -27316,7 +27515,8 @@ fi
 printf "%s\n" "$as_me: Added $wolfssllibpath to CURL_LIBRARY_PATH" >&6;}
         fi
       fi
-
+    else
+        as_fn_error $? "--with-wolfssl but wolfSSL was not found or doesn't work" "$LINENO" 5
     fi
 
   fi
@@ -28099,7 +28299,7 @@ if test "x$curl_cv_native_windows" = "xyes" &&
   LIBS="-lbcrypt $LIBS"
 fi
 
-case "x$OPENSSL_ENABLED$GNUTLS_ENABLED$NSS_ENABLED$MBEDTLS_ENABLED$WOLFSSL_ENABLED$SCHANNEL_ENABLED$SECURETRANSPORT_ENABLED$BEARSSL_ENABLED$RUSTLS_ENABLED$SSL_DISABLED"
+case "x$SSL_DISABLED$OPENSSL_ENABLED$GNUTLS_ENABLED$NSS_ENABLED$MBEDTLS_ENABLED$WOLFSSL_ENABLED$SCHANNEL_ENABLED$SECURETRANSPORT_ENABLED$BEARSSL_ENABLED$RUSTLS_ENABLED"
 in
 x)
   as_fn_error $? "TLS not detected, you will not be able to use HTTPS, FTPS, NTLM and more.
@@ -28114,6 +28314,11 @@ printf "%s\n" "$as_me: built with one SSL backend" >&6;}
   ;;
 xD)
   # explicitly built without TLS
+  ;;
+xD*)
+  as_fn_error $? "--without-ssl has been set together with an explicit option to use an ssl library
+(e.g. --with-openssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-nss, --with-schannel, --with-secure-transport, --with-amissl, --with-bearssl, --with-rustls).
+Since these are conflicting parameters, verify which is the desired one and drop the other." "$LINENO" 5
   ;;
 *)
   # more than one SSL backend is enabled
@@ -28747,13 +28952,10 @@ then :
 fi
 
 
-         for ac_header in libssh2.h
-do :
   ac_fn_c_check_header_compile "$LINENO" "libssh2.h" "ac_cv_header_libssh2_h" "$ac_includes_default"
 if test "x$ac_cv_header_libssh2_h" = xyes
 then :
-  printf "%s\n" "#define HAVE_LIBSSH2_H 1" >>confdefs.h
- curl_ssh_msg="enabled (libSSH2)"
+  curl_ssh_msg="enabled (libSSH2)"
     LIBSSH2_ENABLED=1
 
 printf "%s\n" "#define USE_LIBSSH2 1" >>confdefs.h
@@ -28763,7 +28965,6 @@ printf "%s\n" "#define USE_LIBSSH2 1" >>confdefs.h
 
 fi
 
-done
 
   if test X"$OPT_LIBSSH2" != Xoff &&
      test "$LIBSSH2_ENABLED" != "1"; then
@@ -29000,13 +29201,10 @@ then :
 fi
 
 
-         for ac_header in libssh/libssh.h
-do :
   ac_fn_c_check_header_compile "$LINENO" "libssh/libssh.h" "ac_cv_header_libssh_libssh_h" "$ac_includes_default"
 if test "x$ac_cv_header_libssh_libssh_h" = xyes
 then :
-  printf "%s\n" "#define HAVE_LIBSSH_LIBSSH_H 1" >>confdefs.h
- curl_ssh_msg="enabled (libSSH)"
+  curl_ssh_msg="enabled (libSSH)"
     LIBSSH_ENABLED=1
 
 printf "%s\n" "#define USE_LIBSSH 1" >>confdefs.h
@@ -29016,7 +29214,6 @@ printf "%s\n" "#define USE_LIBSSH 1" >>confdefs.h
 
 fi
 
-done
 
   if test X"$OPT_LIBSSH" != Xoff &&
      test "$LIBSSH_ENABLED" != "1"; then
@@ -30327,7 +30524,7 @@ fi
 fi
 
 
-OPT_TCP2="yes"
+OPT_TCP2="no"
 
 if test "x$disable_http" = "xyes"; then
   # without HTTP, ngtcp2 is no use
@@ -34223,6 +34420,22 @@ fi
 
 
 
+if test ${ac_cv_sizeof_curl_off_t} -lt 8; then
+
+# Check whether --with-n64-deprecated was given.
+if test ${with_n64_deprecated+y}
+then :
+  withval=$with_n64_deprecated; if test X"$withval" != Xno; then
+    OPT_N64_AWARE=$withval
+  fi
+
+fi
+
+  if test -z "$OPT_N64_AWARE"; then
+    as_fn_error $? "support for systems without 64 bit curl_off_t is deprecated, use --with-n64-deprecated until then" "$LINENO" 5
+  fi
+fi
+
 # check for ssize_t
 ac_fn_c_check_type "$LINENO" "ssize_t" "ac_cv_type_ssize_t" "$ac_includes_default"
 if test "x$ac_cv_type_ssize_t" = xyes
@@ -34697,162 +34910,10 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
   #
   if test "$curl_cv_select" = "yes"; then
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking types of args and return type for select" >&5
-printf %s "checking types of args and return type for select... " >&6; }
-if test ${curl_cv_func_select_args+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      curl_cv_func_select_args="unknown"
-      for sel_retv in 'int' 'ssize_t'; do
-        for sel_arg1 in 'int' 'ssize_t' 'size_t' 'unsigned long int' 'unsigned int'; do
-          for sel_arg234 in 'fd_set *' 'int *' 'void *'; do
-            for sel_arg5 in 'struct timeval *' 'const struct timeval *'; do
-              if test "$curl_cv_func_select_args" = "unknown"; then
-                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#undef inline
-#ifdef HAVE_WINDOWS_H
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#endif
-#define SELECTCALLCONV PASCAL
-#endif
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#include <time.h>
-#ifndef HAVE_WINDOWS_H
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#elif defined(HAVE_UNISTD_H)
-#include <unistd.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-$curl_includes_bsdsocket
-#define SELECTCALLCONV
-#endif
-#ifndef HAVE_STRUCT_TIMEVAL
-                    struct timeval {
-                      long tv_sec;
-                      long tv_usec;
-                    };
-#endif
-#ifndef HAVE_PROTO_BSDSOCKET_H
-                    extern $sel_retv SELECTCALLCONV
-				select($sel_arg1,
-					$sel_arg234,
-					$sel_arg234,
-					$sel_arg234,
-					$sel_arg5);
-#endif
-
-int main (void)
-{
-
-                    $sel_arg1   nfds=0;
-                    $sel_arg234 rfds=0;
-                    $sel_arg234 wfds=0;
-                    $sel_arg234 efds=0;
-                    $sel_retv res = select(nfds, rfds, wfds, efds, 0);
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-                  curl_cv_func_select_args="$sel_arg1,$sel_arg234,$sel_arg5,$sel_retv"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-              fi
-            done
-          done
-        done
-      done
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_func_select_args" >&5
-printf "%s\n" "$curl_cv_func_select_args" >&6; } # AC-CACHE-CHECK
-    if test "$curl_cv_func_select_args" = "unknown"; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: Cannot find proper types to use for select args" >&5
-printf "%s\n" "$as_me: WARNING: Cannot find proper types to use for select args" >&2;}
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: HAVE_SELECT will not be defined" >&5
-printf "%s\n" "$as_me: WARNING: HAVE_SELECT will not be defined" >&2;}
-    else
-      select_prev_IFS=$IFS; IFS=','
-      set dummy `echo "$curl_cv_func_select_args" | sed 's/\*/\*/g'`
-      IFS=$select_prev_IFS
-      shift
-      #
-      sel_qual_type_arg5=$3
-      #
-
-printf "%s\n" "#define SELECT_TYPE_ARG1 $1" >>confdefs.h
-
-
-printf "%s\n" "#define SELECT_TYPE_ARG234 $2" >>confdefs.h
-
-
-printf "%s\n" "#define SELECT_TYPE_RETV $4" >>confdefs.h
-
-      #
-      prev_sh_opts=$-
-      #
-      case $prev_sh_opts in
-        *f*)
-          ;;
-        *)
-          set -f
-          ;;
-      esac
-      #
-      case "$sel_qual_type_arg5" in
-        const*)
-          sel_qual_arg5=const
-          sel_type_arg5=`echo $sel_qual_type_arg5 | sed 's/^const //'`
-        ;;
-        *)
-          sel_qual_arg5=
-          sel_type_arg5=$sel_qual_type_arg5
-        ;;
-      esac
-      #
-
-printf "%s\n" "#define SELECT_QUAL_ARG5 $sel_qual_arg5" >>confdefs.h
-
-
-printf "%s\n" "#define SELECT_TYPE_ARG5 $sel_type_arg5" >>confdefs.h
-
-      #
-      case $prev_sh_opts in
-        *f*)
-          ;;
-        *)
-          set +f
-          ;;
-      esac
-      #
 
 printf "%s\n" "#define HAVE_SELECT 1" >>confdefs.h
 
-      curl_cv_func_select="yes"
-    fi
+    curl_cv_func_select="yes"
   fi
 
 
@@ -34924,109 +34985,10 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
   #
   if test "$curl_cv_recv" = "yes"; then
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking types of args and return type for recv" >&5
-printf %s "checking types of args and return type for recv... " >&6; }
-if test ${curl_cv_func_recv_args+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      curl_cv_func_recv_args="unknown"
-      for recv_retv in 'int' 'ssize_t'; do
-        for recv_arg1 in 'int' 'ssize_t' 'SOCKET'; do
-          for recv_arg2 in 'char *' 'void *'; do
-            for recv_arg3 in 'size_t' 'int' 'socklen_t' 'unsigned int'; do
-              for recv_arg4 in 'int' 'unsigned int'; do
-                if test "$curl_cv_func_recv_args" = "unknown"; then
-                  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#undef inline
-#ifdef HAVE_WINDOWS_H
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#endif
-#define RECVCALLCONV PASCAL
-#else
-$curl_includes_bsdsocket
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#define RECVCALLCONV
-#endif
-#ifndef HAVE_PROTO_BSDSOCKET_H
-                      extern $recv_retv RECVCALLCONV
-                      recv($recv_arg1, $recv_arg2, $recv_arg3, $recv_arg4);
-#endif
-
-int main (void)
-{
-
-                      $recv_arg1 s=0;
-                      $recv_arg2 buf=0;
-                      $recv_arg3 len=0;
-                      $recv_arg4 flags=0;
-                      $recv_retv res = recv(s, buf, len, flags);
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-                    curl_cv_func_recv_args="$recv_arg1,$recv_arg2,$recv_arg3,$recv_arg4,$recv_retv"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-                fi
-              done
-            done
-          done
-        done
-      done
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_func_recv_args" >&5
-printf "%s\n" "$curl_cv_func_recv_args" >&6; } # AC-CACHE-CHECK
-    if test "$curl_cv_func_recv_args" = "unknown"; then
-      as_fn_error $? "Cannot find proper types to use for recv args" "$LINENO" 5
-    else
-      recv_prev_IFS=$IFS; IFS=','
-      set dummy `echo "$curl_cv_func_recv_args" | sed 's/\*/\*/g'`
-      IFS=$recv_prev_IFS
-      shift
-      #
-
-printf "%s\n" "#define RECV_TYPE_ARG1 $1" >>confdefs.h
-
-
-printf "%s\n" "#define RECV_TYPE_ARG2 $2" >>confdefs.h
-
-
-printf "%s\n" "#define RECV_TYPE_ARG3 $3" >>confdefs.h
-
-
-printf "%s\n" "#define RECV_TYPE_ARG4 $4" >>confdefs.h
-
-
-printf "%s\n" "#define RECV_TYPE_RETV $5" >>confdefs.h
-
-      #
 
 printf "%s\n" "#define HAVE_RECV 1" >>confdefs.h
 
       curl_cv_func_recv="yes"
-    fi
   else
     as_fn_error $? "Unable to link function recv" "$LINENO" 5
   fi
@@ -35099,143 +35061,10 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
   #
   if test "$curl_cv_send" = "yes"; then
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking types of args and return type for send" >&5
-printf %s "checking types of args and return type for send... " >&6; }
-if test ${curl_cv_func_send_args+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      curl_cv_func_send_args="unknown"
-      for send_retv in 'int' 'ssize_t'; do
-        for send_arg1 in 'int' 'ssize_t' 'SOCKET'; do
-          for send_arg2 in 'char *' 'void *' 'const char *' 'const void *'; do
-            for send_arg3 in 'size_t' 'int' 'socklen_t' 'unsigned int'; do
-              for send_arg4 in 'int' 'unsigned int'; do
-                if test "$curl_cv_func_send_args" = "unknown"; then
-                  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#undef inline
-#ifdef HAVE_WINDOWS_H
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#endif
-#define SENDCALLCONV PASCAL
-#else
-$curl_includes_bsdsocket
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#define SENDCALLCONV
-#endif
-#ifndef HAVE_PROTO_BSDSOCKET_H
-                      extern $send_retv SENDCALLCONV
-                      send($send_arg1, $send_arg2, $send_arg3, $send_arg4);
-#endif
-
-int main (void)
-{
-
-                      $send_arg1 s=0;
-                      $send_arg3 len=0;
-                      $send_arg4 flags=0;
-                      $send_retv res = send(s, 0, len, flags);
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-                    curl_cv_func_send_args="$send_arg1,$send_arg2,$send_arg3,$send_arg4,$send_retv"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-                fi
-              done
-            done
-          done
-        done
-      done
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_func_send_args" >&5
-printf "%s\n" "$curl_cv_func_send_args" >&6; } # AC-CACHE-CHECK
-    if test "$curl_cv_func_send_args" = "unknown"; then
-      as_fn_error $? "Cannot find proper types to use for send args" "$LINENO" 5
-    else
-      send_prev_IFS=$IFS; IFS=','
-      set dummy `echo "$curl_cv_func_send_args" | sed 's/\*/\*/g'`
-      IFS=$send_prev_IFS
-      shift
-      #
-      send_qual_type_arg2=$2
-      #
-
-printf "%s\n" "#define SEND_TYPE_ARG1 $1" >>confdefs.h
-
-
-printf "%s\n" "#define SEND_TYPE_ARG3 $3" >>confdefs.h
-
-
-printf "%s\n" "#define SEND_TYPE_ARG4 $4" >>confdefs.h
-
-
-printf "%s\n" "#define SEND_TYPE_RETV $5" >>confdefs.h
-
-      #
-      prev_sh_opts=$-
-      #
-      case $prev_sh_opts in
-        *f*)
-          ;;
-        *)
-          set -f
-          ;;
-      esac
-      #
-      case "$send_qual_type_arg2" in
-        const*)
-          send_qual_arg2=const
-          send_type_arg2=`echo $send_qual_type_arg2 | sed 's/^const //'`
-        ;;
-        *)
-          send_qual_arg2=
-          send_type_arg2=$send_qual_type_arg2
-        ;;
-      esac
-      #
-
-printf "%s\n" "#define SEND_QUAL_ARG2 $send_qual_arg2" >>confdefs.h
-
-
-printf "%s\n" "#define SEND_TYPE_ARG2 $send_type_arg2" >>confdefs.h
-
-      #
-      case $prev_sh_opts in
-        *f*)
-          ;;
-        *)
-          set +f
-          ;;
-      esac
-      #
 
 printf "%s\n" "#define HAVE_SEND 1" >>confdefs.h
 
-      curl_cv_func_send="yes"
-    fi
+    curl_cv_func_send="yes"
   else
     as_fn_error $? "Unable to link function send" "$LINENO" 5
   fi
@@ -43518,7 +43347,7 @@ fi
 
 
 
-  for ac_func in fnmatch fchmod geteuid getpass_r getppid getpwuid getpwuid_r getrlimit gettimeofday if_nametoindex mach_absolute_time pipe sched_yield sendmsg setlocale setmode setrlimit utime utimes
+  for ac_func in fnmatch fchmod geteuid getpass_r getppid getpwuid getpwuid_r getrlimit gettimeofday if_nametoindex mach_absolute_time pipe sched_yield sendmsg setlocale setmode setrlimit snprintf utime utimes
 do :
   as_ac_var=`printf "%s\n" "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -44618,8 +44447,15 @@ printf "%s\n" "auto" >&6; }
 fi
 
 if test "x$want_unix_sockets" != "xno"; then
-  ac_fn_c_check_member "$LINENO" "struct sockaddr_un" "sun_path" "ac_cv_member_struct_sockaddr_un_sun_path" "
-    #include <sys/un.h>
+  if test "x$curl_cv_native_windows" = "xyes"; then
+    USE_UNIX_SOCKETS=1
+
+printf "%s\n" "#define USE_UNIX_SOCKETS 1" >>confdefs.h
+
+    curl_unix_sockets_msg="enabled"
+  else
+    ac_fn_c_check_member "$LINENO" "struct sockaddr_un" "sun_path" "ac_cv_member_struct_sockaddr_un_sun_path" "
+      #include <sys/un.h>
 
 "
 if test "x$ac_cv_member_struct_sockaddr_un_sun_path" = xyes
@@ -44628,18 +44464,19 @@ then :
 
 printf "%s\n" "#define USE_UNIX_SOCKETS 1" >>confdefs.h
 
-    USE_UNIX_SOCKETS=1
+      USE_UNIX_SOCKETS=1
 
-    curl_unix_sockets_msg="enabled"
+      curl_unix_sockets_msg="enabled"
 
 else $as_nop
 
-    if test "x$want_unix_sockets" = "xyes"; then
-      as_fn_error $? "--enable-unix-sockets is not available on this platform!" "$LINENO" 5
-    fi
+      if test "x$want_unix_sockets" = "xyes"; then
+        as_fn_error $? "--enable-unix-sockets is not available on this platform!" "$LINENO" 5
+      fi
 
 fi
 
+  fi
 fi
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to support cookies" >&5
@@ -45004,13 +44841,51 @@ printf "%s\n" "$ECH_SUPPORT" >&6; }
   fi
 fi
 
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to support WebSockets" >&5
+printf %s "checking whether to support WebSockets... " >&6; }
+# Check whether --enable-websockets was given.
+if test ${enable_websockets+y}
+then :
+  enableval=$enable_websockets;  case "$enableval" in
+  no)
+     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+     ;;
+  *)
+     if test ${ac_cv_sizeof_curl_off_t} -gt 4; then
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+         curl_ws_msg="enabled"
+
+printf "%s\n" "#define USE_WEBSOCKETS 1" >>confdefs.h
+
+         SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS WS"
+         if test "x$SSL_ENABLED" = "x1"; then
+           SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS WSS"
+         fi
+         experimental="$experimental Websockets"
+     else
+                  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: Websockets disabled due to lack of >32 bit curl_off_t" >&5
+printf "%s\n" "$as_me: WARNING: Websockets disabled due to lack of >32 bit curl_off_t" >&2;}
+     fi
+     ;;
+  esac
+else $as_nop
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+fi
+
+
+
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether hiding of library internal symbols will actually happen" >&5
 printf %s "checking whether hiding of library internal symbols will actually happen... " >&6; }
   CFLAG_CURL_SYMBOL_HIDING=""
   doing_symbol_hiding="no"
-  if test x"$curl_cv_native_windows" != "xyes" &&
-    test "$want_symbol_hiding" = "yes" &&
+  if test "$want_symbol_hiding" = "yes" &&
     test "$supports_symbol_hiding" = "yes"; then
     doing_symbol_hiding="yes"
     CFLAG_CURL_SYMBOL_HIDING="$symbol_hiding_CFLAGS"
@@ -45665,6 +45540,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${DOING_NATIVE_WINDOWS_TRUE}" && test -z "${DOING_NATIVE_WINDOWS_FALSE}"; then
   as_fn_error $? "conditional \"DOING_NATIVE_WINDOWS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OS_WINDOWS_TRUE}" && test -z "${OS_WINDOWS_FALSE}"; then
+  as_fn_error $? "conditional \"OS_WINDOWS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_LIBZ_TRUE}" && test -z "${HAVE_LIBZ_FALSE}"; then
@@ -46420,6 +46299,48 @@ enable_dlopen_self='`$ECHO "$enable_dlopen_self" | $SED "$delay_single_quote_sub
 enable_dlopen_self_static='`$ECHO "$enable_dlopen_self_static" | $SED "$delay_single_quote_subst"`'
 old_striplib='`$ECHO "$old_striplib" | $SED "$delay_single_quote_subst"`'
 striplib='`$ECHO "$striplib" | $SED "$delay_single_quote_subst"`'
+LD_RC='`$ECHO "$LD_RC" | $SED "$delay_single_quote_subst"`'
+reload_flag_RC='`$ECHO "$reload_flag_RC" | $SED "$delay_single_quote_subst"`'
+reload_cmds_RC='`$ECHO "$reload_cmds_RC" | $SED "$delay_single_quote_subst"`'
+old_archive_cmds_RC='`$ECHO "$old_archive_cmds_RC" | $SED "$delay_single_quote_subst"`'
+compiler_RC='`$ECHO "$compiler_RC" | $SED "$delay_single_quote_subst"`'
+GCC_RC='`$ECHO "$GCC_RC" | $SED "$delay_single_quote_subst"`'
+lt_prog_compiler_no_builtin_flag_RC='`$ECHO "$lt_prog_compiler_no_builtin_flag_RC" | $SED "$delay_single_quote_subst"`'
+lt_prog_compiler_pic_RC='`$ECHO "$lt_prog_compiler_pic_RC" | $SED "$delay_single_quote_subst"`'
+lt_prog_compiler_wl_RC='`$ECHO "$lt_prog_compiler_wl_RC" | $SED "$delay_single_quote_subst"`'
+lt_prog_compiler_static_RC='`$ECHO "$lt_prog_compiler_static_RC" | $SED "$delay_single_quote_subst"`'
+lt_cv_prog_compiler_c_o_RC='`$ECHO "$lt_cv_prog_compiler_c_o_RC" | $SED "$delay_single_quote_subst"`'
+archive_cmds_need_lc_RC='`$ECHO "$archive_cmds_need_lc_RC" | $SED "$delay_single_quote_subst"`'
+enable_shared_with_static_runtimes_RC='`$ECHO "$enable_shared_with_static_runtimes_RC" | $SED "$delay_single_quote_subst"`'
+export_dynamic_flag_spec_RC='`$ECHO "$export_dynamic_flag_spec_RC" | $SED "$delay_single_quote_subst"`'
+whole_archive_flag_spec_RC='`$ECHO "$whole_archive_flag_spec_RC" | $SED "$delay_single_quote_subst"`'
+compiler_needs_object_RC='`$ECHO "$compiler_needs_object_RC" | $SED "$delay_single_quote_subst"`'
+old_archive_from_new_cmds_RC='`$ECHO "$old_archive_from_new_cmds_RC" | $SED "$delay_single_quote_subst"`'
+old_archive_from_expsyms_cmds_RC='`$ECHO "$old_archive_from_expsyms_cmds_RC" | $SED "$delay_single_quote_subst"`'
+archive_cmds_RC='`$ECHO "$archive_cmds_RC" | $SED "$delay_single_quote_subst"`'
+archive_expsym_cmds_RC='`$ECHO "$archive_expsym_cmds_RC" | $SED "$delay_single_quote_subst"`'
+module_cmds_RC='`$ECHO "$module_cmds_RC" | $SED "$delay_single_quote_subst"`'
+module_expsym_cmds_RC='`$ECHO "$module_expsym_cmds_RC" | $SED "$delay_single_quote_subst"`'
+with_gnu_ld_RC='`$ECHO "$with_gnu_ld_RC" | $SED "$delay_single_quote_subst"`'
+allow_undefined_flag_RC='`$ECHO "$allow_undefined_flag_RC" | $SED "$delay_single_quote_subst"`'
+no_undefined_flag_RC='`$ECHO "$no_undefined_flag_RC" | $SED "$delay_single_quote_subst"`'
+hardcode_libdir_flag_spec_RC='`$ECHO "$hardcode_libdir_flag_spec_RC" | $SED "$delay_single_quote_subst"`'
+hardcode_libdir_separator_RC='`$ECHO "$hardcode_libdir_separator_RC" | $SED "$delay_single_quote_subst"`'
+hardcode_direct_RC='`$ECHO "$hardcode_direct_RC" | $SED "$delay_single_quote_subst"`'
+hardcode_direct_absolute_RC='`$ECHO "$hardcode_direct_absolute_RC" | $SED "$delay_single_quote_subst"`'
+hardcode_minus_L_RC='`$ECHO "$hardcode_minus_L_RC" | $SED "$delay_single_quote_subst"`'
+hardcode_shlibpath_var_RC='`$ECHO "$hardcode_shlibpath_var_RC" | $SED "$delay_single_quote_subst"`'
+hardcode_automatic_RC='`$ECHO "$hardcode_automatic_RC" | $SED "$delay_single_quote_subst"`'
+inherit_rpath_RC='`$ECHO "$inherit_rpath_RC" | $SED "$delay_single_quote_subst"`'
+link_all_deplibs_RC='`$ECHO "$link_all_deplibs_RC" | $SED "$delay_single_quote_subst"`'
+always_export_symbols_RC='`$ECHO "$always_export_symbols_RC" | $SED "$delay_single_quote_subst"`'
+export_symbols_cmds_RC='`$ECHO "$export_symbols_cmds_RC" | $SED "$delay_single_quote_subst"`'
+exclude_expsyms_RC='`$ECHO "$exclude_expsyms_RC" | $SED "$delay_single_quote_subst"`'
+include_expsyms_RC='`$ECHO "$include_expsyms_RC" | $SED "$delay_single_quote_subst"`'
+prelink_cmds_RC='`$ECHO "$prelink_cmds_RC" | $SED "$delay_single_quote_subst"`'
+postlink_cmds_RC='`$ECHO "$postlink_cmds_RC" | $SED "$delay_single_quote_subst"`'
+file_list_spec_RC='`$ECHO "$file_list_spec_RC" | $SED "$delay_single_quote_subst"`'
+hardcode_action_RC='`$ECHO "$hardcode_action_RC" | $SED "$delay_single_quote_subst"`'
 
 LTCC='$LTCC'
 LTCFLAGS='$LTCFLAGS'
@@ -46502,7 +46423,26 @@ soname_spec \
 install_override_mode \
 finish_eval \
 old_striplib \
-striplib; do
+striplib \
+LD_RC \
+reload_flag_RC \
+compiler_RC \
+lt_prog_compiler_no_builtin_flag_RC \
+lt_prog_compiler_pic_RC \
+lt_prog_compiler_wl_RC \
+lt_prog_compiler_static_RC \
+lt_cv_prog_compiler_c_o_RC \
+export_dynamic_flag_spec_RC \
+whole_archive_flag_spec_RC \
+compiler_needs_object_RC \
+with_gnu_ld_RC \
+allow_undefined_flag_RC \
+no_undefined_flag_RC \
+hardcode_libdir_flag_spec_RC \
+hardcode_libdir_separator_RC \
+exclude_expsyms_RC \
+include_expsyms_RC \
+file_list_spec_RC; do
     case \`eval \\\\\$ECHO \\\\""\\\\\$\$var"\\\\"\` in
     *[\\\\\\\`\\"\\\$]*)
       eval "lt_\$var=\\\\\\"\\\`\\\$ECHO \\"\\\$\$var\\" | \\\$SED \\"\\\$sed_quote_subst\\"\\\`\\\\\\"" ## exclude from sc_prohibit_nested_quotes
@@ -46533,7 +46473,18 @@ postuninstall_cmds \
 finish_cmds \
 sys_lib_search_path_spec \
 configure_time_dlsearch_path \
-configure_time_lt_sys_library_path; do
+configure_time_lt_sys_library_path \
+reload_cmds_RC \
+old_archive_cmds_RC \
+old_archive_from_new_cmds_RC \
+old_archive_from_expsyms_cmds_RC \
+archive_cmds_RC \
+archive_expsym_cmds_RC \
+module_cmds_RC \
+module_expsym_cmds_RC \
+export_symbols_cmds_RC \
+prelink_cmds_RC \
+postlink_cmds_RC; do
     case \`eval \\\\\$ECHO \\\\""\\\\\$\$var"\\\\"\` in
     *[\\\\\\\`\\"\\\$]*)
       eval "lt_\$var=\\\\\\"\\\`\\\$ECHO \\"\\\$\$var\\" | \\\$SED -e \\"\\\$double_quote_subst\\" -e \\"\\\$sed_quote_subst\\" -e \\"\\\$delay_variable_subst\\"\\\`\\\\\\"" ## exclude from sc_prohibit_nested_quotes
@@ -46557,6 +46508,8 @@ fi
     VERSION='$VERSION'
     RM='$RM'
     ofile='$ofile'
+
+
 
 
 
@@ -47331,7 +47284,7 @@ See \`config.log' for more details" "$LINENO" 5; }
 
 
 # The names of the tagged configurations supported by this script.
-available_tags=''
+available_tags='RC '
 
 # Configured defaults for sys_lib_dlsearch_path munging.
 : \${LT_SYS_LIBRARY_PATH="$configure_time_lt_sys_library_path"}
@@ -47838,6 +47791,145 @@ ltmain=$ac_aux_dir/ltmain.sh
     (rm -f "$ofile" && cp "$cfgfile" "$ofile" && rm -f "$cfgfile")
   chmod +x "$ofile"
 
+
+    cat <<_LT_EOF >> "$ofile"
+
+# ### BEGIN LIBTOOL TAG CONFIG: RC
+
+# The linker used to build libraries.
+LD=$lt_LD_RC
+
+# How to create reloadable object files.
+reload_flag=$lt_reload_flag_RC
+reload_cmds=$lt_reload_cmds_RC
+
+# Commands used to build an old-style archive.
+old_archive_cmds=$lt_old_archive_cmds_RC
+
+# A language specific compiler.
+CC=$lt_compiler_RC
+
+# Is the compiler the GNU compiler?
+with_gcc=$GCC_RC
+
+# Compiler flag to turn off builtin functions.
+no_builtin_flag=$lt_lt_prog_compiler_no_builtin_flag_RC
+
+# Additional compiler flags for building library objects.
+pic_flag=$lt_lt_prog_compiler_pic_RC
+
+# How to pass a linker flag through the compiler.
+wl=$lt_lt_prog_compiler_wl_RC
+
+# Compiler flag to prevent dynamic linking.
+link_static_flag=$lt_lt_prog_compiler_static_RC
+
+# Does compiler simultaneously support -c and -o options?
+compiler_c_o=$lt_lt_cv_prog_compiler_c_o_RC
+
+# Whether or not to add -lc for building shared libraries.
+build_libtool_need_lc=$archive_cmds_need_lc_RC
+
+# Whether or not to disallow shared libs when runtime libs are static.
+allow_libtool_libs_with_static_runtimes=$enable_shared_with_static_runtimes_RC
+
+# Compiler flag to allow reflexive dlopens.
+export_dynamic_flag_spec=$lt_export_dynamic_flag_spec_RC
+
+# Compiler flag to generate shared objects directly from archives.
+whole_archive_flag_spec=$lt_whole_archive_flag_spec_RC
+
+# Whether the compiler copes with passing no objects directly.
+compiler_needs_object=$lt_compiler_needs_object_RC
+
+# Create an old-style archive from a shared archive.
+old_archive_from_new_cmds=$lt_old_archive_from_new_cmds_RC
+
+# Create a temporary old-style archive to link instead of a shared archive.
+old_archive_from_expsyms_cmds=$lt_old_archive_from_expsyms_cmds_RC
+
+# Commands used to build a shared archive.
+archive_cmds=$lt_archive_cmds_RC
+archive_expsym_cmds=$lt_archive_expsym_cmds_RC
+
+# Commands used to build a loadable module if different from building
+# a shared archive.
+module_cmds=$lt_module_cmds_RC
+module_expsym_cmds=$lt_module_expsym_cmds_RC
+
+# Whether we are building with GNU ld or not.
+with_gnu_ld=$lt_with_gnu_ld_RC
+
+# Flag that allows shared libraries with undefined symbols to be built.
+allow_undefined_flag=$lt_allow_undefined_flag_RC
+
+# Flag that enforces no undefined symbols.
+no_undefined_flag=$lt_no_undefined_flag_RC
+
+# Flag to hardcode \$libdir into a binary during linking.
+# This must work even if \$libdir does not exist
+hardcode_libdir_flag_spec=$lt_hardcode_libdir_flag_spec_RC
+
+# Whether we need a single "-rpath" flag with a separated argument.
+hardcode_libdir_separator=$lt_hardcode_libdir_separator_RC
+
+# Set to "yes" if using DIR/libNAME\$shared_ext during linking hardcodes
+# DIR into the resulting binary.
+hardcode_direct=$hardcode_direct_RC
+
+# Set to "yes" if using DIR/libNAME\$shared_ext during linking hardcodes
+# DIR into the resulting binary and the resulting library dependency is
+# "absolute",i.e impossible to change by setting \$shlibpath_var if the
+# library is relocated.
+hardcode_direct_absolute=$hardcode_direct_absolute_RC
+
+# Set to "yes" if using the -LDIR flag during linking hardcodes DIR
+# into the resulting binary.
+hardcode_minus_L=$hardcode_minus_L_RC
+
+# Set to "yes" if using SHLIBPATH_VAR=DIR during linking hardcodes DIR
+# into the resulting binary.
+hardcode_shlibpath_var=$hardcode_shlibpath_var_RC
+
+# Set to "yes" if building a shared library automatically hardcodes DIR
+# into the library and all subsequent libraries and executables linked
+# against it.
+hardcode_automatic=$hardcode_automatic_RC
+
+# Set to yes if linker adds runtime paths of dependent libraries
+# to runtime path list.
+inherit_rpath=$inherit_rpath_RC
+
+# Whether libtool must link a program against all its dependency libraries.
+link_all_deplibs=$link_all_deplibs_RC
+
+# Set to "yes" if exported symbols are required.
+always_export_symbols=$always_export_symbols_RC
+
+# The commands to list exported symbols.
+export_symbols_cmds=$lt_export_symbols_cmds_RC
+
+# Symbols that should not be listed in the preloaded symbols.
+exclude_expsyms=$lt_exclude_expsyms_RC
+
+# Symbols that must always be exported.
+include_expsyms=$lt_include_expsyms_RC
+
+# Commands necessary for linking programs (against libraries) with templates.
+prelink_cmds=$lt_prelink_cmds_RC
+
+# Commands necessary for finishing linking programs.
+postlink_cmds=$lt_postlink_cmds_RC
+
+# Specify filename containing input files.
+file_list_spec=$lt_file_list_spec_RC
+
+# How to hardcode a shared library path into an executable.
+hardcode_action=$hardcode_action_RC
+
+# ### END LIBTOOL TAG CONFIG: RC
+_LT_EOF
+
  ;;
 
   esac
@@ -48059,6 +48151,7 @@ done
   HTTP2:            ${curl_h2_msg}
   HTTP3:            ${curl_h3_msg}
   ECH:              ${curl_ech_msg}
+  WebSockets:       ${curl_ws_msg}
   Protocols:        ${SUPPORT_PROTOCOLS}
   Features:         ${SUPPORT_FEATURES}
 " >&5
@@ -48106,6 +48199,7 @@ printf "%s\n" "$as_me: Configured to build curl/libcurl:
   HTTP2:            ${curl_h2_msg}
   HTTP3:            ${curl_h3_msg}
   ECH:              ${curl_ech_msg}
+  WebSockets:       ${curl_ws_msg}
   Protocols:        ${SUPPORT_PROTOCOLS}
   Features:         ${SUPPORT_FEATURES}
 " >&6;}
