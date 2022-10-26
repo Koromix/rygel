@@ -181,7 +181,7 @@ Size LocalDisk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Func
             }
         }
         if (RG_UNLIKELY(ret == OpenResult::FileExists)) {
-            LogError("Failed to create temporoary file in '%1'", tmp);
+            LogError("Failed to create temporary file in '%1'", tmp);
             return -1;
         }
 
