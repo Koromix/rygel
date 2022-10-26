@@ -37,7 +37,6 @@ enum class ExtractFlag {
 
 class GetContext {
     kt_Disk *disk;
-    unsigned int flags;
 
     Async tasks;
 
