@@ -684,7 +684,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
             return false;
         }
         if ((param.directions & 2) && ++func->out_parameters >= MaxOutParameters) {
-            ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
+            ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 output parameters", MaxOutParameters);
             return false;
         }
 
@@ -1031,7 +1031,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
             return env.Null();
         }
         if (RG_UNLIKELY((param.directions & 2) && ++func.out_parameters >= MaxOutParameters)) {
-            ThrowError<Napi::TypeError>(env, "Functions cannot have more than out %1 parameters", MaxOutParameters);
+            ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 output parameters", MaxOutParameters);
             return env.Null();
         }
 
