@@ -2,6 +2,12 @@
 
 ## History
 
+### Koffi 2.1.3
+
+**Main changes:**
+
+- Support up to 16 output parameters (instead of 8)
+
 ### Koffi 2.1.2
 
 **Main changes:**
