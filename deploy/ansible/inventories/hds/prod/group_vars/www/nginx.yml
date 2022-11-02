@@ -72,7 +72,7 @@ nginx_domains:
           proxy_pass http://unix:/run/goupile/psy-lille.goupile.fr.sock:;
       }
     ssl_certbot_email: interhop@riseup.net
-  - name: interhop.goupile.fr
+  - name: goupile.hds.interhop.org
     config: |
       location / {
           proxy_http_version 1.1;
@@ -84,5 +84,6 @@ nginx_domains:
           proxy_set_header Host $host;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
-          proxy_pass http://unix:/run/goupile/interhop.goupile.fr.sock:;
+          proxy_pass http://unix:/run/goupile/goupile.hds.interhop.org.sock:;
       }
+    ssl_certbot_email: interhop@riseup.net
