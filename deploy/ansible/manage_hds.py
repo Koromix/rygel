@@ -78,7 +78,7 @@ def add_goupile(path, vault, domain):
     })
     goupile['goupile_domains'].append({
         'name': domain,
-        'archive_key': VaultTag(vault.dump(pkey))
+        'archive_key': VaultTag(vault.dump_raw(pkey))
     })
 
     save_inventories(path, nginx, goupile)
