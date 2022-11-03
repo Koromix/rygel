@@ -37,7 +37,7 @@ static const Size ObjectSplit = Kibibytes(32);
 
 bool kt_Disk::InitCache()
 {
-    const char *cache_dir = GetUserCachePath("kippit", &str_alloc);
+    const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
     if (!MakeDirectory(cache_dir, false))
         return false;
 
