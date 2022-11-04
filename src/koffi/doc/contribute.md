@@ -2,9 +2,9 @@
 
 ## Bugs and feature requests
 
-Use the official repository (named Luigi, because this is a monorepo containing multiple projects) for bugs, ideas and features requests.
+Use the official repository (named Rygel, because this is a monorepo containing multiple projects) for bugs, ideas and features requests.
 
-Go here: https://github.com/Koromix/luigi/
+Go here: https://github.com/Koromix/rygel/
 
 ## Build from source
 
@@ -13,8 +13,8 @@ We provide prebuilt binaries, packaged in the NPM archive, so in most cases it s
 Start by cloning the repository with [Git](https://git-scm.com/):
 
 ```sh
-git clone https://github.com/Koromix/luigi
-cd luigi/koffi
+git clone https://github.com/Koromix/rygel
+cd rygel/src/koffi
 ```
 
 As said before, this is a monorepository containg multiple projects, hence the name.
@@ -59,7 +59,7 @@ These machines are not included directly in this repository (for license and siz
 For example, if you want to run the tests on Debian ARM64, run the following commands:
 
 ```sh
-cd luigi/koffi/qemu/
+cd rygel/src/koffi/qemu/
 wget -q -O- https://koromix.dev/files/machines/qemu_debian_arm64.tar.zst | zstd -d | tar xv
 sha256sum -c --ignore-missing registry/sha256sum.txt
 ```

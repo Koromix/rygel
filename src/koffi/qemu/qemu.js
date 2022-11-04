@@ -434,7 +434,7 @@ async function pack() {
 async function copy(func) {
     let success = true;
 
-    let snapshot_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'luigi_'));
+    let snapshot_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'koffi_'));
     process.on('exit', () => unlink_recursive(snapshot_dir));
 
     console.log('>> Snapshot code...');
