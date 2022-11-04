@@ -279,6 +279,8 @@ bool kt_Disk::HasObject(const kt_ID &id)
 
 Size kt_Disk::WriteTag(const kt_ID &id)
 {
+    RG_ASSERT(url);
+
     // Prepare sealed ID
     uint8_t cypher[crypto_box_SEALBYTES + 32];
     if (crypto_box_seal(cypher, id.hash, RG_SIZE(id.hash), pkey) != 0) {
@@ -306,6 +308,9 @@ Size kt_Disk::WriteTag(const kt_ID &id)
 
 bool kt_Disk::ListTags(HeapArray<kt_ID> *out_ids)
 {
+    RG_ASSERT(url);
+    RG_ASSERT(mode == kt_DiskMode::ReadWrite);
+
     BlockAllocator temp_alloc;
 
     RG_DEFER_NC(out_guard, len = out_ids->len) { out_ids->RemoveFrom(len); };
