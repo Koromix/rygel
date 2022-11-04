@@ -1,0 +1,145 @@
+diff --git a/koffi/vendor/raylib/src/external/glfw/src/egl_context.c b/koffi/vendor/raylib/src/external/glfw/src/egl_context.c
+index 975c67be..4edd3dac 100644
+--- a/koffi/vendor/raylib/src/external/glfw/src/egl_context.c
++++ b/koffi/vendor/raylib/src/external/glfw/src/egl_context.c
+@@ -316,6 +316,8 @@ GLFWbool _glfwInitEGL(void)
+         "libEGL.dylib",
+ #elif defined(__CYGWIN__)
+         "libEGL-1.so",
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++        "libEGL.so",
+ #else
+         "libEGL.so.1",
+ #endif
+@@ -686,6 +688,8 @@ GLFWbool _glfwCreateContextEGL(_GLFWwindow* window,
+             "libGLES_CM.dll",
+ #elif defined(_GLFW_COCOA)
+             "libGLESv1_CM.dylib",
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++            "libGLESv1_CM.so",
+ #else
+             "libGLESv1_CM.so.1",
+             "libGLES_CM.so.1",
+@@ -703,6 +707,8 @@ GLFWbool _glfwCreateContextEGL(_GLFWwindow* window,
+             "libGLESv2.dylib",
+ #elif defined(__CYGWIN__)
+             "libGLESv2-2.so",
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++            "libGLESv2.so",
+ #else
+             "libGLESv2.so.2",
+ #endif
+diff --git a/koffi/vendor/raylib/src/external/glfw/src/osmesa_context.c b/koffi/vendor/raylib/src/external/glfw/src/osmesa_context.c
+index 70e8675b..62c31678 100644
+--- a/koffi/vendor/raylib/src/external/glfw/src/osmesa_context.c
++++ b/koffi/vendor/raylib/src/external/glfw/src/osmesa_context.c
+@@ -124,6 +124,8 @@ GLFWbool _glfwInitOSMesa(void)
+         "libOSMesa.8.dylib",
+ #elif defined(__CYGWIN__)
+         "libOSMesa-8.so",
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++        "libOSMesa.so",
+ #else
+         "libOSMesa.so.8",
+         "libOSMesa.so.6",
+diff --git a/koffi/vendor/raylib/src/external/glfw/src/vulkan.c b/koffi/vendor/raylib/src/external/glfw/src/vulkan.c
+index b5340520..7eb4fdf0 100644
+--- a/koffi/vendor/raylib/src/external/glfw/src/vulkan.c
++++ b/koffi/vendor/raylib/src/external/glfw/src/vulkan.c
+@@ -59,6 +59,8 @@ GLFWbool _glfwInitVulkan(int mode)
+     _glfw.vk.handle = _glfw_dlopen("libvulkan.1.dylib");
+     if (!_glfw.vk.handle)
+         _glfw.vk.handle = _glfwLoadLocalVulkanLoaderNS();
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++    _glfw.vk.handle = _glfw_dlopen("libvulkan.so");
+ #else
+     _glfw.vk.handle = _glfw_dlopen("libvulkan.so.1");
+ #endif
+diff --git a/koffi/vendor/raylib/src/external/glfw/src/x11_init.c b/koffi/vendor/raylib/src/external/glfw/src/x11_init.c
+index fc9ac427..c2233f56 100644
+--- a/koffi/vendor/raylib/src/external/glfw/src/x11_init.c
++++ b/koffi/vendor/raylib/src/external/glfw/src/x11_init.c
+@@ -601,7 +601,11 @@ static void detectEWMH(void)
+ //
+ static GLFWbool initExtensions(void)
+ {
++#if defined(__OpenBSD__) || defined(__NetBSD__)
++    _glfw.x11.vidmode.handle = _glfw_dlopen("libXxf86vm.so");
++#else
+     _glfw.x11.vidmode.handle = _glfw_dlopen("libXxf86vm.so.1");
++#endif
+     if (_glfw.x11.vidmode.handle)
+     {
+         _glfw.x11.vidmode.QueryExtension = (PFN_XF86VidModeQueryExtension)
+@@ -621,6 +625,8 @@ static GLFWbool initExtensions(void)
+ 
+ #if defined(__CYGWIN__)
+     _glfw.x11.xi.handle = _glfw_dlopen("libXi-6.so");
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++    _glfw.x11.xi.handle = _glfw_dlopen("libXi.so");
+ #else
+     _glfw.x11.xi.handle = _glfw_dlopen("libXi.so.6");
+ #endif
+@@ -651,6 +657,8 @@ static GLFWbool initExtensions(void)
+ 
+ #if defined(__CYGWIN__)
+     _glfw.x11.randr.handle = _glfw_dlopen("libXrandr-2.so");
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++    _glfw.x11.randr.handle = _glfw_dlopen("libXrandr.so");
+ #else
+     _glfw.x11.randr.handle = _glfw_dlopen("libXrandr.so.2");
+ #endif
+@@ -743,6 +751,8 @@ static GLFWbool initExtensions(void)
+ 
+ #if defined(__CYGWIN__)
+     _glfw.x11.xcursor.handle = _glfw_dlopen("libXcursor-1.so");
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++    _glfw.x11.xcursor.handle = _glfw_dlopen("libXcursor.so");
+ #else
+     _glfw.x11.xcursor.handle = _glfw_dlopen("libXcursor.so.1");
+ #endif
+@@ -764,6 +774,8 @@ static GLFWbool initExtensions(void)
+ 
+ #if defined(__CYGWIN__)
+     _glfw.x11.xinerama.handle = _glfw_dlopen("libXinerama-1.so");
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++    _glfw.x11.xinerama.handle = _glfw_dlopen("libXinerama.so");
+ #else
+     _glfw.x11.xinerama.handle = _glfw_dlopen("libXinerama.so.1");
+ #endif
+@@ -817,6 +829,8 @@ static GLFWbool initExtensions(void)
+     {
+ #if defined(__CYGWIN__)
+         _glfw.x11.x11xcb.handle = _glfw_dlopen("libX11-xcb-1.so");
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++        _glfw.x11.x11xcb.handle = _glfw_dlopen("libX11-xcb.so");
+ #else
+         _glfw.x11.x11xcb.handle = _glfw_dlopen("libX11-xcb.so.1");
+ #endif
+@@ -830,6 +844,8 @@ static GLFWbool initExtensions(void)
+ 
+ #if defined(__CYGWIN__)
+     _glfw.x11.xrender.handle = _glfw_dlopen("libXrender-1.so");
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++    _glfw.x11.xrender.handle = _glfw_dlopen("libXrender.so");
+ #else
+     _glfw.x11.xrender.handle = _glfw_dlopen("libXrender.so.1");
+ #endif
+@@ -857,6 +873,8 @@ static GLFWbool initExtensions(void)
+ 
+ #if defined(__CYGWIN__)
+     _glfw.x11.xshape.handle = _glfw_dlopen("libXext-6.so");
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++    _glfw.x11.xshape.handle = _glfw_dlopen("libXext.so");
+ #else
+     _glfw.x11.xshape.handle = _glfw_dlopen("libXext.so.6");
+ #endif
+@@ -1120,6 +1138,8 @@ int _glfwPlatformInit(void)
+ 
+ #if defined(__CYGWIN__)
+     _glfw.x11.xlib.handle = _glfw_dlopen("libX11-6.so");
++#elif defined(__OpenBSD__) || defined(__NetBSD__)
++    _glfw.x11.xlib.handle = _glfw_dlopen("libX11.so");
+ #else
+     _glfw.x11.xlib.handle = _glfw_dlopen("libX11.so.6");
+ #endif

@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "koffi"
+version = "0.1.0"
+description = ""
+authors = ["Niels Martignène <niels.martignene@protonmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+Sphinx = "^5.0.2"
+linkify-it-py = "^2.0.0"
+myst-parser = "^0.18.0"
+furo = "^2022.6.21"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
