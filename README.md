@@ -10,7 +10,6 @@
 | *goupile*  | Programmable electronic data capture application                           | Work in progress |
 | *heimdall* | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
 | *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js             | Good             |
-| *mael*     | Mael robot code for 'Coupe de France de Robotique 2022' competition        | Work in progress |
 | *rekord*   | Public-key backup tool with deduplication                                  | Work in progress |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
