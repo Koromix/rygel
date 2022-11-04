@@ -12,7 +12,7 @@ Find out more on the [page dedicated to Goupile](goupile).
 
 Koffi is a fast and easy-to-use C FFI module for [Node.js](https://nodejs.org/), featuring:
 
-* Low-overhead and fast performance (see [benchmarks](https://github.com/Koromix/luigi/tree/master/koffi#benchmarks))
+* Low-overhead and fast performance (see [benchmarks](https://koffi.dev/benchmarks))
 * Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
 * Javascript functions can be used as C callbacks (since 1.2.0)
 * Well-tested code base for popular OS/architecture combinations
@@ -59,6 +59,5 @@ Project | Description                                                           
 [CNoke](https://www.npmjs.com/package/cnoke)   | Simple alternative to CMake.js, without any dependency, designed to build native Node addons based on CMake                                 | Javascript
 [SeatSH](https://github.com/Koromix/rygel/tree/master/src/seatsh)  | SeatSH is a Windows service that enables you to launch graphical programs from an SSH connection on Windows 10, for automated test systems. | C++
 [drd](https://github.com/Koromix/rygel/tree/master/src/drd)     | Alternative french PMSI MCO classifier<br>*Library (libdrd), command-line tool (drdc) and R package (drdR)*                                 | C++
-[Luiggi](https://github.com/Koromix/luigi/tree/master/luiggi)   | Simple educational programming language implemented in JS                                                                                   | Javascript
 [SaneBB](https://gist.github.com/Koromix/679c2e6336808f1e848f2e7f2e6c39cb)  | Small (single-file) and fast BBCode parser in Java                                                                                          | Java
 [Meestic](https://github.com/Koromix/rygel/tree/master/src/meestic) | Small command-line utility to control MSI Delta 15 keyboard lighting (and other models?). Provided "as is", no guarantee.                   | C++

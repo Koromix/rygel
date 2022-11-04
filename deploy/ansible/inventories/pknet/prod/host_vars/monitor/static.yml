@@ -24,9 +24,9 @@ static_deploys:
   - name: koromix.dev/test
 
   - name: koffi.dev/www
-    repo: https://github.com/Koromix/luigi.git
+    repo: https://github.com/Koromix/rygel.git
     version: master
-    path: koffi/build/doc/html
+    path: src/koffi/build/doc/html
     build:
       - cmd: '/root/.local/share/pypoetry/venv/bin/poetry install'
         chdir: '{{ static_root_path }}/repo/koffi.dev/www/koffi/doc'
