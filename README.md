@@ -1,19 +1,19 @@
 # Projects
 
-| Project    | Description                                                                | Quality          |
-| ---------- | -------------------------------------------------------------------------- | -----------------|
-| *blikk*    | Embeddable beginner-friendly language with static types, fast compilation  | Work in progress |
-| *core*     | Base C++ libraries (such as libcc) and small wrappers (R, rapidjson...)    | Good             |
-| *cnoke*    | Simple alternative to cmake.js, without any dependency                     | Good             |
-| *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Good             |
-| *felix*    | Small build system made specifically for this repository                   | Good             |
-| *goupile*  | Programmable electronic data capture application                           | Work in progress |
-| *heimdall* | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
-| *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js             | Good             |
-| *rekord*   | Public-key backup tool with deduplication                                  | Work in progress |
-| *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
-| *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
-| *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Good             |
+| Project    | Description                                                                | Build tool | Quality  |
+| ---------- | -------------------------------------------------------------------------- | ---------- | -------- |
+| *blikk*    | Embeddable beginner-friendly language with static types, fast compilation  | Felix      | **WIP**  |
+| *core*     | Base C++ libraries (such as libcc) and small wrappers (R, rapidjson...)    | Felix      | **Good** |
+| *cnoke*    | Simple alternative to cmake.js, without any dependency                     | Node.js    | **Good** |
+| *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Felix/R    | **Good** |
+| *felix*    | Small build system made specifically for this repository                   | Felix      | **Good** |
+| *goupile*  | Programmable electronic data capture application                           | Felix      | **WIP**  |
+| *heimdall* | Medical timeline visualization (proof-of-concept)                          | Felix/R    | **POC**  |
+| *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js             | Node.js    | **Good** |
+| *rekord*   | Public-key backup tool with deduplication                                  | Felix      | **WIP**  |
+| *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Felix      | **Good** |
+| *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Felix      | **Good** |
+| *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Felix      | **Good** |
 
 # How to build
 
