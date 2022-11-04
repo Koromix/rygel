@@ -29,7 +29,7 @@
 
 namespace RG {
 
-class kt_Chunker {
+class rk_Chunker {
     Size avg;
     Size min;
     Size max;
@@ -41,7 +41,7 @@ class kt_Chunker {
     int64_t total = 0;
 
 public:
-    kt_Chunker(Size avg, Size min, Size max);
+    rk_Chunker(Size avg, Size min, Size max);
 
     Size Process(Span<const uint8_t> buf, bool last,
                  FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func);

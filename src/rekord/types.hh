@@ -17,31 +17,31 @@
 
 namespace RG {
 
-struct kt_ID {
+struct rk_ID {
     uint8_t hash[32];
     operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
 };
-RG_STATIC_ASSERT(RG_SIZE(kt_ID) == 32);
+RG_STATIC_ASSERT(RG_SIZE(rk_ID) == 32);
 
 #pragma pack(push, 1)
-struct kt_SnapshotHeader {
+struct rk_SnapshotHeader {
     char name[512];
     int64_t time; // Little Endian
     int64_t len; // Little Endian
     int64_t stored; // Little Endian
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(kt_SnapshotHeader) == 536);
+RG_STATIC_ASSERT(RG_SIZE(rk_SnapshotHeader) == 536);
 
 #pragma pack(push, 1)
-struct kt_FileEntry {
+struct rk_FileEntry {
     enum class Kind {
         Directory = 0,
         File = 1,
         Link = 2
     };
 
-    kt_ID id;
+    rk_ID id;
     int8_t kind; // Kind
     int64_t mtime; // Little Endian
     uint32_t mode; // Little Endian
@@ -49,19 +49,19 @@ struct kt_FileEntry {
     char name[];
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(kt_FileEntry) == 53);
+RG_STATIC_ASSERT(RG_SIZE(rk_FileEntry) == 53);
 
 #pragma pack(push, 1)
-struct kt_ChunkEntry {
+struct rk_ChunkEntry {
     int64_t offset; // Little Endian
     int32_t len;    // Little Endian
-    kt_ID id;
+    rk_ID id;
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(kt_ChunkEntry) == 44);
+RG_STATIC_ASSERT(RG_SIZE(rk_ChunkEntry) == 44);
 
-bool kt_ParseID(const char *str, kt_ID *out_id);
+bool rk_ParseID(const char *str, rk_ID *out_id);
 
-int kt_ComputeDefaultThreads();
+int rk_ComputeDefaultThreads();
 
 }

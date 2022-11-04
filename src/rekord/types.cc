@@ -29,7 +29,7 @@ static inline int ParseHexadecimalChar(char c)
     }
 }
 
-bool kt_ParseID(const char *str, kt_ID *out_id)
+bool rk_ParseID(const char *str, rk_ID *out_id)
 {
     for (Size i = 0, j = 0; str[j]; i++, j += 2) {
         int high = ParseHexadecimalChar(str[j]);
@@ -46,7 +46,7 @@ bool kt_ParseID(const char *str, kt_ID *out_id)
     return true;
 }
 
-int kt_ComputeDefaultThreads()
+int rk_ComputeDefaultThreads()
 {
     static int threads;
 

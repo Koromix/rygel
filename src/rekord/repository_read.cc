@@ -36,24 +36,24 @@ enum class ExtractFlag {
 };
 
 class GetContext {
-    kt_Disk *disk;
+    rk_Disk *disk;
 
     Async tasks;
 
     std::atomic<int64_t> stat_len {0};
 
 public:
-    GetContext(kt_Disk *disk, int threads);
+    GetContext(rk_Disk *disk, int threads);
 
-    bool ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
-    bool GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
+    bool ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
+    bool GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
 
     bool Sync() { return tasks.Sync(); }
 
     int64_t GetLen() const { return stat_len; }
 };
 
-GetContext::GetContext(kt_Disk *disk, int threads)
+GetContext::GetContext(rk_Disk *disk, int threads)
     : disk(disk), tasks(threads)
 {
 }
@@ -157,7 +157,7 @@ static bool CreateSymbolicLink(const char *filename, const char *target)
 
 #endif
 
-bool GetContext::ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries,
+bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
                                 unsigned int flags, const char *dest_dirname)
 {
     // XXX: Make sure each path does not clobber a previous one
@@ -165,19 +165,19 @@ bool GetContext::ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries,
     std::shared_ptr<BlockAllocator> temp_alloc = std::make_shared<BlockAllocator>();
 
     for (Size offset = 0; offset < entries.len;) {
-        const kt_FileEntry *entry = (const kt_FileEntry *)(entries.ptr + offset);
+        const rk_FileEntry *entry = (const rk_FileEntry *)(entries.ptr + offset);
         const char *name = entry->name;
 
-        if (type == kt_ObjectType::Directory1 || type == kt_ObjectType::Snapshot1) {
+        if (type == rk_ObjectType::Directory1 || type == rk_ObjectType::Snapshot1) {
             name = (const char *)entry + 45;
 
             Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
             Size entry_len = 45 + name_len + 1;
 
             offset += entry_len;
-        } else if (type == kt_ObjectType::Directory2 || type == kt_ObjectType::Snapshot2) {
+        } else if (type == rk_ObjectType::Directory2 || type == rk_ObjectType::Snapshot2) {
             Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
-            Size entry_len = RG_SIZE(kt_FileEntry) + name_len + 1;
+            Size entry_len = RG_SIZE(rk_FileEntry) + name_len + 1;
 
             offset += entry_len;
         } else {
@@ -189,9 +189,9 @@ bool GetContext::ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries,
             LogError("Malformed entry in directory object");
             return false;
         }
-        if (entry->kind != (int8_t)kt_FileEntry::Kind::Directory &&
-                entry->kind != (int8_t)kt_FileEntry::Kind::File &&
-                entry->kind != (int8_t)kt_FileEntry::Kind::Link) {
+        if (entry->kind != (int8_t)rk_FileEntry::Kind::Directory &&
+                entry->kind != (int8_t)rk_FileEntry::Kind::File &&
+                entry->kind != (int8_t)rk_FileEntry::Kind::Link) {
             LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
             return false;
         }
@@ -208,7 +208,7 @@ bool GetContext::ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries,
             return false;
         }
 
-        kt_ID entry_id = entry->id;
+        rk_ID entry_id = entry->id;
         int8_t entry_kind = entry->kind;
 
         const char *entry_filename;
@@ -222,15 +222,15 @@ bool GetContext::ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries,
         }
 
         tasks.Run([temp_alloc, entry_id, entry_kind, entry_filename, this]() {
-            kt_ObjectType entry_type;
+            rk_ObjectType entry_type;
             HeapArray<uint8_t> entry_obj;
             if (!disk->ReadObject(entry_id, &entry_type, &entry_obj))
                 return false;
 
             switch (entry_kind) {
-                case (int8_t)kt_FileEntry::Kind::Directory: {
-                    if (entry_type != kt_ObjectType::Directory1 &&
-                            entry_type != kt_ObjectType::Directory2) {
+                case (int8_t)rk_FileEntry::Kind::Directory: {
+                    if (entry_type != rk_ObjectType::Directory1 &&
+                            entry_type != rk_ObjectType::Directory2) {
                         LogError("Object '%1' is not a directory", entry_id);
                         return false;
                     }
@@ -241,8 +241,8 @@ bool GetContext::ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries,
                     if (!ExtractEntries(entry_type, entry_obj, 0, entry_filename))
                         return false;
                 } break;
-                case (int8_t)kt_FileEntry::Kind::File: {
-                    if (entry_type != kt_ObjectType::File && entry_type != kt_ObjectType::Chunk) {
+                case (int8_t)rk_FileEntry::Kind::File: {
+                    if (entry_type != rk_ObjectType::File && entry_type != rk_ObjectType::Chunk) {
                         LogError("Object '%1' is not a file", entry_id);
                         return false;
                     }
@@ -250,8 +250,8 @@ bool GetContext::ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries,
                     if (!GetFile(entry_id, entry_type, entry_obj, entry_filename))
                         return false;
                 } break;
-                case (int8_t)kt_FileEntry::Kind::Link: {
-                    if (entry_type != kt_ObjectType::Link) {
+                case (int8_t)rk_FileEntry::Kind::Link: {
+                    if (entry_type != rk_ObjectType::Link) {
                         LogError("Object '%1' is not a link", entry_id);
                         return false;
                     }
@@ -276,9 +276,9 @@ bool GetContext::ExtractEntries(kt_ObjectType type, Span<const uint8_t> entries,
     return true;
 }
 
-bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename)
+bool GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename)
 {
-    RG_ASSERT(type == kt_ObjectType::File || type == kt_ObjectType::Chunk);
+    RG_ASSERT(type == rk_ObjectType::File || type == rk_ObjectType::Chunk);
 
     // Open destination file
     int fd = OpenDescriptor(dest_filename, (int)OpenFlag::Write);
@@ -288,8 +288,8 @@ bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t
 
     int64_t file_len = -1;
     switch (type) {
-        case kt_ObjectType::File: {
-            if (file_obj.len % RG_SIZE(kt_ChunkEntry) != RG_SIZE(int64_t)) {
+        case rk_ObjectType::File: {
+            if (file_obj.len % RG_SIZE(rk_ChunkEntry) != RG_SIZE(int64_t)) {
                 LogError("Malformed file object '%1'", id);
                 return false;
             }
@@ -308,20 +308,20 @@ bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t
             Async async(&tasks);
 
             // Write unencrypted file
-            for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(kt_ChunkEntry)) {
+            for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(rk_ChunkEntry)) {
                 async.Run([=, this]() {
-                    kt_ChunkEntry entry = {};
+                    rk_ChunkEntry entry = {};
 
                     memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
                     entry.offset = LittleEndian(entry.offset);
                     entry.len = LittleEndian(entry.len);
 
-                    kt_ObjectType type;
+                    rk_ObjectType type;
                     HeapArray<uint8_t> buf;
                     if (!disk->ReadObject(entry.id, &type, &buf))
                         return false;
 
-                    if (RG_UNLIKELY(type != kt_ObjectType::Chunk)) {
+                    if (RG_UNLIKELY(type != rk_ObjectType::Chunk)) {
                         LogError("Object '%1' is not a chunk", entry.id);
                         return false;
                     }
@@ -343,7 +343,7 @@ bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t
 
             // Check actual file size
             if (file_obj.len) {
-                const kt_ChunkEntry *entry = (const kt_ChunkEntry *)(file_obj.end() - RG_SIZE(kt_ChunkEntry));
+                const rk_ChunkEntry *entry = (const rk_ChunkEntry *)(file_obj.end() - RG_SIZE(rk_ChunkEntry));
                 int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
                 if (RG_UNLIKELY(len != file_len)) {
@@ -353,7 +353,7 @@ bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t
             }
         } break;
 
-        case kt_ObjectType::Chunk: {
+        case rk_ObjectType::Chunk: {
             file_len = file_obj.len;
 
             if (!WriteAt(fd, dest_filename, 0, file_obj)) {
@@ -362,11 +362,11 @@ bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t
             }
         } break;
 
-        case kt_ObjectType::Directory1:
-        case kt_ObjectType::Directory2:
-        case kt_ObjectType::Snapshot1:
-        case kt_ObjectType::Snapshot2:
-        case kt_ObjectType::Link: { RG_UNREACHABLE(); } break;
+        case rk_ObjectType::Directory1:
+        case rk_ObjectType::Directory2:
+        case rk_ObjectType::Snapshot1:
+        case rk_ObjectType::Snapshot2:
+        case rk_ObjectType::Link: { RG_UNREACHABLE(); } break;
     }
 
     if (!FlushFile(fd, dest_filename))
@@ -376,9 +376,9 @@ bool GetContext::GetFile(const kt_ID &id, kt_ObjectType type, Span<const uint8_t
     return true;
 }
 
-bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, const char *dest_path, int64_t *out_len)
+bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len)
 {
-    kt_ObjectType type;
+    rk_ObjectType type;
     HeapArray<uint8_t> obj;
     if (!disk->ReadObject(id, &type, &obj))
         return false;
@@ -386,8 +386,8 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
     GetContext get(disk, settings.threads);
 
     switch (type) {
-        case kt_ObjectType::Chunk:
-        case kt_ObjectType::File: {
+        case rk_ObjectType::Chunk:
+        case rk_ObjectType::File: {
             if (TestFile(dest_path) && !IsDirectoryEmpty(dest_path)) {
                 LogError("File '%1' already exists", dest_path);
                 return false;
@@ -397,8 +397,8 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
                 return false;
         } break;
 
-        case kt_ObjectType::Directory1:
-        case kt_ObjectType::Directory2: {
+        case rk_ObjectType::Directory1:
+        case rk_ObjectType::Directory2: {
             if (TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
@@ -413,8 +413,8 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
                 return false;
         } break;
 
-        case kt_ObjectType::Snapshot1:
-        case kt_ObjectType::Snapshot2: {
+        case rk_ObjectType::Snapshot1:
+        case rk_ObjectType::Snapshot2: {
             if (TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
@@ -426,19 +426,19 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
             }
 
             // There must be at least one entry
-            if (obj.len <= RG_SIZE(kt_SnapshotHeader)) {
+            if (obj.len <= RG_SIZE(rk_SnapshotHeader)) {
                 LogError("Malformed snapshot object '%1'", id);
                 return false;
             }
 
-            Span<uint8_t> entries = obj.Take(RG_SIZE(kt_SnapshotHeader), obj.len - RG_SIZE(kt_SnapshotHeader));
+            Span<uint8_t> entries = obj.Take(RG_SIZE(rk_SnapshotHeader), obj.len - RG_SIZE(rk_SnapshotHeader));
             unsigned int flags = (int)ExtractFlag::AllowSeparators | (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
             if (!get.ExtractEntries(type, entries, flags, dest_path))
                 return false;
         } break;
 
-        case kt_ObjectType::Link: {
+        case rk_ObjectType::Link: {
             obj.Append(0);
 
             if (!CreateSymbolicLink(dest_path, (const char *)obj.ptr))
@@ -455,12 +455,12 @@ bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, cons
     return true;
 }
 
-bool kt_List(kt_Disk *disk, const kt_ListSettings &settings, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *out_snapshots)
+bool rk_List(rk_Disk *disk, const rk_ListSettings &settings, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
 {
     Size prev_len = out_snapshots->len;
     RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
 
-    HeapArray<kt_ID> ids;
+    HeapArray<rk_ID> ids;
     if (!disk->ListTags(&ids))
         return false;
 
@@ -470,26 +470,26 @@ bool kt_List(kt_Disk *disk, const kt_ListSettings &settings, Allocator *str_allo
     {
         std::mutex mutex;
 
-        for (const kt_ID &id: ids) {
+        for (const rk_ID &id: ids) {
             async.Run([=, &mutex]() {
-                kt_SnapshotInfo snapshot = {};
+                rk_SnapshotInfo snapshot = {};
 
-                kt_ObjectType type;
+                rk_ObjectType type;
                 HeapArray<uint8_t> obj;
                 if (!disk->ReadObject(id, &type, &obj))
                     return false;
 
-                if (type != kt_ObjectType::Snapshot1 && type != kt_ObjectType::Snapshot2) {
+                if (type != rk_ObjectType::Snapshot1 && type != rk_ObjectType::Snapshot2) {
                     LogError("Object '%1' is not a snapshot (ignoring)", id);
                     return true;
                 }
-                if (obj.len <= RG_SIZE(kt_SnapshotHeader)) {
+                if (obj.len <= RG_SIZE(rk_SnapshotHeader)) {
                     LogError("Malformed snapshot object '%1' (ignoring)", id);
                     return true;
                 }
 
                 std::lock_guard lock(mutex);
-                const kt_SnapshotHeader *header = (const kt_SnapshotHeader *)obj.ptr;
+                const rk_SnapshotHeader *header = (const rk_SnapshotHeader *)obj.ptr;
 
                 snapshot.id = id;
                 snapshot.name = header->name[0] ? DuplicateString(header->name, str_alloc).ptr : nullptr;
@@ -508,7 +508,7 @@ bool kt_List(kt_Disk *disk, const kt_ListSettings &settings, Allocator *str_allo
         return false;
 
     std::sort(out_snapshots->ptr + prev_len, out_snapshots->end(),
-              [](const kt_SnapshotInfo &snapshot1, const kt_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
+              [](const rk_SnapshotInfo &snapshot1, const rk_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
 
     out_guard.Disable();
     return true;

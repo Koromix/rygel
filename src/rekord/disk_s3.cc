@@ -25,7 +25,7 @@ struct KeyData {
 };
 #pragma pack(pop)
 
-class S3Disk: public kt_Disk {
+class S3Disk: public rk_Disk {
     s3_Session s3;
 
     std::atomic_int cache_hits {0};
@@ -111,10 +111,10 @@ S3Disk::S3Disk(const s3_Config &config, const char *pwd)
         bool error = false;
 
         if (ReadKey(&s3, "keys/write", pwd, pkey, &error)) {
-            mode = kt_DiskMode::WriteOnly;
+            mode = rk_DiskMode::WriteOnly;
             memset(skey, 0, RG_SIZE(skey));
         } else if (ReadKey(&s3, "keys/full", pwd, skey, &error)) {
-            mode = kt_DiskMode::ReadWrite;
+            mode = rk_DiskMode::ReadWrite;
             crypto_scalarmult_base(pkey, skey);
         } else {
             if (!error) {
@@ -225,7 +225,7 @@ bool S3Disk::TestRaw(const char *path)
     return stmt.Step();
 }
 
-kt_Disk *kt_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd)
+rk_Disk *rk_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd)
 {
     s3_Session s3;
 
@@ -258,7 +258,7 @@ kt_Disk *kt_CreateS3Disk(const s3_Config &config, const char *full_pwd, const ch
         return nullptr;
     keys.Append("keys/write");
 
-    kt_Disk *disk = kt_OpenS3Disk(config, full_pwd);
+    rk_Disk *disk = rk_OpenS3Disk(config, full_pwd);
     if (!disk)
         return nullptr;
 
@@ -266,9 +266,9 @@ kt_Disk *kt_CreateS3Disk(const s3_Config &config, const char *full_pwd, const ch
     return disk;
 }
 
-kt_Disk *kt_OpenS3Disk(const s3_Config &config, const char *pwd)
+rk_Disk *rk_OpenS3Disk(const s3_Config &config, const char *pwd)
 {
-    kt_Disk *disk = new S3Disk(config, pwd);
+    rk_Disk *disk = new S3Disk(config, pwd);
 
     if (!disk->GetURL()) {
         delete disk;

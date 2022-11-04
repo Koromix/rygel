@@ -20,16 +20,16 @@
 
 namespace RG {
 
-enum class kt_DiskMode {
+enum class rk_DiskMode {
     WriteOnly,
     ReadWrite
 };
-static const char *const kt_DiskModeNames[] = {
+static const char *const rk_DiskModeNames[] = {
     "WriteOnly",
     "ReadWrite"
 };
 
-enum class kt_ObjectType: int8_t {
+enum class rk_ObjectType: int8_t {
     Chunk = 0,
     File = 1,
     Directory1 = 2,
@@ -38,7 +38,7 @@ enum class kt_ObjectType: int8_t {
     Snapshot2 = 6,
     Link = 4
 };
-static const char *const kt_ObjectTypeNames[] = {
+static const char *const rk_ObjectTypeNames[] = {
     "Chunk",
     "File",
     "Directory1",
@@ -48,11 +48,11 @@ static const char *const kt_ObjectTypeNames[] = {
     "Snapshot2"
 };
 
-class kt_Disk {
+class rk_Disk {
 protected:
     const char *url = nullptr;
 
-    kt_DiskMode mode;
+    rk_DiskMode mode;
     uint8_t pkey[32];
     uint8_t skey[32];
 
@@ -60,24 +60,24 @@ protected:
 
     BlockAllocator str_alloc;
 
-    kt_Disk() = default;
+    rk_Disk() = default;
 
 public:
-    virtual ~kt_Disk() = default;
+    virtual ~rk_Disk() = default;
 
     bool InitCache();
     sq_Database *GetCache() { return &cache_db; }
 
     const char *GetURL() const { return url; }
     Span<const uint8_t> GetSalt() const { return pkey; }
-    kt_DiskMode GetMode() const { return mode; }
+    rk_DiskMode GetMode() const { return mode; }
 
-    bool ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
-    Size WriteObject(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> obj);
-    bool HasObject(const kt_ID &id);
+    bool ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
+    Size WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj);
+    bool HasObject(const rk_ID &id);
 
-    Size WriteTag(const kt_ID &id);
-    bool ListTags(HeapArray<kt_ID> *out_ids);
+    Size WriteTag(const rk_ID &id);
+    bool ListTags(HeapArray<rk_ID> *out_ids);
 
 protected:
     virtual bool ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
@@ -88,10 +88,10 @@ protected:
     virtual bool TestRaw(const char *path) = 0;
 };
 
-kt_Disk *kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
-kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd);
+rk_Disk *rk_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
+rk_Disk *rk_OpenLocalDisk(const char *path, const char *pwd);
 
-kt_Disk *kt_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd);
-kt_Disk *kt_OpenS3Disk(const s3_Config &config, const char *pwd);
+rk_Disk *rk_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd);
+rk_Disk *rk_OpenS3Disk(const s3_Config &config, const char *pwd);
 
 }

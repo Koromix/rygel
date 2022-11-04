@@ -57,14 +57,14 @@ static bool LooksLikeURL(const char *str)
     return ret;
 }
 
-static kt_Disk *OpenRepository(const char *repository, const char *pwd)
+static rk_Disk *OpenRepository(const char *repository, const char *pwd)
 {
     if (LooksLikeURL(repository)) {
         s3_Config config;
         if (!s3_DecodeURL(repository, &config))
             return nullptr;
 
-        kt_Disk *disk = kt_OpenS3Disk(config, pwd);
+        rk_Disk *disk = rk_OpenS3Disk(config, pwd);
         return disk;
     } else {
         if (!PathIsAbsolute(repository)) {
@@ -72,7 +72,7 @@ static kt_Disk *OpenRepository(const char *repository, const char *pwd)
             return nullptr;
         }
 
-        kt_Disk *disk = kt_OpenLocalDisk(repository, pwd);
+        rk_Disk *disk = rk_OpenLocalDisk(repository, pwd);
         return disk;
     }
 }
@@ -116,15 +116,15 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
     if (!pwd_GeneratePassword(write_pwd))
         return 1;
 
-    kt_Disk *disk = nullptr;
+    rk_Disk *disk = nullptr;
     if (LooksLikeURL(repository)) {
         s3_Config config;
         if (!s3_DecodeURL(repository, &config))
             return 1;
 
-        disk = kt_CreateS3Disk(config, full_pwd, write_pwd);
+        disk = rk_CreateS3Disk(config, full_pwd, write_pwd);
     } else {
-        disk = kt_CreateLocalDisk(repository, full_pwd, write_pwd);
+        disk = rk_CreateLocalDisk(repository, full_pwd, write_pwd);
     }
     if (!disk)
         return 1;
@@ -145,7 +145,7 @@ static int RunPut(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    kt_PutSettings settings;
+    rk_PutSettings settings;
     const char *repository = nullptr;
     const char *pwd = nullptr;
     HeapArray<const char *> filenames;
@@ -212,13 +212,13 @@ Options:
     if (!pwd)
         return 1;
 
-    kt_Disk *disk = OpenRepository(repository, pwd);
+    rk_Disk *disk = OpenRepository(repository, pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), kt_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != kt_DiskMode::WriteOnly) {
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    if (disk->GetMode() != rk_DiskMode::WriteOnly) {
         LogWarning("You should use the write-only key with this command");
     }
 
@@ -227,10 +227,10 @@ Options:
 
     int64_t now = GetMonotonicTime();
 
-    kt_ID id = {};
+    rk_ID id = {};
     int64_t total_len = 0;
     int64_t total_written = 0;
-    if (!kt_Put(disk, settings, filenames, &id, &total_len, &total_written))
+    if (!rk_Put(disk, settings, filenames, &id, &total_len, &total_written))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
@@ -249,7 +249,7 @@ static int RunGet(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    kt_GetSettings settings;
+    rk_GetSettings settings;
     const char *repository = nullptr;
     const char *pwd = nullptr;
     const char *dest_filename = nullptr;
@@ -317,13 +317,13 @@ Options:
     if (!pwd)
         return 1;
 
-    kt_Disk *disk = OpenRepository(repository, pwd);
+    rk_Disk *disk = OpenRepository(repository, pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), kt_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != kt_DiskMode::ReadWrite) {
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
         LogError("Cannot decrypt with write-only key");
         return 1;
     }
@@ -335,10 +335,10 @@ Options:
 
     int64_t file_len = 0;
     {
-        kt_ID id = {};
-        if (!kt_ParseID(name, &id))
+        rk_ID id = {};
+        if (!rk_ParseID(name, &id))
             return 1;
-        if (!kt_Get(disk, id, settings, dest_filename, &file_len))
+        if (!rk_Get(disk, id, settings, dest_filename, &file_len))
             return 1;
     }
 
@@ -356,7 +356,7 @@ static int RunList(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    kt_ListSettings settings;
+    rk_ListSettings settings;
     const char *repository = nullptr;
     const char *pwd = nullptr;
 
@@ -405,23 +405,23 @@ Options:
     if (!pwd)
         return 1;
 
-    kt_Disk *disk = OpenRepository(repository, pwd);
+    rk_Disk *disk = OpenRepository(repository, pwd);
     if (!disk)
         return 1;
     RG_DEFER { delete disk; };
 
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), kt_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != kt_DiskMode::ReadWrite) {
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
         LogError("Cannot list with write-only key");
         return 1;
     }
 
-    HeapArray<kt_SnapshotInfo> snapshots;
-    if (!kt_List(disk, settings, &temp_alloc, &snapshots))
+    HeapArray<rk_SnapshotInfo> snapshots;
+    if (!rk_List(disk, settings, &temp_alloc, &snapshots))
         return 1;
 
     if (snapshots.len) {
-        for (const kt_SnapshotInfo &snapshot: snapshots) {
+        for (const rk_SnapshotInfo &snapshot: snapshots) {
             TimeSpec spec = DecomposeTime(snapshot.time);
 
             LogInfo();

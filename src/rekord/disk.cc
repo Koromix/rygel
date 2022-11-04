@@ -35,7 +35,7 @@ static const int CacheVersion = 2;
 static const int ObjectVersion = 2;
 static const Size ObjectSplit = Kibibytes(32);
 
-bool kt_Disk::InitCache()
+bool rk_Disk::InitCache()
 {
     const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
     if (!MakeDirectory(cache_dir, false))
@@ -100,10 +100,10 @@ bool kt_Disk::InitCache()
     return true;
 }
 
-bool kt_Disk::ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uint8_t> *out_obj)
+bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == kt_DiskMode::ReadWrite);
+    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
 
     Size prev_len = out_obj->len;
     RG_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
@@ -126,7 +126,7 @@ bool kt_Disk::ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uin
 
     // Init object decryption
     crypto_secretstream_xchacha20poly1305_state state;
-    kt_ObjectType type;
+    rk_ObjectType type;
     {
         ObjectIntro intro;
         if (obj.len < RG_SIZE(intro)) {
@@ -139,11 +139,11 @@ bool kt_Disk::ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uin
             LogError("Unexpected object version %1 (expected %2)", intro.version, ObjectVersion);
             return false;
         }
-        if (intro.type < 0 || intro.type >= RG_LEN(kt_ObjectTypeNames)) {
+        if (intro.type < 0 || intro.type >= RG_LEN(rk_ObjectTypeNames)) {
             LogError("Invalid object type 0x%1", FmtHex(intro.type));
             return false;
         }
-        type = (kt_ObjectType)intro.type;
+        type = (rk_ObjectType)intro.type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
         if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), pkey, skey) != 0) {
@@ -196,7 +196,7 @@ bool kt_Disk::ReadObject(const kt_ID &id, kt_ObjectType *out_type, HeapArray<uin
     return true;
 }
 
-Size kt_Disk::WriteObject(const kt_ID &id, kt_ObjectType type, Span<const uint8_t> obj)
+Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj)
 {
     RG_ASSERT(url);
 
@@ -267,7 +267,7 @@ Size kt_Disk::WriteObject(const kt_ID &id, kt_ObjectType type, Span<const uint8_
     return written;
 }
 
-bool kt_Disk::HasObject(const kt_ID &id)
+bool rk_Disk::HasObject(const rk_ID &id)
 {
     RG_ASSERT(url);
 
@@ -277,7 +277,7 @@ bool kt_Disk::HasObject(const kt_ID &id)
     return TestRaw(path.data);
 }
 
-Size kt_Disk::WriteTag(const kt_ID &id)
+Size rk_Disk::WriteTag(const rk_ID &id)
 {
     RG_ASSERT(url);
 
@@ -306,17 +306,17 @@ Size kt_Disk::WriteTag(const kt_ID &id)
     return -1;
 }
 
-bool kt_Disk::ListTags(HeapArray<kt_ID> *out_ids)
+bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == kt_DiskMode::ReadWrite);
+    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
 
     BlockAllocator temp_alloc;
 
     RG_DEFER_NC(out_guard, len = out_ids->len) { out_ids->RemoveFrom(len); };
 
     RG_ASSERT(url);
-    RG_ASSERT(mode == kt_DiskMode::ReadWrite);
+    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
 
     HeapArray<const char *> filenames;
     if (!ListRaw("tags", &temp_alloc, &filenames))
@@ -337,7 +337,7 @@ bool kt_Disk::ListTags(HeapArray<kt_ID> *out_ids)
                 continue;
             }
 
-            kt_ID id = {};
+            rk_ID id = {};
             if (crypto_box_seal_open(id.hash, obj.ptr, (size_t)obj.len, pkey, skey) != 0) {
                 LogError("Failed to unseal tag (ignoring)");
                 continue;

@@ -27,7 +27,7 @@ struct KeyData {
 };
 #pragma pack(pop)
 
-class LocalDisk: public kt_Disk {
+class LocalDisk: public rk_Disk {
 public:
     LocalDisk(const char *path, const char *pwd);
     ~LocalDisk() override;
@@ -119,10 +119,10 @@ LocalDisk::LocalDisk(const char *path, const char *pwd)
         bool error = false;
 
         if (ReadKey(write_filename, pwd, pkey, &error)) {
-            mode = kt_DiskMode::WriteOnly;
+            mode = rk_DiskMode::WriteOnly;
             memset(skey, 0, RG_SIZE(skey));
         } else if (ReadKey(full_filename, pwd, skey, &error)) {
-            mode = kt_DiskMode::ReadWrite;
+            mode = rk_DiskMode::ReadWrite;
             crypto_scalarmult_base(pkey, skey);
         } else {
             if (!error) {
@@ -235,7 +235,7 @@ bool LocalDisk::TestRaw(const char *path)
     return exists;
 }
 
-kt_Disk *kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd)
+rk_Disk *rk_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd)
 {
     BlockAllocator temp_alloc;
 
@@ -317,7 +317,7 @@ kt_Disk *kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *
         return nullptr;
     files.Append(write_filename);
 
-    kt_Disk *disk = kt_OpenLocalDisk(directory.ptr, full_pwd);
+    rk_Disk *disk = rk_OpenLocalDisk(directory.ptr, full_pwd);
     if (!disk)
         return nullptr;
 
@@ -325,9 +325,9 @@ kt_Disk *kt_CreateLocalDisk(const char *path, const char *full_pwd, const char *
     return disk;
 }
 
-kt_Disk *kt_OpenLocalDisk(const char *path, const char *pwd)
+rk_Disk *rk_OpenLocalDisk(const char *path, const char *pwd)
 {
-    kt_Disk *disk = new LocalDisk(path, pwd);
+    rk_Disk *disk = new LocalDisk(path, pwd);
 
     if (!disk->GetURL()) {
         delete disk;

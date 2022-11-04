@@ -18,28 +18,28 @@
 
 namespace RG {
 
-class kt_Disk;
+class rk_Disk;
 
-struct kt_PutSettings {
-    int threads = kt_ComputeDefaultThreads();
+struct rk_PutSettings {
+    int threads = rk_ComputeDefaultThreads();
 
     const char *name = nullptr;
     bool follow_symlinks = false;
     bool raw = false;
 };
 
-struct kt_GetSettings {
-    int threads = kt_ComputeDefaultThreads();
+struct rk_GetSettings {
+    int threads = rk_ComputeDefaultThreads();
 
     bool flat = false;
 };
 
-struct kt_ListSettings {
-    int threads = kt_ComputeDefaultThreads();
+struct rk_ListSettings {
+    int threads = rk_ComputeDefaultThreads();
 };
 
-struct kt_SnapshotInfo {
-    kt_ID id;
+struct rk_SnapshotInfo {
+    rk_ID id;
 
     const char *name; // Can be NULL
     int64_t time;
@@ -47,10 +47,10 @@ struct kt_SnapshotInfo {
     int64_t stored;
 };
 
-bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames,
-            kt_ID *out_id, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
+bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
+            rk_ID *out_id, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
 
-bool kt_Get(kt_Disk *disk, const kt_ID &id, const kt_GetSettings &settings, const char *dest_path, int64_t *out_len = nullptr);
-bool kt_List(kt_Disk *disk, const kt_ListSettings &settings, Allocator *str_alloc, HeapArray<kt_SnapshotInfo> *out_snapshots);
+bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len = nullptr);
+bool rk_List(rk_Disk *disk, const rk_ListSettings &settings, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
 
 }

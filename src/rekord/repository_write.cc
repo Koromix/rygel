@@ -34,7 +34,7 @@ enum class PutResult {
 };
 
 class PutContext {
-    kt_Disk *disk;
+    rk_Disk *disk;
     Span<const uint8_t> salt;
 
     Async uploads;
@@ -43,10 +43,10 @@ class PutContext {
     std::atomic<int64_t> stat_written {0};
 
 public:
-    PutContext(kt_Disk *disk, int threads);
+    PutContext(rk_Disk *disk, int threads);
 
-    PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, kt_ID *out_id);
-    PutResult PutFile(const char *src_filename, kt_ID *out_id);
+    PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_ID *out_id);
+    PutResult PutFile(const char *src_filename, rk_ID *out_id);
 
     bool Sync() { return uploads.Sync(); }
 
@@ -54,7 +54,7 @@ public:
     int64_t GetWritten() const { return stat_written; }
 };
 
-static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, kt_ID *out_id)
+static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, rk_ID *out_id)
 {
     blake3_hasher hasher;
 
@@ -84,13 +84,13 @@ public:
     Span<const uint8_t> Get() const { return obj; }
 };
 
-PutContext::PutContext(kt_Disk *disk, int threads)
+PutContext::PutContext(rk_Disk *disk, int threads)
     : disk(disk), salt(disk->GetSalt()), uploads(threads)
 {
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 }
 
-PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, kt_ID *out_id)
+PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, rk_ID *out_id)
 {
     BlockAllocator temp_alloc;
 
@@ -102,8 +102,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                         [&](const char *basename, FileType) {
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, basename).ptr;
 
-        Size entry_len = RG_SIZE(kt_FileEntry) + strlen(basename) + 1;
-        kt_FileEntry *entry = (kt_FileEntry *)dir_obj.AppendDefault(entry_len);
+        Size entry_len = RG_SIZE(rk_FileEntry) + strlen(basename) + 1;
+        rk_FileEntry *entry = (rk_FileEntry *)dir_obj.AppendDefault(entry_len);
         RG_DEFER_N(entry_guard) { dir_obj.RemoveLast(entry_len); };
 
         FileInfo file_info;
@@ -118,13 +118,13 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         }
 
         switch (file_info.type) {
-            case FileType::Directory: { entry->kind = (int8_t)kt_FileEntry::Kind::Directory; } break;
+            case FileType::Directory: { entry->kind = (int8_t)rk_FileEntry::Kind::Directory; } break;
             case FileType::File: {
-                entry->kind = (int8_t)kt_FileEntry::Kind::File;
+                entry->kind = (int8_t)rk_FileEntry::Kind::File;
                 entry->size = LittleEndian(file_info.size);
             } break;
 #ifndef _WIN32
-            case FileType::Link: { entry->kind = (int8_t)kt_FileEntry::Kind::Link; } break;
+            case FileType::Link: { entry->kind = (int8_t)rk_FileEntry::Kind::Link; } break;
 #endif
 
 #ifdef _WIN32
@@ -140,7 +140,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
         entry->mtime = LittleEndian(file_info.mtime);
         entry->mode = LittleEndian((uint32_t)file_info.mode);
-        CopyString(basename, MakeSpan(entry->name, entry_len - RG_SIZE(kt_FileEntry)));
+        CopyString(basename, MakeSpan(entry->name, entry_len - RG_SIZE(rk_FileEntry)));
 
         entry_guard.Disable();
         return true;
@@ -154,13 +154,13 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
     // Process data entries (file, links)
     for (Size offset = 0; offset < dir_obj.len;) {
-        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
+        rk_FileEntry *entry = (rk_FileEntry *)(dir_obj.ptr + offset);
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
 
-        switch ((kt_FileEntry::Kind)entry->kind) {
-            case kt_FileEntry::Kind::Directory: {} break; // Already processed
+        switch ((rk_FileEntry::Kind)entry->kind) {
+            case rk_FileEntry::Kind::Directory: {} break; // Already processed
 
-            case kt_FileEntry::Kind::File: {
+            case rk_FileEntry::Kind::File: {
                 // Skip file analysis if metadata is unchanged
                 {
                     sq_Statement stmt;
@@ -175,10 +175,10 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                         Span<const uint8_t> id = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 3),
                                                           sqlite3_column_bytes(stmt, 3));
 
-                        if (id.len == RG_SIZE(kt_ID) && mtime == LittleEndian(entry->mtime) &&
+                        if (id.len == RG_SIZE(rk_ID) && mtime == LittleEndian(entry->mtime) &&
                                                         mode == LittleEndian(entry->mode) &&
                                                         size == LittleEndian(entry->size)) {
-                            memcpy(&entry->id, id.ptr, RG_SIZE(kt_ID));
+                            memcpy(&entry->id, id.ptr, RG_SIZE(rk_ID));
 
                             if (disk->HasObject(entry->id))
                                 break;
@@ -196,7 +196,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 });
             } break;
 
-            case kt_FileEntry::Kind::Link: {
+            case rk_FileEntry::Kind::Link: {
 #ifdef _WIN32
                 RG_UNREACHABLE();
 #else
@@ -220,7 +220,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                     HashBlake3(target, salt.ptr, &entry->id);
 
-                    Size ret = disk->WriteObject(entry->id, kt_ObjectType::Link, target);
+                    Size ret = disk->WriteObject(entry->id, rk_ObjectType::Link, target);
                     if (ret < 0)
                         return false;
                     stat_written += ret;
@@ -231,15 +231,15 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             } break;
         }
 
-        Size entry_len = RG_SIZE(kt_FileEntry) + strlen(entry->name) + 1;
+        Size entry_len = RG_SIZE(rk_FileEntry) + strlen(entry->name) + 1;
         offset += entry_len;
     }
 
     // Process directory entries
     for (Size offset = 0; offset < dir_obj.len;) {
-        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
+        rk_FileEntry *entry = (rk_FileEntry *)(dir_obj.ptr + offset);
 
-        if (entry->kind == (int8_t)kt_FileEntry::Kind::Directory) {
+        if (entry->kind == (int8_t)rk_FileEntry::Kind::Directory) {
             const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
 
             PutResult ret = PutDirectory(filename, follow_symlinks, &entry->id);
@@ -248,22 +248,22 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 return PutResult::Error;
         }
 
-        Size entry_len = RG_SIZE(kt_FileEntry) + strlen(entry->name) + 1;
+        Size entry_len = RG_SIZE(rk_FileEntry) + strlen(entry->name) + 1;
         offset += entry_len;
     }
 
     if (!async.Sync())
         return PutResult::Error;
 
-    kt_ID dir_id = {};
+    rk_ID dir_id = {};
     HashBlake3(dir_obj, salt.ptr, &dir_id);
 
     // Update cached stats
     for (Size offset = 0; offset < dir_obj.len;) {
-        kt_FileEntry *entry = (kt_FileEntry *)(dir_obj.ptr + offset);
+        rk_FileEntry *entry = (rk_FileEntry *)(dir_obj.ptr + offset);
         const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
 
-        if (entry->kind == (int8_t)kt_FileEntry::Kind::File) {
+        if (entry->kind == (int8_t)rk_FileEntry::Kind::File) {
             if (!db->Run(R"(INSERT INTO stats (path, mtime, mode, size, id)
                                 VALUES (?1, ?2, ?3, ?4, ?5)
                                 ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
@@ -275,7 +275,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 return PutResult::Error;
         }
 
-        Size entry_len = RG_SIZE(kt_FileEntry) + strlen(entry->name) + 1;
+        Size entry_len = RG_SIZE(rk_FileEntry) + strlen(entry->name) + 1;
         offset += entry_len;
     }
 
@@ -283,7 +283,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     uploads.Run([dir_id, data = AsyncUpload(dir_obj.Leak()), this]() {
         Span<const uint8_t> obj = data.Get();
 
-        Size written = disk->WriteObject(dir_id, kt_ObjectType::Directory2, obj);
+        Size written = disk->WriteObject(dir_id, rk_ObjectType::Directory2, obj);
         if (written < 0)
             return false;
         stat_written += written;
@@ -295,7 +295,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     return PutResult::Success;
 }
 
-PutResult PutContext::PutFile(const char *src_filename, kt_ID *out_id)
+PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id)
 {
     StreamReader st;
     {
@@ -310,7 +310,7 @@ PutResult PutContext::PutFile(const char *src_filename, kt_ID *out_id)
 
     // Split the file
     {
-        kt_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
+        rk_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
 
         HeapArray<uint8_t> buf;
         {
@@ -333,24 +333,24 @@ PutResult PutContext::PutFile(const char *src_filename, kt_ID *out_id)
             Span<const uint8_t> remain = buf;
 
             // We can't relocate in the inner loop
-            Size needed = (remain.len / ChunkMin + 1) * RG_SIZE(kt_ChunkEntry) + 8;
+            Size needed = (remain.len / ChunkMin + 1) * RG_SIZE(rk_ChunkEntry) + 8;
             file_obj.Grow(needed);
 
             // Chunk file and write chunks out in parallel
             do {
                 Size processed = chunker.Process(remain, st.IsEOF(), [&](Size idx, int64_t total, Span<const uint8_t> chunk) {
-                    RG_ASSERT(idx * RG_SIZE(kt_ChunkEntry) == file_obj.len);
-                    file_obj.len += RG_SIZE(kt_ChunkEntry);
+                    RG_ASSERT(idx * RG_SIZE(rk_ChunkEntry) == file_obj.len);
+                    file_obj.len += RG_SIZE(rk_ChunkEntry);
 
                     async.Run([&, idx, total, chunk]() {
-                        kt_ChunkEntry entry = {};
+                        rk_ChunkEntry entry = {};
 
                         entry.offset = LittleEndian(total);
                         entry.len = LittleEndian((int32_t)chunk.len);
 
                         HashBlake3(chunk, salt.ptr, &entry.id);
 
-                        Size ret = disk->WriteObject(entry.id, kt_ObjectType::Chunk, chunk);
+                        Size ret = disk->WriteObject(entry.id, rk_ObjectType::Chunk, chunk);
                         if (ret < 0)
                             return false;
                         stat_written += ret;
@@ -380,19 +380,19 @@ PutResult PutContext::PutFile(const char *src_filename, kt_ID *out_id)
     }
 
     // Write list of chunks (unless there is exactly one)
-    kt_ID file_id = {};
-    if (file_obj.len != RG_SIZE(kt_ChunkEntry)) {
+    rk_ID file_id = {};
+    if (file_obj.len != RG_SIZE(rk_ChunkEntry)) {
         int64_t len_64le = LittleEndian(st.GetRawRead());
         file_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
         HashBlake3(file_obj, salt.ptr, &file_id);
 
-        Size ret = disk->WriteObject(file_id, kt_ObjectType::File, file_obj);
+        Size ret = disk->WriteObject(file_id, rk_ObjectType::File, file_obj);
         if (ret < 0)
             return PutResult::Error;
         stat_written += ret;
     } else {
-        const kt_ChunkEntry *entry0 = (const kt_ChunkEntry *)file_obj.ptr;
+        const rk_ChunkEntry *entry0 = (const rk_ChunkEntry *)file_obj.ptr;
         file_id = entry0->id;
     }
 
@@ -400,8 +400,8 @@ PutResult PutContext::PutFile(const char *src_filename, kt_ID *out_id)
     return PutResult::Success;
 }
 
-bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *const> filenames,
-            kt_ID *out_id, int64_t *out_len, int64_t *out_written)
+bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
+            rk_ID *out_id, int64_t *out_len, int64_t *out_written)
 {
     BlockAllocator temp_alloc;
 
@@ -415,8 +415,8 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
         LogError("Only one object can be backup up in raw mode");
         return false;
     }
-    if (settings.name && strlen(settings.name) >= RG_SIZE(kt_SnapshotHeader::name)) {
-        LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(kt_SnapshotHeader::name));
+    if (settings.name && strlen(settings.name) >= RG_SIZE(rk_SnapshotHeader::name)) {
+        LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(rk_SnapshotHeader::name));
         return false;
     }
 
@@ -424,7 +424,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     HeapArray<uint8_t> snapshot_obj;
-    kt_SnapshotHeader *header = (kt_SnapshotHeader *)snapshot_obj.AppendDefault(RG_SIZE(kt_SnapshotHeader));
+    rk_SnapshotHeader *header = (rk_SnapshotHeader *)snapshot_obj.AppendDefault(RG_SIZE(rk_SnapshotHeader));
 
     CopyString(settings.name ? settings.name : "", header->name);
     header->time = LittleEndian(GetUnixTime());
@@ -443,8 +443,8 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
         RG_ASSERT(PathIsAbsolute(name.ptr));
         RG_ASSERT(!PathContainsDotDot(name.ptr));
 
-        Size entry_len = RG_SIZE(kt_FileEntry) + name.len + 1;
-        kt_FileEntry *entry = (kt_FileEntry *)snapshot_obj.Grow(entry_len);
+        Size entry_len = RG_SIZE(rk_FileEntry) + name.len + 1;
+        rk_FileEntry *entry = (rk_FileEntry *)snapshot_obj.Grow(entry_len);
 
         // Transform name (same length or shorter)
         {
@@ -474,7 +474,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
         }
 
         // Adjust entry length
-        entry_len = RG_SIZE(kt_FileEntry) + name.len + 1;
+        entry_len = RG_SIZE(rk_FileEntry) + name.len + 1;
         snapshot_obj.len += entry_len;
 
         FileInfo file_info;
@@ -483,13 +483,13 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
 
         switch (file_info.type) {
             case FileType::Directory: {
-                entry->kind = (int8_t)kt_FileEntry::Kind::Directory;
+                entry->kind = (int8_t)rk_FileEntry::Kind::Directory;
 
                 if (put.PutDirectory(filename, settings.follow_symlinks, &entry->id) != PutResult::Success)
                     return false;
             } break;
             case FileType::File: {
-                entry->kind = (int8_t)kt_FileEntry::Kind::File;
+                entry->kind = (int8_t)rk_FileEntry::Kind::File;
                 entry->size = LittleEndian((uint32_t)file_info.size);
 
                 if (put.PutFile(filename, &entry->id) != PutResult::Success)
@@ -516,7 +516,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
     int64_t total_len = put.GetLen();
     int64_t total_written = put.GetWritten();
 
-    kt_ID id = {};
+    rk_ID id = {};
     if (!settings.raw) {
         header->len = LittleEndian(total_len);
         header->stored = LittleEndian(total_written);
@@ -525,7 +525,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
 
         // Write snapshot object
         {
-            Size ret = disk->WriteObject(id, kt_ObjectType::Snapshot2, snapshot_obj);
+            Size ret = disk->WriteObject(id, rk_ObjectType::Snapshot2, snapshot_obj);
             if (ret < 0)
                 return false;
             total_written += ret;
@@ -539,7 +539,7 @@ bool kt_Put(kt_Disk *disk, const kt_PutSettings &settings, Span<const char *cons
             total_written += ret;
         }
     } else {
-        const kt_FileEntry *entry = (const kt_FileEntry *)(snapshot_obj.ptr + RG_SIZE(kt_SnapshotHeader));
+        const rk_FileEntry *entry = (const rk_FileEntry *)(snapshot_obj.ptr + RG_SIZE(rk_SnapshotHeader));
         id = entry->id;
     }
 
