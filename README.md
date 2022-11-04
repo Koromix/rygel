@@ -4,10 +4,12 @@
 | ---------- | -------------------------------------------------------------------------- | -----------------|
 | *blikk*    | Embeddable beginner-friendly language with static types, fast compilation  | Work in progress |
 | *core*     | Base C++ libraries (such as libcc) and small wrappers (R, rapidjson...)    | Good             |
+| *cnoke*    | Simple alternative to cmake.js, without any dependency                     | Good             |
 | *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Good             |
 | *felix*    | Small build system made specifically for this repository                   | Good             |
 | *goupile*  | Programmable electronic data capture application                           | Work in progress |
 | *heimdall* | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
+| *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js             | Good             |
 | *mael*     | Mael robot code for 'Coupe de France de Robotique 2022' competition        | Work in progress |
 | *rekord*   | Public-key backup tool with deduplication                                  | Work in progress |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
@@ -16,7 +18,9 @@
 
 # How to build
 
-This repository uses a dedicated build tool called felix. To get started, you need to build
+## C++ projects
+
+Most projects use a dedicated build tool called felix. To get started, you need to build
 this tool. You can use the bootstrap scripts at the root of the repository to bootstrap it:
 
 * Run `./bootstrap.sh` on Linux and macOS
@@ -32,6 +36,10 @@ transpile the JS code used in some projects.
 Use `./felix --help` for more information.
 
 As of now, R packages cannot be built using this method.
+
+## Node.js projects
+
+Refer to each project (Koffi, etc.) documentation for instructions on how to build these projects.
 
 ## R packages
 
