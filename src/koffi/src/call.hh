@@ -156,7 +156,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
         return ptr;
     } else {
 #ifdef RG_DEBUG
-        int flags = (int)Allocator::Flag::Zero;
+        int flags = (int)AllocFlag::Zero;
 #else
         int flags = 0;
 #endif
