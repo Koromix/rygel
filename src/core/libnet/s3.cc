@@ -339,10 +339,10 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 
     int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
-        return false;
+        return -1;
     if (status != 200) {
         LogError("Failed to get S3 object with status %1", status);
-        return false;
+        return -1;
     }
 
     return ctx.len;
