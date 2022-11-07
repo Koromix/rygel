@@ -50,6 +50,8 @@ static const char *const rk_ObjectTypeNames[] = {
     "Snapshot2"
 };
 
+int rk_ComputeDefaultThreads();
+
 class rk_Disk {
 protected:
     const char *url = nullptr;
@@ -61,6 +63,8 @@ protected:
     uint8_t skey[32] = {};
 
     sq_Database cache_db;
+
+    int threads = rk_ComputeDefaultThreads();
 
     BlockAllocator str_alloc;
 
@@ -80,6 +84,13 @@ public:
     rk_DiskMode GetMode() const { return mode; }
 
     sq_Database *GetCache() { return &cache_db; }
+
+    void SetThreads(int count)
+    {
+        RG_ASSERT(count > 0);
+        threads = count;
+    }
+    int GetThreads() const { return threads; }
 
     bool ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
     Size WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj);

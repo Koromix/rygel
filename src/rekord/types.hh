@@ -62,6 +62,4 @@ RG_STATIC_ASSERT(RG_SIZE(rk_ChunkEntry) == 44);
 
 bool rk_ParseID(const char *str, rk_ID *out_id);
 
-int rk_ComputeDefaultThreads();
-
 }

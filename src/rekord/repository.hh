@@ -21,21 +21,13 @@ namespace RG {
 class rk_Disk;
 
 struct rk_PutSettings {
-    int threads = rk_ComputeDefaultThreads();
-
     const char *name = nullptr;
     bool follow_symlinks = false;
     bool raw = false;
 };
 
 struct rk_GetSettings {
-    int threads = rk_ComputeDefaultThreads();
-
     bool flat = false;
-};
-
-struct rk_ListSettings {
-    int threads = rk_ComputeDefaultThreads();
 };
 
 struct rk_SnapshotInfo {
@@ -51,6 +43,6 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             rk_ID *out_id, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
 
 bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len = nullptr);
-bool rk_List(rk_Disk *disk, const rk_ListSettings &settings, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
+bool rk_List(rk_Disk *disk, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
 
 }

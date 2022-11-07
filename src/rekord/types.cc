@@ -46,31 +46,4 @@ bool rk_ParseID(const char *str, rk_ID *out_id)
     return true;
 }
 
-int rk_ComputeDefaultThreads()
-{
-    static int threads;
-
-    if (!threads) {
-        const char *env = GetQualifiedEnv("THREADS");
-
-        if (env) {
-            char *end_ptr;
-            long value = strtol(env, &end_ptr, 10);
-
-            if (end_ptr > env && !end_ptr[0] && value > 0) {
-                threads = (int)value;
-            } else {
-                LogError("KIPPIT_THREADS must be positive number (ignored)");
-                threads = (int)std::thread::hardware_concurrency() * 4;
-            }
-        } else {
-            threads = (int)std::thread::hardware_concurrency() * 4;
-        }
-
-        RG_ASSERT(threads > 0);
-    }
-
-    return threads;
-}
-
 }

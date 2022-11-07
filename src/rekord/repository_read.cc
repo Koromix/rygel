@@ -43,7 +43,7 @@ class GetContext {
     std::atomic<int64_t> stat_len {0};
 
 public:
-    GetContext(rk_Disk *disk, int threads);
+    GetContext(rk_Disk *disk);
 
     bool ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
     bool GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
@@ -53,8 +53,8 @@ public:
     int64_t GetLen() const { return stat_len; }
 };
 
-GetContext::GetContext(rk_Disk *disk, int threads)
-    : disk(disk), tasks(threads)
+GetContext::GetContext(rk_Disk *disk)
+    : disk(disk), tasks(disk->GetThreads())
 {
 }
 
@@ -383,7 +383,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
     if (!disk->ReadObject(id, &type, &obj))
         return false;
 
-    GetContext get(disk, settings.threads);
+    GetContext get(disk);
 
     switch (type) {
         case rk_ObjectType::Chunk:
@@ -455,7 +455,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
     return true;
 }
 
-bool rk_List(rk_Disk *disk, const rk_ListSettings &settings, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
+bool rk_List(rk_Disk *disk, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
 {
     Size prev_len = out_snapshots->len;
     RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
@@ -464,7 +464,7 @@ bool rk_List(rk_Disk *disk, const rk_ListSettings &settings, Allocator *str_allo
     if (!disk->ListTags(&ids))
         return false;
 
-    Async async(settings.threads);
+    Async async(disk->GetThreads());
 
     // Gather snapshot information
     {

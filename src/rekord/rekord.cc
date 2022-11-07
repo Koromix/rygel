@@ -57,24 +57,31 @@ static bool LooksLikeURL(const char *str)
     return ret;
 }
 
-static std::unique_ptr<rk_Disk> OpenRepository(const char *repository, const char *pwd)
+static std::unique_ptr<rk_Disk> OpenRepository(const char *repository, const char *pwd, int threads = -1)
 {
+    std::unique_ptr<rk_Disk> disk;
     if (LooksLikeURL(repository)) {
         s3_Config config;
         if (!s3_DecodeURL(repository, &config))
             return nullptr;
 
-        std::unique_ptr<rk_Disk> disk = rk_OpenS3Disk(config, pwd);
-        return disk;
+        disk = rk_OpenS3Disk(config, pwd);
     } else {
         if (!PathIsAbsolute(repository)) {
             LogError("Repository path '%1' is not absolute", repository);
             return nullptr;
         }
 
-        std::unique_ptr<rk_Disk> disk = rk_OpenLocalDisk(repository, pwd);
-        return disk;
+        disk = rk_OpenLocalDisk(repository, pwd);
     }
+    if (!disk)
+        return nullptr;
+
+    if (threads >= 0) {
+        disk->SetThreads(threads);
+    }
+
+    return disk;
 }
 
 static int RunInit(Span<const char *> arguments)
@@ -147,6 +154,7 @@ static int RunPut(Span<const char *> arguments)
 
     // Options
     rk_PutSettings settings;
+    int threads = rk_ComputeDefaultThreads();
     const char *repository = nullptr;
     const char *pwd = nullptr;
     HeapArray<const char *> filenames;
@@ -165,7 +173,7 @@ Options:
         %!..+--raw%!0                    Skip snapshot object and report data ID
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: %2)%!0)", FelixTarget, settings.threads);
+                                 %!D..(default: %2)%!0)", FelixTarget, threads);
     };
 
     // Parse arguments
@@ -187,9 +195,9 @@ Options:
             } else if (opt.Test("--raw")) {
                 settings.raw = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &settings.threads))
+                if (!ParseInt(opt.current_value, &threads))
                     return 1;
-                if (settings.threads < 1) {
+                if (threads < 1) {
                     LogError("Threads count cannot be < 1");
                     return 1;
                 }
@@ -213,7 +221,7 @@ Options:
     if (!pwd)
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd);
+    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd, threads);
     if (!disk)
         return 1;
 
@@ -250,6 +258,7 @@ static int RunGet(Span<const char *> arguments)
 
     // Options
     rk_GetSettings settings;
+    int threads = rk_ComputeDefaultThreads();
     const char *repository = nullptr;
     const char *pwd = nullptr;
     const char *dest_filename = nullptr;
@@ -267,7 +276,7 @@ Options:
         %!..+--flat%!0                   Use flat names for snapshot files
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: %2)%!0)", FelixTarget, settings.threads);
+                                 %!D..(default: %2)%!0)", FelixTarget, threads);
     };
 
     // Parse arguments
@@ -287,9 +296,9 @@ Options:
             } else if (opt.Test("--flat")) {
                 settings.flat = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &settings.threads))
+                if (!ParseInt(opt.current_value, &threads))
                     return 1;
-                if (settings.threads < 1) {
+                if (threads < 1) {
                     LogError("Threads count cannot be < 1");
                     return 1;
                 }
@@ -317,7 +326,7 @@ Options:
     if (!pwd)
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd);
+    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd, threads);
     if (!disk)
         return 1;
 
@@ -355,7 +364,7 @@ static int RunList(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    rk_ListSettings settings;
+    int threads = rk_ComputeDefaultThreads();
     const char *repository = nullptr;
     const char *pwd = nullptr;
 
@@ -368,7 +377,7 @@ Options:
         %!..+--password <pwd>%!0         Set repository password
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: %2)%!0)", FelixTarget, settings.threads);
+                                 %!D..(default: %2)%!0)", FelixTarget, threads);
     };
 
     // Parse arguments
@@ -384,9 +393,9 @@ Options:
             } else if (opt.Test("--password", OptionType::Value)) {
                 pwd = opt.current_value;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &settings.threads))
+                if (!ParseInt(opt.current_value, &threads))
                     return 1;
-                if (settings.threads < 1) {
+                if (threads < 1) {
                     LogError("Threads count cannot be < 1");
                     return 1;
                 }
@@ -404,7 +413,7 @@ Options:
     if (!pwd)
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd);
+    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd, threads);
     if (!disk)
         return 1;
 
@@ -415,7 +424,7 @@ Options:
     }
 
     HeapArray<rk_SnapshotInfo> snapshots;
-    if (!rk_List(disk.get(), settings, &temp_alloc, &snapshots))
+    if (!rk_List(disk.get(), &temp_alloc, &snapshots))
         return 1;
 
     if (snapshots.len) {
