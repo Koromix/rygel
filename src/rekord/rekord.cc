@@ -122,11 +122,13 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
         if (!s3_DecodeURL(repository, &config))
             return 1;
 
-        disk = rk_CreateS3Disk(config, full_pwd, write_pwd);
+        disk = rk_OpenS3Disk(config);
     } else {
-        disk = rk_CreateLocalDisk(repository, full_pwd, write_pwd);
+        disk = rk_OpenLocalDisk(repository);
     }
     if (!disk)
+        return 1;
+    if (!disk->Init(full_pwd, write_pwd))
         return 1;
 
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());

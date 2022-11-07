@@ -24,9 +24,13 @@ public:
     LocalDisk(const char *path);
     ~LocalDisk() override;
 
+    bool Init(const char *full_pwd, const char *write_pwd) override;
+
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
+
     Size WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    bool DeleteRaw(const char *path);
 
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
     bool TestRaw(const char *path) override;
@@ -41,16 +45,76 @@ LocalDisk::LocalDisk(const char *path)
         LogError("Directory path '%1' is too long", directory);
         return;
     }
-    if (!TestFile(directory.ptr, FileType::Directory)) {
-        LogError("Directory '%1' does not exist", directory);
-        return;
-    }
 
     url = directory.ptr;
 }
 
 LocalDisk::~LocalDisk()
 {
+}
+
+bool LocalDisk::Init(const char *full_pwd, const char *write_pwd)
+{
+    RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::Secure);
+
+    BlockAllocator temp_alloc;
+
+    HeapArray<const char *> directories;
+    RG_DEFER_N(err_guard) {
+        for (Size i = directories.len - 1; i >= 0; i--) {
+            const char *dirname = directories[i];
+            UnlinkDirectory(dirname);
+        }
+    };
+
+    // Create main directory
+    if (TestFile(url)) {
+        if (!IsDirectoryEmpty(url)) {
+            LogError("Directory '%1' exists and is not empty", url);
+            return false;
+        }
+    } else {
+        if (!MakeDirectory(url))
+            return false;
+        directories.Append(url);
+    }
+    if (!MakeDirectory(url, false))
+        return false;
+
+    // Init subdirectories
+    {
+        const auto make_directory = [&](const char *suffix) {
+            const char *path = Fmt(&temp_alloc, "%1%/%2", url, suffix).ptr;
+
+            if (!MakeDirectory(path))
+                return false;
+            directories.Append(path);
+
+            return true;
+        };
+
+        if (!make_directory("keys"))
+            return false;
+        if (!make_directory("tags"))
+            return false;
+        if (!make_directory("blobs"))
+            return false;
+
+        for (int i = 0; i < 256; i++) {
+            char name[128];
+            Fmt(name, "blobs/%1", FmtHex(i).Pad0(-2));
+
+            if (!make_directory(name))
+                return false;
+        }
+    }
+
+    if (!InitKeys(full_pwd, write_pwd))
+        return false;
+
+    err_guard.Disable();
+    return true;
 }
 
 Size LocalDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
@@ -129,6 +193,14 @@ Size LocalDisk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Func
     return total_len;
 }
 
+bool LocalDisk::DeleteRaw(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    return UnlinkFile(filename.data);
+}
+
 bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths)
 {
     Size prev_len = out_paths->len;
@@ -151,94 +223,6 @@ bool LocalDisk::TestRaw(const char *path)
 {
     bool exists = TestFile(path, FileType::File);
     return exists;
-}
-
-std::unique_ptr<rk_Disk> rk_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd)
-{
-    BlockAllocator temp_alloc;
-
-    Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &temp_alloc);
-
-    // Sanity checks
-    if (directory.len > MaxPathSize) {
-        LogError("Directory path '%1' is too long", directory);
-        return nullptr;
-    }
-
-    // Drop created files and directories if anything fails
-    HeapArray<const char *> directories;
-    HeapArray<const char *> names;
-    RG_DEFER_N(root_guard) {
-        for (const char *name: names) {
-            const char *filename = Fmt(&temp_alloc, "%1%/%2", directory, name).ptr;
-            UnlinkFile(filename);
-        }
-        for (Size i = directories.len - 1; i >= 0; i--) {
-            UnlinkDirectory(directories[i]);
-        }
-    };
-
-    // Make main directory
-    if (TestFile(path)) {
-        if (!IsDirectoryEmpty(path)) {
-            LogError("Directory '%1' exists and is not empty", path);
-            return nullptr;
-        }
-    } else {
-        if (!MakeDirectory(path))
-            return nullptr;
-        directories.Append(path);
-    }
-    if (!MakeDirectory(path, false))
-        return nullptr;
-
-    // Create repository directories
-    {
-        const auto make_directory = [&](const char *suffix) {
-            const char *path = Fmt(&temp_alloc, "%1%/%2", directory, suffix).ptr;
-
-            if (!MakeDirectory(path))
-                return false;
-            directories.Append(path);
-
-            return true;
-        };
-
-        if (!make_directory("keys"))
-            return nullptr;
-        if (!make_directory("tags"))
-            return nullptr;
-        if (!make_directory("blobs"))
-            return nullptr;
-
-        for (int i = 0; i < 256; i++) {
-            char name[128];
-            Fmt(name, "blobs/%1", FmtHex(i).Pad0(-2));
-
-            if (!make_directory(name))
-                return nullptr;
-        }
-    }
-
-    // Generate master keys
-    uint8_t skey[32];
-    uint8_t pkey[32];
-    crypto_box_keypair(pkey, skey);
-
-    std::unique_ptr<rk_Disk> disk = rk_OpenLocalDisk(directory.ptr);
-    if (!disk)
-        return nullptr;
-
-    // Write control files
-    if (!disk->WriteKey("keys/full", full_pwd, skey))
-        return nullptr;
-    names.Append("keys/full");
-    if (!disk->WriteKey("keys/write", write_pwd, pkey))
-        return nullptr;
-    names.Append("keys/write");
-
-    root_guard.Disable();
-    return disk;
 }
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd)

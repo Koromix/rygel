@@ -28,10 +28,13 @@ public:
     S3Disk(const s3_Config &config);
     ~S3Disk() override;
 
+    bool Init(const char *full_pwd, const char *write_pwd) override;
+
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
 
     Size WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
     bool TestRaw(const char *path) override;
@@ -48,6 +51,12 @@ S3Disk::S3Disk(const s3_Config &config)
 
 S3Disk::~S3Disk()
 {
+}
+
+bool S3Disk::Init(const char *full_pwd, const char *write_pwd)
+{
+    RG_ASSERT(mode == rk_DiskMode::Secure);
+    return InitKeys(full_pwd, write_pwd);
 }
 
 Size S3Disk::ReadRaw(const char *path, Span<uint8_t> out_buf)
@@ -126,6 +135,11 @@ Size S3Disk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Functio
     return total_len;
 }
 
+bool S3Disk::DeleteRaw(const char *path)
+{
+    return s3.DeleteObject(path);
+}
+
 bool S3Disk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths)
 {
     if (!EndsWith(path, "/")) {
@@ -143,47 +157,6 @@ bool S3Disk::TestRaw(const char *path)
     sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
     return stmt.Step();
-}
-
-std::unique_ptr<rk_Disk> rk_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd)
-{
-    s3_Session s3;
-
-    if (!s3.Open(config))
-        return nullptr;
-
-    // Drop created keys if anything fails
-    HeapArray<const char *> keys;
-    RG_DEFER_N(root_guard) {
-        for (const char *key: keys) {
-            s3.DeleteObject(key);
-        }
-    };
-
-    if (s3.HasObject("keys/full")) {
-        LogError("S3 repository '%1' looks already initialized", s3.GetURL());
-        return nullptr;
-    }
-
-    // Generate master keys
-    uint8_t skey[32];
-    uint8_t pkey[32];
-    crypto_box_keypair(pkey, skey);
-
-    std::unique_ptr<rk_Disk> disk = std::make_unique<S3Disk>(config);
-    if (!disk)
-        return nullptr;
-
-    // Write control files
-    if (!disk->WriteKey("keys/full", full_pwd, skey))
-        return nullptr;
-    keys.Append("keys/full");
-    if (!disk->WriteKey("keys/write", write_pwd, pkey))
-        return nullptr;
-    keys.Append("keys/write");
-
-    root_guard.Disable();
-    return disk;
 }
 
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd)

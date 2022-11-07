@@ -48,11 +48,7 @@ bool rk_Disk::Open(const char *pwd)
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
 
-    RG_DEFER_N(err_guard) {
-        mode = rk_DiskMode::Secure;
-        ZeroMemorySafe(pkey, RG_SIZE(pkey));
-        ZeroMemorySafe(skey, RG_SIZE(skey));
-    };
+    RG_DEFER_N(err_guard) { Close(); };
 
     // Open disk and determine mode
     {
@@ -137,6 +133,16 @@ bool rk_Disk::Open(const char *pwd)
 
     err_guard.Disable();
     return true;
+}
+
+void rk_Disk::Close()
+{
+    mode = rk_DiskMode::Secure;
+
+    ZeroMemorySafe(pkey, RG_SIZE(pkey));
+    ZeroMemorySafe(skey, RG_SIZE(skey));
+
+    cache_db.Close();
 }
 
 bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj)
@@ -383,6 +389,38 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
     }
 
     out_guard.Disable();
+    return true;
+}
+
+bool rk_Disk::InitKeys(const char *full_pwd, const char *write_pwd)
+{
+    RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::Secure);
+
+    // Drop created keys if anything fails
+    HeapArray<const char *> keys;
+    RG_DEFER_N(err_guard) {
+        DeleteRaw("keys/full");
+        DeleteRaw("keys/write");
+    };
+
+    if (TestRaw("keys/full")) {
+        LogError("Repository '%1' looks already initialized", url);
+        return false;
+    }
+
+    // Generate master keys
+    crypto_box_keypair(pkey, skey);
+
+    // Write control files
+    if (!WriteKey("keys/full", full_pwd, skey))
+        return false;
+    keys.Append("keys/full");
+    if (!WriteKey("keys/write", write_pwd, pkey))
+        return false;
+    keys.Append("keys/write");
+
+    err_guard.Disable();
     return true;
 }
 

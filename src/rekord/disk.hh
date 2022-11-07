@@ -67,7 +67,10 @@ protected:
 public:
     virtual ~rk_Disk() = default;
 
+    virtual bool Init(const char *full_pwd, const char *write_pwd) = 0;
+
     bool Open(const char *pwd);
+    void Close();
 
     const char *GetURL() const { return url; }
     Span<const uint8_t> GetSalt() const { return pkey; }
@@ -82,26 +85,26 @@ public:
     Size WriteTag(const rk_ID &id);
     bool ListTags(HeapArray<rk_ID> *out_ids);
 
-    bool WriteKey(const char *path, const char *pwd, const uint8_t payload[32]);
-    bool ReadKey(const char *path, const char *pwd, uint8_t *out_payload, bool *out_error);
-
 protected:
+    bool InitKeys(const char *full_pwd, const char *write_pwd);
+
     virtual bool ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
     virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;
 
     virtual Size WriteRaw(const char *path, Size total_len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
+    virtual bool DeleteRaw(const char *path) = 0;
 
     virtual bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) = 0;
     virtual bool TestRaw(const char *path) = 0;
 
 private:
+    bool WriteKey(const char *path, const char *pwd, const uint8_t payload[32]);
+    bool ReadKey(const char *path, const char *pwd, uint8_t *out_payload, bool *out_error);
+
     Size WriteDirect(const char *path, Span<const uint8_t> buf);
 };
 
-std::unique_ptr<rk_Disk> rk_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd = nullptr);
-
-std::unique_ptr<rk_Disk> rk_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd);
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd = nullptr);
 
 }
