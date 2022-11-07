@@ -74,7 +74,7 @@ bool S3Disk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
 Size S3Disk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
     // Fast detection of known objects
-    {
+    if (cache_db.IsValid()) {
         sq_Statement stmt;
         if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
             return -1;
@@ -130,8 +130,8 @@ Size S3Disk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Functio
 
     if (!s3.PutObject(path, obj))
         return -1;
-    if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                         ON CONFLICT (key) DO NOTHING)", path))
+    if (cache_db.IsValid() && !cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                                               ON CONFLICT (key) DO NOTHING)", path))
         return -1;
 
     return total_len;

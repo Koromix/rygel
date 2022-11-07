@@ -19,6 +19,7 @@ namespace RG {
 
 RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
 RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
+RG_STATIC_ASSERT(crypto_secretbox_KEYBYTES == 32);
 RG_STATIC_ASSERT(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
 
 #pragma pack(push, 1)
@@ -26,6 +27,14 @@ struct KeyData {
     uint8_t salt[16];
     uint8_t nonce[crypto_secretbox_NONCEBYTES];
     uint8_t cypher[crypto_secretbox_MACBYTES + 32];
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct SecretData {
+    int8_t version;
+    uint8_t nonce[crypto_secretbox_NONCEBYTES];
+    uint8_t cypher[crypto_secretbox_MACBYTES + 2048];
 };
 #pragma pack(pop)
 
@@ -38,8 +47,8 @@ struct ObjectIntro {
 };
 #pragma pack(pop)
 
+static const int SecretVersion = 1;
 static const int CacheVersion = 2;
-
 static const int ObjectVersion = 2;
 static const Size ObjectSplit = Kibibytes(32);
 
@@ -68,13 +77,17 @@ bool rk_Disk::Open(const char *pwd)
         }
     }
 
+    // Open ID file
+    if (!ReadSecret("rekord", id))
+        return false;
+
     // Open cache
     {
         const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
         if (!MakeDirectory(cache_dir, false))
             return false;
 
-        const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(pkey, FmtType::SmallHex, "").Pad0(-2)).ptr;
+        const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(id, FmtType::SmallHex, "").Pad0(-2)).ptr;
         LogDebug("Cache file: %1", cache_filename);
 
         if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
@@ -139,6 +152,7 @@ void rk_Disk::Close()
 {
     mode = rk_DiskMode::Secure;
 
+    ZeroMemorySafe(id, RG_SIZE(id));
     ZeroMemorySafe(pkey, RG_SIZE(pkey));
     ZeroMemorySafe(skey, RG_SIZE(skey));
 
@@ -397,9 +411,11 @@ bool rk_Disk::InitKeys(const char *full_pwd, const char *write_pwd)
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
 
-    // Drop created keys if anything fails
-    HeapArray<const char *> keys;
+    // Drop created files if anything fails
+    HeapArray<const char *> names;
     RG_DEFER_N(err_guard) {
+        Close();
+
         DeleteRaw("keys/full");
         DeleteRaw("keys/write");
     };
@@ -409,16 +425,24 @@ bool rk_Disk::InitKeys(const char *full_pwd, const char *write_pwd)
         return false;
     }
 
-    // Generate master keys
+    // Generate random ID and keys
+    randombytes_buf(id, RG_SIZE(id));
     crypto_box_keypair(pkey, skey);
 
-    // Write control files
+    if (!WriteSecret("rekord", id))
+        return false;
+    names.Append("rekord");
+
+    // Write key files
     if (!WriteKey("keys/full", full_pwd, skey))
         return false;
-    keys.Append("keys/full");
+    names.Append("keys/full");
     if (!WriteKey("keys/write", write_pwd, pkey))
         return false;
-    keys.Append("keys/write");
+    names.Append("keys/write");
+
+    // Success!
+    mode = rk_DiskMode::ReadWrite;
 
     err_guard.Disable();
     return true;
@@ -490,6 +514,56 @@ bool rk_Disk::ReadKey(const char *path, const char *pwd, uint8_t *out_payload, b
 
     bool success = !crypto_secretbox_open_easy(out_payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key);
     return success;
+}
+
+bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data)
+{
+    RG_ASSERT(data.len + crypto_secretbox_MACBYTES <= RG_SIZE(SecretData::cypher));
+
+    SecretData secret = {};
+
+    secret.version = SecretVersion;
+
+    randombytes_buf(secret.nonce, RG_SIZE(secret.nonce));
+    crypto_secretbox_easy(secret.cypher, data.ptr, (size_t)data.len, secret.nonce, pkey);
+
+    Size len = RG_OFFSET_OF(SecretData, cypher) + crypto_secretbox_MACBYTES + data.len;
+    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&secret, len);
+    Size written = WriteDirect(path, buf);
+
+    if (written < 0)
+        return false;
+    if (!written) {
+        LogError("Secret file '%1' already exists", path);
+        return false;
+    }
+
+    return true;
+}
+
+bool rk_Disk::ReadSecret(const char *path, Span<uint8_t> out_buf)
+{
+    SecretData secret;
+
+    Span<uint8_t> buf = MakeSpan((uint8_t *)&secret, RG_SIZE(secret));
+    Size len = ReadRaw(path, buf);
+
+    if (len < 0)
+        return false;
+    if (len < RG_OFFSET_OF(SecretData, cypher)) {
+        LogError("Malformed secret file '%1'", path);
+        return false;
+    }
+
+    len -= RG_OFFSET_OF(SecretData, cypher);
+    len = std::min(len, out_buf.len + crypto_secretbox_MACBYTES);
+
+    if (crypto_secretbox_open_easy(out_buf.ptr, secret.cypher, len, secret.nonce, pkey)) {
+        LogError("Failed to decrypt secret '%1'", path);
+        return false;
+    }
+
+    return true;
 }
 
 Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf)

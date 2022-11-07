@@ -54,6 +54,8 @@ class rk_Disk {
 protected:
     const char *url = nullptr;
 
+    uint8_t id[32];
+
     rk_DiskMode mode = rk_DiskMode::Secure;
     uint8_t pkey[32] = {};
     uint8_t skey[32] = {};
@@ -73,6 +75,7 @@ public:
     void Close();
 
     const char *GetURL() const { return url; }
+    Span<const uint8_t> GetID() const { return id; }
     Span<const uint8_t> GetSalt() const { return pkey; }
     rk_DiskMode GetMode() const { return mode; }
 
@@ -102,6 +105,9 @@ protected:
 private:
     bool WriteKey(const char *path, const char *pwd, const uint8_t payload[32]);
     bool ReadKey(const char *path, const char *pwd, uint8_t *out_payload, bool *out_error);
+
+    bool WriteSecret(const char *path, Span<const uint8_t> buf);
+    bool ReadSecret(const char *path, Span<uint8_t> out_buf);
 
     Size WriteDirect(const char *path, Span<const uint8_t> buf);
 };
