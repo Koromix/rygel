@@ -422,6 +422,7 @@ Options:
         LogError("Cannot list with write-only key");
         return 1;
     }
+    LogInfo();
 
     HeapArray<rk_SnapshotInfo> snapshots;
     if (!rk_List(disk.get(), &temp_alloc, &snapshots))
@@ -431,17 +432,16 @@ Options:
         for (const rk_SnapshotInfo &snapshot: snapshots) {
             TimeSpec spec = DecomposeTime(snapshot.time);
 
-            LogInfo();
-            LogInfo("%!..+%1%!0", snapshot.id);
+            PrintLn("%!..+%1%!0", snapshot.id);
             if (snapshot.name) {
-                LogInfo("+ Name: %!..+%1%!0", snapshot.name);
+                PrintLn("+ Name: %!..+%1%!0", snapshot.name);
             }
-            LogInfo("+ Time: %!..+%1%!0", FmtTimeNice(spec));
-            LogInfo("+ Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
-            LogInfo("+ Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
+            PrintLn("+ Time: %!..+%1%!0", FmtTimeNice(spec));
+            PrintLn("+ Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
+            PrintLn("+ Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
+            PrintLn();
         }
     } else {
-        LogInfo();
         LogInfo("There does not seem to be any snapshot");
     }
 
