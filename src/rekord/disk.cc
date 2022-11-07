@@ -321,7 +321,7 @@ bool rk_Disk::HasObject(const rk_ID &id)
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
-    return TestRaw(path.data);
+    return TestFast(path.data);
 }
 
 Size rk_Disk::WriteTag(const rk_ID &id)
@@ -404,7 +404,7 @@ bool rk_Disk::InitKeys(const char *full_pwd, const char *write_pwd)
         DeleteRaw("keys/write");
     };
 
-    if (TestRaw("keys/full")) {
+    if (TestSlow("keys/full")) {
         LogError("Repository '%1' looks already initialized", url);
         return false;
     }
@@ -494,7 +494,7 @@ bool rk_Disk::ReadKey(const char *path, const char *pwd, uint8_t *out_payload, b
 
 Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf)
 {
-    if (TestRaw(path))
+    if (TestSlow(path))
         return 0;
 
     Size written = WriteRaw(path, buf.len, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });

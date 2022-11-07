@@ -37,7 +37,9 @@ public:
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
-    bool TestRaw(const char *path) override;
+
+    bool TestSlow(const char *path) override;
+    bool TestFast(const char *path) override;
 };
 
 S3Disk::S3Disk(const s3_Config &config)
@@ -149,7 +151,12 @@ bool S3Disk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *>
     return s3.ListObjects(path, alloc, out_paths);
 }
 
-bool S3Disk::TestRaw(const char *path)
+bool S3Disk::TestSlow(const char *path)
+{
+    return s3.HasObject(path);
+}
+
+bool S3Disk::TestFast(const char *path)
 {
     sq_Statement stmt;
     if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))

@@ -33,7 +33,9 @@ public:
     bool DeleteRaw(const char *path);
 
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
-    bool TestRaw(const char *path) override;
+
+    bool TestSlow(const char *path) override;
+    bool TestFast(const char *path) override;
 };
 
 LocalDisk::LocalDisk(const char *path)
@@ -219,7 +221,13 @@ bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char
     return true;
 }
 
-bool LocalDisk::TestRaw(const char *path)
+bool LocalDisk::TestSlow(const char *path)
+{
+    bool exists = TestFile(path, FileType::File);
+    return exists;
+}
+
+bool LocalDisk::TestFast(const char *path)
 {
     bool exists = TestFile(path, FileType::File);
     return exists;

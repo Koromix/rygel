@@ -179,9 +179,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                                         mode == LittleEndian(entry->mode) &&
                                                         size == LittleEndian(entry->size)) {
                             memcpy(&entry->id, id.ptr, RG_SIZE(rk_ID));
-
-                            if (disk->HasObject(entry->id))
-                                break;
+                            break;
                         }
                     } else if (!stmt.IsValid()) {
                         return PutResult::Error;
