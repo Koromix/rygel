@@ -453,6 +453,8 @@ bool rk_Disk::WriteKey(const char *path, const char *pwd, const uint8_t payload[
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
     Size written = WriteDirect(path, buf);
 
+    if (written < 0)
+        return false;
     if (!written) {
         LogError("Key file '%1' already exists", path);
         return false;
