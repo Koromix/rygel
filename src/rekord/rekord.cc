@@ -57,14 +57,14 @@ static bool LooksLikeURL(const char *str)
     return ret;
 }
 
-static rk_Disk *OpenRepository(const char *repository, const char *pwd)
+static std::unique_ptr<rk_Disk> OpenRepository(const char *repository, const char *pwd)
 {
     if (LooksLikeURL(repository)) {
         s3_Config config;
         if (!s3_DecodeURL(repository, &config))
             return nullptr;
 
-        rk_Disk *disk = rk_OpenS3Disk(config, pwd);
+        std::unique_ptr<rk_Disk> disk = rk_OpenS3Disk(config, pwd);
         return disk;
     } else {
         if (!PathIsAbsolute(repository)) {
@@ -72,7 +72,7 @@ static rk_Disk *OpenRepository(const char *repository, const char *pwd)
             return nullptr;
         }
 
-        rk_Disk *disk = rk_OpenLocalDisk(repository, pwd);
+        std::unique_ptr<rk_Disk> disk = rk_OpenLocalDisk(repository, pwd);
         return disk;
     }
 }
@@ -116,7 +116,7 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
     if (!pwd_GeneratePassword(write_pwd))
         return 1;
 
-    rk_Disk *disk = nullptr;
+    std::unique_ptr<rk_Disk> disk;
     if (LooksLikeURL(repository)) {
         s3_Config config;
         if (!s3_DecodeURL(repository, &config))
@@ -128,7 +128,6 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
     }
     if (!disk)
         return 1;
-    RG_DEFER { delete disk; };
 
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
@@ -212,10 +211,9 @@ Options:
     if (!pwd)
         return 1;
 
-    rk_Disk *disk = OpenRepository(repository, pwd);
+    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd);
     if (!disk)
         return 1;
-    RG_DEFER { delete disk; };
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::WriteOnly) {
@@ -230,7 +228,7 @@ Options:
     rk_ID id = {};
     int64_t total_len = 0;
     int64_t total_written = 0;
-    if (!rk_Put(disk, settings, filenames, &id, &total_len, &total_written))
+    if (!rk_Put(disk.get(), settings, filenames, &id, &total_len, &total_written))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
@@ -317,10 +315,9 @@ Options:
     if (!pwd)
         return 1;
 
-    rk_Disk *disk = OpenRepository(repository, pwd);
+    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd);
     if (!disk)
         return 1;
-    RG_DEFER { delete disk; };
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::ReadWrite) {
@@ -338,7 +335,7 @@ Options:
         rk_ID id = {};
         if (!rk_ParseID(name, &id))
             return 1;
-        if (!rk_Get(disk, id, settings, dest_filename, &file_len))
+        if (!rk_Get(disk.get(), id, settings, dest_filename, &file_len))
             return 1;
     }
 
@@ -405,10 +402,9 @@ Options:
     if (!pwd)
         return 1;
 
-    rk_Disk *disk = OpenRepository(repository, pwd);
+    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd);
     if (!disk)
         return 1;
-    RG_DEFER { delete disk; };
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::ReadWrite) {
@@ -417,7 +413,7 @@ Options:
     }
 
     HeapArray<rk_SnapshotInfo> snapshots;
-    if (!rk_List(disk, settings, &temp_alloc, &snapshots))
+    if (!rk_List(disk.get(), settings, &temp_alloc, &snapshots))
         return 1;
 
     if (snapshots.len) {

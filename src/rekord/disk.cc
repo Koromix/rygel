@@ -22,6 +22,14 @@ RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
 RG_STATIC_ASSERT(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
 
 #pragma pack(push, 1)
+struct KeyData {
+    uint8_t salt[16];
+    uint8_t nonce[crypto_secretbox_NONCEBYTES];
+    uint8_t cypher[crypto_secretbox_MACBYTES + 32];
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 struct ObjectIntro {
     int8_t version;
     int8_t type;
@@ -35,68 +43,99 @@ static const int CacheVersion = 2;
 static const int ObjectVersion = 2;
 static const Size ObjectSplit = Kibibytes(32);
 
-bool rk_Disk::InitCache()
+bool rk_Disk::Open(const char *pwd)
 {
-    const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
-    if (!MakeDirectory(cache_dir, false))
-        return false;
+    RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::Secure);
 
-    const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(pkey, FmtType::SmallHex, "").Pad0(-2)).ptr;
-    LogDebug("Cache file: %1", cache_filename);
+    RG_DEFER_N(err_guard) {
+        mode = rk_DiskMode::Secure;
+        ZeroMemorySafe(pkey, RG_SIZE(pkey));
+        ZeroMemorySafe(skey, RG_SIZE(skey));
+    };
 
-    if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-        return false;
-    if (!cache_db.SetWAL(true))
-        return false;
+    // Open disk and determine mode
+    {
+        bool error = false;
 
-    int version;
-    if (!cache_db.GetUserVersion(&version))
-        return false;
-
-    if (version > CacheVersion) {
-        LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
-        return false;
-    } else if (version < CacheVersion) {
-        bool success = cache_db.Transaction([&]() {
-            switch (version) {
-                case 0: {
-                    bool success = cache_db.RunMany(R"(
-                        CREATE TABLE objects (
-                            key TEXT NOT NULL
-                        );
-                        CREATE UNIQUE INDEX objects_k ON objects (key);
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 1: {
-                    bool success = cache_db.RunMany(R"(
-                        CREATE TABLE stats (
-                            path TEXT NOT NULL,
-                            mtime INTEGER NOT NULL,
-                            mode INTEGER NOT NULL,
-                            size INTEGER NOT NULL,
-                            id BLOB NOT NULL
-                        );
-                        CREATE UNIQUE INDEX stats_p ON stats (path);
-                    )");
-                    if (!success)
-                        return false;
-                } // [[fallthrough]];
-
-                RG_STATIC_ASSERT(CacheVersion == 2);
+        if (ReadKey("keys/write", pwd, pkey, &error)) {
+            mode = rk_DiskMode::WriteOnly;
+            memset(skey, 0, RG_SIZE(skey));
+        } else if (ReadKey("keys/full", pwd, skey, &error)) {
+            mode = rk_DiskMode::ReadWrite;
+            crypto_scalarmult_base(pkey, skey);
+        } else {
+            if (!error) {
+                LogError("Failed to open repository (wrong password?)");
             }
-
-            if (!cache_db.SetUserVersion(CacheVersion))
-                return false;
-
-            return true;
-        });
-        if (!success)
             return false;
+        }
     }
 
+    // Open cache
+    {
+        const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
+        if (!MakeDirectory(cache_dir, false))
+            return false;
+
+        const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(pkey, FmtType::SmallHex, "").Pad0(-2)).ptr;
+        LogDebug("Cache file: %1", cache_filename);
+
+        if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+            return false;
+        if (!cache_db.SetWAL(true))
+            return false;
+
+        int version;
+        if (!cache_db.GetUserVersion(&version))
+            return false;
+
+        if (version > CacheVersion) {
+            LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
+            return false;
+        } else if (version < CacheVersion) {
+            bool success = cache_db.Transaction([&]() {
+                switch (version) {
+                    case 0: {
+                        bool success = cache_db.RunMany(R"(
+                            CREATE TABLE objects (
+                                key TEXT NOT NULL
+                            );
+                            CREATE UNIQUE INDEX objects_k ON objects (key);
+                        )");
+                        if (!success)
+                            return false;
+                    } [[fallthrough]];
+
+                    case 1: {
+                        bool success = cache_db.RunMany(R"(
+                            CREATE TABLE stats (
+                                path TEXT NOT NULL,
+                                mtime INTEGER NOT NULL,
+                                mode INTEGER NOT NULL,
+                                size INTEGER NOT NULL,
+                                id BLOB NOT NULL
+                            );
+                            CREATE UNIQUE INDEX stats_p ON stats (path);
+                        )");
+                        if (!success)
+                            return false;
+                    } // [[fallthrough]];
+
+                    RG_STATIC_ASSERT(CacheVersion == 2);
+                }
+
+                if (!cache_db.SetUserVersion(CacheVersion))
+                    return false;
+
+                return true;
+            });
+            if (!success)
+                return false;
+        }
+    }
+
+    err_guard.Disable();
     return true;
 }
 
@@ -199,6 +238,7 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
 Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj)
 {
     RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
 
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
@@ -270,6 +310,7 @@ Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_
 bool rk_Disk::HasObject(const rk_ID &id)
 {
     RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
 
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
@@ -280,6 +321,7 @@ bool rk_Disk::HasObject(const rk_ID &id)
 Size rk_Disk::WriteTag(const rk_ID &id)
 {
     RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
 
     // Prepare sealed ID
     uint8_t cypher[crypto_box_SEALBYTES + 32];
@@ -293,7 +335,7 @@ Size rk_Disk::WriteTag(const rk_ID &id)
         LocalArray<char, 256> path;
         path.len = Fmt(path.data, "tags/%1", FmtRandom(8)).len;
 
-        Size written = WriteRaw(path.data, cypher);
+        Size written = WriteDirect(path.data, cypher);
 
         if (written > 0)
             return written;
@@ -315,40 +357,108 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
 
     RG_DEFER_NC(out_guard, len = out_ids->len) { out_ids->RemoveFrom(len); };
 
-    RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
-
     HeapArray<const char *> filenames;
     if (!ListRaw("tags", &temp_alloc, &filenames))
         return false;
 
     // List snapshots
-    {
-        // Reuse for performance
-        HeapArray<uint8_t> obj;
+    for (const char *filename: filenames) {
+        uint8_t obj[crypto_box_SEALBYTES + 32];
+        Size len = ReadRaw(filename, obj);
 
-        for (const char *filename: filenames) {
-            obj.RemoveFrom(0);
-            if (!ReadRaw(filename, &obj))
-                return false;
-
-            if (obj.len != crypto_box_SEALBYTES + 32) {
+        if (len != crypto_box_SEALBYTES + 32) {
+            if (len >= 0) {
                 LogError("Malformed tag file '%1' (ignoring)", filename);
-                continue;
             }
-
-            rk_ID id = {};
-            if (crypto_box_seal_open(id.hash, obj.ptr, (size_t)obj.len, pkey, skey) != 0) {
-                LogError("Failed to unseal tag (ignoring)");
-                continue;
-            }
-
-            out_ids->Append(id);
+            continue;
         }
+
+        rk_ID id = {};
+        if (crypto_box_seal_open(id.hash, obj, RG_SIZE(obj), pkey, skey) != 0) {
+            LogError("Failed to unseal tag (ignoring)");
+            continue;
+        }
+
+        out_ids->Append(id);
     }
 
     out_guard.Disable();
     return true;
+}
+
+static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
+{
+    RG_STATIC_ASSERT(crypto_pwhash_SALTBYTES == 16);
+
+    if (crypto_pwhash(out_key, 32, pwd, strlen(pwd), salt, crypto_pwhash_OPSLIMIT_INTERACTIVE,
+                      crypto_pwhash_MEMLIMIT_INTERACTIVE, crypto_pwhash_ALG_ARGON2ID13) != 0) {
+        LogError("Failed to derive key from password (exhausted resource?)");
+        return false;
+    }
+
+    return true;
+}
+
+bool rk_Disk::WriteKey(const char *path, const char *pwd, const uint8_t payload[32])
+{
+    KeyData data;
+
+    randombytes_buf(data.salt, RG_SIZE(data.salt));
+    randombytes_buf(data.nonce, RG_SIZE(data.nonce));
+
+    uint8_t key[32];
+    if (!DeriveKey(pwd, data.salt, key))
+        return false;
+
+    crypto_secretbox_easy(data.cypher, payload, 32, data.nonce, key);
+
+    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
+    Size written = WriteDirect(path, buf);
+
+    if (!written) {
+        LogError("Key file '%1' already exists", path);
+        return false;
+    }
+
+    return true;
+}
+
+bool rk_Disk::ReadKey(const char *path, const char *pwd, uint8_t *out_payload, bool *out_error)
+{
+    KeyData data;
+
+    // Read file data
+    {
+        Span<uint8_t> buf = MakeSpan((uint8_t *)&data, RG_SIZE(data));
+        Size len = ReadRaw(path, buf);
+
+        if (len != RG_SIZE(data)) {
+            if (len >= 0) {
+                LogError("Truncated key object '%1'", path);
+            }
+
+            *out_error = true;
+            return false;
+        }
+    }
+
+    uint8_t key[32];
+    if (!DeriveKey(pwd, data.salt, key)) {
+        *out_error = true;
+        return false;
+    }
+
+    bool success = !crypto_secretbox_open_easy(out_payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key);
+    return success;
+}
+
+Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf)
+{
+    if (TestRaw(path))
+        return 0;
+
+    Size written = WriteRaw(path, buf.len, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });
+    return written;
 }
 
 }

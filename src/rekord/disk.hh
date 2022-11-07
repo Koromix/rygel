@@ -21,10 +21,12 @@
 namespace RG {
 
 enum class rk_DiskMode {
+    Secure,
     WriteOnly,
     ReadWrite
 };
 static const char *const rk_DiskModeNames[] = {
+    "Secure",
     "WriteOnly",
     "ReadWrite"
 };
@@ -52,9 +54,9 @@ class rk_Disk {
 protected:
     const char *url = nullptr;
 
-    rk_DiskMode mode;
-    uint8_t pkey[32];
-    uint8_t skey[32];
+    rk_DiskMode mode = rk_DiskMode::Secure;
+    uint8_t pkey[32] = {};
+    uint8_t skey[32] = {};
 
     sq_Database cache_db;
 
@@ -65,12 +67,13 @@ protected:
 public:
     virtual ~rk_Disk() = default;
 
-    bool InitCache();
-    sq_Database *GetCache() { return &cache_db; }
+    bool Open(const char *pwd);
 
     const char *GetURL() const { return url; }
     Span<const uint8_t> GetSalt() const { return pkey; }
     rk_DiskMode GetMode() const { return mode; }
+
+    sq_Database *GetCache() { return &cache_db; }
 
     bool ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
     Size WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj);
@@ -79,19 +82,26 @@ public:
     Size WriteTag(const rk_ID &id);
     bool ListTags(HeapArray<rk_ID> *out_ids);
 
+    bool WriteKey(const char *path, const char *pwd, const uint8_t payload[32]);
+    bool ReadKey(const char *path, const char *pwd, uint8_t *out_payload, bool *out_error);
+
 protected:
     virtual bool ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
+    virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;
+
     virtual Size WriteRaw(const char *path, Size total_len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
-    Size WriteRaw(const char *path, Span<const uint8_t> buf)
-        { return WriteRaw(path, buf.len, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); }); }
+
     virtual bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) = 0;
     virtual bool TestRaw(const char *path) = 0;
+
+private:
+    Size WriteDirect(const char *path, Span<const uint8_t> buf);
 };
 
-rk_Disk *rk_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
-rk_Disk *rk_OpenLocalDisk(const char *path, const char *pwd);
+std::unique_ptr<rk_Disk> rk_CreateLocalDisk(const char *path, const char *full_pwd, const char *write_pwd);
+std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd = nullptr);
 
-rk_Disk *rk_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd);
-rk_Disk *rk_OpenS3Disk(const s3_Config &config, const char *pwd);
+std::unique_ptr<rk_Disk> rk_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd);
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd = nullptr);
 
 }

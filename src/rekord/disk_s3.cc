@@ -17,14 +17,6 @@
 
 namespace RG {
 
-#pragma pack(push, 1)
-struct KeyData {
-    uint8_t salt[16];
-    uint8_t nonce[crypto_secretbox_NONCEBYTES];
-    uint8_t cypher[crypto_secretbox_MACBYTES + 32];
-};
-#pragma pack(pop)
-
 class S3Disk: public rk_Disk {
     s3_Session s3;
 
@@ -33,98 +25,21 @@ class S3Disk: public rk_Disk {
     std::mutex cache_mutex;
 
 public:
-    S3Disk(const s3_Config &config, const char *pwd);
+    S3Disk(const s3_Config &config);
     ~S3Disk() override;
 
+    Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
+
     Size WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
     bool TestRaw(const char *path) override;
 };
 
-static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
-{
-    RG_STATIC_ASSERT(crypto_pwhash_SALTBYTES == 16);
-
-    if (crypto_pwhash(out_key, 32, pwd, strlen(pwd), salt, crypto_pwhash_OPSLIMIT_INTERACTIVE,
-                      crypto_pwhash_MEMLIMIT_INTERACTIVE, crypto_pwhash_ALG_ARGON2ID13) != 0) {
-        LogError("Failed to derive key from password (exhausted resource?)");
-        return false;
-    }
-
-    return true;
-}
-
-static bool WriteKey(s3_Session *s3, const char *path, const char *pwd, const uint8_t payload[32])
-{
-    KeyData data;
-
-    randombytes_buf(data.salt, RG_SIZE(data.salt));
-    randombytes_buf(data.nonce, RG_SIZE(data.nonce));
-
-    uint8_t key[32];
-    if (!DeriveKey(pwd, data.salt, key))
-        return false;
-
-    crypto_secretbox_easy(data.cypher, payload, 32, data.nonce, key);
-
-    Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
-    return s3->PutObject(path, buf);
-}
-
-static bool ReadKey(s3_Session *s3, const char *path, const char *pwd, uint8_t *out_payload, bool *out_error)
-{
-    KeyData data;
-
-    // Read file data
-    {
-        Span<uint8_t> buf = MakeSpan((uint8_t *)&data, RG_SIZE(data));
-        Size len = s3->GetObject(path, buf);
-
-        if (len != RG_SIZE(data)) {
-            if (len >= 0) {
-                LogError("Truncated key object '%1'", path);
-            }
-
-            *out_error = true;
-            return false;
-        }
-    }
-
-    uint8_t key[32];
-    if (!DeriveKey(pwd, data.salt, key)) {
-        *out_error = true;
-        return false;
-    }
-
-    bool success = !crypto_secretbox_open_easy(out_payload, data.cypher, RG_SIZE(data.cypher), data.nonce, key);
-    return success;
-}
-
-S3Disk::S3Disk(const s3_Config &config, const char *pwd)
+S3Disk::S3Disk(const s3_Config &config)
 {
     if (!s3.Open(config))
-        return;
-
-    // Open disk and determine mode
-    {
-        bool error = false;
-
-        if (ReadKey(&s3, "keys/write", pwd, pkey, &error)) {
-            mode = rk_DiskMode::WriteOnly;
-            memset(skey, 0, RG_SIZE(skey));
-        } else if (ReadKey(&s3, "keys/full", pwd, skey, &error)) {
-            mode = rk_DiskMode::ReadWrite;
-            crypto_scalarmult_base(pkey, skey);
-        } else {
-            if (!error) {
-                LogError("Failed to open repository (wrong password?)");
-            }
-            return;
-        }
-    }
-
-    if (!InitCache())
         return;
 
     // We're good!
@@ -133,6 +48,11 @@ S3Disk::S3Disk(const s3_Config &config, const char *pwd)
 
 S3Disk::~S3Disk()
 {
+}
+
+Size S3Disk::ReadRaw(const char *path, Span<uint8_t> out_buf)
+{
+    return s3.GetObject(path, out_buf);
 }
 
 bool S3Disk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
@@ -225,7 +145,7 @@ bool S3Disk::TestRaw(const char *path)
     return stmt.Step();
 }
 
-rk_Disk *rk_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd)
+std::unique_ptr<rk_Disk> rk_CreateS3Disk(const s3_Config &config, const char *full_pwd, const char *write_pwd)
 {
     s3_Session s3;
 
@@ -250,30 +170,30 @@ rk_Disk *rk_CreateS3Disk(const s3_Config &config, const char *full_pwd, const ch
     uint8_t pkey[32];
     crypto_box_keypair(pkey, skey);
 
-    // Write control files
-    if (!WriteKey(&s3, "keys/full", full_pwd, skey))
-        return nullptr;
-    keys.Append("keys/full");
-    if (!WriteKey(&s3, "keys/write", write_pwd, pkey))
-        return nullptr;
-    keys.Append("keys/write");
-
-    rk_Disk *disk = rk_OpenS3Disk(config, full_pwd);
+    std::unique_ptr<rk_Disk> disk = std::make_unique<S3Disk>(config);
     if (!disk)
         return nullptr;
+
+    // Write control files
+    if (!disk->WriteKey("keys/full", full_pwd, skey))
+        return nullptr;
+    keys.Append("keys/full");
+    if (!disk->WriteKey("keys/write", write_pwd, pkey))
+        return nullptr;
+    keys.Append("keys/write");
 
     root_guard.Disable();
     return disk;
 }
 
-rk_Disk *rk_OpenS3Disk(const s3_Config &config, const char *pwd)
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd)
 {
-    rk_Disk *disk = new S3Disk(config, pwd);
+    std::unique_ptr<rk_Disk> disk = std::make_unique<S3Disk>(config);
 
-    if (!disk->GetURL()) {
-        delete disk;
+    if (!disk->GetURL())
         return nullptr;
-    }
+    if (pwd && !disk->Open(pwd))
+        return nullptr;
 
     return disk;
 }
