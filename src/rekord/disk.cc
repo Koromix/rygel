@@ -402,32 +402,56 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
 
     BlockAllocator temp_alloc;
 
-    RG_DEFER_NC(out_guard, len = out_ids->len) { out_ids->RemoveFrom(len); };
+    Size start_len = out_ids->len;
+    RG_DEFER_N(out_guard) { out_ids->RemoveFrom(start_len); };
 
     HeapArray<const char *> filenames;
     if (!ListRaw("tags", &temp_alloc, &filenames))
         return false;
 
+    HeapArray<bool> ready;
+    out_ids->AppendDefault(filenames.len);
+    ready.AppendDefault(filenames.len);
+
+    Async async(threads);
+
     // List snapshots
-    for (const char *filename: filenames) {
-        uint8_t obj[crypto_box_SEALBYTES + 32];
-        Size len = ReadRaw(filename, obj);
+    for (Size i = 0; i < filenames.len; i++) {
+        const char *filename = filenames[i];
 
-        if (len != crypto_box_SEALBYTES + 32) {
-            if (len >= 0) {
-                LogError("Malformed tag file '%1' (ignoring)", filename);
+        async.Run([=, &ready, this]() {
+            uint8_t obj[crypto_box_SEALBYTES + 32];
+            Size len = ReadRaw(filename, obj);
+
+            if (len != crypto_box_SEALBYTES + 32) {
+                if (len >= 0) {
+                    LogError("Malformed tag file '%1' (ignoring)", filename);
+                }
+                return true;
             }
-            continue;
-        }
 
-        rk_ID id = {};
-        if (crypto_box_seal_open(id.hash, obj, RG_SIZE(obj), pkey, skey) != 0) {
-            LogError("Failed to unseal tag (ignoring)");
-            continue;
-        }
+            rk_ID id = {};
+            if (crypto_box_seal_open(id.hash, obj, RG_SIZE(obj), pkey, skey) != 0) {
+                LogError("Failed to unseal tag (ignoring)");
+                return true;
+            }
 
-        out_ids->Append(id);
+            out_ids->ptr[start_len + i] = id;
+            ready[i] = true;
+
+            return true;
+        });
     }
+
+    if (!async.Sync())
+        return false;
+
+    Size j = 0;
+    for (Size i = 0; i < filenames.len; i++) {
+        out_ids->ptr[start_len + j] = out_ids->ptr[start_len + i];
+        j += ready[i];
+    }
+    out_ids->len = start_len + j;
 
     out_guard.Disable();
     return true;
