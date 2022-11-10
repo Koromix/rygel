@@ -3868,7 +3868,9 @@ enum class OpenFlag {
     Write = 1 << 1,
     Append = 1 << 2,
 
-    Exclusive = 1 << 3
+    Directory = 1 << 3,
+    Exists = 1 << 4,
+    Exclusive = 1 << 5
 };
 
 enum class OpenResult {

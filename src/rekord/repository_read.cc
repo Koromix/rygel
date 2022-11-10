@@ -25,6 +25,8 @@
     #include <windows.h>
     #include <io.h>
 #else
+    #include <sys/stat.h>
+    #include <sys/time.h>
     #include <unistd.h>
 #endif
 
@@ -46,7 +48,7 @@ public:
     GetContext(rk_Disk *disk);
 
     bool ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
-    bool GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
+    int GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
 
     bool Sync() { return tasks.Sync(); }
 
@@ -115,6 +117,27 @@ static bool CreateSymbolicLink(const char *filename, const char *target)
     return true;
 }
 
+static FILETIME UnixTimeToFileTime(int64_t time)
+{
+    time = (time + 11644473600000ll) * 10000;
+
+    FILETIME ft;
+    ft.dwHighDateTime = (DWORD)(time >> 32);
+    ft.dwLowDateTime = (DWORD)time;
+
+    return ft;
+}
+
+static void SetFileMetaData(int fd, const char *filename, int64_t mtime, uint32_t)
+{
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+    FILETIME ft = UnixTimeToFileTime(mtime);
+
+    if (!SetFileTime(h, nullptr, nullptr, &ft)) {
+        LogError("Failed to set modification time of '%1': %2", filename, GetWin32ErrorString());
+    }
+}
+
 #else
 
 static bool ReserveFile(int fd, const char *filename, int64_t len)
@@ -155,6 +178,23 @@ static bool CreateSymbolicLink(const char *filename, const char *target)
     return true;
 }
 
+static void SetFileMetaData(int fd, const char *filename, int64_t mtime, uint32_t mode)
+{
+    struct timespec times[2] = {};
+
+    times[0].tv_nsec = UTIME_OMIT;
+    times[1].tv_sec = mtime / 1000;
+    times[1].tv_nsec = (mtime % 1000) * 1000;
+
+    if (futimens(fd, times) < 0) {
+        LogError("Failed to set mtime of '%1' (ignoring)", filename);
+    }
+
+    if (fchmod(fd, (mode_t)mode) < 0) {
+        LogError("Failed to set permissions of '%1' (ignoring)", filename);
+    }
+}
+
 #endif
 
 bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
@@ -165,11 +205,17 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
     std::shared_ptr<BlockAllocator> temp_alloc = std::make_shared<BlockAllocator>();
 
     for (Size offset = 0; offset < entries.len;) {
-        const rk_FileEntry *entry = (const rk_FileEntry *)(entries.ptr + offset);
-        const char *name = entry->name;
+        const rk_FileEntry *ptr = (const rk_FileEntry *)(entries.ptr + offset);
+
+        rk_FileEntry entry = *ptr;
+        const char *name = ptr->name;
+
+        entry.mtime = LittleEndian(entry.mtime);
+        entry.mode = LittleEndian(entry.mode);
+        entry.size = LittleEndian(entry.size);
 
         if (type == rk_ObjectType::Directory1 || type == rk_ObjectType::Snapshot1) {
-            name = (const char *)entry + 45;
+            name = (const char *)ptr + 45;
 
             Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
             Size entry_len = 45 + name_len + 1;
@@ -189,10 +235,10 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
             LogError("Malformed entry in directory object");
             return false;
         }
-        if (entry->kind != (int8_t)rk_FileEntry::Kind::Directory &&
-                entry->kind != (int8_t)rk_FileEntry::Kind::File &&
-                entry->kind != (int8_t)rk_FileEntry::Kind::Link) {
-            LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry->kind));
+        if (entry.kind != (int8_t)rk_FileEntry::Kind::Directory &&
+                entry.kind != (int8_t)rk_FileEntry::Kind::File &&
+                entry.kind != (int8_t)rk_FileEntry::Kind::Link) {
+            LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry.kind));
             return false;
         }
         if (!name[0] || PathContainsDotDot(name)) {
@@ -208,8 +254,10 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
             return false;
         }
 
-        rk_ID entry_id = entry->id;
-        int8_t entry_kind = entry->kind;
+        rk_ID entry_id = entry.id;
+        int8_t entry_kind = entry.kind;
+        int64_t entry_mtime = entry.mtime;
+        uint32_t entry_mode = entry.mode;
 
         const char *entry_filename;
         if (flags & (int)ExtractFlag::FlattenName) {
@@ -221,7 +269,7 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
                 return false;
         }
 
-        tasks.Run([temp_alloc, entry_id, entry_kind, entry_filename, this]() {
+        tasks.Run([=, temp_alloc = temp_alloc, this] () {
             rk_ObjectType entry_type;
             HeapArray<uint8_t> entry_obj;
             if (!disk->ReadObject(entry_id, &entry_type, &entry_obj))
@@ -240,6 +288,13 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
 
                     if (!ExtractEntries(entry_type, entry_obj, 0, entry_filename))
                         return false;
+
+                    // Set directory metadata
+                    {
+                        int fd = OpenDescriptor(entry_filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
+                        SetFileMetaData(fd, entry_filename, entry_mtime, entry_mode);
+                        close(fd);
+                    }
                 } break;
                 case (int8_t)rk_FileEntry::Kind::File: {
                     if (entry_type != rk_ObjectType::File && entry_type != rk_ObjectType::Chunk) {
@@ -247,8 +302,12 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
                         return false;
                     }
 
-                    if (!GetFile(entry_id, entry_type, entry_obj, entry_filename))
+                    int fd = GetFile(entry_id, entry_type, entry_obj, entry_filename);
+                    if (fd < 0)
                         return false;
+                    RG_DEFER { close(fd); };
+
+                    SetFileMetaData(fd, entry_filename, entry_mtime, entry_mode);
                 } break;
                 case (int8_t)rk_FileEntry::Kind::Link: {
                     if (entry_type != rk_ObjectType::Link) {
@@ -263,10 +322,7 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
                         return false;
                 } break;
 
-                default: {
-                    LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry_kind));
-                    return false;
-                } break;
+                default: { RG_UNREACHABLE(); } break;
             }
 
             return true;
@@ -276,22 +332,22 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
     return true;
 }
 
-bool GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename)
+int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename)
 {
     RG_ASSERT(type == rk_ObjectType::File || type == rk_ObjectType::Chunk);
 
     // Open destination file
     int fd = OpenDescriptor(dest_filename, (int)OpenFlag::Write);
     if (fd < 0)
-        return false;
-    RG_DEFER { close(fd); };
+        return -1;
+    RG_DEFER_N(err_guard) { close(fd); };
 
     int64_t file_len = -1;
     switch (type) {
         case rk_ObjectType::File: {
             if (file_obj.len % RG_SIZE(rk_ChunkEntry) != RG_SIZE(int64_t)) {
                 LogError("Malformed file object '%1'", id);
-                return false;
+                return -1;
             }
 
             file_obj.len -= RG_SIZE(int64_t);
@@ -300,10 +356,10 @@ bool GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t
             file_len = LittleEndian(*(const int64_t *)file_obj.end());
             if (file_len < 0) {
                 LogError("Malformed file object '%1'", id);
-                return false;
+                return -1;
             }
             if (!ReserveFile(fd, dest_filename, file_len))
-                return false;
+                return -1;
 
             Async async(&tasks);
 
@@ -339,7 +395,7 @@ bool GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t
             }
 
             if (!async.Sync())
-                return false;
+                return -1;
 
             // Check actual file size
             if (file_obj.len) {
@@ -348,7 +404,7 @@ bool GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t
 
                 if (RG_UNLIKELY(len != file_len)) {
                     LogError("File size mismatch for '%1'", entry->id);
-                    return false;
+                    return -1;
                 }
             }
         } break;
@@ -358,7 +414,7 @@ bool GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t
 
             if (!WriteAt(fd, dest_filename, 0, file_obj)) {
                 LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
-                return false;
+                return -1;
             }
         } break;
 
@@ -370,10 +426,12 @@ bool GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t
     }
 
     if (!FlushFile(fd, dest_filename))
-        return false;
+        return -1;
 
     stat_len += file_len;
-    return true;
+
+    err_guard.Disable();
+    return fd;
 }
 
 bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len)
@@ -393,8 +451,10 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
                 return false;
             }
 
-            if (!get.GetFile(id, type, obj, dest_path))
+            int fd = get.GetFile(id, type, obj, dest_path);
+            if (fd < 0)
                 return false;
+            close(fd);
         } break;
 
         case rk_ObjectType::Directory1:

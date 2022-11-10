@@ -3069,6 +3069,7 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
     DWORD access = 0;
     DWORD share = 0;
     DWORD creation = 0;
+    DWORD attributes = 0;
     int oflags = -1;
     switch (flags & ((int)OpenFlag::Read |
                      (int)OpenFlag::Write |
@@ -3077,47 +3078,63 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
             access = GENERIC_READ;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
             creation = OPEN_EXISTING;
-
+            attributes = FILE_ATTRIBUTE_NORMAL;
             oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT;
         } break;
         case (int)OpenFlag::Write: {
             access = GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = (flags & (int)OpenFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
-
+            creation = CREATE_ALWAYS;
+            attributes = FILE_ATTRIBUTE_NORMAL;
             oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
         case (int)OpenFlag::Read | (int)OpenFlag::Write: {
             access = GENERIC_READ | GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = (flags & (int)OpenFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
-
+            creation = CREATE_ALWAYS;
+            attributes = FILE_ATTRIBUTE_NORMAL;
             oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
         case (int)OpenFlag::Append: {
             access = GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = (flags & (int)OpenFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
-
+            creation = CREATE_ALWAYS;
+            attributes = FILE_ATTRIBUTE_NORMAL;
             oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
         } break;
     }
     RG_ASSERT(oflags >= 0);
 
-    if (flags & (int)OpenFlag::Exclusive) {
+    if (flags & (int)OpenFlag::Directory) {
+        RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
+        RG_ASSERT(!(flags & (int)OpenFlag::Append));
+
+        creation = OPEN_EXISTING;
+        attributes = FILE_FLAG_BACKUP_SEMANTICS;
+        oflags &= ~(_O_CREAT | _O_TRUNC | _O_BINARY);
+    }
+    if (flags & (int)OpenFlag::Exists) {
+        RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
+
+        creation = OPEN_EXISTING;
+        oflags &= ~_O_CREAT;
+    } else if (flags & (int)OpenFlag::Exclusive) {
+        RG_ASSERT(creation == CREATE_ALWAYS);
+
+        creation = CREATE_NEW;
         oflags |= (int)_O_EXCL;
     }
     share |= FILE_SHARE_DELETE;
 
     HANDLE h;
     if (win32_utf8) {
-        h = CreateFileA(filename, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
+        h = CreateFileA(filename, access, share, nullptr, creation, attributes, nullptr);
     } else {
         wchar_t filename_w[4096];
         if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
             return OpenResult::OtherError;
 
-        h = CreateFileW(filename_w, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
+        h = CreateFileW(filename_w, access, share, nullptr, creation, attributes, nullptr);
     }
     if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
@@ -3410,7 +3427,17 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
     }
     RG_ASSERT(oflags >= 0);
 
-    if (flags & (int)OpenFlag::Exclusive) {
+    if (flags & (int)OpenFlag::Directory) {
+        RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
+        RG_ASSERT(!(flags & (int)OpenFlag::Append));
+
+        oflags &= ~O_CREAT;
+    }
+    if (flags & (int)OpenFlag::Exists) {
+        RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
+        oflags &= ~O_CREAT;
+    } else if (flags & (int)OpenFlag::Exclusive) {
+        RG_ASSERT(oflags & O_CREAT);
         oflags |= O_EXCL;
     }
 
