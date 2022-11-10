@@ -21,19 +21,18 @@ endif()
 # ---- Raylib ----
 
 add_library(raylib SHARED
-    ../vendor/raylib/src/rcore.c
-    ../vendor/raylib/src/rshapes.c
-    ../vendor/raylib/src/rtextures.c
-    ../vendor/raylib/src/rtext.c
-    ../vendor/raylib/src/rmodels.c
-    ../vendor/raylib/src/utils.c
-    ../vendor/raylib/src/rglfw.c
-    ../vendor/raylib/src/raudio.c
+    ../../../vendor/raylib/src/rcore.c
+    ../../../vendor/raylib/src/rshapes.c
+    ../../../vendor/raylib/src/rtextures.c
+    ../../../vendor/raylib/src/rtext.c
+    ../../../vendor/raylib/src/rmodels.c
+    ../../../vendor/raylib/src/utils.c
+    ../../../vendor/raylib/src/rglfw.c
+    ../../../vendor/raylib/src/raudio.c
 )
 set_target_properties(raylib PROPERTIES PREFIX "")
-target_include_directories(raylib PRIVATE ../vendor/raylib/src/external/glfw/include)
-target_compile_definitions(raylib PRIVATE PLATFORM_DESKTOP GRAPHICS_API_OPENGL_21
-                                          BUILD_LIBTYPE_SHARED NDEBUG)
+target_include_directories(raylib PRIVATE ../../../vendor/raylib/src/external/glfw/include)
+target_compile_definitions(raylib PRIVATE PLATFORM_DESKTOP GRAPHICS_API_OPENGL_21 BUILD_LIBTYPE_SHARED NDEBUG)
 
 if(MSVC)
     target_compile_options(raylib PRIVATE /wd4244 /wd4305)
@@ -101,11 +100,11 @@ endif()
 
 # ---- SQLite ----
 
-add_library(sqlite3 SHARED ../vendor/sqlite3/sqlite3.c)
-set_target_properties(sqlite3 PROPERTIES PREFIX "")
+add_library(sqlite3mc SHARED ../../../vendor/sqlite3mc/sqlite3mc.c)
+set_target_properties(sqlite3mc PROPERTIES PREFIX "")
 
 if(WIN32)
-    target_compile_definitions(sqlite3 PRIVATE SQLITE_API=__declspec\(dllexport\))
+    target_compile_definitions(sqlite3mc PRIVATE SQLITE_API=__declspec\(dllexport\))
 endif()
 
 # ---- Misc ----

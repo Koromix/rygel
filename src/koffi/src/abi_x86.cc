@@ -13,7 +13,7 @@
 
 #if defined(__i386__) || defined(_M_IX86)
 
-#include "vendor/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

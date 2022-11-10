@@ -13,7 +13,7 @@
 
 #if __riscv_xlen == 64
 
-#include "vendor/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

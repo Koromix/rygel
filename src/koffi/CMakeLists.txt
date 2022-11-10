@@ -44,7 +44,7 @@ set(KOFFI_SRC
     src/ffi.cc
     src/parser.cc
     src/util.cc
-    vendor/libcc/libcc.cc
+    ../../src/core/libcc/libcc.cc
 )
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     # CMAKE_SYSTEM_PROCESSOR is wrong on Windows ARM64
@@ -98,9 +98,9 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 endif()
 
 add_node_addon(NAME koffi SOURCES ${KOFFI_SRC})
-target_include_directories(koffi PRIVATE . vendor/node-addon-api)
+target_include_directories(koffi PRIVATE . ../.. ../../vendor/node-addon-api)
 
-target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS NAPI_VERSION=8)
+target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS NAPI_VERSION=8 LIBCC_NO_BROTLI LIBCC_NO_MINIZ)
 if(WIN32)
     target_compile_definitions(koffi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
     target_link_libraries(koffi PRIVATE ws2_32)

@@ -13,7 +13,7 @@
 
 #if defined(_WIN32) && (defined(__x86_64__) || defined(_M_AMD64))
 
-#include "vendor/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

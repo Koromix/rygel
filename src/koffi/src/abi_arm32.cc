@@ -13,7 +13,7 @@
 
 #if defined(__arm__) || (defined(__M_ARM) && !defined(_M_ARM64))
 
-#include "vendor/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

@@ -36,8 +36,9 @@ endif()
 
 # ---- atoi ----
 
-add_node_addon(NAME atoi_napi SOURCES atoi_napi.cc ../vendor/libcc/libcc.cc)
-target_include_directories(atoi_napi PRIVATE .. ../vendor/node-addon-api)
+add_node_addon(NAME atoi_napi SOURCES atoi_napi.cc ../../../src/core/libcc/libcc.cc)
+target_compile_definitions(atoi_napi PRIVATE LIBCC_NO_BROTLI LIBCC_NO_MINIZ)
+target_include_directories(atoi_napi PRIVATE ../../.. ../../../vendor/node-addon-api)
 target_link_libraries(atoi_napi PRIVATE Threads::Threads)
 
 if(WIN32)
@@ -49,8 +50,9 @@ endif()
 
 # ---- rand ----
 
-add_node_addon(NAME rand_napi SOURCES rand_napi.cc ../vendor/libcc/libcc.cc)
-target_include_directories(rand_napi PRIVATE .. ../vendor/node-addon-api)
+add_node_addon(NAME rand_napi SOURCES rand_napi.cc ../../../src/core/libcc/libcc.cc)
+target_compile_definitions(rand_napi PRIVATE LIBCC_NO_BROTLI LIBCC_NO_MINIZ)
+target_include_directories(rand_napi PRIVATE ../../.. ../../../vendor/node-addon-api)
 target_link_libraries(rand_napi PRIVATE Threads::Threads)
 
 if(WIN32)
@@ -62,8 +64,9 @@ endif()
 
 # ---- Raylib ----
 
-add_executable(raylib_cc raylib_cc.cc ../vendor/libcc/libcc.cc)
-target_include_directories(raylib_cc PRIVATE ..)
+add_executable(raylib_cc raylib_cc.cc  ../../../src/core/libcc/libcc.cc)
+target_compile_definitions(raylib_cc PRIVATE LIBCC_NO_BROTLI LIBCC_NO_MINIZ)
+target_include_directories(raylib_cc PRIVATE ../../..)
 target_link_libraries(raylib_cc PRIVATE Threads::Threads raylib)
 
 if(WIN32)
