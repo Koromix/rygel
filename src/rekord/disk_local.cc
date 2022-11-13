@@ -30,7 +30,7 @@ public:
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
 
     Size WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
-    bool DeleteRaw(const char *path);
+    bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
 
