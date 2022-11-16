@@ -2046,6 +2046,7 @@ function InstanceController() {
             if (form_state != null && copy_ui) {
                 new_state.state_tabs = form_state.state_tabs;
                 new_state.state_sections = form_state.state_sections;
+                new_state.take_delayed = form_state.take_delayed;
             }
             form_state = new_state;
 
