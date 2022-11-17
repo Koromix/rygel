@@ -946,6 +946,26 @@ function InstanceController() {
                     <div id="ins_actions">
                         ${model.renderActions()}
                         ${form_record.historical ? html`<p class="historical">${form_record.ctime.toLocaleString()}</p>` : ''}
+
+                        ${route.form.chain.map(form => {
+                            let meta = form_record.map[form.key];
+
+                            if (profile.lock != null)
+                                return '';
+                            if (meta == null || meta.siblings == null)
+                                return '';
+
+                            return html`
+                                <h1>${form.multi}</h1>
+                                <ul>
+                                    ${meta.siblings.map(sibling => {
+                                        let url = route.page.url + `/${sibling.ulid}`;
+                                        return html`<li><a href=${url} class=${sibling.ulid === meta.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a></li>`;
+                                    })}
+                                    <li><a href=${contextualizeURL(route.page.url, meta.parent)} class=${!meta.saved ? 'active' : ''}>Nouvelle fiche</a></li>
+                                </ul>
+                            `;
+                        })}
                     </div>
                 </div>
                 <div style="flex: 1;"></div>
@@ -997,17 +1017,6 @@ function InstanceController() {
         let title = form.multi ? (meta.saved ? meta.ctime.toLocaleString() : 'Nouvelle fiche') : form.title;
 
         return html`
-            ${profile.lock == null && meta.siblings != null ? html`
-                <h1>${form.multi}</h1>
-                <ul>
-                    ${meta.siblings.map(sibling => {
-                        let url = route.page.url + `/${sibling.ulid}`;
-                        return html`<li><a href=${url} class=${sibling.ulid === meta.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a></li>`;
-                    })}
-                    <li><a href=${contextualizeURL(route.page.url, meta.parent)} class=${!meta.saved ? 'active' : ''}>Nouvelle fiche</a></li>
-                </ul>
-            ` : ''}
-
             ${show ? html`
                 <h1>${title}</h1>
                 <ul>

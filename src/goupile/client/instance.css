@@ -20,7 +20,9 @@ html.instance {
     --page_color_n1: #346bb8;
     --anchor_color: #fe7735;
     --anchor_color_n1: #ff9059;
-    --outline_color: #fe773577;
+    --outline_color: #55555544;
+    --many_color: #207358;
+    --many_color_n1: #298a6a;
 
     --block_rounding: 0px;
     --widget_rounding: 0px;
@@ -119,7 +121,41 @@ html.mobile #ins_drop > button { max-width: 200px; }
     width: 220px;
     padding-left: 12px;
 }
-#ins_actions > hr {
+#ins_actions h1 {
+    font-size: 1.1em;
+    margin: 0 0 6px 0;
+    font-weight: bold;
+    color: var(--many_color_n1);
+}
+#ins_actions * + h1 { margin-top: 10px; }
+#ins_actions ul {
+    margin: 0;
+    padding: 0;
+}
+#ins_actions li {
+    list-style: none;
+    display: flex;
+    margin-top: 1px;
+}
+#ins_actions li::before {
+    content: '–';
+    color: #ccc;
+}
+#ins_actions li > * { padding: 0 5px; }
+#ins_actions ul a {
+    display: flex;
+    flex: 1;
+    margin-left: 3px;
+    padding: 1px calc(5px + var(--widget_rounding) / 4);
+    text-decoration: none;
+    color: black;
+    border-radius: var(--widget_rounding);
+}
+#ins_actions ul a.active, #ins_actions ul a:hover {
+    background: linear-gradient(var(--many_color_n1), var(--many_color));
+    color: white;
+}
+#ins_actions hr {
     margin: 10px;
     border: 0;
     border-top: 1px solid #dfdfdf;
