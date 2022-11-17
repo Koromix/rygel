@@ -158,7 +158,7 @@ function ApplicationBuilder(app) {
     };
 
     function showMenuRec(form) {
-        for (let page of form_ref.pages.values()) {
+        for (let page of form.pages.values()) {
             if (page.getOption('menu', null, true))
                 return true;
         }
