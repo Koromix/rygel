@@ -187,8 +187,9 @@ function InstanceController() {
     this.runTasks = util.serialize(this.runTasks, mutex);
 
     function renderMenu() {
-        let menu = (profile.lock == null && (route.form.menu.length > 1 || route.form.chain.length > 1));
         let history = (!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null);
+        let menu = (profile.lock == null && (route.form.menu.length > 1 || route.form.chain.length > 1));
+        let wide = (route.form.chain[0].menu.length > 3);
 
         let user_icon;
         if (profile.develop)  {
@@ -217,28 +218,45 @@ function InstanceController() {
 
                 ${history ? html`
                     <button class="ins_hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
-                        ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
-                        ${form_record.historical ? html`<br/><span class="ins_note">${form_record.ctime.toLocaleString()}</span>` : ''}
+                        <span>
+                            ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
+                            ${form_record.historical ? html`<br/><span class="ins_note">${form_record.ctime.toLocaleString()}</span>` : ''}
+                        </span>
                     </button>
                 ` : ''}
-                ${menu ? html`
+                ${menu && wide ? route.form.chain.map(form => {
+                    let meta = form_record.map[form.key];
+
+                    if (form.menu.length > 1) {
+                        return html`
+                            <div id="ins_drop" class="drop">
+                                <button title=${form.title} @click=${ui.deployMenu}>${form.title}</button>
+                                <div>${util.map(form.menu, item => renderDropItem(meta, item))}</div>
+                            </div>
+                        `;
+                    } else {
+                        return renderDropItem(meta, form);
+                    }
+                }) : ''}
+                ${menu && !wide ? html`
                     ${util.map(route.form.chain[0].menu, item => {
                         let active = (route.form.chain.some(form => form === item.form) || item.page === route.page);
-                        let form = active ? route.form : item.form;
                         let drop = (item.type === 'form' && item.form.menu.length > 1);
-                        let enabled = (item.type === 'form') ? isFormEnabled(form, form_record) : isPageEnabled(item.page, form_record);
+                        let enabled = (item.type === 'form') ? isFormEnabled(item.form, form_record) : isPageEnabled(item.page, form_record);
 
                         if (drop) {
+                            let meta = form_record.map[route.form.chain[Math.min(route.form.chain.length - 1, 1)].key];
+
                             return html`
                                 <div id="ins_drop" class="drop">
                                     <button title=${item.title} class=${active ? 'active' : ''} ?disabled=${!enabled}
                                             @click=${ui.deployMenu}>${item.title}</button>
-                                    <div>${util.mapRange(1, form.chain.length, idx => renderFormDrop(form.chain[idx], idx === 1))}</div>
+                                    <div>${util.mapRange(1, item.form.menu.length, idx => renderDropItem(meta, item.form.menu[idx]))}</div>
                                 </div>
                             `;
                         } else {
-                            return html`<button title=${item.title} class=${active ? 'active' : ''} ?disabled=${!enabled}
-                                                @click=${e => self.go(e, item.url)}>${item.title}</button>`;
+                            let meta = form_record.map[route.form.chain[0].key];
+                            return renderDropItem(meta, item);
                         }
                     })}
                 ` : ''}
@@ -326,74 +344,41 @@ function InstanceController() {
         });
     }
 
-    function renderFormDrop(form, first) {
-        let meta = form_record.map[form.key];
+    function renderDropItem(meta, item) {
+        let active;
+        let url;
+        let title;
+        let status;
 
-        let show = (form.menu.length > 1 || route.form.chain.length === 1);
-        let title = form.multi ? (meta != null && meta.saved ? meta.ctime.toLocaleString() : 'Nouvelle fiche') : form.title;
-        let active = (form === route.form.chain[route.form.chain.length - 1 - !show]);
-        let siblings = (profile.lock == null && meta != null && meta.siblings != null && meta.siblings.length > 0);
+        if (item instanceof PageInfo || item.type === 'page') {
+            let page = item.page || item;
+
+            if (!isPageEnabled(page, form_record))
+                return '';
+
+            active = (page === route.page);
+            url = page.url;
+            title = page.title;
+            status = (meta.status[page.form.key] != null);
+        } else if (item instanceof FormInfo || item.type === 'form') {
+            let form = item.form || item;
+
+            if (!isFormEnabled(form, form_record))
+                return '';
+
+            active = route.form.chain.some(parent => form === parent);
+            url = form.url;
+            title = form.multi || form.title;
+            status = (meta.status[form.key] != null);
+        } else {
+            throw new Error(`Unknown item type '${item.type}'`);
+        }
 
         return html`
-            ${siblings ? html`
-                <div class="expand">
-                    ${!first ? html`<button>${form.multi}</button>` : ''}
-                    <div>
-                        ${meta.siblings.map(sibling => {
-                            let url = route.page.url + `/${sibling.ulid}`;
-                            return html`<button @click=${ui.wrapAction(e => self.go(e, url))}
-                                                class=${sibling.ulid === meta.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>`;
-                        })}
-                        <button @click=${ui.wrapAction(e => self.go(e, contextualizeURL(route.page.url, meta.parent)))}
-                                class=${!meta.saved ? 'active' : ''}>Nouvelle fiche</button>
-                    </div>
-                </div>
-            ` : ''}
-
-            ${show ? html`
-                <div class="expand">
-                    ${siblings || !first ? html`<button>${title}</button>` : ''}
-                    <div>
-                        ${util.map(form.menu, item => {
-                            let active;
-                            let url;
-                            let title;
-                            let status;
-
-                            if (item.type === 'page') {
-                                let page = item.page;
-
-                                if (!isPageEnabled(page, form_record))
-                                    return '';
-
-                                active = (page === route.page);
-                                url = page.url;
-                                title = page.title;
-                                status = (meta != null) && (meta.status[form.key] != null);
-                            } else if (item.type === 'form') {
-                                let form = item.form;
-
-                                if (!isFormEnabled(form, form_record))
-                                    return '';
-
-                                active = route.form.chain.some(parent => form === parent);
-                                url = form.url;
-                                title = form.multi || form.title;
-                                status = (meta != null) && (meta.status[form.key] != null);
-                            } else {
-                                throw new Error(`Unknown item type '${item.type}'`);
-                            }
-
-                            return html`
-                                <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}">
-                                    <div style="flex: 1;">${title}</div>
-                                    ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
-                               </button>
-                            `;
-                        })}
-                    </div>
-                </div>
-            ` : ''}
+            <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}">
+                <div style="flex: 1;">${title}</div>
+                ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+           </button>
         `;
     }
 
@@ -928,7 +913,8 @@ function InstanceController() {
             page_div.classList.add('disabled');
         }
 
-        let menu = (profile.lock == null && (route.form.menu.length > 1 || route.form.chain.length > 1));
+        let menu = (profile.lock == null) && (route.form.menu.length > 1 || route.form.chain.length > 1);
+        let wide = (route.form.chain[0].menu.length > 3);
 
         let sections = [];
         for (let intf of model.widgets) {
@@ -946,7 +932,7 @@ function InstanceController() {
             <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
                     <div id="ins_menu">${menu ? html`
-                        ${util.mapRange(1, route.form.chain.length, idx => renderFormMenu(route.form.chain[idx]))}
+                        ${util.mapRange(1 - wide, route.form.chain.length, idx => renderFormMenu(route.form.chain[idx]))}
                         ${sections.length ? html`
                             <h1>${route.page.title}</h1>
                             <ul>${sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
@@ -1007,7 +993,7 @@ function InstanceController() {
     function renderFormMenu(form) {
         let meta = form_record.map[form.key];
 
-        let show = (route.form.chain.length === 1 || route.form.menu.length > 1);
+        let show = (form.menu.length > 1);
         let title = form.multi ? (meta.saved ? meta.ctime.toLocaleString() : 'Nouvelle fiche') : form.title;
 
         return html`
@@ -1018,7 +1004,7 @@ function InstanceController() {
                         let url = route.page.url + `/${sibling.ulid}`;
                         return html`<li><a href=${url} class=${sibling.ulid === meta.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a></li>`;
                     })}
-                    <li><a href=${contextualizeURL(route.page.url, meta.parent)} class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</a></li>
+                    <li><a href=${contextualizeURL(route.page.url, meta.parent)} class=${!meta.saved ? 'active' : ''}>Nouvelle fiche</a></li>
                 </ul>
             ` : ''}
 
@@ -1693,7 +1679,7 @@ function InstanceController() {
             if (!url.pathname.startsWith(`${ENV.urls.instance}main/`)) {
                 if (self.hasUnsavedData())
                     await goupile.confirmDangerousAction(e);
-
+d
                 window.onbeforeunload = null;
                 window.location.href = url.href;
 

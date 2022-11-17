@@ -94,7 +94,7 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
 }
 
 .ui_toolbar button {
-    display: block;
+    display: flex;
     height: 100%;
     box-sizing: border-box;
     background-color: inherit;
@@ -107,6 +107,7 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     white-space: nowrap;
     font-size: 1.1em;
     line-height: 1em;
+    align-items: center;
 }
 .ui_toolbar button.active { background-color: var(--menu_color_n2); }
 .ui_toolbar button:not(.active):hover { background-color: var(--menu_color_n1); }
