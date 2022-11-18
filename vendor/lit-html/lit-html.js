@@ -1,8 +1,8 @@
-import { render } from 'lit/html.js';
-import { directive } from 'lit/directive.js';
-import { guard } from 'lit/directives/guard.js';
-import { live } from 'lit/directives/live.js';
-import { until } from 'lit/directives/until.js';
+const { render } = require('lit/html.js');
+const { directive } = require('lit/directive.js');
+const { guard } = require('lit/directives/guard.js');
+const { live } = require('lit/directives/live.js');
+const { until } = require('lit/directives/until.js');
 
 const html = (strings, ...values) => {
     transformValues(values);
@@ -33,4 +33,12 @@ function transformValues(values) {
     }
 }
 
-export { html, svg, render, directive, guard, live, until };
+module.exports = {
+    html: html,
+    svg: svg,
+    render: render,
+    directive: directive,
+    guard: guard,
+    live: live,
+    until: until
+};
