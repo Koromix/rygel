@@ -1,17 +1,24 @@
-import { render, directive } from 'lit-html/lit-html';
-import { defaultTemplateProcessor } from 'lit-html/lib/default-template-processor';
-import { SVGTemplateResult, TemplateResult } from 'lit-html/lib/template-result';
-import { guard } from 'lit-html/directives/guard';
-import { live } from 'lit-html/directives/live';
-import { until } from 'lit-html/directives/until';
+import { render } from 'lit/html.js';
+import { directive } from 'lit/directive.js';
+import { guard } from 'lit/directives/guard.js';
+import { live } from 'lit/directives/live.js';
+import { until } from 'lit/directives/until.js';
 
 const html = (strings, ...values) => {
     transformValues(values);
-    return new TemplateResult(strings, values, 'html', defaultTemplateProcessor);
+    return {
+        ['_$litType$']: 1, // HTML_RESULT
+        strings,
+        values
+    };
 };
 const svg = (strings, ...values) => {
     transformValues(values);
-    return new SVGTemplateResult(strings, values, 'svg', defaultTemplateProcessor);
+    return {
+        ['_$litType$']: 2, // SVG_RESULT
+        strings,
+        values
+    };
 };
 
 // Small addition to lit-html: objects with a toHTML() method are handled by

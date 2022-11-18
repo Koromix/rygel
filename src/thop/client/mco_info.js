@@ -1261,7 +1261,7 @@ const mco_info = new function() {
 
         return html`
             <label>
-                Secteur <abbr title="${help}">?</abbr>
+                Secteur <abbr title=${help}>?</abbr>
                 <select @change=${e => thop.go(self, {sector: e.target.value})}>
                     <option value="public" .selected=${current_sector === 'public'}>Public</option>
                     <option value="private" .selected=${current_sector === 'private'}>Privé</option>

@@ -1866,9 +1866,9 @@ instead of:
 
     function makePrefixOrSuffix(cls, text, value) {
         if (typeof text === 'function') {
-            return html`<span class="${cls}">${text(value)}</span>`;
+            return html`<span class=${cls}>${text(value)}</span>`;
         } else if (text != null && text !== '') {
-            return html`<span class="${cls}">${text != null ? text : ''}</span>`;
+            return html`<span class=${cls}>${text != null ? text : ''}</span>`;
         } else {
             return '';
         }

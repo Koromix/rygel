@@ -375,7 +375,7 @@ function InstanceController() {
         }
 
         return html`
-            <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}">
+            <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}>
                 <div style="flex: 1;">${title}</div>
                 ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
            </button>

@@ -3,7 +3,7 @@
 Run the following commands:
 
 ```bash
-npm install lit-html rollup @rollup/plugin-node-resolve rollup-plugin-babel rollup-plugin-uglify @babel/core @babel/preset-env
+npm install lit rollup @rollup/plugin-node-resolve @rollup/plugin-babel @rollup/plugin-terser @babel/core @babel/preset-env
 node_modules/.bin/rollup -c rollup.js
 ```
 
