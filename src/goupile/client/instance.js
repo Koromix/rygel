@@ -916,24 +916,17 @@ function InstanceController() {
         let menu = (profile.lock == null) && (route.form.menu.length > 1 || route.form.chain.length > 1);
         let wide = (route.form.chain[0].menu.length > 3);
 
-        let sections = [];
-        for (let intf of model.widgets) {
-            if (intf.options.anchor) {
-                let section = {
-                    title: intf.label,
-                    anchor: intf.options.anchor
-                };
-
-                sections.push(section);
-            }
-        }
+        let sections = model.widgets.filter(intf => intf.options.anchor).map(intf => ({
+            title: intf.label,
+            anchor: intf.options.anchor
+        }));
 
         return html`
             <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
                     <div id="ins_menu">${menu ? html`
                         ${util.mapRange(1 - wide, route.form.chain.length, idx => renderFormMenu(route.form.chain[idx]))}
-                        ${sections.length ? html`
+                        ${sections.length > 1 ? html`
                             <h1>${route.page.title}</h1>
                             <ul>${sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
                         ` : ''}
