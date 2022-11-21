@@ -1539,4 +1539,14 @@ const times = new function() {
             return null;
         }
     };
+
+    this.now = function() {
+        let date = new Date();
+
+        let hours = date.getHours();
+        let minutes = date.getMinutes();
+        let seconds = date.getSeconds();
+
+        return times.create(hours, minutes, seconds);
+    };
 };
