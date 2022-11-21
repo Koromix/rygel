@@ -209,6 +209,9 @@ function InstanceController() {
                     <button class=${'icon' + (ui.isPanelActive('data') ? ' active' : '')}
                             style="background-position-y: calc(-274px + 1.2em);"
                             @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
+                    <button class=${'icon' + (ui.isPanelActive('view') && !form_record.chain[0].saved ? ' active' : '')}
+                            style="background-position-y: calc(-758px + 1.2em);"
+                            @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Ajouter</button>
                 ` : ''}
                 ${profile.lock != null ? html`
                     <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
@@ -488,10 +491,6 @@ function InstanceController() {
                     <button class=${ui.isPanelActive('view') ? 'ui_pin active' : 'ui_pin'}
                             @click=${ui.wrapAction(e => togglePanel(e, 'view'))}></button>
                 ` : ''}
-
-                <div class="ui_actions" style="margin-bottom: 1.2em;">
-                    <button @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Ajouter un ${data_form.title.toLowerCase()}</button>
-                </div>
 
                 <div class="ui_quick" style=${visible_rows.length ? 'margin-right: 2.2em;' : ''}>
                     <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
