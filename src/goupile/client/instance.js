@@ -707,8 +707,12 @@ function InstanceController() {
             {
                 let sequence = (profile.lock != null) ? profile.lock.pages : route.page.getOption('sequence', form_record);
 
-                if (typeof sequence === 'boolean')
-                    sequence = sequence ? Array.from(route.form.pages.keys()) : null;
+                if (typeof sequence === 'boolean') {
+                    let parent = (route.form.menu.length == 1 && route.form.chain.length > 1);
+                    let form = parent ? route.form.chain[route.form.chain.length - 2] : route.form;
+
+                    sequence = sequence ? Array.from(form.menu.map(item => item.key)) : null;
+                }
 
                 nav_sequence = {
                     prev: null,
