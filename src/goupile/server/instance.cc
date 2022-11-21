@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 54;
+const int InstanceVersion = 55;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -1655,9 +1655,20 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 54: {
+                bool success = db->RunMany(R"(
+                    UPDATE rec_entries SET deleted = 1
+                        FROM (SELECT MAX(anchor) AS anchor FROM rec_fragments
+                              WHERE type = 'delete' GROUP BY ulid) AS deleted
+                        WHERE rec_entries.anchor = deleted.anchor;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 54);
+            RG_STATIC_ASSERT(InstanceVersion == 55);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

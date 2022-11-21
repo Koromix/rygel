@@ -328,7 +328,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 }
 
                 record->deleted = record->fragments.len &&
-                                  TestStr(record->fragments[record->fragments.len - 1].type, "deleted");
+                                  TestStr(record->fragments[record->fragments.len - 1].type, "delete");
             }
             if (!parser.IsValid()) {
                 io->AttachError(422);
