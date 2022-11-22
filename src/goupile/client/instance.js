@@ -2392,9 +2392,11 @@ function InstanceController() {
             };
 
             child.ctime = new Date(util.decodeULIDTime(child.ulid));
-            if (key.index.match(/@[0-9]+$/)) {
-                let str = key.index.substr(key.index.indexOf('@') + 1);
-                child.mtime = new Date(parseInt(str, 10));
+            if (child.form.includes('@')) {
+                let pos = child.form.indexOf('@');
+
+                child.mtime = new Date(parseInt(child.form.substr(pos + 1), 10));
+                child.form = child.form.substr(0, pos);
             } else {
                 child.mtime = child.ctime;
             }
