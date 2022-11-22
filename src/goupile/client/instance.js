@@ -54,6 +54,7 @@ function InstanceController() {
     let data_form;
     let data_rows;
     let data_filter;
+    let data_date;
 
     let prev_anchor;
 
@@ -469,9 +470,26 @@ function InstanceController() {
 
     function renderData() {
         let visible_rows = data_rows;
+
         if (data_filter != null) {
             let func = makeFilterFunction(data_filter);
             visible_rows = visible_rows.filter(meta => func(meta.hid));
+        }
+        if (data_date != null) {
+            visible_rows = visible_rows.filter(meta => {
+                if (meta.ctime.getFullYear() == data_date.year &&
+                        meta.ctime.getMonth() + 1 == data_date.month &&
+                        meta.ctime.getDate() == data_date.day)
+                    return true;
+
+                /*for (let key in meta.status) {
+                    let status = meta.status[key];
+                    if (status.ctime.toDateString() == data_date.toDateString())
+                        return true;
+                }*/
+
+                return false;
+            });
         }
 
         let column_stats = {};
@@ -498,6 +516,12 @@ function InstanceController() {
                 <div class="ui_quick" style=${visible_rows.length ? 'margin-right: 2.2em;' : ''}>
                     <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
                            @input=${e => { data_filter = e.target.value || null; self.run(); }} />
+                    <div style="flex: 1;"></div>
+                    <label>
+                        Date de création :
+                        <input type="date" .value=${data_date != null ? data_date.toString() : ''}
+                               @input=${e => { data_date = e.target.value ? dates.parse(e.target.value) : null; self.run(); }} />
+                    </label>
                     <div style="flex: 1;"></div>
                     <p>
                         ${visible_rows.length} ${visible_rows.length < data_rows.length ? `/ ${data_rows.length} ` : ''} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
