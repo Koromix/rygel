@@ -1725,7 +1725,7 @@ function InstanceController() {
             if (!url.pathname.startsWith(`${ENV.urls.instance}main/`)) {
                 if (self.hasUnsavedData())
                     await goupile.confirmDangerousAction(e);
-d
+
                 window.onbeforeunload = null;
                 window.location.href = url.href;
 
