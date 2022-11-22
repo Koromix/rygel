@@ -243,7 +243,8 @@ function InstanceController() {
                 }) : ''}
                 ${menu && !wide ? html`
                     ${util.map(route.form.chain[0].menu, item => {
-                        let active = (route.form.chain.some(form => form === item.form) || item.page === route.page);
+                        let active = ui.isPanelActive('view') &&
+                                     (route.form.chain.some(form => form === item.form) || item.page === route.page);
                         let drop = (item.type === 'form' && item.form.menu.length > 1);
                         let enabled = (item.type === 'form') ? isFormEnabled(item.form, form_record) : isPageEnabled(item.page, form_record);
 
@@ -376,6 +377,8 @@ function InstanceController() {
         } else {
             throw new Error(`Unknown item type '${item.type}'`);
         }
+
+        active &= ui.isPanelActive('view');
 
         return html`
             <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}>
