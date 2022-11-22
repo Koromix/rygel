@@ -488,7 +488,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     padding: 0px 4px;
     border-radius: 4px;
     color: white;
-    font-size: 0.9em;
+    font-size: 0.8em;
     white-space: nowrap;
 }
 

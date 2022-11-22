@@ -545,9 +545,16 @@ function InstanceController() {
                                             let url = page.url + `/${row.ulid}`;
 
                                             if (row.status[page.key] != null) {
-                                                let mtime = row.status[page.key];
-                                                return html`<td class=${active && page === route.page ? 'saved active' : 'saved'}
-                                                                title=${row.status[page.key].toLocaleString()}><a href=${url}>${mtime.toLocaleDateString()} (${mtime.toLocaleTimeString()})</a></td>`;
+                                                let status = row.status[page.key];
+
+                                                return html`
+                                                    <td class=${active && page === route.page ? 'saved active' : 'saved'}
+                                                        title=${row.status[page.key].toLocaleString()}>
+                                                        <a href=${url}>
+                                                            ${status.ctime.toLocaleDateString()} (${status.ctime.toLocaleTimeString()})
+                                                            ${status.mtime.getTime() != status.ctime.getTime() ?
+                                                                html`<br/><span class="ui_tag" style="background: #999;">(modifié: ${status.mtime.toLocaleDateString()} ${status.mtime.toLocaleTimeString()})</span>` : ''}                                                        </a>
+                                                    </td>`;
                                             } else {
                                                 return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}
                                                                 title=${item.title}><a href=${url}>Afficher</a></td>`;
@@ -558,10 +565,17 @@ function InstanceController() {
                                             if (row.status[form.key] != null) {
                                                 let child = row.children[form.key][0];
                                                 let url = form.url + `/${child.ulid}`;
-                                                let mtime = row.status[form.key];
+                                                let status = row.status[form.key];
 
-                                                return html`<td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}
-                                                                title=${item.title}><a href=${url}>${row.status[form.key].toLocaleDateString()} (${mtime.toLocaleTimeString()})</a></td>`;
+                                                return html`
+                                                    <td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}
+                                                        title=${item.title}>
+                                                        <a href=${url}>
+                                                            ${status.ctime.toLocaleDateString()} (${status.ctime.toLocaleTimeString()})
+                                                            ${status.mtime.getTime() != status.ctime.getTime() ?
+                                                                html`<br/><span class="ui_tag" style="background: #999;">(modifié: ${status.mtime.toLocaleDateString()} ${status.mtime.toLocaleTimeString()})</span>` : ''}
+                                                        </a>
+                                                    </td>`;
                                             } else {
                                                 let url = form.url + `/${row.ulid}`;
 
@@ -1207,16 +1221,18 @@ function InstanceController() {
                             }
                         }
 
-                        // Always rewrite keys to fix potential namespace changes
-                        obj.keys.form = `${profile.namespaces.records}/${record.form.key}`;
-                        if (record.parent != null)
-                            obj.keys.parent = `${profile.namespaces.records}:${record.parent.ulid}/${record.form.key}`;
-                        obj.keys.sync = profile.namespaces.records;
-
                         if (record.version !== entry.fragments.length)
                             throw new Error('Cannot overwrite old record fragment');
                         if (fragment != null)
                             entry.fragments.push(fragment);
+
+                        // Always rewrite keys to fix potential namespace changes
+                        obj.keys.form = `${profile.namespaces.records}/${record.form.key}`;
+                        if (record.parent != null) {
+                            let mtime = entry.fragments.length ? entry.fragments[entry.fragments.length - 1].mtime.toTime() : null;
+                            obj.keys.parent = `${profile.namespaces.records}:${record.parent.ulid}/${record.form.key}@${mtime}`;
+                        }
+                        obj.keys.sync = profile.namespaces.records;
 
                         obj.enc = await goupile.encryptSymmetric(entry, 'records');
                         await t.saveWithKey('rec_records', key, obj);
@@ -2306,7 +2322,8 @@ d
     {
         let objects;
         if (parent_ulid != null && form_key != null) {
-            let range = IDBKeyRange.only(profile.namespaces.records + `:${parent_ulid}/${form_key}`);
+            let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/${form_key}`,
+                                          profile.namespaces.records + `:${parent_ulid}/${form_key}\``, false, true);
             objects = await db.loadAll('rec_records/parent', range);
         } else if (parent_ulid != null) {
             let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/`,
@@ -2334,7 +2351,8 @@ d
     {
         let keys;
         if (form_key != null) {
-            let range = IDBKeyRange.only(profile.namespaces.records + `:${parent_ulid}/${form_key}`);
+            let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/${form_key}`,
+                                          profile.namespaces.records + `:${parent_ulid}/${form_key}\``, false, true);
             keys = await db.list('rec_records/parent', range);
         } else {
             let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/`,
@@ -2347,9 +2365,17 @@ d
             let child = {
                 form: key.index.substr(key.index.indexOf('/') + 1),
                 ulid: key.primary.substr(key.primary.indexOf(':') + 1),
-                ctime: null
+                ctime: null,
+                mtime: null,
             };
+
             child.ctime = new Date(util.decodeULIDTime(child.ulid));
+            if (key.index.match(/@[0-9]+$/)) {
+                let str = key.index.substr(key.index.indexOf('@') + 1);
+                child.mtime = new Date(parseInt(str, 10));
+            } else {
+                child.mtime = child.ctime;
+            }
 
             children.push(child);
         }
@@ -2381,8 +2407,16 @@ d
             if (fragment.type === 'save') {
                 Object.assign(values, fragment.values);
 
-                if (form.pages.get(fragment.page) && status[fragment.page] == null)
-                    status[fragment.page] = new Date(fragment.mtime);
+                if (form.pages.get(fragment.page)) {
+                    if (status[fragment.page] == null) {
+                        status[fragment.page] = {
+                            ctime: new Date(fragment.mtime),
+                            mtime: null
+                        };
+                    }
+
+                    status[fragment.page].mtime = new Date(fragment.mtime);
+                }
             }
         }
         for (let fragment of fragments)
@@ -2403,7 +2437,11 @@ d
                 }
 
                 array.push(child);
-                status[child.form] = child.ctime;
+
+                status[child.form] = {
+                    ctime: child.mtime,
+                    mtime: child.mtime
+                };
             }
         }
 
@@ -2651,11 +2689,12 @@ d
 
                     for (let download of downloads) {
                         let key = profile.namespaces.records + `:${download.ulid}`;
+                        let mtime = download.fragments.length ? (new Date(download.fragments[download.fragments.length - 1].mtime)).getTime() : null;
 
                         let obj = {
                             keys: {
                                 form: profile.namespaces.records + `/${download.form}`,
-                                parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}`) : null,
+                                parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}@${mtime}`) : null,
                                 anchor: profile.namespaces.records + `@${(download.anchor + 1).toString().padStart(16, '0')}`,
                                 sync: null
                             },
