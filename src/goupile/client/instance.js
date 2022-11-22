@@ -298,8 +298,8 @@ function InstanceController() {
                             ${profile.type === 'login' ? html`
                                 ${goupile.hasPermission('admin_code') ? html`
                                     <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>
-                                        ${profile.develop ? html`<div style="float: right">&nbsp;✓\uFE0E</div>` : ''}
-                                        Mode conception
+                                        <div style="flex: 1;">Mode conception</div>
+                                        ${profile.develop ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                                     </button>
                                     <hr/>
                                 ` : ''}
