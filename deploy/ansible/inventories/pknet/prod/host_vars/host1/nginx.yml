@@ -163,3 +163,18 @@ nginx_domains:
           proxy_pass http://unix:/run/goupile/forparis.goupile.fr.sock:;
       }
     ssl_certbot_email: niels.martignene@protonmail.com
+  - name: goupile.interhop.org
+    config: |
+      location / {
+          proxy_http_version 1.1;
+          proxy_request_buffering off;
+          proxy_buffering on;
+          proxy_read_timeout 180;
+          send_timeout 180;
+
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+          proxy_pass http://unix:/run/goupile/goupile.interhop.org.sock:;
+      }
+    ssl_certbot_email: niels.martignene@protonmail.com
