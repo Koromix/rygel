@@ -572,8 +572,7 @@ function InstanceController() {
                                                 let status = row.status[page.key];
 
                                                 return html`
-                                                    <td class=${active && page === route.page ? 'saved active' : 'saved'}
-                                                        title=${row.status[page.key].toLocaleString()}>
+                                                    <td class=${active && page === route.page ? 'saved active' : 'saved'} title=${item.title}>
                                                         <a href=${url}>
                                                             ${status.ctime.toLocaleDateString()} (${status.ctime.toLocaleTimeString()})
                                                             ${status.mtime.getTime() != status.ctime.getTime() ?
@@ -592,8 +591,7 @@ function InstanceController() {
                                                 let status = row.status[form.key];
 
                                                 return html`
-                                                    <td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}
-                                                        title=${item.title}>
+                                                    <td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'} title=${item.title}>
                                                         <a href=${url}>
                                                             ${status.ctime.toLocaleDateString()} (${status.ctime.toLocaleTimeString()})
                                                             ${status.mtime.getTime() != status.ctime.getTime() ?
