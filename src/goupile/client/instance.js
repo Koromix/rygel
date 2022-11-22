@@ -2194,7 +2194,7 @@ d
             ctime: null,
             mtime: null,
             fragments: [],
-            status: new Set,
+            status: {},
             saved: false,
             values: {},
 
