@@ -1251,7 +1251,7 @@ function InstanceController() {
                         // Always rewrite keys to fix potential namespace changes
                         obj.keys.form = `${profile.namespaces.records}/${record.form.key}`;
                         if (record.parent != null) {
-                            let mtime = entry.fragments.length ? entry.fragments[entry.fragments.length - 1].mtime.toTime() : null;
+                            let mtime = entry.fragments.length ? entry.fragments[entry.fragments.length - 1].mtime.getTime() : null;
                             obj.keys.parent = `${profile.namespaces.records}:${record.parent.ulid}/${record.form.key}@${mtime}`;
                         }
                         obj.keys.sync = profile.namespaces.records;
