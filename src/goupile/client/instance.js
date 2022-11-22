@@ -1996,7 +1996,12 @@ function InstanceController() {
         if (!reality && profile.develop)
             return true;
 
+        let restrict = page.getOption('restrict', record, false);
         let enabled = page.getOption('enabled', record, true);
+
+        if (goupile.isLocked() && restrict)
+            return false;
+
         return enabled;
     }
 
