@@ -2393,18 +2393,17 @@ function InstanceController() {
                 form: key.index.substr(key.index.indexOf('/') + 1),
                 ulid: key.primary.substr(key.primary.indexOf(':') + 1),
                 ctime: null,
-                mtime: null,
+                mtime: null
             };
 
             child.ctime = new Date(util.decodeULIDTime(child.ulid));
             if (child.form.includes('@')) {
                 let pos = child.form.indexOf('@');
-
                 child.mtime = new Date(parseInt(child.form.substr(pos + 1), 10));
                 child.form = child.form.substr(0, pos);
-            } else {
-                child.mtime = child.ctime;
             }
+            if (child.mtime == null || isNaN(child.mtime))
+                child.mtime = new Date(child.ctime);
 
             children.push(child);
         }
@@ -2468,7 +2467,7 @@ function InstanceController() {
                 array.push(child);
 
                 status[child.form] = {
-                    ctime: child.mtime,
+                    ctime: child.ctime,
                     mtime: child.mtime
                 };
             }
