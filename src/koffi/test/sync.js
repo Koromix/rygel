@@ -130,8 +130,7 @@ const EndianInts = koffi.struct('EndianInts', {
 });
 
 const BigText = koffi.struct('BigText', {
-    text: koffi.array('char', 262144),
-    len: 'int'
+    text: koffi.array('uint8_t', 262145)
 });
 
 main();
@@ -508,13 +507,13 @@ async function test() {
 
     // Test big structs
     {
-        let text = 'hello!foo!bar'.repeat(20164);
+        let text = 'hello!foo!bar'.repeat(20165);
         let expected = text.split('').reverse().join('');
 
-        let big = { text: text, len: text.length };
+        let big = { text: Buffer.from(text) };
         let ret = ReverseBigText(big);
 
         assert.equal(ret.len, big.len);
-        assert.equal(ret.text, expected);
+        assert.equal(Buffer.from(ret.text).toString(), expected);
     }
 }
