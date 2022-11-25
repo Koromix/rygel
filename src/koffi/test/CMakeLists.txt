@@ -58,7 +58,7 @@ endif()
 if(APPLE)
     target_compile_options(raylib PRIVATE -Wno-unknown-warning-option -Wno-macro-redefined)
     target_compile_definitions(raylib PRIVATE GL_SILENCE_DEPRECATION)
-    set_source_files_properties(../vendor/raylib/src/rglfw.c PROPERTIES COMPILE_FLAGS "-x objective-c")
+    set_source_files_properties(../../../vendor/raylib/src/rglfw.c PROPERTIES COMPILE_FLAGS "-x objective-c")
     target_link_libraries(raylib PRIVATE "-framework Cocoa" "-framework IOKit" "-framework CoreFoundation" "-framework OpenGL")
 endif()
 
