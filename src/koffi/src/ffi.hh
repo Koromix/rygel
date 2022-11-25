@@ -30,6 +30,7 @@ static const int MaxAsyncCalls = 256;
 static const Size MaxParameters = 32;
 static const Size MaxOutParameters = 16;
 static const Size MaxTrampolines = 16;
+static const Size MaxTypeSize = Mebibytes(64);
 
 extern const int TypeInfoMarker;
 extern const int CastMarker;
@@ -105,7 +106,7 @@ struct TypeInfo {
     const char *name;
 
     PrimitiveKind primitive;
-    int16_t size;
+    int32_t size;
     int16_t align;
 
     DisposeFunc *dispose;
@@ -127,7 +128,7 @@ struct TypeInfo {
 struct RecordMember {
     const char *name;
     const TypeInfo *type;
-    int16_t offset;
+    int32_t offset;
 };
 
 struct LibraryHolder {

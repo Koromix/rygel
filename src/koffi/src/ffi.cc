@@ -210,6 +210,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     type->align = 1;
 
     HashSet<const char *> members;
+    int64_t size = 0;
 
     for (uint32_t i = 0; i < keys.Length(); i++) {
         RecordMember member = {};
@@ -250,11 +251,15 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         if (!align) {
             align = pad ? member.type->align : 1;
         }
-        member.offset = (int16_t)AlignLen(type->size, align);
+        member.offset = (int32_t)AlignLen(size, align);
 
-        type->size = (int16_t)(member.offset + member.type->size);
+        size = member.offset + member.type->size;
         type->align = std::max(type->align, align);
 
+        if (size > MaxTypeSize) {
+            ThrowError<Napi::Error>(env, "Struct '%1' size is too high (max = %2)", type->name, FmtMemSize(size));
+            return env.Null();
+        }
         if (!members.TrySet(member.name).second) {
             ThrowError<Napi::Error>(env, "Duplicate member '%1' in struct '%2'", member.name, type->name);
             return env.Null();
@@ -263,12 +268,12 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         type->members.Append(member);
     }
 
-    if (!type->size) {
-        ThrowError<Napi::TypeError>(env, "Empty struct '%1' is not allowed in C", type->name);
+    size = (int32_t)AlignLen(size, type->align);
+    if (!size) {
+        ThrowError<Napi::Error>(env, "Empty struct '%1' is not allowed in C", type->name);
         return env.Null();
     }
-
-    type->size = (int16_t)AlignLen(type->size, type->align);
+    type->size = (int32_t)size;
 
     // If the insert succeeds, we cannot fail anymore
     if (named && !instance->types_map.TrySet(type->name, type).second) {
@@ -565,7 +570,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     }
 
     const TypeInfo *ref = ResolveType(info[0]);
-    int64_t len = (uint16_t)info[1].As<Napi::Number>().Int64Value();
+    int64_t len = info[1].As<Napi::Number>().Int64Value();
 
     if (!ref)
         return env.Null();
@@ -573,8 +578,8 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
         return env.Null();
     }
-    if (len > INT16_MAX / ref->size) {
-        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", INT16_MAX / ref->size);
+    if (len > MaxTypeSize / ref->size) {
+        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", MaxTypeSize / ref->size);
         return env.Null();
     }
 
@@ -615,7 +620,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 
     type->primitive = PrimitiveKind::Array;
     type->align = ref->align;
-    type->size = (int16_t)(len * ref->size);
+    type->size = (int32_t)(len * ref->size);
     type->ref.type = ref;
     type->hint = hint;
 
@@ -1417,7 +1422,7 @@ void LibraryHolder::Unref() const
 
 
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
-                                  PrimitiveKind primitive, int16_t size, int16_t align, const char *ref = nullptr)
+                                  PrimitiveKind primitive, int32_t size, int16_t align, const char *ref = nullptr)
 {
     RG_ASSERT(names.size() > 0);
     RG_ASSERT(align <= size);

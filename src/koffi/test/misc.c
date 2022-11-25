@@ -158,6 +158,11 @@ typedef struct EndianInts {
     uint64_t u64be;
 } EndianInts;
 
+typedef struct BigText {
+    char text[262144];
+    int len;
+} BigText;
+
 EXPORT int8_t GetMinusOne1(void)
 {
     return -1;
@@ -696,3 +701,15 @@ EXPORT void CopyEndianInts2(int16_t i16le, int16_t i16be, uint16_t u16le, uint16
 EXPORT uint16_t ReturnEndianInt2(uint16_t v) { return v; }
 EXPORT uint32_t ReturnEndianInt4(uint32_t v) { return v; }
 EXPORT uint64_t ReturnEndianInt8(uint64_t v) { return v; }
+
+EXPORT BigText ReverseBigText(BigText buf)
+{
+    BigText ret;
+
+    for (int i = 0; i < buf.len; i++) {
+        ret.text[buf.len - i - 1] = buf.text[i];
+    }
+    ret.len = buf.len;
+
+    return ret;
+}

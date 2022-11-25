@@ -129,6 +129,11 @@ const EndianInts = koffi.struct('EndianInts', {
     u64be: 'uint64_be_t'
 });
 
+const BigText = koffi.struct('BigText', {
+    text: koffi.array('char', 262144),
+    len: 'int'
+});
+
 main();
 
 async function main() {
@@ -219,6 +224,7 @@ async function test() {
     const ReturnEndianInt8SB = lib.func('int64_be_t ReturnEndianInt8(int64_le_t v)');
     const ReturnEndianInt8UL = lib.func('uint64_le_t ReturnEndianInt8(uint64_be_t v)');
     const ReturnEndianInt8UB = lib.func('uint64_be_t ReturnEndianInt8(uint64_le_t v)');
+    const ReverseBigText = lib.func('BigText ReverseBigText(BigText buf)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -498,5 +504,17 @@ async function test() {
         assert.equal(ReturnEndianInt8SB(0x0123456789ABCD3Fn), 0x3FCDAB8967452301n);
         assert.equal(ReturnEndianInt8UL(0x0123456789ABCD3Fn), 0x3FCDAB8967452301n);
         assert.equal(ReturnEndianInt8UB(0x0123456789ABCD3Fn), 0x3FCDAB8967452301n);
+    }
+
+    // Test big structs
+    {
+        let text = 'hello!foo!bar'.repeat(20164);
+        let expected = text.split('').reverse().join('');
+
+        let big = { text: text, len: text.length };
+        let ret = ReverseBigText(big);
+
+        assert.equal(ret.len, big.len);
+        assert.equal(ret.text, expected);
     }
 }
