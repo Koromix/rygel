@@ -25,12 +25,12 @@ static const Size DefaultAsyncStackSize = Kibibytes(256);
 static const Size DefaultAsyncHeapSize = Kibibytes(512);
 static const int DefaultResidentAsyncPools = 2;
 static const int DefaultMaxAsyncCalls = 64;
+static const Size DefaultMaxTypeSize = Mebibytes(64);
 
 static const int MaxAsyncCalls = 256;
 static const Size MaxParameters = 32;
 static const Size MaxOutParameters = 16;
 static const Size MaxTrampolines = 16;
-static const Size MaxTypeSize = Mebibytes(64);
 
 extern const int TypeInfoMarker;
 extern const int CastMarker;
@@ -267,6 +267,7 @@ struct InstanceData {
     Size async_heap_size = DefaultAsyncHeapSize;
     int resident_async_pools = DefaultResidentAsyncPools;
     int max_temporaries = DefaultMaxAsyncCalls - DefaultResidentAsyncPools;
+    Size max_type_size = DefaultMaxTypeSize;
 };
 RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(InstanceData::memories.data) - 1);
 RG_STATIC_ASSERT(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);

@@ -44,11 +44,8 @@ namespace RG {
 const int TypeInfoMarker = 0xDEADBEEF;
 const int CastMarker = 0xDEADBEEF;
 
-static bool ChangeMemorySize(const char *name, Napi::Value value, Size *out_size)
+static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
-    const Size MinSize = Kibibytes(1);
-    const Size MaxSize = Mebibytes(16);
-
     Napi::Env env = value.Env();
 
     if (!value.IsNumber()) {
@@ -60,13 +57,21 @@ static bool ChangeMemorySize(const char *name, Napi::Value value, Size *out_size
 
     int64_t size = value.As<Napi::Number>().Int64Value();
 
-    if (size < MinSize || size > MaxSize) {
-        ThrowError<Napi::Error>(env, "Setting '%1' must be between %2 and %3", name, FmtMemSize(MinSize), FmtMemSize(MaxSize));
+    if (size < min_size || size > max_size) {
+        ThrowError<Napi::Error>(env, "Setting '%1' must be between %2 and %3", name, FmtMemSize(min_size), FmtMemSize(max_size));
         return false;
     }
 
     *out_size = (Size)size;
     return true;
+}
+
+static bool ChangeMemorySize(const char *name, Napi::Value value, Size *out_size)
+{
+    const Size MinSize = Kibibytes(1);
+    const Size MaxSize = Mebibytes(16);
+
+    return ChangeSize(name, value, MinSize, MaxSize, out_size);
 }
 
 static bool ChangeAsyncLimit(const char *name, Napi::Value value, int max, int *out_limit)
@@ -113,6 +118,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
         Size async_heap_size = instance->async_heap_size;
         int resident_async_pools = instance->resident_async_pools;
         int max_async_calls = resident_async_pools + instance->max_temporaries;
+        Size max_type_size = instance->max_type_size;
 
         Napi::Object obj = info[0].As<Napi::Object>();
         Napi::Array keys = obj.GetPropertyNames();
@@ -139,6 +145,9 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             } else if (key == "max_async_calls") {
                 if (!ChangeAsyncLimit(key.c_str(), value, MaxAsyncCalls, &max_async_calls))
                     return env.Null();
+            } else if (key == "max_type_size") {
+                if (!ChangeSize(key.c_str(), value, 32, Mebibytes(512), &max_type_size))
+                    return env.Null();
             } else {
                 ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
                 return env.Null();
@@ -156,6 +165,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
         instance->async_heap_size = async_heap_size;
         instance->resident_async_pools = resident_async_pools;
         instance->max_temporaries = max_async_calls - resident_async_pools;
+        instance->max_type_size = max_type_size;
     }
 
     Napi::Object obj = Napi::Object::New(env);
@@ -166,6 +176,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
     obj.Set("async_heap_size", instance->async_heap_size);
     obj.Set("resident_async_pools", instance->resident_async_pools);
     obj.Set("max_async_calls", instance->resident_async_pools + instance->max_temporaries);
+    obj.Set("max_type_size", instance->max_type_size);
 
     return obj;
 }
@@ -256,7 +267,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         size = member.offset + member.type->size;
         type->align = std::max(type->align, align);
 
-        if (size > MaxTypeSize) {
+        if (size > instance->max_type_size) {
             ThrowError<Napi::Error>(env, "Struct '%1' size is too high (max = %2)", type->name, FmtMemSize(size));
             return env.Null();
         }
@@ -578,8 +589,8 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
         return env.Null();
     }
-    if (len > MaxTypeSize / ref->size) {
-        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", MaxTypeSize / ref->size);
+    if (len > instance->max_type_size / ref->size) {
+        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->max_type_size / ref->size);
         return env.Null();
     }
 

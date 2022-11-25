@@ -30,3 +30,4 @@ async_stack_size     | 256 kiB | Stack size for asynchronous calls
 async_heap_size      | 512 kiB | Heap size for asynchronous calls
 resident_async_pools | 2       | Number of resident pools for asynchronous calls
 max_async_calls      | 64      | Maximum number of ongoing asynchronous calls
+max_type_size        | 64 MiB  | Maximum size of Koffi types (for arrays and structs)
