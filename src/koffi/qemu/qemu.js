@@ -53,6 +53,10 @@ async function main() {
 
     // Parse options
     {
+        if (process.argv[2] == '--help') {
+            print_usage();
+            return;
+        }
         if (process.argv.length < 3 || process.argv[2][0] == '-')
             throw new Error(`Missing command, use --help`);
 
@@ -208,7 +212,7 @@ Commands:
     reset                        Reset initial disk snapshot
 
 Options:
-        --no-accel               Disable QEMU acceleration
+        --no_accel               Disable QEMU acceleration
 `;
 
     console.log(help);
