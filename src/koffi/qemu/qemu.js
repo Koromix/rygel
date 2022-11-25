@@ -43,7 +43,7 @@ main();
 
 async function main() {
     script_dir = fs.realpathSync(__dirname);
-    root_dir = fs.realpathSync(script_dir + '/../..');
+    root_dir = fs.realpathSync(script_dir + '/../../..');
 
     // All the code assumes we are working from the script directory
     process.chdir(script_dir);
@@ -285,7 +285,7 @@ async function start(detach = true) {
 async function pack() {
     let success = true;
 
-    let json = fs.readFileSync(root_dir + '/koffi/package.json', { encoding: 'utf-8' });
+    let json = fs.readFileSync(root_dir + '/src/koffi/package.json', { encoding: 'utf-8' });
     let version = JSON.parse(json).version;
 
     console.log('>> Version:', version);
@@ -296,7 +296,7 @@ async function pack() {
         for (let suite in machine.builds) {
             let build = machine.builds[suite];
 
-            let archive_filename = root_dir + `/koffi/build/qemu/${version}/koffi_${machine.platform}_${build.arch}.tar.gz`;
+            let archive_filename = root_dir + `/src/koffi/build/qemu/${version}/koffi_${machine.platform}_${build.arch}.tar.gz`;
 
             if (fs.existsSync(archive_filename)) {
                 log(machine, `${suite} > Status`, chalk.bold.green(`[ok]`));
@@ -332,7 +332,7 @@ async function pack() {
             let build = machine.builds[suite];
 
             let cmd = build.build;
-            let cwd = build.directory + '/koffi';
+            let cwd = build.directory + '/src/koffi';
 
             let start = process.hrtime.bigint();
             let ret = await exec_remote(machine, cmd, cwd);
@@ -366,7 +366,7 @@ async function pack() {
 
     console.log('>> Get build artifacts');
     {
-        let build_dir = root_dir + '/koffi/build/qemu';
+        let build_dir = root_dir + '/src/koffi/build/qemu';
 
         // Clean up old files
         if (fs.existsSync(build_dir)) {
@@ -385,7 +385,7 @@ async function pack() {
             await Promise.all(Object.keys(machine.builds).map(async suite => {
                 let build = machine.builds[suite];
 
-                let src_dir = build.directory + '/koffi/build';
+                let src_dir = build.directory + '/src/koffi/build';
                 let dest_dir = build_dir + `/${version}/koffi_${machine.platform}_${build.arch}`;
                 let dest_filename = dest_dir + '.tar.gz';
 
@@ -439,14 +439,22 @@ async function copy(func) {
 
     console.log('>> Snapshot code...');
     copy_recursive(root_dir, snapshot_dir, filename => {
-        let basename = path.basename(filename);
+        let parts = filename.split(/[\/\\]/);
 
-        return basename !== '.git' &&
-               basename !== 'qemu' && !basename.startsWith('qemu_') &&
-               basename !== 'node_modules' &&
-               basename !== 'node' &&
-               basename !== 'build' &&
-               basename !== 'luiggi';
+        if (parts[0] == 'src') {
+            return parts[1] == null || parts[1] == 'cnoke' ||
+                                       parts[1] == 'core' ||
+                                       parts[1] == 'koffi';
+        } else if (parts[0] == 'vendor') {
+            return parts[1] == null || parts[1] == 'brotli' ||
+                                       parts[1] == 'dragonbox' ||
+                                       parts[1] == 'miniz' ||
+                                       parts[1] == 'node-addon-api' ||
+                                       parts[1] == 'raylib' ||
+                                       parts[1] == 'sqlite3mc';
+        } else {
+            return false;
+        }
     });
 
     console.log('>> Copy source code...');
@@ -508,7 +516,7 @@ async function test() {
 
             for (let name in commands) {
                 let cmd = commands[name];
-                let cwd = test.directory + '/koffi';
+                let cwd = test.directory + '/src/koffi';
 
                 let start = process.hrtime.bigint();
                 let ret = await exec_remote(machine, cmd, cwd);
@@ -706,20 +714,30 @@ function check_qemu() {
 }
 
 function copy_recursive(src, dest, validate = filename => true) {
-    let entries = fs.readdirSync(src, { withFileTypes: true });
+    let proc = spawnSync('git', ['ls-files', '-i', '-o', '--exclude-standard', '--directory'], { cwd: src });
+    let ignored = new Set(proc.stdout.toString().split('\n').map(it => it.trim().replace(/[\\\/+]$/, '')).filter(it => it));
 
-    for (let entry of entries) {
-        let filename = path.join(src, entry.name);
-        let destname = path.join(dest, entry.name);
+    copy(src, dest, '');
 
-        if (!validate(filename))
-            continue;
+    function copy(src, dest, nice) {
+        let entries = fs.readdirSync(src, { withFileTypes: true });
 
-        if (entry.isDirectory()) {
-            fs.mkdirSync(destname, { mode: 0o755 });
-            copy_recursive(filename, destname, validate);
-        } else if (entry.isFile()) {
-            fs.copyFileSync(filename, destname);
+        for (let entry of entries) {
+            let src_filename = path.join(src, entry.name);
+            let dest_filename = path.join(dest, entry.name);
+            let filename = path.join(nice, entry.name);
+
+            if (ignored.has(filename))
+                continue;
+            if (!validate(filename))
+                continue;
+
+            if (entry.isDirectory()) {
+                fs.mkdirSync(dest_filename, { mode: 0o755 });
+                copy(src_filename, dest_filename, filename);
+            } else if (entry.isFile()) {
+                fs.copyFileSync(src_filename, dest_filename);
+            }
         }
     }
 }
