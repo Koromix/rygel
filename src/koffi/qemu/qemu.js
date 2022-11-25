@@ -663,7 +663,7 @@ async function reset() {
             return;
 
         let dirname = `qemu/${machine.key}`;
-        let disk = dirname + '/disk.qcow2';
+        let disk = dirname + '/' + machine.qemu.disk;
 
         if (!fs.existsSync(dirname)) {
             log(machine, 'Missing files', chalk.bold.gray('[ignore]'));
