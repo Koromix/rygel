@@ -20,7 +20,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const util = require('util');
-const { spawn, spawnSync } = require('child_process');
+const { spawn, spawnSync, execFileSync } = require('child_process');
 const { NodeSSH } = require('node-ssh');
 const chalk = require('chalk');
 const minimatch = require('minimatch');
@@ -62,6 +62,7 @@ async function main() {
 
         switch (process.argv[2]) {
             case 'pack': { command = pack; } break;
+            case 'publish': { command = publish; } break;
             case 'test': { command = test; } break;
             case 'start': { command = start; } break;
             case 'stop': { command = stop; } break;
@@ -202,7 +203,8 @@ function print_usage() {
 
 Commands:
     test                         Run the machines and perform the tests (default)
-    pack                         Use machines to package prebuilt Koffi binaries
+    pack                         Create NPM package with prebuilt Koffi binaries
+    publish                      Publish NPM package with prebuilt Koffi binaries
 
     start                        Start the machines but don't run anythingh
     stop                         Stop running machines
@@ -287,7 +289,34 @@ async function start(detach = true) {
 }
 
 async function pack() {
-    let success = true;
+    let pack_dir = script_dir + '/../build';
+    let dist_dir = script_dir + '/../build/dist';
+
+    let success = await prepare(dist_dir);
+    if (!success)
+        return false;
+
+    execFileSync('npm', ['pack', '--pack-destination', pack_dir], {
+        cwd: dist_dir,
+        stdio: 'inherit',
+    });
+}
+
+async function publish() {
+    let dist_dir = script_dir + '/../build/dist';
+
+    let success = await prepare(dist_dir);
+    if (!success)
+        return false;
+
+    execFileSync('npm', ['publish'], {
+        cwd: dist_dir,
+        stdio: 'inherit'
+    });
+}
+
+async function prepare(dist_dir) {
+    let snapshot_dir = snapshot();
 
     let json = fs.readFileSync(root_dir + '/src/koffi/package.json', { encoding: 'utf-8' });
     let version = JSON.parse(json).version;
@@ -318,136 +347,159 @@ async function pack() {
     }
 
     let ready = ignore.size;
+    let artifacts = [];
 
-    if (ready >= machines.length) {
-        console.log('>> Nothing to do!');
-        return true;
-    }
-
-    success &= await start(false);
-    success &= await copy(machine => Object.values(machine.builds).map(build => build.directory));
-
-    console.log('>> Run build commands...');
-    await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine))
-            return;
-
-        await Promise.all(Object.keys(machine.builds).map(async suite => {
-            let build = machine.builds[suite];
-
-            let cmd = build.build;
-            let cwd = build.directory + '/src/koffi';
-
-            let start = process.hrtime.bigint();
-            let ret = await exec_remote(machine, cmd, cwd);
-            let time = Number((process.hrtime.bigint() - start) / 1000000n);
-
-            if (ret.code == 0) {
-                log(machine, `${suite} > Build`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
-            } else {
-                log(machine, `${suite} > Build`, chalk.bold.red('[error]'));
-
-                if (ret.stdout || ret.stderr)
-                    console.error('');
-
-                let align = log.align + 9;
-                if (ret.stdout) {
-                    let str = ' '.repeat(align) + 'Standard output:\n' +
-                              chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                    console.error(str);
-                }
-                if (ret.stderr) {
-                    let str = ' '.repeat(align) + 'Standard error:\n' +
-                              chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                    console.error(str);
-                }
-
-                ignore.add(machine);
-                success = false;
-            }
-        }));
-    }));
-
-    console.log('>> Get build artifacts');
+    // Run machine commands
     {
-        let build_dir = root_dir + '/src/koffi/build/qemu';
+        let success = true;
 
-        // Clean up old files
-        if (fs.existsSync(build_dir)) {
-            for (let basename of fs.readdirSync(build_dir)) {
-                if (basename !== version)
-                    unlink_recursive(build_dir + '/' + basename);
-            }
+        if (ready < machines.length) {
+            success &= await start(false);
+            success &= await upload(snapshot_dir, machine => Object.values(machine.builds).map(build => build.directory));
+
+            console.log('>> Run build commands...');
+            await Promise.all(machines.map(async machine => {
+                if (ignore.has(machine))
+                    return;
+
+                await Promise.all(Object.keys(machine.builds).map(async suite => {
+                    let build = machine.builds[suite];
+
+                    let cmd = build.build;
+                    let cwd = build.directory + '/src/koffi';
+
+                    let start = process.hrtime.bigint();
+                    let ret = await exec_remote(machine, cmd, cwd);
+                    let time = Number((process.hrtime.bigint() - start) / 1000000n);
+
+                    if (ret.code == 0) {
+                        log(machine, `${suite} > Build`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
+                    } else {
+                        log(machine, `${suite} > Build`, chalk.bold.red('[error]'));
+
+                        if (ret.stdout || ret.stderr)
+                            console.error('');
+
+                        let align = log.align + 9;
+                        if (ret.stdout) {
+                            let str = ' '.repeat(align) + 'Standard output:\n' +
+                                      chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                            console.error(str);
+                        }
+                        if (ret.stderr) {
+                            let str = ' '.repeat(align) + 'Standard error:\n' +
+                                      chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                            console.error(str);
+                        }
+
+                        ignore.add(machine);
+                        success = false;
+                    }
+                }));
+            }));
         }
 
-        await Promise.all(machines.map(async machine => {
-            if (ignore.has(machine))
-                return;
+        console.log('>> Get build artifacts');
+        {
+            let build_dir = root_dir + '/src/koffi/build/qemu';
 
-            let copied = true;
+            await Promise.all(machines.map(async machine => {
+                let copied = true;
 
-            await Promise.all(Object.keys(machine.builds).map(async suite => {
-                let build = machine.builds[suite];
+                await Promise.all(Object.keys(machine.builds).map(async suite => {
+                    let build = machine.builds[suite];
 
-                let src_dir = build.directory + '/src/koffi/build';
-                let dest_dir = build_dir + `/${version}/koffi_${machine.platform}_${build.arch}`;
-                let dest_filename = dest_dir + '.tar.gz';
+                    let src_dir = build.directory + '/src/koffi/build';
+                    let dest_dir = build_dir + `/${version}/koffi_${machine.platform}_${build.arch}`;
+                    let dest_filename = dest_dir + '.tar.gz';
 
-                unlink_recursive(dest_dir);
-                fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
+                    artifacts.push(dest_filename);
 
-                try {
-                    await machine.ssh.getDirectory(dest_dir, src_dir, {
-                        recursive: false,
-                        concurrency: 4,
-                        validate: filename => !path.basename(filename).match(/^v[0-9]+/)
-                    });
+                    if (ignore.has(machine))
+                        return;
 
-                    tar.c({
-                        gzip: true,
-                        file: dest_filename,
-                        sync: true,
-                        cwd: dest_dir + '/..'
-                    }, [path.basename(dest_dir)]);
-                } catch (err) {
-                    ignore.add(machine);
-                    success = false;
-                    copied = false;
-                }
+                    unlink_recursive(dest_dir);
+                    fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
+
+                    try {
+                        await machine.ssh.getDirectory(dest_dir, src_dir, {
+                            recursive: false,
+                            concurrency: 4,
+                            validate: filename => !path.basename(filename).match(/^v[0-9]+/)
+                        });
+
+                        tar.c({
+                            gzip: true,
+                            file: dest_filename,
+                            sync: true,
+                            cwd: dest_dir + '/..'
+                        }, [path.basename(dest_dir)]);
+                    } catch (err) {
+                        ignore.add(machine);
+                        success = false;
+                        copied = false;
+                    }
+                }));
+
+                let status = copied ? chalk.bold.green('[ok]') : chalk.bold.red('[error]');
+                log(machine, 'Pack', status);
             }));
+        }
 
-            let status = copied ? chalk.bold.green('[ok]') : chalk.bold.red('[error]');
-            log(machine, 'Pack', status);
-        }));
+        if (machines.some(machine => machine.started))
+            success &= await stop(false);
+        success &= (ignore.size == ready);
+
+        if (!success) {
+            console.log('');
+            console.log('>> Status: ' + chalk.bold.red('FAILED'));
+            return false;
+        }
     }
 
-    if (machines.some(machine => machine.started))
-        success &= await stop(false);
-    success &= (ignore.size == ready);
+    console.log('>> Prepare NPM package');
+    {
+        unlink_recursive(dist_dir);
+        fs.mkdirSync(dist_dir, { mode: 0o755, recursive: true });
 
-    console.log('');
-    if (success) {
-        console.log('>> Status: ' + chalk.bold.green('SUCCESS'));
-    } else {
-        console.log('>> Status: ' + chalk.bold.red('FAILED'));
+        copy_recursive(snapshot_dir, dist_dir);
+
+        fs.mkdirSync(dist_dir + '/build', { mode: 0o755 });
+        fs.mkdirSync(dist_dir + '/build/' + version, { mode: 0o755 });
+
+        for (let artifact of artifacts) {
+            let dest_filename = dist_dir + '/build/' + version + '/' + path.basename(artifact);
+            fs.copyFileSync(artifact, dest_filename);
+        }
+
+        let pkg = JSON.parse(json);
+
+        pkg.main = "src/koffi/src/index.js";
+        pkg.scripts = {
+            install: "cnoke --prebuild -d src/koffi",
+            test: "node src/koffi/qemu/qemu.js test"
+        };
+
+        fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
     }
 
-    return success;
+    return true;
 }
 
-async function copy(func) {
-    let success = true;
+function snapshot() {
+    let snapshot_dir = script_dir + '/../build/snapshot';
 
-    let snapshot_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'koffi_'));
-    process.on('exit', () => unlink_recursive(snapshot_dir));
+    unlink_recursive(snapshot_dir);
+    fs.mkdirSync(snapshot_dir, { mode: 0o755, recursive: true });
 
     console.log('>> Snapshot code...');
     copy_recursive(root_dir, snapshot_dir, filename => {
         let parts = filename.split(/[\/\\]/);
 
-        if (parts[0] == 'src') {
+        if (parts[0] == 'src' && parts[1] == 'core') {
+            return parts[2] == null || parts[2] == 'libcc';
+        } else if (parts[0] == 'src') {
             return parts[1] == null || parts[1] == 'cnoke' ||
-                                       parts[1] == 'core' ||
                                        parts[1] == 'koffi';
         } else if (parts[0] == 'vendor') {
             return parts[1] == null || parts[1] == 'brotli' ||
@@ -461,7 +513,13 @@ async function copy(func) {
         }
     });
 
-    console.log('>> Copy source code...');
+    return snapshot_dir;
+}
+
+async function upload(snapshot_dir, func) {
+    let success = true;
+
+    console.log('>> Upload source code...');
     await Promise.all(machines.map(async machine => {
         if (ignore.has(machine))
             return;
@@ -501,10 +559,12 @@ async function copy(func) {
 }
 
 async function test() {
+    let snapshot_dir = snapshot();
+
     let success = true;
 
     success &= await start(false);
-    success &= await copy(machine => Object.values(machine.tests).map(test => test.directory));
+    success &= await upload(snapshot_dir, machine => Object.values(machine.tests).map(test => test.directory));
 
     console.log('>> Run test commands...');
     await Promise.all(machines.map(async machine => {
@@ -721,9 +781,9 @@ function copy_recursive(src, dest, validate = filename => true) {
     let proc = spawnSync('git', ['ls-files', '-i', '-o', '--exclude-standard', '--directory'], { cwd: src });
     let ignored = new Set(proc.stdout.toString().split('\n').map(it => it.trim().replace(/[\\\/+]$/, '')).filter(it => it));
 
-    copy(src, dest, '');
+    recurse(src, dest, '');
 
-    function copy(src, dest, nice) {
+    function recurse(src, dest, nice) {
         let entries = fs.readdirSync(src, { withFileTypes: true });
 
         for (let entry of entries) {
@@ -738,7 +798,7 @@ function copy_recursive(src, dest, validate = filename => true) {
 
             if (entry.isDirectory()) {
                 fs.mkdirSync(dest_filename, { mode: 0o755 });
-                copy(src_filename, dest_filename, filename);
+                recurse(src_filename, dest_filename, filename);
             } else if (entry.isFile()) {
                 fs.copyFileSync(src_filename, dest_filename);
             }

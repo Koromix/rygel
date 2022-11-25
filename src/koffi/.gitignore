@@ -15,3 +15,4 @@ node_modules
 /benchmark/raylib_cc.exe
 /benchmark/raylib.dll
 /benchmark/tmp
+/koffi-*.tgz

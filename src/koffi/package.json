@@ -22,7 +22,10 @@
   "scripts": {
     "install": "cnoke --prebuild",
     "test": "node qemu/qemu.js test",
-    "prepublishOnly": "node qemu/qemu.js pack"
+    "prepack": "echo 'Use \"npm run prepare\" instead' && false",
+    "prepublishOnly": "echo 'Use \"npm run release\" instead' && false",
+    "prepare": "node qemu/qemu.js pack",
+    "release": "node qemu/qemu.js publish"
   },
   "license": "AGPL-3.0",
   "dependencies": {
@@ -42,28 +45,5 @@
     "prebuild": "build/qemu/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz",
     "require": "./build/koffi.node",
     "napi": 8
-  },
-  "files": [
-    "src",
-    "doc",
-    "benchmark/CMakeLists.txt",
-    "benchmark/atoi_*",
-    "benchmark/raylib_*",
-    "qemu/qemu.js",
-    "qemu/registry",
-    "test/async.js",
-    "test/callbacks.js",
-    "test/CMakeLists.txt",
-    "test/misc.c",
-    "test/misc.def",
-    "test/raylib.js",
-    "test/sqlite.js",
-    "test/sync.js",
-    "vendor",
-    "LICENSE.txt",
-    "README.md",
-    "ChangeLog.md",
-    "CMakeLists.txt",
-    "build/qemu/*/*.tar.gz"
-  ]
+  }
 }
