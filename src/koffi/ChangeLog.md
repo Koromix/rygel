@@ -2,6 +2,17 @@
 
 ## History
 
+### Koffi 2.1.4
+
+**Main changes:**
+
+- Increase maximum type size from 32 kiB to 64 MiB
+- Add configurable option for maximum type size
+
+**Other changes:**
+
+- Moved Koffi to a new repository: https://github.com/Koromix/rygel/
+
 ### Koffi 2.1.3
 
 **Main changes:**
