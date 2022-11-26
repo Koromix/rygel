@@ -459,16 +459,16 @@ async function prepare(dist_dir) {
 
     console.log('>> Prepare NPM package');
     {
+        let build_dir = dist_dir + '/src/koffi/build/' + version;
+
         unlink_recursive(dist_dir);
         fs.mkdirSync(dist_dir, { mode: 0o755, recursive: true });
 
         copy_recursive(snapshot_dir, dist_dir);
-
-        fs.mkdirSync(dist_dir + '/build', { mode: 0o755 });
-        fs.mkdirSync(dist_dir + '/build/' + version, { mode: 0o755 });
+        fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
 
         for (let artifact of artifacts) {
-            let dest_filename = dist_dir + '/build/' + version + '/' + path.basename(artifact);
+            let dest_filename = build_dir + '/' + path.basename(artifact);
             fs.copyFileSync(artifact, dest_filename);
         }
 
@@ -479,8 +479,12 @@ async function prepare(dist_dir) {
             install: "cnoke --prebuild -d src/koffi",
             test: "node src/koffi/qemu/qemu.js test"
         };
+        pkg.cnoke.prebuild = "src/koffi/" + pkg.cnoke.prebuild;
+        pkg.cnoke.require = "./src/koffi/build/koffi.node";
 
         fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
+        fs.unlinkSync(dist_dir + '/src/koffi/package.json', '');
+        fs.unlinkSync(dist_dir + '/src/koffi/.gitignore', '');
     }
 
     return true;

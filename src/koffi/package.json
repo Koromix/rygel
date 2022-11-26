@@ -42,7 +42,7 @@
     "tar": "^6.1.11"
   },
   "cnoke": {
-    "prebuild": "build/qemu/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz",
+    "prebuild": "build/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz",
     "require": "./build/koffi.node",
     "napi": 8
   }
