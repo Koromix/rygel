@@ -618,8 +618,9 @@ retry_pwd:
             sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
-        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash, admin, local_key, confirm)
-                              VALUES (1, ?1, ?2, 1, ?3, ?4))", username, hash, local_key, totp ? "TOTP" : nullptr))
+        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
+                                                     change_password, admin, local_key, confirm)
+                              VALUES (1, ?1, ?2, 0, 1, ?3, ?4))", username, hash, local_key, totp ? "TOTP" : nullptr))
             return 1;
     }
 
@@ -2259,8 +2260,8 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                     return false;
             }
 
-            // It would be much better to do this bu ATTACHing the old database and do the copy
-            // in SQL Unfortunately this triggers memory problems in SQLite Multiple Ciphers and
+            // It would be much better to do this by ATTACHing the old database and do the copy
+            // in SQL. Unfortunately this triggers memory problems in SQLite Multiple Ciphers and
             // I don't have time to investigate this right now.
             if (restore_users) {
                 bool success = gp_domain.db.RunMany(R"(
@@ -2391,6 +2392,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         const char *username;
         const char *password;
         bool force_password = false;
+        bool change_password = false;
         const char *confirm;
         const char *email;
         const char *phone;
@@ -2402,6 +2404,9 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             password = values.FindValue("password", nullptr);
             if (const char *str = values.FindValue("force_password", nullptr); str) {
                 valid &= ParseBool(str, &force_password);
+            }
+            if (const char *str = values.FindValue("change_password", nullptr); str) {
+                valid &= ParseBool(str, &change_password);
             }
             confirm = values.FindValue("confirm", nullptr);
             email = values.FindValue("email", nullptr);
@@ -2489,10 +2494,10 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             // Create user
-            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, email, phone,
-                                                            admin, local_key, confirm)
-                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
-                                  username, hash, email, phone, 0 + admin, local_key, confirm))
+            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, change_password,
+                                                            email, phone, admin, local_key, confirm)
+                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
+                                  username, hash, 0 + change_password, email, phone, 0 + admin, local_key, confirm))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -2533,6 +2538,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         const char *username;
         const char *password;
         bool force_password = false;
+        bool change_password = false;
         const char *confirm;
         bool set_confirm = false;
         bool reset_secret = false;
@@ -2554,6 +2560,9 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             password = values.FindValue("password", nullptr);
             if (const char *str = values.FindValue("force_password", nullptr); str) {
                 valid &= ParseBool(str, &force_password);
+            }
+            if (const char *str = values.FindValue("change_password", nullptr); str) {
+                valid &= ParseBool(str, &change_password);
             }
             confirm = values.FindValue("confirm", nullptr);
             email = values.FindValue("email", nullptr);
@@ -2647,6 +2656,8 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (username && !gp_domain.db.Run("UPDATE dom_users SET username = ?2 WHERE userid = ?1", userid, username))
                 return false;
             if (password && !gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
+                return false;
+            if (change_password && !gp_domain.db.Run("UPDATE dom_users SET change_password = ?2 WHERE userid = ?1", userid, 0 + change_password))
                 return false;
             if (set_confirm && !gp_domain.db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm))
                 return false;

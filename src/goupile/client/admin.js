@@ -683,6 +683,9 @@ function AdminController() {
                 disabled: password.value == null,
                 value: false, untoggle: false
             });
+            let change_password = d.boolean('change_password', 'Exiger un changement de mot de passe', {
+                value: true, untoggle: false
+            });
             if (password.value != null && password2.value != null) {
                 if (password.value !== password2.value) {
                     password2.error('Les mots de passe sont différents');
@@ -708,6 +711,7 @@ function AdminController() {
                 query.set('username', username.value);
                 query.set('password', password.value);
                 query.set('force_password', force_password.value ? 1 : 0);
+                query.set('change_password', change_password.value ? 1 : 0);
                 query.set('confirm', confirm.value || '');
                 if (email.value != null)
                     query.set('email', email.value);
@@ -816,6 +820,10 @@ function AdminController() {
                         disabled: password.value == null,
                         value: false, untoggle: false
                     });
+                    let change_password = d.boolean('change_password', 'Exiger un changement de mot de passe', {
+                        value: password.value != null,
+                        untoggle: false
+                    });
                     if (password.value != null && password2.value != null) {
                         if (password.value !== password2.value) {
                             password2.error('Les mots de passe sont différents');
@@ -849,6 +857,7 @@ function AdminController() {
                         if (password.value != null)
                             query.set('password', password.value);
                         query.set('force_password', 0 + force_password.value);
+                        query.set('change_password', 0 + change_password.value);
                         query.set('confirm', confirm.value || '');
                         query.set('reset_secret', 0 + reset_secret.value);
                         if (email.value != null)

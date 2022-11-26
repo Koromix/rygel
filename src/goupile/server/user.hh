@@ -85,6 +85,7 @@ public:
     int64_t userid;
     int64_t admin_until;
     char local_key[45];
+    bool change_password;
     std::atomic<SessionConfirm> confirm;
     char secret[33]; // Lock mutex to change
     char username[];
@@ -112,7 +113,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 void HandleSessionLogout(const http_RequestInfo &request, http_IO *io);
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
-void HandleChangePassword(const http_RequestInfo &request, http_IO *io);
+void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io);
 void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io);
 void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);

@@ -206,6 +206,12 @@ const goupile = new function() {
             try {
                 if (new_profile.confirm == null)
                     [new_profile, password] = await runPasswordScreen(e, initial);
+                if (new_profile.confirm == 'password') {
+                    await runChangePassword(e, true);
+
+                    let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
+                    new_profile = await response.json();
+                }
                 if (new_profile.confirm != null)
                     new_profile = await runConfirmScreen(e, initial, new_profile.confirm);
             } catch (err) {
@@ -368,9 +374,22 @@ const goupile = new function() {
         }
     }
 
-    this.runChangePasswordDialog = function(e) {
-        return ui.runDialog(e, 'Changement de mot de passe', {}, (d, resolve, reject) => {
-            let old_password = d.password('*old_password', 'Ancien mot de passe');
+    this.runChangePasswordDialog = function(e) { return runChangePassword(e, false); };
+
+    function runChangePassword(e, forced) {
+        let title = forced ? null : 'Changement de mot de passe';
+
+        return ui.runDialog(e, title, { fixed: forced }, (d, resolve, reject) => {
+            if (forced) {
+                d.output(html`
+                    <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
+                    <div id="gp_title">${ENV.title}</div>
+                    <br/><br/>
+                    Veuillez saisir un nouveau mot de passe.
+                `);
+            }
+
+            let old_password = !forced ? d.password('*old_password', 'Ancien mot de passe') : null;
             let new_password = d.password('*new_password', 'Nouveau mot de passe');
             let new_password2 = d.password('*new_password2', null, {
                 placeholder: 'Confirmation',
@@ -384,7 +403,8 @@ const goupile = new function() {
 
                 try {
                     let query = new URLSearchParams;
-                    query.set('old_password', old_password.value);
+                    if (old_password != null)
+                        query.set('old_password', old_password.value);
                     query.set('new_password', new_password.value);
 
                     let response = await net.fetch(`${ENV.urls.instance}api/change/password`, {
@@ -407,7 +427,7 @@ const goupile = new function() {
                 }
             });
         });
-    };
+    }
 
     this.runResetTOTP = async function(e) {
         let qrcode = document.createElement('img');

@@ -63,6 +63,8 @@ static HashTable<EventInfo::Key, EventInfo *> events_map;
 
 bool SessionInfo::IsAdmin() const
 {
+    if (change_password)
+        return false;
     if (confirm != SessionConfirm::None)
         return false;
     if (!admin_until || admin_until <= GetMonotonicTime())
@@ -79,6 +81,8 @@ bool SessionInfo::HasPermission(const InstanceHolder *instance, UserPermission p
 
 SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 {
+    if (change_password)
+        return nullptr;
     if (confirm != SessionConfirm::None)
         return nullptr;
 
@@ -192,7 +196,10 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
         // Atomic load
         SessionConfirm confirm = session->confirm;
 
-        if (confirm != SessionConfirm::None) {
+        if (session->change_password) {
+            json.Key("authorized"); json.Bool(false);
+            json.Key("confirm"); json.String("password");
+        } else if (confirm != SessionConfirm::None) {
             json.Key("authorized"); json.Bool(false);
 
             switch (confirm) {
@@ -445,8 +452,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             InstanceHolder *master = instance->master;
 
             if (!instance->slaves.len) {
-                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin,
-                                                    u.local_key, u.confirm, u.secret
+                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
+                                                    u.admin, u.local_key, u.confirm, u.secret
                                              FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
@@ -462,8 +469,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             if (!stmt.IsRow() && master->slaves.len) {
                 instance = master;
 
-                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin,
-                                                    u.local_key, u.confirm, u.secret
+                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
+                                                    u.admin, u.local_key, u.confirm, u.secret
                                              FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
@@ -476,8 +483,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 stmt.Run();
             }
         } else {
-            if (!gp_domain.db.Prepare(R"(SELECT userid, password_hash, admin,
-                                                local_key, confirm, secret
+            if (!gp_domain.db.Prepare(R"(SELECT userid, password_hash, change_password,
+                                                admin, local_key, confirm, secret
                                          FROM dom_users
                                          WHERE username = ?1 AND admin = 1)", &stmt))
                 return;
@@ -489,10 +496,11 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
         if (stmt.IsRow()) {
             int64_t userid = sqlite3_column_int64(stmt, 0);
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
-            bool admin = (sqlite3_column_int(stmt, 2) == 1);
-            const char *local_key = (const char *)sqlite3_column_text(stmt, 3);
-            const char *confirm = (const char *)sqlite3_column_text(stmt, 4);
-            const char *secret = (const char *)sqlite3_column_text(stmt, 5);
+            bool change_password = (sqlite3_column_int(stmt, 2) == 1);
+            bool admin = (sqlite3_column_int(stmt, 3) == 1);
+            const char *local_key = (const char *)sqlite3_column_text(stmt, 4);
+            const char *confirm = (const char *)sqlite3_column_text(stmt, 5);
+            const char *secret = (const char *)sqlite3_column_text(stmt, 6);
 
             if (CountEvents(request.client_addr, username) >= BanThreshold) {
                 LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
@@ -530,6 +538,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                     LogError("Invalid confirmation method '%1'", confirm);
                     return;
                 }
+                session->change_password = change_password;
 
                 if (RG_LIKELY(session)) {
                     if (admin) {
@@ -1021,7 +1030,7 @@ void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &requ
     WriteProfileJson(session.GetRaw(), instance, request, io);
 }
 
-void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
+void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
@@ -1038,7 +1047,7 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
         io->AttachError(403);
         return;
     }
-    if (session->confirm != SessionConfirm::None) {
+    if (session->confirm != SessionConfirm::None && !session->change_password) {
         LogError("You must be fully logged in before you do that");
         io->AttachError(403);
         return;
@@ -1057,10 +1066,14 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
 
             bool valid = true;
 
-            old_password = values.FindValue("old_password", nullptr);
-            if (!old_password) {
-                LogError("Missing 'old_password' parameter");
-                valid = false;
+            if (!session->change_password) {
+                old_password = values.FindValue("old_password", nullptr);
+                if (!old_password) {
+                    LogError("Missing 'old_password' parameter");
+                    valid = false;
+                }
+            } else {
+                old_password = nullptr;
             }
 
             new_password = values.FindValue("new_password", nullptr);
@@ -1075,13 +1088,10 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
             }
         }
 
+        RG_ASSERT(old_password || session->change_password);
+
         // Check password strength
         if (!pwd_CheckPassword(new_password, session->username)) {
-            io->AttachError(422);
-            return;
-        }
-        if (TestStr(new_password, old_password)) {
-            LogError("This is the same password");
             io->AttachError(422);
             return;
         }
@@ -1107,14 +1117,28 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
 
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
 
-            if (crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
-                // Enforce constant delay if authentification fails
-                int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-                WaitDelay(safety_delay);
+            if (old_password) {
+                if (crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
+                    // Enforce constant delay if authentification fails
+                    int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+                    WaitDelay(safety_delay);
 
-                LogError("Invalid password");
-                io->AttachError(403);
-                return;
+                    LogError("Invalid password");
+                    io->AttachError(403);
+                    return;
+                }
+
+                if (TestStr(new_password, old_password)) {
+                    LogError("You cannot reuse the same password");
+                    io->AttachError(422);
+                    return;
+                }
+            } else {
+                if (crypto_pwhash_str_verify(password_hash, new_password, strlen(new_password)) == 0) {
+                    LogError("You cannot reuse the same password");
+                    io->AttachError(422);
+                    return;
+                }
             }
         }
 
@@ -1130,7 +1154,7 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
                                      VALUES (?1, ?2, ?3, ?4))",
                                   time, request.client_addr, "change_password", session->username))
                 return false;
-            if (!gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1",
+            if (!gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2, change_password = 0 WHERE userid = ?1",
                                   session->userid, new_hash))
                 return false;
 
@@ -1139,7 +1163,12 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
         if (!success)
             return;
 
-        io->AttachText(200, "Done!");
+        if (session->change_password) {
+            session->change_password = false;
+            WriteProfileJson(session.GetRaw(), instance, request, io);
+        } else {
+            io->AttachText(200, "Done!");
+        }
     });
 }
 
