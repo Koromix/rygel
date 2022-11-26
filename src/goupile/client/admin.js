@@ -679,18 +679,14 @@ function AdminController() {
                 placeholder: 'Confirmation',
                 help: 'Doit contenir au moins 8 caractères de 3 classes différentes'
             });
-            let force_password = d.boolean('force_password', 'Accepter un mot de passe simple', {
-                disabled: password.value == null,
-                value: false, untoggle: false
-            });
             let change_password = d.boolean('change_password', 'Exiger un changement de mot de passe', {
                 value: true, untoggle: false
             });
             if (password.value != null && password2.value != null) {
                 if (password.value !== password2.value) {
                     password2.error('Les mots de passe sont différents');
-                } else if (!force_password.value && password.value.length < 8) {
-                    password2.error('Mot de passe trop court', true);
+                } else if (password.value.length < 8) {
+                    password2.error('Mot de passe trop court');
                 }
             }
             let confirm = d.enumDrop('confirm', 'Méthode de confirmation', [
@@ -710,7 +706,6 @@ function AdminController() {
                 let query = new URLSearchParams;
                 query.set('username', username.value);
                 query.set('password', password.value);
-                query.set('force_password', force_password.value ? 1 : 0);
                 query.set('change_password', change_password.value ? 1 : 0);
                 query.set('confirm', confirm.value || '');
                 if (email.value != null)
@@ -816,10 +811,6 @@ function AdminController() {
                         ],
                         mandatory: password.value != null
                     });
-                    let force_password = d.boolean('force_password', 'Accepter un mot de passe simple', {
-                        disabled: password.value == null,
-                        value: false, untoggle: false
-                    });
                     let change_password = d.boolean('change_password', 'Exiger un changement de mot de passe', {
                         value: password.value != null,
                         untoggle: false
@@ -827,8 +818,8 @@ function AdminController() {
                     if (password.value != null && password2.value != null) {
                         if (password.value !== password2.value) {
                             password2.error('Les mots de passe sont différents');
-                        } else if (!force_password.value && password.value.length < 8) {
-                            password2.error('Mot de passe trop court', true);
+                        } else if (password.value.length < 8) {
+                            password2.error('Mot de passe trop court');
                         }
                     }
                     let confirm = d.enumDrop('confirm', 'Méthode de confirmation', [
@@ -856,7 +847,6 @@ function AdminController() {
                             query.set('username', username.value);
                         if (password.value != null)
                             query.set('password', password.value);
-                        query.set('force_password', 0 + force_password.value);
                         query.set('change_password', 0 + change_password.value);
                         query.set('confirm', confirm.value || '');
                         query.set('reset_secret', 0 + reset_secret.value);
