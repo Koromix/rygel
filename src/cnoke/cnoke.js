@@ -410,6 +410,8 @@ async function build() {
             } else {
                 if (path_is_absolute(url)) {
                     archive_filename = url;
+                } else if (package_dir != null) {
+                    archive_filename = package_dir + '/' + url;
                 } else {
                     archive_filename = project_dir + '/' + url;
                 }
