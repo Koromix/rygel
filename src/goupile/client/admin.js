@@ -19,6 +19,7 @@ function AdminController() {
     let archives;
 
     let selected_instance;
+    let all_users;
     let selected_permissions;
 
     this.init = async function() {
@@ -98,7 +99,9 @@ function AdminController() {
                                 </td>
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
-                                <td><a role="button" tabindex="0" href=${util.pasteURL('/admin/', { select: instance.key })} @click=${e => ui.setPanelState('users', true)}>Droits</a></td>
+                                <td><a role="button" tabindex="0" href=${util.pasteURL('/admin/', { select: instance.key })} 
+                                       @click=${ui.wrapAction(instance != selected_instance ? (e => ui.setPanelState('users', true))
+                                                                                            : (e => { self.go(e, '/admin/'); e.preventDefault(); }))}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
                             </tr>
                         `)}
@@ -109,13 +112,19 @@ function AdminController() {
     }
 
     function renderUsers() {
+        let visible_users = users.filter(user => selected_instance == null || all_users || selected_permissions.permissions[user.userid]);
+
         return html`
             <div class="padded" style="flex-grow: 1.5;">
                 <div class="ui_quick">
                     <a @click=${ui.wrapAction(runCreateUserDialog)}>Créer un utilisateur</a>
                     <div style="flex: 1;"></div>
                     ${selected_instance != null ? html`
-                        Droits sur ${selected_instance.key} (<a href="/admin/">déselectionner</a>)
+                        <div class="fm_check">
+                            <input id="all_users" type="checkbox" .checked=${all_users}
+                                   @change=${ui.wrapAction(e => { all_users = e.target.checked; return self.go(); })} />
+                            <label for="all_users">Afficher tout le monde</label>
+                        </div>
                         <div style="flex: 1;"></div>
                     ` : ''}
                     Utilisateurs (<a @click=${ui.wrapAction(e => { users = null; selected_permissions = null; return self.go(); })}>rafraichir</a>)
@@ -138,8 +147,8 @@ function AdminController() {
                     </colgroup>
 
                     <tbody>
-                        ${!users.length ? html`<tr><td colspan=${selected_instance != null ? 4 : 3}>Aucun utilisateur</td></tr>` : ''}
-                        ${users.map(user => {
+                        ${!visible_users.length ? html`<tr><td colspan=${selected_instance != null ? 4 : 3}>Aucun utilisateur</td></tr>` : ''}
+                        ${visible_users.map(user => {
                             let permissions;
                             if (selected_instance != null) {
                                 permissions = selected_permissions.permissions[user.userid] || [];
@@ -160,10 +169,11 @@ function AdminController() {
                                     <td><a role="button" tabindex="0"
                                            @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
                                     ${selected_instance != null ? html`
-                                        <td class=${selected_instance.master != null ? 'missing' : ''}
+                                        <td class=${!permissions.length ? 'missing' : ''}
                                             style="white-space: normal;">
                                             ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : ''}
                                             ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
+                                            ${!permissions.length ? 'Non assigné' : ''}
                                         </td>
                                         <td><a role="button" tabindex="0"
                                                @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user,
@@ -371,6 +381,7 @@ function AdminController() {
         let new_users = users;
         let new_archives = archives;
         let new_selected = selected_instance;
+        let new_all_users = all_users;
         let new_permissions = selected_permissions;
         let explicit_panels = false;
 
@@ -399,6 +410,12 @@ function AdminController() {
                     throw new Error(`Cannot select instance '${select}' (does not exist)`);
             } else {
                 new_selected = null;
+            }
+
+            if (url.searchParams.has('all')) {
+                new_all_users = (url.searchParams.get('all') == 1);
+            } else if (new_all_users == null) {
+                new_all_users = true;
             }
         }
 
@@ -433,6 +450,7 @@ function AdminController() {
         archives = new_archives;
         selected_instance = new_selected;
         selected_permissions = new_permissions;
+        all_users = new_all_users;
 
         // Update browser URL
         {
@@ -440,6 +458,7 @@ function AdminController() {
 
             if (selected_instance != null)
                 params.select = selected_instance.key;
+            params.all = 0 + all_users;
             params.p = ui.savePanels().join('|') || null;
 
             let url = util.pasteURL('/admin/', params);
