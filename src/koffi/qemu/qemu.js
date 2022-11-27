@@ -296,7 +296,9 @@ async function pack() {
     if (!success)
         return false;
 
-    execFileSync('npm', ['pack', '--pack-destination', pack_dir], {
+    let npm = (process.platform == 'win32') ? 'npm.cmd' : 'npm';
+
+    execFileSync(npm, ['pack', '--pack-destination', pack_dir], {
         cwd: dist_dir,
         stdio: 'inherit',
     });
@@ -309,7 +311,9 @@ async function publish() {
     if (!success)
         return false;
 
-    execFileSync('npm', ['publish'], {
+    let npm = (process.platform == 'win32') ? 'npm.cmd' : 'npm';
+
+    execFileSync(npm, ['publish'], {
         cwd: dist_dir,
         stdio: 'inherit'
     });
@@ -498,7 +502,7 @@ function snapshot() {
 
     console.log('>> Snapshot code...');
     copy_recursive(root_dir, snapshot_dir, filename => {
-        let parts = filename.split(/[\/\\]/);
+        let parts = filename.split('/');
 
         if (parts[0] == 'src' && parts[1] == 'core') {
             return parts[2] == null || parts[2] == 'libcc';
@@ -783,7 +787,7 @@ function check_qemu() {
 
 function copy_recursive(src, dest, validate = filename => true) {
     let proc = spawnSync('git', ['ls-files', '-i', '-o', '--exclude-standard', '--directory'], { cwd: src });
-    let ignored = new Set(proc.stdout.toString().split('\n').map(it => it.trim().replace(/[\\\/+]$/, '')).filter(it => it));
+    let ignored = new Set(proc.stdout.toString().split('\n').map(it => it.trim().replace(/[\\\/+]$/, '').replaceAll('\\', '/')).filter(it => it));
 
     recurse(src, dest, '');
 
@@ -793,7 +797,7 @@ function copy_recursive(src, dest, validate = filename => true) {
         for (let entry of entries) {
             let src_filename = path.join(src, entry.name);
             let dest_filename = path.join(dest, entry.name);
-            let filename = path.join(nice, entry.name);
+            let filename = nice + (nice ? '/' : '') + entry.name;
 
             if (ignored.has(filename))
                 continue;
