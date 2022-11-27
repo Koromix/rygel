@@ -1699,6 +1699,14 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
+    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    if (!instance) {
+        LogError("Instance '%1' does not exist", instance_key);
+        io->AttachError(404);
+        return;
+    }
+    RG_DEFER { instance->Unref(); };
+
     sq_Statement stmt;
     if (!gp_domain.db.Prepare(R"(SELECT userid, permissions FROM dom_permissions
                                  WHERE instance = ?1
@@ -1716,6 +1724,14 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         int64_t userid = sqlite3_column_int64(stmt, 0);
         uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
         char buf[128];
+
+        if (instance->master != instance) {
+            permissions &= UserPermissionSlaveMask;
+        } else if (instance->slaves.len) {
+            permissions &= UserPermissionMasterMask;
+        }
+        if (!permissions)
+            continue;
 
         json.Key(Fmt(buf, "%1", userid).ptr); json.StartArray();
         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
