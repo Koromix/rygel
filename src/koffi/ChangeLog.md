@@ -2,6 +2,12 @@
 
 ## History
 
+### Koffi 2.1.5
+
+**Main fixes:**
+
+- Add missing README.md file to NPM package
+
 ### Koffi 2.1.4
 
 **Main changes:**
