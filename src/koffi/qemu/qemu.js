@@ -487,8 +487,12 @@ async function prepare(dist_dir) {
         pkg.cnoke.require = "./src/koffi/build/koffi.node";
 
         fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
-        fs.unlinkSync(dist_dir + '/src/koffi/package.json', '');
-        fs.unlinkSync(dist_dir + '/src/koffi/.gitignore', '');
+        fs.unlinkSync(dist_dir + '/src/koffi/package.json');
+        fs.unlinkSync(dist_dir + '/src/koffi/.gitignore');
+        fs.renameSync(dist_dir + '/src/koffi/README.md', dist_dir + '/README.md');
+        fs.renameSync(dist_dir + '/src/koffi/LICENSE.txt', dist_dir + '/LICENSE.txt');
+        fs.renameSync(dist_dir + '/src/koffi/ChangeLog.md', dist_dir + '/ChangeLog.md');
+        fs.renameSync(dist_dir + '/src/koffi/doc', dist_dir + '/doc');
     }
 
     return true;
