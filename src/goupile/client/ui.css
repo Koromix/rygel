@@ -485,10 +485,10 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
 
 .ui_tag {
     display: inline-block;
-    padding: 0px 4px;
+    padding: 0px 4px 1px 4px;
     border-radius: 4px;
     color: white;
-    font-size: 0.8em;
+    font-size: 0.9em;
     white-space: nowrap;
 }
 
