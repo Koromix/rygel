@@ -807,7 +807,7 @@ function FormBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${options.readonly ? 'fm_multi readonly' : 'fm_multi'}
+            <div class=${options.readonly ? 'fm_check readonly' : 'fm_check'}
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) =>
                     html`<input type="checkbox" id=${`${id}.${i}`} value=${util.valueToStr(p.value)}

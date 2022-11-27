@@ -266,17 +266,15 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     border-color: var(--page_color);
 }
 
-.fm_enum.readonly, .fm_radio.readonly, .fm_multi.readonly, .fm_slider.readonly {
+.fm_enum.readonly, .fm_radio.readonly, .fm_check.readonly, .fm_slider.readonly {
     pointer-events: none;
     cursor: inherit;
 }
 
 /* -------------------- Nice radio and checkboxes -------------------- */
 
-.fm_radio {
-    display: inline-block;
-    padding-top: 3px;
-}
+.fm_radio { display: inline-block; }
+.fm_radio + .fm_radio { padding-top: 3px; }
 .fm_radio > input {
     position: absolute;
     opacity: 0;
@@ -324,22 +322,20 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 .fm_radio > input:hover + label::before { border-color: var(--outline_color); }
 .fm_radio > input:hover + label::after { background-color: var(--outline_color); }
 
-.fm_multi {
-    display: inline-block;
-    padding-top: 3px;
-}
-.fm_multi > input {
+.fm_check { display: inline-block; }
+.fm_check + .fm_check { padding-top: 3px; }
+.fm_check > input {
     position: absolute;
     opacity: 0;
 }
-.fm_multi > input + label {
+.fm_check > input + label {
     display: inline-block;
     position: relative;
     padding-left: calc(1.18em + 10px);
     line-height: 20px;
     cursor: pointer;
 }
-.fm_multi > input + label::before {
+.fm_check > input + label::before {
     display: inline-block;
     position: absolute;
     left: 2px;
@@ -354,7 +350,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
 }
-.fm_multi > input + label::after {
+.fm_check > input + label::after {
     display: inline-block;
     position: absolute;
     left: 0.4em;
@@ -367,9 +363,9 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
 }
-.fm_multi > input:checked + label::after { content: ''; }
-.fm_multi > input:hover + label::before,
-    .fm_multi > input:hover + label::after { border-color: var(--outline_color); }
+.fm_check > input:checked + label::after { content: ''; }
+.fm_check > input:hover + label::before,
+    .fm_check > input:hover + label::after { border-color: var(--outline_color); }
 
 @media (pointer: coarse) {
     .fm_radio > input + label {
@@ -388,16 +384,16 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
         border: 5px solid white;
     }
 
-    .fm_multi > input + label {
+    .fm_check > input + label {
         padding-left: 32px;
         line-height: 28px;
     }
-    .fm_multi > input + label::before {
+    .fm_check > input + label::before {
         top: 0;
         width: 22px;
         height: 22px;
     }
-    .fm_multi > input + label::after {
+    .fm_check > input + label::after {
         left: 7px;
         top: 4px;
         width: 12px;
