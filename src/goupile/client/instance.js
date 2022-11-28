@@ -233,9 +233,6 @@ function InstanceController() {
                     <button class=${'icon' + (ui.isPanelActive('data') ? ' active' : '')}
                             style="background-position-y: calc(-274px + 1.2em);"
                             @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
-                    <button class=${'icon' + (ui.isPanelActive('view') && !form_record.chain[0].saved ? ' active' : '')}
-                            style="background-position-y: calc(-758px + 1.2em);"
-                            @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Ajouter</button>
                 ` : ''}
                 ${profile.lock != null ? html`
                     <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
@@ -250,6 +247,7 @@ function InstanceController() {
                             ${form_record.historical ? html`<br/><span class="ins_note">${form_record.ctime.toLocaleString()}</span>` : ''}
                         </span>
                     </button>
+                    <div style="width: 15px;"></div>
                 ` : ''}
                 ${menu && wide ? route.form.chain.map(form => {
                     let meta = form_record.map[form.key];
@@ -289,6 +287,11 @@ function InstanceController() {
                     })}
                 ` : ''}
                 ${title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
+                ${app.panels.data && (!ui.isPanelActive('view') || form_record.chain[0].saved) ? html`
+                    <div style="width: 15px;"></div>
+                    <button class="icon" style="background-position-y: calc(-758px + 1.2em);"
+                            @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Ajouter</button>
+                ` : ''}
                 <div style="flex: 1; min-width: 15px;"></div>
 
                 ${!goupile.isLocked() && profile.instances == null ?
@@ -416,10 +419,9 @@ function InstanceController() {
             throw new Error(`Unknown item type '${item.type}'`);
         }
 
-        active &= ui.isPanelActive('view');
-
         return html`
-            <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}>
+            <button class=${active && ui.isPanelActive('view') ? 'active' : ''}
+                    @click=${ui.wrapAction(e => active ? togglePanel(e, 'view', true) : self.go(e, url))}>
                 <div style="flex: 1;">${title}</div>
                 ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
            </button>
