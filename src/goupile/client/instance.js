@@ -2128,11 +2128,13 @@ function InstanceController() {
             form_record = new_record;
 
             let new_state = new FormState(new_record.values);
+
             new_state.changeHandler = handleStateChange;
             if (form_state != null && copy_ui) {
                 new_state.state_tabs = form_state.state_tabs;
                 new_state.state_sections = form_state.state_sections;
-                new_state.take_delayed = form_state.take_delayed;
+                if (new_record.saved && new_record.ulid == form_record.ulid)
+                    new_state.take_delayed = form_state.take_delayed;
             }
             form_state = new_state;
 
