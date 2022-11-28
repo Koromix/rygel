@@ -480,7 +480,7 @@ function InstanceController() {
             active: false
         });
         tabs.push({
-            title: 'Page',
+            title: 'Formulaire',
             filename: route.page.getOption('filename', form_record),
             active: false
         });
