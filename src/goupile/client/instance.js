@@ -165,7 +165,9 @@ function InstanceController() {
         ui.createPanel('data', ['view'], null, renderData);
         ui.createPanel('view', [], null, renderPage);
 
-        if (app.panels.data) {
+        if (app.panels.editor) {
+            ui.setPanelState('editor', true);
+        } else if (app.panels.data) {
             ui.setPanelState('data', true);
         } else if (app.panels.view) {
             ui.setPanelState('view', true);
@@ -192,19 +194,36 @@ function InstanceController() {
         let menu = (profile.lock == null && (route.form.menu.length > 1 || route.form.chain.length > 1));
         let wide = (route.form.chain[0].menu.length > 3);
 
-        let user_icon;
-        if (profile.develop)  {
-            user_icon = goupile.isLoggedOnline() ? 670 : 714;
-        } else {
-            user_icon = goupile.isLoggedOnline() ? 450 : 494;
-        }
+        let user_icon = goupile.isLoggedOnline() ? 450 : 494;
+        let page_filename = route.page.getOption('filename', form_record);
 
         return html`
             <nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'} id="ui_top" style="z-index: 999999;">
                 ${app.panels.editor ? html`
-                    <button class=${'icon' + (ui.isPanelActive('editor') ? ' active' : '')}
-                            style="background-position-y: calc(-230px + 1.2em);"
-                            @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
+                    <div class="drop">
+                        <button class=${'icon' + (ui.isPanelActive('editor') ? ' active' : '')}
+                                style="background-position-y: calc(-230px + 1.2em);"
+                                @click=${ui.deployMenu}>Code</button>
+                        <div>
+                            <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>
+                                <div style="flex: 1;">Mode conception</div>
+                                <div>&nbsp;✓\uFE0E</div>
+                            </button>
+                            <hr/>
+                            <button class=${editor_filename === 'main.js' ? 'active' : ''}
+                                    @click=${ui.wrapAction(e => toggleEditorFile(e, 'main.js'))}>Application</button>
+                            <button class=${editor_filename === page_filename ? 'active' : ''}
+                                    @click=${ui.wrapAction(e => toggleEditorFile(e, page_filename))}>Formulaire</button>
+                        </div>
+                    </div>
+                ` : ''}
+                ${!app.panels.editor && goupile.hasPermission('admin_code') ? html`
+                    <div id="ins_drop" class="drop">
+                        <button class="icon" style="background-position-y: calc(-670px + 1.2em);" @click=${ui.deployMenu}>Conception</button>
+                        <div>
+                            <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>Mode conception</button>
+                        </div>
+                    </div>
                 ` : ''}
                 ${app.panels.data ? html`
                     <button class=${'icon' + (ui.isPanelActive('data') ? ' active' : '')}
@@ -296,13 +315,6 @@ function InstanceController() {
                                 <hr/>
                             ` : ''}
                             ${profile.type === 'login' ? html`
-                                ${goupile.hasPermission('admin_code') ? html`
-                                    <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>
-                                        <div style="flex: 1;">Mode conception</div>
-                                        ${profile.develop ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
-                                    </button>
-                                    <hr/>
-                                ` : ''}
                                 <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
                                 <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
                                 <hr/>
@@ -431,26 +443,20 @@ function InstanceController() {
     }
 
     function renderEditor() {
-        let filename = route.page.getOption('filename', form_record);
-
-        let tabs = [];
-        tabs.push({
-            title: 'Application',
-            filename: 'main.js'
-        });
-        tabs.push({
-            title: 'Formulaire',
-            filename: filename
-        });
-
         // Ask ACE to adjust if needed, it needs to happen after the render
         setTimeout(() => editor_ace.resize(false), 0);
+
+        let tabs = getEditorTabs();
+        let active_tab = tabs.find(tab => tab.active);
 
         return html`
             <div style="--menu_color: #1d1d1d; --menu_color_n1: #2c2c2c;">
                 <div class="ui_toolbar">
-                    ${tabs.map(tab => html`<button class=${editor_filename === tab.filename ? 'active' : ''}
-                                                   @click=${ui.wrapAction(e => toggleEditorFile(tab.filename))}>${tab.title}</button>`)}
+                    <div class="drop">
+                        <button @click=${ui.deployMenu}>${active_tab != null ? active_tab.title : 'Onglets'}</button>
+                        <div>${tabs.map(tab => html`<button class=${tab.active ? 'active' : ''}
+                                                            @click=${!tab.active ? ui.wrapAction(e => toggleEditorFile(e, tab.filename)) : null}>${tab.title}</button>`)}</div>
+                    </div>
                     <div style="flex: 1;"></div>
                     ${editor_filename === 'main.js' ? html`
                         <button ?disabled=${!fileHasChanged('main.js')}
@@ -466,6 +472,25 @@ function InstanceController() {
                 ${editor_el}
             </div>
         `;
+    }
+
+    function getEditorTabs() {
+        let tabs = [];
+        tabs.push({
+            title: 'Application',
+            filename: 'main.js',
+            active: false
+        });
+        tabs.push({
+            title: 'Formulaire',
+            filename: route.page.getOption('filename', form_record),
+            active: false
+        });
+
+        for (let tab of tabs)
+            tab.active = (editor_filename == tab.filename);
+
+        return tabs;
     }
 
     async function applyMainScript() {
@@ -1472,9 +1497,14 @@ function InstanceController() {
         editor_ace.setSession(buffer.session);
     }
 
-    function toggleEditorFile(filename) {
-        editor_filename = filename;
-        return self.run();
+    function toggleEditorFile(e, filename) {
+        if (!ui.isPanelActive('editor') || editor_filename != filename) {
+            editor_filename = filename;
+            return togglePanel(e, 'editor', true);
+        } else {
+            return togglePanel(e, 'editor', false);
+        }
+
     }
 
     async function handleFileChange(filename) {
