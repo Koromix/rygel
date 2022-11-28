@@ -325,9 +325,10 @@ function InstanceController() {
                                 <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
                                 <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
                                 <hr/>
-                                <button ?disabled=${!goupile.hasPermission('data_export')}
-                                        @click=${ui.wrapAction(generateExportKey)}>Générer une clé d'export</button>
-                                <hr/>
+                                ${goupile.hasPermission('data_export') ? html`
+                                    <button @click=${ui.wrapAction(generateExportKey)}>Générer une clé d'export</button>
+                                    <hr/>
+                                ` : ''}
                             ` : ''}
                             ${profile.admin ? html`
                                 <button @click=${e => window.open('/admin/')}>Administration</button>
