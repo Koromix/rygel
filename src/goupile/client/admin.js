@@ -90,7 +90,7 @@ function AdminController() {
                     </colgroup>
 
                     <tbody>
-                        ${!instances.length ? html`<tr><td colspan="4">Aucun projet</td></tr>` : ''}
+                        ${!instances.length ? html`<tr><td colspan="5">Aucun projet</td></tr>` : ''}
                         ${instances.map(instance => html`
                             <tr class=${instance === selected_instance ? 'active' : ''}>
                                 <td style="text-align: left;" class=${instance.master != null ? 'child' : ''}>
@@ -150,7 +150,7 @@ function AdminController() {
                     </colgroup>
 
                     <tbody>
-                        ${!visible_users.length ? html`<tr><td colspan=${selected_instance != null ? 4 : 3}>Aucun utilisateur</td></tr>` : ''}
+                        ${!visible_users.length ? html`<tr><td colspan=${selected_instance != null ? 5 : 4}>Aucun utilisateur</td></tr>` : ''}
                         ${visible_users.map(user => {
                             let permissions;
                             if (selected_instance != null) {

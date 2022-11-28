@@ -564,7 +564,7 @@ function InstanceController() {
                 <button class=${ui.isPanelActive('view') ? 'ui_pin active' : 'ui_pin'}
                         @click=${ui.wrapAction(e => togglePanel(e, 'view'))}></button>
 
-                <div class="ui_quick" style=${visible_rows.length ? 'margin-right: 2.2em;' : ''}>
+                <div class="ui_quick" style="margin-right: 2.2em;">
                     <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
                            @input=${e => { data_filter = e.target.value || null; self.run(); }} />
                     <div style="flex: 1;"></div>
@@ -658,11 +658,11 @@ function InstanceController() {
                                             }
                                         }
                                     })}
-                                    ${row.saved ? html`<th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
+                                    <th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>
                                 </tr>
                             `;
                         })}
-                        ${!visible_rows.length && !recording ? html`<tr><td colspan=${1 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
+                        ${!visible_rows.length && !recording ? html`<tr><td colspan=${2 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
                         ${recording_new ? html`
                             <tr>
                                 <td class="missing">NA</td>
