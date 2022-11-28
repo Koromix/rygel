@@ -1827,11 +1827,13 @@ function InstanceController() {
 
             // Deal with ULID
             if (ulid && ulid !== new_route.ulid) {
-                if (ulid === 'new')
-                    ulid = null;
-
-                new_route.ulid = ulid;
-                new_route.version = null;
+                if (ulid === 'new') {
+                    new_route.ulid = null;
+                    new_route.version = null;
+                } else if (form_record == null || !form_record.chain.some(record => record.ulid === ulid)) {
+                    new_route.ulid = ulid;
+                    new_route.version = null;
+                }
             }
 
             // And with version!

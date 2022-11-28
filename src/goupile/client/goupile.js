@@ -499,11 +499,8 @@ const goupile = new function() {
             if (current_hash) {
                 let el = document.querySelector(current_hash);
 
-                if (el) {
+                if (el != null)
                     el.scrollIntoView();
-                } else {
-                    window.scrollTo(0, 0);
-                }
             }
 
             e.preventDefault();

@@ -455,12 +455,13 @@ html.mobile .ui_table.fixed { table-layout: auto; }
 .ui_busy {
     position: relative;
     cursor: wait !important;
+}
+button.ui_busy {
     opacity: 0.5 !important;
-    white-space: nowrap !important;
     color: rgba(0, 0, 0, 0) !important;
     background-image: none !important;
 }
-.ui_busy::after {
+button.ui_busy::after {
     position: absolute;
     top: calc(50% - 10px);
     left: calc(50% - 10px);
