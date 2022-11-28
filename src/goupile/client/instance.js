@@ -560,10 +560,8 @@ function InstanceController() {
 
         return html`
             <div class="padded">
-                ${app.panels.view && (recording || ui.isPanelActive('view')) ? html`
-                    <button class=${ui.isPanelActive('view') ? 'ui_pin active' : 'ui_pin'}
-                            @click=${ui.wrapAction(e => togglePanel(e, 'view'))}></button>
-                ` : ''}
+                <button class=${ui.isPanelActive('view') ? 'ui_pin active' : 'ui_pin'}
+                        @click=${ui.wrapAction(e => togglePanel(e, 'view'))}></button>
 
                 <div class="ui_quick" style=${visible_rows.length ? 'margin-right: 2.2em;' : ''}>
                     <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
