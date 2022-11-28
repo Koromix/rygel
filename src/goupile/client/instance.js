@@ -397,7 +397,7 @@ function InstanceController() {
             active = (page === route.page);
             url = page.url;
             title = page.title;
-            status = (meta.status[page.form.key] != null);
+            status = (meta.status[page.key] != null);
         } else if (item instanceof FormInfo || item.type === 'form') {
             let form = item.form || item;
 
