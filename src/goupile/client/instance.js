@@ -277,7 +277,7 @@ function InstanceController() {
                                 <div id="ins_drop" class="drop">
                                     <button title=${item.title} class=${active ? 'active' : ''} ?disabled=${!enabled}
                                             @click=${ui.deployMenu}>${item.title}</button>
-                                    <div>${util.mapRange(1, item.form.menu.length, idx => renderDropItem(meta, item.form.menu[idx]))}</div>
+                                    <div>${util.map(item.form.menu, item => renderDropItem(meta, item))}</div>
                                 </div>
                             `;
                         } else {
