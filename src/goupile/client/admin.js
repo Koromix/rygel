@@ -521,30 +521,36 @@ function AdminController() {
             d.pushOptions({untoggle: false});
 
             if (instance.master == null) {
-                d.text('*name', 'Nom', {value: instance.config.name});
+                d.tabs('tabs', () => {
+                    d.tab('Basique', () => {
+                        d.text('*name', 'Nom', {value: instance.config.name});
+                        d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
+                        d.boolean('*allow_guests', 'Autoriser les invités', {value: instance.config.allow_guests});
+                    });
 
-                d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
-                d.enum('*sync_mode', 'Mode de synchronisation', [
-                    ['online', 'En ligne'],
-                    ['mirror', 'Miroir'],
-                    ['offline', 'Hors ligne']
-                ], {value: instance.config.sync_mode});
+                    d.tab('Avancé', () => {
+                        d.enumDrop('*sync_mode', 'Mode de synchronisation', [
+                            ['online', 'En ligne'],
+                            ['mirror', 'Miroir'],
+                            ['offline', 'Hors ligne']
+                        ], {value: instance.config.sync_mode});
 
-                if (d.values.sync_mode == 'offline')
-                    d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key});
-                if (d.values.backup_key != null && !checkCryptoKey(d.values.backup_key))
-                    d.error('backup_key', 'Format de clé non valide');
-                d.text('shared_key', 'Clé locale partagée', {
-                    value: instance.config.shared_key,
-                    hidden: instance.slaves > 0
+                        if (d.values.sync_mode == 'offline')
+                            d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key});
+                        if (d.values.backup_key != null && !checkCryptoKey(d.values.backup_key))
+                            d.error('backup_key', 'Format de clé non valide');
+                        d.text('shared_key', 'Clé locale partagée', {
+                            value: instance.config.shared_key,
+                            hidden: instance.slaves > 0
+                        });
+                        if (instance.slaves > 0 && d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
+                            d.error('shared_key', 'Format de clé non valide');
+                        d.text('token_key', 'Session par token', {value: instance.config.token_key});
+                        if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
+                            d.error('token_key', 'Format de clé non valide');
+                        d.text('auto_key', 'Session de requête', {value: instance.config.auto_key});
+                    });
                 });
-                if (instance.slaves > 0 && d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
-                    d.error('shared_key', 'Format de clé non valide');
-                d.text('token_key', 'Session par token', {value: instance.config.token_key});
-                if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
-                    d.error('token_key', 'Format de clé non valide');
-                d.text('auto_key', 'Session de requête', {value: instance.config.auto_key});
-                d.boolean('allow_guests', 'Autoriser les invités', {value: instance.config.allow_guests});
 
                 d.action('Configurer', {disabled: !d.isValid()}, async () => {
                     let query = new URLSearchParams();
@@ -580,11 +586,17 @@ function AdminController() {
                     }
                 });
             } else {
-                d.text('*name', 'Nom', {value: instance.config.name});
+                d.tabs('tabs', () => {
+                    d.tab('Basique', () => {
+                        d.text('*name', 'Nom', {value: instance.config.name});
+                    });
 
-                d.text('shared_key', 'Clé locale partagée', {value: instance.config.shared_key});
-                if (d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
-                    d.error('shared_key', 'Format de clé non valide');
+                    d.tab('Avancé', () => {
+                        d.text('shared_key', 'Clé locale partagée', {value: instance.config.shared_key});
+                        if (d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
+                            d.error('shared_key', 'Format de clé non valide');
+                    });
+                });
 
                 d.action('Configurer', {disabled: !d.isValid()}, async () => {
                     let query = new URLSearchParams();
