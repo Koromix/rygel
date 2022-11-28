@@ -579,6 +579,7 @@ function InstanceController() {
                        style=${'min-width: ' + (5 + 5 * data_form.menu.length) + 'em;'}>
                     <colgroup>
                         <col style=${'width: ' + hid_width + 'px;'} />
+                        <col style="width: 8em;"/>
                         ${util.mapRange(0, data_form.menu.length, () => html`<col/>`)}
                         <col style="width: 2em;"/>
                     </colgroup>
@@ -586,6 +587,7 @@ function InstanceController() {
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Création</th>
                             ${data_form.menu.map(item => {
                                 let prec = `${column_stats[item.key] || 0} / ${visible_rows.length}`;
                                 let title = `${item.title}\nDisponible : ${prec} ${visible_rows.length > 1 ? 'lignes' : 'ligne'}`;
@@ -609,6 +611,7 @@ function InstanceController() {
                                     <td class=${(row.hid == null ? 'missing' : '') +
                                                 (active ? ' active' : '')}
                                         title=${row.hid || ''}>${row.hid != null ? row.hid : 'NA'}</td>
+                                    <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
                                     ${row.form.menu.map(item => {
                                         if (item.type === 'page') {
                                             let page = item.page;
@@ -616,13 +619,12 @@ function InstanceController() {
 
                                             if (row.status[page.key] != null) {
                                                 let status = row.status[page.key];
+                                                let tooltip = 'Créé : ' + status.ctime.toLocaleString() +
+                                                              (status.mtime.getTime() != status.ctime.getTime() ? '\nModifié : ' + status.mtime.toLocaleString() : '');
 
                                                 return html`
-                                                    <td class=${active && page === route.page ? 'saved active' : 'saved'} title=${item.title}>
-                                                        <a href=${url}>
-                                                            ${status.ctime.toLocaleDateString()} (${status.ctime.toLocaleTimeString()})
-                                                            ${status.mtime.getTime() != status.ctime.getTime() ?
-                                                                html`<br/><span class="ui_tag" style="background: #999;">(modifié: ${status.mtime.toLocaleDateString()} ${status.mtime.toLocaleTimeString()})</span>` : ''}                                                        </a>
+                                                    <td class=${active && page === route.page ? 'saved active' : 'saved'} title=${tooltip}>
+                                                        <a href=${url}>${status.mtime.toLocaleDateString()}</a>
                                                     </td>`;
                                             } else {
                                                 return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}
@@ -634,15 +636,14 @@ function InstanceController() {
                                             if (row.status[form.key] != null) {
                                                 let child = row.children[form.key][0];
                                                 let url = form.url + `/${child.ulid}`;
+
                                                 let status = row.status[form.key];
+                                                let tooltip = 'Créé : ' + status.ctime.toLocaleString() +
+                                                              (status.mtime.getTime() != status.ctime.getTime() ? '\nModifié : ' + status.mtime.toLocaleString() : '');
 
                                                 return html`
-                                                    <td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'} title=${item.title}>
-                                                        <a href=${url}>
-                                                            ${status.ctime.toLocaleDateString()} (${status.ctime.toLocaleTimeString()})
-                                                            ${status.mtime.getTime() != status.ctime.getTime() ?
-                                                                html`<br/><span class="ui_tag" style="background: #999;">(modifié: ${status.mtime.toLocaleDateString()} ${status.mtime.toLocaleTimeString()})</span>` : ''}
-                                                        </a>
+                                                    <td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'} title=${tooltip}>
+                                                        <a href=${url}>${status.mtime.toLocaleDateString()}</a>
                                                     </td>`;
                                             } else {
                                                 let url = form.url + `/${row.ulid}`;
@@ -659,6 +660,7 @@ function InstanceController() {
                         ${!visible_rows.length && !recording ? html`<tr><td colspan=${1 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
                         ${recording_new ? html`
                             <tr>
+                                <td class="missing">NA</td>
                                 <td class="missing">NA</td>
                                 <td class="missing" colspan=${data_form.menu.length}><a @click=${e => togglePanel(e, 'view', true)}>Nouvel enregistrement</a></td>
                             </tr>
