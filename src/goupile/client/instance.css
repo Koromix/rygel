@@ -45,8 +45,8 @@ html.instance {
     width: 100%;
     max-width: 1080px;
 
-    --anchor_color: #fe7735;
-    --anchor_color_n1: #ff864b;
+    --anchor_color: var(--page_color);
+    --anchor_color_n1: var(--page_color_n1);
 }
 
 html.mobile #ins_page { padding-top: 0; }

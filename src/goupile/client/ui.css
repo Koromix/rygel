@@ -33,8 +33,9 @@ body {
 
 a {
     color: var(--anchor_color);
-    text-decoration: underline;
+    text-decoration: none;
 }
+a:hover { text-decoration: underline; }
 
 *:focus, *:focus + label {
     outline: 2px solid #cdcdcd;
@@ -342,7 +343,6 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     white-space: nowrap;
 }
 .ui_table td { border: 1px solid #dfdfdf; }
-.ui_table a { text-decoration: none; }
 .ui_table tbody tr.active > td, .ui_table tbody tr td.active {
     background: var(--anchor_color);
     color: white;
