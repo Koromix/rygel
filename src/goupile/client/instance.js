@@ -306,6 +306,9 @@ function InstanceController() {
                                 <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
                                 <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
                                 <hr/>
+                                <button ?disabled=${!goupile.hasPermission('data_export')}
+                                        @click=${ui.wrapAction(generateExportKey)}>Générer une clé d'export</button>
+                                <hr/>
                             ` : ''}
                             ${profile.admin ? html`
                                 <button @click=${e => window.open('/admin/')}>Administration</button>
@@ -346,6 +349,24 @@ function InstanceController() {
                 let err = await net.readError(response);
                 throw new Error(err);
             }
+        });
+    }
+
+    async function generateExportKey(e) {
+        let response = await net.fetch(`${ENV.urls.instance}api/change/export_key`, {method: 'POST'});
+
+        if (!response.ok) {
+            let err = await net.readError(response);
+            throw new Error(err);
+        }
+
+        let export_key = (await response.text()).trim();
+
+        await ui.runDialog(e, 'Clé d\'export', {}, (d, resolve, reject) => {
+            d.text('export_key', 'Clé d\'export', {
+                value: export_key,
+                readonly: true
+            });
         });
     }
 

@@ -117,6 +117,7 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
 void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io);
 void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io);
 void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleChangeExportKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, InstanceHolder *instance,
                                                  const http_RequestInfo &request, http_IO *io);

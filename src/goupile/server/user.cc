@@ -1370,6 +1370,38 @@ void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request,
     });
 }
 
+void HandleChangeExportKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = sessions.Find(request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::DataExport)) {
+        LogError("User is not allowed to export data");
+        io->AttachError(403);
+        return;
+    }
+
+    Span<char> key_buf = AllocateSpan<char>(&io->allocator, 45);
+
+    // Generate export key
+    {
+        uint8_t buf[32];
+        FillRandomSafe(buf);
+        sodium_bin2base64(key_buf.ptr, (size_t)key_buf.len, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+    }
+
+    if (!gp_domain.db.Run(R"(UPDATE dom_permissions SET export_key = ?3
+                             WHERE userid = ?1 AND instance = ?2)",
+                          session->userid, instance->key, key_buf.ptr))
+        return;
+
+    io->AttachText(200, key_buf.ptr);
+}
+
 RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, InstanceHolder *instance,
                                                  const http_RequestInfo &request, http_IO *io)
 {

@@ -1036,15 +1036,37 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
 
     RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
 
-    if (!session) {
-        LogError("User is not logged in");
-        io->AttachError(401);
-        return;
-    }
-    if (!session->HasPermission(instance, UserPermission::DataExport)) {
-        LogError("User is not allowed to export data");
-        io->AttachError(403);
-        return;
+    if (session) {
+        if (!session->HasPermission(instance, UserPermission::DataExport)) {
+            LogError("User is not allowed to export data");
+            io->AttachError(403);
+            return;
+        }
+    } else if (!instance->slaves.len) {
+        const char *export_key = request.GetHeaderValue("X-Export-Key");
+
+        if (!export_key) {
+            LogError("User is not logged in");
+            io->AttachError(401);
+            return;
+        }
+
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                     WHERE instance = ?1 AND export_key = ?2)", &stmt))
+            return;
+        sqlite3_bind_text(stmt, 1, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
+
+        uint32_t permissions = stmt.Step() ? (uint32_t)sqlite3_column_int(stmt, 0) : 0;
+
+        if (!stmt.IsValid())
+            return;
+        if (!(permissions & (int)UserPermission::DataExport)) {
+            LogError("Export key is not valid");
+            io->AttachError(403);
+            return;
+        }
     }
 
     io->RunAsync([=]() {
