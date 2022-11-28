@@ -459,7 +459,7 @@ function InstanceController() {
                         <button ?disabled=${!fileHasChanged('main.js')}
                                 @click=${ui.wrapAction(applyMainScript)}>Appliquer</button>
                     ` : ''}
-                    <button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>
+                    ${goupile.hasPermission('admin_publish') ? html`<button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>` : ''}
                     <div style="flex: 1;"></div>
                     <button class=${ui.isPanelActive('view') ? 'icon active' : 'icon'}
                             style="background-position-y: calc(-626px + 1.2em);"
