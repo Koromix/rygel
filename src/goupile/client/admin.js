@@ -710,11 +710,8 @@ function AdminController() {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
             d.password('*password', 'Mot de passe');
-            d.password('*password2', null, {
-                placeholder: 'Confirmation',
-                help: 'Doit contenir au moins 8 caractères de 3 classes différentes'
-            });
-            d.boolean('change_password', 'Exiger un changement de mot de passe', {
+            d.password('*password2', null, {placeholder: 'Confirmation'});
+            d.boolean('*change_password', 'Exiger un changement de mot de passe', {
                 value: true, untoggle: false
             });
             if (d.values.password != null && d.values.password2 != null) {
@@ -724,9 +721,9 @@ function AdminController() {
                     d.error('password2', 'Mot de passe trop court');
                 }
             }
-            d.enumDrop('confirm', 'Méthode de confirmation', [
-                ['totp', 'TOTP'],
-            ]);
+            d.boolean('*confirm', 'Authentification à 2 facteurs', {
+                value: false, untoggle: false
+            });
 
             d.text('email', 'Courriel');
             if (d.values.email != null && !d.values.email.includes('@'))
@@ -742,7 +739,7 @@ function AdminController() {
                 query.set('username', d.values.username);
                 query.set('password', d.values.password);
                 query.set('change_password', d.values.change_password ? 1 : 0);
-                query.set('confirm', d.values.confirm || '');
+                query.set('confirm', 0 + d.values.confirm);
                 if (d.values.email != null)
                     query.set('email', d.values.email);
                 if (d.values.phone != null)
@@ -833,45 +830,48 @@ function AdminController() {
         return ui.runDialog(e, `Modification de ${user.username}`, {}, (d, resolve, reject) => {
             d.pushOptions({untoggle: false});
 
-            d.text('username', 'Nom d\'utilisateur', {value: user.username});
+            d.tabs('tabs', () => {
+                d.tab('Identité', () => {
+                    d.text('username', 'Nom d\'utilisateur', {value: user.username});
 
-            d.password('password', 'Mot de passe');
-            d.password('password2', null, {
-                placeholder: 'Confirmation',
-                help: [
-                    'Laissez vide pour ne pas modifier',
-                    'Doit contenir au moins 8 caractères de 3 classes différentes'
-                ],
-                mandatory: d.values.password != null
-            });
-            d.boolean('change_password', 'Exiger un changement de mot de passe', {
-                value: d.values.password != null,
-                untoggle: false
-            });
-            if (d.values.password != null && d.values.password2 != null) {
-                if (d.values.password !== d.values.password2) {
-                    d.error('password2', 'Les mots de passe sont différents');
-                } else if (d.values.password.length < 8) {
-                    d.error('password2', 'Mot de passe trop court');
-                }
-            }
-            d.enumDrop('confirm', 'Méthode de confirmation', [
-                ['totp', 'TOTP'],
-            ], { value: user.confirm, untoggle: true });
-            d.boolean('reset_secret', 'Réinitialiser le secret TOTP', {
-                value: user.confirm == null,
-                disabled: d.values.confirm == null,
-                untoggle: false
-            });
+                    d.text('email', 'Courriel', {value: user.email});
+                    if (d.values.email != null && !d.values.email.includes('@'))
+                        d.error('email', 'Format non valide');
+                    d.text('phone', 'Téléphone', {value: user.phone});
+                    if (d.values.phone != null && !d.values.phone.startsWith('+'))
+                        d.error('phone', 'Format non valide (préfixe obligatoire)');
 
-            d.text('email', 'Courriel', {value: user.email});
-            if (d.values.email != null && !d.values.email.includes('@'))
-                d.error('email', 'Format non valide');
-            d.text('phone', 'Téléphone', {value: user.phone});
-            if (d.values.phone != null && !d.values.phone.startsWith('+'))
-                d.error('phone', 'Format non valide (préfixe obligatoire)');
+                    d.boolean('*admin', 'Administrateur', {value: user.admin});
+                });
 
-            d.boolean('*admin', 'Administrateur', {value: user.admin});
+                d.tab('Sécurité', () => {
+                    d.password('password', 'Mot de passe');
+                    d.password('password2', null, {
+                        placeholder: 'Confirmation',
+                        help: 'Laissez vide pour ne pas modifier',
+                        mandatory: d.values.password != null
+                    });
+                    d.boolean('change_password', 'Exiger un changement de mot de passe', {
+                        value: d.values.password != null,
+                        untoggle: false
+                    });
+                    if (d.values.password != null && d.values.password2 != null) {
+                        if (d.values.password !== d.values.password2) {
+                            d.error('password2', 'Les mots de passe sont différents');
+                        } else if (d.values.password.length < 8) {
+                            d.error('password2', 'Mot de passe trop court');
+                        }
+                    }
+                    d.boolean('confirm', 'Authentification à 2 facteurs', {
+                        value: user.confirm, untoggle: false
+                    });
+                    d.boolean('reset_secret', 'Réinitialiser le secret TOTP', {
+                        value: !user.confirm,
+                        disabled: !d.values.confirm,
+                        untoggle: false
+                    });
+                });
+            });
 
             d.action('Modifier', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
@@ -881,7 +881,7 @@ function AdminController() {
                 if (d.values.password != null)
                     query.set('password', d.values.password);
                 query.set('change_password', 0 + d.values.change_password);
-                query.set('confirm', d.values.confirm || '');
+                query.set('confirm', 0 + d.values.confirm);
                 query.set('reset_secret', 0 + d.values.reset_secret);
                 if (d.values.email != null)
                     query.set('email', d.values.email);

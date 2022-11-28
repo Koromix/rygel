@@ -2408,7 +2408,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         const char *username;
         const char *password;
         bool change_password = false;
-        const char *confirm;
+        bool confirm = false;
         const char *email;
         const char *phone;
         bool admin;
@@ -2420,7 +2420,9 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             if (const char *str = values.FindValue("change_password", nullptr); str) {
                 valid &= ParseBool(str, &change_password);
             }
-            confirm = values.FindValue("confirm", nullptr);
+            if (const char *str = values.FindValue("confirm", nullptr); str) {
+                valid &= ParseBool(str, &confirm);
+            }
             email = values.FindValue("email", nullptr);
             phone = values.FindValue("phone", nullptr);
             if (!username || !password) {
@@ -2433,18 +2435,6 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             if (password && !password[0]) {
                 LogError("Empty password");
                 valid = false;
-            }
-            if (confirm) {
-                if (confirm[0]) {
-                    if (TestStr(confirm, "totp")) {
-                        confirm = "TOTP";
-                    } else {
-                        LogError("Invalid confirmation method '%1'", confirm);
-                        valid = false;
-                    }
-                } else {
-                    confirm = nullptr;
-                }
             }
 
             if (email && !strchr(email, '@')) {
@@ -2506,7 +2496,8 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, change_password,
                                                             email, phone, admin, local_key, confirm)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
-                                  username, hash, 0 + change_password, email, phone, 0 + admin, local_key, confirm))
+                                  username, hash, 0 + change_password, email, phone, 0 + admin, local_key,
+                                  confirm ? "totp" : nullptr))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -2547,7 +2538,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         const char *username;
         const char *password;
         bool change_password = false;
-        const char *confirm;
+        bool confirm = false;
         bool set_confirm = false;
         bool reset_secret = false;
         const char *email;
@@ -2569,7 +2560,10 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (const char *str = values.FindValue("change_password", nullptr); str) {
                 valid &= ParseBool(str, &change_password);
             }
-            confirm = values.FindValue("confirm", nullptr);
+            if (const char *str = values.FindValue("confirm", nullptr); str) {
+                valid &= ParseBool(str, &confirm);
+                set_confirm = true;
+            }
             email = values.FindValue("email", nullptr);
             phone = values.FindValue("phone", nullptr);
             if (username && !CheckUserName(username)) {
@@ -2578,20 +2572,6 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (password && !password[0]) {
                 LogError("Empty password");
                 valid = false;
-            }
-            if (confirm) {
-                if (confirm[0]) {
-                    if (TestStr(confirm, "totp")) {
-                        confirm = "TOTP";
-                    } else {
-                        LogError("Invalid confirmation method '%1'", confirm);
-                        valid = false;
-                    }
-                } else {
-                    confirm = nullptr;
-                }
-
-                set_confirm = true;
             }
             if (const char *str = values.FindValue("reset_secret", nullptr); str) {
                 valid &= ParseBool(str, &reset_secret);
@@ -2661,7 +2641,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 return false;
             if (change_password && !gp_domain.db.Run("UPDATE dom_users SET change_password = ?2 WHERE userid = ?1", userid, 0 + change_password))
                 return false;
-            if (set_confirm && !gp_domain.db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm))
+            if (set_confirm && !gp_domain.db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm ? "totp" : nullptr))
                 return false;
             if (reset_secret && !gp_domain.db.Run("UPDATE dom_users SET secret = NULL WHERE userid = ?1", userid))
                 return false;
@@ -2812,11 +2792,7 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
             json.Key("phone"); json.Null();
         }
         json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 4));
-        if (sqlite3_column_type(stmt, 5) != SQLITE_NULL) {
-            json.Key("confirm"); json.String((const char *)sqlite3_column_text(stmt, 5));
-        } else {
-            json.Key("confirm"); json.Null();
-        }
+        json.Key("confirm"); json.Bool(sqlite3_column_type(stmt, 5) != SQLITE_NULL);
         json.EndObject();
     }
     if (!stmt.IsValid())
