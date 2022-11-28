@@ -447,6 +447,10 @@ function FormBuilder(state, model, readonly = false) {
                 }
             }
         }
+        ticks = ticks.filter(tick => {
+            let value = Array.isArray(tick) ? tick[0] : tick;
+            return value >= options.min && value <= options.max;
+        });
 
         // Yeah, the generated HTML is not very pretty, it is the result of trial-and-error
         // with seemingly random px and em offsets. If you want to do better, be my guest :)
