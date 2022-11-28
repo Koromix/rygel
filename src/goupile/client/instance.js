@@ -1919,12 +1919,12 @@ function InstanceController() {
                             await ui.runDialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
                                 d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
 
-                                let save = d.enumRadio('action', 'Que souhaitez-vous faire avant de continuer ?', [
+                                d.enumRadio('action', 'Que souhaitez-vous faire avant de continuer ?', [
                                     [true, "Enregistrer mes modifications"],
                                     [false, "Oublier mes modifications"]
                                 ], { value: true, untoggle: false });
 
-                                if (save.value) {
+                                if (d.values.action) {
                                     d.action('Enregistrer', {}, async e => {
                                         try {
                                             form_builder.triggerErrors();

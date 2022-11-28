@@ -280,16 +280,16 @@ function AdminController() {
 
     async function runUploadBackupDialog(e) {
         return ui.runDialog(e, 'Envoi d\'archive', {}, (d, resolve, reject) => {
-            let archive = d.file('*archive', 'Archive');
+            d.file('*archive', 'Archive');
 
             d.action('Envoyer', {disabled: !d.isValid()}, async () => {
                 let progress = log.progress('Envoi en cours');
 
                 try {
-                    let url = '/admin/api/archives/files/' + archive.value.name;
+                    let url = '/admin/api/archives/files/' + d.values.archive.name;
                     let response = await net.fetch(url, {
                         method: 'PUT',
-                        body: archive.value,
+                        body: d.values.archive,
                         timeout: null
                     });
 
@@ -316,8 +316,8 @@ function AdminController() {
 
     async function runRestoreBackupDialog(e, filename) {
         return ui.runDialog(e, `Restauration de '${filename}'`, {}, (d, resolve, reject) => {
-            let key = d.password('*key', 'Clé de restauration');
-            let restore_users = d.boolean('*restore_users', 'Restaurer les utilisateurs et leurs droits', { value: false, untoggle: false });
+            d.password('*key', 'Clé de restauration');
+            d.boolean('*restore_users', 'Restaurer les utilisateurs et leurs droits', { value: false, untoggle: false });
 
             d.action('Restaurer', {disabled: !d.isValid()}, async () => {
                 let progress = log.progress('Restauration en cours');
@@ -325,8 +325,8 @@ function AdminController() {
                 try {
                     let query = new URLSearchParams;
                     query.set('filename', filename);
-                    query.set('key', key.value);
-                    query.set('users', 0 + restore_users.value);
+                    query.set('key', d.values.key);
+                    query.set('users', 0 + d.values.restore_users);
 
                     let response = await net.fetch('/admin/api/archives/restore', {
                         method: 'POST',
@@ -477,20 +477,20 @@ function AdminController() {
 
     function runCreateInstanceDialog(e) {
         return ui.runDialog(e, 'Création d\'un projet', {}, (d, resolve, reject) => {
-            let key = d.text('*key', 'Clé du projet', {
+            d.text('*key', 'Clé du projet', {
                 help: [
                     'Longueur maximale : 24 caractères',
                     'Caractères autorisés : a-z (minuscules), 0-9 et \'-\''
                 ]
             });
-            let name = d.text('name', 'Nom', {value: key.value});
-            let demo = d.boolean('demo', 'Ajouter les pages par défaut', {value: true, untoggle: false});
+            d.text('name', 'Nom', {value: d.values.key});
+            d.boolean('demo', 'Ajouter les pages par défaut', {value: true, untoggle: false});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
-                query.set('key', key.value);
-                query.set('name', name.value);
-                query.set('demo', 0 + demo.value);
+                query.set('key', d.values.key);
+                query.set('name', d.values.name);
+                query.set('demo', 0 + d.values.demo);
 
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',
@@ -499,12 +499,12 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
-                    log.success(`Projet '${key.value}' créé`);
+                    log.success(`Projet '${d.values.key}' créé`);
 
                     instances = null;
                     selected_permissions = null;
 
-                    let url = util.pasteURL('/admin/', { select: key.value });
+                    let url = util.pasteURL('/admin/', { select: d.values.key });
                     self.go(null, url);
                 } else {
                     let err = await net.readError(response);
@@ -521,44 +521,44 @@ function AdminController() {
             d.pushOptions({untoggle: false});
 
             if (instance.master == null) {
-                let name = d.text('*name', 'Nom', {value: instance.config.name});
+                d.text('*name', 'Nom', {value: instance.config.name});
 
-                let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
-                let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
+                d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
+                d.enum('*sync_mode', 'Mode de synchronisation', [
                     ['online', 'En ligne'],
                     ['mirror', 'Miroir'],
                     ['offline', 'Hors ligne']
                 ], {value: instance.config.sync_mode});
 
-                let backup_key = (sync_mode.value == 'offline') ?
-                                 d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key}) : {};
-                if (backup_key.value != null && !checkCryptoKey(backup_key.value))
-                    backup_key.error('Format de clé non valide');
-                let shared_key = d.text('shared_key', 'Clé locale partagée', {
+                if (d.values.sync_mode == 'offline')
+                    d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key});
+                if (d.values.backup_key != null && !checkCryptoKey(d.values.backup_key))
+                    d.error('backup_key', 'Format de clé non valide');
+                d.text('shared_key', 'Clé locale partagée', {
                     value: instance.config.shared_key,
                     hidden: instance.slaves > 0
                 });
-                if (instance.slaves > 0 && shared_key.value != null && !checkCryptoKey(shared_key.value))
-                    shared_key.error('Format de clé non valide');
-                let token_key = d.text('token_key', 'Session par token', {value: instance.config.token_key});
-                if (token_key.value != null && !checkCryptoKey(token_key.value))
-                    token_key.error('Format de clé non valide');
-                let auto_key = d.text('auto_key', 'Session de requête', {value: instance.config.auto_key});
-                let allow_guests = d.boolean('allow_guests', 'Autoriser les invités', {value: instance.config.allow_guests});
+                if (instance.slaves > 0 && d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
+                    d.error('shared_key', 'Format de clé non valide');
+                d.text('token_key', 'Session par token', {value: instance.config.token_key});
+                if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
+                    d.error('token_key', 'Format de clé non valide');
+                d.text('auto_key', 'Session de requête', {value: instance.config.auto_key});
+                d.boolean('allow_guests', 'Autoriser les invités', {value: instance.config.allow_guests});
 
                 d.action('Configurer', {disabled: !d.isValid()}, async () => {
                     let query = new URLSearchParams();
                     query.set('key', instance.key);
-                    query.set('name', name.value);
-                    query.set('use_offline', 0 + use_offline.value);
-                    query.set('sync_mode', sync_mode.value);
-                    if (sync_mode.value === 'offline')
-                        query.set('backup_key', backup_key.value || '');
+                    query.set('name', d.values.name);
+                    query.set('use_offline', 0 + d.values.use_offline);
+                    query.set('sync_mode', d.values.sync_mode);
+                    if (d.values.sync_mode === 'offline')
+                        query.set('backup_key', d.values.backup_key || '');
                     if (!instance.slaves)
-                        query.set('shared_key', shared_key.value || '');
-                    query.set('token_key', token_key.value || '');
-                    query.set('auto_key', auto_key.value || '');
-                    query.set('allow_guests', 0 + allow_guests.value);
+                        query.set('shared_key', d.values.shared_key || '');
+                    query.set('token_key', d.values.token_key || '');
+                    query.set('auto_key', d.values.auto_key || '');
+                    query.set('allow_guests', 0 + d.values.allow_guests);
 
                     let response = await net.fetch('/admin/api/instances/configure', {
                         method: 'POST',
@@ -580,17 +580,17 @@ function AdminController() {
                     }
                 });
             } else {
-                let name = d.text('*name', 'Nom', {value: instance.config.name});
+                d.text('*name', 'Nom', {value: instance.config.name});
 
-                let shared_key = d.text('shared_key', 'Clé locale partagée', {value: instance.config.shared_key});
-                if (shared_key.value != null && !checkCryptoKey(shared_key.value))
-                    shared_key.error('Format de clé non valide');
+                d.text('shared_key', 'Clé locale partagée', {value: instance.config.shared_key});
+                if (d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
+                    d.error('shared_key', 'Format de clé non valide');
 
                 d.action('Configurer', {disabled: !d.isValid()}, async () => {
                     let query = new URLSearchParams();
                     query.set('key', instance.key);
-                    query.set('name', name.value);
-                    query.set('shared_key', shared_key.value || '');
+                    query.set('name', d.values.name);
+                    query.set('shared_key', d.values.shared_key || '');
 
                     let response = await net.fetch('/admin/api/instances/configure', {
                         method: 'POST',
@@ -659,15 +659,15 @@ function AdminController() {
     function runSplitInstanceDialog(e, master) {
         return ui.runDialog(e, `Division de ${master}`, {}, (d, resolve, reject) => {
             d.calc('instance', 'Projet', master);
-            let key = d.text('*key', 'Clé du sous-projet');
-            let name = d.text('name', 'Nom', {value: key.value});
+            d.text('*key', 'Clé du sous-projet');
+            d.text('name', 'Nom', {value: d.values.key});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
-                let full_key = master + '/' + key.value;
+                let full_key = master + '/' + d.values.key;
 
                 let query = new URLSearchParams;
                 query.set('key', full_key);
-                query.set('name', name.value);
+                query.set('name', d.values.name);
 
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',
@@ -697,45 +697,45 @@ function AdminController() {
         return ui.runDialog(e, 'Création d\'un utilisateur', {}, (d, resolve, reject) => {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
-            let password = d.password('*password', 'Mot de passe');
-            let password2 = d.password('*password2', null, {
+            d.password('*password', 'Mot de passe');
+            d.password('*password2', null, {
                 placeholder: 'Confirmation',
                 help: 'Doit contenir au moins 8 caractères de 3 classes différentes'
             });
-            let change_password = d.boolean('change_password', 'Exiger un changement de mot de passe', {
+            d.boolean('change_password', 'Exiger un changement de mot de passe', {
                 value: true, untoggle: false
             });
-            if (password.value != null && password2.value != null) {
-                if (password.value !== password2.value) {
-                    password2.error('Les mots de passe sont différents');
-                } else if (password.value.length < 8) {
-                    password2.error('Mot de passe trop court');
+            if (d.values.password != null && d.values.password2 != null) {
+                if (d.values.password !== d.values.password2) {
+                    d.error('password2', 'Les mots de passe sont différents');
+                } else if (d.values.password.length < 8) {
+                    d.error('password2', 'Mot de passe trop court');
                 }
             }
-            let confirm = d.enumDrop('confirm', 'Méthode de confirmation', [
+            d.enumDrop('confirm', 'Méthode de confirmation', [
                 ['totp', 'TOTP'],
             ]);
 
-            let email = d.text('email', 'Courriel');
-            if (email.value != null && !email.value.includes('@'))
-                email.error('Format non valide');
-            let phone = d.text('phone', 'Téléphone');
-            if (phone.value != null && !phone.value.startsWith('+'))
-                phone.error('Format non valide (préfixe obligatoire)');
+            d.text('email', 'Courriel');
+            if (d.values.email != null && !d.values.email.includes('@'))
+                d.error('email', 'Format non valide');
+            d.text('phone', 'Téléphone');
+            if (d.values.phone != null && !d.values.phone.startsWith('+'))
+                d.error('phone', 'Format non valide (préfixe obligatoire)');
 
-            let admin = d.boolean('*admin', 'Administrateur', {value: false, untoggle: false});
+            d.boolean('*admin', 'Administrateur', {value: false, untoggle: false});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
-                query.set('username', username.value);
-                query.set('password', password.value);
-                query.set('change_password', change_password.value ? 1 : 0);
-                query.set('confirm', confirm.value || '');
-                if (email.value != null)
-                    query.set('email', email.value);
-                if (phone.value != null)
-                    query.set('phone', phone.value);
-                query.set('admin', admin.value ? 1 : 0);
+                query.set('username', d.values.username);
+                query.set('password', d.values.password);
+                query.set('change_password', d.values.change_password ? 1 : 0);
+                query.set('confirm', d.values.confirm || '');
+                if (d.values.email != null)
+                    query.set('email', d.values.email);
+                if (d.values.phone != null)
+                    query.set('phone', d.values.phone);
+                query.set('admin', d.values.admin ? 1 : 0);
 
                 let response = await net.fetch('/admin/api/users/create', {
                     method: 'POST',
@@ -744,7 +744,7 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
-                    log.success(`Utilisateur '${username.value}' créé`);
+                    log.success(`Utilisateur '${d.values.username}' créé`);
 
                     users = null;
                     selected_permissions = null;
@@ -782,7 +782,7 @@ function AdminController() {
             }, {color: '#258264'});
 
             // Now regroup permissions
-            let permissions = [...d.value("admin_permissions", []), ...d.value("data_permissions", [])];
+            let permissions = [...(d.values.admin_permissions || []), ...(d.values.data_permissions || [])];
 
             d.action('Modifier', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
@@ -821,61 +821,61 @@ function AdminController() {
         return ui.runDialog(e, `Modification de ${user.username}`, {}, (d, resolve, reject) => {
             d.pushOptions({untoggle: false});
 
-            let username = d.text('username', 'Nom d\'utilisateur', {value: user.username});
+            d.text('username', 'Nom d\'utilisateur', {value: user.username});
 
-            let password = d.password('password', 'Mot de passe');
-            let password2 = d.password('password2', null, {
+            d.password('password', 'Mot de passe');
+            d.password('password2', null, {
                 placeholder: 'Confirmation',
                 help: [
                     'Laissez vide pour ne pas modifier',
                     'Doit contenir au moins 8 caractères de 3 classes différentes'
                 ],
-                mandatory: password.value != null
+                mandatory: d.values.password != null
             });
-            let change_password = d.boolean('change_password', 'Exiger un changement de mot de passe', {
-                value: password.value != null,
+            d.boolean('change_password', 'Exiger un changement de mot de passe', {
+                value: d.values.password != null,
                 untoggle: false
             });
-            if (password.value != null && password2.value != null) {
-                if (password.value !== password2.value) {
-                    password2.error('Les mots de passe sont différents');
-                } else if (password.value.length < 8) {
-                    password2.error('Mot de passe trop court');
+            if (d.values.password != null && d.values.password2 != null) {
+                if (d.values.password !== d.values.password2) {
+                    d.error('password2', 'Les mots de passe sont différents');
+                } else if (d.values.password.length < 8) {
+                    d.error('password2', 'Mot de passe trop court');
                 }
             }
-            let confirm = d.enumDrop('confirm', 'Méthode de confirmation', [
+            d.enumDrop('confirm', 'Méthode de confirmation', [
                 ['totp', 'TOTP'],
             ], { value: user.confirm, untoggle: true });
-            let reset_secret = d.boolean('reset_secret', 'Réinitialiser le secret TOTP', {
+            d.boolean('reset_secret', 'Réinitialiser le secret TOTP', {
                 value: user.confirm == null,
-                disabled: confirm.value == null,
+                disabled: d.values.confirm == null,
                 untoggle: false
             });
 
-            let email = d.text('email', 'Courriel', {value: user.email});
-            if (email.value != null && !email.value.includes('@'))
-                email.error('Format non valide');
-            let phone = d.text('phone', 'Téléphone', {value: user.phone});
-            if (phone.value != null && !phone.value.startsWith('+'))
-                phone.error('Format non valide (préfixe obligatoire)');
+            d.text('email', 'Courriel', {value: user.email});
+            if (d.values.email != null && !d.values.email.includes('@'))
+                d.error('email', 'Format non valide');
+            d.text('phone', 'Téléphone', {value: user.phone});
+            if (d.values.phone != null && !d.values.phone.startsWith('+'))
+                d.error('phone', 'Format non valide (préfixe obligatoire)');
 
-            let admin = d.boolean('*admin', 'Administrateur', {value: user.admin});
+            d.boolean('*admin', 'Administrateur', {value: user.admin});
 
             d.action('Modifier', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('userid', user.userid);
-                if (username.value != null)
-                    query.set('username', username.value);
-                if (password.value != null)
-                    query.set('password', password.value);
-                query.set('change_password', 0 + change_password.value);
-                query.set('confirm', confirm.value || '');
-                query.set('reset_secret', 0 + reset_secret.value);
-                if (email.value != null)
-                    query.set('email', email.value);
-                if (phone.value != null)
-                    query.set('phone', phone.value);
-                query.set('admin', admin.value ? 1 : 0);
+                if (d.values.username != null)
+                    query.set('username', d.values.username);
+                if (d.values.password != null)
+                    query.set('password', d.values.password);
+                query.set('change_password', 0 + d.values.change_password);
+                query.set('confirm', d.values.confirm || '');
+                query.set('reset_secret', 0 + d.values.reset_secret);
+                if (d.values.email != null)
+                    query.set('email', d.values.email);
+                if (d.values.phone != null)
+                    query.set('phone', d.values.phone);
+                query.set('admin', 0 + d.values.admin);
 
                 let response = await net.fetch('/admin/api/users/edit', {
                     method: 'POST',
@@ -884,7 +884,7 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
-                    log.success(`Utilisateur '${username.value}' modifié`);
+                    log.success(`Utilisateur '${d.values.username}' modifié`);
 
                     users = null;
 

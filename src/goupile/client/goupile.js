@@ -243,30 +243,27 @@ const goupile = new function() {
         let title = initial ? null : 'Confirmation d\'identité';
 
         return ui.runDialog(e, title, { fixed: true }, (d, resolve, reject) => {
-            let username;
             if (initial) {
                 d.output(html`
                     <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
                     <div id="gp_title">${ENV.title}</div>
                     <br/>
                 `);
-
-                username = d.text('*username', 'Nom d\'utilisateur', {value: profile.username});
+                d.text('*username', 'Nom d\'utilisateur', {value: profile.username});
             } else {
                 d.output(html`Veuillez <b>confirmer votre identité</b> pour continuer.`);
-
-                username = d.calc('*username', 'Nom d\'utilisateur', profile.username);
+                d.calc('*username', 'Nom d\'utilisateur', profile.username);
             }
 
-            let password = d.password('*password', 'Mot de passe');
+            d.password('*password', 'Mot de passe');
 
             d.action('Se connecter', {disabled: !d.isValid()}, async () => {
                 try {
-                    let username2 = (username.value || '').trim();
-                    let password2 = (password.value || '').trim();
+                    let username = (d.values.username || '').trim();
+                    let password = (d.values.password || '').trim();
 
-                    let new_profile = await login(username2, password2);
-                    resolve([new_profile, password2]);
+                    let new_profile = await login(username, password);
+                    resolve([new_profile, password]);
                 } catch (err) {
                     log.error(err);
                     d.refresh();
@@ -304,12 +301,10 @@ const goupile = new function() {
                 ` : ''}
                 <br/>
             `);
-            let code = d.text('*code', 'Code secret', { help: '6 chiffres' });
+            d.text('*code', 'Code secret', { help: '6 chiffres' });
 
-            if (method === 'mail' || method === 'sms') {
+            if (method === 'mail' || method === 'sms')
                 d.output(html`<i>Si vous ne trouvez pas ce message, pensez à vérifiez vos spams.</i>`);
-            }
-
             if (errors >= 2) {
                 d.output(html`
                     <span style="color: red; font-style: italic">
@@ -322,7 +317,7 @@ const goupile = new function() {
 
             d.action('Continuer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
-                query.set('code', code.value);
+                query.set('code', d.values.code);
 
                 let response = await net.fetch(`${ENV.urls.instance}api/session/confirm`, {
                     method: 'POST',
@@ -389,23 +384,25 @@ const goupile = new function() {
                 `);
             }
 
-            let old_password = !forced ? d.password('*old_password', 'Ancien mot de passe') : null;
-            let new_password = d.password('*new_password', 'Nouveau mot de passe');
-            let new_password2 = d.password('*new_password2', null, {
+            if (!forced)
+                d.password('*old_password', 'Ancien mot de passe');
+            d.password('*new_password', 'Nouveau mot de passe');
+            d.password('*new_password2', null, {
                 placeholder: 'Confirmation',
                 help: 'Doit contenir au moins 8 caractères de 3 classes différentes'
             });
-            if (new_password.value != null && new_password2.value != null && new_password.value !== new_password2.value)
-                new_password2.error('Les mots de passe sont différents');
+            if (d.values.new_password != null && d.values.new_password2 != null &&
+                                                 d.values.new_password !== d.values.new_password2)
+                d.error('new_password2', 'Les mots de passe sont différents');
 
             d.action('Modifier', {disabled: !d.isValid()}, async () => {
                 let progress = log.progress('Modification du mot de passe');
 
                 try {
                     let query = new URLSearchParams;
-                    if (old_password != null)
-                        query.set('old_password', old_password.value);
-                    query.set('new_password', new_password.value);
+                    if (!forced)
+                        query.set('old_password', d.values.old_password);
+                    query.set('new_password', d.values.new_password);
 
                     let response = await net.fetch(`${ENV.urls.instance}api/change/password`, {
                         method: 'POST',
@@ -445,8 +442,8 @@ const goupile = new function() {
                 <br/>
             `);
 
-            let code = d.text('*code', 'Code secret', { help : '6 chiffres' });
-            let password = d.password('*password', 'Mot de passe du compte');
+            d.text('*code', 'Code secret', { help : '6 chiffres' });
+            d.password('*password', 'Mot de passe du compte');
 
             if (errors >= 2) {
                 d.output(html`
@@ -463,8 +460,8 @@ const goupile = new function() {
 
                 try {
                     let query = new URLSearchParams;
-                    query.set('password', password.value);
-                    query.set('code', code.value);
+                    query.set('password', d.values.password);
+                    query.set('code', d.values.code);
 
                     let response = await net.fetch(`${ENV.urls.instance}api/change/totp`, {
                         method: 'POST',
@@ -822,18 +819,17 @@ const goupile = new function() {
 
     this.runLockDialog = function(e, ctx) {
         return ui.runDialog(e, 'Verrouillage', {}, (d, resolve, reject) => {
-            let pin = d.pin('*pin', 'Code de déverrouillage');
-            if (pin.value != null && pin.value.length < 4)
-                pin.error('Ce code est trop court', true);
-
-            d.action('Verrouiller', {disabled: !d.isValid()}, e => goupile.lock(e, pin.value, ctx));
+            d.pin('*pin', 'Code de déverrouillage');
+            if (d.values.pin != null && d.values.pin.length < 4)
+                d.error('pin', 'Ce code est trop court', true);
+            d.action('Verrouiller', {disabled: !d.isValid()}, e => goupile.lock(e, d.values.pin, ctx));
         });
     };
 
     this.runUnlockDialog = function(e) {
         return ui.runDialog(e, 'Déverrouillage', {}, (d, resolve, reject) => {
-            let pin = d.pin('*pin', 'Code de déverrouillage');
-            d.action('Déverrouiller', {disabled: !d.isValid()}, e => goupile.unlock(e, pin.value));
+            d.pin('*pin', 'Code de déverrouillage');
+            d.action('Déverrouiller', {disabled: !d.isValid()}, e => goupile.unlock(e, d.values.pin));
         });
     };
 
