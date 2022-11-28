@@ -453,17 +453,9 @@ function InstanceController() {
         // Ask ACE to adjust if needed, it needs to happen after the render
         setTimeout(() => editor_ace.resize(false), 0);
 
-        let tabs = getEditorTabs();
-        let active_tab = tabs.find(tab => tab.active);
-
         return html`
             <div style="--menu_color: #1d1d1d; --menu_color_n1: #2c2c2c;">
                 <div class="ui_toolbar">
-                    <div class="drop">
-                        <button @click=${ui.deployMenu}>${active_tab != null ? active_tab.title : 'Onglets'}</button>
-                        <div>${tabs.map(tab => html`<button class=${tab.active ? 'active' : ''}
-                                                            @click=${!tab.active ? ui.wrapAction(e => toggleEditorFile(e, tab.filename)) : null}>${tab.title}</button>`)}</div>
-                    </div>
                     <div style="flex: 1;"></div>
                     ${editor_filename === 'main.js' ? html`
                         <button ?disabled=${!fileHasChanged('main.js')}
