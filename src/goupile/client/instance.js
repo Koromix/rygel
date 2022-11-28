@@ -199,7 +199,7 @@ function InstanceController() {
             menu = false;
 
         let user_icon = goupile.isLoggedOnline() ? 450 : 494;
-        let page_filename = route.page.getOption('filename', form_record);
+        let tabs = getEditorTabs();
 
         return html`
             <nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'} id="ui_top" style="z-index: 999999;">
@@ -207,23 +207,21 @@ function InstanceController() {
                     <div class="drop">
                         <button class=${'icon' + (ui.isPanelActive('editor') ? ' active' : '')}
                                 style="background-position-y: calc(-230px + 1.2em);"
-                                @click=${ui.deployMenu}>Code</button>
+                                @click=${ui.deployMenu}>Conception</button>
                         <div>
                             <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>
                                 <div style="flex: 1;">Mode conception</div>
                                 <div>&nbsp;✓\uFE0E</div>
                             </button>
                             <hr/>
-                            <button class=${editor_filename === 'main.js' ? 'active' : ''}
-                                    @click=${ui.wrapAction(e => toggleEditorFile(e, 'main.js'))}>Application</button>
-                            <button class=${editor_filename === page_filename ? 'active' : ''}
-                                    @click=${ui.wrapAction(e => toggleEditorFile(e, page_filename))}>Formulaire</button>
+                            ${tabs.map(tab => html`<button class=${tab.active ? 'active' : ''}
+                                                           @click=${ui.wrapAction(e => toggleEditorFile(e, tab.filename))}>${tab.title}</button>`)}
                         </div>
                     </div>
                 ` : ''}
                 ${!app.panels.editor && goupile.hasPermission('admin_code') ? html`
                     <div id="ins_drop" class="drop">
-                        <button class="icon" style="background-position-y: calc(-670px + 1.2em);" @click=${ui.deployMenu}>Conception</button>
+                        <button class="icon" style="background-position-y: calc(-230px + 1.2em);" @click=${ui.deployMenu}>Conception</button>
                         <div>
                             <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>Mode conception</button>
                         </div>
@@ -475,13 +473,14 @@ function InstanceController() {
 
     function getEditorTabs() {
         let tabs = [];
+
         tabs.push({
-            title: 'Application',
+            title: 'Projet',
             filename: 'main.js',
             active: false
         });
         tabs.push({
-            title: 'Formulaire',
+            title: 'Page',
             filename: route.page.getOption('filename', form_record),
             active: false
         });
