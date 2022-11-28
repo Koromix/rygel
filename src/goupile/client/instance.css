@@ -20,7 +20,6 @@ html.instance {
     --page_color_n1: #346bb8;
     --anchor_color: #fe7735;
     --anchor_color_n1: #ff9059;
-    --outline_color: #55555544;
     --many_color: #207358;
     --many_color_n1: #298a6a;
 
@@ -48,7 +47,6 @@ html.instance {
 
     --anchor_color: #fe7735;
     --anchor_color_n1: #ff864b;
-    --outline_color: #00adff;
 }
 
 html.mobile #ins_page { padding-top: 0; }

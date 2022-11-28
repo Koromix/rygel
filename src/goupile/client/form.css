@@ -88,14 +88,10 @@
     z-index: 999;
 }
 .fm_tabs > button + button { margin-left: 8px; }
-.fm_tabs > button:not(.active):not(:disabled):hover {
-    background: white;
-    color: black;
-    z-index: 1;
-}
 .fm_tabs > button.active, .fm_tabs > button.active:hover {
     background: linear-gradient(var(--page_color_n1), var(--page_color));
     color: white;
+    filter: none !important;
 }
 
 html:not(.mobile) .fm_columns { display: flex; }
@@ -242,12 +238,6 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     font-size: 0.9em;
     content: '';
 }
-.fm_enum > button:not(.active):not(:disabled):hover {
-    background: white;
-    border-color: var(--page_color_n1);
-    color: black;
-    z-index: 1;
-}
 .fm_enum > button.active {
     background: var(--page_color_n1);
     border-color: var(--page_color_n1);
@@ -264,6 +254,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 .fm_enum > button.active:hover {
     background: var(--page_color);
     border-color: var(--page_color);
+    filter: none !important;
 }
 
 .fm_enum.readonly, .fm_radio.readonly, .fm_check.readonly, .fm_slider.readonly {
@@ -319,8 +310,8 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 }
 .fm_radio > input:checked + label::before { background: none; }
 .fm_radio > input:checked + label::after { content: ''; }
-.fm_radio > input:hover + label::before { border-color: var(--outline_color); }
-.fm_radio > input:hover + label::after { background-color: var(--outline_color); }
+.fm_radio > input:hover + label::before { border-color: #999; }
+.fm_radio > input:hover + label::after { background-color: #999; }
 
 .fm_check { display: inline-block; }
 .fm_check + .fm_check { padding-top: 3px; }
@@ -365,7 +356,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 }
 .fm_check > input:checked + label::after { content: ''; }
 .fm_check > input:hover + label::before,
-    .fm_check > input:hover + label::after { border-color: var(--outline_color); }
+    .fm_check > input:hover + label::after { border-color: #999; }
 
 @media (pointer: coarse) {
     .fm_radio > input + label {

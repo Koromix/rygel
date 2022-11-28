@@ -37,7 +37,7 @@ a {
 }
 
 *:focus, *:focus + label {
-    outline: 1px solid var(--outline_color);
+    outline: 2px solid #cdcdcd;
     z-index: 99999;
 }
 
@@ -64,13 +64,7 @@ button:disabled {
     cursor: not-allowed;
 }
 button::-moz-focus-inner { border: 0; }
-button:not(:disabled):hover { border-color: var(--anchor_color); }
-@media (pointer: fine) {
-    button:not(:disabled):hover {
-        background-color: var(--anchor_color);
-        color: white;
-    }
-}
+button:not(:disabled):hover { filter: brightness(80%) contrast(160%); }
 
 /* -------------------- Toolbars -------------------- */
 
@@ -84,8 +78,6 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     background: linear-gradient(var(--menu_color_n1), var(--menu_color));
     color: white;
     z-index: 9999;
-
-    --outline_color: var(--menu_color_n3);
 }
 
 .ui_toolbar *:focus, .ui_toolbar *:focus + label {
@@ -108,6 +100,7 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     font-size: 1.1em;
     line-height: 1em;
     align-items: center;
+    filter: none !important;
 }
 .ui_toolbar button.active { background-color: var(--menu_color_n2); }
 .ui_toolbar button:not(.active):hover { background-color: var(--menu_color_n1); }
