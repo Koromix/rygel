@@ -424,7 +424,7 @@ function FormBuilder(state, model, readonly = false) {
         if (options.ticks != null && options.ticks !== false) {
             if (options.ticks === true) {
                 ticks = Array.from(util.mapRange(options.min, options.max + 1, i => i));
-            } else if (typeof options.ticks === 'object') {
+            } else if (util.isPodObject(options.ticks)) {
                 for (let key in options.ticks) {
                     let pos = parseFloat(key);
                     if (Number.isNaN(pos))

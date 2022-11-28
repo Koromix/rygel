@@ -138,10 +138,10 @@ const util = new function() {
         for (let key in src) {
             let from = src[key];
 
-            if (isPodObject(from) && !Object.isFrozen(from)) {
+            if (self.isPodObject(from) && !Object.isFrozen(from)) {
                 let to = obj[key];
 
-                if (!isPodObject(to)) {
+                if (!self.isPodObject(to)) {
                     to = {};
                     obj[key] = to;
                 }
@@ -153,9 +153,9 @@ const util = new function() {
         }
     }
 
-    function isPodObject(value) {
+    this.isPodObject = function(value) {
         return !!value && value.constructor === Object;
-    }
+    };
 
     this.deepFreeze = function(obj) {
         Object.freeze(obj);
