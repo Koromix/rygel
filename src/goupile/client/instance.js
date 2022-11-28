@@ -192,7 +192,11 @@ function InstanceController() {
     function renderMenu() {
         let history = (!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null);
         let menu = (profile.lock == null && (route.form.menu.length > 1 || route.form.chain.length > 1));
+        let title = !menu;
         let wide = (route.form.chain[0].menu.length > 3);
+
+        if (!form_record.saved && !form_state.hasChanged() && !ui.isPanelActive('view'))
+            menu = false;
 
         let user_icon = goupile.isLoggedOnline() ? 450 : 494;
         let page_filename = route.page.getOption('filename', form_record);
@@ -284,7 +288,7 @@ function InstanceController() {
                         }
                     })}
                 ` : ''}
-                ${!menu ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
+                ${title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
                 <div style="flex: 1; min-width: 15px;"></div>
 
                 ${!goupile.isLocked() && profile.instances == null ?
