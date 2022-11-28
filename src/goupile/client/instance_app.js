@@ -105,6 +105,8 @@ function ApplicationBuilder(app) {
         if (app.forms.has(key))
             throw new Error(`Form key '${key}' is already used`);
 
+        title = title || key;
+
         if (options == null && typeof func === 'object') {
             options = func;
             func = null;
@@ -188,6 +190,8 @@ function ApplicationBuilder(app) {
             throw new Error(`Page key '${key}' is already used`);
         if (form_ref == null)
             throw new Error('Cannot make page without enclosing form');
+
+        title = title || key;
 
         options = expandOptions(options, {
             filename: `pages/${key}.js`
