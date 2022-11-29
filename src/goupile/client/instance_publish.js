@@ -115,14 +115,14 @@ function InstancePublisher(instance, db) {
 
     function runAddFileDialog(e) {
         return ui.runDialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
-            let file = d.file('*file', 'Fichier :');
-            let filename = d.text('*filename', 'Chemin :', {value: file.value ? file.value.name : null});
+            d.file('*file', 'Fichier :');
+            d.text('*filename', 'Chemin :', {value: d.values.file ? d.values.file.name : null});
 
-            if (filename.value) {
-                if (!filename.value.match(/^[A-Za-z0-9_\.]+(\/[A-Za-z0-9_\.]+)*$/))
-                    filename.error('Caractères autorisés: a-z, 0-9, \'_\', \'.\' et \'/\' (pas au début ou à la fin)');
-                if (filename.value.includes('/../') || filename.value.endsWith('/..'))
-                    filename.error('Le chemin ne doit pas contenir de composants \'..\'');
+            if (d.values.filename) {
+                if (!d.values.filename.match(/^[A-Za-z0-9_\.]+(\/[A-Za-z0-9_\.]+)*$/))
+                    d.error('filename', 'Caractères autorisés: a-z, 0-9, \'_\', \'.\' et \'/\' (pas au début ou à la fin)');
+                if (d.values.filename.includes('/../') || d.values.filename.endsWith('/..'))
+                    d.error('filename', 'Le chemin ne doit pas contenir de composants \'..\'');
             }
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
@@ -130,12 +130,12 @@ function InstancePublisher(instance, db) {
 
                 progress.progress('Enregistrement du fichier');
                 try {
-                    let sha256 = await goupile.computeSha256(file.value);
-                    let url = util.pasteURL(`${ENV.urls.base}files/${filename.value}`, { sha256: sha256 });
+                    let sha256 = await goupile.computeSha256(d.values.file);
+                    let url = util.pasteURL(`${ENV.urls.base}files/${d.values.filename}`, { sha256: sha256 });
 
                     let response = await net.fetch(url, {
                         method: 'PUT',
-                        body: file.value,
+                        body: d.values.file,
                         timeout: null
                     });
                     if (!response.ok) {
