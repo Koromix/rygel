@@ -26,7 +26,9 @@ const goupile = new function() {
 
     let controller;
     let current_url;
+
     let current_hash = '';
+    let prev_hash = null;
 
     this.start = async function() {
         let url = new URL(window.location.href);
@@ -960,16 +962,22 @@ const goupile = new function() {
                 let el = document.querySelector(current_hash);
 
                 if (el != null) {
-                    el.scrollIntoView();
+                    if (current_hash != prev_hash)
+                        el.scrollIntoView();
                 } else {
                     window.history.replaceState(null, null, url);
                     current_hash = '';
                 }
+
+                prev_hash = current_hash;
             }
         }, 0);
     };
 
-    this.setCurrentHash = function(hash) { current_hash = hash || ''; };
+    this.setCurrentHash = function(hash) {
+        current_hash = hash || '';
+        prev_hash = null;
+    };
 
     this.encryptSymmetric = function(obj, ns) {
         let key = profile_keys[ns];
