@@ -280,6 +280,8 @@ OR:
 
 #if defined(BROTLI_BUILD_PORTABLE)
 #define BROTLI_ALIGNED_READ (!!1)
+#elif !defined(NDEBUG)
+#define BROTLI_ALIGNED_READ (!!1)
 #elif defined(BROTLI_TARGET_X86) || defined(BROTLI_TARGET_X64) || \
     defined(BROTLI_TARGET_ARMV7) || defined(BROTLI_TARGET_ARMV8_ANY) || \
     defined(BROTLI_TARGET_RISCV64)
