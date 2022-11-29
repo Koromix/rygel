@@ -26,17 +26,58 @@
             };
         </script>
 
-        <script src="{BASE_URL}static/thop.pk.js"></script>
-        <script nomodule>
-            if (typeof thop === 'undefined') {
-                var script = document.createElement('script');
-                script.src = '{BASE_URL}static/thop_compat.pk.js';
-                script.type = 'text/javascript';
-                document.head.appendChild(script);
-            }
-        </script>
+        <script src="{BASE_URL}static/thop.pk.js" async></script>
+        <link rel="stylesheet" href="{BASE_URL}static/thop.pk.css" async/>
 
-        <link rel="stylesheet" href="{BASE_URL}static/thop.pk.css"/>
+        <style>
+            .th_loading {
+                display: flex;
+                height: 100%;
+                align-items: center;
+                justify-content: center;
+                visibility: hidden;
+                background: white;
+                animation: th_loading_wait 0.2s 1 linear;
+                animation-fill-mode: forwards;
+            }
+            .th_loading::after {
+                content: ' ';
+                display: block;
+                width: 48px;
+                height: 48px;
+                margin: 1px;
+                border-radius: 50%;
+                border: 12px solid #262626;
+                border-color: #262626 transparent #262626 transparent;
+                animation: th_loading_spinner 0.8s ease-in-out infinite;
+            }
+            .th_loading > * { display: none !important; }
+            @keyframes th_loading_wait {
+                99% { visibility: hidden; }
+                100% { visibility: visible; }
+            }
+            @keyframes th_loading_spinner {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .th_fatal {
+                display: flex;
+                height: 100%;
+                align-items: center;
+                justify-content: center;
+            }
+            .th_fatal > div {
+                padding: 5px;
+                font-size: 1.4em;
+                text-align: center;
+            }
+
+            .th_browser {
+                font-size: 0.8em;
+                color: #444;
+            }
+        </style>
     </head>
 
     <body>
@@ -60,5 +101,55 @@
             </div>
             <div id="th_view"></div>
         </main>
+
+        <script>
+            try {
+                // Quick way to check for recent browser
+                eval('let test = async () => {}');
+                eval('let test = function () { if (!new.target) {} }');
+                eval('let test = new URLSearchParams');
+
+                // See here: https://github.com/dfahlander/Dexie.js/issues/317
+                var m = navigator.userAgent.toLowerCase().match('firefox/([0-9]+)');
+                if (m != null) {
+                    var version = parseInt(m[1], 10);
+                    if (version < 60)
+                        throw new Error('Cannot work with broken async support in IndexedDB');
+                }
+
+                document.body.classList.add('th_loading');
+                window.addEventListener('load', function(e) {
+                    if (typeof thop !== 'undefined') {
+                        var p = thop.start();
+
+                        p.catch(function(err) {
+                            document.querySelector('#ui_main').innerHTML =
+                                '<div class="th_fatal"><div>' +
+                                    '<span style="color: red;">⚠\uFE0E <b>Une erreur est survenue pendant le chargement</b></span><br/>' +
+                                    err.message +
+                                '</div></div>';
+                            document.body.classList.remove('th_loading');
+                        });
+                    } else {
+                        proposeBrowsers();
+                    }
+                });
+            } catch (err) {
+                proposeBrowsers();
+            }
+
+            function proposeBrowsers() {
+                document.querySelector('#ui_main').innerHTML =
+                    '<div class="th_fatal"><div>' +
+                        '<span style="color: red;">⚠\uFE0E <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
+                        'Nous vous recommandons <u>l\'un de ces navigateurs</u> :<br/><br/>' + 
+                        '<b>Mozilla Firefox</b> <span class="th_browser">(version ≥ 60)</span><br/>' +
+                        '<b>Google Chrome</b> <span class="th_browser">(version ≥ 55)</span><br/>' +
+                        '<b>Microsoft Edge</b> <span class="th_browser">(version ≥ 17)</span><br/>' + 
+                        '<b>Apple Safari</b> <span class="th_browser">(version ≥ 11)</span>' +
+                    '</div></div>';
+                document.body.classList.remove('th_loading');
+            }
+        </script>
     </body>
 </html>

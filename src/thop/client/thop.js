@@ -28,12 +28,7 @@ const thop = new function() {
 
     let log_entries = [];
 
-    document.addEventListener('readystatechange', e => {
-        if (document.readyState === 'complete')
-            self.startApp();
-    });
-
-    this.startApp = async function() {
+    this.start = async function() {
         log.pushHandler(notifyHandler);
         initNavigation();
 
