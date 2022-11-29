@@ -226,8 +226,11 @@ static void GeneratePNG(const qrcodegen::QrCode &qr, int border, HeapArray<uint8
         RG_ASSERT(success);
 
         // Fix length
-        uint32_t *len_ptr = (uint32_t *)(out_png->ptr + chunk_pos);
-        *len_ptr = BigEndian((uint32_t)(out_png->len - chunk_pos - 8));
+        {
+            uint32_t len = BigEndian((uint32_t)(out_png->len - chunk_pos - 8));
+            uint32_t *ptr = (uint32_t *)(out_png->ptr + chunk_pos);
+            memcpy(ptr, &len, RG_SIZE(len));
+        }
 
         // Chunk CRC-32
         uint32_t crc = BigEndian((uint32_t)mz_crc32(MZ_CRC32_INIT, out_png->ptr + chunk_pos + 4, out_png->len - chunk_pos - 4));
