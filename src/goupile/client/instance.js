@@ -358,6 +358,13 @@ function InstanceController() {
 
             if (response.ok) {
                 try {
+                    if (enable) {
+                        let url = contextualizeURL(route.page.url, form_record);
+
+                        url = util.pasteURL(url, { p: 'editor|view' });
+                        goupile.syncHistory(url, false);
+                    }
+
                     await applyMainScript();
                 } catch (err) {
                     // We want to reload no matter what, because the mode has changed
@@ -1766,6 +1773,7 @@ function InstanceController() {
                 url = new URL(url, window.location.href);
             if (url.pathname === ENV.urls.instance)
                 url = new URL(app.home.url, window.location.href);
+            goupile.setCurrentHash(url.hash);
 
             if (!url.pathname.endsWith('/'))
                 url.pathname += '/';

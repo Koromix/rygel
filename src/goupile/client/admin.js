@@ -399,6 +399,7 @@ function AdminController() {
         if (url != null) {
             if (!(url instanceof URL))
                 url = new URL(url, window.location.href);
+            goupile.setCurrentHash(url.hash);
 
             let panels = url.searchParams.get('p');
             if (panels) {

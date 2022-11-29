@@ -26,7 +26,7 @@ const goupile = new function() {
 
     let controller;
     let current_url;
-    let current_hash;
+    let current_hash = '';
 
     this.start = async function() {
         let url = new URL(window.location.href);
@@ -91,6 +91,10 @@ const goupile = new function() {
         // Initialize controller
         await controller.init();
         await initTasks();
+
+        // URL hash
+        if (url.hash)
+            current_hash = url.hash;
 
         // Run page
         return controller.go(null, url.href).catch(err => {
@@ -491,17 +495,8 @@ const goupile = new function() {
         util.interceptLocalAnchors((e, href) => {
             let url = new URL(href, window.location.href);
 
-            current_hash = url.hash;
-
             let func = ui.wrapAction(e => controller.go(e, url));
             func(e);
-
-            if (current_hash) {
-                let el = document.querySelector(current_hash);
-
-                if (el != null)
-                    el.scrollIntoView();
-            }
 
             e.preventDefault();
         });
@@ -952,26 +947,29 @@ const goupile = new function() {
             url = url.toString();
         }
 
+        if (push) {
+            window.history.pushState(null, null, url + current_hash);
+        } else {
+            window.history.replaceState(null, null, url + current_hash);
+        }
+
         current_url = url;
 
         setTimeout(() => {
             if (current_hash) {
                 let el = document.querySelector(current_hash);
 
-                if (el) {
-                    url += current_hash;
+                if (el != null) {
+                    el.scrollIntoView();
                 } else {
-                    current_hash = null;
+                    window.history.replaceState(null, null, url);
+                    current_hash = '';
                 }
-            }
-
-            if (push) {
-                window.history.pushState(null, null, url);
-            } else {
-                window.history.replaceState(null, null, url);
             }
         }, 0);
     };
+
+    this.setCurrentHash = function(hash) { current_hash = hash || ''; };
 
     this.encryptSymmetric = function(obj, ns) {
         let key = profile_keys[ns];
