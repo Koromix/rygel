@@ -15,13 +15,20 @@
 Features = ?PCH, ?Ccache, DebugInfo, HotAssets
 
 [ASan]
-Features = ?PCH, ?Ccache, DebugInfo, HotAssets, ASan
+Template = Debug
+Features = +ASan
 
 [TSan]
-Features = ?PCH, ?Ccache, DebugInfo, HotAssets, TSan
+Template = Debug
+Features = +TSan
 
 [UBSan]
-Features = ?PCH, ?Ccache, DebugInfo, HotAssets, UBSan
+Template = Debug
+Features = +UBSan
+
+[AUBSan]
+Template = Debug
+Features = +ASan +UBSan
 
 [Fast]
 Features = ?PCH, ?Ccache, DebugInfo, OptimizeSpeed
