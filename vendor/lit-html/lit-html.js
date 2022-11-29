@@ -1,5 +1,5 @@
-const { render } = require('lit/html.js');
-const { directive } = require('lit/directive.js');
+const { render, noChange, nothing } = require('lit/html.js');
+const { directive, Directive } = require('lit/directive.js');
 const { guard } = require('lit/directives/guard.js');
 const { live } = require('lit/directives/live.js');
 const { until } = require('lit/directives/until.js');
@@ -37,7 +37,10 @@ module.exports = {
     html: html,
     svg: svg,
     render: render,
+    noChange: noChange,
+    nothing: nothing,
     directive: directive,
+    Directive: Directive,
     guard: guard,
     live: live,
     until: until

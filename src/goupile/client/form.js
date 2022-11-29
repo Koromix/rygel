@@ -1088,23 +1088,36 @@ function FormBuilder(state, model, readonly = false) {
 
         // Setting files on input file elements is fragile. At least on Firefox, assigning
         // its own value to the property results in an empty FileList for some reason.
-        let set_files = lithtml.directive(() => part => {
-            let file_list = state.file_lists.get(key.toString());
+        class SetFiles extends lithtml.Directive {
+            update(part, [value]) {
+                if (value === lithtml.noChange || value === lithtml.nothing)
+                    return value;
 
-            if (file_list == null) {
-                part.committer.element.value = '';
-            } else if (file_list !== part.committer.element.files) {
-                part.committer.element.files = file_list;
+                let el = part.element;
+
+                if (value == null) {
+                    part.element.value = '';
+                } else if (value !== el.files) {
+                    part.element.files = value;
+                }
+
+                return value;
             }
-        });
+
+            render(value) {
+                return value;
+            }
+        }
+        let set_files = lithtml.directive(SetFiles);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <input id=${id} type="file" size="${options.size || 30}" .files=${set_files()}
+            <input id=${id} type="file" size="${options.size || 30}"
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
-                   @input=${e => handleFileInput(e, key)}/>
+                   @input=${e => handleFileInput(e, key)}
+                   ${set_files(state.file_lists.get(key.toString()))} />
         `);
 
         let intf = makeWidget('file', label, render, options);
