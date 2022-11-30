@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-# Old enough to support Ubuntu Bionic.
-cmake_minimum_required(VERSION 3.10.2)
+# Old enough to support Ubuntu Bionic,
+# but just the MAJOR.MINOR components.
+cmake_minimum_required(VERSION 3.10)
 
 project(RE2 CXX)
 include(CMakePackageConfigHelpers)
@@ -19,7 +20,7 @@ option(RE2_BUILD_TESTING "enable testing for RE2" ON)
 
 # ABI version
 # http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html
-set(SONAME 9)
+set(SONAME 10)
 
 set(EXTRA_TARGET_LINK_LIBRARIES)
 
@@ -154,23 +155,30 @@ set(RE2_HEADERS
 
 install(FILES ${RE2_HEADERS}
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/re2)
-install(TARGETS re2 EXPORT re2Targets
+install(TARGETS re2
+        EXPORT re2Targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT re2Targets
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/re2 NAMESPACE re2::)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/re2
+        NAMESPACE re2::)
 
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/re2Config.cmake.in
                               ${CMAKE_CURRENT_BINARY_DIR}/re2Config.cmake
-                              INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/re2
-                              )
+                              INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/re2)
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/re2ConfigVersion.cmake
                                  VERSION ${SONAME}.0.0
-                                 COMPATIBILITY SameMajorVersion
-                                 )
+                                 COMPATIBILITY SameMajorVersion)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/re2Config.cmake
               ${CMAKE_CURRENT_BINARY_DIR}/re2ConfigVersion.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/re2)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/re2.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/re2.pc
+               @ONLY)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/re2.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
