@@ -916,23 +916,23 @@ function InstanceController() {
                         self.go(e, url);
                     });
 
-                    form_builder.action('Continuer', {color: '#2d8261',
-                                                      always: nav_sequence.next != null,
-                                                      disabled: nav_sequence.next == null}, async e => {
-                        let url = nav_sequence.next;
+                    if (nav_sequence.next != null) {
+                        form_builder.action('Continuer', {color: '#2d8261', always: true}, async e => {
+                            let url = nav_sequence.next;
 
-                        if (!form_record.saved || form_state.hasChanged())
-                            form_builder.triggerErrors();
-                        if (form_state.hasChanged())
-                            await saveRecord(form_record, new_hid, form_values, route.page);
+                            if (!form_record.saved || form_state.hasChanged())
+                                form_builder.triggerErrors();
+                            if (form_state.hasChanged())
+                                await saveRecord(form_record, new_hid, form_values, route.page);
 
-                        self.go(e, url);
-                    });
+                            self.go(e, url);
+                        });
+                    }
 
                     if (nav_sequence.stay)
                         form_builder.action('-');
                 }
-                if (nav_sequence.stay) {
+                if (nav_sequence.stay || nav_sequence.next == null) {
                     let name = (!form_record.saved || form_state.hasChanged()) ? 'Enregistrer' : '✓ Enregistré';
 
                     form_builder.action(name, {disabled: !form_state.hasChanged(),
