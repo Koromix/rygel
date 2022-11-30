@@ -3842,6 +3842,7 @@ bool IsDirectoryEmpty(const char *dirname);
 
 bool TestFile(const char *filename);
 bool TestFile(const char *filename, FileType type);
+bool IsDirectory(const char *filename);
 
 bool MatchPathName(const char *path, const char *spec);
 bool MatchPathSpec(const char *path, const char *spec);

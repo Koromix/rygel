@@ -290,7 +290,11 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                config_filename = opt.current_value;
+                if (IsDirectory(opt.current_value)) {
+                    config_filename = Fmt(&temp_alloc, "%1%/meestic.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                } else {
+                    config_filename = opt.current_value;
+                }
             } else if (opt.TestHasFailed()) {
                 return 1;
             }

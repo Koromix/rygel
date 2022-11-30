@@ -125,7 +125,11 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
                 config_filename = nullptr;
                 break;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                config_filename = opt.current_value;
+                if (IsDirectory(opt.current_value)) {
+                    config_filename = Fmt(&temp_alloc, "%1%/drdc.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                } else {
+                    config_filename = opt.current_value;
+                }
             } else if (opt.TestHasFailed()) {
                 return 1;
             }

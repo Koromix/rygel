@@ -827,6 +827,8 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
 
 static int RunServe(Span<const char *> arguments)
 {
+    BlockAllocator temp_alloc;
+
     const char *config_filename = "goupile.ini";
     bool sandbox = false;
 
@@ -861,7 +863,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                config_filename = opt.current_value;
+                if (IsDirectory(opt.current_value)) {
+                    config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                } else {
+                    config_filename = opt.current_value;
+                }
             } else if (opt.Test("--sandbox")) {
                 sandbox = true;
             } else if (opt.TestHasFailed()) {

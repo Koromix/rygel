@@ -2540,6 +2540,14 @@ bool TestFile(const char *filename, FileType type)
     return true;
 }
 
+bool IsDirectory(const char *filename)
+{
+    FileInfo file_info;
+    if (StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info) != StatResult::Success)
+        return false;
+    return file_info.type == FileType::Directory;
+}
+
 static Size MatchPathItem(const char *path, const char *spec)
 {
     Size i = 0;
