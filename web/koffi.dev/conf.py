@@ -7,12 +7,31 @@ project = 'Koffi'
 copyright = '2022, Niels Martignène'
 author = 'Niels Martignène'
 
-with open(os.path.dirname(__file__) + '/../package.json') as f:
-    config = json.load(f)
+root = None
+version = None
+revision = None
+stable = None
 
-    version = config['version']
-    revision = config['version']
-    stable = config['stable']
+names = ['../../src/koffi/package.json', '../package.json']
+
+for name in names:
+    filename = os.path.dirname(__file__) + '/' + name
+
+    if not os.path.exists(filename):
+        continue;
+
+    with open(filename) as f:
+        config = json.load(f)
+
+        root = os.path.dirname(name)
+        version = config['version']
+        revision = config['version']
+        stable = config['stable']
+
+    break
+
+if root is None:
+    raise FileNotFoundError('Cannot find Koffi package.json')
 
 # -- General configuration ---------------------------------------------------
 
@@ -63,14 +82,18 @@ html_sidebars = {
 }
 
 html_context = {
+    "root": root,
     "stable": stable
 }
 
 # -- MyST parser options -------------------------------------------------
 
 myst_enable_extensions = [
-    'linkify'
+    'linkify',
+    'substitution'
 ]
+
+myst_substitutions = html_context
 
 myst_heading_anchors = 3
 

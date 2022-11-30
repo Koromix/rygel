@@ -492,7 +492,7 @@ async function prepare(dist_dir) {
         fs.renameSync(dist_dir + '/src/koffi/README.md', dist_dir + '/README.md');
         fs.renameSync(dist_dir + '/src/koffi/LICENSE.txt', dist_dir + '/LICENSE.txt');
         fs.renameSync(dist_dir + '/src/koffi/ChangeLog.md', dist_dir + '/ChangeLog.md');
-        fs.renameSync(dist_dir + '/src/koffi/doc', dist_dir + '/doc');
+        fs.renameSync(dist_dir + '/web/koffi.dev', dist_dir + '/doc');
     }
 
     return true;
@@ -520,6 +520,8 @@ function snapshot() {
                                        parts[1] == 'node-addon-api' ||
                                        parts[1] == 'raylib' ||
                                        parts[1] == 'sqlite3mc';
+        } else if (parts[0] == 'web') {
+            return parts[1] == null || parts[1] == 'koffi.dev';
         } else {
             return false;
         }

@@ -18,3 +18,5 @@ FelixBuild.ini.user
 
 node_modules
 package-lock.json
+
+/web/koffi.dev/dist/

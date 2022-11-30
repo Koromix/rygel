@@ -6,7 +6,7 @@
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
-BUILDDIR      = ../build/doc
+BUILDDIR      = dist
 
 # Put it first so that "make" without argument is like "make help".
 help:
