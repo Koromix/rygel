@@ -65,18 +65,11 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
             }
 
             param.type = ParseType();
-            if (!CanPassType(param.type)) {
+
+            if (!CanPassType(param.type, param.directions)) {
                 MarkError("Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
                 return false;
             }
-
-            if ((param.directions & 2) && param.type->primitive != PrimitiveKind::Pointer) {
-                MarkError("Only pointers can be used for output parameters");
-                return false;
-            }
-
-            offset += (offset < tokens.len && IsIdentifier(tokens[offset]));
-
             if (out_func->parameters.len >= MaxParameters) {
                 MarkError("Functions cannot have more than %1 parameters", MaxParameters);
                 return false;
@@ -90,6 +83,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
 
             out_func->parameters.Append(param);
 
+            offset += (offset < tokens.len && IsIdentifier(tokens[offset]));
             if (offset >= tokens.len || tokens[offset] != ",")
                 break;
             offset++;

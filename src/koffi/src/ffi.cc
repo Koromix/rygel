@@ -688,13 +688,13 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
         ParameterInfo param = {};
 
         param.type = ResolveType(parameters[j], &param.directions);
+
         if (!param.type)
             return false;
-        if (!CanPassType(param.type)) {
+        if (!CanPassType(param.type, param.directions)) {
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
             return false;
         }
-
         if (func->parameters.len >= MaxParameters) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
             return false;
@@ -1035,13 +1035,13 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         ParameterInfo param = {};
 
         param.type = ResolveType(info[i], &param.directions);
+
         if (RG_UNLIKELY(!param.type))
             return env.Null();
-        if (RG_UNLIKELY(!CanPassType(param.type))) {
+        if (RG_UNLIKELY(!CanPassType(param.type, param.directions))) {
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
             return env.Null();
         }
-
         if (RG_UNLIKELY(func.parameters.len >= MaxParameters)) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
             return env.Null();

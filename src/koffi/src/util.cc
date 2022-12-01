@@ -170,16 +170,21 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
     return ref;
 }
 
-bool CanPassType(const TypeInfo *type)
+bool CanPassType(const TypeInfo *type, int directions)
 {
-    if (type->primitive == PrimitiveKind::Void)
-        return false;
-    if (type->primitive == PrimitiveKind::Array)
-        return false;
-    if (type->primitive == PrimitiveKind::Prototype)
-        return false;
+    if (directions & 2) {
+        bool accept = (type->primitive == PrimitiveKind::Pointer);
+        return accept;
+    } else {
+        if (type->primitive == PrimitiveKind::Void)
+            return false;
+        if (type->primitive == PrimitiveKind::Array)
+            return false;
+        if (type->primitive == PrimitiveKind::Prototype)
+            return false;
 
-    return true;
+        return true;
+    }
 }
 
 bool CanReturnType(const TypeInfo *type)
