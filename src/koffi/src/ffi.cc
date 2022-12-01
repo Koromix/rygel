@@ -1621,7 +1621,8 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     RegisterPrimitiveType(env, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, RG_SIZE(void *), alignof(void *), "char16_t");
 
     instance->void_type = instance->types_map.FindValue("void", nullptr);
-    RG_ASSERT(instance->void_type);
+    instance->char_type = instance->types_map.FindValue("char", nullptr);
+    instance->char16_type = instance->types_map.FindValue("char16", nullptr);
 
     types.Freeze();
 

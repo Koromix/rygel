@@ -224,6 +224,8 @@ async function test() {
     const ReturnEndianInt8UL = lib.func('uint64_le_t ReturnEndianInt8(uint64_be_t v)');
     const ReturnEndianInt8UB = lib.func('uint64_be_t ReturnEndianInt8(uint64_le_t v)');
     const ReverseBigText = lib.func('BigText ReverseBigText(BigText buf)');
+    const UpperCaseStrAscii = lib.func('size_t UpperCaseStrAscii(const char *str, _Out_ char *out)');
+    const UpperCaseStrAscii16 = lib.func('size_t UpperCaseStrAscii16(const char16_t *str16, _Out_ char16_t *out)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -515,5 +517,25 @@ async function test() {
 
         assert.equal(ret.len, big.len);
         assert.equal(Buffer.from(ret.text).toString(), expected);
+    }
+
+    // Test output string arguments
+    {
+        let str = ['\0'.repeat(32)];
+
+        let len = UpperCaseStrAscii('fooBAR_1x3', str);
+
+        assert.equal(len, 10);
+        assert.equal(str[0], 'FOOBAR_1X3');
+    }
+
+    // Test output string16 arguments
+    {
+        let str = ['\0'.repeat(32)];
+
+        let len = UpperCaseStrAscii16('fooBAR_1x3', str);
+
+        assert.equal(len, 10);
+        assert.equal(str[0], 'FOOBAR_1X3');
     }
 }

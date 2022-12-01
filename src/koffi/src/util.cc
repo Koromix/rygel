@@ -173,8 +173,14 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 bool CanPassType(const TypeInfo *type, int directions)
 {
     if (directions & 2) {
-        bool accept = (type->primitive == PrimitiveKind::Pointer);
-        return accept;
+        if (type->primitive == PrimitiveKind::Pointer)
+            return true;
+        if (type->primitive == PrimitiveKind::String)
+            return true;
+        if (type->primitive == PrimitiveKind::String16)
+            return true;
+
+        return false;
     } else {
         if (type->primitive == PrimitiveKind::Void)
             return false;
