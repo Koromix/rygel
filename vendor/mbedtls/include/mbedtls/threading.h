@@ -48,6 +48,21 @@ typedef struct mbedtls_threading_mutex_t
 } mbedtls_threading_mutex_t;
 #endif
 
+#if defined(MBEDTLS_THREADING_WIN32)
+typedef struct mbedtls_threading_mutex_t
+{
+#if defined(_WIN64)
+    struct { uint64_t dummy[5]; } MBEDTLS_PRIVATE(cs); // CRITICAL_SECTION
+#elif defined(_WIN32)
+    struct { uint32_t dummy[6]; } MBEDTLS_PRIVATE(cs); // CRITICAL_SECTION
+#endif
+    /* is_valid is 0 after a failed init or a free, and nonzero after a
+     * successful init. This field is not considered part of the public
+     * API of Mbed TLS and may change without notice. */
+    char MBEDTLS_PRIVATE(is_valid);
+} mbedtls_threading_mutex_t;
+#endif
+
 #if defined(MBEDTLS_THREADING_ALT)
 /* You should define the mbedtls_threading_mutex_t type in your header */
 #include "threading_alt.h"
