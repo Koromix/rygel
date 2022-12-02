@@ -1630,6 +1630,116 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     return external;
 }
 
+static Napi::Value GetPtrValue(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    if (info.Length() < 3) {
+        ThrowError<Napi::TypeError>(env, "Expected 3 or 4 arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    if (!info[0].IsExternal()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected pointer", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    if (info[1].Type() != napi_number) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for offset, expected number", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(info[2]);
+    if (!type)
+        return env.Null();
+
+    Napi::Number num = info[1].ToNumber();
+    int64_t offset = num.Int64Value();
+
+    Napi::External<void> external = info[0].As<Napi::External<void>>();
+    void *ptr = external.Data();
+
+    switch(type->primitive){
+        case PrimitiveKind::Bool : {
+            bool v = *(((bool*)ptr) + offset);
+            return Napi::Boolean::New(env, v);
+        }
+        case PrimitiveKind::Int8 : {
+            int8_t v = *(((int8_t*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::UInt8 : {
+            uint8_t v = *(((uint8_t*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::Int16 : {
+            int16_t v = *(((int16_t*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::UInt16 : {
+            uint16_t v = *(((uint16_t*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::Int32 : {
+            int32_t v = *(((int32_t*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::UInt32 : {
+            uint32_t v = *(((uint32_t*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::Int64 : {
+            int64_t v = *(((int64_t*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::UInt64 : {
+            uint64_t v = *(((uint64_t*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::Float32 : {
+            float v = *(((float*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::Float64 : {
+            double v = *(((double*)ptr) + offset);
+            return Napi::Number::New(env, v);
+        }
+        case PrimitiveKind::String : {
+            if(info.Length() == 4) {
+                Napi::Number t = info[3].ToNumber();
+                int64_t len = t.Int64Value();
+                char* v = *(((char**)ptr) + offset);
+                return Napi::String::New(env, v, len);
+            } else {
+                // assume null terminated str
+                char* v = *(((char**)ptr) + offset);
+                return Napi::String::New(env, v);
+            }
+        }
+        case PrimitiveKind::String16 : {
+            if(info.Length() == 4) {
+                Napi::Number t = info[3].ToNumber();
+                int64_t len = t.Int64Value();
+                char16_t* v = *(((char16_t**)ptr) + offset);
+                return Napi::String::New(env, v, len);
+            } else {
+                // assume null terminated str
+                char16_t* v = *(((char16_t**)ptr) + offset);
+                return Napi::String::New(env, v);
+            }
+        }
+        case PrimitiveKind::Pointer : {
+            void* v = *(((void**)ptr) + offset);
+            return Napi::External<void>::New(env, v, [](Napi::Env, void *val) { /* ignore, we do not have ownership! */ });
+        }
+        default: {
+            return env.Null();
+        }
+    }
+
+    return env.Null();
+}
+
 template <typename Func>
 static void SetExports(Napi::Env env, Func func)
 {
@@ -1661,6 +1771,7 @@ static void SetExports(Napi::Env env, Func func)
     func("unregister", Napi::Function::New(env, UnregisterCallback));
 
     func("as", Napi::Function::New(env, CastValue));
+    func("getPtrValue", Napi::Function::New(env, GetPtrValue));
 
 #if defined(_WIN32)
     func("extension", Napi::String::New(env, ".dll"));
