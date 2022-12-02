@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 56;
+const int InstanceVersion = 57;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -1674,9 +1674,109 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 56: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_entries_a;
+                    DROP INDEX rec_entries_f;
+                    DROP INDEX rec_entries_fs;
+                    DROP INDEX rec_entries_u;
+                    DROP INDEX rec_fragments_uv;
+                    DROP INDEX ins_claims_uu;
+
+                    ALTER TABLE rec_entries RENAME TO rec_entries_BAK;
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+                    ALTER TABLE ins_claims RENAME TO ins_claims_BAK;
+
+                    CREATE TABLE rec_threads (
+                        tid TEXT NOT NULL,
+                        deleted INTEGER CHECK(deleted IN (0, 1)) NOT NULL
+                    );
+                    CREATE UNIQUE INDEX rec_threads_t ON rec_threads (tid);
+
+                    CREATE TABLE rec_entries (
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid),
+                        eid TEXT NOT NULL,
+                        anchor INTEGER NOT NULL,
+                        ctime INTEGER NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        store TEXT NOT NULL,
+                        context TEXT NOT NULL,
+                        sequence INTEGER NOT NULL,
+                        hid BLOB,
+                        data BLOB
+                    );
+                    CREATE UNIQUE INDEX rec_entries_ts ON rec_entries (tid, store);
+                    CREATE UNIQUE INDEX rec_entries_e ON rec_entries (eid);
+                    CREATE UNIQUE INDEX rec_entries_cs ON rec_entries (context, sequence);
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        previous INTEGER REFERENCES rec_fragments (anchor),
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid),
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid),
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        fs INTEGER NOT NULL REFERENCES fs_versions (version),
+                        data BLOB
+                    );
+                    CREATE INDEX rec_fragments_t ON rec_fragments (tid);
+                    CREATE INDEX rec_fragments_r ON rec_fragments (eid);
+
+                    CREATE TABLE ins_claims (
+                        userid INTEGER NOT NULL,
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid)
+                    );
+                    CREATE UNIQUE INDEX ins_claims_ut ON ins_claims (userid, tid);
+
+                    INSERT INTO rec_threads (tid, deleted)
+                        SELECT root_ulid, deleted FROM rec_entries_BAK WHERE ulid = root_ulid;
+                    INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, context, sequence, hid, data)
+                        SELECT root_ulid, ulid, anchor, -1, -1, form, IIF(ulid <> root_ulid, parent_ulid || '/', '') || form,
+                               sequence, hid, '{}' FROM rec_entries_BAK;
+                    INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, data)
+                        SELECT f.anchor, p.anchor, e.root_ulid, f.ulid, f.userid,
+                               f.username, CAST(strftime('%s', f.mtime) AS INTEGER) * 1000 +
+                                           MOD(CAST(strftime('%f', f.mtime) AS REAL) * 1000, 1000),
+                               f.fs, IIF(f.type = 'save', json_object(f.page, json_patch('{}', f.json)), NULL) FROM rec_fragments_BAK f
+                        INNER JOIN rec_entries_BAK e ON (e.ulid = f.ulid)
+                        LEFT JOIN rec_fragments_BAK p ON (p.ulid = f.ulid AND p.version = f.version - 1);
+                    INSERT INTO ins_claims (userid, tid)
+                        SELECT userid, ulid FROM ins_claims_BAK;
+
+                    DROP TABLE rec_fragments_BAK;
+                    DROP TABLE rec_entries_BAK;
+                    DROP TABLE ins_claims_BAK;
+                )");
+                if (!success)
+                    return false;
+
+                sq_Statement stmt;
+                if (!db->Prepare("SELECT eid, mtime, data FROM rec_fragments WHERE data IS NOT NULL ORDER BY anchor", &stmt))
+                    return false;
+
+                while (stmt.Step()) {
+                    const char *eid = (const char *)sqlite3_column_text(stmt, 0);
+                    int64_t mtime = sqlite3_column_int64(stmt, 1);
+                    const char *json = (const char *)sqlite3_column_text(stmt, 2);
+
+                    if (!db->Run("UPDATE rec_entries SET ctime = ?2 WHERE eid = ?1 AND ctime < 0", eid, mtime))
+                        return false;
+                    if (!db->Run("UPDATE rec_entries SET mtime = ?2 WHERE eid = ?1", eid, mtime))
+                        return false;
+                    if (json && !db->Run("UPDATE rec_entries SET data = json_patch(data, ?2) WHERE eid = ?1", eid, json))
+                        return false;
+                }
+                if (!stmt.IsValid())
+                    return false;
+
+                if (!db->Run("DELETE FROM rec_entries WHERE ctime < 0"))
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 56);
+            RG_STATIC_ASSERT(InstanceVersion == 57);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
