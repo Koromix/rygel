@@ -116,7 +116,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
 
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitCurl();
+    CURL *curl = curl_Init();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -206,7 +206,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         }
     }
 
-    int status = PerformCurl(curl, "SMTP");
+    int status = curl_Perform(curl, "SMTP");
     if (status < 0)
         return false;
     if (status != 250) {

@@ -73,7 +73,7 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitCurl();
+    CURL *curl = curl_Init();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -106,7 +106,7 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
         }
     }
 
-    int status = PerformCurl(curl, "SMS");
+    int status = curl_Perform(curl, "SMS");
     if (status < 0)
         return false;
     if (status != 200 && status != 201) {

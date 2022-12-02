@@ -198,7 +198,7 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
 
     RG_DEFER_NC(out_guard, len = out_keys->len) { out_keys->RemoveFrom(len); };
 
-    CURL *curl = InitCurl();
+    CURL *curl = curl_Init();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -247,7 +247,7 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
             }
         }
 
-        int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
+        int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
         if (status < 0)
             return false;
         if (status != 200) {
@@ -292,7 +292,7 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitCurl();
+    CURL *curl = curl_Init();
     if (!curl)
         return -1;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -337,7 +337,7 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
         }
     }
 
-    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
+    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
         return -1;
     if (status != 200) {
@@ -355,7 +355,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     Size prev_len = out_obj->len;
     RG_DEFER_N(out_guard) { out_obj->RemoveFrom(prev_len); };
 
-    CURL *curl = InitCurl();
+    CURL *curl = curl_Init();
     if (!curl)
         return -1;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -407,7 +407,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
         }
     }
 
-    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
+    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
         return false;
     if (status != 200) {
@@ -423,7 +423,7 @@ bool s3_Session::HasObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitCurl();
+    CURL *curl = curl_Init();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -448,7 +448,7 @@ bool s3_Session::HasObject(Span<const char> key)
         }
     }
 
-    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
+    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
         return false;
     if (status != 200 && status != 404) {
@@ -464,7 +464,7 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitCurl();
+    CURL *curl = curl_Init();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -502,7 +502,7 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
         }
     }
 
-    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
+    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
         return false;
     if (status != 200) {
@@ -517,7 +517,7 @@ bool s3_Session::DeleteObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = InitCurl();
+    CURL *curl = curl_Init();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -542,7 +542,7 @@ bool s3_Session::DeleteObject(Span<const char> key)
         }
     }
 
-    int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
+    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
     if (status < 0)
         return false;
     if (status != 204) {
@@ -590,7 +590,7 @@ bool s3_Session::OpenAccess(const char *id, const char *key)
 
     // Test access
     {
-        CURL *curl = InitCurl();
+        CURL *curl = curl_Init();
         if (!curl)
             return false;
         RG_DEFER { curl_easy_cleanup(curl); };
@@ -627,7 +627,7 @@ bool s3_Session::OpenAccess(const char *id, const char *key)
             }
         }
 
-        int status = PerformCurl(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
+        int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
         if (status < 0)
             return false;
         if (status != 200 && status != 201) {
@@ -644,7 +644,7 @@ bool s3_Session::DetermineRegion(const char *url)
 {
     RG_ASSERT(!open);
 
-    CURL *curl = InitCurl();
+    CURL *curl = curl_Init();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -677,7 +677,7 @@ bool s3_Session::DetermineRegion(const char *url)
         }
     }
 
-    int status = PerformCurl(curl, "S3", [&](int i, int) { return i < 5 && !region; });
+    int status = curl_Perform(curl, "S3", [&](int i, int) { return i < 5 && !region; });
     if (status < 0)
         return false;
 

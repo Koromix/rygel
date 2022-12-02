@@ -18,7 +18,7 @@ namespace RG {
 
 extern "C" const AssetInfo CacertPem;
 
-CURL *InitCurl()
+CURL *curl_Init()
 {
     CURL *curl = curl_easy_init();
     if (!curl)
@@ -59,7 +59,7 @@ CURL *InitCurl()
     return curl;
 }
 
-int PerformCurl(CURL *curl, const char *reason, FunctionRef<bool(int, int)> retry)
+int curl_Perform(CURL *curl, const char *reason, FunctionRef<bool(int, int)> retry)
 {
     CURLcode res = curl_easy_perform(curl);
 
