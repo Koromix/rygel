@@ -15,10 +15,11 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "types.hh"
-#include "src/core/libnet/s3.hh"
 #include "src/core/libsqlite/libsqlite.hh"
 
 namespace RG {
+
+struct s3_Config;
 
 enum class rk_DiskMode {
     Secure,

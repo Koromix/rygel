@@ -14,6 +14,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "disk.hh"
 #include "repository.hh"
+#include "src/core/libnet/s3.hh"
 #include "src/core/libpasswd/libpasswd.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/curl/include/curl/curl.h"

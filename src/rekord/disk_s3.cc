@@ -13,6 +13,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "disk.hh"
+#include "src/core/libnet/s3.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
