@@ -1,0 +1,26 @@
+diff --git b/vendor/libssh/src/gzip.c a/vendor/libssh/src/gzip.c
+index 148cc21c9..92120fd34 100644
+--- b/vendor/libssh/src/gzip.c
++++ a/vendor/libssh/src/gzip.c
+@@ -26,7 +26,7 @@
+ 
+ #include <string.h>
+ #include <stdlib.h>
+-#include <zlib.h>
++#include "miniz.h"
+ 
+ #include "libssh/priv.h"
+ #include "libssh/buffer.h"
+diff --git b/vendor/libssh/src/wrapper.c a/vendor/libssh/src/wrapper.c
+index bff7bab35..392a4d2a7 100644
+--- b/vendor/libssh/src/wrapper.c
++++ a/vendor/libssh/src/wrapper.c
+@@ -39,7 +39,7 @@
+ #include <string.h>
+ 
+ #ifdef WITH_ZLIB
+-#include <zlib.h>
++#include "miniz.h"
+ #endif
+ 
+ #include "libssh/priv.h"

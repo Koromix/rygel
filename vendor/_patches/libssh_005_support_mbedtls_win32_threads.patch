@@ -1,0 +1,13 @@
+diff --git a/vendor/libssh/src/threads/mbedtls.c b/vendor/libssh/src/threads/mbedtls.c
+index 6cc3fa53a..d838933fd 100644
+--- a/vendor/libssh/src/threads/mbedtls.c
++++ b/vendor/libssh/src/threads/mbedtls.c
+@@ -51,6 +51,8 @@ int crypto_thread_init(struct ssh_threads_callbacks_struct *user_callbacks)
+     }
+ #elif defined MBEDTLS_THREADING_PTHREAD
+     return SSH_OK;
++#elif defined MBEDTLS_THREADING_WIN32
++    return SSH_OK;
+ #else
+     return SSH_ERROR;
+ #endif
