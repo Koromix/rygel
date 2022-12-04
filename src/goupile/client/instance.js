@@ -797,11 +797,14 @@ function InstanceController() {
             {
                 let sequence = (profile.lock != null) ? profile.lock.pages : route.page.getOption('sequence', form_record);
 
-                if (typeof sequence === 'boolean') {
-                    let parent = (route.form.menu.length == 1 && route.form.chain.length > 1);
-                    let form = parent ? route.form.chain[route.form.chain.length - 2] : route.form;
+                if (sequence === false)
+                    sequence = null;
+                if (sequence != null) {
+                    let root = route.form.chain[0];
+                    let pages = getAllPages(root.menu);
 
-                    sequence = sequence ? Array.from(form.menu.map(item => item.key)) : null;
+                    sequence = pages.filter(page => page.getOption('sequence', form_record) === sequence).map(page => page.key);
+                    console.log(sequence);
                 }
 
                 nav_sequence = {
@@ -1097,6 +1100,19 @@ function InstanceController() {
                 </nav>
             </div>
         `;
+    }
+
+    function getAllPages(items) {
+        let pages = items.flatMap(item => {
+            if (item.type === 'form') {
+                let form = item.form;
+                return getAllPages(form.menu);
+            } else if (item.type == 'page') {
+                return item.page;
+            }
+        })
+
+        return pages;
     }
 
     function renderFormMenu(form) {
