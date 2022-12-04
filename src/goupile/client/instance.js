@@ -1005,6 +1005,8 @@ function InstanceController() {
             if (!page_div.children.length)
                 render('Impossible de générer la page à cause d\'une erreur', page_div);
             page_div.classList.add('disabled');
+
+            console.error(err);
         }
 
         let menu = (profile.lock == null) && (route.form.menu.length > 1 || route.form.chain.length > 1);
