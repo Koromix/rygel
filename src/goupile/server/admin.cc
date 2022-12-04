@@ -820,13 +820,16 @@ int RunUnseal(Span<const char *> arguments)
     const char *archive_filename = nullptr;
     const char *output_filename = nullptr;
     const char *decrypt_key = nullptr;
+    bool extract = true;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 unseal [options] <archive_file>%!0
 
 Options:
     %!..+-O, --output_file <file>%!0      Set output file
-    %!..+-k, --key <key>%!0               Set decryption key)", FelixTarget);
+    %!..+-k, --key <key>%!0               Set decryption key
+
+        %!..+--check%!0                   Only check that key is valid)", FelixTarget);
     };
 
     // Parse arguments
@@ -841,6 +844,8 @@ Options:
                 output_filename = opt.current_value;
             } else if (opt.Test("-k", "--key", OptionType::Value)) {
                 decrypt_key = opt.current_value;
+            } else if (opt.Test("--check")) {
+                extract = false;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -864,7 +869,7 @@ Options:
 
         output_filename = Fmt(&temp_alloc, "%1.zip", name).ptr;
     }
-    if (TestFile(output_filename)) {
+    if (extract && TestFile(output_filename)) {
         LogError("File '%1' already exists", output_filename);
         return 1;
     }
@@ -875,8 +880,12 @@ Options:
             return 1;
     }
 
-    StreamWriter writer(output_filename, (int)StreamWriterFlag::Atomic |
-                                         (int)StreamWriterFlag::Exclusive);
+    StreamWriter writer;
+    if (extract) {
+        writer.Open(output_filename, (int)StreamWriterFlag::Atomic | (int)StreamWriterFlag::Exclusive);
+    } else {
+        writer.Open([](Span<const uint8_t>) { return true; });
+    }
     if (!writer.IsValid())
         return 1;
 
@@ -885,7 +894,12 @@ Options:
     if (!writer.Close())
         return 1;
 
-    LogInfo("Unsealed archive: %!..+%1%!0", output_filename);
+    if (extract) {
+        LogInfo("Unsealed archive: %!..+%1%!0", output_filename);
+    } else {
+        LogInfo("Key appears correct");
+    }
+
     return 0;
 }
 
