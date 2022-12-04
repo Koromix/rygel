@@ -60,16 +60,16 @@ static ssh_mac_ctx ssh_mac_ctx_init(enum ssh_kdf_digest type)
     ctx->digest_type = type;
     switch(type){
     case SSH_KDF_SHA1:
-        ctx->ctx.sha1_ctx = sha1_init();
+        ctx->ctx.sha1_ctx = _ssh_sha1_init();
         return ctx;
     case SSH_KDF_SHA256:
-        ctx->ctx.sha256_ctx = sha256_init();
+        ctx->ctx.sha256_ctx = _ssh_sha256_init();
         return ctx;
     case SSH_KDF_SHA384:
-        ctx->ctx.sha384_ctx = sha384_init();
+        ctx->ctx.sha384_ctx = _ssh_sha384_init();
         return ctx;
     case SSH_KDF_SHA512:
-        ctx->ctx.sha512_ctx = sha512_init();
+        ctx->ctx.sha512_ctx = _ssh_sha512_init();
         return ctx;
     default:
         SAFE_FREE(ctx);
@@ -81,16 +81,16 @@ static void ssh_mac_update(ssh_mac_ctx ctx, const void *data, size_t len)
 {
     switch(ctx->digest_type){
     case SSH_KDF_SHA1:
-        sha1_update(ctx->ctx.sha1_ctx, data, len);
+        _ssh_sha1_update(ctx->ctx.sha1_ctx, data, len);
         break;
     case SSH_KDF_SHA256:
-        sha256_update(ctx->ctx.sha256_ctx, data, len);
+        _ssh_sha256_update(ctx->ctx.sha256_ctx, data, len);
         break;
     case SSH_KDF_SHA384:
-        sha384_update(ctx->ctx.sha384_ctx, data, len);
+        _ssh_sha384_update(ctx->ctx.sha384_ctx, data, len);
         break;
     case SSH_KDF_SHA512:
-        sha512_update(ctx->ctx.sha512_ctx, data, len);
+        _ssh_sha512_update(ctx->ctx.sha512_ctx, data, len);
         break;
     }
 }
@@ -99,16 +99,16 @@ static void ssh_mac_final(unsigned char *md, ssh_mac_ctx ctx)
 {
     switch(ctx->digest_type){
     case SSH_KDF_SHA1:
-        sha1_final(md,ctx->ctx.sha1_ctx);
+        _ssh_sha1_final(md,ctx->ctx.sha1_ctx);
         break;
     case SSH_KDF_SHA256:
-        sha256_final(md,ctx->ctx.sha256_ctx);
+        _ssh_sha256_final(md,ctx->ctx.sha256_ctx);
         break;
     case SSH_KDF_SHA384:
-        sha384_final(md,ctx->ctx.sha384_ctx);
+        _ssh_sha384_final(md,ctx->ctx.sha384_ctx);
         break;
     case SSH_KDF_SHA512:
-        sha512_final(md,ctx->ctx.sha512_ctx);
+        _ssh_sha512_final(md,ctx->ctx.sha512_ctx);
         break;
     }
     SAFE_FREE(ctx);

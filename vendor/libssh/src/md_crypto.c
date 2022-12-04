@@ -30,7 +30,7 @@
 #include <openssl/sha.h>
 
 SHACTX
-sha1_init(void)
+_ssh_sha1_init(void)
 {
     int rc;
     SHACTX c = EVP_MD_CTX_new();
@@ -46,13 +46,13 @@ sha1_init(void)
 }
 
 void
-sha1_update(SHACTX c, const void *data, size_t len)
+_ssh_sha1_update(SHACTX c, const void *data, size_t len)
 {
     EVP_DigestUpdate(c, data, len);
 }
 
 void
-sha1_final(unsigned char *md, SHACTX c)
+_ssh_sha1_final(unsigned char *md, SHACTX c)
 {
     unsigned int mdlen = 0;
 
@@ -61,17 +61,17 @@ sha1_final(unsigned char *md, SHACTX c)
 }
 
 void
-sha1(const unsigned char *digest, size_t len, unsigned char *hash)
+_ssh_sha1(const unsigned char *digest, size_t len, unsigned char *hash)
 {
-    SHACTX c = sha1_init();
+    SHACTX c = _ssh_sha1_init();
     if (c != NULL) {
-        sha1_update(c, digest, len);
-        sha1_final(hash, c);
+        _ssh_sha1_update(c, digest, len);
+        _ssh_sha1_final(hash, c);
     }
 }
 
 SHA256CTX
-sha256_init(void)
+_ssh_sha256_init(void)
 {
     int rc;
     SHA256CTX c = EVP_MD_CTX_new();
@@ -87,13 +87,13 @@ sha256_init(void)
 }
 
 void
-sha256_update(SHA256CTX c, const void *data, size_t len)
+_ssh_sha256_update(SHA256CTX c, const void *data, size_t len)
 {
     EVP_DigestUpdate(c, data, len);
 }
 
 void
-sha256_final(unsigned char *md, SHA256CTX c)
+_ssh_sha256_final(unsigned char *md, SHA256CTX c)
 {
     unsigned int mdlen = 0;
 
@@ -104,15 +104,15 @@ sha256_final(unsigned char *md, SHA256CTX c)
 void
 sha256(const unsigned char *digest, size_t len, unsigned char *hash)
 {
-    SHA256CTX c = sha256_init();
+    SHA256CTX c = _ssh_sha256_init();
     if (c != NULL) {
-        sha256_update(c, digest, len);
-        sha256_final(hash, c);
+        _ssh_sha256_update(c, digest, len);
+        _ssh_sha256_final(hash, c);
     }
 }
 
 SHA384CTX
-sha384_init(void)
+_ssh_sha384_init(void)
 {
     int rc;
     SHA384CTX c = EVP_MD_CTX_new();
@@ -128,13 +128,13 @@ sha384_init(void)
 }
 
 void
-sha384_update(SHA384CTX c, const void *data, size_t len)
+_ssh_sha384_update(SHA384CTX c, const void *data, size_t len)
 {
     EVP_DigestUpdate(c, data, len);
 }
 
 void
-sha384_final(unsigned char *md, SHA384CTX c)
+_ssh_sha384_final(unsigned char *md, SHA384CTX c)
 {
     unsigned int mdlen = 0;
 
@@ -145,15 +145,15 @@ sha384_final(unsigned char *md, SHA384CTX c)
 void
 sha384(const unsigned char *digest, size_t len, unsigned char *hash)
 {
-    SHA384CTX c = sha384_init();
+    SHA384CTX c = _ssh_sha384_init();
     if (c != NULL) {
-        sha384_update(c, digest, len);
-        sha384_final(hash, c);
+        _ssh_sha384_update(c, digest, len);
+        _ssh_sha384_final(hash, c);
     }
 }
 
 SHA512CTX
-sha512_init(void)
+_ssh_sha512_init(void)
 {
     int rc = 0;
     SHA512CTX c = EVP_MD_CTX_new();
@@ -169,13 +169,13 @@ sha512_init(void)
 }
 
 void
-sha512_update(SHA512CTX c, const void *data, size_t len)
+_ssh_sha512_update(SHA512CTX c, const void *data, size_t len)
 {
     EVP_DigestUpdate(c, data, len);
 }
 
 void
-sha512_final(unsigned char *md, SHA512CTX c)
+_ssh_sha512_final(unsigned char *md, SHA512CTX c)
 {
     unsigned int mdlen = 0;
 
@@ -184,17 +184,17 @@ sha512_final(unsigned char *md, SHA512CTX c)
 }
 
 void
-sha512(const unsigned char *digest, size_t len, unsigned char *hash)
+_ssh_sha512(const unsigned char *digest, size_t len, unsigned char *hash)
 {
-    SHA512CTX c = sha512_init();
+    SHA512CTX c = _ssh_sha512_init();
     if (c != NULL) {
-        sha512_update(c, digest, len);
-        sha512_final(hash, c);
+        _ssh_sha512_update(c, digest, len);
+        _ssh_sha512_final(hash, c);
     }
 }
 
 MD5CTX
-md5_init(void)
+_ssh_md5_init(void)
 {
     int rc;
     MD5CTX c = EVP_MD_CTX_new();
@@ -210,13 +210,13 @@ md5_init(void)
 }
 
 void
-md5_update(MD5CTX c, const void *data, size_t len)
+_ssh_md5_update(MD5CTX c, const void *data, size_t len)
 {
     EVP_DigestUpdate(c, data, len);
 }
 
 void
-md5_final(unsigned char *md, MD5CTX c)
+_ssh_md5_final(unsigned char *md, MD5CTX c)
 {
     unsigned int mdlen = 0;
 

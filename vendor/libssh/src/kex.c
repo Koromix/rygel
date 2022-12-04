@@ -1191,8 +1191,8 @@ int ssh_make_sessionid(ssh_session session)
             ssh_set_error_oom(session);
             goto error;
         }
-        sha1(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
-                                   session->next_crypto->secret_hash);
+        _ssh_sha1(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
+                                       session->next_crypto->secret_hash);
         break;
     case SSH_KEX_DH_GROUP14_SHA256:
     case SSH_KEX_ECDH_SHA2_NISTP256:
@@ -1208,8 +1208,8 @@ int ssh_make_sessionid(ssh_session session)
             ssh_set_error_oom(session);
             goto error;
         }
-        sha256(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
-                                     session->next_crypto->secret_hash);
+        _ssh_sha256(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
+                                         session->next_crypto->secret_hash);
         break;
     case SSH_KEX_ECDH_SHA2_NISTP384:
         session->next_crypto->digest_len = SHA384_DIGEST_LENGTH;
@@ -1219,8 +1219,8 @@ int ssh_make_sessionid(ssh_session session)
             ssh_set_error_oom(session);
             goto error;
         }
-        sha384(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
-                                     session->next_crypto->secret_hash);
+        _ssh_sha384(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
+                                         session->next_crypto->secret_hash);
         break;
     case SSH_KEX_DH_GROUP16_SHA512:
     case SSH_KEX_DH_GROUP18_SHA512:
@@ -1232,9 +1232,9 @@ int ssh_make_sessionid(ssh_session session)
             ssh_set_error_oom(session);
             goto error;
         }
-        sha512(ssh_buffer_get(buf),
-               ssh_buffer_get_len(buf),
-               session->next_crypto->secret_hash);
+        _ssh_sha512(ssh_buffer_get(buf),
+                    ssh_buffer_get_len(buf),
+                    session->next_crypto->secret_hash);
         break;
     }
     /* During the first kex, secret hash and session ID are equal. However, after

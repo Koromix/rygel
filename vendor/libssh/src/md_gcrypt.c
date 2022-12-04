@@ -28,7 +28,7 @@
 #include <gcrypt.h>
 
 SHACTX
-sha1_init(void)
+_ssh_sha1_init(void)
 {
     SHACTX ctx = NULL;
     gcry_md_open(&ctx, GCRY_MD_SHA1, 0);
@@ -37,13 +37,13 @@ sha1_init(void)
 }
 
 void
-sha1_update(SHACTX c, const void *data, size_t len)
+_ssh_sha1_update(SHACTX c, const void *data, size_t len)
 {
     gcry_md_write(c, data, len);
 }
 
 void
-sha1_final(unsigned char *md, SHACTX c)
+_ssh_sha1_final(unsigned char *md, SHACTX c)
 {
     gcry_md_final(c);
     memcpy(md, gcry_md_read(c, 0), SHA_DIGEST_LEN);
@@ -51,13 +51,13 @@ sha1_final(unsigned char *md, SHACTX c)
 }
 
 void
-sha1(const unsigned char *digest, size_t len, unsigned char *hash)
+_ssh_sha1(const unsigned char *digest, size_t len, unsigned char *hash)
 {
     gcry_md_hash_buffer(GCRY_MD_SHA1, hash, digest, len);
 }
 
 SHA256CTX
-sha256_init(void)
+_ssh_sha256_init(void)
 {
     SHA256CTX ctx = NULL;
     gcry_md_open(&ctx, GCRY_MD_SHA256, 0);
@@ -66,13 +66,13 @@ sha256_init(void)
 }
 
 void
-sha256_update(SHACTX c, const void *data, size_t len)
+_ssh_sha256_update(SHACTX c, const void *data, size_t len)
 {
     gcry_md_write(c, data, len);
 }
 
 void
-sha256_final(unsigned char *md, SHACTX c)
+_ssh_sha256_final(unsigned char *md, SHACTX c)
 {
     gcry_md_final(c);
     memcpy(md, gcry_md_read(c, 0), SHA256_DIGEST_LEN);
@@ -80,13 +80,13 @@ sha256_final(unsigned char *md, SHACTX c)
 }
 
 void
-sha256(const unsigned char *digest, size_t len, unsigned char *hash)
+_ssh_sha256(const unsigned char *digest, size_t len, unsigned char *hash)
 {
     gcry_md_hash_buffer(GCRY_MD_SHA256, hash, digest, len);
 }
 
 SHA384CTX
-sha384_init(void)
+_ssh_sha384_init(void)
 {
     SHA384CTX ctx = NULL;
     gcry_md_open(&ctx, GCRY_MD_SHA384, 0);
@@ -95,13 +95,13 @@ sha384_init(void)
 }
 
 void
-sha384_update(SHACTX c, const void *data, size_t len)
+_ssh_sha384_update(SHACTX c, const void *data, size_t len)
 {
     gcry_md_write(c, data, len);
 }
 
 void
-sha384_final(unsigned char *md, SHACTX c)
+_ssh_sha384_final(unsigned char *md, SHACTX c)
 {
     gcry_md_final(c);
     memcpy(md, gcry_md_read(c, 0), SHA384_DIGEST_LEN);
@@ -109,13 +109,13 @@ sha384_final(unsigned char *md, SHACTX c)
 }
 
 void
-sha384(const unsigned char *digest, size_t len, unsigned char *hash)
+_ssh_sha384(const unsigned char *digest, size_t len, unsigned char *hash)
 {
     gcry_md_hash_buffer(GCRY_MD_SHA384, hash, digest, len);
 }
 
 SHA512CTX
-sha512_init(void)
+_ssh_sha512_init(void)
 {
     SHA512CTX ctx = NULL;
     gcry_md_open(&ctx, GCRY_MD_SHA512, 0);
@@ -124,13 +124,13 @@ sha512_init(void)
 }
 
 void
-sha512_update(SHACTX c, const void *data, size_t len)
+_ssh_sha512_update(SHACTX c, const void *data, size_t len)
 {
     gcry_md_write(c, data, len);
 }
 
 void
-sha512_final(unsigned char *md, SHACTX c)
+_ssh_sha512_final(unsigned char *md, SHACTX c)
 {
     gcry_md_final(c);
     memcpy(md, gcry_md_read(c, 0), SHA512_DIGEST_LEN);
@@ -138,13 +138,13 @@ sha512_final(unsigned char *md, SHACTX c)
 }
 
 void
-sha512(const unsigned char *digest, size_t len, unsigned char *hash)
+_ssh_sha512(const unsigned char *digest, size_t len, unsigned char *hash)
 {
     gcry_md_hash_buffer(GCRY_MD_SHA512, hash, digest, len);
 }
 
 MD5CTX
-md5_init(void)
+_ssh_md5_init(void)
 {
     MD5CTX c = NULL;
     gcry_md_open(&c, GCRY_MD_MD5, 0);
@@ -153,13 +153,13 @@ md5_init(void)
 }
 
 void
-md5_update(MD5CTX c, const void *data, size_t len)
+_ssh_md5_update(MD5CTX c, const void *data, size_t len)
 {
     gcry_md_write(c, data, len);
 }
 
 void
-md5_final(unsigned char *md, MD5CTX c)
+_ssh_md5_final(unsigned char *md, MD5CTX c)
 {
     gcry_md_final(c);
     memcpy(md, gcry_md_read(c, 0), MD5_DIGEST_LEN);

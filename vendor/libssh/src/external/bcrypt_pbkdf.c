@@ -136,9 +136,9 @@ bcrypt_pbkdf(const char *pass, size_t passlen, const uint8_t *salt, size_t saltl
 	}
 
 	/* collapse password */
-	ctx = sha512_init();
-	sha512_update(ctx, pass, passlen);
-	sha512_final(sha2pass, ctx);
+	ctx = _ssh_sha512_init();
+	_ssh_sha512_update(ctx, pass, passlen);
+	_ssh_sha512_final(sha2pass, ctx);
 
 	/* generate key, sizeof(out) at a time */
 	for (count = 1; keylen > 0; count++) {
@@ -148,18 +148,18 @@ bcrypt_pbkdf(const char *pass, size_t passlen, const uint8_t *salt, size_t saltl
 		countsalt[saltlen + 3] = count & 0xff;
 
 		/* first round, salt is salt */
-		ctx = sha512_init();
-		sha512_update(ctx, countsalt, saltlen + 4);
-		sha512_final(sha2salt, ctx);
+		ctx = _ssh_sha512_init();
+		_ssh_sha512_update(ctx, countsalt, saltlen + 4);
+		_ssh_sha512_final(sha2salt, ctx);
 
 		bcrypt_hash(state, sha2pass, sha2salt, tmpout);
 		memcpy(out, tmpout, sizeof(out));
 
 		for (i = 1; i < rounds; i++) {
 			/* subsequent rounds, salt is previous output */
-			ctx = sha512_init();
-			sha512_update(ctx, tmpout, sizeof(tmpout));
-			sha512_final(sha2salt, ctx);
+			ctx = _ssh_sha512_init();
+			_ssh_sha512_update(ctx, tmpout, sizeof(tmpout));
+			_ssh_sha512_final(sha2salt, ctx);
 			bcrypt_hash(state, sha2pass, sha2salt, tmpout);
 			for (j = 0; j < sizeof(out); j++)
 				out[j] ^= tmpout[j];

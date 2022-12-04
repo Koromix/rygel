@@ -130,11 +130,11 @@ static int ssh_curve25519_init(ssh_session session)
     }
 
     if (session->server) {
-        crypto_scalarmult_base(session->next_crypto->curve25519_server_pubkey,
-                               session->next_crypto->curve25519_privkey);
+        _ssh_crypto_scalarmult_base(session->next_crypto->curve25519_server_pubkey,
+                                    session->next_crypto->curve25519_privkey);
     } else {
-        crypto_scalarmult_base(session->next_crypto->curve25519_client_pubkey,
-                               session->next_crypto->curve25519_privkey);
+        _ssh_crypto_scalarmult_base(session->next_crypto->curve25519_client_pubkey,
+                                    session->next_crypto->curve25519_privkey);
     }
 #endif /* defined(HAVE_LIBCRYPTO) && defined(HAVE_OPENSSL_X25519) */
 
@@ -249,11 +249,11 @@ out:
     }
 #else
     if (session->server) {
-        crypto_scalarmult(k, session->next_crypto->curve25519_privkey,
-                          session->next_crypto->curve25519_client_pubkey);
+        _ssh_crypto_scalarmult(k, session->next_crypto->curve25519_privkey,
+                               session->next_crypto->curve25519_client_pubkey);
     } else {
-        crypto_scalarmult(k, session->next_crypto->curve25519_privkey,
-                          session->next_crypto->curve25519_server_pubkey);
+        _ssh_crypto_scalarmult(k, session->next_crypto->curve25519_privkey,
+                               session->next_crypto->curve25519_server_pubkey);
     }
 #endif /* defined(HAVE_LIBCRYPTO) && defined(HAVE_OPENSSL_X25519) */
 

@@ -8,7 +8,7 @@ Derived from public domain code by D. J. Bernstein.
 #include "libssh/curve25519.h"
 static const unsigned char base[32] = {9};
 
-int crypto_scalarmult_base(unsigned char *q,
+int _ssh_crypto_scalarmult_base(unsigned char *q,
   const unsigned char *n)
 {
   return crypto_scalarmult(q,n,base);
@@ -250,7 +250,7 @@ static void recip(unsigned int out[32],const unsigned int z[32])
   /* 2^255 - 21 */ mult(out,t1,z11);
 }
 
-int crypto_scalarmult(unsigned char *q,
+int _ssh_crypto_scalarmult(unsigned char *q,
   const unsigned char *n,
   const unsigned char *p)
 {

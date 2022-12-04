@@ -1,0 +1,1257 @@
+diff --git a/vendor/libssh/include/libssh/curve25519.h b/vendor/libssh/include/libssh/curve25519.h
+index f0cc63487..2313505c4 100644
+--- a/vendor/libssh/include/libssh/curve25519.h
++++ b/vendor/libssh/include/libssh/curve25519.h
+@@ -29,14 +29,14 @@
+ #include <nacl/crypto_scalarmult_curve25519.h>
+ #define CURVE25519_PUBKEY_SIZE crypto_scalarmult_curve25519_BYTES
+ #define CURVE25519_PRIVKEY_SIZE crypto_scalarmult_curve25519_SCALARBYTES
+-#define crypto_scalarmult_base crypto_scalarmult_curve25519_base
+-#define crypto_scalarmult crypto_scalarmult_curve25519
++#define _ssh_crypto_scalarmult_base crypto_scalarmult_curve25519_base
++#define _ssh_crypto_scalarmult crypto_scalarmult_curve25519
+ #else
+ 
+ #define CURVE25519_PUBKEY_SIZE 32
+ #define CURVE25519_PRIVKEY_SIZE 32
+-int crypto_scalarmult_base(unsigned char *q, const unsigned char *n);
+-int crypto_scalarmult(unsigned char *q, const unsigned char *n, const unsigned char *p);
++int _ssh_crypto_scalarmult_base(unsigned char *q, const unsigned char *n);
++int _ssh_crypto_scalarmult(unsigned char *q, const unsigned char *n, const unsigned char *p);
+ #endif /* WITH_NACL */
+ 
+ #ifdef HAVE_ECC
+diff --git a/vendor/libssh/include/libssh/ed25519.h b/vendor/libssh/include/libssh/ed25519.h
+index b45f507d2..c9f0b5cca 100644
+--- a/vendor/libssh/include/libssh/ed25519.h
++++ b/vendor/libssh/include/libssh/ed25519.h
+@@ -43,7 +43,7 @@ typedef uint8_t ed25519_signature[ED25519_SIG_LEN];
+  * @param[out] sk generated secret key
+  * @return     0 on success, -1 on error.
+  * */
+-int crypto_sign_ed25519_keypair(ed25519_pubkey pk, ed25519_privkey sk);
++int _ssh_crypto_sign_ed25519_keypair(ed25519_pubkey pk, ed25519_privkey sk);
+ 
+ /** @internal
+  * @brief sign a message with ed25519
+@@ -55,7 +55,7 @@ int crypto_sign_ed25519_keypair(ed25519_pubkey pk, ed25519_privkey sk);
+  * @param[in] sk secret key to sign the message with
+  * @return    0 on success.
+  */
+-int crypto_sign_ed25519(
++int _ssh_crypto_sign_ed25519(
+     unsigned char *sm, uint64_t *smlen,
+     const unsigned char *m, uint64_t mlen,
+     const ed25519_privkey sk);
+@@ -70,7 +70,7 @@ int crypto_sign_ed25519(
+  * @param[in] pk public key used to sign the message
+  * @returns   0 on success (supposedly).
+  */
+-int crypto_sign_ed25519_open(
++int _ssh_crypto_sign_ed25519_open(
+     unsigned char *m, uint64_t *mlen,
+     const unsigned char *sm, uint64_t smlen,
+     const ed25519_pubkey pk);
+diff --git a/vendor/libssh/include/libssh/wrapper.h b/vendor/libssh/include/libssh/wrapper.h
+index 2275032eb..24f7c0d1a 100644
+--- a/vendor/libssh/include/libssh/wrapper.h
++++ b/vendor/libssh/include/libssh/wrapper.h
+@@ -67,29 +67,29 @@ struct ssh_cipher_struct;
+ struct ssh_crypto_struct;
+ 
+ typedef struct ssh_mac_ctx_struct *ssh_mac_ctx;
+-MD5CTX md5_init(void);
+-void md5_update(MD5CTX c, const void *data, size_t len);
+-void md5_final(unsigned char *md,MD5CTX c);
+-
+-SHACTX sha1_init(void);
+-void sha1_update(SHACTX c, const void *data, size_t len);
+-void sha1_final(unsigned char *md,SHACTX c);
+-void sha1(const unsigned char *digest,size_t len,unsigned char *hash);
+-
+-SHA256CTX sha256_init(void);
+-void sha256_update(SHA256CTX c, const void *data, size_t len);
+-void sha256_final(unsigned char *md,SHA256CTX c);
+-void sha256(const unsigned char *digest, size_t len, unsigned char *hash);
+-
+-SHA384CTX sha384_init(void);
+-void sha384_update(SHA384CTX c, const void *data, size_t len);
+-void sha384_final(unsigned char *md,SHA384CTX c);
+-void sha384(const unsigned char *digest, size_t len, unsigned char *hash);
+-
+-SHA512CTX sha512_init(void);
+-void sha512_update(SHA512CTX c, const void *data, size_t len);
+-void sha512_final(unsigned char *md,SHA512CTX c);
+-void sha512(const unsigned char *digest, size_t len, unsigned char *hash);
++MD5CTX _ssh_md5_init(void);
++void _ssh_md5_update(MD5CTX c, const void *data, size_t len);
++void _ssh_md5_final(unsigned char *md,MD5CTX c);
++
++SHACTX _ssh_sha1_init(void);
++void _ssh_sha1_update(SHACTX c, const void *data, size_t len);
++void _ssh_sha1_final(unsigned char *md,SHACTX c);
++void _ssh_sha1(const unsigned char *digest,size_t len,unsigned char *hash);
++
++SHA256CTX _ssh_sha256_init(void);
++void _ssh_sha256_update(SHA256CTX c, const void *data, size_t len);
++void _ssh_sha256_final(unsigned char *md,SHA256CTX c);
++void _ssh_sha256(const unsigned char *digest, size_t len, unsigned char *hash);
++
++SHA384CTX _ssh_sha384_init(void);
++void _ssh_sha384_update(SHA384CTX c, const void *data, size_t len);
++void _ssh_sha384_final(unsigned char *md,SHA384CTX c);
++void _ssh_sha384(const unsigned char *digest, size_t len, unsigned char *hash);
++
++SHA512CTX _ssh_sha512_init(void);
++void _ssh_sha512_update(SHA512CTX c, const void *data, size_t len);
++void _ssh_sha512_final(unsigned char *md,SHA512CTX c);
++void _ssh_sha512(const unsigned char *digest, size_t len, unsigned char *hash);
+ 
+ void evp(int nid, unsigned char *digest, size_t len, unsigned char *hash, unsigned int *hlen);
+ EVPCTX evp_init(int nid);
+diff --git a/vendor/libssh/src/curve25519.c b/vendor/libssh/src/curve25519.c
+index 6a930faf6..f288dce51 100644
+--- a/vendor/libssh/src/curve25519.c
++++ b/vendor/libssh/src/curve25519.c
+@@ -130,11 +130,11 @@ static int ssh_curve25519_init(ssh_session session)
+     }
+ 
+     if (session->server) {
+-        crypto_scalarmult_base(session->next_crypto->curve25519_server_pubkey,
+-                               session->next_crypto->curve25519_privkey);
++        _ssh_crypto_scalarmult_base(session->next_crypto->curve25519_server_pubkey,
++                                    session->next_crypto->curve25519_privkey);
+     } else {
+-        crypto_scalarmult_base(session->next_crypto->curve25519_client_pubkey,
+-                               session->next_crypto->curve25519_privkey);
++        _ssh_crypto_scalarmult_base(session->next_crypto->curve25519_client_pubkey,
++                                    session->next_crypto->curve25519_privkey);
+     }
+ #endif /* defined(HAVE_LIBCRYPTO) && defined(HAVE_OPENSSL_X25519) */
+ 
+@@ -249,11 +249,11 @@ out:
+     }
+ #else
+     if (session->server) {
+-        crypto_scalarmult(k, session->next_crypto->curve25519_privkey,
+-                          session->next_crypto->curve25519_client_pubkey);
++        _ssh_crypto_scalarmult(k, session->next_crypto->curve25519_privkey,
++                               session->next_crypto->curve25519_client_pubkey);
+     } else {
+-        crypto_scalarmult(k, session->next_crypto->curve25519_privkey,
+-                          session->next_crypto->curve25519_server_pubkey);
++        _ssh_crypto_scalarmult(k, session->next_crypto->curve25519_privkey,
++                               session->next_crypto->curve25519_server_pubkey);
+     }
+ #endif /* defined(HAVE_LIBCRYPTO) && defined(HAVE_OPENSSL_X25519) */
+ 
+diff --git a/vendor/libssh/src/external/bcrypt_pbkdf.c b/vendor/libssh/src/external/bcrypt_pbkdf.c
+index 75c02151b..952392967 100644
+--- a/vendor/libssh/src/external/bcrypt_pbkdf.c
++++ b/vendor/libssh/src/external/bcrypt_pbkdf.c
+@@ -136,9 +136,9 @@ bcrypt_pbkdf(const char *pass, size_t passlen, const uint8_t *salt, size_t saltl
+ 	}
+ 
+ 	/* collapse password */
+-	ctx = sha512_init();
+-	sha512_update(ctx, pass, passlen);
+-	sha512_final(sha2pass, ctx);
++	ctx = _ssh_sha512_init();
++	_ssh_sha512_update(ctx, pass, passlen);
++	_ssh_sha512_final(sha2pass, ctx);
+ 
+ 	/* generate key, sizeof(out) at a time */
+ 	for (count = 1; keylen > 0; count++) {
+@@ -148,18 +148,18 @@ bcrypt_pbkdf(const char *pass, size_t passlen, const uint8_t *salt, size_t saltl
+ 		countsalt[saltlen + 3] = count & 0xff;
+ 
+ 		/* first round, salt is salt */
+-		ctx = sha512_init();
+-		sha512_update(ctx, countsalt, saltlen + 4);
+-		sha512_final(sha2salt, ctx);
++		ctx = _ssh_sha512_init();
++		_ssh_sha512_update(ctx, countsalt, saltlen + 4);
++		_ssh_sha512_final(sha2salt, ctx);
+ 
+ 		bcrypt_hash(state, sha2pass, sha2salt, tmpout);
+ 		memcpy(out, tmpout, sizeof(out));
+ 
+ 		for (i = 1; i < rounds; i++) {
+ 			/* subsequent rounds, salt is previous output */
+-			ctx = sha512_init();
+-			sha512_update(ctx, tmpout, sizeof(tmpout));
+-			sha512_final(sha2salt, ctx);
++			ctx = _ssh_sha512_init();
++			_ssh_sha512_update(ctx, tmpout, sizeof(tmpout));
++			_ssh_sha512_final(sha2salt, ctx);
+ 			bcrypt_hash(state, sha2pass, sha2salt, tmpout);
+ 			for (j = 0; j < sizeof(out); j++)
+ 				out[j] ^= tmpout[j];
+diff --git a/vendor/libssh/src/external/curve25519_ref.c b/vendor/libssh/src/external/curve25519_ref.c
+index 6ffb14a87..218c6f0a1 100644
+--- a/vendor/libssh/src/external/curve25519_ref.c
++++ b/vendor/libssh/src/external/curve25519_ref.c
+@@ -8,7 +8,7 @@ Derived from public domain code by D. J. Bernstein.
+ #include "libssh/curve25519.h"
+ static const unsigned char base[32] = {9};
+ 
+-int crypto_scalarmult_base(unsigned char *q,
++int _ssh_crypto_scalarmult_base(unsigned char *q,
+   const unsigned char *n)
+ {
+   return crypto_scalarmult(q,n,base);
+@@ -250,7 +250,7 @@ static void recip(unsigned int out[32],const unsigned int z[32])
+   /* 2^255 - 21 */ mult(out,t1,z11);
+ }
+ 
+-int crypto_scalarmult(unsigned char *q,
++int _ssh_crypto_scalarmult(unsigned char *q,
+   const unsigned char *n,
+   const unsigned char *p)
+ {
+diff --git a/vendor/libssh/src/external/ed25519.c b/vendor/libssh/src/external/ed25519.c
+index 41b5f2898..262d1a3df 100644
+--- a/vendor/libssh/src/external/ed25519.c
++++ b/vendor/libssh/src/external/ed25519.c
+@@ -71,14 +71,14 @@ static void get_hram(unsigned char *hram,
+     for (i = 32;i < 64;++i)    playground[i] = pk[i-32];
+     for (i = 64;i < smlen;++i) playground[i] = sm[i];
+ 
+-    ctx = sha512_init();
+-    sha512_update(ctx, playground, smlen);
+-    sha512_final(hram, ctx);
++    ctx = _ssh_sha512_init();
++    _ssh_sha512_update(ctx, playground, smlen);
++    _ssh_sha512_final(hram, ctx);
+ }
+ 
+ 
+-int crypto_sign_ed25519_keypair(ed25519_pubkey pk,
+-                                ed25519_privkey sk)
++int _ssh_crypto_sign_ed25519_keypair(ed25519_pubkey pk,
++                                     ed25519_privkey sk)
+ {
+     sc25519 scsk;
+     ge25519 gepk;
+@@ -92,9 +92,9 @@ int crypto_sign_ed25519_keypair(ed25519_pubkey pk,
+         return -1;
+     }
+ 
+-    ctx = sha512_init();
+-    sha512_update(ctx, sk, 32);
+-    sha512_final(extsk, ctx);
++    ctx = _ssh_sha512_init();
++    _ssh_sha512_update(ctx, sk, 32);
++    _ssh_sha512_final(extsk, ctx);
+     extsk[0] &= 248;
+     extsk[31] &= 127;
+     extsk[31] |= 64;
+@@ -110,11 +110,11 @@ int crypto_sign_ed25519_keypair(ed25519_pubkey pk,
+     return 0;
+ }
+ 
+-int crypto_sign_ed25519(unsigned char *sm,
+-                        uint64_t *smlen,
+-                        const unsigned char *m,
+-                        uint64_t mlen,
+-                        const ed25519_privkey sk)
++int _ssh_crypto_sign_ed25519(unsigned char *sm,
++                             uint64_t *smlen,
++                             const unsigned char *m,
++                             uint64_t mlen,
++                             const ed25519_privkey sk)
+ {
+     sc25519 sck, scs, scsk;
+     ge25519 ger;
+@@ -126,9 +126,9 @@ int crypto_sign_ed25519(unsigned char *sm,
+     unsigned char hmg[SHA512_DIGEST_LEN];
+     unsigned char hram[SHA512_DIGEST_LEN];
+ 
+-    ctx = sha512_init();
+-    sha512_update(ctx, sk, 32);
+-    sha512_final(extsk, ctx);
++    ctx = _ssh_sha512_init();
++    _ssh_sha512_update(ctx, sk, 32);
++    _ssh_sha512_final(extsk, ctx);
+ 
+     extsk[0] &= 248;
+     extsk[31] &= 127;
+@@ -143,9 +143,9 @@ int crypto_sign_ed25519(unsigned char *sm,
+     }
+ 
+     /* Generate k as h(extsk[32],...,extsk[63],m) */
+-    ctx = sha512_init();
+-    sha512_update(ctx, sm + 32, mlen + 32);
+-    sha512_final(hmg, ctx);
++    ctx = _ssh_sha512_init();
++    _ssh_sha512_update(ctx, sm + 32, mlen + 32);
++    _ssh_sha512_final(hmg, ctx);
+ 
+     /* Computation of R */
+     sc25519_from64bytes(&sck, hmg);
+@@ -173,11 +173,11 @@ int crypto_sign_ed25519(unsigned char *sm,
+     return 0;
+ }
+ 
+-int crypto_sign_ed25519_open(unsigned char *m,
+-                             uint64_t *mlen,
+-                             const unsigned char *sm,
+-                             uint64_t smlen,
+-                             const ed25519_pubkey pk)
++int _ssh_crypto_sign_ed25519_open(unsigned char *m,
++                                  uint64_t *mlen,
++                                  const unsigned char *sm,
++                                  uint64_t smlen,
++                                  const ed25519_pubkey pk)
+ {
+     unsigned int i;
+     int ret;
+diff --git a/vendor/libssh/src/kdf.c b/vendor/libssh/src/kdf.c
+index 44f06631c..2d5039a22 100644
+--- a/vendor/libssh/src/kdf.c
++++ b/vendor/libssh/src/kdf.c
+@@ -60,16 +60,16 @@ static ssh_mac_ctx ssh_mac_ctx_init(enum ssh_kdf_digest type)
+     ctx->digest_type = type;
+     switch(type){
+     case SSH_KDF_SHA1:
+-        ctx->ctx.sha1_ctx = sha1_init();
++        ctx->ctx.sha1_ctx = _ssh_sha1_init();
+         return ctx;
+     case SSH_KDF_SHA256:
+-        ctx->ctx.sha256_ctx = sha256_init();
++        ctx->ctx.sha256_ctx = _ssh_sha256_init();
+         return ctx;
+     case SSH_KDF_SHA384:
+-        ctx->ctx.sha384_ctx = sha384_init();
++        ctx->ctx.sha384_ctx = _ssh_sha384_init();
+         return ctx;
+     case SSH_KDF_SHA512:
+-        ctx->ctx.sha512_ctx = sha512_init();
++        ctx->ctx.sha512_ctx = _ssh_sha512_init();
+         return ctx;
+     default:
+         SAFE_FREE(ctx);
+@@ -81,16 +81,16 @@ static void ssh_mac_update(ssh_mac_ctx ctx, const void *data, size_t len)
+ {
+     switch(ctx->digest_type){
+     case SSH_KDF_SHA1:
+-        sha1_update(ctx->ctx.sha1_ctx, data, len);
++        _ssh_sha1_update(ctx->ctx.sha1_ctx, data, len);
+         break;
+     case SSH_KDF_SHA256:
+-        sha256_update(ctx->ctx.sha256_ctx, data, len);
++        _ssh_sha256_update(ctx->ctx.sha256_ctx, data, len);
+         break;
+     case SSH_KDF_SHA384:
+-        sha384_update(ctx->ctx.sha384_ctx, data, len);
++        _ssh_sha384_update(ctx->ctx.sha384_ctx, data, len);
+         break;
+     case SSH_KDF_SHA512:
+-        sha512_update(ctx->ctx.sha512_ctx, data, len);
++        _ssh_sha512_update(ctx->ctx.sha512_ctx, data, len);
+         break;
+     }
+ }
+@@ -99,16 +99,16 @@ static void ssh_mac_final(unsigned char *md, ssh_mac_ctx ctx)
+ {
+     switch(ctx->digest_type){
+     case SSH_KDF_SHA1:
+-        sha1_final(md,ctx->ctx.sha1_ctx);
++        _ssh_sha1_final(md,ctx->ctx.sha1_ctx);
+         break;
+     case SSH_KDF_SHA256:
+-        sha256_final(md,ctx->ctx.sha256_ctx);
++        _ssh_sha256_final(md,ctx->ctx.sha256_ctx);
+         break;
+     case SSH_KDF_SHA384:
+-        sha384_final(md,ctx->ctx.sha384_ctx);
++        _ssh_sha384_final(md,ctx->ctx.sha384_ctx);
+         break;
+     case SSH_KDF_SHA512:
+-        sha512_final(md,ctx->ctx.sha512_ctx);
++        _ssh_sha512_final(md,ctx->ctx.sha512_ctx);
+         break;
+     }
+     SAFE_FREE(ctx);
+diff --git a/vendor/libssh/src/kex.c b/vendor/libssh/src/kex.c
+index 192eb8810..9341a68f6 100644
+--- a/vendor/libssh/src/kex.c
++++ b/vendor/libssh/src/kex.c
+@@ -1191,8 +1191,8 @@ int ssh_make_sessionid(ssh_session session)
+             ssh_set_error_oom(session);
+             goto error;
+         }
+-        sha1(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
+-                                   session->next_crypto->secret_hash);
++        _ssh_sha1(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
++                                       session->next_crypto->secret_hash);
+         break;
+     case SSH_KEX_DH_GROUP14_SHA256:
+     case SSH_KEX_ECDH_SHA2_NISTP256:
+@@ -1208,8 +1208,8 @@ int ssh_make_sessionid(ssh_session session)
+             ssh_set_error_oom(session);
+             goto error;
+         }
+-        sha256(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
+-                                     session->next_crypto->secret_hash);
++        _ssh_sha256(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
++                                         session->next_crypto->secret_hash);
+         break;
+     case SSH_KEX_ECDH_SHA2_NISTP384:
+         session->next_crypto->digest_len = SHA384_DIGEST_LENGTH;
+@@ -1219,8 +1219,8 @@ int ssh_make_sessionid(ssh_session session)
+             ssh_set_error_oom(session);
+             goto error;
+         }
+-        sha384(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
+-                                     session->next_crypto->secret_hash);
++        _ssh_sha384(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
++                                         session->next_crypto->secret_hash);
+         break;
+     case SSH_KEX_DH_GROUP16_SHA512:
+     case SSH_KEX_DH_GROUP18_SHA512:
+@@ -1232,9 +1232,9 @@ int ssh_make_sessionid(ssh_session session)
+             ssh_set_error_oom(session);
+             goto error;
+         }
+-        sha512(ssh_buffer_get(buf),
+-               ssh_buffer_get_len(buf),
+-               session->next_crypto->secret_hash);
++        _ssh_sha512(ssh_buffer_get(buf),
++                    ssh_buffer_get_len(buf),
++                    session->next_crypto->secret_hash);
+         break;
+     }
+     /* During the first kex, secret hash and session ID are equal. However, after
+diff --git a/vendor/libssh/src/md_crypto.c b/vendor/libssh/src/md_crypto.c
+index f5104f045..6e95c336d 100644
+--- a/vendor/libssh/src/md_crypto.c
++++ b/vendor/libssh/src/md_crypto.c
+@@ -30,7 +30,7 @@
+ #include <openssl/sha.h>
+ 
+ SHACTX
+-sha1_init(void)
++_ssh_sha1_init(void)
+ {
+     int rc;
+     SHACTX c = EVP_MD_CTX_new();
+@@ -46,13 +46,13 @@ sha1_init(void)
+ }
+ 
+ void
+-sha1_update(SHACTX c, const void *data, size_t len)
++_ssh_sha1_update(SHACTX c, const void *data, size_t len)
+ {
+     EVP_DigestUpdate(c, data, len);
+ }
+ 
+ void
+-sha1_final(unsigned char *md, SHACTX c)
++_ssh_sha1_final(unsigned char *md, SHACTX c)
+ {
+     unsigned int mdlen = 0;
+ 
+@@ -61,17 +61,17 @@ sha1_final(unsigned char *md, SHACTX c)
+ }
+ 
+ void
+-sha1(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha1(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+-    SHACTX c = sha1_init();
++    SHACTX c = _ssh_sha1_init();
+     if (c != NULL) {
+-        sha1_update(c, digest, len);
+-        sha1_final(hash, c);
++        _ssh_sha1_update(c, digest, len);
++        _ssh_sha1_final(hash, c);
+     }
+ }
+ 
+ SHA256CTX
+-sha256_init(void)
++_ssh_sha256_init(void)
+ {
+     int rc;
+     SHA256CTX c = EVP_MD_CTX_new();
+@@ -87,13 +87,13 @@ sha256_init(void)
+ }
+ 
+ void
+-sha256_update(SHA256CTX c, const void *data, size_t len)
++_ssh_sha256_update(SHA256CTX c, const void *data, size_t len)
+ {
+     EVP_DigestUpdate(c, data, len);
+ }
+ 
+ void
+-sha256_final(unsigned char *md, SHA256CTX c)
++_ssh_sha256_final(unsigned char *md, SHA256CTX c)
+ {
+     unsigned int mdlen = 0;
+ 
+@@ -104,15 +104,15 @@ sha256_final(unsigned char *md, SHA256CTX c)
+ void
+ sha256(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+-    SHA256CTX c = sha256_init();
++    SHA256CTX c = _ssh_sha256_init();
+     if (c != NULL) {
+-        sha256_update(c, digest, len);
+-        sha256_final(hash, c);
++        _ssh_sha256_update(c, digest, len);
++        _ssh_sha256_final(hash, c);
+     }
+ }
+ 
+ SHA384CTX
+-sha384_init(void)
++_ssh_sha384_init(void)
+ {
+     int rc;
+     SHA384CTX c = EVP_MD_CTX_new();
+@@ -128,13 +128,13 @@ sha384_init(void)
+ }
+ 
+ void
+-sha384_update(SHA384CTX c, const void *data, size_t len)
++_ssh_sha384_update(SHA384CTX c, const void *data, size_t len)
+ {
+     EVP_DigestUpdate(c, data, len);
+ }
+ 
+ void
+-sha384_final(unsigned char *md, SHA384CTX c)
++_ssh_sha384_final(unsigned char *md, SHA384CTX c)
+ {
+     unsigned int mdlen = 0;
+ 
+@@ -145,15 +145,15 @@ sha384_final(unsigned char *md, SHA384CTX c)
+ void
+ sha384(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+-    SHA384CTX c = sha384_init();
++    SHA384CTX c = _ssh_sha384_init();
+     if (c != NULL) {
+-        sha384_update(c, digest, len);
+-        sha384_final(hash, c);
++        _ssh_sha384_update(c, digest, len);
++        _ssh_sha384_final(hash, c);
+     }
+ }
+ 
+ SHA512CTX
+-sha512_init(void)
++_ssh_sha512_init(void)
+ {
+     int rc = 0;
+     SHA512CTX c = EVP_MD_CTX_new();
+@@ -169,13 +169,13 @@ sha512_init(void)
+ }
+ 
+ void
+-sha512_update(SHA512CTX c, const void *data, size_t len)
++_ssh_sha512_update(SHA512CTX c, const void *data, size_t len)
+ {
+     EVP_DigestUpdate(c, data, len);
+ }
+ 
+ void
+-sha512_final(unsigned char *md, SHA512CTX c)
++_ssh_sha512_final(unsigned char *md, SHA512CTX c)
+ {
+     unsigned int mdlen = 0;
+ 
+@@ -184,17 +184,17 @@ sha512_final(unsigned char *md, SHA512CTX c)
+ }
+ 
+ void
+-sha512(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha512(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+-    SHA512CTX c = sha512_init();
++    SHA512CTX c = _ssh_sha512_init();
+     if (c != NULL) {
+-        sha512_update(c, digest, len);
+-        sha512_final(hash, c);
++        _ssh_sha512_update(c, digest, len);
++        _ssh_sha512_final(hash, c);
+     }
+ }
+ 
+ MD5CTX
+-md5_init(void)
++_ssh_md5_init(void)
+ {
+     int rc;
+     MD5CTX c = EVP_MD_CTX_new();
+@@ -210,13 +210,13 @@ md5_init(void)
+ }
+ 
+ void
+-md5_update(MD5CTX c, const void *data, size_t len)
++_ssh_md5_update(MD5CTX c, const void *data, size_t len)
+ {
+     EVP_DigestUpdate(c, data, len);
+ }
+ 
+ void
+-md5_final(unsigned char *md, MD5CTX c)
++_ssh_md5_final(unsigned char *md, MD5CTX c)
+ {
+     unsigned int mdlen = 0;
+ 
+diff --git a/vendor/libssh/src/md_gcrypt.c b/vendor/libssh/src/md_gcrypt.c
+index 1f0a71f30..6bf3085a8 100644
+--- a/vendor/libssh/src/md_gcrypt.c
++++ b/vendor/libssh/src/md_gcrypt.c
+@@ -28,7 +28,7 @@
+ #include <gcrypt.h>
+ 
+ SHACTX
+-sha1_init(void)
++_ssh_sha1_init(void)
+ {
+     SHACTX ctx = NULL;
+     gcry_md_open(&ctx, GCRY_MD_SHA1, 0);
+@@ -37,13 +37,13 @@ sha1_init(void)
+ }
+ 
+ void
+-sha1_update(SHACTX c, const void *data, size_t len)
++_ssh_sha1_update(SHACTX c, const void *data, size_t len)
+ {
+     gcry_md_write(c, data, len);
+ }
+ 
+ void
+-sha1_final(unsigned char *md, SHACTX c)
++_ssh_sha1_final(unsigned char *md, SHACTX c)
+ {
+     gcry_md_final(c);
+     memcpy(md, gcry_md_read(c, 0), SHA_DIGEST_LEN);
+@@ -51,13 +51,13 @@ sha1_final(unsigned char *md, SHACTX c)
+ }
+ 
+ void
+-sha1(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha1(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+     gcry_md_hash_buffer(GCRY_MD_SHA1, hash, digest, len);
+ }
+ 
+ SHA256CTX
+-sha256_init(void)
++_ssh_sha256_init(void)
+ {
+     SHA256CTX ctx = NULL;
+     gcry_md_open(&ctx, GCRY_MD_SHA256, 0);
+@@ -66,13 +66,13 @@ sha256_init(void)
+ }
+ 
+ void
+-sha256_update(SHACTX c, const void *data, size_t len)
++_ssh_sha256_update(SHACTX c, const void *data, size_t len)
+ {
+     gcry_md_write(c, data, len);
+ }
+ 
+ void
+-sha256_final(unsigned char *md, SHACTX c)
++_ssh_sha256_final(unsigned char *md, SHACTX c)
+ {
+     gcry_md_final(c);
+     memcpy(md, gcry_md_read(c, 0), SHA256_DIGEST_LEN);
+@@ -80,13 +80,13 @@ sha256_final(unsigned char *md, SHACTX c)
+ }
+ 
+ void
+-sha256(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha256(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+     gcry_md_hash_buffer(GCRY_MD_SHA256, hash, digest, len);
+ }
+ 
+ SHA384CTX
+-sha384_init(void)
++_ssh_sha384_init(void)
+ {
+     SHA384CTX ctx = NULL;
+     gcry_md_open(&ctx, GCRY_MD_SHA384, 0);
+@@ -95,13 +95,13 @@ sha384_init(void)
+ }
+ 
+ void
+-sha384_update(SHACTX c, const void *data, size_t len)
++_ssh_sha384_update(SHACTX c, const void *data, size_t len)
+ {
+     gcry_md_write(c, data, len);
+ }
+ 
+ void
+-sha384_final(unsigned char *md, SHACTX c)
++_ssh_sha384_final(unsigned char *md, SHACTX c)
+ {
+     gcry_md_final(c);
+     memcpy(md, gcry_md_read(c, 0), SHA384_DIGEST_LEN);
+@@ -109,13 +109,13 @@ sha384_final(unsigned char *md, SHACTX c)
+ }
+ 
+ void
+-sha384(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha384(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+     gcry_md_hash_buffer(GCRY_MD_SHA384, hash, digest, len);
+ }
+ 
+ SHA512CTX
+-sha512_init(void)
++_ssh_sha512_init(void)
+ {
+     SHA512CTX ctx = NULL;
+     gcry_md_open(&ctx, GCRY_MD_SHA512, 0);
+@@ -124,13 +124,13 @@ sha512_init(void)
+ }
+ 
+ void
+-sha512_update(SHACTX c, const void *data, size_t len)
++_ssh_sha512_update(SHACTX c, const void *data, size_t len)
+ {
+     gcry_md_write(c, data, len);
+ }
+ 
+ void
+-sha512_final(unsigned char *md, SHACTX c)
++_ssh_sha512_final(unsigned char *md, SHACTX c)
+ {
+     gcry_md_final(c);
+     memcpy(md, gcry_md_read(c, 0), SHA512_DIGEST_LEN);
+@@ -138,13 +138,13 @@ sha512_final(unsigned char *md, SHACTX c)
+ }
+ 
+ void
+-sha512(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha512(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+     gcry_md_hash_buffer(GCRY_MD_SHA512, hash, digest, len);
+ }
+ 
+ MD5CTX
+-md5_init(void)
++_ssh_md5_init(void)
+ {
+     MD5CTX c = NULL;
+     gcry_md_open(&c, GCRY_MD_MD5, 0);
+@@ -153,13 +153,13 @@ md5_init(void)
+ }
+ 
+ void
+-md5_update(MD5CTX c, const void *data, size_t len)
++_ssh_md5_update(MD5CTX c, const void *data, size_t len)
+ {
+     gcry_md_write(c, data, len);
+ }
+ 
+ void
+-md5_final(unsigned char *md, MD5CTX c)
++_ssh_md5_final(unsigned char *md, MD5CTX c)
+ {
+     gcry_md_final(c);
+     memcpy(md, gcry_md_read(c, 0), MD5_DIGEST_LEN);
+diff --git a/vendor/libssh/src/md_mbedcrypto.c b/vendor/libssh/src/md_mbedcrypto.c
+index 227e20ab4..35566b7cc 100644
+--- a/vendor/libssh/src/md_mbedcrypto.c
++++ b/vendor/libssh/src/md_mbedcrypto.c
+@@ -30,7 +30,7 @@
+ #include <mbedtls/md.h>
+ 
+ SHACTX
+-sha1_init(void)
++_ssh_sha1_init(void)
+ {
+     SHACTX ctx = NULL;
+     int rc;
+@@ -64,13 +64,13 @@ sha1_init(void)
+ }
+ 
+ void
+-sha1_update(SHACTX c, const void *data, size_t len)
++_ssh_sha1_update(SHACTX c, const void *data, size_t len)
+ {
+     mbedtls_md_update(c, data, len);
+ }
+ 
+ void
+-sha1_final(unsigned char *md, SHACTX c)
++_ssh_sha1_final(unsigned char *md, SHACTX c)
+ {
+     mbedtls_md_finish(c, md);
+     mbedtls_md_free(c);
+@@ -78,7 +78,7 @@ sha1_final(unsigned char *md, SHACTX c)
+ }
+ 
+ void
+-sha1(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha1(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+     const mbedtls_md_info_t *md_info =
+         mbedtls_md_info_from_type(MBEDTLS_MD_SHA1);
+@@ -88,7 +88,7 @@ sha1(const unsigned char *digest, size_t len, unsigned char *hash)
+ }
+ 
+ SHA256CTX
+-sha256_init(void)
++_ssh_sha256_init(void)
+ {
+     SHA256CTX ctx = NULL;
+     int rc;
+@@ -122,13 +122,13 @@ sha256_init(void)
+ }
+ 
+ void
+-sha256_update(SHA256CTX c, const void *data, size_t len)
++_ssh_sha256_update(SHA256CTX c, const void *data, size_t len)
+ {
+     mbedtls_md_update(c, data, len);
+ }
+ 
+ void
+-sha256_final(unsigned char *md, SHA256CTX c)
++_ssh_sha256_final(unsigned char *md, SHA256CTX c)
+ {
+     mbedtls_md_finish(c, md);
+     mbedtls_md_free(c);
+@@ -136,7 +136,7 @@ sha256_final(unsigned char *md, SHA256CTX c)
+ }
+ 
+ void
+-sha256(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha256(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+     const mbedtls_md_info_t *md_info =
+         mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+@@ -146,7 +146,7 @@ sha256(const unsigned char *digest, size_t len, unsigned char *hash)
+ }
+ 
+ SHA384CTX
+-sha384_init(void)
++_ssh_sha384_init(void)
+ {
+     SHA384CTX ctx = NULL;
+     int rc;
+@@ -180,13 +180,13 @@ sha384_init(void)
+ }
+ 
+ void
+-sha384_update(SHA384CTX c, const void *data, size_t len)
++_ssh_sha384_update(SHA384CTX c, const void *data, size_t len)
+ {
+     mbedtls_md_update(c, data, len);
+ }
+ 
+ void
+-sha384_final(unsigned char *md, SHA384CTX c)
++_ssh_sha384_final(unsigned char *md, SHA384CTX c)
+ {
+     mbedtls_md_finish(c, md);
+     mbedtls_md_free(c);
+@@ -194,7 +194,7 @@ sha384_final(unsigned char *md, SHA384CTX c)
+ }
+ 
+ void
+-sha384(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha384(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+     const mbedtls_md_info_t *md_info =
+         mbedtls_md_info_from_type(MBEDTLS_MD_SHA384);
+@@ -204,7 +204,7 @@ sha384(const unsigned char *digest, size_t len, unsigned char *hash)
+ }
+ 
+ SHA512CTX
+-sha512_init(void)
++_ssh_sha512_init(void)
+ {
+     SHA512CTX ctx = NULL;
+     int rc;
+@@ -237,13 +237,13 @@ sha512_init(void)
+ }
+ 
+ void
+-sha512_update(SHA512CTX c, const void *data, size_t len)
++_ssh_sha512_update(SHA512CTX c, const void *data, size_t len)
+ {
+     mbedtls_md_update(c, data, len);
+ }
+ 
+ void
+-sha512_final(unsigned char *md, SHA512CTX c)
++_ssh_sha512_final(unsigned char *md, SHA512CTX c)
+ {
+     mbedtls_md_finish(c, md);
+     mbedtls_md_free(c);
+@@ -251,7 +251,7 @@ sha512_final(unsigned char *md, SHA512CTX c)
+ }
+ 
+ void
+-sha512(const unsigned char *digest, size_t len, unsigned char *hash)
++_ssh_sha512(const unsigned char *digest, size_t len, unsigned char *hash)
+ {
+     const mbedtls_md_info_t *md_info =
+         mbedtls_md_info_from_type(MBEDTLS_MD_SHA512);
+@@ -261,7 +261,7 @@ sha512(const unsigned char *digest, size_t len, unsigned char *hash)
+ }
+ 
+ MD5CTX
+-md5_init(void)
++_ssh_md5_init(void)
+ {
+     MD5CTX ctx = NULL;
+     int rc;
+@@ -294,13 +294,13 @@ md5_init(void)
+ }
+ 
+ void
+-md5_update(MD5CTX c, const void *data, size_t len)
++_ssh_md5_update(MD5CTX c, const void *data, size_t len)
+ {
+     mbedtls_md_update(c, data, len);
+ }
+ 
+ void
+-md5_final(unsigned char *md, MD5CTX c)
++_ssh_md5_final(unsigned char *md, MD5CTX c)
+ {
+     mbedtls_md_finish(c, md);
+     mbedtls_md_free(c);
+diff --git a/vendor/libssh/src/pki.c b/vendor/libssh/src/pki.c
+index 8f62ce2bd..73b97a86f 100644
+--- a/vendor/libssh/src/pki.c
++++ b/vendor/libssh/src/pki.c
+@@ -2520,24 +2520,24 @@ int ssh_pki_signature_verify(ssh_session session,
+         unsigned char application_hash[SHA256_DIGEST_LEN] = {0};
+         unsigned char input_hash[SHA256_DIGEST_LEN] = {0};
+ 
+-        ctx = sha256_init();
++        ctx = _ssh_sha256_init();
+         if (ctx == NULL) {
+             SSH_LOG(SSH_LOG_WARN,
+                     "Can not create SHA256CTX for application hash");
+            return SSH_ERROR;
+         }
+-        sha256_update(ctx, ssh_string_data(key->sk_application),
++        _ssh_sha256_update(ctx, ssh_string_data(key->sk_application),
+                ssh_string_len(key->sk_application));
+-        sha256_final(application_hash, ctx);
++        _ssh_sha256_final(application_hash, ctx);
+ 
+-        ctx = sha256_init();
++        ctx = _ssh_sha256_init();
+         if (ctx == NULL) {
+             SSH_LOG(SSH_LOG_WARN,
+                     "Can not create SHA256CTX for input hash");
+            return SSH_ERROR;
+         }
+-        sha256_update(ctx, input, input_len);
+-        sha256_final(input_hash, ctx);
++        _ssh_sha256_update(ctx, input, input_len);
++        _ssh_sha256_final(input_hash, ctx);
+ 
+         sk_buffer = ssh_buffer_new();
+         if (sk_buffer == NULL) {
+diff --git a/vendor/libssh/src/pki_ed25519.c b/vendor/libssh/src/pki_ed25519.c
+index 6a5a4a8ae..7ab2bd661 100644
+--- a/vendor/libssh/src/pki_ed25519.c
++++ b/vendor/libssh/src/pki_ed25519.c
+@@ -42,8 +42,8 @@ int pki_key_generate_ed25519(ssh_key key)
+         goto error;
+     }
+ 
+-    rc = crypto_sign_ed25519_keypair(*key->ed25519_pubkey,
+-                                     *key->ed25519_privkey);
++    rc = _ssh_crypto_sign_ed25519_keypair(*key->ed25519_pubkey,
++                                          *key->ed25519_privkey);
+     if (rc != 0) {
+         goto error;
+     }
+@@ -70,11 +70,11 @@ int pki_ed25519_sign(const ssh_key privkey,
+         return SSH_ERROR;
+     }
+ 
+-    rc = crypto_sign_ed25519(buffer,
+-                             &dlen,
+-                             hash,
+-                             hlen,
+-                             *privkey->ed25519_privkey);
++    rc = _ssh_crypto_sign_ed25519(buffer,
++                                  &dlen,
++                                  hash,
++                                  hlen,
++                                  *privkey->ed25519_privkey);
+     if (rc != 0) {
+         goto error;
+     }
+@@ -126,11 +126,11 @@ int pki_ed25519_verify(const ssh_key pubkey,
+     memcpy(buffer, sig->ed25519_sig, ED25519_SIG_LEN);
+     memcpy(buffer + ED25519_SIG_LEN, hash, hlen);
+ 
+-    rc = crypto_sign_ed25519_open(buffer2,
+-                                  &mlen,
+-                                  buffer,
+-                                  hlen + ED25519_SIG_LEN,
+-                                  *pubkey->ed25519_pubkey);
++    rc = _ssh_crypto_sign_ed25519_open(buffer2,
++                                       &mlen,
++                                       buffer,
++                                       hlen + ED25519_SIG_LEN,
++                                       *pubkey->ed25519_pubkey);
+ 
+     explicit_bzero(buffer, hlen + ED25519_SIG_LEN);
+     explicit_bzero(buffer2, hlen);
+diff --git a/vendor/libssh/src/pki_gcrypt.c b/vendor/libssh/src/pki_gcrypt.c
+index b619b1a3f..e2368c6a6 100644
+--- a/vendor/libssh/src/pki_gcrypt.c
++++ b/vendor/libssh/src/pki_gcrypt.c
+@@ -256,22 +256,22 @@ static int passphrase_to_key(char *data, unsigned int datalen,
+   unsigned int md_not_empty;
+ 
+   for (j = 0, md_not_empty = 0; j < keylen; ) {
+-    md = md5_init();
++    md = _ssh_md5_init();
+     if (md == NULL) {
+       return -1;
+     }
+ 
+     if (md_not_empty) {
+-      md5_update(md, digest, MD5_DIGEST_LEN);
++      _ssh_md5_update(md, digest, MD5_DIGEST_LEN);
+     } else {
+       md_not_empty = 1;
+     }
+ 
+-    md5_update(md, data, datalen);
++    _ssh_md5_update(md, data, datalen);
+     if (salt) {
+-      md5_update(md, salt, PKCS5_SALT_LEN);
++      _ssh_md5_update(md, salt, PKCS5_SALT_LEN);
+     }
+-    md5_final(digest, md);
++    _ssh_md5_final(digest, md);
+ 
+     for (i = 0; j < keylen && i < MD5_DIGEST_LEN; j++, i++) {
+       if (key) {
+@@ -2287,22 +2287,22 @@ ssh_signature pki_sign_data(const ssh_key privkey,
+ 
+     switch (hash_type) {
+     case SSH_DIGEST_SHA256:
+-        sha256(input, input_len, hash);
++        _ssh_sha256(input, input_len, hash);
+         hlen = SHA256_DIGEST_LEN;
+         sign_input = hash;
+         break;
+     case SSH_DIGEST_SHA384:
+-        sha384(input, input_len, hash);
++        _ssh_sha384(input, input_len, hash);
+         hlen = SHA384_DIGEST_LEN;
+         sign_input = hash;
+         break;
+     case SSH_DIGEST_SHA512:
+-        sha512(input, input_len, hash);
++        _ssh_sha512(input, input_len, hash);
+         hlen = SHA512_DIGEST_LEN;
+         sign_input = hash;
+         break;
+     case SSH_DIGEST_SHA1:
+-        sha1(input, input_len, hash);
++        _ssh_sha1(input, input_len, hash);
+         hlen = SHA_DIGEST_LEN;
+         sign_input = hash;
+         break;
+@@ -2369,25 +2369,25 @@ int pki_verify_data_signature(ssh_signature signature,
+ 
+     switch (signature->hash_type) {
+     case SSH_DIGEST_SHA256:
+-        sha256(input, input_len, hash);
++        _ssh_sha256(input, input_len, hash);
+         hlen = SHA256_DIGEST_LEN;
+         hash_type = "sha256";
+         verify_input = hash;
+         break;
+     case SSH_DIGEST_SHA384:
+-        sha384(input, input_len, hash);
++        _ssh_sha384(input, input_len, hash);
+         hlen = SHA384_DIGEST_LEN;
+         hash_type = "sha384";
+         verify_input = hash;
+         break;
+     case SSH_DIGEST_SHA512:
+-        sha512(input, input_len, hash);
++        _ssh_sha512(input, input_len, hash);
+         hlen = SHA512_DIGEST_LEN;
+         hash_type = "sha512";
+         verify_input = hash;
+         break;
+     case SSH_DIGEST_SHA1:
+-        sha1(input, input_len, hash);
++        _ssh_sha1(input, input_len, hash);
+         hlen = SHA_DIGEST_LEN;
+         hash_type = "sha1";
+         verify_input = hash;
+diff --git a/vendor/libssh/src/pki_mbedcrypto.c b/vendor/libssh/src/pki_mbedcrypto.c
+index 4439b3cd6..ffa5f38d1 100644
+--- a/vendor/libssh/src/pki_mbedcrypto.c
++++ b/vendor/libssh/src/pki_mbedcrypto.c
+@@ -1491,22 +1491,22 @@ ssh_signature pki_sign_data(const ssh_key privkey,
+ 
+     switch (hash_type) {
+     case SSH_DIGEST_SHA256:
+-        sha256(input, input_len, hash);
++        _ssh_sha256(input, input_len, hash);
+         hlen = SHA256_DIGEST_LEN;
+         sign_input = hash;
+         break;
+     case SSH_DIGEST_SHA384:
+-        sha384(input, input_len, hash);
++        _ssh_sha384(input, input_len, hash);
+         hlen = SHA384_DIGEST_LEN;
+         sign_input = hash;
+         break;
+     case SSH_DIGEST_SHA512:
+-        sha512(input, input_len, hash);
++        _ssh_sha512(input, input_len, hash);
+         hlen = SHA512_DIGEST_LEN;
+         sign_input = hash;
+         break;
+     case SSH_DIGEST_SHA1:
+-        sha1(input, input_len, hash);
++        _ssh_sha1(input, input_len, hash);
+         hlen = SHA_DIGEST_LEN;
+         sign_input = hash;
+         break;
+@@ -1570,25 +1570,25 @@ int pki_verify_data_signature(ssh_signature signature,
+ 
+     switch (signature->hash_type) {
+     case SSH_DIGEST_SHA256:
+-        sha256(input, input_len, hash);
++        _ssh_sha256(input, input_len, hash);
+         hlen = SHA256_DIGEST_LEN;
+         md = MBEDTLS_MD_SHA256;
+         verify_input = hash;
+         break;
+     case SSH_DIGEST_SHA384:
+-        sha384(input, input_len, hash);
++        _ssh_sha384(input, input_len, hash);
+         hlen = SHA384_DIGEST_LEN;
+         md = MBEDTLS_MD_SHA384;
+         verify_input = hash;
+         break;
+     case SSH_DIGEST_SHA512:
+-        sha512(input, input_len, hash);
++        _ssh_sha512(input, input_len, hash);
+         hlen = SHA512_DIGEST_LEN;
+         md = MBEDTLS_MD_SHA512;
+         verify_input = hash;
+         break;
+     case SSH_DIGEST_SHA1:
+-        sha1(input, input_len, hash);
++        _ssh_sha1(input, input_len, hash);
+         hlen = SHA_DIGEST_LEN;
+         md = MBEDTLS_MD_SHA1;
+         verify_input = hash;
+diff --git a/vendor/libssh/src/session.c b/vendor/libssh/src/session.c
+index 6025c1335..205cdf048 100644
+--- a/vendor/libssh/src/session.c
++++ b/vendor/libssh/src/session.c
+@@ -1009,7 +1009,7 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
+         return SSH_ERROR;
+     }
+ 
+-    ctx = md5_init();
++    ctx = _ssh_md5_init();
+     if (ctx == NULL) {
+         SAFE_FREE(h);
+         return SSH_ERROR;
+@@ -1017,7 +1017,7 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
+ 
+     rc = ssh_get_server_publickey(session, &pubkey);
+     if (rc != SSH_OK) {
+-        md5_final(h, ctx);
++        _ssh_md5_final(h, ctx);
+         SAFE_FREE(h);
+         return SSH_ERROR;
+     }
+@@ -1025,14 +1025,14 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
+     rc = ssh_pki_export_pubkey_blob(pubkey, &pubkey_blob);
+     ssh_key_free(pubkey);
+     if (rc != SSH_OK) {
+-        md5_final(h, ctx);
++        _ssh_md5_final(h, ctx);
+         SAFE_FREE(h);
+         return SSH_ERROR;
+     }
+ 
+-    md5_update(ctx, ssh_string_data(pubkey_blob), ssh_string_len(pubkey_blob));
++    _ssh_md5_update(ctx, ssh_string_data(pubkey_blob), ssh_string_len(pubkey_blob));
+     SSH_STRING_FREE(pubkey_blob);
+-    md5_final(h, ctx);
++    _ssh_md5_final(h, ctx);
+ 
+     *hash = h;
+ 
+@@ -1146,15 +1146,15 @@ int ssh_get_publickey_hash(const ssh_key key,
+                 goto out;
+             }
+ 
+-            ctx = sha1_init();
++            ctx = _ssh_sha1_init();
+             if (ctx == NULL) {
+                 free(h);
+                 rc = -1;
+                 goto out;
+             }
+ 
+-            sha1_update(ctx, ssh_string_data(blob), ssh_string_len(blob));
+-            sha1_final(h, ctx);
++            _ssh_sha1_update(ctx, ssh_string_data(blob), ssh_string_len(blob));
++            _ssh_sha1_final(h, ctx);
+ 
+             *hlen = SHA_DIGEST_LEN;
+         }
+@@ -1169,15 +1169,15 @@ int ssh_get_publickey_hash(const ssh_key key,
+                 goto out;
+             }
+ 
+-            ctx = sha256_init();
++            ctx = _ssh_sha256_init();
+             if (ctx == NULL) {
+                 free(h);
+                 rc = -1;
+                 goto out;
+             }
+ 
+-            sha256_update(ctx, ssh_string_data(blob), ssh_string_len(blob));
+-            sha256_final(h, ctx);
++            _ssh_sha256_update(ctx, ssh_string_data(blob), ssh_string_len(blob));
++            _ssh_sha256_final(h, ctx);
+ 
+             *hlen = SHA256_DIGEST_LEN;
+         }
+@@ -1200,15 +1200,15 @@ int ssh_get_publickey_hash(const ssh_key key,
+                 goto out;
+             }
+ 
+-            ctx = md5_init();
++            ctx = _ssh_md5_init();
+             if (ctx == NULL) {
+                 free(h);
+                 rc = -1;
+                 goto out;
+             }
+ 
+-            md5_update(ctx, ssh_string_data(blob), ssh_string_len(blob));
+-            md5_final(h, ctx);
++            _ssh_md5_update(ctx, ssh_string_data(blob), ssh_string_len(blob));
++            _ssh_md5_final(h, ctx);
+ 
+             *hlen = MD5_DIGEST_LEN;
+         }
