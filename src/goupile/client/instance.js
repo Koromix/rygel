@@ -320,8 +320,8 @@ function InstanceController() {
                                 <hr/>
                             ` : ''}
                             ${profile.type === 'login' ? html`
-                                <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
-                                <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
+                                <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Modifier mon mot de passe</button>
+                                <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Configurer la double authentification</button>
                                 <hr/>
                                 ${goupile.hasPermission('data_export') ? html`
                                     <button @click=${ui.wrapAction(generateExportKey)}>Générer une clé d'export</button>
