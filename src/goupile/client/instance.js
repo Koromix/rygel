@@ -2691,6 +2691,8 @@ function InstanceController() {
     }
 
     async function syncRecords(standalone = true) {
+        standalone &= (form_record != null);
+
         await mutex.run(async () => {
             let progress = standalone ? log.progress('Synchronisation en cours') : null;
 
@@ -2853,7 +2855,7 @@ function InstanceController() {
                 }
 
                 if (changed && standalone) {
-                    progress.success('Synchronisation terminée');
+                    progress.success('Synchronisation effectuée');
 
                     if (form_record != null) {
                         data_rows = null;
