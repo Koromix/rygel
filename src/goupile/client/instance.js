@@ -787,7 +787,7 @@ function InstanceController() {
         let code = code_buffers.get(filename).code;
 
         let model = new FormModel;
-        let readonly = form_record.historical;
+        let readonly = !goupile.hasPermission('data_save') || form_record.historical;
         form_builder = new FormBuilder(form_state, model, readonly);
 
         try {
@@ -904,7 +904,8 @@ function InstanceController() {
             if (model.hasErrors())
                 form_builder.errorList();
 
-            let default_actions = route.page.getOption('default_actions', form_record, true);
+            let default_actions = goupile.hasPermission('data_save') &&
+                                  route.page.getOption('default_actions', form_record, true);
 
             if (default_actions && model.variables.length) {
                 let prev_actions = model.actions;
@@ -1236,6 +1237,9 @@ function InstanceController() {
     }
 
     async function saveRecord(record, hid, values, page, silent = false) {
+        if (!goupile.hasPermission('data_save'))
+            throw new Error('You are not allowed to save data');
+
         await mutex.run(async () => {
             let progress = log.progress('Enregistrement en cours');
 
@@ -1360,6 +1364,9 @@ function InstanceController() {
     }
 
     async function deleteRecord(ulid) {
+        if (!goupile.hasPermission('data_save'))
+            throw new Error('You are not allowed to delete data');
+
         await mutex.run(async () => {
             let progress = log.progress('Suppression en cours');
 
