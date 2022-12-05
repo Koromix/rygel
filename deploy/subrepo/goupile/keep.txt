@@ -27,6 +27,7 @@ vendor/grisu-exact
 vendor/libmicrohttpd
 vendor/libseccomp
 vendor/libsodium
+vendor/libssh
 vendor/lit-html
 vendor/mbedtls
 vendor/miniz
