@@ -225,6 +225,32 @@ TEST_FUNCTION("libcc/TestFastRandom")
         TEST_EQ(rng.GetInt(1, 24097), 791);
         TEST_EQ(rng.GetInt(1, 24097), 3227);
     }
+
+    for (int i = 0; i < 2; i++) {
+        FastRandom rng(24);
+
+        TEST_EQ(rng.GetInt(1, 24097), 931);
+        TEST_EQ(rng.GetInt(1, 24097), 10937);
+        TEST_EQ(rng.GetInt(1, 24097), 23722);
+        TEST_EQ(rng.GetInt(1, 24097), 4287);
+        TEST_EQ(rng.GetInt(1, 24097), 3511);
+        TEST_EQ(rng.GetInt(1, 24097), 4221);
+        TEST_EQ(rng.GetInt(1, 24097), 24011);
+        TEST_EQ(rng.GetInt(1, 24097), 12267);
+        TEST_EQ(rng.GetInt(1, 24097), 19237);
+        TEST_EQ(rng.GetInt(1, 24097), 17957);
+        TEST_EQ(rng.GetInt(1, 24097), 12928);
+        TEST_EQ(rng.GetInt(1, 24097), 7037);
+        TEST_EQ(rng.GetInt(1, 24097), 4299);
+        TEST_EQ(rng.GetInt(1, 24097), 14853);
+        TEST_EQ(rng.GetInt(1, 24097), 4323);
+        TEST_EQ(rng.GetInt(1, 24097), 4861);
+        TEST_EQ(rng.GetInt(1, 24097), 19231);
+        TEST_EQ(rng.GetInt(1, 24097), 12924);
+        TEST_EQ(rng.GetInt(1, 24097), 9126);
+        TEST_EQ(rng.GetInt(1, 24097), 20133);
+        TEST_EQ(rng.GetInt(1, 24097), 20881);
+    }
 }
 
 TEST_FUNCTION("libcc/TestGetRandomIntSafe")
