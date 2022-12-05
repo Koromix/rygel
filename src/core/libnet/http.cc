@@ -85,8 +85,7 @@ bool http_Config::Validate() const
         if (!unix_path) {
             LogError("Unix socket path must be set");
             valid = false;
-        }
-        if (strlen(unix_path) >= sizeof(addr.sun_path)) {
+        } else if (strlen(unix_path) >= sizeof(addr.sun_path)) {
             LogError("Socket path '%1' is too long (max length = %2)", unix_path, sizeof(addr.sun_path) - 1);
             valid = false;
         }
