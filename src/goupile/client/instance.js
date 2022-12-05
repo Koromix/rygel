@@ -1219,8 +1219,6 @@ function InstanceController() {
     }
 
     function runTrailDialog(e, ulid) {
-        return;
-
         return ui.runDialog(e, 'Historique', {}, (d, resolve, reject) => {
             d.output(html`
                 <table class="ui_table">
@@ -2528,11 +2526,11 @@ function InstanceController() {
                     if (status[fragment.page] == null) {
                         status[fragment.page] = {
                             ctime: new Date(fragment.mtime),
-                            mtime: new Date(fragment.mtime)
+                            mtime: null
                         };
                     }
 
-                    // status[fragment.page].mtime = new Date(fragment.mtime);
+                    status[fragment.page].mtime = new Date(fragment.mtime);
                 }
             }
         }
@@ -2557,7 +2555,7 @@ function InstanceController() {
 
                 status[child.form] = {
                     ctime: child.ctime,
-                    mtime: child.ctime
+                    mtime: child.mtime
                 };
             }
         }
