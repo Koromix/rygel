@@ -40,6 +40,41 @@
 
 namespace RG {
 
+bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
+{
+    if (key == "SocketType" || key == "IPStack") {
+        if (!OptionToEnum(SocketTypeNames, value, &sock_type)) {
+            LogError("Unknown socket type '%1'", value);
+            return false;
+        }
+
+        return true;
+    } else if (key == "UnixPath") {
+        unix_path = NormalizePath(value, root_directory, &str_alloc).ptr;
+        return true;
+    } else if (key == "Port") {
+        return ParseInt(value, &port);
+    } else if (key == "MaxConnections") {
+        return ParseInt(value, &max_connections);
+    } else if (key == "IdleTimeout") {
+        return ParseInt(value, &idle_timeout);
+    } else if (key == "Threads") {
+        return ParseInt(value, &threads);
+    } else if (key == "AsyncThreads") {
+        return ParseInt(value, &async_threads);
+    } else if (key == "ClientAddress") {
+        if (!OptionToEnum(http_ClientAddressModeNames, value, &client_addr_mode)) {
+            LogError("Unknown client address mode '%1'", value);
+            return false;
+        }
+
+        return true;
+    }
+
+    LogError("Unknown HTTP property '%1'", key);
+    return false;
+}
+
 bool http_Config::Validate() const
 {
     bool valid = true;

@@ -52,6 +52,9 @@ struct http_Config {
     int async_threads = std::max(GetCoreCount() * 4, 16);
     http_ClientAddressMode client_addr_mode = http_ClientAddressMode::Socket;
 
+    BlockAllocator str_alloc;
+
+    bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
     bool Validate() const;
 };
 

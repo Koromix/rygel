@@ -99,37 +99,14 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
-                    if (prop.key == "SocketType" || prop.key == "IPStack") {
-                        if (!OptionToEnum(SocketTypeNames, prop.value, &config.http.sock_type)) {
-                            LogError("Unknown socket type '%1'", prop.value);
-                            valid = false;
-                        }
-                    } else if (prop.key == "UnixPath") {
-                        config.http.unix_path = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "Port") {
-                        valid &= ParseInt(prop.value, &config.http.port);
-                    } else if (prop.key == "MaxConnections") {
-                        valid &= ParseInt(prop.value, &config.http.max_connections);
-                    } else if (prop.key == "IdleTimeout") {
-                        valid &= ParseInt(prop.value, &config.http.idle_timeout);
-                    } else if (prop.key == "Threads") {
-                        valid &= ParseInt(prop.value, &config.http.threads);
-                    } else if (prop.key == "AsyncThreads") {
-                        valid &= ParseInt(prop.value, &config.http.async_threads);
-                    } else if (prop.key == "BaseUrl") {
+                    if (prop.key == "BaseUrl") {
                         config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "ClientAddress") {
-                        if (!OptionToEnum(http_ClientAddressModeNames, prop.value, &config.http.client_addr_mode)) {
-                            LogError("Unknown client address mode '%1'", prop.value);
-                            valid = false;
-                        }
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseInt(prop.value, &config.max_age);
                     } else if (prop.key == "RequireHost") {
                         config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
+                        valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
                     }
                 } while (ini.NextInSection(&prop));
             } else {
