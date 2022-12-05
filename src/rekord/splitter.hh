@@ -29,7 +29,7 @@
 
 namespace RG {
 
-class rk_Chunker {
+class rk_Splitter {
     Size avg;
     Size min;
     Size max;
@@ -41,7 +41,7 @@ class rk_Chunker {
     int64_t total = 0;
 
 public:
-    rk_Chunker(Size avg, Size min, Size max);
+    rk_Splitter(Size avg, Size min, Size max);
 
     Size Process(Span<const uint8_t> buf, bool last,
                  FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func);

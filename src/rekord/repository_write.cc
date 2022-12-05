@@ -12,9 +12,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
-#include "chunker.hh"
 #include "disk.hh"
 #include "repository.hh"
+#include "splitter.hh"
 #include "vendor/blake3/c/blake3.h"
 
 #ifndef _WIN32
@@ -308,7 +308,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id)
 
     // Split the file
     {
-        rk_Chunker chunker(ChunkAverage, ChunkMin, ChunkMax);
+        rk_Splitter splitter(ChunkAverage, ChunkMin, ChunkMax);
 
         HeapArray<uint8_t> buf;
         {
@@ -336,7 +336,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id)
 
             // Chunk file and write chunks out in parallel
             do {
-                Size processed = chunker.Process(remain, st.IsEOF(), [&](Size idx, int64_t total, Span<const uint8_t> chunk) {
+                Size processed = splitter.Process(remain, st.IsEOF(), [&](Size idx, int64_t total, Span<const uint8_t> chunk) {
                     RG_ASSERT(idx * RG_SIZE(rk_ChunkEntry) == file_obj.len);
                     file_obj.len += RG_SIZE(rk_ChunkEntry);
 

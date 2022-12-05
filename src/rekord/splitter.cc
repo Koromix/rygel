@@ -24,7 +24,7 @@
 // Adapted from https://github.com/ronomon/deduplication/blob/master/binding.cc
 
 #include "src/core/libcc/libcc.hh"
-#include "chunker.hh"
+#include "splitter.hh"
 
 namespace RG {
 
@@ -100,7 +100,7 @@ static Size CenterSize(Size avg, Size min, Size max)
     return size;
 }
 
-rk_Chunker::rk_Chunker(Size avg, Size min, Size max)
+rk_Splitter::rk_Splitter(Size avg, Size min, Size max)
     : avg(avg), min(min), max(max)
 {
     RG_ASSERT(AverageMin <= avg && avg <= AverageMax);
@@ -114,8 +114,8 @@ rk_Chunker::rk_Chunker(Size avg, Size min, Size max)
     mask2 = (1u << (bits - 1)) - 1;
 }
 
-Size rk_Chunker::Process(Span<const uint8_t> buf, bool last,
-                         FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func)
+Size rk_Splitter::Process(Span<const uint8_t> buf, bool last,
+                             FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func)
 {
     Size processed = 0;
 
@@ -138,7 +138,7 @@ Size rk_Chunker::Process(Span<const uint8_t> buf, bool last,
     return processed;
 }
 
-Size rk_Chunker::Cut(Span<const uint8_t> buf, bool last)
+Size rk_Splitter::Cut(Span<const uint8_t> buf, bool last)
 {
     if (buf.len <= min)
         return last ? buf.len : 0;
