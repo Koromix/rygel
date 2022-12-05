@@ -31,6 +31,9 @@ struct ssh_Config {
 
     BlockAllocator str_alloc;
 
+    bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
+    bool Complete(bool interactive);
+
     bool Validate() const;
 };
 

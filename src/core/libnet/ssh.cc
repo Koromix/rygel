@@ -16,6 +16,59 @@
 
 namespace RG {
 
+bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
+{
+    if (key == "Host") {
+        host = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "User") {
+        username = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "KnownHosts") {
+        return ParseBool(value, &known_hosts);
+    } else if (key == "HostHash") {
+        host_hash = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "Password") {
+        password = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "KeyFile") {
+        keyfile = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    }
+
+    LogError("Unknown SSH property '%1'", key);
+    return false;
+}
+
+bool ssh_Config::Complete(bool interactive)
+{
+    if (username && !password && !keyfile) {
+        const char *str = getenv("SSH_KEYFILE");
+
+        if (str) {
+            keyfile = DuplicateString(str, &str_alloc).ptr;
+        } else {
+            str = getenv("SSH_PASSWORD");
+
+            if (str) {
+                password = DuplicateString(str, &str_alloc).ptr;
+            } else {
+                interactive &= FileIsVt100(stderr);
+
+                if (interactive) {
+                    password = Prompt("SSH password: ", nullptr, "*", &str_alloc);
+
+                    if (!password)
+                        return false;
+                }
+            }
+        }
+    }
+
+    return Validate();
+}
+
 bool ssh_Config::Validate() const
 {
     bool valid = true;
@@ -34,7 +87,7 @@ bool ssh_Config::Validate() const
         valid = false;
     }
     if (!password && !keyfile) {
-        LogError("Missing SFTP password and/or keyfile");
+        LogError("Missing SFTP password (SSH_PASSWORD) and/or keyfile (SSH_KEYFILE)");
         valid = false;
     }
 
