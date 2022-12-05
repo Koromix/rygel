@@ -269,22 +269,15 @@ static bool CheckComplexity(Span<const char> password)
 
     // Help user!
     {
-        LocalArray<const char *, 8> problems;
-
-        if (password.len < 16 && PopCount(classes) < 3) {
-            problems.Append("less than 3 character classes");
-        } else if (PopCount(classes) < 2) {
-            problems.Append("less than 2 character classes");
-        }
         if (chars.PopCount() < 8) {
-            problems.Append("less than 8 unique characters");
-        }
-        if (score < 32) {
-            problems.Append("not complex enough");
+            LogError("Password has less than 8 unique characters");
+            return false;
         }
 
-        if (problems.len) {
-            LogError("Password is insufficient: %1", FmtSpan(problems.As()));
+        bool simple = PopCount(classes) < (password.len < 16 ? 3 : 2) || score < 32;
+
+        if (simple) {
+            LogError("Password is not safe (use more characters, more words, or more special characters)");
             return false;
         }
     }
