@@ -46,7 +46,10 @@ const thop = new function() {
 
         // Start interface
         updateMenu('');
-        self.go(window.location.href, {}, false);
+        await self.go(window.location.href, {}, false);
+
+        // Ready!
+        document.body.classList.remove('th_loading');
     }
 
     function initNavigation() {
