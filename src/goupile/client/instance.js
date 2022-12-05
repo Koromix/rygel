@@ -656,7 +656,8 @@ function InstanceController() {
                                             }
                                         }
                                     })}
-                                    <th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>
+                                    ${goupile.hasPermission('data_save') ?
+                                        html`<th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
                                 </tr>
                             `;
                         })}
