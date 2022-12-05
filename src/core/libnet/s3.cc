@@ -25,6 +25,60 @@ namespace RG {
     #undef GetObject
 #endif
 
+bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
+{
+    if (key == "URL") {
+        return s3_DecodeURL(value, this);
+    } else if (key == "Host") {
+        host = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "Region") {
+        region = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "Bucket") {
+        bucket = value[0] ? DuplicateString(value, &str_alloc).ptr : nullptr;
+        return true;
+    } else if (key == "PathMode") {
+        return ParseBool(value, &path_mode);
+    } else if (key == "AccessID") {
+        access_id = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "AccessKey") {
+        access_key = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    }
+
+    LogError("Unknown S3 property '%1'", key);
+    return false;
+}
+
+bool s3_Config::Complete(bool interactive)
+{
+    if (!access_id) {
+        const char *str = getenv("AWS_ACCESS_KEY_ID");
+        access_id = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
+    if (!access_key) {
+        const char *str = getenv("AWS_SECRET_ACCESS_KEY");
+
+        if (str) {
+            access_key = DuplicateString(str, &str_alloc).ptr;
+        } else {
+            interactive &= FileIsVt100(stderr);
+
+            if (interactive) {
+                access_key = Prompt("AWS secret key: ", nullptr, "*", &str_alloc);
+
+                if (!access_key)
+                    return false;
+            }
+        }
+    }
+
+    return Validate();
+}
+
 bool s3_Config::Validate() const
 {
     bool valid = true;
@@ -40,6 +94,16 @@ bool s3_Config::Validate() const
     if (!bucket) {
         LogError("Missing S3 bucket");
         valid = false;
+    }
+
+    if (!access_id) {
+        LogError("Missing AWS key ID (AWS_ACCESS_KEY_ID) variable");
+        return false;
+    }
+
+    if (!access_key) {
+        LogError("Missing AWS secret key (AWS_SECRET_ACCESS_KEY) variable");
+        return false;
     }
 
     return valid;
@@ -62,17 +126,26 @@ static Span<const char> GetUrlPart(CURLU *h, CURLUPart part, Allocator *alloc)
     }
 }
 
-bool s3_DecodeURL(const char *url, s3_Config *out_config)
+bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
 {
     s3_Config config;
 
     CURLU *h = curl_url();
     RG_DEFER { curl_url_cleanup(h); };
 
-    CURLUcode ret = curl_url_set(h, CURLUPART_URL, url, 0);
-    if (ret != CURLUE_OK) {
-        LogError("Failed to parse URL '%1': %2", url, curl_url_strerror(ret));
-        return false;
+    CURLUcode ret;
+    {
+        char url0[32768];
+
+        url.len = std::min(url.len, RG_SIZE(url0) - 1);
+        memcpy(url0, url.ptr, url.len);
+        url0[url.len] = 0;
+
+        ret = curl_url_set(h, CURLUPART_URL, url0, 0);
+        if (ret != CURLUE_OK) {
+            LogError("Failed to parse URL '%1': %2", url, curl_url_strerror(ret));
+            return false;
+        }
     }
 
     const char *scheme = GetUrlPart(h, CURLUPART_SCHEME, &config.str_alloc).ptr;
@@ -558,28 +631,6 @@ bool s3_Session::OpenAccess(const char *id, const char *key)
     BlockAllocator temp_alloc;
 
     RG_ASSERT(!open);
-
-    // Access keys
-    if (!id) {
-        id = getenv("AWS_ACCESS_KEY_ID");
-
-        if (!id) {
-            LogError("Missing AWS_ACCESS_KEY_ID variable");
-            return false;
-        }
-
-        access_id = DuplicateString(id, &str_alloc).ptr;
-    }
-    if (!key) {
-        key = getenv("AWS_SECRET_ACCESS_KEY");
-
-        if (!key) {
-            LogError("Missing AWS_SECRET_ACCESS_KEY variable");
-            return false;
-        }
-
-        access_key = DuplicateString(key, &str_alloc).ptr;
-    }
 
     Span<const char> path;
     Span<const char> url = MakeURL({}, &temp_alloc, &path);

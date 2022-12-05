@@ -31,10 +31,13 @@ struct s3_Config {
 
     BlockAllocator str_alloc;
 
+    bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
+    bool Complete(bool interactive);
+
     bool Validate() const;
 };
 
-bool s3_DecodeURL(const char *url, s3_Config *out_config);
+bool s3_DecodeURL(Span<const char> url, s3_Config *out_config);
 
 class s3_Session {
     const char *scheme = nullptr;
