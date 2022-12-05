@@ -33,7 +33,6 @@
 
     #define WITH_ZLIB 1
     #define WITH_SFTP 1
-    #define WITH_SERVER 1
     #define WITH_GEX 1
 #elif defined(__APPLE__)
     #define GLOBAL_BIND_CONFIG "/etc/ssh/libssh_server_config"
@@ -79,7 +78,6 @@
 
     #define WITH_ZLIB 1
     #define WITH_SFTP 1
-    #define WITH_SERVER 1
     #define WITH_GEX 1
 #else
     #define GLOBAL_BIND_CONFIG "/etc/ssh/libssh_server_config"
@@ -126,7 +124,6 @@
 
     #define WITH_ZLIB 1
     #define WITH_SFTP 1
-    #define WITH_SERVER 1
     #define WITH_GEX 1
 #endif
 
