@@ -7176,19 +7176,24 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             }
 
             current_section.RemoveFrom(0);
+            current_section.Grow(section.len + 1);
             current_section.Append(section);
+            current_section.ptr[current_section.len] = 0;
 
             err_guard.Disable();
             return LineType::Section;
         } else {
             Span<char> value;
-            Span<const char> key = TrimStr(SplitStr(line, '=', &value));
+
+            Span<char> key = TrimStr(SplitStr(line, '=', &value));
             if (!key.len || key.end() == line.end()) {
                 LogError("Expected [section] or <key> = <value> pair");
                 return LineType::Exit;
             }
             if (!CheckIniKey(key))
                 return LineType::Exit;
+            key.ptr[key.len] = 0;
+
             value = TrimStr(value);
             *value.end() = 0;
 
