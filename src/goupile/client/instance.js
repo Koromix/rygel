@@ -2526,11 +2526,11 @@ function InstanceController() {
                     if (status[fragment.page] == null) {
                         status[fragment.page] = {
                             ctime: new Date(fragment.mtime),
-                            mtime: null
+                            mtime: new Date(fragment.mtime)
                         };
                     }
 
-                    status[fragment.page].mtime = new Date(fragment.mtime);
+                    // status[fragment.page].mtime = new Date(fragment.mtime);
                 }
             }
         }
@@ -2555,7 +2555,7 @@ function InstanceController() {
 
                 status[child.form] = {
                     ctime: child.ctime,
-                    mtime: child.mtime
+                    mtime: child.ctime
                 };
             }
         }
