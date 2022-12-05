@@ -2773,7 +2773,8 @@ function InstanceController() {
                         let url = `${ENV.urls.instance}api/records/save`;
                         let response = await net.fetch(url, {
                             method: 'POST',
-                            body: JSON.stringify(uploads)
+                            body: JSON.stringify(uploads),
+                            timeout: 30000
                         });
 
                         if (!response.ok) {
@@ -2801,7 +2802,7 @@ function InstanceController() {
                         anchor: anchor
                     });
                     let downloads = await net.fetchJson(url, {
-                        timeout: 30000
+                        timeout: 120000
                     });
 
                     for (let download of downloads) {
