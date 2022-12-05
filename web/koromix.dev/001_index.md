@@ -4,7 +4,7 @@
 
 #goupile# Goupile
 
-Goupile is a **free and open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
+Goupile is an **open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
 
 Find out more on the [page dedicated to Goupile](goupile).
 
