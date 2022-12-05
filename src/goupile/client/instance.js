@@ -574,7 +574,7 @@ function InstanceController() {
                     <div style="flex: 1;"></div>
                     <p>
                         ${visible_rows.length} ${visible_rows.length < data_rows.length ? `/ ${data_rows.length} ` : ''} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
-                        ${ENV.sync_mode !== 'offline' ? html`(<a @click=${ui.wrapAction(e => syncRecords())}>synchroniser</a>)` : ''}
+                        ${ENV.sync_mode !== 'offline' ? html`(<a @click=${ui.wrapAction(e => syncRecords(true, true))}>synchroniser</a>)` : ''}
                     </p>
                 </div>
 
@@ -2691,7 +2691,7 @@ function InstanceController() {
         }
     }
 
-    async function syncRecords(standalone = true) {
+    async function syncRecords(standalone = true, full = false) {
         standalone &= (form_record != null);
 
         await mutex.run(async () => {
@@ -2789,7 +2789,7 @@ function InstanceController() {
                                                   profile.namespaces.records + '`', false, true);
                     let [, anchor] = await db.limits('rec_records/anchor', range);
 
-                    if (anchor != null) {
+                    if (!full && anchor != null) {
                         anchor = anchor.toString();
                         anchor = anchor.substr(anchor.indexOf('@') + 1);
                         anchor = parseInt(anchor, 10);
