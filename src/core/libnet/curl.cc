@@ -40,6 +40,7 @@ CURL *curl_Init()
 
     success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
     success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+    success &= !curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 60000L);
 
 #if 0
     success &= !curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);

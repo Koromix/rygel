@@ -178,6 +178,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
         success &= SetStringOption(ssh, SSH_OPTIONS_HOST, config.host);
         success &= SetIntegerOption(ssh, SSH_OPTIONS_PORT, config.port);
         success &= SetStringOption(ssh, SSH_OPTIONS_USER, config.username);
+        success &= SetIntegerOption(ssh, SSH_OPTIONS_TIMEOUT_USEC, 60000000L);
 
         if (!success)
             return nullptr;
