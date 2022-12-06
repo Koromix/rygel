@@ -23,7 +23,6 @@
 #include "src/core/libnet/libnet.hh"
 #include "src/core/libsandbox/libsandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
-#include "vendor/curl/include/curl/curl.h"
 #ifndef _WIN32
     #include <sys/time.h>
     #include <sys/resource.h>
