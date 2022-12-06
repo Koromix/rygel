@@ -52,7 +52,7 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
     return false;
 }
 
-void s3_Config::Complete()
+bool s3_Config::Complete()
 {
     if (!access_id) {
         const char *str = getenv("AWS_ACCESS_KEY_ID");
@@ -66,8 +66,12 @@ void s3_Config::Complete()
             access_key = DuplicateString(str, &str_alloc).ptr;
         } else if (access_id && FileIsVt100(stderr)) {
             access_key = Prompt("AWS secret key: ", nullptr, "*", &str_alloc);
+            if (!access_key)
+                return false;
         }
     }
+
+    return true;
 }
 
 bool s3_Config::Validate() const

@@ -47,7 +47,7 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
     return false;
 }
 
-void ssh_Config::Complete()
+bool ssh_Config::Complete()
 {
     if (!password && !keyfile) {
         const char *str = getenv("SSH_KEYFILE");
@@ -61,9 +61,13 @@ void ssh_Config::Complete()
                 password = DuplicateString(str, &str_alloc).ptr;
             } else if (username && FileIsVt100(stderr)) {
                 password = Prompt("SSH password: ", nullptr, "*", &str_alloc);
+                if (!password)
+                    return false;
             }
         }
     }
+
+    return true;
 }
 
 bool ssh_Config::Validate() const

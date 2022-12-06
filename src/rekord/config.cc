@@ -44,7 +44,7 @@ int rk_ComputeDefaultThreads()
     return threads;
 }
 
-void rk_Config::Complete(bool require_password)
+bool rk_Config::Complete(bool require_password)
 {
     if (!repository) {
         const char *str = getenv("REKORD_REPOSITORY");
@@ -58,14 +58,18 @@ void rk_Config::Complete(bool require_password)
             password = DuplicateString(str, &str_alloc).ptr;
         } else if (FileIsVt100(stderr)) {
             password = Prompt("Repository password: ", nullptr, "*", &str_alloc);
+            if (!password)
+                return false;
         }
     }
 
     switch (type) {
-        case rk_DiskType::Local: {} break;
-        case rk_DiskType::S3: { s3.Complete(); } break;
-        case rk_DiskType::SFTP: { ssh.Complete(); } break;
+        case rk_DiskType::Local: return true;
+        case rk_DiskType::S3: return s3.Complete();
+        case rk_DiskType::SFTP: return ssh.Complete();
     }
+
+    RG_UNREACHABLE();
 }
 
 bool rk_Config::Validate(bool require_password) const

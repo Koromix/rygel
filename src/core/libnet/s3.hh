@@ -33,7 +33,7 @@ struct s3_Config {
 
     bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
 
-    void Complete();
+    bool Complete();
     bool Validate() const;
 };
 

@@ -101,7 +101,8 @@ Options:
     if (!pwd_GeneratePassword(write_pwd))
         return 1;
 
-    config.Complete(false);
+    if (!config.Complete(false))
+        return 1;
 
     std::unique_ptr<rk_Disk> disk = OpenRepository(config, false);
     if (!disk)
@@ -188,7 +189,8 @@ Options:
         return 1;
     }
 
-    config.Complete(true);
+    if (!config.Complete(true))
+        return 1;
 
     std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
     if (!disk)
@@ -291,7 +293,8 @@ Options:
         return 1;
     }
 
-    config.Complete(true);
+    if (!config.Complete(true))
+        return 1;
 
     std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
     if (!disk)
@@ -379,7 +382,8 @@ Options:
         }
     }
 
-    config.Complete(true);
+    if (!config.Complete(true))
+        return 1;
 
     std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
     if (!disk)

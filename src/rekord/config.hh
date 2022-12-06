@@ -39,7 +39,7 @@ struct rk_Config {
 
     BlockAllocator str_alloc;
 
-    void Complete(bool require_password);
+    bool Complete(bool require_password);
     bool Validate(bool require_password) const;
 };
 
