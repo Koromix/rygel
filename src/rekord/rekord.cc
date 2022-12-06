@@ -481,6 +481,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         LogError("Failed to initialize libssh");
         return 1;
     }
+    RG_DEFER { ssh_finalize(); };
 
     const char *cmd = argv[1];
     Span<const char *> arguments((const char **)argv + 2, argc - 2);
