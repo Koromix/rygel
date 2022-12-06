@@ -27,7 +27,7 @@ namespace RG {
 
 bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
 {
-    if (key == "URL") {
+    if (key == "Location") {
         return s3_DecodeURL(value, this);
     } else if (key == "Host") {
         host = DuplicateString(value, &str_alloc).ptr;
@@ -52,7 +52,7 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
     return false;
 }
 
-bool s3_Config::Complete(bool interactive)
+void s3_Config::Complete()
 {
     if (!access_id) {
         const char *str = getenv("AWS_ACCESS_KEY_ID");
@@ -64,19 +64,10 @@ bool s3_Config::Complete(bool interactive)
 
         if (str) {
             access_key = DuplicateString(str, &str_alloc).ptr;
-        } else {
-            interactive &= FileIsVt100(stderr);
-
-            if (interactive) {
-                access_key = Prompt("AWS secret key: ", nullptr, "*", &str_alloc);
-
-                if (!access_key)
-                    return false;
-            }
+        } else if (access_id && FileIsVt100(stderr)) {
+            access_key = Prompt("AWS secret key: ", nullptr, "*", &str_alloc);
         }
     }
-
-    return Validate();
 }
 
 bool s3_Config::Validate() const
@@ -128,8 +119,6 @@ static Span<const char> GetUrlPart(CURLU *h, CURLUPart part, Allocator *alloc)
 
 bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
 {
-    s3_Config config;
-
     CURLU *h = curl_url();
     RG_DEFER { curl_url_cleanup(h); };
 
@@ -148,9 +137,13 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
         }
     }
 
-    const char *scheme = GetUrlPart(h, CURLUPART_SCHEME, &config.str_alloc).ptr;
-    Span<const char> host = GetUrlPart(h, CURLUPART_HOST, &config.str_alloc);
-    const char *path = GetUrlPart(h, CURLUPART_PATH, &config.str_alloc).ptr;
+    const char *scheme = GetUrlPart(h, CURLUPART_SCHEME, &out_config->str_alloc).ptr;
+    Span<const char> host = GetUrlPart(h, CURLUPART_HOST, &out_config->str_alloc);
+    const char *path = GetUrlPart(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
+
+    const char *bucket = nullptr;
+    bool path_mode = false;
+    const char *region = nullptr;
 
     // Extract bucket name from path (if any)
     if (path && !TestStr(path, "/")) {
@@ -162,8 +155,8 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
             return false;
         }
 
-        config.bucket = DuplicateString(name, &config.str_alloc).ptr;
-        config.path_mode = true;
+        bucket = DuplicateString(name, &out_config->str_alloc).ptr;
+        path_mode = true;
     }
 
     // Extract bucket and region from host name
@@ -174,18 +167,18 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
             Span<const char> part = SplitStr(remain, '.', &remain);
 
             if (StartsWith(remain, "s3.")) {
-                if (config.path_mode) {
+                if (path_mode) {
                     LogError("Duplicate bucket name in S3 URL '%1'", url);
                     return false;
                 }
 
-                config.bucket = DuplicateString(part, &config.str_alloc).ptr;
+                bucket = DuplicateString(part, &out_config->str_alloc).ptr;
             } else {
-                config.region = DuplicateString(part, &config.str_alloc).ptr;
+                region = DuplicateString(part, &out_config->str_alloc).ptr;
             }
         }
 
-        if (!config.region) {
+        if (!region) {
             if (StartsWith(remain, "s3.")) {
                 SplitStr(remain, '.', &remain);
             }
@@ -194,18 +187,17 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
 
             if (dots >= 2) {
                 Span<const char> part = SplitStr(remain, '.');
-                config.region = DuplicateString(part, &config.str_alloc).ptr;
+                region = DuplicateString(part, &out_config->str_alloc).ptr;
             }
         }
     }
 
-    config.scheme = scheme;
-    config.host = host.ptr;
+    out_config->scheme = scheme;
+    out_config->host = host.ptr;
+    out_config->region = region;
+    out_config->bucket = bucket;
+    out_config->path_mode = path_mode;
 
-    if (!config.Validate())
-        return false;
-
-    std::swap(*out_config, config);
     return true;
 }
 

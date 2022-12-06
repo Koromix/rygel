@@ -32,8 +32,8 @@ struct s3_Config {
     BlockAllocator str_alloc;
 
     bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
-    bool Complete(bool interactive);
 
+    void Complete();
     bool Validate() const;
 };
 
