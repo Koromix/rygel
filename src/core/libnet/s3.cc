@@ -245,7 +245,10 @@ bool s3_Session::Open(const s3_Config &config)
         url = Fmt(&str_alloc, "%1://%2/", scheme, host).ptr;
     }
 
-    return OpenAccess(config.access_id, config.access_key);
+    this->access_id = DuplicateString(config.access_id, &str_alloc).ptr;
+    this->access_key = DuplicateString(config.access_key, &str_alloc).ptr;
+
+    return OpenAccess();
 }
 
 void s3_Session::Close()
@@ -622,7 +625,7 @@ bool s3_Session::DeleteObject(Span<const char> key)
     return true;
 }
 
-bool s3_Session::OpenAccess(const char *id, const char *key)
+bool s3_Session::OpenAccess()
 {
     BlockAllocator temp_alloc;
 

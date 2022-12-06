@@ -72,7 +72,7 @@ public:
     bool DeleteObject(Span<const char> key);
 
 private:
-    bool OpenAccess(const char *id, const char *key);
+    bool OpenAccess();
     bool DetermineRegion(const char *url);
 
     Size PrepareHeaders(const char *method, const char *path, const char *query,
