@@ -12,17 +12,23 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
+#include "curl.hh"
 #include "ssh.hh"
 
 namespace RG {
 
 bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
 {
-    if (key == "Host") {
+    if (key == "Location") {
+        return ssh_DecodeURL(value, this);
+    } else if (key == "Host") {
         host = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "User") {
         username = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "Path") {
+        path = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "KnownHosts") {
         return ParseBool(value, &known_hosts);
@@ -41,9 +47,9 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
     return false;
 }
 
-bool ssh_Config::Complete(bool interactive)
+void ssh_Config::Complete()
 {
-    if (username && !password && !keyfile) {
+    if (!password && !keyfile) {
         const char *str = getenv("SSH_KEYFILE");
 
         if (str) {
@@ -53,20 +59,11 @@ bool ssh_Config::Complete(bool interactive)
 
             if (str) {
                 password = DuplicateString(str, &str_alloc).ptr;
-            } else {
-                interactive &= FileIsVt100(stderr);
-
-                if (interactive) {
-                    password = Prompt("SSH password: ", nullptr, "*", &str_alloc);
-
-                    if (!password)
-                        return false;
-                }
+            } else if (username && FileIsVt100(stderr)) {
+                password = Prompt("SSH password: ", nullptr, "*", &str_alloc);
             }
         }
     }
-
-    return Validate();
 }
 
 bool ssh_Config::Validate() const
@@ -92,6 +89,62 @@ bool ssh_Config::Validate() const
     }
 
     return valid;
+}
+
+static const char *GetUrlPart(CURLU *h, CURLUPart part, Allocator *alloc)
+{
+    char *buf = nullptr;
+
+    CURLUcode ret = curl_url_get(h, part, &buf, 0);
+    if (ret == CURLUE_OUT_OF_MEMORY)
+        throw std::bad_alloc();
+    RG_DEFER { curl_free(buf); };
+
+    if (buf && buf[0]) {
+        Span<const char> str = DuplicateString(buf, alloc);
+        return str.ptr;
+    } else {
+        return nullptr;
+    }
+}
+
+bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
+{
+    CURLU *h = curl_url();
+    RG_DEFER { curl_url_cleanup(h); };
+
+    CURLUcode ret;
+    {
+        char url0[32768];
+
+        Fmt(url0, "%1", url);
+        ret = curl_url_set(h, CURLUPART_URL, url0, CURLU_NON_SUPPORT_SCHEME);
+
+        if (ret == CURLUE_BAD_SCHEME) {
+            Fmt(url0, "ssh://%1", url);
+            ret = curl_url_set(h, CURLUPART_URL, url0, CURLU_NON_SUPPORT_SCHEME);
+        }
+
+        if (ret != CURLUE_OK) {
+            LogError("Failed to parse URL '%1': %2", url, curl_url_strerror(ret));
+            return false;
+        }
+    }
+
+    const char *scheme = GetUrlPart(h, CURLUPART_SCHEME, &out_config->str_alloc);
+
+    if (scheme && !TestStr(scheme, "ssh") && !TestStr(scheme, "sftp")) {
+        LogError("Invalid scheme for SSH: '%1'", scheme);
+        return false;
+    }
+
+    out_config->host = GetUrlPart(h, CURLUPART_HOST, &out_config->str_alloc);
+    out_config->username = GetUrlPart(h, CURLUPART_USER, &out_config->str_alloc);
+    out_config->path = GetUrlPart(h, CURLUPART_PATH, &out_config->str_alloc);
+
+    LogInfo("%1 -- %2 -- %3", out_config->host, out_config->username, out_config->path);
+
+    return true;
 }
 
 static bool SetStringOption(ssh_session ssh, ssh_options_e type, const char *str)

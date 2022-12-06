@@ -22,6 +22,7 @@ namespace RG {
 struct ssh_Config {
     const char *host = nullptr;
     const char *username = nullptr;
+    const char *path = nullptr;
 
     bool known_hosts = true;
     const char *host_hash = nullptr;
@@ -32,9 +33,11 @@ struct ssh_Config {
     BlockAllocator str_alloc;
 
     bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
-    bool Complete(bool interactive);
 
+    void Complete();
     bool Validate() const;
 };
+
+bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config);
 
 }
