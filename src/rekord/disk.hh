@@ -51,8 +51,6 @@ static const char *const rk_ObjectTypeNames[] = {
     "Snapshot2"
 };
 
-int rk_ComputeDefaultThreads();
-
 class rk_Disk {
 protected:
     const char *url = nullptr;
@@ -65,11 +63,11 @@ protected:
 
     sq_Database cache_db;
 
-    int threads = rk_ComputeDefaultThreads();
+    int threads = -1;
 
     BlockAllocator str_alloc;
 
-    rk_Disk() = default;
+    rk_Disk(int threads) : threads(threads) {}
 
 public:
     virtual ~rk_Disk() = default;
@@ -85,12 +83,6 @@ public:
     rk_DiskMode GetMode() const { return mode; }
 
     sq_Database *GetCache() { return &cache_db; }
-
-    void SetThreads(int count)
-    {
-        RG_ASSERT(count > 0);
-        threads = count;
-    }
     int GetThreads() const { return threads; }
 
     bool ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
@@ -124,7 +116,7 @@ private:
     Size WriteDirect(const char *path, Span<const uint8_t> buf);
 };
 
-std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd = nullptr);
-std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd = nullptr);
+std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd, int threads);
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd, int threads);
 
 }

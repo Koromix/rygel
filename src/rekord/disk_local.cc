@@ -21,7 +21,7 @@ static const int MaxPathSize = 4096 - 128;
 
 class LocalDisk: public rk_Disk {
 public:
-    LocalDisk(const char *path);
+    LocalDisk(const char *path, int threads);
     ~LocalDisk() override;
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
@@ -38,7 +38,8 @@ public:
     bool TestFast(const char *path) override;
 };
 
-LocalDisk::LocalDisk(const char *path)
+LocalDisk::LocalDisk(const char *path, int threads)
+    : rk_Disk(threads)
 {
     Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &str_alloc);
 
@@ -233,9 +234,9 @@ bool LocalDisk::TestFast(const char *path)
     return exists;
 }
 
-std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd)
+std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd, int threads)
 {
-    std::unique_ptr<rk_Disk> disk = std::make_unique<LocalDisk>(path);
+    std::unique_ptr<rk_Disk> disk = std::make_unique<LocalDisk>(path, threads);
 
     if (!disk->GetURL())
         return nullptr;

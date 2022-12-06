@@ -12,9 +12,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
+#include "config.hh"
 #include "disk.hh"
 #include "repository.hh"
-#include "src/core/libnet/s3.hh"
 #include "src/core/libpasswd/libpasswd.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/curl/include/curl/curl.h"
@@ -25,75 +25,51 @@
 
 namespace RG {
 
-static const char *FillRepository(const char *repository)
+static bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
-    if (!repository) {
-        repository = GetQualifiedEnv("REPOSITORY");
+    OptionParser opt(arguments, OptionMode::Skip);
 
-        if (!repository) {
-            LogError("Missing repository directory");
-            return nullptr;
+    const char *config_filename = nullptr;
+
+    while (opt.Next()) {
+        if (opt.Test("-C", "--config_file", OptionType::Value)) {
+            config_filename = opt.current_value;
         }
     }
 
-    return repository;
+    if (config_filename && !rk_LoadConfig(config_filename, out_config))
+        return false;
+
+    return true;
 }
 
-static const char *FillPassword(const char *pwd, Allocator *alloc)
+static std::unique_ptr<rk_Disk> OpenRepository(rk_Config &config, bool require_password)
 {
-    if (!pwd) {
-        pwd = GetQualifiedEnv("PASSWORD");
-
-        if (!pwd) {
-            pwd = Prompt("Repository password: ", nullptr, "*", alloc);
-        }
-    }
-
-    return pwd;
-}
-
-static bool LooksLikeURL(const char *str)
-{
-    bool ret = StartsWith(str, "https://") || StartsWith(str, "http://");
-    return ret;
-}
-
-static std::unique_ptr<rk_Disk> OpenRepository(const char *repository, const char *pwd, int threads = -1)
-{
-    std::unique_ptr<rk_Disk> disk;
-    if (LooksLikeURL(repository)) {
-        s3_Config config;
-        if (!s3_DecodeURL(repository, &config))
-            return nullptr;
-
-        disk = rk_OpenS3Disk(config, pwd);
-    } else {
-        if (!PathIsAbsolute(repository)) {
-            LogError("Repository path '%1' is not absolute", repository);
-            return nullptr;
-        }
-
-        disk = rk_OpenLocalDisk(repository, pwd);
-    }
-    if (!disk)
+    if (!config.Validate(require_password))
         return nullptr;
 
-    if (threads >= 0) {
-        disk->SetThreads(threads);
+    switch (config.type) {
+        case rk_DiskType::Local: return rk_OpenLocalDisk(config.repository, config.password, config.threads);
+        case rk_DiskType::SFTP: { RG_UNREACHABLE(); } break;
+        case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, config.password, config.threads);
     }
-
-    return disk;
 }
 
 static int RunInit(Span<const char *> arguments)
 {
     // Options
-    const char *repository = nullptr;
+    rk_Config config;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
+R"(Usage: %!..+%1 init [-C <config>] [dir]
+
+Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file)", FelixTarget);
     };
+
+    if (!FindAndLoadConfig(arguments, &config))
+        return 1;
 
     // Parse arguments
     {
@@ -103,18 +79,19 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else {
                 opt.LogUnknownError();
                 return 1;
             }
         }
 
-        repository = opt.ConsumeNonOption();
-    }
+        const char *repo = opt.ConsumeNonOption();
 
-    repository = FillRepository(repository);
-    if (!repository)
-        return 1;
+        if (repo && !rk_DecodeURL(repo, &config))
+            return 1;
+    }
 
     // Generate repository passwords
     char full_pwd[33] = {};
@@ -124,16 +101,9 @@ R"(Usage: %!..+%1 init <dir>%!0)", FelixTarget);
     if (!pwd_GeneratePassword(write_pwd))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk;
-    if (LooksLikeURL(repository)) {
-        s3_Config config;
-        if (!s3_DecodeURL(repository, &config))
-            return 1;
+    config.Complete(false);
 
-        disk = rk_OpenS3Disk(config);
-    } else {
-        disk = rk_OpenLocalDisk(repository);
-    }
+    std::unique_ptr<rk_Disk> disk = OpenRepository(config, false);
     if (!disk)
         return 1;
     if (!disk->Init(full_pwd, write_pwd))
@@ -154,10 +124,8 @@ static int RunPut(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
+    rk_Config config;
     rk_PutSettings settings;
-    int threads = rk_ComputeDefaultThreads();
-    const char *repository = nullptr;
-    const char *pwd = nullptr;
     HeapArray<const char *> filenames;
 
     const auto print_usage = [=](FILE *fp) {
@@ -165,6 +133,8 @@ static int RunPut(Span<const char *> arguments)
 R"(Usage: %!..+%1 put [-R <repo>] <filename> ...%!0
 
 Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+
     %!..+-R, --repository <dir>%!0       Set repository directory
         %!..+--password <pwd>%!0         Set repository password
 
@@ -174,8 +144,11 @@ Options:
         %!..+--raw%!0                    Skip snapshot object and report data ID
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: %2)%!0)", FelixTarget, threads);
+                                 %!D..(default: %2)%!0)", FelixTarget, rk_ComputeDefaultThreads());
     };
+
+    if (!FindAndLoadConfig(arguments, &config))
+        return 1;
 
     // Parse arguments
     {
@@ -185,10 +158,13 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                repository = opt.current_value;
+                if (!rk_DecodeURL(opt.current_value, &config))
+                    return 1;
             } else if (opt.Test("--password", OptionType::Value)) {
-                pwd = opt.current_value;
+                config.password = opt.current_value;
             } else if (opt.Test("-n", "--name", OptionType::Value)) {
                 settings.name = opt.current_value;
             } else if (opt.Test("--follow_symlinks")) {
@@ -196,12 +172,8 @@ Options:
             } else if (opt.Test("--raw")) {
                 settings.raw = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &threads))
+                if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
-                if (threads < 1) {
-                    LogError("Threads count cannot be < 1");
-                    return 1;
-                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -215,14 +187,10 @@ Options:
         LogError("No filename provided");
         return 1;
     }
-    repository = FillRepository(repository);
-    if (!repository)
-        return 1;
-    pwd = FillPassword(pwd, &temp_alloc);
-    if (!pwd)
-        return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd, threads);
+    config.Complete(true);
+
+    std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
     if (!disk)
         return 1;
 
@@ -258,10 +226,8 @@ static int RunGet(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
+    rk_Config config;
     rk_GetSettings settings;
-    int threads = rk_ComputeDefaultThreads();
-    const char *repository = nullptr;
-    const char *pwd = nullptr;
     const char *dest_filename = nullptr;
     const char *name = nullptr;
 
@@ -270,6 +236,8 @@ static int RunGet(Span<const char *> arguments)
 R"(Usage: %!..+%1 get [-R <repo>] <ID> -O <path>%!0
 
 Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+
     %!..+-R, --repository <dir>%!0       Set repository directory
         %!..+--password <pwd>%!0         Set repository password
 
@@ -277,8 +245,11 @@ Options:
         %!..+--flat%!0                   Use flat names for snapshot files
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: %2)%!0)", FelixTarget, threads);
+                                 %!D..(default: %2)%!0)", FelixTarget, rk_ComputeDefaultThreads());
     };
+
+    if (!FindAndLoadConfig(arguments, &config))
+        return 1;
 
     // Parse arguments
     {
@@ -288,21 +259,20 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                repository = opt.current_value;
+                if (!rk_DecodeURL(opt.current_value, &config))
+                    return 1;
             } else if (opt.Test("--password", OptionType::Value)) {
-                pwd = opt.current_value;
+                config.password = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 dest_filename = opt.current_value;
             } else if (opt.Test("--flat")) {
                 settings.flat = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &threads))
+                if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
-                if (threads < 1) {
-                    LogError("Threads count cannot be < 1");
-                    return 1;
-                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -320,14 +290,10 @@ Options:
         LogError("Missing destination filename");
         return 1;
     }
-    repository = FillRepository(repository);
-    if (!repository)
-        return 1;
-    pwd = FillPassword(pwd, &temp_alloc);
-    if (!pwd)
-        return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd, threads);
+    config.Complete(true);
+
+    std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
     if (!disk)
         return 1;
 
@@ -365,21 +331,24 @@ static int RunList(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    int threads = rk_ComputeDefaultThreads();
-    const char *repository = nullptr;
-    const char *pwd = nullptr;
+    rk_Config config;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: %!..+%1 list [-R <repo>]%!0
 
 Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+
     %!..+-R, --repository <dir>%!0       Set repository directory
         %!..+--password <pwd>%!0         Set repository password
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: %2)%!0)", FelixTarget, threads);
+                                 %!D..(default: %2)%!0)", FelixTarget, rk_ComputeDefaultThreads());
     };
+
+    if (!FindAndLoadConfig(arguments, &config))
+        return 1;
 
     // Parse arguments
     {
@@ -389,14 +358,17 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
-                repository = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                pwd = opt.current_value;
-            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &threads))
+                if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
-                if (threads < 1) {
+            } else if (opt.Test("--password", OptionType::Value)) {
+                config.password = opt.current_value;
+            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
+                if (!ParseInt(opt.current_value, &config.threads))
+                    return 1;
+                if (config.threads < 1) {
                     LogError("Threads count cannot be < 1");
                     return 1;
                 }
@@ -407,14 +379,9 @@ Options:
         }
     }
 
-    repository = FillRepository(repository);
-    if (!repository)
-        return 1;
-    pwd = FillPassword(pwd, &temp_alloc);
-    if (!pwd)
-        return 1;
+    config.Complete(true);
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(repository, pwd, threads);
+    std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
     if (!disk)
         return 1;
 
@@ -504,6 +471,10 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     }
     if (curl_global_init(CURL_GLOBAL_ALL)) {
         LogError("Failed to initialize libcurl");
+        return 1;
+    }
+    if (ssh_init() < 0) {
+        LogError("Failed to initialize libssh");
         return 1;
     }
 

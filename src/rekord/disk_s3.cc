@@ -26,7 +26,7 @@ class S3Disk: public rk_Disk {
     std::mutex cache_mutex;
 
 public:
-    S3Disk(const s3_Config &config);
+    S3Disk(const s3_Config &config, int threads);
     ~S3Disk() override;
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
@@ -43,7 +43,8 @@ public:
     bool TestFast(const char *path) override;
 };
 
-S3Disk::S3Disk(const s3_Config &config)
+S3Disk::S3Disk(const s3_Config &config, int threads)
+    : rk_Disk(threads)
 {
     if (!s3.Open(config))
         return;
@@ -167,9 +168,9 @@ bool S3Disk::TestFast(const char *path)
     return stmt.Step();
 }
 
-std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd)
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd, int threads)
 {
-    std::unique_ptr<rk_Disk> disk = std::make_unique<S3Disk>(config);
+    std::unique_ptr<rk_Disk> disk = std::make_unique<S3Disk>(config, threads);
 
     if (!disk->GetURL())
         return nullptr;
