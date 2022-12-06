@@ -146,8 +146,6 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
     out_config->username = GetUrlPart(h, CURLUPART_USER, &out_config->str_alloc);
     out_config->path = GetUrlPart(h, CURLUPART_PATH, &out_config->str_alloc);
 
-    LogInfo("%1 -- %2 -- %3", out_config->host, out_config->username, out_config->path);
-
     return true;
 }
 
