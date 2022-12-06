@@ -32,6 +32,8 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
     } else if (key == "Host") {
         host = DuplicateString(value, &str_alloc).ptr;
         return true;
+    } else if (key == "Port") {
+        return ParseInt(value, &port);
     } else if (key == "Region") {
         region = DuplicateString(value, &str_alloc).ptr;
         return true;
@@ -86,6 +88,10 @@ bool s3_Config::Validate() const
         LogError("Missing S3 host");
         valid = false;
     }
+    if (!port || port > 65535) {
+        LogError("Invalid S3 port");
+        valid = false;
+    }
     if (!bucket) {
         LogError("Missing S3 bucket");
         valid = false;
@@ -102,23 +108,6 @@ bool s3_Config::Validate() const
     }
 
     return valid;
-}
-
-static Span<const char> GetUrlPart(CURLU *h, CURLUPart part, Allocator *alloc)
-{
-    char *buf = nullptr;
-
-    CURLUcode ret = curl_url_get(h, part, &buf, 0);
-    if (ret == CURLUE_OUT_OF_MEMORY)
-        throw std::bad_alloc();
-    RG_DEFER { curl_free(buf); };
-
-    if (buf && buf[0]) {
-        Span<const char> str = DuplicateString(buf, alloc);
-        return str;
-    } else {
-        return {};
-    }
 }
 
 bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
@@ -141,9 +130,10 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
         }
     }
 
-    const char *scheme = GetUrlPart(h, CURLUPART_SCHEME, &out_config->str_alloc).ptr;
-    Span<const char> host = GetUrlPart(h, CURLUPART_HOST, &out_config->str_alloc);
-    const char *path = GetUrlPart(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
+    const char *scheme = curl_GetUrlPartStr(h, CURLUPART_SCHEME, &out_config->str_alloc).ptr;
+    Span<const char> host = curl_GetUrlPartStr(h, CURLUPART_HOST, &out_config->str_alloc);
+    int port = curl_GetUrlPartInt(h, CURLUPART_PORT);
+    const char *path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
 
     const char *bucket = nullptr;
     bool path_mode = false;
@@ -198,6 +188,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
 
     out_config->scheme = scheme;
     out_config->host = host.ptr;
+    out_config->port = port;
     out_config->region = region;
     out_config->bucket = bucket;
     out_config->path_mode = path_mode;
@@ -230,6 +221,13 @@ bool s3_Session::Open(const s3_Config &config)
 
     this->scheme = DuplicateString(config.scheme, &str_alloc).ptr;
     this->host = DuplicateString(config.host, &str_alloc).ptr;
+    if (config.port >= 0) {
+        this->port = config.port;
+    } else if (TestStr(config.scheme, "https")) {
+        this->port = 443;
+    } else if (TestStr(config.scheme, "http")) {
+        this->port = 80;
+    }
     if (config.region) {
         this->region = DuplicateString(config.region, &str_alloc).ptr;
     } else {
@@ -882,7 +880,7 @@ Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Spa
 
     HeapArray<char> buf(alloc);
 
-    Fmt(&buf, "%1://%2", scheme, host);
+    Fmt(&buf, "%1://%2:%3", scheme, host, port);
     Size path_offset = buf.len;
 
     if (path_mode) {

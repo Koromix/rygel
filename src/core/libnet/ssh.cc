@@ -24,6 +24,8 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
     } else if (key == "Host") {
         host = DuplicateString(value, &str_alloc).ptr;
         return true;
+    } else if (key == "Port") {
+        return ParseInt(value, &port);
     } else if (key == "User") {
         username = DuplicateString(value, &str_alloc).ptr;
         return true;
@@ -78,6 +80,10 @@ bool ssh_Config::Validate() const
         LogError("Missing SFTP host name");
         valid = false;
     }
+    if (port <= 0 || port > 65535) {
+        LogError("Missing or invalid SFTP port");
+        valid = false;
+    }
     if (!username) {
         LogError("Missing SFTP username");
         valid = false;
@@ -93,23 +99,6 @@ bool ssh_Config::Validate() const
     }
 
     return valid;
-}
-
-static const char *GetUrlPart(CURLU *h, CURLUPart part, Allocator *alloc)
-{
-    char *buf = nullptr;
-
-    CURLUcode ret = curl_url_get(h, part, &buf, 0);
-    if (ret == CURLUE_OUT_OF_MEMORY)
-        throw std::bad_alloc();
-    RG_DEFER { curl_free(buf); };
-
-    if (buf && buf[0]) {
-        Span<const char> str = DuplicateString(buf, alloc);
-        return str.ptr;
-    } else {
-        return nullptr;
-    }
 }
 
 bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
@@ -135,16 +124,26 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
         }
     }
 
-    const char *scheme = GetUrlPart(h, CURLUPART_SCHEME, &out_config->str_alloc);
+    const char *scheme = curl_GetUrlPartStr(h, CURLUPART_SCHEME, &out_config->str_alloc).ptr;
 
     if (scheme && !TestStr(scheme, "ssh") && !TestStr(scheme, "sftp")) {
         LogError("Invalid scheme for SSH: '%1'", scheme);
         return false;
     }
 
-    out_config->host = GetUrlPart(h, CURLUPART_HOST, &out_config->str_alloc);
-    out_config->username = GetUrlPart(h, CURLUPART_USER, &out_config->str_alloc);
-    out_config->path = GetUrlPart(h, CURLUPART_PATH, &out_config->str_alloc);
+    out_config->host = curl_GetUrlPartStr(h, CURLUPART_HOST, &out_config->str_alloc).ptr;
+    out_config->port = curl_GetUrlPartInt(h, CURLUPART_PORT);
+    out_config->username = curl_GetUrlPartStr(h, CURLUPART_USER, &out_config->str_alloc).ptr;
+    out_config->path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
+
+    if (out_config->port >= 0) {
+        // The first '/' separates the explicit port from the path, use '//' for port + absolute path
+        if (out_config->path && out_config->path[0] == '/') {
+            out_config->path++;
+        }
+    } else {
+        out_config->port = 22;
+    }
 
     return true;
 }
@@ -177,7 +176,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
         bool success = true;
 
         success &= SetStringOption(ssh, SSH_OPTIONS_HOST, config.host);
-        success &= SetIntegerOption(ssh, SSH_OPTIONS_PORT, 22);
+        success &= SetIntegerOption(ssh, SSH_OPTIONS_PORT, config.port);
         success &= SetStringOption(ssh, SSH_OPTIONS_USER, config.username);
 
         if (!success)

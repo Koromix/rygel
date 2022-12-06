@@ -21,6 +21,7 @@ namespace RG {
 
 struct ssh_Config {
     const char *host = nullptr;
+    int port = 22;
     const char *username = nullptr;
     const char *path = nullptr;
 
