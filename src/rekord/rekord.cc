@@ -50,7 +50,7 @@ static std::unique_ptr<rk_Disk> OpenRepository(rk_Config &config, bool require_p
 
     switch (config.type) {
         case rk_DiskType::Local: return rk_OpenLocalDisk(config.repository, config.password, config.threads);
-        case rk_DiskType::SFTP: { RG_UNREACHABLE(); } break;
+        case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, config.password, config.threads);
         case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, config.password, config.threads);
     }
 }

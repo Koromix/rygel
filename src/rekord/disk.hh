@@ -20,6 +20,7 @@
 namespace RG {
 
 struct s3_Config;
+struct ssh_Config;
 
 enum class rk_DiskMode {
     Secure,
@@ -117,6 +118,7 @@ private:
 };
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd, int threads);
+std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *pwd, int threads);
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd, int threads);
 
 }
