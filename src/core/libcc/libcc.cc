@@ -5333,7 +5333,9 @@ Async::Async(Async *parent, bool stop_after_error)
 
 Async::~Async()
 {
+    success = false;
     Sync();
+
     pool->UnregisterAsync();
 }
 
