@@ -853,9 +853,6 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
 
 void CallData::PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign)
 {
-    Napi::Env env = obj.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
     RG_ASSERT(type->primitive == PrimitiveKind::Record);
 
     for (Size i = 0; i < type->members.len; i++) {
