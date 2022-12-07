@@ -363,7 +363,7 @@ console.log(ret);
 
 ### Registered callbacks
 
-*New in Koffi 2.0*
+*New in Koffi 2.0 (explicit this binding in Koffi 2.2)*
 
 Use registered callbacks when the function needs to be called at a later time (e.g. log handler, event handler, `fopencookie/funopen`). Call `koffi.register(func, type)` to register a callback function, with two arguments: the JS function, and the callback type.
 
@@ -406,6 +406,20 @@ SayIt('Kyoto'); // Prints Hello Kyoto!
 
 koffi.unregister(cb1);
 koffi.unregister(cb2);
+```
+
+Starting *with Koffi 2.2*, you can optionally specify the `this` value for the function as the first argument.
+
+```js
+class ValueStore {
+    constructor(value) { this.value = value; }
+    get() { return this.value; }
+}
+
+let store = new ValueStore(42);
+
+let cb1 = koffi.register(store.get, 'IntCallback *'); // If a C function calls cb1 it will fail because this will be undefined
+let cb2 = koffi.register(store, store.get, 'IntCallback *'); // However in this case, this will match the store object
 ```
 
 ### Handling of exceptions

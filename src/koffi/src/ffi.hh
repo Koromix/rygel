@@ -236,6 +236,7 @@ struct InstanceMemory {
 struct TrampolineInfo {
     const FunctionInfo *proto;
     Napi::FunctionReference func;
+    Napi::Reference<Napi::Value> recv;
 
     int32_t generation;
 };

@@ -1327,24 +1327,28 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (info.Length() < 2) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+    bool has_recv = (info.Length() >= 3 && info[1].IsFunction());
+
+    if (info.Length() < 2 + has_recv) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 or 3 arguments, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsFunction()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, info[0]));
+    if (!info[0 + has_recv].IsFunction()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, info[0 + has_recv]));
         return env.Null();
     }
 
-    Napi::Function func = info[0].As<Napi::Function>();
+    Napi::Value recv = has_recv ? info[0] : env.Undefined();
+    Napi::Function func = info[0 + has_recv].As<Napi::Function>();
 
-    const TypeInfo *type = ResolveType(info[1]);
+    const TypeInfo *type = ResolveType(info[1 + has_recv]);
     if (!type)
         return env.Null();
     if (type->primitive != PrimitiveKind::Callback) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected <callback> * type", type->name);
         return env.Null();
     }
+
 
     int idx = CountTrailingZeros(~instance->registered_trampolines);
 
@@ -1360,6 +1364,11 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     trampoline->proto = type->ref.proto;
     trampoline->func.Reset(func, 1);
+    if (!IsNullOrUndefined(recv)) {
+        trampoline->recv.Reset(recv, 1);
+    } else {
+        trampoline->recv.Reset();
+    }
     trampoline->generation = -1;
 
     void *ptr = GetTrampoline(idx, type->ref.proto);
@@ -1393,10 +1402,12 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         if (!(instance->registered_trampolines & (1u << i)))
             continue;
 
-        const TrampolineInfo &trampoline = instance->trampolines[idx];
+        TrampolineInfo *trampoline = &instance->trampolines[idx];
 
-        if (GetTrampoline(idx, trampoline.proto) == ptr) {
+        if (GetTrampoline(idx, trampoline->proto) == ptr) {
             instance->registered_trampolines &= ~(1u << i);
+            trampoline->recv.Reset();
+
             return env.Undefined();
         }
     }

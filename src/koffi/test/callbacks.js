@@ -160,4 +160,21 @@ async function test() {
         assert.equal(koffi.unregister(cb), null);
         assert.throws(() => koffi.unregister(cb));
     }
+
+    // Register with binding
+    {
+        class Multiplier {
+            constructor(k) { this.k = k; }
+            multiply(x) { return this.k * x; }
+        }
+
+        let mult = new Multiplier(5);
+        let cb = koffi.register(mult, mult.multiply, 'IntCallback *');
+
+        SetCallback(cb);
+        assert.equal(CallCallback(42), 5 * 42);
+
+        assert.equal(koffi.unregister(cb), null);
+        assert.throws(() => koffi.unregister(cb));
+    }
 }

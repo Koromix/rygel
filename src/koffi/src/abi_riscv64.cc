@@ -552,7 +552,9 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
         return;
     }
 
-    LocalArray<napi_value, MaxParameters> arguments;
+    LocalArray<napi_value, MaxParameters + 1> arguments;
+
+    arguments.Append(!trampoline.recv.IsEmpty() ? trampoline.recv.Value() : env.Undefined());
 
     // Convert to JS arguments
     for (Size i = 0; i < proto->parameters.len; i++) {
@@ -760,7 +762,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
     // Make the call
     napi_value ret = CallSwitchStack(&func, (size_t)arguments.len, arguments.data, old_sp, &mem->stack,
-                                     [](Napi::Function *func, size_t argc, napi_value *argv) { return (napi_value)func->Call(argc, argv); });
+                                     [](Napi::Function *func, size_t argc, napi_value *argv) { return (napi_value)func->Call(argv[0], argc - 1, argv + 1); });
     Napi::Value value(env, ret);
 
     if (RG_UNLIKELY(env.IsExceptionPending()))
