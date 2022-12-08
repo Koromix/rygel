@@ -100,11 +100,11 @@ endif()
 
 # ---- SQLite ----
 
-add_library(sqlite3mc SHARED ../../../vendor/sqlite3mc/sqlite3mc.c)
-set_target_properties(sqlite3mc PROPERTIES PREFIX "")
+add_library(sqlite3 SHARED ../../../vendor/sqlite3mc/sqlite3.c)
+set_target_properties(sqlite3 PROPERTIES PREFIX "")
 
 if(WIN32)
-    target_compile_definitions(sqlite3mc PRIVATE SQLITE_API=__declspec\(dllexport\))
+    target_compile_definitions(sqlite3 PRIVATE SQLITE_API=__declspec\(dllexport\))
 endif()
 
 # ---- Misc ----
