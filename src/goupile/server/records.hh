@@ -20,7 +20,8 @@ namespace RG {
 
 class InstanceHolder;
 
-void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
