@@ -91,6 +91,10 @@ static void AddMimeTypeHeader(const char *filename, http_IO *io)
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     const char *url = request.url + 1 + instance->key.len;
+
+    RG_ASSERT(url <= request.url + strlen(request.url));
+    RG_ASSERT(url[0] == '/');
+
     const char *client_etag = request.GetHeaderValue("If-None-Match");
     const char *client_sha256 = request.GetQueryValue("sha256");
 
