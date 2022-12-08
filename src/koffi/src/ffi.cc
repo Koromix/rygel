@@ -1329,19 +1329,19 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     bool has_recv = (info.Length() >= 3 && info[1].IsFunction());
 
-    if (info.Length() < 2 + has_recv) {
+    if (info.Length() < 2u + has_recv) {
         ThrowError<Napi::TypeError>(env, "Expected 2 or 3 arguments, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0 + has_recv].IsFunction()) {
+    if (!info[0u + has_recv].IsFunction()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, info[0 + has_recv]));
         return env.Null();
     }
 
     Napi::Value recv = has_recv ? info[0] : env.Undefined();
-    Napi::Function func = info[0 + has_recv].As<Napi::Function>();
+    Napi::Function func = info[0u + has_recv].As<Napi::Function>();
 
-    const TypeInfo *type = ResolveType(info[1 + has_recv]);
+    const TypeInfo *type = ResolveType(info[1u + has_recv]);
     if (!type)
         return env.Null();
     if (type->primitive != PrimitiveKind::Callback) {
@@ -1647,9 +1647,9 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
-    bool has_len = (info.Length() >= 3 + has_offset && info[2 + has_offset].IsNumber());
+    bool has_len = (info.Length() >= 3u + has_offset && info[2u + has_offset].IsNumber());
 
-    if (RG_UNLIKELY(info.Length() < 2 + has_offset)) {
+    if (RG_UNLIKELY(info.Length() < 2u + has_offset)) {
         ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, info.Length());
         return env.Null();
     }
@@ -1657,7 +1657,7 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected pointer (external)", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (has_len && RG_UNLIKELY(!info[2 + has_offset].IsNumber())) {
+    if (has_len && RG_UNLIKELY(!info[2u + has_offset].IsNumber())) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, info[2 + has_offset]));
         return env.Null();
     }
@@ -1666,12 +1666,12 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
     const uint8_t *ptr = (const uint8_t *)external.Data() + offset;
 
-    const TypeInfo *type = ResolveType(info[1 + has_offset]);
+    const TypeInfo *type = ResolveType(info[1u + has_offset]);
     if (RG_UNLIKELY(!type))
         return env.Null();
 
     // Used for strings and arrays, ignored otherwise
-    int64_t len = has_len ? info[2 + has_offset].As<Napi::Number>().Int64Value() : -1;
+    int64_t len = has_len ? info[2u + has_offset].As<Napi::Number>().Int64Value() : -1;
 
 #define RETURN_INT(Type, NewCall) \
         do { \
