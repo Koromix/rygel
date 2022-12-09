@@ -20,6 +20,7 @@ namespace RG {
 
 class InstanceHolder;
 
+void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);

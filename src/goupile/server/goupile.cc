@@ -675,6 +675,8 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleFileDelta(instance, request, io);
     } else if (StartsWith(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {
         HandleFilePublish(instance, request, io);
+    } else if (TestStr(instance_url, "/api/records/list") && request.method == http_RequestMethod::Get) {
+        HandleRecordList(instance, request, io);
     } else if (TestStr(instance_url, "/api/records/get") && request.method == http_RequestMethod::Get) {
         HandleRecordGet(instance, request, io);
     } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
