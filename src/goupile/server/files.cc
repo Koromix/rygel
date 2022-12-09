@@ -775,7 +775,9 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
             return;
         }
 
-        instance->db->Transaction([&]() {
+        int64_t version = -1;
+
+        bool success = instance->db->Transaction([&]() {
             int64_t mtime = GetUnixTime();
 
             if (!instance->db->Run(R"(INSERT INTO fs_versions (mtime, userid, username, atomic)
@@ -783,7 +785,7 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
                                    mtime, session->userid, session->username))
                 return false;
 
-            int64_t version = sqlite3_last_insert_rowid(*instance->db);
+            version = sqlite3_last_insert_rowid(*instance->db);
 
             for (const auto &file: files.table) {
                 if (!file.key[0]) {
@@ -826,13 +828,17 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
 
             if (!instance->db->Run("UPDATE fs_settings SET value = ?1 WHERE key = 'FsVersion'", version))
                 return false;
-            instance->fs_version = version;
 
             const char *json = Fmt(&io->allocator, "{\"version\": %1}", version).ptr;
             io->AttachText(200, json, "application/json");
 
             return true;
         });
+        if (!success)
+            return;
+
+        RG_ASSERT(version >= 0);
+        instance->fs_version = version;
     });
 }
 
