@@ -239,7 +239,8 @@ function InstanceController() {
                 <div style="flex: 1; min-width: 15px;"></div>
 
                 ${history ? html`
-                    <button class="ins_hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
+                    <button class="ins_hid"
+                            @click=${goupile.hasPermission('data_audit') ? ui.wrapAction(e => runTrailDialog(e, route.ulid)) : null}>
                         <span>
                             ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
                             ${form_record.historical ? html`<br/><span class="ins_note">${form_record.ctime.toLocaleString()}</span>` : ''}
@@ -1073,7 +1074,7 @@ function InstanceController() {
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
                     ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
                         <button class="ins_hid" style=${form_record.historical ? 'color: #00ffff;' : ''}
-                                @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
+                                @click=${goupile.hasPermission('data_audit') ? ui.wrapAction(e => runTrailDialog(e, route.ulid)) : null}>
                             ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
                             ${form_record.historical ? html`<br/><span style="font-size: 0.5em;">(historique)</span>` : ''}
                         </button>
