@@ -928,7 +928,7 @@ function InstanceController() {
 
                             if (!form_record.saved || form_state.hasChanged())
                                 form_builder.triggerErrors();
-                            if (form_state.hasChanged())
+                            if (!form_record.saved && form_state.hasChanged())
                                 await saveRecord(form_record, new_hid, form_values, route.page);
 
                             self.go(e, url);
