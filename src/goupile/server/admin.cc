@@ -930,34 +930,54 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *instance_key = nullptr;
+        const char *name = nullptr;
+        bool demo = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "key") {
+                    parser.ParseString(&instance_key);
+                } else if (key == "name") {
+                    parser.SkipNull() || parser.ParseString(&name);
+                } else if (key == "demo") {
+                    parser.ParseBool(&demo);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        const char *instance_key;
-        const char *name;
-        bool demo;
+        // Check missing or invalid values
         {
             bool valid = true;
 
-            instance_key = values.FindValue("key", nullptr);
             if (!instance_key) {
                 LogError("Missing 'key' parameter");
                 valid = false;
             } else if (!CheckInstanceKey(instance_key)) {
                 valid = false;
             }
-
-            name = values.FindValue("name", instance_key);
-            if (name && !name[0]) {
+            if (!name) {
+                name = instance_key;
+            } else if (!name[0]) {
                 LogError("Application name cannot be empty");
                 valid = false;
             }
-
-            valid &= ParseBool(values.FindValue("demo", "1"), &demo);
 
             if (!valid) {
                 io->AttachError(422);
@@ -1229,15 +1249,35 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *instance_key = nullptr;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "instance") {
+                    parser.ParseString(&instance_key);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        const char *instance_key = values.FindValue("key", nullptr);
+        // Check missing values
         if (!instance_key) {
-            LogError("Missing 'key' parameter");
+            LogError("Missing 'instance' parameter");
             io->AttachError(422);
             return;
         }
@@ -1356,17 +1396,90 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *instance_key = nullptr;
+        decltype(InstanceHolder::config) config;
+        bool change_use_offline = false;
+        bool change_sync_mode = false;
+        bool change_allow_guests = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(4), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "instance") {
+                    parser.ParseString(&instance_key);
+                } else if (key == "name") {
+                    parser.SkipNull() || parser.ParseString(&config.name);
+                } else if (key == "use_offline") {
+                    if (!parser.SkipNull()) {
+                        parser.ParseBool(&config.use_offline);
+                        change_use_offline = true;
+                    }
+                } else if (key == "sync_mode") {
+                    if (!parser.SkipNull()) {
+                        Span<const char> str = {};
+
+                        if (parser.ParseString(&str)) {
+                            char mode[128];
+                            ConvertFromJsonName(str, mode);
+
+                            if (!OptionToEnum(SyncModeNames, mode, &config.sync_mode)) {
+                                LogError("Invalid sync mode '%1'", str);
+                                io->AttachError(422);
+                                return;
+                            }
+                        }
+
+                        change_sync_mode = true;
+                    }
+                } else if (key == "backup_key") {
+                    parser.SkipNull() || parser.ParseString(&config.backup_key);
+                } else if (key == "shared_key") {
+                    parser.SkipNull() || parser.ParseString(&config.shared_key);
+                } else if (key == "token_key") {
+                    parser.SkipNull() || parser.ParseString(&config.token_key);
+                } else if (key == "auto_key") {
+                    parser.SkipNull() || parser.ParseString(&config.auto_key);
+                } else if (key == "allow_guests") {
+                    if (!parser.SkipNull()) {
+                        parser.ParseBool(&config.allow_guests);
+                        change_allow_guests = true;
+                    }
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        const char *instance_key = values.FindValue("key", nullptr);
-        if (!instance_key) {
-            LogError("Missing 'key' parameter");
-            io->AttachError(422);
-            return;
+        // Check missing or invalid values
+        {
+            bool valid = true;
+
+            if (!instance_key) {
+                LogError("Missing 'instance' parameter");
+                valid = false;
+            }
+            if (config.name && !config.name[0]) {
+                LogError("Application name cannot be empty");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
         }
 
         InstanceHolder *instance = gp_domain.Ref(instance_key);
@@ -1376,59 +1489,6 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             return;
         }
         RG_DEFER_N(ref_guard) { instance->Unref(); };
-
-        // Parse new configuration values
-        decltype(InstanceHolder::config) config = instance->config;
-        {
-            bool valid = true;
-            char buf[128];
-
-            if (const char *str = values.FindValue("name", nullptr); str) {
-                config.name = str;
-
-                if (!str[0]) {
-                    LogError("Application name cannot be empty");
-                    valid = false;
-                }
-            }
-
-            if (const char *str = values.FindValue("use_offline", nullptr); str) {
-                Span<const char> str2 = ConvertFromJsonName(str, buf);
-                valid &= ParseBool(str2, &config.use_offline);
-            }
-
-            if (const char *str = values.FindValue("sync_mode", nullptr); str) {
-                Span<const char> str2 = ConvertFromJsonName(str, buf);
-                if (!OptionToEnum(SyncModeNames, str2, &config.sync_mode)) {
-                    LogError("Unknown sync mode '%1'", str);
-                    valid = false;
-                }
-            }
-
-            config.backup_key = values.FindValue("backup_key", config.backup_key);
-            if (config.backup_key && !config.backup_key[0])
-                config.backup_key = nullptr;
-            config.shared_key = values.FindValue("shared_key", config.shared_key);
-            if (config.shared_key && !config.shared_key[0])
-                config.shared_key = nullptr;
-
-            config.token_key = values.FindValue("token_key", config.token_key);
-            if (config.token_key && !config.token_key[0])
-                config.token_key = nullptr;
-            config.auto_key = values.FindValue("auto_key", config.auto_key);
-            if (config.auto_key && !config.auto_key[0])
-                config.auto_key = nullptr;
-
-            if (const char *str = values.FindValue("allow_guests", nullptr); str) {
-                Span<const char> str2 = ConvertFromJsonName(str, buf);
-                valid &= ParseBool(str2, &config.allow_guests);
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
 
         // Write new configuration to database
         bool success = instance->db->Transaction([&]() {
@@ -1443,17 +1503,17 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
             bool success = true;
 
-            success &= instance->db->Run(sql, "Name", config.name);
+            success &= !config.name || instance->db->Run(sql, "Name", config.name);
             if (instance->master == instance) {
-                success &= instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
-                success &= instance->db->Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
-                success &= instance->db->Run(sql, "BackupKey", config.backup_key);
-                success &= instance->db->Run(sql, "TokenKey", config.token_key);
-                success &= instance->db->Run(sql, "AutoKey", config.auto_key);
-                success &= instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
+                success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
+                success &= !change_sync_mode || instance->db->Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
+                success &= !config.backup_key || instance->db->Run(sql, "BackupKey", config.backup_key);
+                success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
+                success &= !config.auto_key || instance->db->Run(sql, "AutoKey", config.auto_key);
+                success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
             }
             if (!instance->slaves.len) {
-                success &= instance->db->Run(sql, "SharedKey", config.shared_key);
+                success &= !config.shared_key || instance->db->Run(sql, "SharedKey", config.shared_key);
             }
             if (!success)
                 return false;
@@ -1543,28 +1603,6 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
     json.Finish();
 }
 
-static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
-{
-    uint32_t permissions = 0;
-
-    while (remain.len) {
-        Span<const char> js_perm = TrimStr(SplitStr(remain, ',', &remain), " ");
-
-        if (js_perm.len) {
-            char buf[128];
-            js_perm = ConvertFromJsonName(js_perm, buf);
-
-            if (!OptionToFlag(UserPermissionNames, js_perm, &permissions)) {
-                LogError("Unknown permission '%1'", js_perm);
-                return false;
-            }
-        }
-    }
-
-    *out_permissions = permissions;
-    return true;
-}
-
 void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
@@ -1586,35 +1624,66 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        int64_t userid = -1;
+        const char *instance = nullptr;
+        uint32_t permissions = UINT32_MAX;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "userid") {
+                    parser.ParseInt(&userid);
+                } else if (key == "instance") {
+                    parser.ParseString(&instance);
+                } else if (key == "permissions") {
+                    if (!parser.SkipNull()) {
+                        parser.ParseArray();
+                        while (parser.InArray()) {
+                            Span<const char> str = {};
+                            parser.ParseString(&str);
+
+                            char perm[128];
+                            ConvertFromJsonName(str, perm);
+
+                            if (!OptionToFlag(UserPermissionNames, perm, &permissions)) {
+                                LogError("Unknown permission '%1'", str);
+                                io->AttachError(422);
+                                return;
+                            }
+                        }
+                    }
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        int64_t userid;
-        const char *instance;
-        uint32_t permissions;
+        // Check missing values
         {
             bool valid = true;
 
-            if (const char *str = values.FindValue("userid", nullptr); str) {
-                valid &= ParseInt(str, &userid);
-            } else {
-                LogError("Missing 'userid' parameter");
+            if (userid < 0) {
+                LogError("Missing or invalid 'userid' parameter");
                 valid = false;
             }
-
-            instance = values.FindValue("instance", nullptr);
             if (!instance) {
                 LogError("Missing 'instance' parameter");
                 valid = false;
             }
-
-            if (const char *str = values.FindValue("permissions", nullptr); str) {
-                valid &= ParsePermissionList(str, &permissions);
-            } else {
+            if (permissions == UINT32_MAX) {
                 LogError("Missing 'permissions' parameter");
                 valid = false;
             }
@@ -1710,9 +1779,9 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    const char *instance_key = request.GetQueryValue("key");
+    const char *instance_key = request.GetQueryValue("instance");
     if (!instance_key) {
-        LogError("Missing 'key' parameter");
+        LogError("Missing 'instance' parameter");
         io->AttachError(422);
         return;
     }
@@ -1821,16 +1890,35 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *basename = nullptr;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "filename") {
+                    parser.ParseString(&basename);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        const char *basename = values.FindValue("filename", nullptr);
+        // Check missing values
         if (!basename) {
-            LogError("Missing 'filename' paramreter");
+            LogError("Missing 'filename' parameter");
             io->AttachError(422);
             return;
         }
@@ -2068,37 +2156,49 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *basename = nullptr;
+        const char *decrypt_key = nullptr;
+        bool restore_users = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "filename") {
+                    parser.ParseString(&basename);
+                } else if (key == "key") {
+                    parser.ParseString(&decrypt_key);
+                } else if (key == "users") {
+                    parser.ParseBool(&restore_users);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Parse options
-        const char *basename;
-        const char *decrypt_key;
-        bool restore_users;
+        // Check missing values
         {
             bool valid = true;
-            char buf[32];
 
-            basename = values.FindValue("filename", nullptr);
             if (!basename) {
-                LogError("Missing 'filename' paramreter");
+                LogError("Missing 'filename' parameter");
                 valid = false;
             }
-
-            decrypt_key = values.FindValue("key", nullptr);
             if (!decrypt_key) {
                 LogError("Missing 'key' parameter");
                 valid = false;
-            }
-
-            if (const char *str = values.FindValue("users", nullptr); str) {
-                Span<const char> str2 = ConvertFromJsonName(str, buf);
-                valid &= ParseBool(str2, &restore_users);
-            } else {
-                restore_users = false;
             }
 
             if (!valid) {
@@ -2416,33 +2516,54 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *username = nullptr;
+        const char *password = nullptr;
+        bool change_password = true;
+        bool confirm = false;
+        const char *email = nullptr;
+        const char *phone = nullptr;
+        bool admin = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(4), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "username") {
+                    parser.ParseString(&username);
+                } else if (key == "password") {
+                    parser.ParseString(&password);
+                } else if (key == "change_password") {
+                    parser.ParseBool(&change_password);
+                } else if (key == "confirm") {
+                    parser.ParseBool(&confirm);
+                } else if (key == "email") {
+                    parser.ParseString(&email);
+                } else if (key == "phone") {
+                    parser.ParseString(&phone);
+                } else if (key == "admin") {
+                    parser.ParseBool(&admin);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        const char *username;
-        const char *password;
-        bool change_password = false;
-        bool confirm = false;
-        const char *email;
-        const char *phone;
-        bool admin;
+        // Check missing or invalid values
         {
             bool valid = true;
 
-            username = values.FindValue("username", nullptr);
-            password = values.FindValue("password", nullptr);
-            if (const char *str = values.FindValue("change_password", nullptr); str) {
-                valid &= ParseBool(str, &change_password);
-            }
-            if (const char *str = values.FindValue("confirm", nullptr); str) {
-                valid &= ParseBool(str, &confirm);
-            }
-            email = values.FindValue("email", nullptr);
-            phone = values.FindValue("phone", nullptr);
             if (!username || !password) {
                 LogError("Missing 'username' or 'password' parameter");
                 valid = false;
@@ -2454,7 +2575,6 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 LogError("Empty password");
                 valid = false;
             }
-
             if (email && !strchr(email, '@')) {
                 LogError("Invalid email address format");
                 valid = false;
@@ -2463,8 +2583,6 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 LogError("Invalid phone number format (prefix is mandatory)");
                 valid = false;
             }
-
-            valid &= ParseBool(values.FindValue("admin", "0"), &admin);
 
             if (!valid) {
                 io->AttachError(422);
@@ -2545,45 +2663,68 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        int64_t userid = -1;
+        const char *username = nullptr;
+        const char *password = nullptr;
+        bool change_password = true;
+        bool confirm = false, set_confirm = false;
+        bool reset_secret = false;
+        const char *email = nullptr;
+        const char *phone = nullptr;
+        bool admin = false, set_admin = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(4), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "username") {
+                    parser.SkipNull() ||parser.ParseString(&username);
+                } else if (key == "password") {
+                    parser.SkipNull() ||parser.ParseString(&password);
+                } else if (key == "change_password") {
+                    parser.SkipNull() || parser.ParseBool(&change_password);
+                } else if (key == "confirm") {
+                    if (!parser.SkipNull()) {
+                        parser.ParseBool(&confirm);
+                        set_confirm = true;
+                    }
+                } else if (key == "reset_secret") {
+                    parser.SkipNull() || parser.ParseBool(&reset_secret);
+                } else if (key == "email") {
+                    parser.SkipNull() || parser.ParseString(&email);
+                } else if (key == "phone") {
+                    parser.SkipNull() || parser.ParseString(&phone);
+                } else if (key == "admin") {
+                    if (!parser.SkipNull()) {
+                        parser.ParseBool(&admin);
+                        set_admin = true;
+                    }
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        int64_t userid = 0;
-        const char *username;
-        const char *password;
-        bool change_password = false;
-        bool confirm = false;
-        bool set_confirm = false;
-        bool reset_secret = false;
-        const char *email;
-        const char *phone;
-        bool admin = false, set_admin = false;
+        // Check missing or invalid values
         {
             bool valid = true;
 
-            // User ID
-            if (const char *str = values.FindValue("userid", nullptr); str) {
-                valid &= ParseInt(str, &userid);
-            } else {
-                LogError("Missing 'userid' parameter");
+            if (userid < 0) {
+                LogError("Missing or invalid 'userid' parameter");
                 valid = false;
             }
-
-            username = values.FindValue("username", nullptr);
-            password = values.FindValue("password", nullptr);
-            if (const char *str = values.FindValue("change_password", nullptr); str) {
-                valid &= ParseBool(str, &change_password);
-            }
-            if (const char *str = values.FindValue("confirm", nullptr); str) {
-                valid &= ParseBool(str, &confirm);
-                set_confirm = true;
-            }
-            email = values.FindValue("email", nullptr);
-            phone = values.FindValue("phone", nullptr);
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
@@ -2591,10 +2732,6 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 LogError("Empty password");
                 valid = false;
             }
-            if (const char *str = values.FindValue("reset_secret", nullptr); str) {
-                valid &= ParseBool(str, &reset_secret);
-            }
-
             if (email && !strchr(email, '@')) {
                 LogError("Invalid email address format");
                 valid = false;
@@ -2604,18 +2741,13 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 valid = false;
             }
 
-            if (const char *str = values.FindValue("admin", nullptr); str) {
-                valid &= ParseBool(str, &admin);
-                set_admin = true;
-            }
-
             if (!valid) {
                 io->AttachError(422);
                 return;
             }
         }
 
-        // Safety check
+        // Safety checks
         if (userid == session->userid && set_admin && admin != !!session->admin_until) {
             LogError("You cannot change your admin privileges");
             io->AttachError(403);
@@ -2697,32 +2829,40 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
-        }
-
-        // Read POST values
-        int64_t userid = 0;
+        int64_t userid = -1;
         {
-            bool valid = true;
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
 
-            // User ID
-            if (const char *str = values.FindValue("userid", nullptr); str) {
-                valid &= ParseInt(str, &userid);
-            } else {
-                LogError("Missing 'userid' parameter");
-                valid = false;
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "userid") {
+                    parser.ParseInt(&userid);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
             }
-
-            if (!valid) {
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
         }
 
-        // Safety check
+        // Check missing values
+        if (userid < 0) {
+            LogError("Missing or invalid 'userid' parameter");
+            io->AttachError(422);
+            return;
+        }
+
+        // Safety checks
         if (userid == session->userid) {
             LogError("You cannot delete yourself");
             io->AttachError(403);
