@@ -226,7 +226,6 @@ public:
     bool OpenForWrite(int code, Size len, CompressionType encoding, StreamWriter *out_st);
     bool OpenForWrite(int code, Size len, StreamWriter *out_st)
         { return OpenForWrite(code, len, CompressionType::None, out_st); }
-    bool ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values);
 
     // These must be run in async context (with RunAsync), except for IsWS
     bool IsWS() const;
