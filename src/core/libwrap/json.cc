@@ -289,6 +289,16 @@ bool json_Parser::Skip()
     return IsValid();
 }
 
+bool json_Parser::SkipNull()
+{
+    if (PeekToken() == json_TokenType::Null) {
+        handler.token = json_TokenType::Invalid;
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void json_Parser::PushLogFilter()
 {
     RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {

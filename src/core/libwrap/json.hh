@@ -186,6 +186,7 @@ public:
     bool ParseString(const char **out_str);
 
     bool Skip();
+    bool SkipNull();
 
     void PushLogFilter();
 
