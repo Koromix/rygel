@@ -348,12 +348,11 @@ function InstanceController() {
             return;
 
         await mutex.run(async () => {
-            let query = new URLSearchParams;
-            query.set('develop', 0 + enable);
-
             let response = await net.fetch(`${ENV.urls.instance}api/change/mode`, {
                 method: 'POST',
-                body: query
+                body: JSON.stringify({
+                    develop: enable
+                })
             });
 
             if (response.ok) {

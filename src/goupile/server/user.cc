@@ -425,23 +425,40 @@ static int CountEvents(const char *where, const char *who)
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() mutable {
-        // Read POST values
-        const char *username;
-        const char *password;
+        const char *username = nullptr;
+        const char *password = nullptr;
         {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
-                io->AttachError(422);
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
                 return;
-            }
+            json_Parser parser(&st, &io->allocator);
 
-            username = values.FindValue("username", nullptr);
-            password = values.FindValue("password", nullptr);
-            if (!username || !password) {
-                LogError("Missing 'username' or 'password' parameter");
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "username") {
+                    parser.ParseString(&username);
+                } else if (key == "password") {
+                    parser.ParseString(&password);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
+
+        // Check for missing values
+        if (!username || !password) {
+            LogError("Missing 'username' or 'password' parameter");
+            io->AttachError(422);
+            return;
         }
 
         // We use this to extend/fix the response delay in case of error
@@ -853,24 +870,40 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
 
     if (request.method == http_RequestMethod::Post) {
         io->RunAsync([=]() {
-            // Read POST values
-            const char *key;
+            const char *session_key = nullptr;
             {
-                HashMap<const char *, const char *> values;
-                if (!io->ReadPostValues(&io->allocator, &values)) {
-                    io->AttachError(422);
+                StreamReader st;
+                if (!io->OpenForRead(Kibibytes(1), &st))
                     return;
-                }
+                json_Parser parser(&st, &io->allocator);
 
-                key = values.FindValue("key", nullptr);
-                if (!key) {
-                    LogError("Missing 'key' parameter");
+                parser.ParseObject();
+                while (parser.InObject()) {
+                    Span<const char> key = {};
+                    parser.ParseKey(&key);
+
+                    if (key == "key") {
+                        parser.ParseString(&session_key);
+                    } else if (parser.IsValid()) {
+                        LogError("Unexpected key '%1'", key);
+                        io->AttachError(422);
+                        return;
+                    }
+                }
+                if (!parser.IsValid()) {
                     io->AttachError(422);
                     return;
                 }
             }
 
-            RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, key, nullptr, nullptr, &io->allocator);
+            // Check for missing values
+            if (!session_key) {
+                LogError("Missing 'key' parameter");
+                io->AttachError(422);
+                return;
+            }
+
+            RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key, nullptr, nullptr, &io->allocator);
             if (!session)
                 return;
 
@@ -880,11 +913,11 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachText(200, "Done!");
         return true;
     } else {
-        const char *key = request.GetQueryValue(instance->config.auto_key);
-        if (!key || !key[0])
+        const char *session_key = request.GetQueryValue(instance->config.auto_key);
+        if (!session_key || !session_key[0])
             return true;
 
-        RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, key, nullptr, nullptr, &io->allocator);
+        RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key, nullptr, nullptr, &io->allocator);
         if (!session)
             return false;
 
@@ -944,21 +977,37 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
     }
 
     io->RunAsync([=]() {
-        // Read POST values
-        const char *code;
+        const char *code = nullptr;
         {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
-                io->AttachError(422);
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
                 return;
-            }
+            json_Parser parser(&st, &io->allocator);
 
-            code = values.FindValue("code", nullptr);
-            if (!code) {
-                LogError("Missing 'code' parameter");
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "code") {
+                    parser.ParseString(&code);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
+
+        // Check for missing values
+        if (!code) {
+            LogError("Missing 'code' parameter");
+            io->AttachError(422);
+            return;
         }
 
         if (CountEvents(request.client_addr, session->username) >= BanThreshold) {
@@ -1054,29 +1103,43 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
     }
 
     io->RunAsync([=]() {
-        // Read POST values
-        const char *old_password;
-        const char *new_password;
+        const char *old_password = nullptr;
+        const char *new_password = nullptr;
         {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "old_password") {
+                    parser.SkipNull() || parser.ParseString(&old_password);
+                } else if (key == "new_password") {
+                    parser.ParseString(&new_password);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
 
+        // Check missing values
+        {
             bool valid = true;
 
-            if (!session->change_password) {
-                old_password = values.FindValue("old_password", nullptr);
-                if (!old_password) {
-                    LogError("Missing 'old_password' parameter");
-                    valid = false;
-                }
-            } else {
-                old_password = nullptr;
+            if (!old_password && !session->change_password) {
+                LogError("Missing 'old_password' parameter");
+                valid = false;
             }
-
-            new_password = values.FindValue("new_password", nullptr);
             if (!new_password) {
                 LogError("Missing 'new_password' parameter");
                 valid = false;
@@ -1087,7 +1150,6 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
                 return;
             }
         }
-
         RG_ASSERT(old_password || session->change_password);
 
         // Check password strength
@@ -1240,25 +1302,43 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        // Read POST values
-        const char *password;
-        const char *code;
+        const char *password = nullptr;
+        const char *code = nullptr;
         {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "password") {
+                    parser.ParseString(&password);
+                } else if (key == "code") {
+                    parser.ParseString(&code);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
 
+        // Check for missing values
+        {
             bool valid = true;
 
-            password = values.FindValue("password", nullptr);
             if (!password) {
                 LogError("Missing 'password' parameter");
                 valid = false;
             }
-
-            code = values.FindValue("code", nullptr);
             if (!code) {
                 LogError("Missing 'code' parameter");
                 valid = false;
@@ -1270,10 +1350,11 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
             }
         }
 
+        // We use this to extend/fix the response delay in case of error
+        int64_t now = GetMonotonicTime();
+
         // Authenticate with password
         {
-            // We use this to extend/fix the response delay in case of error
-            int64_t now = GetMonotonicTime();
 
             sq_Statement stmt;
             if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
@@ -1343,25 +1424,39 @@ void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
-        }
-
         bool develop = stamp->develop;
 
-        if (const char *str = values.FindValue("develop", nullptr); str) {
-            if (!ParseBool(str, &develop)) {
+        // Read changes
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "develop") {
+                    parser.SkipNull() || parser.ParseBool(&develop);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
 
-            if (develop && !stamp->HasPermission(UserPermission::AdminCode)) {
-                LogError("User is not allowed to code");
-                io->AttachError(403);
-                return;
-            }
+        // Check permissions
+        if (develop && !stamp->HasPermission(UserPermission::AdminCode)) {
+            LogError("User is not allowed to code");
+            io->AttachError(403);
+            return;
         }
 
         stamp->develop = develop;

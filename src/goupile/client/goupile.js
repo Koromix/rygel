@@ -322,12 +322,11 @@ const goupile = new function() {
             }
 
             d.action('Continuer', {disabled: !d.isValid()}, async () => {
-                let query = new URLSearchParams;
-                query.set('code', d.values.code);
-
                 let response = await net.fetch(`${ENV.urls.instance}api/session/confirm`, {
                     method: 'POST',
-                    body: query
+                    body: JSON.stringify({
+                        code: d.values.code
+                    })
                 });
 
                 if (response.ok) {
@@ -351,12 +350,11 @@ const goupile = new function() {
         }
 
         if (profile.type === 'key') {
-            let query = new URLSearchParams;
-            query.set('key', profile.username);
-
             let response = await net.fetch(`${ENV.urls.instance}api/session/key`, {
                 method: 'POST',
-                body: query
+                body: JSON.stringify({
+                    key: profile.username
+                })
             });
 
             if (!response.ok) {
@@ -405,14 +403,12 @@ const goupile = new function() {
                 let progress = log.progress('Modification du mot de passe');
 
                 try {
-                    let query = new URLSearchParams;
-                    if (!forced)
-                        query.set('old_password', d.values.old_password);
-                    query.set('new_password', d.values.new_password);
-
                     let response = await net.fetch(`${ENV.urls.instance}api/change/password`, {
                         method: 'POST',
-                        body: query
+                        body: JSON.stringify({
+                            old_password: d.values.old_password || '',
+                            new_password: d.values.new_password
+                        })
                     });
 
                     if (response.ok) {
@@ -465,13 +461,12 @@ const goupile = new function() {
                 let progress = log.progress('Modification des codes TOTP');
 
                 try {
-                    let query = new URLSearchParams;
-                    query.set('password', d.values.password);
-                    query.set('code', d.values.code);
-
                     let response = await net.fetch(`${ENV.urls.instance}api/change/totp`, {
                         method: 'POST',
-                        body: query
+                        body: JSON.stringify({
+                            password: d.values.password,
+                            code: d.values.code
+                        })
                     });
 
                     if (response.ok) {
@@ -634,13 +629,12 @@ const goupile = new function() {
     }
 
     async function loginOnline(username, password) {
-        let query = new URLSearchParams;
-        query.set('username', username.toLowerCase());
-        query.set('password', password);
-
         let response = await net.fetch(`${ENV.urls.instance}api/session/login`, {
             method: 'POST',
-            body: query
+            body: JSON.stringify({
+                username: username.toLowerCase(),
+                password: password
+            })
         });
 
         if (response.ok) {
