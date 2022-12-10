@@ -320,23 +320,40 @@ void PruneSessions()
 void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
 {
     io->RunAsync([=]() {
-        // Get POST and header values
-        const char *username;
-        const char *password;
+        const char *username = nullptr;
+        const char *password = nullptr;
         {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
-                io->AttachError(422);
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
                 return;
-            }
+            json_Parser parser(&st, &io->allocator);
 
-            username = values.FindValue("username", nullptr);
-            password = values.FindValue("password", nullptr);
-            if (!username || !password) {
-                LogError("Missing 'username' or 'password' parameter");
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "username") {
+                    parser.ParseString(&username);
+                } else if (key == "password") {
+                    parser.ParseString(&password);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
+
+        // Check for missing values
+        if (!username || !password) {
+            LogError("Missing 'username' or 'password' parameter");
+            io->AttachError(422);
+            return;
         }
 
         int64_t now = GetMonotonicTime();

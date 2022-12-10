@@ -96,13 +96,12 @@ const user = new function() {
     }
 
     this.login = async function(username, password) {
-        let query = new URLSearchParams;
-        query.set('username', username.toLowerCase());
-        query.set('password', password);
-
         let response = await net.fetch(`${ENV.base_url}api/user/login`, {
             method: 'POST',
-            body: query
+            body: JSON.stringify({
+                username: username.toLowerCase(),
+                password: password
+            })
         });
 
         if (response.ok) {
