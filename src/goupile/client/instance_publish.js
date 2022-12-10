@@ -88,7 +88,7 @@ function InstancePublisher(instance, db) {
                 </div>
             `);
 
-            d.action('Publier', {disabled: !d.isValid()}, async () => {
+            d.action('Publier', { disabled: !d.isValid() }, async () => {
                 await deploy(actions);
                 resolve();
             });
@@ -116,7 +116,7 @@ function InstancePublisher(instance, db) {
     function runAddFileDialog(e) {
         return ui.runDialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
             d.file('*file', 'Fichier :');
-            d.text('*filename', 'Chemin :', {value: d.values.file ? d.values.file.name : null});
+            d.text('*filename', 'Chemin :', { value: d.values.file ? d.values.file.name : null });
 
             if (d.values.filename) {
                 if (!d.values.filename.match(/^[A-Za-z0-9_\.]+(\/[A-Za-z0-9_\.]+)*$/))
@@ -125,7 +125,7 @@ function InstancePublisher(instance, db) {
                     d.error('filename', 'Le chemin ne doit pas contenir de composants \'..\'');
             }
 
-            d.action('Créer', {disabled: !d.isValid()}, async () => {
+            d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let progress = new log.Entry;
 
                 progress.progress('Enregistrement du fichier');

@@ -145,9 +145,9 @@ async function test(display) {
 
     if (display) {
         BeginDrawing();
-        ClearBackground({r: 0, g: 0, b: 0, a: 255});
+        ClearBackground({ r: 0, g: 0, b: 0, a: 255 });
         let tex = LoadTextureFromImage(img);
-        DrawTexture(tex, 0, 0, {r: 255, g: 255, b: 255, a: 255});
+        DrawTexture(tex, 0, 0, { r: 255, g: 255, b: 255, a: 255 });
         EndDrawing();
 
         while (!WindowShouldClose())

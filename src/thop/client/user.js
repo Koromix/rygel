@@ -115,7 +115,7 @@ const user = new function() {
     };
 
     this.logout = async function() {
-        let response = await net.fetch(`${ENV.base_url}api/user/logout`, {method: 'POST'});
+        let response = await net.fetch(`${ENV.base_url}api/user/logout`, { method: 'POST' });
 
         if (response.ok) {
             log.info('Vous êtes déconnecté(e)');

@@ -255,7 +255,7 @@ const goupile = new function() {
                     <div id="gp_title">${ENV.title}</div>
                     <br/>
                 `);
-                d.text('*username', 'Nom d\'utilisateur', {value: profile.username});
+                d.text('*username', 'Nom d\'utilisateur', { value: profile.username });
             } else {
                 d.output(html`Veuillez <b>confirmer votre identité</b> pour continuer.`);
                 d.calc('*username', 'Nom d\'utilisateur', profile.username);
@@ -263,7 +263,7 @@ const goupile = new function() {
 
             d.password('*password', 'Mot de passe');
 
-            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
+            d.action('Se connecter', { disabled: !d.isValid() }, async () => {
                 try {
                     let username = (d.values.username || '').trim();
                     let password = (d.values.password || '').trim();
@@ -321,7 +321,7 @@ const goupile = new function() {
                 `);
             }
 
-            d.action('Continuer', {disabled: !d.isValid()}, async () => {
+            d.action('Continuer', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch(`${ENV.urls.instance}api/session/confirm`, {
                     method: 'POST',
                     body: JSON.stringify({
@@ -399,7 +399,7 @@ const goupile = new function() {
                                                  d.values.new_password !== d.values.new_password2)
                 d.error('new_password2', 'Les mots de passe sont différents');
 
-            d.action('Modifier', {disabled: !d.isValid()}, async () => {
+            d.action('Modifier', { disabled: !d.isValid() }, async () => {
                 let progress = log.progress('Modification du mot de passe');
 
                 try {
@@ -457,7 +457,7 @@ const goupile = new function() {
                 `);
             }
 
-            d.action('Modifier', {disabled: !d.isValid()}, async () => {
+            d.action('Modifier', { disabled: !d.isValid() }, async () => {
                 let progress = log.progress('Modification des codes TOTP');
 
                 try {
@@ -773,7 +773,7 @@ const goupile = new function() {
         let progress = log.progress('Déconnexion en cours');
 
         try {
-            let response = await net.fetch(`${ENV.urls.instance}api/session/logout`, {method: 'POST'})
+            let response = await net.fetch(`${ENV.urls.instance}api/session/logout`, { method: 'POST' })
 
             if (response.ok) {
                 await updateProfile({});
@@ -781,7 +781,7 @@ const goupile = new function() {
 
                 // Clear state and start from fresh as a precaution
                 let url = new URL(window.location.href);
-                let reload = util.pasteURL(url.pathname, {login: 1});
+                let reload = util.pasteURL(url.pathname, { login: 1 });
 
                 window.onbeforeunload = null;
                 document.location.href = reload;
@@ -799,7 +799,7 @@ const goupile = new function() {
         await self.confirmDangerousAction(e);
 
         let url = new URL(window.location.href);
-        let reload = util.pasteURL(url.pathname, {login: 1});
+        let reload = util.pasteURL(url.pathname, { login: 1 });
 
         window.onbeforeunload = null;
         document.location.href = reload;
@@ -810,14 +810,14 @@ const goupile = new function() {
             d.pin('*pin', 'Code de déverrouillage');
             if (d.values.pin != null && d.values.pin.length < 4)
                 d.error('pin', 'Ce code est trop court', true);
-            d.action('Verrouiller', {disabled: !d.isValid()}, e => goupile.lock(e, d.values.pin, ctx));
+            d.action('Verrouiller', { disabled: !d.isValid() }, e => goupile.lock(e, d.values.pin, ctx));
         });
     };
 
     this.runUnlockDialog = function(e) {
         return ui.runDialog(e, 'Déverrouillage', {}, (d, resolve, reject) => {
             d.pin('*pin', 'Code de déverrouillage');
-            d.action('Déverrouiller', {disabled: !d.isValid()}, e => goupile.unlock(e, d.values.pin));
+            d.action('Déverrouiller', { disabled: !d.isValid() }, e => goupile.unlock(e, d.values.pin));
         });
     };
 

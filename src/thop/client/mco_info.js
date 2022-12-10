@@ -184,7 +184,7 @@ const mco_info = new function() {
         renderListTable(ghm_roots, {
             header: false,
             category: ghm_root => mco.ghm_roots.describeParent(ghm_root, 'cmd'),
-            columns: [{key: 'ghm_root', title: 'Racine de GHM', func: ghm_root => mco.ghm_roots.describe(ghm_root)}]
+            columns: [{ key: 'ghm_root', title: 'Racine de GHM', func: ghm_root => mco.ghm_roots.describe(ghm_root) }]
         });
     }
 
@@ -215,23 +215,23 @@ const mco_info = new function() {
             offset: route.ghmghs.offset,
             filter: route.ghmghs.filter,
             sort: route.ghmghs.sort,
-            route: (offset, filter, sort_key) => ({ghmghs: {offset: offset, filter: filter, sort: sort_key}}),
+            route: (offset, filter, sort_key) => ({ ghmghs: { offset: offset, filter: filter, sort: sort_key } }),
 
             export: `GHM_GHS_${version.begin_date}`,
 
             category: ghs => mco.ghm_roots.describe(ghs.ghm_root),
             columns: [
-                {key: 'code', title: 'Code', func: ghs => ghs.ghm},
-                {key: 'label', title: 'Libellé', func: ghs => mco.ghm.label(ghs.ghm),
-                    sort: (label1, label2) => label1.localeCompare(label2)},
-                {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
-                {key: 'durations', title: 'Durées', func: ghs => maskToRangeStr(ghs.durations)},
-                {key: 'confirm', title: 'Confirmation',
-                    func: ghs => ghs.confirm_threshold ? `< ${format.duration(ghs.confirm_threshold)}` : ''},
-                {key: 'main_diagnosis', title: 'DP', func: ghs => ghs.main_diagnosis},
-                {key: 'diagnoses', title: 'Diagnostics', func: ghs => ghs.diagnoses},
-                {key: 'procedures', title: 'Actes', func: ghs => ghs.procedures ? ghs.procedures.join(', ') : ''},
-                {key: 'authorizations', title: 'Autorisations', tooltip: 'Autorisations (unités et lits)',
+                { key: 'code', title: 'Code', func: ghs => ghs.ghm },
+                { key: 'label', title: 'Libellé', func: ghs => mco.ghm.label(ghs.ghm),
+                    sort: (label1, label2) => label1.localeCompare(label2) },
+                { key: 'ghs', title: 'GHS', func: ghs => ghs.ghs },
+                { key: 'durations', title: 'Durées', func: ghs => maskToRangeStr(ghs.durations) },
+                { key: 'confirm', title: 'Confirmation',
+                    func: ghs => ghs.confirm_threshold ? `< ${format.duration(ghs.confirm_threshold)}` : '' },
+                { key: 'main_diagnosis', title: 'DP', func: ghs => ghs.main_diagnosis },
+                { key: 'diagnoses', title: 'Diagnostics', func: ghs => ghs.diagnoses },
+                { key: 'procedures', title: 'Actes', func: ghs => ghs.procedures ? ghs.procedures.join(', ') : '' },
+                { key: 'authorizations', title: 'Autorisations', tooltip: 'Autorisations (unités et lits)',
                     func: ghs => {
                         let ret = [];
                         if (ghs.unit_authorization)
@@ -241,12 +241,12 @@ const mco_info = new function() {
                         return ret;
                     }
                 },
-                {key: 'old_severity', title: 'Sévérité âgé',
+                { key: 'old_severity', title: 'Sévérité âgé',
                     func: ghs => ghs.old_age_threshold ? `≥ ${ghs.old_age_threshold} et ` +
-                                                        `< ${ghs.old_severity_limit + 1}` : null},
-                {key: 'young_severity', title: 'Sévérité jeune',
+                                                        `< ${ghs.old_severity_limit + 1}` : null },
+                { key: 'young_severity', title: 'Sévérité jeune',
                     func: ghs => ghs.young_age_threshold ? `< ${ghs.young_age_threshold} et ` +
-                                                          `< ${ghs.young_severity_limit + 1}` : null}
+                                                          `< ${ghs.young_severity_limit + 1}` : null }
             ]
         });
     }
@@ -278,18 +278,18 @@ const mco_info = new function() {
             offset: route.diagnoses.offset,
             filter: route.diagnoses.filter,
             sort: route.diagnoses.sort,
-            route: (offset, filter, sort_key) => ({diagnoses: {offset: offset, filter: filter, sort: sort_key}}),
+            route: (offset, filter, sort_key) => ({ diagnoses: { offset: offset, filter: filter, sort: sort_key } }),
 
             export: `Diagnostics_${version.begin_date}`,
 
             columns: [
-                {key: 'code', title: 'Code', func: diag => diag.diag},
-                {key: 'label', title: 'Libellé', func: diag => cim10.diagnoses.label(diag.diag),
-                    sort: (label1, label2) => label1.localeCompare(label2)},
-                {key: 'severity', title: 'Niveau', func: diag => (diag.severity || 0) + 1},
-                {key: 'cmd', title: 'CMD', tooltip: 'Catégorie majeure de diagnostics',
-                    func: diag => diag.cmd},
-                {key: 'main_list', title: 'Liste principale', func: diag => diag.main_list}
+                { key: 'code', title: 'Code', func: diag => diag.diag },
+                { key: 'label', title: 'Libellé', func: diag => cim10.diagnoses.label(diag.diag),
+                    sort: (label1, label2) => label1.localeCompare(label2) },
+                { key: 'severity', title: 'Niveau', func: diag => (diag.severity || 0) + 1 },
+                { key: 'cmd', title: 'CMD', tooltip: 'Catégorie majeure de diagnostics',
+                    func: diag => diag.cmd },
+                { key: 'main_list', title: 'Liste principale', func: diag => diag.main_list }
             ]
         });
     }
@@ -321,24 +321,24 @@ const mco_info = new function() {
             offset: route.procedures.offset,
             filter: route.procedures.filter,
             sort: route.procedures.sort,
-            route: (offset, filter, sort_key) => ({procedures: {offset: offset, filter: filter, sort: sort_key}}),
+            route: (offset, filter, sort_key) => ({ procedures: { offset: offset, filter: filter, sort: sort_key } }),
 
             export: `Actes_${version.begin_date}`,
 
             columns: [
-                {key: 'code', title: 'Code',
-                    func: proc => proc.proc + (proc.phase ? `/${proc.phase}` : '')},
-                {key: 'label', title: 'Libellé', func: proc => ccam.procedures.label(proc.proc),
-                    sort: (label1, label2) => label1.localeCompare(label2)},
-                {key: 'begin_date', title: 'Début', tooltip: 'Date de début incluse',
-                    func: proc => dates.parseLog(proc.begin_date)},
-                {key: 'end_date', title: 'Fin', tooltip: 'Date de fin exclue',
-                    func: proc => dates.parseLog(proc.end_date)},
-                {key: 'classifying', title: 'Classant', tooltip: 'Acte classant',
-                    func: proc => proc.classifying ? 'Majeur' : ''},
-                {key: 'activities', title: 'Activités', func: proc => proc.activities},
-                {key: 'extensions', title: 'Extensions', tooltip: 'CCAM descriptive',
-                    func: proc => proc.extensions}
+                { key: 'code', title: 'Code',
+                    func: proc => proc.proc + (proc.phase ? `/${proc.phase}` : '') },
+                { key: 'label', title: 'Libellé', func: proc => ccam.procedures.label(proc.proc),
+                    sort: (label1, label2) => label1.localeCompare(label2) },
+                { key: 'begin_date', title: 'Début', tooltip: 'Date de début incluse',
+                    func: proc => dates.parseLog(proc.begin_date) },
+                { key: 'end_date', title: 'Fin', tooltip: 'Date de fin exclue',
+                    func: proc => dates.parseLog(proc.end_date) },
+                { key: 'classifying', title: 'Classant', tooltip: 'Acte classant',
+                    func: proc => proc.classifying ? 'Majeur' : '' },
+                { key: 'activities', title: 'Activités', func: proc => proc.activities },
+                { key: 'extensions', title: 'Extensions', tooltip: 'CCAM descriptive',
+                    func: proc => proc.extensions }
             ]
         });
     }
@@ -350,7 +350,7 @@ const mco_info = new function() {
             etab.urlBuilder = (offset, sort_key) => self.makeURL(handler.route(offset, sort_key));
             etab.clickHandler = (e, offset, sort_key) => {
                 thop.goFake(self, handler.route(offset, handler.filter, sort_key));
-                etab.setOptions({parents: !etab.getSortKey()});
+                etab.setOptions({ parents: !etab.getSortKey() });
 
                 e.preventDefault();
             };
@@ -400,7 +400,7 @@ const mco_info = new function() {
                 if (category !== prev_category) {
                     etab.endRow();
                     etab.beginRow();
-                    etab.addCell(category, {colspan: handler.columns.length});
+                    etab.addCell(category, { colspan: handler.columns.length });
 
                     prev_category = category;
                 }
@@ -521,7 +521,7 @@ const mco_info = new function() {
     function renderListInfo(type, label, current_list) {
         if (current_list) {
             let args = {};
-            args[type] = {list: null, offset: 0, filter: null};
+            args[type] = { list: null, offset: 0, filter: null };
 
             return html`<div class="opt_list"><b>Liste :</b> ${current_list}
                                               <a href=${self.makeURL(args)}>(afficher tout)</a></div>`;
@@ -552,7 +552,7 @@ const mco_info = new function() {
         let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, handler.export);
 
-        XLSX.writeFile(wb, `${handler.export}.xlsx`, {cellDates: true});
+        XLSX.writeFile(wb, `${handler.export}.xlsx`, { cellDates: true });
     }
 
     // ------------------------------------------------------------------------
@@ -594,12 +594,12 @@ const mco_info = new function() {
                 ${renderDiffSelector(settings.mco.versions, version_diff, !route.ghs.plot)}
             </label>
             <label>Durée <input type="number" step="5" min="0" max="500" .value=${route.ghs.duration}
-                                @change=${e => thop.go(self, {ghs: {duration: parseInt(e.target.value, 10)}})}/></label>
+                                @change=${e => thop.go(self, { ghs: { duration: parseInt(e.target.value, 10) } })}/></label>
             <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
-                                      @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
+                                      @change=${e => thop.go(self, { ghs: { coeff: e.target.checked } })}/></label>
             ${!window.document.documentMode ?
                 html`<label>Graphique <input type="checkbox" .checked=${route.ghs.plot}
-                                             @change=${e => thop.go(self, {ghs: {plot: e.target.checked}})}/></label>` : ''}
+                                             @change=${e => thop.go(self, { ghs: { plot: e.target.checked } })}/></label>` : ''}
             ${renderGhmRootSelector(mco, route.ghs.ghm_root)}
         `, document.querySelector('#th_options'));
 
@@ -669,7 +669,7 @@ const mco_info = new function() {
 
     function renderDiffSelector(versions, current_version) {
         return html`
-            <select @change=${e => thop.go(self, {ghs: {diff: dates.parse(e.target.value || null)}})}>
+            <select @change=${e => thop.go(self, { ghs: { diff: dates.parse(e.target.value || null) } })}>
                 <option value="" .selected=${current_version == null}>Non</option>
                 ${versions.map(version => {
                     let label = version.begin_date.toLocaleString();
@@ -682,7 +682,7 @@ const mco_info = new function() {
 
     function renderGhmRootSelector(mco, current_ghm_root) {
         return html`
-            <select @change=${e => thop.go(self, {ghs: {ghm_root: e.target.value}})}>
+            <select @change=${e => thop.go(self, { ghs: { ghm_root: e.target.value } })}>
                 ${mco.ghm_roots.definitions.map(ghm_root => {
                     let disabled = false;
                     let label = `${ghm_root.describe()}${disabled ? ' *' : ''}`;
@@ -958,7 +958,7 @@ const mco_info = new function() {
         }
 
         price_cents = applyGhsCoefficient(price_cents, !apply_coeff || ghs.ghs_coefficient);
-        return {price: price_cents, mode: mode};
+        return { price: price_cents, mode: mode };
     }
 
     function applyGhsCoefficient(cents, coefficient) {
@@ -988,7 +988,7 @@ const mco_info = new function() {
         } else if (info != null) {
             info.mode += ' added';
         } else if (info_diff != null) {
-            info = {price: -info_diff.price, mode: info_diff.mode + ' removed'};
+            info = { price: -info_diff.price, mode: info_diff.mode + ' removed' };
         } else {
             return null;
         }
@@ -1025,19 +1025,19 @@ const mco_info = new function() {
             <label>
                 Filtre sur diagnostic ou acte
                 <input type="checkbox" .checked=${route.tree.filter}
-                       @change=${e => thop.go(self, {tree: {filter: e.target.checked}})} />
+                       @change=${e => thop.go(self, { tree: { filter: e.target.checked } })} />
             </label>
             <div class=${!route.tree.filter ? 'disabled' : ''}>
                 <label>Diagnostic <input type="text" .value=${route.tree.diag || ''}
                                          placeholder="* pour tout accepter"
-                                         @change=${e => thop.go(self, {tree: {diag: e.target.value || null}})} /></label>
+                                         @change=${e => thop.go(self, { tree: { diag: e.target.value || null } })} /></label>
                 <label>Acte <input type="text" .value=${route.tree.proc || ''}
                                    placeholder="* pour tout accepter"
-                                   @change=${e => thop.go(self, {tree: {proc: e.target.value || null}})} /></label>
+                                   @change=${e => thop.go(self, { tree: { proc: e.target.value || null } })} /></label>
                 <label>Séance <input type="checkbox" .checked=${route.tree.session}
-                                     @change=${e => thop.go(self, {tree: {session: e.target.checked}})} /></label>
+                                     @change=${e => thop.go(self, { tree: { session: e.target.checked } })} /></label>
                 <label>Âge ≤ 7 jours <input type="checkbox" .checked=${route.tree.a7d}
-                                            @change=${e => thop.go(self, {tree: {a7d: e.target.checked}})} /></label>
+                                            @change=${e => thop.go(self, { tree: { a7d: e.target.checked } })} /></label>
             </div>
         `, document.querySelector('#th_options'));
 
@@ -1235,9 +1235,9 @@ const mco_info = new function() {
     function renderVersionLine(versions, current_version) {
         let vlin = new VersionLine;
 
-        vlin.urlBuilder = version => self.makeURL({version: version.date});
+        vlin.urlBuilder = version => self.makeURL({ version: version.date });
         vlin.clickHandler = (e, version) => {
-            thop.go(self, {version: version.date});
+            thop.go(self, { version: version.date });
             e.preventDefault();
         };
 
@@ -1262,7 +1262,7 @@ const mco_info = new function() {
         return html`
             <label>
                 Secteur <abbr title=${help}>?</abbr>
-                <select @change=${e => thop.go(self, {sector: e.target.value})}>
+                <select @change=${e => thop.go(self, { sector: e.target.value })}>
                     <option value="public" .selected=${current_sector === 'public'}>Public</option>
                     <option value="private" .selected=${current_sector === 'private'}>Privé</option>
                 </select>
@@ -1287,9 +1287,9 @@ const mco_info = new function() {
             let m;
             let frag;
             if (m = str.match(/\bA(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
-                frag = html`<a href=${self.makeURL({mode: 'procedures', procedures: {list: m[0], offset: 0}})}>${m[0]}</a>`;
+                frag = html`<a href=${self.makeURL({ mode: 'procedures', procedures: { list: m[0], offset: 0 } })}>${m[0]}</a>`;
             } else if (m = str.match(/\bD(\-[0-9]+|\$[0-9]+\.[0-9]+)/)) {
-                frag = html`<a href=${self.makeURL({mode: 'diagnoses', diagnoses: {list: m[0], offset: 0}})}>${m[0]}</a>`;
+                frag = html`<a href=${self.makeURL({ mode: 'diagnoses', diagnoses: { list: m[0], offset: 0 } })}>${m[0]}</a>`;
             } else if (m = str.match(/\b[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?( \[([0-9]{1,3})\])?/)) {
                 let ghm_root = m[0].substr(0, 5);
                 let tooltip = findCachedLabel('mco', 'ghm_roots', ghm_root) || '';
@@ -1300,7 +1300,7 @@ const mco_info = new function() {
                         tooltip += `\nErreur ${m[2]} : ${error}`;
                 }
 
-                frag = html`<a class="ghm" href=${self.makeURL({mode: 'ghs', ghs: {ghm_root: ghm_root}})} title=${tooltip}>${m[0]}</a>`;
+                frag = html`<a class="ghm" href=${self.makeURL({ mode: 'ghs', ghs: { ghm_root: ghm_root } })} title=${tooltip}>${m[0]}</a>`;
             } else if (m = str.match(/\b[A-Z]{4}[0-9+]{3}/)) {
                 let tooltip = findCachedLabel('ccam', 'procedures', m[0]);
                 frag = tooltip ? html`<abbr title=${tooltip}>${m[0]}</abbr>` : m[0];
@@ -1311,7 +1311,7 @@ const mco_info = new function() {
                 let tooltip = findCachedLabel('cim10', 'diagnoses', code);
                 frag = tooltip ? html`<abbr title=${tooltip}>${code_with_dot}</abbr>` : code_with_dot;
             } else if (m = str.match(/\b[Nn]oeud ([0-9]+)/)) {
-                frag = html`<a href=${self.makeURL({mode: 'tree'}) + `#n${m[1]}`}>${m[0]}</a>`;
+                frag = html`<a href=${self.makeURL({ mode: 'tree' }) + `#n${m[1]}`}>${m[0]}</a>`;
             } else {
                 break;
             }

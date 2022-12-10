@@ -1,6 +1,6 @@
 // Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
-// form.pushOptions({compact: true})
+// form.pushOptions({ compact: true })
 
 form.output(html`
     <p>Cette page introduit les <i>conditions</i>, les <i>erreurs</i>, les <i>variables calculées</i> ainsi que quelques éléments de <i>mise en page</i>. Ces explications seront données au fur et à mesure.

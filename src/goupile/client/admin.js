@@ -282,7 +282,7 @@ function AdminController() {
         return ui.runDialog(e, 'Envoi d\'archive', {}, (d, resolve, reject) => {
             d.file('*archive', 'Archive');
 
-            d.action('Envoyer', {disabled: !d.isValid()}, async () => {
+            d.action('Envoyer', { disabled: !d.isValid() }, async () => {
                 let progress = log.progress('Envoi en cours');
 
                 try {
@@ -319,7 +319,7 @@ function AdminController() {
             d.password('*key', 'Clé de restauration');
             d.boolean('*restore_users', 'Restaurer les utilisateurs et leurs droits', { value: false, untoggle: false });
 
-            d.action('Restaurer', {disabled: !d.isValid()}, async () => {
+            d.action('Restaurer', { disabled: !d.isValid() }, async () => {
                 let progress = log.progress('Restauration en cours');
 
                 try {
@@ -433,7 +433,7 @@ function AdminController() {
             new_selected = new_instances.find(instance => instance.key === new_selected.key);
         if (new_selected != null) {
             if (new_permissions == null || new_permissions.key != new_selected.key) {
-                let url = util.pasteURL('/admin/api/instances/permissions', {instance: new_selected.key});
+                let url = util.pasteURL('/admin/api/instances/permissions', { instance: new_selected.key });
                 let permissions = await net.fetchJson(url);
 
                 new_permissions = {
@@ -482,10 +482,10 @@ function AdminController() {
                     'Caractères autorisés : a-z (minuscules), 0-9 et \'-\''
                 ]
             });
-            d.text('name', 'Nom', {value: d.values.key});
-            d.boolean('demo', 'Ajouter les pages par défaut', {value: true, untoggle: false});
+            d.text('name', 'Nom', { value: d.values.key });
+            d.boolean('demo', 'Ajouter les pages par défaut', { value: true, untoggle: false });
 
-            d.action('Créer', {disabled: !d.isValid()}, async () => {
+            d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -516,14 +516,14 @@ function AdminController() {
 
     function runConfigureInstanceDialog(e, instance) {
         return ui.runDialog(e, `Configuration de ${instance.key}`, {}, (d, resolve, reject) => {
-            d.pushOptions({untoggle: false});
+            d.pushOptions({ untoggle: false });
 
             if (instance.master == null) {
                 d.tabs('tabs', () => {
                     d.tab('Basique', () => {
-                        d.text('*name', 'Nom', {value: instance.config.name});
-                        d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
-                        d.boolean('*allow_guests', 'Autoriser les invités', {value: instance.config.allow_guests});
+                        d.text('*name', 'Nom', { value: instance.config.name });
+                        d.boolean('*use_offline', 'Utilisation hors-ligne', { value: instance.config.use_offline });
+                        d.boolean('*allow_guests', 'Autoriser les invités', { value: instance.config.allow_guests });
                     });
 
                     d.tab('Avancé', () => {
@@ -531,10 +531,10 @@ function AdminController() {
                             ['online', 'En ligne'],
                             ['mirror', 'Miroir'],
                             ['offline', 'Hors ligne']
-                        ], {value: instance.config.sync_mode});
+                        ], { value: instance.config.sync_mode });
 
                         if (d.values.sync_mode == 'offline')
-                            d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key});
+                            d.text('backup_key', 'Clé d\'archivage', { value: instance.config.backup_key });
                         if (d.values.backup_key != null && !checkCryptoKey(d.values.backup_key))
                             d.error('backup_key', 'Format de clé non valide');
                         d.text('shared_key', 'Clé locale partagée', {
@@ -543,14 +543,14 @@ function AdminController() {
                         });
                         if (instance.slaves > 0 && d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
                             d.error('shared_key', 'Format de clé non valide');
-                        d.text('token_key', 'Session par token', {value: instance.config.token_key});
+                        d.text('token_key', 'Session par token', { value: instance.config.token_key });
                         if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
                             d.error('token_key', 'Format de clé non valide');
-                        d.text('auto_key', 'Session de requête', {value: instance.config.auto_key});
+                        d.text('auto_key', 'Session de requête', { value: instance.config.auto_key });
                     });
                 });
 
-                d.action('Configurer', {disabled: !d.isValid()}, async () => {
+                d.action('Configurer', { disabled: !d.isValid() }, async () => {
                     let response = await net.fetch('/admin/api/instances/configure', {
                         method: 'POST',
                         body: JSON.stringify({
@@ -583,17 +583,17 @@ function AdminController() {
             } else {
                 d.tabs('tabs', () => {
                     d.tab('Basique', () => {
-                        d.text('*name', 'Nom', {value: instance.config.name});
+                        d.text('*name', 'Nom', { value: instance.config.name });
                     });
 
                     d.tab('Avancé', () => {
-                        d.text('shared_key', 'Clé locale partagée', {value: instance.config.shared_key});
+                        d.text('shared_key', 'Clé locale partagée', { value: instance.config.shared_key });
                         if (d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
                             d.error('shared_key', 'Format de clé non valide');
                     });
                 });
 
-                d.action('Configurer', {disabled: !d.isValid()}, async () => {
+                d.action('Configurer', { disabled: !d.isValid() }, async () => {
                     let response = await net.fetch('/admin/api/instances/configure', {
                         method: 'POST',
                         body: JSON.stringify({
@@ -663,9 +663,9 @@ function AdminController() {
         return ui.runDialog(e, `Division de ${master}`, {}, (d, resolve, reject) => {
             d.calc('instance', 'Projet', master);
             d.text('*key', 'Clé du sous-projet');
-            d.text('name', 'Nom', {value: d.values.key});
+            d.text('name', 'Nom', { value: d.values.key });
 
-            d.action('Créer', {disabled: !d.isValid()}, async () => {
+            d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let full_key = master + '/' + d.values.key;
 
                 let response = await net.fetch('/admin/api/instances/create', {
@@ -700,7 +700,7 @@ function AdminController() {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
             d.password('*password', 'Mot de passe');
-            d.password('*password2', null, {placeholder: 'Confirmation'});
+            d.password('*password2', null, { placeholder: 'Confirmation' });
             d.boolean('*change_password', 'Exiger un changement de mot de passe', {
                 value: true, untoggle: false
             });
@@ -722,9 +722,9 @@ function AdminController() {
             if (d.values.phone != null && !d.values.phone.startsWith('+'))
                 d.error('phone', 'Format non valide (préfixe obligatoire)');
 
-            d.boolean('*admin', 'Administrateur', {value: false, untoggle: false});
+            d.boolean('*admin', 'Administrateur', { value: false, untoggle: false });
 
-            d.action('Créer', {disabled: !d.isValid()}, async () => {
+            d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/users/create', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -766,7 +766,7 @@ function AdminController() {
                     value: value,
                     disabled: instance.master != null
                 });
-            }, {color: '#b518bf'});
+            }, { color: '#b518bf' });
             d.sameLine(true); d.section("Enregistrements", () => {
                 let props = ENV.permissions.filter(perm => perm.startsWith('data_')).map(makePermissionProp);
                 let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('data_')) : null;
@@ -775,12 +775,12 @@ function AdminController() {
                     value: value,
                     disabled: instance.slaves > 0
                 });
-            }, {color: '#258264'});
+            }, { color: '#258264' });
 
             // Now regroup permissions
             let permissions = [...(d.values.admin_permissions || []), ...(d.values.data_permissions || [])];
 
-            d.action('Modifier', {disabled: !d.isValid()}, async () => {
+            d.action('Modifier', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/instances/assign', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -814,20 +814,20 @@ function AdminController() {
 
     function runEditUserDialog(e, user) {
         return ui.runDialog(e, `Modification de ${user.username}`, {}, (d, resolve, reject) => {
-            d.pushOptions({untoggle: false});
+            d.pushOptions({ untoggle: false });
 
             d.tabs('tabs', () => {
                 d.tab('Identité', () => {
-                    d.text('username', 'Nom d\'utilisateur', {value: user.username});
+                    d.text('username', 'Nom d\'utilisateur', { value: user.username });
 
-                    d.text('email', 'Courriel', {value: user.email});
+                    d.text('email', 'Courriel', { value: user.email });
                     if (d.values.email != null && !d.values.email.includes('@'))
                         d.error('email', 'Format non valide');
-                    d.text('phone', 'Téléphone', {value: user.phone});
+                    d.text('phone', 'Téléphone', { value: user.phone });
                     if (d.values.phone != null && !d.values.phone.startsWith('+'))
                         d.error('phone', 'Format non valide (préfixe obligatoire)');
 
-                    d.boolean('*admin', 'Administrateur', {value: user.admin});
+                    d.boolean('*admin', 'Administrateur', { value: user.admin });
                 });
 
                 d.tab('Sécurité', () => {
@@ -859,7 +859,7 @@ function AdminController() {
                 });
             });
 
-            d.action('Modifier', {disabled: !d.isValid()}, async () => {
+            d.action('Modifier', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/users/edit', {
                     method: 'POST',
                     body: JSON.stringify({
