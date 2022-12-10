@@ -770,9 +770,30 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
 
     io->RunAsync([=]() {
         HashMap<const char *, const char *> files;
-        if (!io->ReadPostValues(&io->allocator, &files)) {
-            io->AttachError(422);
-            return;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Megabytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                const char *filename = "";
+                const char *sha256 = "";
+
+                parser.ParseKey(&filename);
+                parser.ParseString(&sha256);
+
+                if (!files.TrySet(filename, sha256).second) {
+                    LogError("Duplicate file '%1'", filename);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
         int64_t version = -1;

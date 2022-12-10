@@ -179,19 +179,19 @@ function InstancePublisher(instance, db) {
             if (actions.some(action => action.type == 'conflict'))
                 throw new Error('Conflits non résolus');
 
-            let query = new URLSearchParams;
+            let files = {};
             for (let i = 0; i < actions.length; i += 10) {
                 let p = actions.slice(i, i + 10).map(async action => {
                     switch (action.type) {
                         case 'push': {
                             if (action.to_sha256 != null)
-                                query.set(action.filename, action.to_sha256);
+                                files[action.filename] = action.to_sha256;
                         } break;
 
                         case 'noop':
                         case 'pull': {
                             if (action.from_sha256 != null)
-                                query.set(action.filename, action.from_sha256);
+                                files[action.filename] = action.from_sha256;
                         } break;
                     }
                 });
@@ -201,7 +201,7 @@ function InstancePublisher(instance, db) {
             // Publish!
             await net.fetchJson(`${ENV.urls.base}api/files/publish`, {
                 method: 'POST',
-                body: query
+                body: JSON.stringify(files)
             });
 
             progress.success('Publication effectuée');
