@@ -1664,7 +1664,7 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 
     Napi::External<void> external = info[0].As<Napi::External<void>>();
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
-    const uint8_t *ptr = (const uint8_t *)external.Data() + offset;
+    void *ptr = external.Data();
 
     if (!ptr)
         return env.Null();
@@ -1678,12 +1678,12 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 
 #define RETURN_INT(Type, NewCall) \
         do { \
-            Type v = *(Type *)ptr; \
+            Type v = ((Type *)ptr)[offset]; \
             return NewCall(env, v); \
         } while (false)
 #define RETURN_INT_SWAP(Type, NewCall) \
         do { \
-            Type v = ReverseBytes(*(Type *)ptr); \
+            Type v = ReverseBytes(((Type *)ptr)[offset]); \
             return NewCall(env, v); \
         } while (false)
 
@@ -1694,7 +1694,7 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
         } break;
 
         case PrimitiveKind::Bool: {
-            bool v = *(bool *)ptr;
+            bool v = ((bool *)ptr)[offset];
             return Napi::Boolean::New(env, v);
         } break;
         case PrimitiveKind::Int8: { RETURN_INT(int8_t, Napi::Number::New); } break;
@@ -1713,25 +1713,25 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
         case PrimitiveKind::UInt64S: { RETURN_INT_SWAP(uint64_t, NewBigInt); } break;
         case PrimitiveKind::String: {
             if (len >= 0) {
-                const char *str = *(const char **)ptr;
+                const char *str = ((const char**) ptr)[offset];
                 return str ? Napi::String::New(env, str, len) : env.Null();
             } else {
-                const char *str = *(const char **)ptr;
+                const char *str = ((const char**) ptr)[offset];
                 return str ? Napi::String::New(env, str) : env.Null();
             }
         } break;
         case PrimitiveKind::String16: {
             if (len >= 0) {
-                const char16_t *str16 = *(const char16_t **)ptr;
+                const char16_t *str16 = ((const char16_t **)ptr)[offset];
                 return str16 ? Napi::String::New(env, str16, len) : env.Null();
             } else {
-                const char16_t *str16 = *(const char16_t **)ptr;
+                const char16_t *str16 = ((const char16_t **)ptr)[offset];
                 return str16 ? Napi::String::New(env, str16) : env.Null();
             }
         } break;
-        case PrimitiveKind::Pointer: 
+        case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
-            void *ptr2 = *(void **)ptr;
+            void *ptr2 = ((void **)ptr)[offset];
             return ptr2 ? Napi::External<void>::New(env, ptr2, [](Napi::Env, void *) {}) : env.Null();
         } break;
         case PrimitiveKind::Array:
