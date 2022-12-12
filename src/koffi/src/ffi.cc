@@ -1666,6 +1666,9 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
     const uint8_t *ptr = (const uint8_t *)external.Data() + offset;
 
+    if (!ptr)
+        return env.Null();
+
     const TypeInfo *type = ResolveType(info[1u + has_offset]);
     if (RG_UNLIKELY(!type))
         return env.Null();
