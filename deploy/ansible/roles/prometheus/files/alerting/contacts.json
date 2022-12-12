@@ -1,0 +1,29 @@
+{
+    "contactPoints": [
+        {
+            "orgId": 1,
+            "name": "Koromix",
+            "receivers": [
+                {
+                    "uid": "cglAw3Snz",
+                    "type": "email",
+                    "settings": {
+                        "addresses": "niels.martignene@protonmail.com",
+                        "autoResolve": true,
+                        "httpMethod": "POST",
+                        "severity": "critical",
+                        "singleEmail": false,
+                        "uploadImage": false
+                    },
+                    "disableResolveMessage": false
+                }
+            ]
+        }
+    ],
+    "policies": [
+        {
+            "orgId": 1,
+            "receiver": "Koromix"
+        }
+    ]
+}
