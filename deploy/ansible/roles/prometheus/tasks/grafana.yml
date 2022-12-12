@@ -48,6 +48,7 @@
     - '{{ grafana_root_path }}'
     - '{{ grafana_root_path }}/provision'
     - '{{ grafana_root_path }}/provision/access-control'
+    - '{{ grafana_root_path }}/provision/alerting'
     - '{{ grafana_root_path }}/provision/dashboards'
     - '{{ grafana_root_path }}/provision/datasources'
     - '{{ grafana_root_path }}/provision/notifiers'
@@ -77,6 +78,14 @@
       dest: '{{ grafana_root_path }}/provision/dashboards/ansible.yml'
     - src: 'grafana_datasources.yml.j2'
       dest: '{{ grafana_root_path }}/provision/datasources/ansible.yml'
+  become: yes
+
+- name: Configure Grafana alerts
+  copy:
+    src: '{{ item }}'
+    dest: '{{ grafana_root_path }}/provision/alerting/{{ item | basename }}'
+    mode: '0644'
+  loop: '{{ lookup("fileglob", "alerting/*.json", wantlist = True) }}'
   become: yes
 
 - name: Configure Grafana dashboards
