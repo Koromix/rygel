@@ -105,12 +105,6 @@ private:
     bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
     bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
 
-    void PopObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
-    Napi::Object PopObject(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
-    void PopNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
-    void PopTypedArray(Napi::TypedArray array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
-    Napi::Value PopArray(const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
-
     void PopOutArguments();
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);

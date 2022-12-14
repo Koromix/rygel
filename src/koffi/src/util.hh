@@ -80,7 +80,7 @@ static inline bool IsObject(Napi::Value value)
 int GetTypedArrayType(const TypeInfo *type);
 
 template <typename T>
-T CopyNumber(Napi::Value value)
+T GetNumber(Napi::Value value)
 {
     RG_ASSERT(value.IsNumber() || value.IsBigInt());
 
@@ -95,6 +95,12 @@ T CopyNumber(Napi::Value value)
 
     RG_UNREACHABLE();
 }
+
+Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
+void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
+Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
+void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
+void DecodeTypedArray(Napi::TypedArray array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
 
 static inline Napi::Value NewBigInt(Napi::Env env, int64_t value)
 {

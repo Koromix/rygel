@@ -303,6 +303,533 @@ int GetTypedArrayType(const TypeInfo *type)
     RG_UNREACHABLE();
 }
 
+Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign)
+{
+    Napi::Object obj = Napi::Object::New(env);
+    DecodeObject(obj, origin, type, realign);
+    return obj;
+}
+
+void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign)
+{
+    Napi::Env env = obj.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    RG_ASSERT(type->primitive == PrimitiveKind::Record);
+
+    for (Size i = 0; i < type->members.len; i++) {
+        const RecordMember &member = type->members[i];
+
+        Size offset = realign ? (i * realign) : member.offset;
+        const uint8_t *src = origin + offset;
+
+        switch (member.type->primitive) {
+            case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+
+            case PrimitiveKind::Bool: {
+                bool b = *(bool *)src;
+                obj.Set(member.name, Napi::Boolean::New(env, b));
+            } break;
+            case PrimitiveKind::Int8: {
+                double d = (double)*(int8_t *)src;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt8: {
+                double d = (double)*(uint8_t *)src;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::Int16: {
+                double d = (double)*(int16_t *)src;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::Int16S: {
+                int16_t v = *(int16_t *)src;
+                double d = (double)ReverseBytes(v);
+
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt16: {
+                double d = (double)*(uint16_t *)src;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt16S: {
+                uint16_t v = *(uint16_t *)src;
+                double d = (double)ReverseBytes(v);
+
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::Int32: {
+                double d = (double)*(int32_t *)src;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::Int32S: {
+                int32_t v = *(int32_t *)src;
+                double d = (double)ReverseBytes(v);
+
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt32: {
+                double d = (double)*(uint32_t *)src;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::UInt32S: {
+                uint32_t v = *(uint32_t *)src;
+                double d = (double)ReverseBytes(v);
+
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+            case PrimitiveKind::Int64: {
+                int64_t v = *(int64_t *)src;
+                obj.Set(member.name, NewBigInt(env, v));
+            } break;
+            case PrimitiveKind::Int64S: {
+                int64_t v = ReverseBytes(*(int64_t *)src);
+                obj.Set(member.name, NewBigInt(env, v));
+            } break;
+            case PrimitiveKind::UInt64: {
+                uint64_t v = *(uint64_t *)src;
+                obj.Set(member.name, NewBigInt(env, v));
+            } break;
+            case PrimitiveKind::UInt64S: {
+                uint64_t v = ReverseBytes(*(uint64_t *)src);
+                obj.Set(member.name, NewBigInt(env, v));
+            } break;
+            case PrimitiveKind::String: {
+                const char *str = *(const char **)src;
+                obj.Set(member.name, str ? Napi::String::New(env, str) : env.Null());
+
+                if (member.type->dispose) {
+                    member.type->dispose(env, member.type, str);
+                }
+            } break;
+            case PrimitiveKind::String16: {
+                const char16_t *str16 = *(const char16_t **)src;
+                obj.Set(member.name, str16 ? Napi::String::New(env, str16) : env.Null());
+
+                if (member.type->dispose) {
+                    member.type->dispose(env, member.type, str16);
+                }
+            } break;
+            case PrimitiveKind::Pointer:
+            case PrimitiveKind::Callback: {
+                void *ptr2 = *(void **)src;
+
+                if (ptr2) {
+                    Napi::External<void> external = Napi::External<void>::New(env, ptr2);
+                    SetValueTag(instance, external, member.type->ref.marker);
+
+                    obj.Set(member.name, external);
+                } else {
+                    obj.Set(member.name, env.Null());
+                }
+
+                if (member.type->dispose) {
+                    member.type->dispose(env, member.type, ptr2);
+                }
+            } break;
+            case PrimitiveKind::Record: {
+                Napi::Object obj2 = DecodeObject(env, src, member.type, realign);
+                obj.Set(member.name, obj2);
+            } break;
+            case PrimitiveKind::Array: {
+                Napi::Value value = DecodeArray(env, src, member.type, realign);
+                obj.Set(member.name, value);
+            } break;
+            case PrimitiveKind::Float32: {
+                float f = *(float *)src;
+                obj.Set(member.name, Napi::Number::New(env, (double)f));
+            } break;
+            case PrimitiveKind::Float64: {
+                double d = *(double *)src;
+                obj.Set(member.name, Napi::Number::New(env, d));
+            } break;
+
+            case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+        }
+    }
+}
+
+static Size WideStringLength(const char16_t *str16, Size max)
+{
+    Size len = 0;
+
+    while (len < max && str16[len]) {
+        len++;
+    }
+
+    return len;
+}
+
+Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign)
+{
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    RG_ASSERT(type->primitive == PrimitiveKind::Array);
+
+    uint32_t len = type->size / type->ref.type->size;
+    Size offset = 0;
+
+#define POP_ARRAY(SetCode) \
+        do { \
+            Napi::Array array = Napi::Array::New(env); \
+             \
+            for (uint32_t i = 0; i < len; i++) { \
+                int16_t align = std::max(realign, type->ref.type->align); \
+                offset = AlignLen(offset, align); \
+                 \
+                const uint8_t *src = origin + offset; \
+                 \
+                SetCode \
+                 \
+                offset += type->ref.type->size; \
+            } \
+             \
+            return array; \
+        } while (false)
+#define POP_NUMBER_ARRAY(TypedArrayType, CType) \
+        do { \
+            if (type->hint == TypeInfo::ArrayHint::Array) { \
+                POP_ARRAY({ \
+                    double d = (double)*(CType *)src; \
+                    array.Set(i, Napi::Number::New(env, d)); \
+                }); \
+            } else { \
+                Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
+                DecodeTypedArray(array, origin, type->ref.type, realign); \
+                 \
+                return array; \
+            } \
+        } while (false)
+#define POP_NUMBER_ARRAY_SWAP(TypedArrayType, CType) \
+        do { \
+            if (type->hint == TypeInfo::ArrayHint::Array) { \
+                POP_ARRAY({ \
+                    CType v = *(CType *)src; \
+                    double d = (double)ReverseBytes(v); \
+                    array.Set(i, Napi::Number::New(env, d)); \
+                }); \
+            } else { \
+                Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
+                DecodeTypedArray(array, origin, type->ref.type, realign); \
+                 \
+                return array; \
+            } \
+        } while (false)
+
+    switch (type->ref.type->primitive) {
+        case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+
+        case PrimitiveKind::Bool: {
+            POP_ARRAY({
+                bool b = *(bool *)src;
+                array.Set(i, Napi::Boolean::New(env, b));
+            });
+        } break;
+        case PrimitiveKind::Int8: {
+            if (type->hint == TypeInfo::ArrayHint::String) {
+                RG_ASSERT(!realign);
+
+                const char *ptr = (const char *)origin;
+                size_t count = strnlen(ptr, (size_t)len);
+
+                Napi::String str = Napi::String::New(env, ptr, count);
+                return str;
+            }
+
+            POP_NUMBER_ARRAY(Int8Array, int8_t);
+        } break;
+        case PrimitiveKind::UInt8: { POP_NUMBER_ARRAY(Uint8Array, uint8_t); } break;
+        case PrimitiveKind::Int16: {
+            if (type->hint == TypeInfo::ArrayHint::String) {
+                RG_ASSERT(!realign);
+
+                const char16_t *ptr = (const char16_t *)origin;
+                Size count = WideStringLength(ptr, len);
+
+                Napi::String str = Napi::String::New(env, ptr, count);
+                return str;
+            }
+
+            POP_NUMBER_ARRAY(Int16Array, int16_t);
+        } break;
+        case PrimitiveKind::Int16S: { POP_NUMBER_ARRAY_SWAP(Int16Array, int16_t); } break;
+        case PrimitiveKind::UInt16: { POP_NUMBER_ARRAY(Uint16Array, uint16_t); } break;
+        case PrimitiveKind::UInt16S: { POP_NUMBER_ARRAY_SWAP(Uint16Array, uint16_t); } break;
+        case PrimitiveKind::Int32: { POP_NUMBER_ARRAY(Int32Array, int32_t); } break;
+        case PrimitiveKind::Int32S: { POP_NUMBER_ARRAY_SWAP(Int32Array, int32_t); } break;
+        case PrimitiveKind::UInt32: { POP_NUMBER_ARRAY(Uint32Array, uint32_t); } break;
+        case PrimitiveKind::UInt32S: { POP_NUMBER_ARRAY_SWAP(Uint32Array, uint32_t); } break;
+        case PrimitiveKind::Int64: {
+            POP_ARRAY({
+                int64_t v = *(int64_t *)src;
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::Int64S: {
+            POP_ARRAY({
+                int64_t v = ReverseBytes(*(int64_t *)src);
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::UInt64: {
+            POP_ARRAY({
+                uint64_t v = *(uint64_t *)src;
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::UInt64S: {
+            POP_ARRAY({
+                uint64_t v = ReverseBytes(*(uint64_t *)src);
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::String: {
+            POP_ARRAY({
+                const char *str = *(const char **)src;
+                array.Set(i, str ? Napi::String::New(env, str) : env.Null());
+            });
+        } break;
+        case PrimitiveKind::String16: {
+            POP_ARRAY({
+                const char16_t *str16 = *(const char16_t **)src;
+                array.Set(i, str16 ? Napi::String::New(env, str16) : env.Null());
+            });
+        } break;
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Callback: {
+            POP_ARRAY({
+                void *ptr2 = *(void **)src;
+
+                if (ptr2) {
+                    Napi::External<void> external = Napi::External<void>::New(env, ptr2);
+                    SetValueTag(instance, external, type->ref.type->ref.marker);
+
+                    array.Set(i, external);
+                } else {
+                    array.Set(i, env.Null());
+                }
+            });
+        } break;
+        case PrimitiveKind::Record: {
+            POP_ARRAY({
+                Napi::Object obj = DecodeObject(env, src, type->ref.type, realign);
+                array.Set(i, obj);
+            });
+        } break;
+        case PrimitiveKind::Array: {
+            POP_ARRAY({
+                Napi::Value value = DecodeArray(env, src, type->ref.type, realign);
+                array.Set(i, value);
+            });
+        } break;
+        case PrimitiveKind::Float32: { POP_NUMBER_ARRAY(Float32Array, float); } break;
+        case PrimitiveKind::Float64: { POP_NUMBER_ARRAY(Float64Array, double); } break;
+
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+    }
+
+#undef POP_NUMBER_ARRAY_SWAP
+#undef POP_NUMBER_ARRAY
+#undef POP_ARRAY
+
+    RG_UNREACHABLE();
+}
+
+void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref, int16_t realign)
+{
+    Napi::Env env = array.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    RG_ASSERT(array.IsArray());
+
+    Size offset = 0;
+    uint32_t len = array.Length();
+
+#define POP_ARRAY(SetCode) \
+        do { \
+            for (uint32_t i = 0; i < len; i++) { \
+                int16_t align = std::max(realign, ref->align); \
+                offset = AlignLen(offset, align); \
+                 \
+                const uint8_t *src = origin + offset; \
+                 \
+                SetCode \
+                 \
+                offset += ref->size; \
+            } \
+        } while (false)
+#define POP_NUMBER_ARRAY(CType) \
+        do { \
+            POP_ARRAY({ \
+                double d = (double)*(CType *)src; \
+                array.Set(i, Napi::Number::New(env, d)); \
+            }); \
+        } while (false)
+#define POP_NUMBER_ARRAY_SWAP(CType) \
+        do { \
+            POP_ARRAY({ \
+                CType v = *(CType *)src; \
+                double d = (double)ReverseBytes(v); \
+                array.Set(i, Napi::Number::New(env, d)); \
+            }); \
+        } while (false)
+
+    switch (ref->primitive) {
+        case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+
+        case PrimitiveKind::Bool: {
+            POP_ARRAY({
+                bool b = *(bool *)src;
+                array.Set(i, Napi::Boolean::New(env, b));
+            });
+        } break;
+        case PrimitiveKind::Int8: { POP_NUMBER_ARRAY(int8_t); } break;
+        case PrimitiveKind::UInt8: { POP_NUMBER_ARRAY(uint8_t); } break;
+        case PrimitiveKind::Int16: { POP_NUMBER_ARRAY(int16_t); } break;
+        case PrimitiveKind::Int16S: { POP_NUMBER_ARRAY_SWAP(int16_t); } break;
+        case PrimitiveKind::UInt16: { POP_NUMBER_ARRAY(uint16_t); } break;
+        case PrimitiveKind::UInt16S: { POP_NUMBER_ARRAY_SWAP(uint16_t); } break;
+        case PrimitiveKind::Int32: { POP_NUMBER_ARRAY(int32_t); } break;
+        case PrimitiveKind::Int32S: { POP_NUMBER_ARRAY_SWAP(int32_t); } break;
+        case PrimitiveKind::UInt32: { POP_NUMBER_ARRAY(uint32_t); } break;
+        case PrimitiveKind::UInt32S: { POP_NUMBER_ARRAY_SWAP(uint32_t); } break;
+        case PrimitiveKind::Int64: {
+            POP_ARRAY({
+                int64_t v = *(int64_t *)src;
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::Int64S: {
+            POP_ARRAY({
+                int64_t v = ReverseBytes(*(int64_t *)src);
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::UInt64: {
+            POP_ARRAY({
+                uint64_t v = *(uint64_t *)src;
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::UInt64S: {
+            POP_ARRAY({
+                uint64_t v = ReverseBytes(*(uint64_t *)src);
+                array.Set(i, NewBigInt(env, v));
+            });
+        } break;
+        case PrimitiveKind::String: {
+            POP_ARRAY({
+                const char *str = *(const char **)src;
+                array.Set(i, str ? Napi::String::New(env, str) : env.Null());
+
+                if (ref->dispose) {
+                    ref->dispose(env, ref, str);
+                }
+            });
+        } break;
+        case PrimitiveKind::String16: {
+            POP_ARRAY({
+                const char16_t *str16 = *(const char16_t **)src;
+                array.Set(i, str16 ? Napi::String::New(env, str16) : env.Null());
+
+                if (ref->dispose) {
+                    ref->dispose(env, ref, str16);
+                }
+            });
+        } break;
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Callback: {
+            POP_ARRAY({
+                void *ptr2 = *(void **)src;
+
+                if (ptr2) {
+                    Napi::External<void> external = Napi::External<void>::New(env, ptr2);
+                    SetValueTag(instance, external, ref->ref.marker);
+
+                    array.Set(i, external);
+                } else {
+                    array.Set(i, env.Null());
+                }
+
+                if (ref->dispose) {
+                    ref->dispose(env, ref, ptr2);
+                }
+            });
+        } break;
+        case PrimitiveKind::Record: {
+            POP_ARRAY({
+                Napi::Object obj = DecodeObject(env, src, ref, realign);
+                array.Set(i, obj);
+            });
+        } break;
+        case PrimitiveKind::Array: {
+            POP_ARRAY({
+                Napi::Value value = DecodeArray(env, src, ref, realign);
+                array.Set(i, value);
+            });
+        } break;
+        case PrimitiveKind::Float32: { POP_NUMBER_ARRAY(float); } break;
+        case PrimitiveKind::Float64: { POP_NUMBER_ARRAY(double); } break;
+
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+    }
+
+#undef POP_NUMBER_ARRAY_SWAP
+#undef POP_NUMBER_ARRAY
+#undef POP_ARRAY
+}
+
+void DecodeTypedArray(Napi::TypedArray array, const uint8_t *origin, const TypeInfo *ref, int16_t realign)
+{
+    Napi::Env env = array.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    RG_ASSERT(array.IsTypedArray());
+    RG_ASSERT(GetTypedArrayType(ref) == array.TypedArrayType() ||
+              ref == instance->void_type);
+
+    uint8_t *buf = (uint8_t *)array.ArrayBuffer().Data();
+
+    if (realign) {
+        Size offset = 0;
+        Size len = (Size)array.ElementLength();
+        Size size = (Size)array.ElementSize();
+
+        for (Size i = 0; i < len; i++) {
+            offset = AlignLen(offset, realign);
+
+            uint8_t *dest = buf + i * size;
+            const uint8_t *src = origin + offset;
+
+            memcpy(dest, src, size);
+
+            offset += size;
+        }
+    } else {
+        memcpy_safe(buf, origin, (size_t)array.ByteLength());
+    }
+
+#define SWAP(CType) \
+        do { \
+            CType *data = (CType *)buf; \
+            Size len = (Size)array.ElementLength(); \
+             \
+            for (Size i = 0; i < len; i++) { \
+                data[i] = ReverseBytes(data[i]); \
+            } \
+        } while (false)
+
+    if (ref->primitive == PrimitiveKind::Int16S || ref->primitive == PrimitiveKind::UInt16S) {
+        SWAP(uint16_t);
+    } else if (ref->primitive == PrimitiveKind::Int32S || ref->primitive == PrimitiveKind::UInt32S) {
+        SWAP(uint32_t);
+    } else if (ref->primitive == PrimitiveKind::Int64S || ref->primitive == PrimitiveKind::UInt64S) {
+        SWAP(uint64_t);
+    }
+
+#undef SWAP
+}
+
 static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
 {
     if (type->primitive == PrimitiveKind::Record) {

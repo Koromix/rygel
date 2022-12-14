@@ -282,7 +282,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)v; \
         } while (false)
 #define PUSH_INTEGER_32_SWAP(CType) \
@@ -292,7 +292,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)ReverseBytes(v); \
         } while (false)
 #define PUSH_INTEGER_64(CType) \
@@ -302,7 +302,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
              \
             if (RG_LIKELY(param.gpr_count)) { \
                 gpr_ptr = AlignUp(gpr_ptr, 8); \
@@ -321,7 +321,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
              \
             if (RG_LIKELY(param.gpr_count)) { \
                 gpr_ptr = AlignUp(gpr_ptr, 8); \
@@ -427,7 +427,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                float f = CopyNumber<float>(value);
+                float f = GetNumber<float>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
                     *(float *)(vec_ptr++) = f;
@@ -443,7 +443,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                double d = CopyNumber<double>(value);
+                double d = GetNumber<double>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
                     *(double *)vec_ptr = d;
@@ -588,7 +588,7 @@ Napi::Value CallData::Complete()
             const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
                                             : (const uint8_t *)&result.buf;
 
-            Napi::Object obj = PopObject(ptr, func->ret.type);
+            Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
             return obj;
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
@@ -782,7 +782,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             } break;
             case PrimitiveKind::Record: {
                 if (param.vec_count) {
-                    Napi::Object obj = PopObject((const uint8_t *)vec_ptr, param.type);
+                    Napi::Object obj = DecodeObject(env, (const uint8_t *)vec_ptr, param.type);
                     arguments.Append(obj);
 
                     vec_ptr += param.vec_count;
@@ -801,13 +801,13 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                         memcpy(ptr, gpr_ptr, gpr_size);
                         memcpy(ptr + gpr_size, args_ptr, param.type->size - gpr_size);
 
-                        Napi::Object obj = PopObject(ptr, param.type);
+                        Napi::Object obj = DecodeObject(env, ptr, param.type);
                         arguments.Append(obj);
 
                         gpr_ptr += param.gpr_count;
                         args_ptr += (param.type->size - gpr_size + 3) / 4;
                     } else {
-                        Napi::Object obj = PopObject((const uint8_t *)gpr_ptr, param.type);
+                        Napi::Object obj = DecodeObject(env, (const uint8_t *)gpr_ptr, param.type);
                         arguments.Append(obj);
 
                         gpr_ptr += param.gpr_count;
@@ -816,7 +816,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                     int16_t align = (param.type->align <= 4) ? 4 : 8;
                     args_ptr = AlignUp(args_ptr, align);
 
-                    Napi::Object obj = PopObject((const uint8_t *)args_ptr, param.type);
+                    Napi::Object obj = DecodeObject(env, (const uint8_t *)args_ptr, param.type);
                     arguments.Append(obj);
 
                     args_ptr += (param.type->size + 3) / 4;
@@ -876,7 +876,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             out_reg->r0 = (uint32_t)v; \
         } while (false)
 #define RETURN_INTEGER_32_SWAP(CType) \
@@ -886,7 +886,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             out_reg->r0 = (uint32_t)ReverseBytes(v); \
         } while (false)
 #define RETURN_INTEGER_64(CType) \
@@ -896,7 +896,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
              \
             out_reg->r0 = (uint32_t)((uint64_t)v >> 32); \
             out_reg->r1 = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
@@ -908,7 +908,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = ReverseBytes(CopyNumber<CType>(value)); \
+            CType v = ReverseBytes(GetNumber<CType>(value)); \
              \
             out_reg->r0 = (uint32_t)((uint64_t)v >> 32); \
             out_reg->r1 = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
@@ -1000,7 +1000,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            float f = CopyNumber<float>(value);
+            float f = GetNumber<float>(value);
 #ifdef __ARM_PCS_VFP
             memcpy(&out_reg->d0, &f, 4);
 #else
@@ -1013,7 +1013,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            double d = CopyNumber<double>(value);
+            double d = GetNumber<double>(value);
 #ifdef __ARM_PCS_VFP
             out_reg->d0 = d;
 #else

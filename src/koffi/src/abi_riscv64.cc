@@ -223,7 +223,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)v; \
         } while (false)
 #define PUSH_INTEGER_SWAP(CType) \
@@ -233,7 +233,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)ReverseBytes(v); \
         } while (false)
 
@@ -346,7 +346,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                float f = CopyNumber<float>(value);
+                float f = GetNumber<float>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
                     memset((uint8_t *)vec_ptr + 4, 0xFF, 4);
@@ -365,7 +365,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                double d = CopyNumber<double>(value);
+                double d = GetNumber<double>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
                     *(double *)(vec_ptr++) = d;
@@ -508,13 +508,13 @@ Napi::Value CallData::Complete()
         } break;
         case PrimitiveKind::Record: {
             if (func->ret.vec_count) { // HFA
-                Napi::Object obj = PopObject((const uint8_t *)&result.buf, func->ret.type, 8);
+                Napi::Object obj = DecodeObject(env, (const uint8_t *)&result.buf, func->ret.type, 8);
                 return obj;
             } else {
                 const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
                                                 : (const uint8_t *)&result.buf;
 
-                Napi::Object obj = PopObject(ptr, func->ret.type);
+                Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
                 return obj;
             }
         } break;
@@ -717,12 +717,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                     // Reassemble float or mixed int-float structs from registers
                     int realign = param.vec_count ? 8 : 0;
 
-                    Napi::Object obj = PopObject((const uint8_t *)buf, param.type, realign);
+                    Napi::Object obj = DecodeObject(env, (const uint8_t *)buf, param.type, realign);
                     arguments.Append(obj);
                 } else {
                     uint8_t *ptr = *(uint8_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                    Napi::Object obj = PopObject(ptr, param.type);
+                    Napi::Object obj = DecodeObject(env, ptr, param.type);
                     arguments.Append(obj);
                 }
             } break;
@@ -775,7 +775,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             out_reg->a0 = (uint64_t)v; \
         } while (false)
 #define RETURN_INTEGER_SWAP(CType) \
@@ -785,7 +785,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             out_reg->a0 = (uint64_t)ReverseBytes(v); \
         } while (false)
 
@@ -875,7 +875,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            float f = CopyNumber<float>(value);
+            float f = GetNumber<float>(value);
             memset((uint8_t *)&out_reg->fa0 + 4, 0xFF, 4);
             memcpy(&out_reg->fa0, &f, 4);
         } break;
@@ -885,7 +885,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            double d = CopyNumber<double>(value);
+            double d = GetNumber<double>(value);
             out_reg->fa0 = d;
         } break;
         case PrimitiveKind::Callback: {
