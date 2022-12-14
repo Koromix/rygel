@@ -509,12 +509,13 @@ Read the documentation for [disposable types](functions.md#heap-allocated-values
 
 ### Type introspection
 
-*New in Koffi 2.0: `koffi.resolve()`*
+*New in Koffi 2.0: `koffi.resolve()`, new in Koffi 2.2: `koffi.offsetof()`*
 
-Koffi exposes three functions to explore type information:
+Koffi exposes a few functions to explore type information:
 
 - `koffi.sizeof(type)` to get the size of a type
 - `koffi.alignof(type)` to get the alignment of a type
+- `koffi.offsetof(type, member_name)` to get the offset of a record member
 - `koffi.introspect(type)` to get the definition of a type in an object containing: name, primitive, size, alignment, members (structs), reference (array, pointer) and length (array)
 - `koffi.resolve(type)` to get the resolved type object from a type string
 
