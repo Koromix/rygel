@@ -835,6 +835,40 @@ static Napi::Value GetTypeAlign(const Napi::CallbackInfo &info)
     return Napi::Number::New(env, type->align);
 }
 
+static Napi::Value GetMemberOffset(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+    if (!info[1].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member, expected string", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(info[0]);
+    if (!type)
+        return env.Null();
+    if (type->primitive != PrimitiveKind::Record) {
+        ThrowError<Napi::TypeError>(env, "The offsetof() function can only be used with record types");
+        return env.Null();
+    }
+
+    std::string name = info[1].As<Napi::String>();
+
+    const RecordMember *member = std::find_if(type->members.begin(), type->members.end(),
+        [&](const RecordMember &member) { return TestStr(member.name, name.c_str()); });
+    if (member == type->members.end()) {
+        ThrowError<Napi::Error>(env, "Record type %1 does not have member '%2'", type->name, name.c_str());
+        return env.Null();
+    }
+
+    return Napi::Number::New(env, member->offset);
+}
+
 static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -1778,6 +1812,7 @@ static void SetExports(Napi::Env env, Func func)
 
     func("sizeof", Napi::Function::New(env, GetTypeSize));
     func("alignof", Napi::Function::New(env, GetTypeAlign));
+    func("offsetof", Napi::Function::New(env, GetMemberOffset));
     func("resolve", Napi::Function::New(env, GetResolvedType));
     func("introspect", Napi::Function::New(env, GetTypeDefinition));
 
