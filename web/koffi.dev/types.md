@@ -511,21 +511,47 @@ Read the documentation for [disposable types](functions.md#heap-allocated-values
 
 *New in Koffi 2.0: `koffi.resolve()`, new in Koffi 2.2: `koffi.offsetof()`*
 
-Koffi exposes a few functions to explore type information:
+```{note}
+The value returned by `introspect()` has **changed in version 2.0 and in version 2.2**.
+
+In Koffi 1.x, it could only be used with struct types and returned the object passed to koffi.struct() with the member names and types.
+
+Starting in Koffi 2.2, each record member is exposed as an object containing the name, the type and the offset within the record.
+
+Consult the [migration guide](changes.md) for more information.
+```
+
+Use `koffi.introspect(type)` to get detailed information about a type: name, primitive, size, alignment, members (record types), reference type (array, pointer) and length (array).
+
+```js
+const FoobarType = koffi.struct('FoobarType', {
+    a: 'int',
+    b: 'char *',
+    c: 'double'
+});
+
+console.log(koffi.introspect(FoobarType));
+
+// Expected result on 64-bit machines:
+// {
+//     name: 'FoobarType',
+//     primitive: 'Record',
+//     size: 24,
+//     alignment: 8,
+//     members: {
+//         a: { name: 'a', type: [External: 4b28a60], offset: 0 },
+//         b: { name: 'b', type: [External: 4b292e0], offset: 8 },
+//         c: { name: 'c', type: [External: 4b29260], offset: 16 }
+//     }
+// }
+```
+
+Koffi also exposes a few more utility functions to get a subset of this information:
 
 - `koffi.sizeof(type)` to get the size of a type
 - `koffi.alignof(type)` to get the alignment of a type
 - `koffi.offsetof(type, member_name)` to get the offset of a record member
-- `koffi.introspect(type)` to get the definition of a type in an object containing: name, primitive, size, alignment, members (structs), reference (array, pointer) and length (array)
 - `koffi.resolve(type)` to get the resolved type object from a type string
-
-```{note}
-The value returned by `introspect()` has **changed in version 2.0**.
-
-In Koffi 1.x, it could only be used with struct types and returned the object passed to koffi.struct() with the member names and types.
-
-Consult the [migration guide](changes.md) for more information.
-```
 
 Just like before, you can refer to primitive types by their name or through `koffi.types`:
 
