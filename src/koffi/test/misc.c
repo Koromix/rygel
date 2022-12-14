@@ -162,6 +162,13 @@ typedef struct BigText {
     char text[262145];
 } BigText;
 
+typedef struct Vec2 {
+    double x;
+    double y;
+} Vec2;
+
+typedef int VectorCallback(int len, Vec2 *vec);
+
 EXPORT int8_t GetMinusOne1(void)
 {
     return -1;
@@ -707,5 +714,19 @@ EXPORT BigText ReverseBigText(BigText buf)
     for (int i = 0; i < sizeof(buf.text); i++) {
         ret.text[sizeof(buf.text) - 1 - i] = buf.text[i];
     }
+    return ret;
+}
+
+EXPORT int MakeVectors(int len, VectorCallback *func)
+{
+    Vec2 vectors[512];
+
+    for (int i = 0; i < len; i++) {
+        vectors[i].x = (double)i;
+        vectors[i].y = (double)-i;
+    }
+
+    int ret = func(len, vectors);
+
     return ret;
 }
