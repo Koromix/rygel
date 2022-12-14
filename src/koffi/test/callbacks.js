@@ -28,12 +28,18 @@ const BFG = koffi.struct('BFG', {
     })
 });
 
+const Vec2 = koffi.struct('Vec2', {
+    x: 'double',
+    y: 'double'
+});
+
 const SimpleCallback = koffi.callback('int SimpleCallback(const char *str)');
 const RecursiveCallback = koffi.callback('RecursiveCallback', 'float', ['int', 'str', 'double']);
 const BigCallback = koffi.callback('BFG BigCallback(BFG bfg)');
 const SuperCallback = koffi.callback('void SuperCallback(int i, int v1, double v2, int v3, int v4, int v5, int v6, float v7, int v8)');
 const ApplyCallback = koffi.callback('int __stdcall ApplyCallback(int a, int b, int c)');
 const IntCallback = koffi.callback('int IntCallback(int x)');
+const VectorCallback = koffi.callback('int VectorCallback(int len, Vec2 *vec)');
 
 const StructCallbacks = koffi.struct('StructCallbacks', {
     first: koffi.pointer(IntCallback),
@@ -66,6 +72,7 @@ async function test() {
     const ApplyStruct = lib.func('int ApplyStruct(int x, StructCallbacks callbacks)');
     const SetCallback = lib.func('void SetCallback(IntCallback *func)');
     const CallCallback = lib.func('int CallCallback(int x)');
+    const MakeVectors = lib.func('int MakeVectors(int len, VectorCallback *func)');
 
     // Simple test similar to README example
     {
@@ -176,5 +183,35 @@ async function test() {
 
         assert.equal(koffi.unregister(cb), null);
         assert.throws(() => koffi.unregister(cb));
+    }
+
+    // Test decoding callback pointers
+    {
+        assert.equal(koffi.offsetof('Vec2', 'x'), 0);
+        assert.equal(koffi.offsetof('Vec2', 'y'), 8);
+
+        let ret = MakeVectors(5, (len, ptr) => {
+            assert.equal(len, 5);
+
+            for (let i = 0; i < len; i++) {
+                let x = koffi.decode(ptr, i * koffi.sizeof('Vec2'), 'double');
+                let y = koffi.decode(ptr, i * koffi.sizeof('Vec2') + 8, 'double');
+
+                assert.equal(x, i);
+                assert.equal(y, -i);
+            }
+
+            for (let i = 0; i < len; i++) {
+                let vec = koffi.decode(ptr, i * koffi.sizeof('Vec2'), 'Vec2');
+                assert.deepEqual(vec, { x: i, y: -i });
+            }
+
+            let all = koffi.decode(ptr, koffi.array('double', 10, 'array'), 10);
+            assert.deepEqual(all, [0, 0, 1, -1, 2, -2, 3, -3, 4, -4]);
+
+            return 424242;
+        });
+
+        assert.equal(ret, 424242);
     }
 }
