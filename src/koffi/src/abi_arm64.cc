@@ -307,7 +307,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
              \
             if (RG_LIKELY(param.gpr_count)) { \
                 *(gpr_ptr++) = (uint64_t)v; \
@@ -324,7 +324,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
              \
             if (RG_LIKELY(param.gpr_count)) { \
                 *(gpr_ptr++) = (uint64_t)ReverseBytes(v); \
@@ -342,7 +342,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)v; \
         } while (false)
     #define PUSH_INTEGER_SWAP(CType) \
@@ -352,7 +352,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)ReverseBytes(v); \
         } while (false)
 #endif
@@ -483,7 +483,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                float f = CopyNumber<float>(value);
+                float f = GetNumber<float>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
                     memset((uint8_t *)vec_ptr + 4, 0, 4);
@@ -510,7 +510,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                double d = CopyNumber<double>(value);
+                double d = GetNumber<double>(value);
 
                 if (RG_LIKELY(param.vec_count)) {
                     *(double *)(vec_ptr++) = d;
@@ -657,13 +657,13 @@ Napi::Value CallData::Complete()
         } break;
         case PrimitiveKind::Record: {
             if (func->ret.vec_count) { // HFA
-                Napi::Object obj = PopObject((const uint8_t *)&result.buf, func->ret.type, 8);
+                Napi::Object obj = DecodeObject(env, (const uint8_t *)&result.buf, func->ret.type, 8);
                 return obj;
             } else {
                 const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
                                                 : (const uint8_t *)&result.buf;
 
-                Napi::Object obj = PopObject(ptr, func->ret.type);
+                Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
                 return obj;
             }
         } break;
@@ -1007,7 +1007,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
             } break;
             case PrimitiveKind::Record: {
                 if (param.vec_count) { // HFA
-                    Napi::Object obj = PopObject((uint8_t *)vec_ptr, param.type, 8);
+                    Napi::Object obj = DecodeObject(env, (uint8_t *)vec_ptr, param.type, 8);
                     arguments.Append(obj);
 
                     vec_ptr += param.vec_count;
@@ -1015,14 +1015,14 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                     if (param.gpr_count) {
                         RG_ASSERT(param.type->align <= 8);
 
-                        Napi::Object obj = PopObject((uint8_t *)gpr_ptr, param.type);
+                        Napi::Object obj = DecodeObject(env, (uint8_t *)gpr_ptr, param.type);
                         arguments.Append(obj);
 
                         gpr_ptr += param.gpr_count;
                     } else if (param.type->size) {
                         args_ptr = AlignUp(args_ptr, param.type->align);
 
-                        Napi::Object obj = PopObject((uint8_t *)args_ptr, param.type);
+                        Napi::Object obj = DecodeObject(env, (uint8_t *)args_ptr, param.type);
                         arguments.Append(obj);
 
                         args_ptr += (param.type->size + 7) / 8;
@@ -1034,7 +1034,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
 
                     void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                    Napi::Object obj = PopObject((uint8_t *)ptr2, param.type);
+                    Napi::Object obj = DecodeObject(env, (uint8_t *)ptr2, param.type);
                     arguments.Append(obj);
                 }
             } break;
@@ -1101,7 +1101,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             out_reg->x0 = (uint64_t)v; \
         } while (false)
 #define RETURN_INTEGER_SWAP(CType) \
@@ -1111,7 +1111,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             out_reg->x0 = (uint64_t)ReverseBytes(v); \
         } while (false)
 
@@ -1201,7 +1201,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            float f = CopyNumber<float>(value);
+            float f = GetNumber<float>(value);
 
             memset((uint8_t *)&out_reg->d0 + 4, 0, 4);
             memcpy(&out_reg->d0, &f, 4);
@@ -1212,7 +1212,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            double d = CopyNumber<double>(value);
+            double d = GetNumber<double>(value);
             out_reg->d0 = d;
         } break;
         case PrimitiveKind::Callback: {

@@ -142,7 +142,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             *(args_ptr++) = (uint64_t)v; \
         } while (false)
 #define PUSH_INTEGER_SWAP(CType) \
@@ -152,7 +152,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             *(args_ptr++) = (uint64_t)ReverseBytes(v); \
         } while (false)
 
@@ -236,7 +236,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                float f = CopyNumber<float>(value);
+                float f = GetNumber<float>(value);
 
                 memset((uint8_t *)args_ptr + 4, 0, 4);
                 *(float *)(args_ptr++) = f;
@@ -247,7 +247,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
                     return false;
                 }
 
-                double d = CopyNumber<double>(value);
+                double d = GetNumber<double>(value);
                 *(double *)(args_ptr++) = d;
             } break;
             case PrimitiveKind::Callback: {
@@ -370,7 +370,7 @@ Napi::Value CallData::Complete()
             const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
                                             : (const uint8_t *)&result.buf;
 
-            Napi::Object obj = PopObject(ptr, func->ret.type);
+            Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
             return obj;
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
@@ -576,7 +576,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 }
                 args_ptr += (j >= 4);
 
-                Napi::Object obj2 = PopObject(ptr, param.type);
+                Napi::Object obj2 = DecodeObject(env, ptr, param.type);
                 arguments.Append(obj2);
             } break;
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
@@ -616,7 +616,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             out_reg->rax = (uint64_t)v; \
         } while (false)
 #define RETURN_INTEGER_SWAP(CType) \
@@ -626,7 +626,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return; \
             } \
              \
-            CType v = CopyNumber<CType>(value); \
+            CType v = GetNumber<CType>(value); \
             out_reg->rax = (uint64_t)ReverseBytes(v); \
         } while (false)
 
@@ -713,7 +713,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            float f = CopyNumber<float>(value);
+            float f = GetNumber<float>(value);
 
             memset((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
             memcpy(&out_reg->xmm0, &f, 4);
@@ -724,7 +724,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
                 return;
             }
 
-            double d = CopyNumber<double>(value);
+            double d = GetNumber<double>(value);
             out_reg->xmm0 = d;
         } break;
         case PrimitiveKind::Callback: {
