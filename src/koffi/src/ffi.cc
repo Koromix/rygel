@@ -1734,10 +1734,13 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
             void *ptr2 = *(void **)ptr;
             return ptr2 ? Napi::External<void>::New(env, ptr2, [](Napi::Env, void *) {}) : env.Null();
         } break;
-        case PrimitiveKind::Array:
+        case PrimitiveKind::Array: {
+            Napi::Value array = DecodeArray(env, ptr, type);
+            return array;
+        } break;
         case PrimitiveKind::Record: {
-            ThrowError<Napi::Error>(env, "Cannot yet decode value of type %1", type->name);
-            return env.Null();
+            Napi::Object obj = DecodeObject(env, ptr, type);
+            return obj;
         } break;
         case PrimitiveKind::Float32: {
             float f = *(float *)ptr;
