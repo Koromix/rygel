@@ -86,6 +86,7 @@ public:
     SessionType type;
     int64_t userid;
     int64_t admin_until;
+    bool admin_root;
     char local_key[45];
     bool change_password;
     std::atomic<SessionConfirm> confirm;
@@ -93,6 +94,7 @@ public:
     char username[];
 
     bool IsAdmin() const;
+    bool IsRoot() const;
     bool HasPermission(const InstanceHolder *instance, UserPermission perm) const;
 
     SessionStamp *GetStamp(const InstanceHolder *instance) const;
@@ -103,7 +105,9 @@ public:
 
 void InvalidateUserStamps(int64_t userid);
 
-RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+RetainPtr<const SessionInfo> GetNormalSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+RetainPtr<const SessionInfo> GetAdminSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+
 void PruneSessions();
 
 bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes]);

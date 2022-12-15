@@ -27,7 +27,8 @@ function AdminController() {
 
         ui.createPanel('instances', ['users', 'archives'], 'users', renderInstances);
         ui.createPanel('users', [], null, renderUsers);
-        ui.createPanel('archives', [], null, renderArchives);
+        if (profile.root)
+            ui.createPanel('archives', [], null, renderArchives);
 
         ui.setPanelState('instances', true);
         if (ui.allowTwoPanels())
@@ -49,9 +50,11 @@ function AdminController() {
                 <button class=${'icon' + (ui.isPanelActive('users') ? ' active' : '')}
                         style="background-position-y: calc(-406px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
-                <button class=${'icon' + (ui.isPanelActive('archives') ? ' active' : '')}
-                        style="background-position-y: calc(-142px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'archives'))}>Archives</button>
+                ${profile.root ? html`
+                    <button class=${'icon' + (ui.isPanelActive('archives') ? ' active' : '')}
+                            style="background-position-y: calc(-142px + 1.2em);"
+                            @click=${ui.wrapAction(e => togglePanel(e, 'archives'))}>Archives</button>
+                ` : ''}
                 <div style="flex: 1;"></div>
                 <div class="drop right" @click=${ui.deployMenu}>
                     <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
@@ -75,7 +78,7 @@ function AdminController() {
         return html`
             <div class="padded" style="background: #f8f8f8;">
                 <div class="ui_quick">
-                    <a @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer un projet</a>
+                    ${profile.root ? html`<a @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer un projet</a>` : ''}
                     <div style="flex: 1;"></div>
                     Projets (<a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>rafraichir</a>)
                 </div>
@@ -83,10 +86,10 @@ function AdminController() {
                 <table class="ui_table fixed">
                     <colgroup>
                         <col/>
+                        ${profile.root ? html`<col style="width: 100px;"/>` : ''}
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
-                        <col style="width: 100px;"/>
-                        <col style="width: 100px;"/>
+                        ${profile.root ? html`<col style="width: 100px;"/>` : ''}
                     </colgroup>
 
                     <tbody>
@@ -98,13 +101,14 @@ function AdminController() {
                                     ${instance.master == null ? instance.key : ''}
                                     (<a href=${'/' + instance.key} target="_blank">accès</a>)
                                 </td>
-                                <td>${instance.master == null ?
-                                        html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
+                                ${profile.root && instance.master == null ?
+                                    html`<td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a></td>` : ''}
+                                ${profile.root && instance.master != null ? html`<td></td>` : ''}
                                 <td><a role="button" tabindex="0" href=${util.pasteURL('/admin/', { select: instance.key })} 
                                        @click=${ui.wrapAction(instance != selected_instance ? (e => ui.setPanelState('users', true))
                                                                                             : (e => { self.go(e, '/admin/'); e.preventDefault(); }))}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
-                                <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runDeleteInstanceDialog(e, instance))}>Supprimer</a></td>
+                                ${profile.root ? html`<td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runDeleteInstanceDialog(e, instance))}>Supprimer</a></td>` : ''}
                             </tr>
                         `)}
                     </tbody>
@@ -161,9 +165,9 @@ function AdminController() {
 
                             return html`
                                 <tr>
-                                    <td style=${'text-align: left;' + (user.admin ? ' color: #db0a0a;' : '')}>
+                                    <td style=${'text-align: left;' + (user.root ? ' color: #db0a0a;' : '')}>
                                         ${user.username}
-                                        ${user.admin ? html`<span title="Administrateur">♛\uFE0E</span>` : ''}
+                                        ${user.root ? html`<span title="Super-administrateur">♛\uFE0E</span>` : ''}
                                     </td>
                                     ${selected_instance == null ? html`
                                         <td style="text-align: left;">${user.email != null ? html`<a href=${'mailto:' + user.email}>${user.email}</a>` : ''}</td>
@@ -722,7 +726,8 @@ function AdminController() {
             if (d.values.phone != null && !d.values.phone.startsWith('+'))
                 d.error('phone', 'Format non valide (préfixe obligatoire)');
 
-            d.boolean('*admin', 'Administrateur', { value: false, untoggle: false });
+            if (profile.root)
+                d.boolean('*root', 'Super-administrateur', { value: false, untoggle: false });
 
             d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/users/create', {
@@ -734,7 +739,7 @@ function AdminController() {
                         confirm: d.values.confirm,
                         email: d.values.email,
                         phone: d.values.phone,
-                        admin: d.values.admin
+                        root: d.values.root
                     })
                 });
 
@@ -827,7 +832,8 @@ function AdminController() {
                     if (d.values.phone != null && !d.values.phone.startsWith('+'))
                         d.error('phone', 'Format non valide (préfixe obligatoire)');
 
-                    d.boolean('*admin', 'Administrateur', { value: user.admin });
+                    if (profile.root)
+                        d.boolean('*root', 'Super-administrateur', { value: user.root });
                 });
 
                 d.tab('Sécurité', () => {
@@ -871,7 +877,7 @@ function AdminController() {
                         reset_secret: d.values.reset_secret,
                         email: d.values.email,
                         phone: d.values.phone,
-                        admin: d.values.admin
+                        root: d.values.root
                     })
                 });
 

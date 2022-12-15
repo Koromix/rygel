@@ -36,7 +36,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
         }
 
         if (fs_version == 0) {
-            RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+            RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
             if (!session || !session->HasPermission(instance, UserPermission::AdminCode)) {
                 LogError("You cannot access pages in development");
@@ -123,7 +123,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         if (ParseInt(filename, &fs_version, 0, &remain) && remain.ptr[0] == '/') {
             if (fs_version == 0) {
-                RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+                RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
                 if (!session || !session->HasPermission(instance, UserPermission::AdminCode)) {
                     LogError("You cannot access pages in development");
@@ -405,7 +405,7 @@ static bool CheckSha256(Span<const char> sha256)
 
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -576,7 +576,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -640,7 +640,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
 
 void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -755,7 +755,7 @@ void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, 
 
 void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");

@@ -273,7 +273,7 @@ static void AttachStatic(const AssetInfo &asset, int max_age, const char *etag,
 static void HandlePing(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     // Do this to renew session and clear invalid session cookies
-    GetCheckedSession(instance, request, io);
+    GetNormalSession(instance, request, io);
 
     io->AddCachingHeaders(0, nullptr);
     io->AttachText(200, "Pong!");

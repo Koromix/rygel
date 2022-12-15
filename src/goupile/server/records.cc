@@ -95,7 +95,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
     const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -185,7 +185,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
     const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -290,7 +290,7 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");

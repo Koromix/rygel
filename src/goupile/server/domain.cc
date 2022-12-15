@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 30;
+const int DomainVersion = 31;
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
 
@@ -1479,9 +1479,17 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 30: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_users RENAME COLUMN admin TO root;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 30);
+            RG_STATIC_ASSERT(DomainVersion == 31);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

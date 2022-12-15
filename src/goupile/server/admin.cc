@@ -401,7 +401,7 @@ Options:
 
     %!..+-u, --username <username>%!0    Name of default user
         %!..+--password <pwd>%!0         Password of default user
-        %!..+--totp%!0                   Enable TOTP for admin user
+        %!..+--totp%!0                   Enable TOTP for root user
 
         %!..+--archive_key <key>%!0      Set domain public archive key
 
@@ -604,7 +604,7 @@ retry_pwd:
     if (change_owner && !ChangeFileOwner(domain.config.database_filename, owner_uid, owner_gid))
         return 1;
 
-    // Create default admin user
+    // Create default root user
     {
         char hash[PasswordHashBytes];
         if (!HashPassword(password, hash))
@@ -619,7 +619,7 @@ retry_pwd:
         }
 
         if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                                     change_password, admin, local_key, confirm)
+                                                     change_password, root, local_key, confirm)
                               VALUES (1, ?1, ?2, 0, 1, ?3, ?4))", username, hash, local_key, totp ? "TOTP" : nullptr))
             return 1;
     }
@@ -905,21 +905,16 @@ Options:
 
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to create instances");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to create instances");
+        io->AttachError(403);
         return;
     }
 
@@ -1230,21 +1225,16 @@ bool ArchiveDomain()
 
 void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to delete instances");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to delete instances");
+        io->AttachError(403);
         return;
     }
 
@@ -1377,7 +1367,7 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1385,13 +1375,8 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to configure instances");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to configure instances");
+        io->AttachError(403);
         return;
     }
 
@@ -1490,6 +1475,26 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         }
         RG_DEFER_N(ref_guard) { instance->Unref(); };
 
+        // Can this admin user touch this instance?
+        if (!session->IsRoot()) {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                         WHERE userid = ?1 AND instance = ?2 AND
+                                               permissions & ?3)", &stmt))
+                return;
+            sqlite3_bind_int64(stmt, 1, session->userid);
+            sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 3, (int)UserPermission::AdminConfig);
+
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("Instance '%1' does not exist", instance_key);
+                    io->AttachError(404);
+                }
+                return;
+            }
+        }
+
         // Write new configuration to database
         bool success = instance->db->Transaction([&]() {
             // Log action
@@ -1537,7 +1542,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1545,13 +1550,8 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to list instances");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to list instances");
+        io->AttachError(403);
         return;
     }
 
@@ -1564,8 +1564,25 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         return;
     char buf[128];
 
+    // Check allowed instances
+    HashSet<const char *> allowed_masters;
+    if (!session->IsRoot()) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare("SELECT instance FROM dom_permissions WHERE userid = ?1", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+
+        while (stmt.Step()) {
+            const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
+            allowed_masters.Set(DuplicateString(instance_key, &io->allocator).ptr);
+        }
+    }
+
     json.StartArray();
     for (InstanceHolder *instance: instances) {
+        if (!session->IsRoot() && !allowed_masters.Find(instance->master->key.ptr))
+            continue;
+
         json.StartObject();
 
         json.Key("key"); json.String(instance->key.ptr);
@@ -1605,7 +1622,7 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1613,13 +1630,8 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to delete users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to delete users");
+        io->AttachError(403);
         return;
     }
 
@@ -1696,42 +1708,66 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
             }
         }
 
+        // Does instance exist?
+        {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
+                return;
+            sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
+
+            if (stmt.Step() && !session->IsRoot()) {
+                Span<const char> master = SplitStr(instance, '/');
+
+                if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                             WHERE userid = ?1 AND instance = ?2 AND
+                                                   permissions & ?3)", &stmt))
+                    return;
+                sqlite3_bind_int64(stmt, 1, session->userid);
+                sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
+                sqlite3_bind_int(stmt, 3, (int)UserPermission::AdminConfig);
+
+                stmt.Step();
+            }
+
+            if (!stmt.IsRow()) {
+                if (stmt.IsValid()) {
+                    LogError("Instance '%1' does not exist", instance);
+                    io->AttachError(404);
+                }
+                return;
+            }
+        }
+
+        // Does user exist?
+        const char *username;
+        {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare("SELECT root, username FROM dom_users WHERE userid = ?1", &stmt))
+                return;
+            sqlite3_bind_int64(stmt, 1, userid);
+
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
+                }
+                return;
+            }
+
+            if (!session->IsRoot()) {
+                bool root = (sqlite3_column_int(stmt, 0) == 1);
+
+                if (root) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
+                    return;
+                }
+            }
+
+            username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &io->allocator).ptr;
+        }
+
         gp_domain.db.Transaction([&]() {
-            // Does instance exist?
-            {
-                sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
-                    return false;
-                sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
-
-                if (!stmt.Step()) {
-                    if (stmt.IsValid()) {
-                        LogError("Instance '%1' does not exist", instance);
-                        io->AttachError(404);
-                    }
-                    return false;
-                }
-            }
-
-            // Does user exist?
-            const char *username;
-            {
-                sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT username FROM dom_users WHERE userid = ?1", &stmt))
-                    return false;
-                sqlite3_bind_int64(stmt, 1, userid);
-
-                if (!stmt.Step()) {
-                    if (stmt.IsValid()) {
-                        LogError("User ID '%1' does not exist", userid);
-                        io->AttachError(404);
-                    }
-                    return false;
-                }
-
-                username = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &io->allocator).ptr;
-            }
-
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
@@ -1763,7 +1799,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1771,13 +1807,8 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to list users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to list users");
+        io->AttachError(403);
         return;
     }
 
@@ -1796,10 +1827,32 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     }
     RG_DEFER { instance->Unref(); };
 
+    // Can this admin user touch this instance?
+    if (!session->IsRoot()) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                     WHERE userid = ?1 AND instance = ?2 AND
+                                           permissions & ?3)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, (int)UserPermission::AdminConfig);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Instance '%1' does not exist", instance_key);
+                io->AttachError(404);
+            }
+            return;
+        }
+    }
+
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT userid, permissions FROM dom_permissions
-                                 WHERE instance = ?1
-                                 ORDER BY instance)", &stmt))
+    if (!gp_domain.db.Prepare(R"(SELECT p.userid, p.permissions, u.root
+                                 FROM dom_permissions p
+                                 INNER JOIN dom_users u ON (u.userid = p.userid)
+                                 WHERE p.instance = ?1
+                                 ORDER BY p.instance)", &stmt))
         return;
     sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
 
@@ -1812,7 +1865,11 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     while (stmt.Step()) {
         int64_t userid = sqlite3_column_int64(stmt, 0);
         uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
+        bool root = (sqlite3_column_int(stmt, 2) == 1);
         char buf[128];
+
+        if (root && !session->IsRoot())
+            continue;
 
         if (instance->master != instance) {
             permissions &= UserPermissionSlaveMask;
@@ -1840,21 +1897,16 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to create archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to create archives");
+        io->AttachError(403);
         return;
     }
 
@@ -1873,21 +1925,16 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to delete archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to delete archives");
+        io->AttachError(403);
         return;
     }
 
@@ -1952,21 +1999,16 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to list archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Root user needs to confirm identity");
+        io->AttachError(401);
         return;
     }
 
@@ -2011,21 +2053,16 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to download archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to download archives");
+        io->AttachError(403);
         return;
     }
 
@@ -2065,21 +2102,16 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to upload archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to upload archives");
+        io->AttachError(403);
         return;
     }
 
@@ -2139,21 +2171,16 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to upload archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to upload archives");
+        io->AttachError(403);
         return;
     }
 
@@ -2412,7 +2439,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 {
                     sq_Statement stmt;
                     if (!main_db.Prepare(R"(SELECT userid, username, password_hash,
-                                                   admin, local_key, email, phone
+                                                   root, local_key, email, phone
                                             FROM dom_users)", &stmt))
                         return false;
 
@@ -2420,15 +2447,15 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                         int64_t userid = sqlite3_column_int64(stmt, 0);
                         const char *username = (const char *)sqlite3_column_text(stmt, 1);
                         const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
-                        int admin = sqlite3_column_int(stmt, 3);
+                        int root = sqlite3_column_int(stmt, 3);
                         const char *local_key = (const char *)sqlite3_column_text(stmt, 4);
                         const char *email = (const char *)sqlite3_column_text(stmt, 5);
                         const char *phone = (const char *)sqlite3_column_text(stmt, 6);
 
                         if (!gp_domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                                                        admin, local_key, email, phone)
+                                                                        root, local_key, email, phone)
                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
-                                              userid, username, password_hash, admin, local_key, email, phone))
+                                              userid, username, password_hash, root, local_key, email, phone))
                             return false;
                     }
                     if (!stmt.IsValid())
@@ -2499,7 +2526,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2507,13 +2534,8 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to create users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to create users");
+        io->AttachError(403);
         return;
     }
 
@@ -2524,7 +2546,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         bool confirm = false;
         const char *email = nullptr;
         const char *phone = nullptr;
-        bool admin = false;
+        bool root = false;
         {
             StreamReader st;
             if (!io->OpenForRead(Kibibytes(4), &st))
@@ -2548,8 +2570,8 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                     parser.ParseString(&email);
                 } else if (key == "phone") {
                     parser.ParseString(&phone);
-                } else if (key == "admin") {
-                    parser.ParseBool(&admin);
+                } else if (key == "root") {
+                    parser.ParseBool(&root);
                 } else if (parser.IsValid()) {
                     LogError("Unexpected key '%1'", key);
                     io->AttachError(422);
@@ -2592,6 +2614,13 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             }
         }
 
+        // Safety checks
+        if (root && !session->IsRoot()) {
+            LogError("You cannot create a root user");
+            io->AttachError(403);
+            return;
+        }
+
         // Hash password
         char hash[PasswordHashBytes];
         if (!HashPassword(password, hash))
@@ -2609,7 +2638,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             // Check for existing user
             {
                 sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?1", &stmt))
+                if (!gp_domain.db.Prepare("SELECT userid FROM dom_users WHERE username = ?1", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -2632,9 +2661,9 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 
             // Create user
             if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, change_password,
-                                                            email, phone, admin, local_key, confirm)
+                                                            email, phone, root, local_key, confirm)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
-                                  username, hash, 0 + change_password, email, phone, 0 + admin, local_key,
+                                  username, hash, 0 + change_password, email, phone, 0 + root, local_key,
                                   confirm ? "totp" : nullptr))
                 return false;
 
@@ -2646,7 +2675,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2654,13 +2683,8 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to edit users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to edit users");
+        io->AttachError(403);
         return;
     }
 
@@ -2673,7 +2697,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         bool reset_secret = false;
         const char *email = nullptr;
         const char *phone = nullptr;
-        bool admin = false, set_admin = false;
+        bool root = false, set_root = false;
         {
             StreamReader st;
             if (!io->OpenForRead(Kibibytes(4), &st))
@@ -2702,10 +2726,10 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                     parser.SkipNull() || parser.ParseString(&email);
                 } else if (key == "phone") {
                     parser.SkipNull() || parser.ParseString(&phone);
-                } else if (key == "admin") {
+                } else if (key == "root") {
                     if (!parser.SkipNull()) {
-                        parser.ParseBool(&admin);
-                        set_admin = true;
+                        parser.ParseBool(&root);
+                        set_root = true;
                     }
                 } else if (parser.IsValid()) {
                     LogError("Unexpected key '%1'", key);
@@ -2750,8 +2774,13 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         }
 
         // Safety checks
-        if (userid == session->userid && set_admin && admin != !!session->admin_until) {
-            LogError("You cannot change your admin privileges");
+        if (root && !session->IsRoot()) {
+            LogError("You cannot create a root user");
+            io->AttachError(403);
+            return;
+        }
+        if (userid == session->userid && set_root && root != session->admin_root) {
+            LogError("You cannot change your root privileges");
             io->AttachError(403);
             return;
         }
@@ -2761,23 +2790,33 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         if (password && !HashPassword(password, hash))
             return;
 
-        gp_domain.db.Transaction([&]() {
-            // Check for existing user
-            {
-                sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT rowid FROM dom_users WHERE userid = ?1", &stmt))
-                    return false;
-                sqlite3_bind_int64(stmt, 1, userid);
+        // Check for existing user
+        {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare("SELECT root FROM dom_users WHERE userid = ?1", &stmt))
+                return;
+            sqlite3_bind_int64(stmt, 1, userid);
 
-                if (!stmt.Step()) {
-                    if (stmt.IsValid()) {
-                        LogError("User ID '%1' does not exist", userid);
-                        io->AttachError(404);
-                    }
-                    return false;
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
                 }
+                return;
             }
 
+            if (!session->IsRoot()) {
+                bool root = (sqlite3_column_int(stmt, 0) == 1);
+
+                if (root) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
+                    return;
+                }
+            }
+        }
+
+        gp_domain.db.Transaction([&]() {
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
@@ -2801,7 +2840,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 return false;
             if (phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
                 return false;
-            if (set_admin && !gp_domain.db.Run("UPDATE dom_users SET admin = ?2 WHERE userid = ?1", userid, 0 + admin))
+            if (set_root && !gp_domain.db.Run("UPDATE dom_users SET root = ?2 WHERE userid = ?1", userid, 0 + root))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -2812,7 +2851,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2820,13 +2859,8 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to delete users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to delete users");
+        io->AttachError(403);
         return;
     }
 
@@ -2871,10 +2905,13 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        gp_domain.db.Transaction([&]() {
+        // Get user information
+        const char *username;
+        const char *local_key;
+        {
             sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT username, local_key FROM dom_users WHERE userid = ?1", &stmt))
-                return false;
+            if (!gp_domain.db.Prepare("SELECT username, local_key, root FROM dom_users WHERE userid = ?1", &stmt))
+                return;
             sqlite3_bind_int64(stmt, 1, userid);
 
             if (!stmt.Step()) {
@@ -2882,14 +2919,26 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
                     LogError("User ID '%1' does not exist", userid);
                     io->AttachError(404);
                 }
-                return false;
+                return;
             }
 
-            const char *username = (const char *)sqlite3_column_text(stmt, 0);
-            const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
-            int64_t time = GetUnixTime();
+            if (!session->IsRoot()) {
+                bool root = (sqlite3_column_int(stmt, 2) == 1);
 
+                if (root) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
+                    return;
+                }
+            }
+
+            username = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &io->allocator).ptr;
+            local_key = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &io->allocator).ptr;
+        }
+
+        gp_domain.db.Transaction([&]() {
             // Log action
+            int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
                                      VALUES (?1, ?2, ?3, ?4, ?5 || ':' || ?6))",
                                   time, request.client_addr, "delete_user", session->username,
@@ -2907,7 +2956,7 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserList(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2915,18 +2964,13 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to list users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to list users");
+        io->AttachError(403);
         return;
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, admin, LOWER(confirm)
+    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, root, LOWER(confirm)
                                  FROM dom_users
                                  ORDER BY username)", &stmt))
         return;
@@ -2938,6 +2982,11 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
 
     json.StartArray();
     while (stmt.Step()) {
+        bool root = (sqlite3_column_int(stmt, 4) == 1);
+
+        if (root && !session->IsRoot())
+            continue;
+
         json.StartObject();
         json.Key("userid"); json.Int64(sqlite3_column_int64(stmt, 0));
         json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 1));
@@ -2951,7 +3000,7 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         } else {
             json.Key("phone"); json.Null();
         }
-        json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 4));
+        json.Key("root"); json.Bool(root);
         json.Key("confirm"); json.Bool(sqlite3_column_type(stmt, 5) != SQLITE_NULL);
         json.EndObject();
     }
