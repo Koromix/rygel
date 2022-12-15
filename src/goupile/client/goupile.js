@@ -404,7 +404,7 @@ const goupile = new function() {
                     let response = await net.fetch(`${ENV.urls.instance}api/change/password`, {
                         method: 'POST',
                         body: JSON.stringify({
-                            old_password: d.values.old_password || '',
+                            old_password: d.values.old_password,
                             new_password: d.values.new_password
                         })
                     });
