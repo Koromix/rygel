@@ -29,11 +29,6 @@ github.
 
 [ffdh]: https://github.com/Mbed-TLS/mbedtls/issues/3261
 
-PSA Crypto has an experimental API for EC J-PAKE, but it's not implemented in
-Mbed TLS yet. See the [EC J-PAKE follow-up EPIC][ecjp] on github.
-
-[ecjp]: https://github.com/orgs/Mbed-TLS/projects/1#column-17950140
-
 Arbitrary parameters for FFDH
 -----------------------------
 
@@ -171,7 +166,7 @@ match a limitation of the PSA API.
 
 It is unclear what parameters people use in practice. It looks like by default
 OpenSSL picks saltlen = keylen - hashlen - 2 (tested with openssl 1.1.1f).
-The `certool` command provided by GnuTLS seems to be picking saltlen = hashlen
+The `certtool` command provided by GnuTLS seems to be picking saltlen = hashlen
 by default (tested with GnuTLS 3.6.13). FIPS 186-4 requires 0 <= saltlen <=
 hashlen.
 

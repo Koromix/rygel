@@ -21,17 +21,16 @@
 
 #include "query_config.h"
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdio.h>
-#define mbedtls_printf printf
-#endif /* MBEDTLS_PLATFORM_C */
 
 /*
  * Include all the headers with public APIs in case they define a macro to its
- * default value when that configuration is not set in the mbedtls_config.h.
+ * default value when that configuration is not set in mbedtls_config.h, or
+ * for PSA_WANT macros, in case they're auto-defined based on mbedtls_config.h
+ * rather than defined directly in crypto_config.h.
  */
+#include "psa/crypto.h"
+
 #include "mbedtls/aes.h"
 #include "mbedtls/aria.h"
 #include "mbedtls/asn1.h"
@@ -1216,6 +1215,14 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT)
+    if( strcmp( "MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT */
+
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     if( strcmp( "MBEDTLS_SSL_ASYNC_PRIVATE", config ) == 0 )
     {
@@ -1303,6 +1310,70 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
+
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED)
+    if( strcmp( "MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED */
+
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
+    if( strcmp( "MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED */
+
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED)
+    if( strcmp( "MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED */
+
+#if defined(MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE)
+    if( strcmp( "MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE */
+
+#if defined(MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH)
+    if( strcmp( "MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH */
+
+#if defined(MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS)
+    if( strcmp( "MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS */
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    if( strcmp( "MBEDTLS_SSL_EARLY_DATA", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_EARLY_DATA );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
+#if defined(MBEDTLS_SSL_MAX_EARLY_DATA_SIZE)
+    if( strcmp( "MBEDTLS_SSL_MAX_EARLY_DATA_SIZE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_SSL_MAX_EARLY_DATA_SIZE );
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_MAX_EARLY_DATA_SIZE */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( strcmp( "MBEDTLS_SSL_PROTO_DTLS", config ) == 0 )
@@ -1672,6 +1743,22 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_HMAC_DRBG_C */
 
+#if defined(MBEDTLS_LMS_C)
+    if( strcmp( "MBEDTLS_LMS_C", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_LMS_C );
+        return( 0 );
+    }
+#endif /* MBEDTLS_LMS_C */
+
+#if defined(MBEDTLS_LMS_PRIVATE)
+    if( strcmp( "MBEDTLS_LMS_PRIVATE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_LMS_PRIVATE );
+        return( 0 );
+    }
+#endif /* MBEDTLS_LMS_PRIVATE */
+
 #if defined(MBEDTLS_NIST_KW_C)
     if( strcmp( "MBEDTLS_NIST_KW_C", config ) == 0 )
     {
@@ -1775,6 +1862,14 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_PKCS5_C */
+
+#if defined(MBEDTLS_PKCS7_C)
+    if( strcmp( "MBEDTLS_PKCS7_C", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PKCS7_C );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PKCS7_C */
 
 #if defined(MBEDTLS_PKCS12_C)
     if( strcmp( "MBEDTLS_PKCS12_C", config ) == 0 )
@@ -2536,14 +2631,6 @@ int query_config( const char *config )
     }
 #endif /* MBEDTLS_SSL_COOKIE_TIMEOUT */
 
-#if defined(MBEDTLS_TLS_EXT_CID)
-    if( strcmp( "MBEDTLS_TLS_EXT_CID", config ) == 0 )
-    {
-        MACRO_EXPANSION_TO_STR( MBEDTLS_TLS_EXT_CID );
-        return( 0 );
-    }
-#endif /* MBEDTLS_TLS_EXT_CID */
-
 #if defined(MBEDTLS_X509_MAX_INTERMEDIATE_CA)
     if( strcmp( "MBEDTLS_X509_MAX_INTERMEDIATE_CA", config ) == 0 )
     {
@@ -2583,6 +2670,494 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED */
+
+#if defined(PSA_WANT_ALG_CBC_MAC)
+    if( strcmp( "PSA_WANT_ALG_CBC_MAC", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_CBC_MAC );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_CBC_MAC */
+
+#if defined(PSA_WANT_ALG_CBC_NO_PADDING)
+    if( strcmp( "PSA_WANT_ALG_CBC_NO_PADDING", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_CBC_NO_PADDING );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_CBC_NO_PADDING */
+
+#if defined(PSA_WANT_ALG_CBC_PKCS7)
+    if( strcmp( "PSA_WANT_ALG_CBC_PKCS7", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_CBC_PKCS7 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_CBC_PKCS7 */
+
+#if defined(PSA_WANT_ALG_CCM)
+    if( strcmp( "PSA_WANT_ALG_CCM", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_CCM );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_CCM */
+
+#if defined(PSA_WANT_ALG_CMAC)
+    if( strcmp( "PSA_WANT_ALG_CMAC", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_CMAC );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_CMAC */
+
+#if defined(PSA_WANT_ALG_CFB)
+    if( strcmp( "PSA_WANT_ALG_CFB", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_CFB );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_CFB */
+
+#if defined(PSA_WANT_ALG_CHACHA20_POLY1305)
+    if( strcmp( "PSA_WANT_ALG_CHACHA20_POLY1305", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_CHACHA20_POLY1305 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
+
+#if defined(PSA_WANT_ALG_CTR)
+    if( strcmp( "PSA_WANT_ALG_CTR", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_CTR );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_CTR */
+
+#if defined(PSA_WANT_ALG_DETERMINISTIC_ECDSA)
+    if( strcmp( "PSA_WANT_ALG_DETERMINISTIC_ECDSA", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_DETERMINISTIC_ECDSA );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_DETERMINISTIC_ECDSA */
+
+#if defined(PSA_WANT_ALG_ECB_NO_PADDING)
+    if( strcmp( "PSA_WANT_ALG_ECB_NO_PADDING", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_ECB_NO_PADDING );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_ECB_NO_PADDING */
+
+#if defined(PSA_WANT_ALG_ECDH)
+    if( strcmp( "PSA_WANT_ALG_ECDH", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_ECDH );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_ECDH */
+
+#if defined(PSA_WANT_ALG_ECDSA)
+    if( strcmp( "PSA_WANT_ALG_ECDSA", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_ECDSA );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_ECDSA */
+
+#if defined(PSA_WANT_ALG_JPAKE)
+    if( strcmp( "PSA_WANT_ALG_JPAKE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_JPAKE );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_JPAKE */
+
+#if defined(PSA_WANT_ALG_GCM)
+    if( strcmp( "PSA_WANT_ALG_GCM", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_GCM );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_GCM */
+
+#if defined(PSA_WANT_ALG_HKDF)
+    if( strcmp( "PSA_WANT_ALG_HKDF", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_HKDF );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_HKDF */
+
+#if defined(PSA_WANT_ALG_HKDF_EXTRACT)
+    if( strcmp( "PSA_WANT_ALG_HKDF_EXTRACT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_HKDF_EXTRACT );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_HKDF_EXTRACT */
+
+#if defined(PSA_WANT_ALG_HKDF_EXPAND)
+    if( strcmp( "PSA_WANT_ALG_HKDF_EXPAND", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_HKDF_EXPAND );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_HKDF_EXPAND */
+
+#if defined(PSA_WANT_ALG_HMAC)
+    if( strcmp( "PSA_WANT_ALG_HMAC", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_HMAC );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_HMAC */
+
+#if defined(PSA_WANT_ALG_MD5)
+    if( strcmp( "PSA_WANT_ALG_MD5", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_MD5 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_MD5 */
+
+#if defined(PSA_WANT_ALG_OFB)
+    if( strcmp( "PSA_WANT_ALG_OFB", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_OFB );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_OFB */
+
+#if defined(PSA_WANT_ALG_PBKDF2_HMAC)
+    if( strcmp( "PSA_WANT_ALG_PBKDF2_HMAC", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_PBKDF2_HMAC );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_PBKDF2_HMAC */
+
+#if defined(PSA_WANT_ALG_RIPEMD160)
+    if( strcmp( "PSA_WANT_ALG_RIPEMD160", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_RIPEMD160 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_RIPEMD160 */
+
+#if defined(PSA_WANT_ALG_RSA_OAEP)
+    if( strcmp( "PSA_WANT_ALG_RSA_OAEP", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_RSA_OAEP );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_RSA_OAEP */
+
+#if defined(PSA_WANT_ALG_RSA_PKCS1V15_CRYPT)
+    if( strcmp( "PSA_WANT_ALG_RSA_PKCS1V15_CRYPT", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_RSA_PKCS1V15_CRYPT );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_RSA_PKCS1V15_CRYPT */
+
+#if defined(PSA_WANT_ALG_RSA_PKCS1V15_SIGN)
+    if( strcmp( "PSA_WANT_ALG_RSA_PKCS1V15_SIGN", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_RSA_PKCS1V15_SIGN );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_RSA_PKCS1V15_SIGN */
+
+#if defined(PSA_WANT_ALG_RSA_PSS)
+    if( strcmp( "PSA_WANT_ALG_RSA_PSS", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_RSA_PSS );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_RSA_PSS */
+
+#if defined(PSA_WANT_ALG_SHA_1)
+    if( strcmp( "PSA_WANT_ALG_SHA_1", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_SHA_1 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_SHA_1 */
+
+#if defined(PSA_WANT_ALG_SHA_224)
+    if( strcmp( "PSA_WANT_ALG_SHA_224", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_SHA_224 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_SHA_224 */
+
+#if defined(PSA_WANT_ALG_SHA_256)
+    if( strcmp( "PSA_WANT_ALG_SHA_256", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_SHA_256 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_SHA_256 */
+
+#if defined(PSA_WANT_ALG_SHA_384)
+    if( strcmp( "PSA_WANT_ALG_SHA_384", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_SHA_384 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_SHA_384 */
+
+#if defined(PSA_WANT_ALG_SHA_512)
+    if( strcmp( "PSA_WANT_ALG_SHA_512", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_SHA_512 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_SHA_512 */
+
+#if defined(PSA_WANT_ALG_STREAM_CIPHER)
+    if( strcmp( "PSA_WANT_ALG_STREAM_CIPHER", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_STREAM_CIPHER );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_STREAM_CIPHER */
+
+#if defined(PSA_WANT_ALG_TLS12_PRF)
+    if( strcmp( "PSA_WANT_ALG_TLS12_PRF", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_TLS12_PRF );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_TLS12_PRF */
+
+#if defined(PSA_WANT_ALG_TLS12_PSK_TO_MS)
+    if( strcmp( "PSA_WANT_ALG_TLS12_PSK_TO_MS", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_TLS12_PSK_TO_MS );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_TLS12_PSK_TO_MS */
+
+#if defined(PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS)
+    if( strcmp( "PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS */
+
+#if defined(PSA_WANT_ALG_XTS)
+    if( strcmp( "PSA_WANT_ALG_XTS", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ALG_XTS );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ALG_XTS */
+
+#if defined(PSA_WANT_ECC_BRAINPOOL_P_R1_256)
+    if( strcmp( "PSA_WANT_ECC_BRAINPOOL_P_R1_256", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_BRAINPOOL_P_R1_256 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_BRAINPOOL_P_R1_256 */
+
+#if defined(PSA_WANT_ECC_BRAINPOOL_P_R1_384)
+    if( strcmp( "PSA_WANT_ECC_BRAINPOOL_P_R1_384", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_BRAINPOOL_P_R1_384 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_BRAINPOOL_P_R1_384 */
+
+#if defined(PSA_WANT_ECC_BRAINPOOL_P_R1_512)
+    if( strcmp( "PSA_WANT_ECC_BRAINPOOL_P_R1_512", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_BRAINPOOL_P_R1_512 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_BRAINPOOL_P_R1_512 */
+
+#if defined(PSA_WANT_ECC_MONTGOMERY_255)
+    if( strcmp( "PSA_WANT_ECC_MONTGOMERY_255", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_MONTGOMERY_255 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_MONTGOMERY_255 */
+
+#if defined(PSA_WANT_ECC_MONTGOMERY_448)
+    if( strcmp( "PSA_WANT_ECC_MONTGOMERY_448", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_MONTGOMERY_448 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_MONTGOMERY_448 */
+
+#if defined(PSA_WANT_ECC_SECP_K1_192)
+    if( strcmp( "PSA_WANT_ECC_SECP_K1_192", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_SECP_K1_192 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_SECP_K1_192 */
+
+#if defined(PSA_WANT_ECC_SECP_K1_224)
+    if( strcmp( "PSA_WANT_ECC_SECP_K1_224", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_SECP_K1_224 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_SECP_K1_224 */
+
+#if defined(PSA_WANT_ECC_SECP_K1_256)
+    if( strcmp( "PSA_WANT_ECC_SECP_K1_256", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_SECP_K1_256 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_SECP_K1_256 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_192)
+    if( strcmp( "PSA_WANT_ECC_SECP_R1_192", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_SECP_R1_192 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_SECP_R1_192 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_224)
+    if( strcmp( "PSA_WANT_ECC_SECP_R1_224", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_SECP_R1_224 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_SECP_R1_224 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_256)
+    if( strcmp( "PSA_WANT_ECC_SECP_R1_256", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_SECP_R1_256 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_SECP_R1_256 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_384)
+    if( strcmp( "PSA_WANT_ECC_SECP_R1_384", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_SECP_R1_384 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_SECP_R1_384 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_521)
+    if( strcmp( "PSA_WANT_ECC_SECP_R1_521", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_ECC_SECP_R1_521 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_ECC_SECP_R1_521 */
+
+#if defined(PSA_WANT_KEY_TYPE_DERIVE)
+    if( strcmp( "PSA_WANT_KEY_TYPE_DERIVE", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_DERIVE );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_DERIVE */
+
+#if defined(PSA_WANT_KEY_TYPE_HMAC)
+    if( strcmp( "PSA_WANT_KEY_TYPE_HMAC", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_HMAC );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_HMAC */
+
+#if defined(PSA_WANT_KEY_TYPE_AES)
+    if( strcmp( "PSA_WANT_KEY_TYPE_AES", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_AES );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_AES */
+
+#if defined(PSA_WANT_KEY_TYPE_ARIA)
+    if( strcmp( "PSA_WANT_KEY_TYPE_ARIA", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_ARIA );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_ARIA */
+
+#if defined(PSA_WANT_KEY_TYPE_CAMELLIA)
+    if( strcmp( "PSA_WANT_KEY_TYPE_CAMELLIA", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_CAMELLIA );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_CAMELLIA */
+
+#if defined(PSA_WANT_KEY_TYPE_CHACHA20)
+    if( strcmp( "PSA_WANT_KEY_TYPE_CHACHA20", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_CHACHA20 );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_CHACHA20 */
+
+#if defined(PSA_WANT_KEY_TYPE_DES)
+    if( strcmp( "PSA_WANT_KEY_TYPE_DES", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_DES );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_DES */
+
+#if defined(PSA_WANT_KEY_TYPE_ECC_KEY_PAIR)
+    if( strcmp( "PSA_WANT_KEY_TYPE_ECC_KEY_PAIR", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_ECC_KEY_PAIR );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_ECC_KEY_PAIR */
+
+#if defined(PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY)
+    if( strcmp( "PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY */
+
+#if defined(PSA_WANT_KEY_TYPE_RAW_DATA)
+    if( strcmp( "PSA_WANT_KEY_TYPE_RAW_DATA", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_RAW_DATA );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_RAW_DATA */
+
+#if defined(PSA_WANT_KEY_TYPE_RSA_KEY_PAIR)
+    if( strcmp( "PSA_WANT_KEY_TYPE_RSA_KEY_PAIR", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_RSA_KEY_PAIR );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_RSA_KEY_PAIR */
+
+#if defined(PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY)
+    if( strcmp( "PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY );
+        return( 0 );
+    }
+#endif /* PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY */
 
     /* If the symbol is not found, return an error */
     return( 1 );
@@ -3138,6 +3713,10 @@ void list_config( void )
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_DTLS_CONNECTION_ID);
 #endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
 
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT);
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID_COMPAT */
+
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_ASYNC_PRIVATE);
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
@@ -3181,6 +3760,38 @@ void list_config( void )
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE);
 #endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
+
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED);
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED */
+
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED);
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED */
+
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED);
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED */
+
+#if defined(MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE);
+#endif /* MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE */
+
+#if defined(MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH);
+#endif /* MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH */
+
+#if defined(MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS);
+#endif /* MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS */
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_EARLY_DATA);
+#endif /* MBEDTLS_SSL_EARLY_DATA */
+
+#if defined(MBEDTLS_SSL_MAX_EARLY_DATA_SIZE)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_MAX_EARLY_DATA_SIZE);
+#endif /* MBEDTLS_SSL_MAX_EARLY_DATA_SIZE */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_PROTO_DTLS);
@@ -3366,6 +3977,14 @@ void list_config( void )
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_HMAC_DRBG_C);
 #endif /* MBEDTLS_HMAC_DRBG_C */
 
+#if defined(MBEDTLS_LMS_C)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_LMS_C);
+#endif /* MBEDTLS_LMS_C */
+
+#if defined(MBEDTLS_LMS_PRIVATE)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_LMS_PRIVATE);
+#endif /* MBEDTLS_LMS_PRIVATE */
+
 #if defined(MBEDTLS_NIST_KW_C)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_NIST_KW_C);
 #endif /* MBEDTLS_NIST_KW_C */
@@ -3417,6 +4036,10 @@ void list_config( void )
 #if defined(MBEDTLS_PKCS5_C)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PKCS5_C);
 #endif /* MBEDTLS_PKCS5_C */
+
+#if defined(MBEDTLS_PKCS7_C)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PKCS7_C);
+#endif /* MBEDTLS_PKCS7_C */
 
 #if defined(MBEDTLS_PKCS12_C)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PKCS12_C);
@@ -3798,10 +4421,6 @@ void list_config( void )
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_SSL_COOKIE_TIMEOUT);
 #endif /* MBEDTLS_SSL_COOKIE_TIMEOUT */
 
-#if defined(MBEDTLS_TLS_EXT_CID)
-    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_TLS_EXT_CID);
-#endif /* MBEDTLS_TLS_EXT_CID */
-
 #if defined(MBEDTLS_X509_MAX_INTERMEDIATE_CA)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_X509_MAX_INTERMEDIATE_CA);
 #endif /* MBEDTLS_X509_MAX_INTERMEDIATE_CA */
@@ -3821,6 +4440,250 @@ void list_config( void )
 #if defined(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED);
 #endif /* MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED */
+
+#if defined(PSA_WANT_ALG_CBC_MAC)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_CBC_MAC);
+#endif /* PSA_WANT_ALG_CBC_MAC */
+
+#if defined(PSA_WANT_ALG_CBC_NO_PADDING)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_CBC_NO_PADDING);
+#endif /* PSA_WANT_ALG_CBC_NO_PADDING */
+
+#if defined(PSA_WANT_ALG_CBC_PKCS7)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_CBC_PKCS7);
+#endif /* PSA_WANT_ALG_CBC_PKCS7 */
+
+#if defined(PSA_WANT_ALG_CCM)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_CCM);
+#endif /* PSA_WANT_ALG_CCM */
+
+#if defined(PSA_WANT_ALG_CMAC)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_CMAC);
+#endif /* PSA_WANT_ALG_CMAC */
+
+#if defined(PSA_WANT_ALG_CFB)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_CFB);
+#endif /* PSA_WANT_ALG_CFB */
+
+#if defined(PSA_WANT_ALG_CHACHA20_POLY1305)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_CHACHA20_POLY1305);
+#endif /* PSA_WANT_ALG_CHACHA20_POLY1305 */
+
+#if defined(PSA_WANT_ALG_CTR)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_CTR);
+#endif /* PSA_WANT_ALG_CTR */
+
+#if defined(PSA_WANT_ALG_DETERMINISTIC_ECDSA)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_DETERMINISTIC_ECDSA);
+#endif /* PSA_WANT_ALG_DETERMINISTIC_ECDSA */
+
+#if defined(PSA_WANT_ALG_ECB_NO_PADDING)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_ECB_NO_PADDING);
+#endif /* PSA_WANT_ALG_ECB_NO_PADDING */
+
+#if defined(PSA_WANT_ALG_ECDH)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_ECDH);
+#endif /* PSA_WANT_ALG_ECDH */
+
+#if defined(PSA_WANT_ALG_ECDSA)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_ECDSA);
+#endif /* PSA_WANT_ALG_ECDSA */
+
+#if defined(PSA_WANT_ALG_JPAKE)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_JPAKE);
+#endif /* PSA_WANT_ALG_JPAKE */
+
+#if defined(PSA_WANT_ALG_GCM)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_GCM);
+#endif /* PSA_WANT_ALG_GCM */
+
+#if defined(PSA_WANT_ALG_HKDF)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_HKDF);
+#endif /* PSA_WANT_ALG_HKDF */
+
+#if defined(PSA_WANT_ALG_HKDF_EXTRACT)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_HKDF_EXTRACT);
+#endif /* PSA_WANT_ALG_HKDF_EXTRACT */
+
+#if defined(PSA_WANT_ALG_HKDF_EXPAND)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_HKDF_EXPAND);
+#endif /* PSA_WANT_ALG_HKDF_EXPAND */
+
+#if defined(PSA_WANT_ALG_HMAC)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_HMAC);
+#endif /* PSA_WANT_ALG_HMAC */
+
+#if defined(PSA_WANT_ALG_MD5)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_MD5);
+#endif /* PSA_WANT_ALG_MD5 */
+
+#if defined(PSA_WANT_ALG_OFB)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_OFB);
+#endif /* PSA_WANT_ALG_OFB */
+
+#if defined(PSA_WANT_ALG_PBKDF2_HMAC)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_PBKDF2_HMAC);
+#endif /* PSA_WANT_ALG_PBKDF2_HMAC */
+
+#if defined(PSA_WANT_ALG_RIPEMD160)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_RIPEMD160);
+#endif /* PSA_WANT_ALG_RIPEMD160 */
+
+#if defined(PSA_WANT_ALG_RSA_OAEP)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_RSA_OAEP);
+#endif /* PSA_WANT_ALG_RSA_OAEP */
+
+#if defined(PSA_WANT_ALG_RSA_PKCS1V15_CRYPT)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_RSA_PKCS1V15_CRYPT);
+#endif /* PSA_WANT_ALG_RSA_PKCS1V15_CRYPT */
+
+#if defined(PSA_WANT_ALG_RSA_PKCS1V15_SIGN)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_RSA_PKCS1V15_SIGN);
+#endif /* PSA_WANT_ALG_RSA_PKCS1V15_SIGN */
+
+#if defined(PSA_WANT_ALG_RSA_PSS)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_RSA_PSS);
+#endif /* PSA_WANT_ALG_RSA_PSS */
+
+#if defined(PSA_WANT_ALG_SHA_1)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_SHA_1);
+#endif /* PSA_WANT_ALG_SHA_1 */
+
+#if defined(PSA_WANT_ALG_SHA_224)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_SHA_224);
+#endif /* PSA_WANT_ALG_SHA_224 */
+
+#if defined(PSA_WANT_ALG_SHA_256)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_SHA_256);
+#endif /* PSA_WANT_ALG_SHA_256 */
+
+#if defined(PSA_WANT_ALG_SHA_384)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_SHA_384);
+#endif /* PSA_WANT_ALG_SHA_384 */
+
+#if defined(PSA_WANT_ALG_SHA_512)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_SHA_512);
+#endif /* PSA_WANT_ALG_SHA_512 */
+
+#if defined(PSA_WANT_ALG_STREAM_CIPHER)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_STREAM_CIPHER);
+#endif /* PSA_WANT_ALG_STREAM_CIPHER */
+
+#if defined(PSA_WANT_ALG_TLS12_PRF)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_TLS12_PRF);
+#endif /* PSA_WANT_ALG_TLS12_PRF */
+
+#if defined(PSA_WANT_ALG_TLS12_PSK_TO_MS)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_TLS12_PSK_TO_MS);
+#endif /* PSA_WANT_ALG_TLS12_PSK_TO_MS */
+
+#if defined(PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS);
+#endif /* PSA_WANT_ALG_TLS12_ECJPAKE_TO_PMS */
+
+#if defined(PSA_WANT_ALG_XTS)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ALG_XTS);
+#endif /* PSA_WANT_ALG_XTS */
+
+#if defined(PSA_WANT_ECC_BRAINPOOL_P_R1_256)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_BRAINPOOL_P_R1_256);
+#endif /* PSA_WANT_ECC_BRAINPOOL_P_R1_256 */
+
+#if defined(PSA_WANT_ECC_BRAINPOOL_P_R1_384)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_BRAINPOOL_P_R1_384);
+#endif /* PSA_WANT_ECC_BRAINPOOL_P_R1_384 */
+
+#if defined(PSA_WANT_ECC_BRAINPOOL_P_R1_512)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_BRAINPOOL_P_R1_512);
+#endif /* PSA_WANT_ECC_BRAINPOOL_P_R1_512 */
+
+#if defined(PSA_WANT_ECC_MONTGOMERY_255)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_MONTGOMERY_255);
+#endif /* PSA_WANT_ECC_MONTGOMERY_255 */
+
+#if defined(PSA_WANT_ECC_MONTGOMERY_448)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_MONTGOMERY_448);
+#endif /* PSA_WANT_ECC_MONTGOMERY_448 */
+
+#if defined(PSA_WANT_ECC_SECP_K1_192)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_SECP_K1_192);
+#endif /* PSA_WANT_ECC_SECP_K1_192 */
+
+#if defined(PSA_WANT_ECC_SECP_K1_224)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_SECP_K1_224);
+#endif /* PSA_WANT_ECC_SECP_K1_224 */
+
+#if defined(PSA_WANT_ECC_SECP_K1_256)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_SECP_K1_256);
+#endif /* PSA_WANT_ECC_SECP_K1_256 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_192)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_SECP_R1_192);
+#endif /* PSA_WANT_ECC_SECP_R1_192 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_224)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_SECP_R1_224);
+#endif /* PSA_WANT_ECC_SECP_R1_224 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_256)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_SECP_R1_256);
+#endif /* PSA_WANT_ECC_SECP_R1_256 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_384)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_SECP_R1_384);
+#endif /* PSA_WANT_ECC_SECP_R1_384 */
+
+#if defined(PSA_WANT_ECC_SECP_R1_521)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_ECC_SECP_R1_521);
+#endif /* PSA_WANT_ECC_SECP_R1_521 */
+
+#if defined(PSA_WANT_KEY_TYPE_DERIVE)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_DERIVE);
+#endif /* PSA_WANT_KEY_TYPE_DERIVE */
+
+#if defined(PSA_WANT_KEY_TYPE_HMAC)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_HMAC);
+#endif /* PSA_WANT_KEY_TYPE_HMAC */
+
+#if defined(PSA_WANT_KEY_TYPE_AES)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_AES);
+#endif /* PSA_WANT_KEY_TYPE_AES */
+
+#if defined(PSA_WANT_KEY_TYPE_ARIA)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_ARIA);
+#endif /* PSA_WANT_KEY_TYPE_ARIA */
+
+#if defined(PSA_WANT_KEY_TYPE_CAMELLIA)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_CAMELLIA);
+#endif /* PSA_WANT_KEY_TYPE_CAMELLIA */
+
+#if defined(PSA_WANT_KEY_TYPE_CHACHA20)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_CHACHA20);
+#endif /* PSA_WANT_KEY_TYPE_CHACHA20 */
+
+#if defined(PSA_WANT_KEY_TYPE_DES)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_DES);
+#endif /* PSA_WANT_KEY_TYPE_DES */
+
+#if defined(PSA_WANT_KEY_TYPE_ECC_KEY_PAIR)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_ECC_KEY_PAIR);
+#endif /* PSA_WANT_KEY_TYPE_ECC_KEY_PAIR */
+
+#if defined(PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY);
+#endif /* PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY */
+
+#if defined(PSA_WANT_KEY_TYPE_RAW_DATA)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_RAW_DATA);
+#endif /* PSA_WANT_KEY_TYPE_RAW_DATA */
+
+#if defined(PSA_WANT_KEY_TYPE_RSA_KEY_PAIR)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_RSA_KEY_PAIR);
+#endif /* PSA_WANT_KEY_TYPE_RSA_KEY_PAIR */
+
+#if defined(PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY)
+    OUTPUT_MACRO_NAME_VALUE(PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY);
+#endif /* PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY */
 
 
 }

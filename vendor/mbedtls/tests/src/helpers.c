@@ -15,6 +15,7 @@
  *  limitations under the License.
  */
 
+#include <test/constant_flow.h>
 #include <test/helpers.h>
 #include <test/macros.h>
 #include <string.h>
@@ -88,6 +89,10 @@ void mbedtls_test_set_step( unsigned long step )
     mbedtls_test_info.step = step;
 }
 
+#if defined(MBEDTLS_BIGNUM_C)
+unsigned mbedtls_test_case_uses_negative_0 = 0;
+#endif
+
 void mbedtls_test_info_reset( void )
 {
     mbedtls_test_info.result = MBEDTLS_TEST_RESULT_SUCCESS;
@@ -97,13 +102,20 @@ void mbedtls_test_info_reset( void )
     mbedtls_test_info.filename = 0;
     memset( mbedtls_test_info.line1, 0, sizeof( mbedtls_test_info.line1 ) );
     memset( mbedtls_test_info.line2, 0, sizeof( mbedtls_test_info.line2 ) );
+#if defined(MBEDTLS_BIGNUM_C)
+    mbedtls_test_case_uses_negative_0 = 0;
+#endif
 }
 
 int mbedtls_test_equal( const char *test, int line_no, const char* filename,
                         unsigned long long value1, unsigned long long value2 )
 {
+    TEST_CF_PUBLIC( &value1, sizeof( value1 ) );
+    TEST_CF_PUBLIC( &value2, sizeof( value2 ) );
+
     if( value1 == value2 )
         return( 1 );
+
     if( mbedtls_test_info.result == MBEDTLS_TEST_RESULT_FAILED )
     {
         /* We've already recorded the test as having failed. Don't
@@ -125,8 +137,12 @@ int mbedtls_test_equal( const char *test, int line_no, const char* filename,
 int mbedtls_test_le_u( const char *test, int line_no, const char* filename,
                        unsigned long long value1, unsigned long long value2 )
 {
+    TEST_CF_PUBLIC( &value1, sizeof( value1 ) );
+    TEST_CF_PUBLIC( &value2, sizeof( value2 ) );
+
     if( value1 <= value2 )
         return( 1 );
+
     if( mbedtls_test_info.result == MBEDTLS_TEST_RESULT_FAILED )
     {
         /* We've already recorded the test as having failed. Don't
@@ -148,8 +164,12 @@ int mbedtls_test_le_u( const char *test, int line_no, const char* filename,
 int mbedtls_test_le_s( const char *test, int line_no, const char* filename,
                        long long value1, long long value2 )
 {
+    TEST_CF_PUBLIC( &value1, sizeof( value1 ) );
+    TEST_CF_PUBLIC( &value2, sizeof( value2 ) );
+
     if( value1 <= value2 )
         return( 1 );
+
     if( mbedtls_test_info.result == MBEDTLS_TEST_RESULT_FAILED )
     {
         /* We've already recorded the test as having failed. Don't
@@ -332,8 +352,66 @@ void mbedtls_test_err_add_check( int high, int low,
 #endif /* MBEDTLS_TEST_HOOKS */
 
 #if defined(MBEDTLS_BIGNUM_C)
-int mbedtls_test_read_mpi( mbedtls_mpi *X, int radix, const char *s )
+#include "bignum_core.h"
+
+int mbedtls_test_read_mpi_core( mbedtls_mpi_uint **pX, size_t *plimbs,
+                                const char *input )
 {
+    /* Sanity check */
+    if( *pX != NULL )
+        return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
+
+    size_t hex_len = strlen( input );
+    size_t byte_len = ( hex_len + 1 ) / 2;
+    *plimbs = CHARS_TO_LIMBS( byte_len );
+
+    /* A core bignum is not allowed to be empty. Forbid it as test data,
+     * this way static analyzers have a chance of knowing we don't expect
+     * the bignum functions to support empty inputs. */
+    if( *plimbs == 0 )
+        return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
+
+    *pX = mbedtls_calloc( *plimbs, sizeof( **pX ) );
+    if( *pX == NULL )
+        return( MBEDTLS_ERR_MPI_ALLOC_FAILED );
+
+    unsigned char *byte_start = ( unsigned char * ) *pX;
+    if( byte_len % sizeof( mbedtls_mpi_uint ) != 0 )
+    {
+        byte_start += sizeof( mbedtls_mpi_uint ) - byte_len % sizeof( mbedtls_mpi_uint );
+    }
+    if( ( hex_len & 1 ) != 0 )
+    {
+        /* mbedtls_test_unhexify wants an even number of hex digits */
+        TEST_ASSERT( ascii2uc( *input, byte_start ) == 0 );
+        ++byte_start;
+        ++input;
+        --byte_len;
+    }
+    TEST_ASSERT( mbedtls_test_unhexify( byte_start,
+                                        byte_len,
+                                        input,
+                                        &byte_len ) == 0 );
+
+    mbedtls_mpi_core_bigendian_to_host( *pX, *plimbs );
+    return( 0 );
+
+exit:
+    mbedtls_free( *pX );
+    return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
+}
+
+int mbedtls_test_read_mpi( mbedtls_mpi *X, const char *s )
+{
+    int negative = 0;
+    /* Always set the sign bit to -1 if the input has a minus sign, even for 0.
+     * This creates an invalid representation, which mbedtls_mpi_read_string()
+     * avoids but we want to be able to create that in test data. */
+    if( s[0] == '-' )
+    {
+        ++s;
+        negative = 1;
+    }
     /* mbedtls_mpi_read_string() currently retains leading zeros.
      * It always allocates at least one limb for the value 0. */
     if( s[0] == 0 )
@@ -341,7 +419,15 @@ int mbedtls_test_read_mpi( mbedtls_mpi *X, int radix, const char *s )
         mbedtls_mpi_free( X );
         return( 0 );
     }
-    else
-        return( mbedtls_mpi_read_string( X, radix, s ) );
+    int ret = mbedtls_mpi_read_string( X, 16, s );
+    if( ret != 0 )
+        return( ret );
+    if( negative )
+    {
+        if( mbedtls_mpi_cmp_int( X, 0 ) == 0 )
+            ++mbedtls_test_case_uses_negative_0;
+        X->s = -1;
+    }
+    return( 0 );
 }
 #endif

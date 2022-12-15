@@ -5,6 +5,10 @@
 #include "mbedtls/pem.h"
 #include "mbedtls/oid.h"
 #include "mbedtls/rsa.h"
+#include "mbedtls/asn1write.h"
+
+#include "hash_info.h"
+#include "mbedtls/legacy_or_psa.h"
 
 #if defined(MBEDTLS_RSA_C)
 int mbedtls_rsa_decrypt_func( void *ctx, size_t *olen,
@@ -32,8 +36,7 @@ size_t mbedtls_rsa_key_len_func( void *ctx )
     defined(MBEDTLS_PEM_WRITE_C) && defined(MBEDTLS_X509_CSR_WRITE_C)
 static int x509_crt_verifycsr( const unsigned char *buf, size_t buflen )
 {
-    unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-    const mbedtls_md_info_t *md_info;
+    unsigned char hash[PSA_HASH_MAX_SIZE];
     mbedtls_x509_csr csr;
     int ret = 0;
 
@@ -45,8 +48,12 @@ static int x509_crt_verifycsr( const unsigned char *buf, size_t buflen )
         goto cleanup;
     }
 
-    md_info = mbedtls_md_info_from_type( csr.sig_md );
-    if( mbedtls_md( md_info, csr.cri.p, csr.cri.len, hash ) != 0 )
+    psa_algorithm_t psa_alg = mbedtls_hash_info_psa_from_md( csr.sig_md );
+    size_t hash_size = 0;
+    psa_status_t status = psa_hash_compute( psa_alg, csr.cri.p, csr.cri.len,
+                                            hash, PSA_HASH_MAX_SIZE, &hash_size );
+
+    if( status != PSA_SUCCESS )
     {
         /* Note: this can't happen except after an internal error */
         ret = MBEDTLS_ERR_X509_BAD_INPUT_DATA;
@@ -54,7 +61,7 @@ static int x509_crt_verifycsr( const unsigned char *buf, size_t buflen )
     }
 
     if( mbedtls_pk_verify_ext( csr.sig_pk, csr.sig_opts, &csr.pk,
-                       csr.sig_md, hash, mbedtls_md_get_size( md_info ),
+                       csr.sig_md, hash, mbedtls_hash_info_get_size( csr.sig_md ),
                        csr.sig.p, csr.sig.len ) != 0 )
     {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
@@ -68,6 +75,56 @@ cleanup:
 }
 #endif /* MBEDTLS_USE_PSA_CRYPTO && MBEDTLS_PEM_WRITE_C && MBEDTLS_X509_CSR_WRITE_C */
 
+#if defined(MBEDTLS_X509_CSR_WRITE_C)
+
+/*
+ * The size of this temporary buffer is given by the sequence of functions
+ * called hereinafter:
+ * - mbedtls_asn1_write_oid()
+ *     - 8 bytes for MBEDTLS_OID_EXTENDED_KEY_USAGE raw value
+ *     - 1 byte for MBEDTLS_OID_EXTENDED_KEY_USAGE length
+ *     - 1 byte for MBEDTLS_ASN1_OID tag
+ * - mbedtls_asn1_write_len()
+ *     - 1 byte since we're dealing with sizes which are less than 0x80
+ * - mbedtls_asn1_write_tag()
+ *     - 1 byte
+ *
+ * This length is fine as long as this function is called using the
+ * MBEDTLS_OID_SERVER_AUTH OID. If this is changed in the future, then this
+ * buffer's length should be adjusted accordingly.
+ * Unfortunately there's no predefined max size for OIDs which can be used
+ * to set an overall upper boundary which is always guaranteed.
+ */
+#define EXT_KEY_USAGE_TMP_BUF_MAX_LENGTH    12
+
+static int csr_set_extended_key_usage( mbedtls_x509write_csr *ctx,
+                        const char *oid, size_t oid_len )
+{
+    unsigned char buf[EXT_KEY_USAGE_TMP_BUF_MAX_LENGTH] = { 0 };
+    unsigned char *p = buf + sizeof( buf );
+    int ret;
+    size_t len = 0;
+
+    /*
+     * Following functions fail anyway if the temporary buffer is not large,
+     * but we set an extra check here to emphasize a possible source of errors
+     */
+    if ( oid_len > EXT_KEY_USAGE_TMP_BUF_MAX_LENGTH )
+    {
+        return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
+    }
+
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_oid( &p, buf, oid, oid_len ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( &p, buf, ret ) );
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( &p, buf,
+                        MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) );
+
+    ret = mbedtls_x509write_csr_set_extension( ctx, MBEDTLS_OID_EXTENDED_KEY_USAGE,
+              MBEDTLS_OID_SIZE( MBEDTLS_OID_EXTENDED_KEY_USAGE ), 0, p, len );
+
+    return ret;
+}
+#endif  /* MBEDTLS_X509_CSR_WRITE_C */
 /* END_HEADER */
 
 /* BEGIN_DEPENDENCIES
@@ -78,7 +135,7 @@ cleanup:
 /* BEGIN_CASE depends_on:MBEDTLS_PEM_WRITE_C:MBEDTLS_X509_CSR_WRITE_C */
 void x509_csr_check( char * key_file, char * cert_req_check_file, int md_type,
                      int key_usage, int set_key_usage, int cert_type,
-                     int set_cert_type )
+                     int set_cert_type, int set_extension )
 {
     mbedtls_pk_context key;
     mbedtls_x509write_csr req;
@@ -96,13 +153,14 @@ void x509_csr_check( char * key_file, char * cert_req_check_file, int md_type,
 
     memset( &rnd_info, 0x2a, sizeof( mbedtls_test_rnd_pseudo_info ) );
 
+    mbedtls_x509write_csr_init( &req );
+
     USE_PSA_INIT( );
 
     mbedtls_pk_init( &key );
     TEST_ASSERT( mbedtls_pk_parse_keyfile( &key, key_file, NULL,
                         mbedtls_test_rnd_std_rand, NULL ) == 0 );
 
-    mbedtls_x509write_csr_init( &req );
     mbedtls_x509write_csr_set_md_alg( &req, md_type );
     mbedtls_x509write_csr_set_key( &req, &key );
     TEST_ASSERT( mbedtls_x509write_csr_set_subject_name( &req, subject_name ) == 0 );
@@ -110,6 +168,9 @@ void x509_csr_check( char * key_file, char * cert_req_check_file, int md_type,
         TEST_ASSERT( mbedtls_x509write_csr_set_key_usage( &req, key_usage ) == 0 );
     if( set_cert_type != 0 )
         TEST_ASSERT( mbedtls_x509write_csr_set_ns_cert_type( &req, cert_type ) == 0 );
+    if ( set_extension != 0 )
+        TEST_ASSERT( csr_set_extended_key_usage( &req, MBEDTLS_OID_SERVER_AUTH,
+                            MBEDTLS_OID_SIZE( MBEDTLS_OID_SERVER_AUTH ) ) == 0 );
 
     ret = mbedtls_x509write_csr_pem( &req, buf, sizeof( buf ),
                                      mbedtls_test_rnd_pseudo_rand, &rnd_info );
@@ -178,10 +239,13 @@ void x509_csr_check_opaque( char *key_file, int md_type, int key_usage,
     const char *subject_name = "C=NL,O=PolarSSL,CN=PolarSSL Server 1";
     mbedtls_test_rnd_pseudo_info rnd_info;
 
-    PSA_INIT( );
     memset( &rnd_info, 0x2a, sizeof( mbedtls_test_rnd_pseudo_info ) );
 
-    md_alg_psa = mbedtls_psa_translate_md( (mbedtls_md_type_t) md_type );
+    mbedtls_x509write_csr_init( &req );
+
+    USE_PSA_INIT( );
+
+    md_alg_psa = mbedtls_hash_info_psa_from_md( (mbedtls_md_type_t) md_type );
     TEST_ASSERT( md_alg_psa != MBEDTLS_MD_NONE );
 
     mbedtls_pk_init( &key );
@@ -199,7 +263,6 @@ void x509_csr_check_opaque( char *key_file, int md_type, int key_usage,
                                             PSA_KEY_USAGE_SIGN_HASH,
                                             PSA_ALG_NONE ) == 0 );
 
-    mbedtls_x509write_csr_init( &req );
     mbedtls_x509write_csr_set_md_alg( &req, md_type );
     mbedtls_x509write_csr_set_key( &req, &key );
     TEST_ASSERT( mbedtls_x509write_csr_set_subject_name( &req, subject_name ) == 0 );
@@ -226,12 +289,13 @@ exit:
 }
 /* END_CASE */
 
-/* BEGIN_CASE depends_on:MBEDTLS_PEM_WRITE_C:MBEDTLS_X509_CRT_WRITE_C:MBEDTLS_SHA1_C */
+/* BEGIN_CASE depends_on:MBEDTLS_PEM_WRITE_C:MBEDTLS_X509_CRT_WRITE_C:MBEDTLS_X509_CRT_PARSE_C:MBEDTLS_HAS_ALG_SHA_1_VIA_MD_OR_PSA_BASED_ON_USE_PSA */
 void x509_crt_check( char *subject_key_file, char *subject_pwd,
                      char *subject_name, char *issuer_key_file,
                      char *issuer_pwd, char *issuer_name,
                      char *serial_str, char *not_before, char *not_after,
                      int md_type, int key_usage, int set_key_usage,
+                     char *ext_key_usage,
                      int cert_type, int set_cert_type, int auth_ident,
                      int ver, char *cert_check_file, int pk_wrap, int is_ca,
                      char *cert_verify_file )
@@ -294,7 +358,7 @@ void x509_crt_check( char *subject_key_file, char *subject_pwd,
     {
         psa_algorithm_t alg_psa, md_alg_psa;
 
-        md_alg_psa = mbedtls_psa_translate_md( (mbedtls_md_type_t) md_type );
+        md_alg_psa = mbedtls_hash_info_psa_from_md( (mbedtls_md_type_t) md_type );
         TEST_ASSERT( md_alg_psa != MBEDTLS_MD_NONE );
 
         if( mbedtls_pk_get_type( &issuer_key ) == MBEDTLS_PK_ECKEY )
@@ -313,7 +377,7 @@ void x509_crt_check( char *subject_key_file, char *subject_pwd,
     if( pk_wrap == 2 )
         TEST_ASSERT( mbedtls_pk_get_type( &issuer_key ) == MBEDTLS_PK_OPAQUE );
 
-    TEST_ASSERT( mbedtls_test_read_mpi( &serial, 10, serial_str ) == 0 );
+    TEST_ASSERT( mbedtls_test_read_mpi( &serial, serial_str ) == 0 );
 
     if( ver != -1 )
         mbedtls_x509write_crt_set_version( &crt, ver );
@@ -340,6 +404,31 @@ void x509_crt_check( char *subject_key_file, char *subject_pwd,
             TEST_ASSERT( mbedtls_x509write_crt_set_key_usage( &crt, key_usage ) == 0 );
         if( set_cert_type != 0 )
             TEST_ASSERT( mbedtls_x509write_crt_set_ns_cert_type( &crt, cert_type ) == 0 );
+        if( strcmp( ext_key_usage, "NULL" ) != 0 )
+        {
+            mbedtls_asn1_sequence exts[2];
+            memset( exts, 0, sizeof(exts) );
+
+#define SET_OID(x, oid)                \
+    do {                               \
+        x.len = MBEDTLS_OID_SIZE(oid); \
+        x.p   = (unsigned char*)oid;   \
+        x.tag = MBEDTLS_ASN1_OID;      \
+    }                                  \
+    while( 0 )
+
+            if( strcmp( ext_key_usage, "serverAuth" ) == 0 )
+            {
+                SET_OID( exts[0].buf, MBEDTLS_OID_SERVER_AUTH );
+            }
+            else if( strcmp( ext_key_usage, "codeSigning,timeStamping" ) == 0 )
+            {
+                SET_OID( exts[0].buf, MBEDTLS_OID_CODE_SIGNING );
+                exts[0].next = &exts[1];
+                SET_OID( exts[1].buf, MBEDTLS_OID_TIME_STAMPING );
+            }
+            TEST_ASSERT( mbedtls_x509write_crt_set_ext_key_usage( &crt, exts ) == 0 );
+        }
     }
 
     ret = mbedtls_x509write_crt_pem( &crt, buf, sizeof( buf ),
