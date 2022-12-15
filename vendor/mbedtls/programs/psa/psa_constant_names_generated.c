@@ -248,6 +248,7 @@ static int psa_snprint_algorithm(char *buffer, size_t buffer_size,
     case PSA_ALG_SHA_512_224: append(&buffer, buffer_size, &required_size, "PSA_ALG_SHA_512_224", 19); break;
     case PSA_ALG_SHA_512_256: append(&buffer, buffer_size, &required_size, "PSA_ALG_SHA_512_256", 19); break;
     case PSA_ALG_STREAM_CIPHER: append(&buffer, buffer_size, &required_size, "PSA_ALG_STREAM_CIPHER", 21); break;
+    case PSA_ALG_TLS12_ECJPAKE_TO_PMS: append(&buffer, buffer_size, &required_size, "PSA_ALG_TLS12_ECJPAKE_TO_PMS", 28); break;
     case PSA_ALG_TLS12_PRF_BASE: append(&buffer, buffer_size, &required_size, "PSA_ALG_TLS12_PRF_BASE", 22); break;
     case PSA_ALG_TLS12_PSK_TO_MS_BASE: append(&buffer, buffer_size, &required_size, "PSA_ALG_TLS12_PSK_TO_MS_BASE", 28); break;
     case PSA_ALG_XTS: append(&buffer, buffer_size, &required_size, "PSA_ALG_XTS", 11); break;

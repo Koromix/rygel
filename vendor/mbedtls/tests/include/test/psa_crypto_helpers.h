@@ -189,7 +189,7 @@ psa_status_t mbedtls_test_record_status( psa_status_t status,
  *
  * Do a key policy permission extension on key usage policies always involves
  * permissions of other usage policies
- * (like PSA_KEY_USAGE_SIGN_HASH involves PSA_KEY_USAGE_SIGN_MESSGAE).
+ * (like PSA_KEY_USAGE_SIGN_HASH involves PSA_KEY_USAGE_SIGN_MESSAGE).
  */
 psa_key_usage_t mbedtls_test_update_key_usage_flags( psa_key_usage_t usage_flags );
 
@@ -277,8 +277,16 @@ psa_key_usage_t mbedtls_test_update_key_usage_flags( psa_key_usage_t usage_flags
     }                                                                      \
     while( 0 )
 
+#if !defined(MBEDTLS_MD_C)
+#define PSA_INIT_IF_NO_MD( ) PSA_INIT( )
+#define PSA_DONE_IF_NO_MD( ) PSA_DONE( )
+#endif
 #endif /* MBEDTLS_PSA_CRYPTO_C */
 
+#if defined(MBEDTLS_MD_C)
+#define PSA_INIT_IF_NO_MD( ) ( (void) 0 )
+#define PSA_DONE_IF_NO_MD( ) ( (void) 0 )
+#endif
 /** \def USE_PSA_INIT
  *
  * Call this macro to initialize the PSA subsystem if #MBEDTLS_USE_PSA_CRYPTO

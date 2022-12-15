@@ -19,17 +19,7 @@
 
 #include "mbedtls/build_info.h"
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define mbedtls_time_t          time_t
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
 
 #if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_ENTROPY_C) ||   \
     !defined(MBEDTLS_FS_IO) || !defined(MBEDTLS_CTR_DRBG_C) ||     \
@@ -52,7 +42,7 @@ int main( void )
 
 #define USAGE \
     "\n usage: dh_genprime param=<>...\n"                                   \
-    "\n acceprable parameters:\n"                                           \
+    "\n acceptable parameters:\n"                                           \
     "    bits=%%d           default: 2048\n"
 
 #define DFL_BITS    2048
@@ -167,8 +157,8 @@ int main( int argc, char **argv )
         goto exit;
     }
 
-    if( ( ret = mbedtls_mpi_write_file( "P = ", &P, 16, fout ) != 0 ) ||
-        ( ret = mbedtls_mpi_write_file( "G = ", &G, 16, fout ) != 0 ) )
+    if( ( ( ret = mbedtls_mpi_write_file( "P = ", &P, 16, fout ) ) != 0 ) ||
+        ( ( ret = mbedtls_mpi_write_file( "G = ", &G, 16, fout ) ) != 0 ) )
     {
         mbedtls_printf( " failed\n  ! mbedtls_mpi_write_file returned %d\n\n", ret );
         fclose( fout );

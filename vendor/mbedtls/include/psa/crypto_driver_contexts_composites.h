@@ -34,10 +34,10 @@
 #ifndef PSA_CRYPTO_DRIVER_CONTEXTS_COMPOSITES_H
 #define PSA_CRYPTO_DRIVER_CONTEXTS_COMPOSITES_H
 
-#include "psa/crypto_driver_common.h"
+#include "../psa/crypto_driver_common.h"
 
 /* Include the context structure definitions for the Mbed TLS software drivers */
-#include "psa/crypto_builtin_composites.h"
+#include "../psa/crypto_builtin_composites.h"
 
 /* Include the context structure definitions for those drivers that were
  * declared during the autogeneration process. */

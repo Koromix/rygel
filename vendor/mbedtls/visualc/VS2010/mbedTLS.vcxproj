@@ -171,6 +171,8 @@
     <ClInclude Include="..\..\include\mbedtls\gcm.h" />
     <ClInclude Include="..\..\include\mbedtls\hkdf.h" />
     <ClInclude Include="..\..\include\mbedtls\hmac_drbg.h" />
+    <ClInclude Include="..\..\include\mbedtls\legacy_or_psa.h" />
+    <ClInclude Include="..\..\include\mbedtls\lms.h" />
     <ClInclude Include="..\..\include\mbedtls\mbedtls_config.h" />
     <ClInclude Include="..\..\include\mbedtls\md.h" />
     <ClInclude Include="..\..\include\mbedtls\md5.h" />
@@ -182,6 +184,7 @@
     <ClInclude Include="..\..\include\mbedtls\pk.h" />
     <ClInclude Include="..\..\include\mbedtls\pkcs12.h" />
     <ClInclude Include="..\..\include\mbedtls\pkcs5.h" />
+    <ClInclude Include="..\..\include\mbedtls\pkcs7.h" />
     <ClInclude Include="..\..\include\mbedtls\platform.h" />
     <ClInclude Include="..\..\include\mbedtls\platform_time.h" />
     <ClInclude Include="..\..\include\mbedtls\platform_util.h" />
@@ -236,12 +239,15 @@
     <ClInclude Include="..\..\tests\include\test\drivers\config_test_driver.h" />
     <ClInclude Include="..\..\tests\include\test\drivers\crypto_config_test_driver_extension.h" />
     <ClInclude Include="..\..\tests\include\test\drivers\hash.h" />
+    <ClInclude Include="..\..\tests\include\test\drivers\key_agreement.h" />
     <ClInclude Include="..\..\tests\include\test\drivers\key_management.h" />
     <ClInclude Include="..\..\tests\include\test\drivers\mac.h" />
     <ClInclude Include="..\..\tests\include\test\drivers\signature.h" />
     <ClInclude Include="..\..\tests\include\test\drivers\test_driver.h" />
     <ClInclude Include="..\..\library\aesni.h" />
-    <ClInclude Include="..\..\library\bignum_internal.h" />
+    <ClInclude Include="..\..\library\bignum_core.h" />
+    <ClInclude Include="..\..\library\bignum_mod.h" />
+    <ClInclude Include="..\..\library\bignum_mod_raw.h" />
     <ClInclude Include="..\..\library\bn_mul.h" />
     <ClInclude Include="..\..\library\check_crypto_config.h" />
     <ClInclude Include="..\..\library\cipher_wrap.h" />
@@ -251,6 +257,8 @@
     <ClInclude Include="..\..\library\ecp_internal_alt.h" />
     <ClInclude Include="..\..\library\ecp_invasive.h" />
     <ClInclude Include="..\..\library\entropy_poll.h" />
+    <ClInclude Include="..\..\library\hash_info.h" />
+    <ClInclude Include="..\..\library\lmots.h" />
     <ClInclude Include="..\..\library\md_wrap.h" />
     <ClInclude Include="..\..\library\mps_common.h" />
     <ClInclude Include="..\..\library\mps_error.h" />
@@ -292,6 +300,9 @@
     <ClCompile Include="..\..\library\asn1write.c" />
     <ClCompile Include="..\..\library\base64.c" />
     <ClCompile Include="..\..\library\bignum.c" />
+    <ClCompile Include="..\..\library\bignum_core.c" />
+    <ClCompile Include="..\..\library\bignum_mod.c" />
+    <ClCompile Include="..\..\library\bignum_mod_raw.c" />
     <ClCompile Include="..\..\library\camellia.c" />
     <ClCompile Include="..\..\library\ccm.c" />
     <ClCompile Include="..\..\library\chacha20.c" />
@@ -313,8 +324,11 @@
     <ClCompile Include="..\..\library\entropy_poll.c" />
     <ClCompile Include="..\..\library\error.c" />
     <ClCompile Include="..\..\library\gcm.c" />
+    <ClCompile Include="..\..\library\hash_info.c" />
     <ClCompile Include="..\..\library\hkdf.c" />
     <ClCompile Include="..\..\library\hmac_drbg.c" />
+    <ClCompile Include="..\..\library\lmots.c" />
+    <ClCompile Include="..\..\library\lms.c" />
     <ClCompile Include="..\..\library\md.c" />
     <ClCompile Include="..\..\library\md5.c" />
     <ClCompile Include="..\..\library\memory_buffer_alloc.c" />
@@ -329,6 +343,7 @@
     <ClCompile Include="..\..\library\pk_wrap.c" />
     <ClCompile Include="..\..\library\pkcs12.c" />
     <ClCompile Include="..\..\library\pkcs5.c" />
+    <ClCompile Include="..\..\library\pkcs7.c" />
     <ClCompile Include="..\..\library\pkparse.c" />
     <ClCompile Include="..\..\library\pkwrite.c" />
     <ClCompile Include="..\..\library\platform.c" />
@@ -342,6 +357,7 @@
     <ClCompile Include="..\..\library\psa_crypto_ecp.c" />
     <ClCompile Include="..\..\library\psa_crypto_hash.c" />
     <ClCompile Include="..\..\library\psa_crypto_mac.c" />
+    <ClCompile Include="..\..\library\psa_crypto_pake.c" />
     <ClCompile Include="..\..\library\psa_crypto_rsa.c" />
     <ClCompile Include="..\..\library\psa_crypto_se.c" />
     <ClCompile Include="..\..\library\psa_crypto_slot_management.c" />
@@ -357,6 +373,7 @@
     <ClCompile Include="..\..\library\ssl_ciphersuites.c" />
     <ClCompile Include="..\..\library\ssl_client.c" />
     <ClCompile Include="..\..\library\ssl_cookie.c" />
+    <ClCompile Include="..\..\library\ssl_debug_helpers_generated.c" />
     <ClCompile Include="..\..\library\ssl_msg.c" />
     <ClCompile Include="..\..\library\ssl_ticket.c" />
     <ClCompile Include="..\..\library\ssl_tls.c" />
@@ -390,6 +407,7 @@
     <ClCompile Include="..\..\tests\src\drivers\test_driver_aead.c" />
     <ClCompile Include="..\..\tests\src\drivers\test_driver_asymmetric_encryption.c" />
     <ClCompile Include="..\..\tests\src\drivers\test_driver_cipher.c" />
+    <ClCompile Include="..\..\tests\src\drivers\test_driver_key_agreement.c" />
     <ClCompile Include="..\..\tests\src\drivers\test_driver_key_management.c" />
     <ClCompile Include="..\..\tests\src\drivers\test_driver_mac.c" />
     <ClCompile Include="..\..\tests\src\drivers\test_driver_signature.c" />
