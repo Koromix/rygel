@@ -38,7 +38,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
         if (fs_version == 0) {
             RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
-            if (!session || !session->HasPermission(instance, UserPermission::AdminCode)) {
+            if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
                 LogError("You cannot access pages in development");
                 io->AttachError(403);
                 return;
@@ -125,7 +125,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             if (fs_version == 0) {
                 RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
-                if (!session || !session->HasPermission(instance, UserPermission::AdminCode)) {
+                if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
                     LogError("You cannot access pages in development");
                     io->AttachError(403);
                     return true;
@@ -412,7 +412,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::AdminCode)) {
+    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to upload files");
         io->AttachError(403);
         return;
@@ -583,7 +583,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::AdminCode)) {
+    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to delete files");
         io->AttachError(403);
         return;
@@ -647,7 +647,7 @@ void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, 
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::AdminCode)) {
+    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to publish a new version");
         io->AttachError(403);
         return;
@@ -762,7 +762,7 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::AdminPublish)) {
+    if (!session->HasPermission(instance, UserPermission::BuildPublish)) {
         LogError("User is not allowed to publish a new version");
         io->AttachError(403);
         return;

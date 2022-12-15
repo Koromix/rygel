@@ -21,31 +21,29 @@ namespace RG {
 class InstanceHolder;
 
 enum class UserPermission {
-    AdminCode = 1 << 0,
-    AdminPublish = 1 << 1,
-    AdminConfig = 1 << 2,
-    AdminAssign = 1 << 3,
+    BuildCode = 1 << 0,
+    BuildPublish = 1 << 1,
+    BuildAdmin = 1 << 2,
+    BuildBatch = 1 << 3,
     DataLoad = 1 << 4,
     DataSave = 1 << 5,
-    DataExport = 1 << 6,
-    DataBatch = 1 << 7,
-    DataMessage = 1 << 8,
-    DataAudit = 1 << 9
+    DataAudit = 1 << 6,
+    DataExport = 1 << 7,
+    DataMessage = 1 << 8
 };
 static const char *const UserPermissionNames[] = {
-    "AdminCode",
-    "AdminPublish",
-    "AdminConfig",
-    "AdminAssign",
+    "BuildCode",
+    "BuildPublish",
+    "BuildAdmin",
+    "BuildBatch",
     "DataLoad",
     "DataSave",
+    "DataAudit",
     "DataExport",
-    "DataBatch",
-    "DataMessage",
-    "DataAudit"
+    "DataMessage"
 };
-static const uint32_t UserPermissionMasterMask = 0b0000001111u;
-static const uint32_t UserPermissionSlaveMask =  0b1111110000u;
+static const uint32_t UserPermissionMasterMask = 0b000001111u;
+static const uint32_t UserPermissionSlaveMask =  0b111110000u;
 
 static const int PasswordHashBytes = 128;
 

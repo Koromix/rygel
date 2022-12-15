@@ -1484,7 +1484,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 return;
             sqlite3_bind_int64(stmt, 1, session->userid);
             sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
-            sqlite3_bind_int(stmt, 3, (int)UserPermission::AdminConfig);
+            sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
             if (!stmt.Step()) {
                 if (stmt.IsValid()) {
@@ -1724,7 +1724,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
                     return;
                 sqlite3_bind_int64(stmt, 1, session->userid);
                 sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
-                sqlite3_bind_int(stmt, 3, (int)UserPermission::AdminConfig);
+                sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
                 stmt.Step();
             }
@@ -1836,7 +1836,7 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
         sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 3, (int)UserPermission::AdminConfig);
+        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
         if (!stmt.Step()) {
             if (stmt.IsValid()) {

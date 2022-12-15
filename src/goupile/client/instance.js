@@ -219,7 +219,7 @@ function InstanceController() {
                         </div>
                     </div>
                 ` : ''}
-                ${!app.panels.editor && goupile.hasPermission('admin_code') ? html`
+                ${!app.panels.editor && goupile.hasPermission('build_code') ? html`
                     <div id="ins_drop" class="drop">
                         <button class="icon" style="background-position-y: calc(-230px + 1.2em);" @click=${ui.deployMenu}>Conception</button>
                         <div>
@@ -328,7 +328,7 @@ function InstanceController() {
                                     <hr/>
                                 ` : ''}
                             ` : ''}
-                            ${profile.admin || goupile.hasPermission('admin_config') ? html`
+                            ${profile.admin || goupile.hasPermission('build_admin') ? html`
                                 <button @click=${e => window.open('/admin/')}>Administration</button>
                                 <hr/>
                             ` : ''}
@@ -465,7 +465,7 @@ function InstanceController() {
                         <button ?disabled=${!fileHasChanged('main.js')}
                                 @click=${ui.wrapAction(applyMainScript)}>Appliquer</button>
                     ` : ''}
-                    ${goupile.hasPermission('admin_publish') ? html`<button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>` : ''}
+                    ${goupile.hasPermission('build_publish') ? html`<button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>` : ''}
                     <div style="flex: 1;"></div>
                     <button class=${ui.isPanelActive('view') ? 'icon active' : 'icon'}
                             style="background-position-y: calc(-626px + 1.2em);"

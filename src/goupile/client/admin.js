@@ -178,7 +178,7 @@ function AdminController() {
                                     ${selected_instance != null ? html`
                                         <td class=${!permissions.length ? 'missing' : ''}
                                             style="white-space: normal;">
-                                            ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : ''}
+                                            ${selected_instance.master == null ? makePermissionsTag(permissions, 'build_', '#b518bf') : ''}
                                             ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
                                             ${!permissions.length ? 'Non assigné' : ''}
                                         </td>
@@ -764,10 +764,10 @@ function AdminController() {
     function runAssignUserDialog(e, instance, user, prev_permissions) {
         return ui.runDialog(e, `Droits de ${user.username} sur ${instance.key}`, {}, (d, resolve, reject) => {
             d.section("Développement", () => {
-                let props = ENV.permissions.filter(perm => perm.startsWith('admin_')).map(makePermissionProp);
-                let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('admin_')) : null;
+                let props = ENV.permissions.filter(perm => perm.startsWith('build_')).map(makePermissionProp);
+                let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('build_')) : null;
 
-                d.multiCheck('admin_permissions', null, props, {
+                d.multiCheck('build_permissions', null, props, {
                     value: value,
                     disabled: instance.master != null
                 });
@@ -783,7 +783,7 @@ function AdminController() {
             }, { color: '#258264' });
 
             // Now regroup permissions
-            let permissions = [...(d.values.admin_permissions || []), ...(d.values.data_permissions || [])];
+            let permissions = [...(d.values.build_permissions || []), ...(d.values.data_permissions || [])];
 
             d.action('Modifier', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/instances/assign', {

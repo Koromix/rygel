@@ -286,7 +286,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                 }
                 json.EndObject();
 
-                if (stamp->HasPermission(UserPermission::AdminCode)) {
+                if (stamp->HasPermission(UserPermission::BuildCode)) {
                     json.Key("develop"); json.Bool(stamp->develop.load(std::memory_order_relaxed));
                 } else {
                     RG_ASSERT(!stamp->develop.load());
@@ -530,7 +530,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                                                                     p.permissions IS NOT NULL))", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-            sqlite3_bind_int(stmt, 2, (int)UserPermission::AdminConfig);
+            sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
 
             stmt.Run();
         }
@@ -1473,7 +1473,7 @@ void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request,
         }
 
         // Check permissions
-        if (develop && !stamp->HasPermission(UserPermission::AdminCode)) {
+        if (develop && !stamp->HasPermission(UserPermission::BuildCode)) {
             LogError("User is not allowed to code");
             io->AttachError(403);
             return;
