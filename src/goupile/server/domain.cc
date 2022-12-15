@@ -1023,7 +1023,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
                     CREATE TABLE dom_instances (
                         instance TEXT NOT NULL,
-                        master TEXT GENERATED ALWAYS AS (iif(instr(instance, '@') > 0, substr(instance, 1, instr(instance, '@') - 1), NULL)) STORED
+                        master TEXT GENERATED ALWAYS AS (IIF(instr(instance, '@') > 0, substr(instance, 1, instr(instance, '@') - 1), NULL)) STORED
                                     REFERENCES dom_instances (instance) ON DELETE CASCADE
                     );
                     CREATE UNIQUE INDEX dom_instances_i ON dom_instances (instance);
@@ -1036,9 +1036,9 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (userid, instance);
 
                     INSERT INTO dom_instances (instance)
-                        SELECT iif(master IS NULL, instance, master || '@' || instance) FROM dom_instances_BAK ORDER BY master ASC NULLS FIRST;
+                        SELECT IIF(master IS NULL, instance, master || '@' || instance) FROM dom_instances_BAK ORDER BY master ASC NULLS FIRST;
                     INSERT INTO dom_permissions (userid, instance, permissions)
-                        SELECT p.userid, iif(i.master IS NULL, i.instance, i.master || '@' || i.instance), p.permissions FROM dom_permissions_BAK p
+                        SELECT p.userid, IIF(i.master IS NULL, i.instance, i.master || '@' || i.instance), p.permissions FROM dom_permissions_BAK p
                         LEFT JOIN dom_instances_BAK i ON (i.instance = p.instance);
 
                     DROP TABLE dom_permissions_BAK;
@@ -1065,7 +1065,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
                     CREATE TABLE dom_instances (
                         instance TEXT NOT NULL,
-                        master TEXT GENERATED ALWAYS AS (iif(instr(instance, '/') > 0, substr(instance, 1, instr(instance, '/') - 1), NULL)) STORED
+                        master TEXT GENERATED ALWAYS AS (IIF(instr(instance, '/') > 0, substr(instance, 1, instr(instance, '/') - 1), NULL)) STORED
                                     REFERENCES dom_instances (instance) ON DELETE CASCADE
                     );
                     CREATE UNIQUE INDEX dom_instances_i ON dom_instances (instance);
@@ -1091,15 +1091,15 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
             case 13: {
                 bool success = db->RunMany(R"(
-                    UPDATE dom_permissions SET permissions = iif(permissions & 1, 1, 0) |
-                                                             iif(permissions & 8, 2, 0) |
-                                                             iif(permissions & 1, 4, 0) |
-                                                             iif(permissions & 1, 8, 0) |
-                                                             iif(permissions & 4, 16, 0) |
-                                                             iif(permissions & 2, 32, 0) |
-                                                             iif(permissions & 4, 64, 0) |
-                                                             iif(permissions & 32, 128, 0) |
-                                                             iif(permissions & 64, 256, 0);
+                    UPDATE dom_permissions SET permissions = IIF(permissions & 1, 1, 0) |
+                                                             IIF(permissions & 8, 2, 0) |
+                                                             IIF(permissions & 1, 4, 0) |
+                                                             IIF(permissions & 1, 8, 0) |
+                                                             IIF(permissions & 4, 16, 0) |
+                                                             IIF(permissions & 2, 32, 0) |
+                                                             IIF(permissions & 4, 64, 0) |
+                                                             IIF(permissions & 32, 128, 0) |
+                                                             IIF(permissions & 64, 256, 0);
                 )");
                 if (!success)
                     return false;
@@ -1122,7 +1122,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
                     CREATE TABLE dom_instances (
                         instance TEXT NOT NULL,
-                        master TEXT GENERATED ALWAYS AS (iif(instr(instance, '/') > 0, substr(instance, 1, instr(instance, '/') - 1), NULL)) STORED
+                        master TEXT GENERATED ALWAYS AS (IIF(instr(instance, '/') > 0, substr(instance, 1, instr(instance, '/') - 1), NULL)) STORED
                                     REFERENCES dom_instances (instance) ON DELETE CASCADE,
                         generation INTEGER NOT NULL DEFAULT 0
                     );
@@ -1149,17 +1149,17 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
             case 16: {
                 bool success = db->RunMany(R"(
-                    UPDATE dom_permissions SET permissions = iif(permissions & 1, 1, 0) |
-                                                             iif(permissions & 2, 2, 0) |
-                                                             iif(permissions & 4, 4, 0) |
-                                                             iif(permissions & 8, 8, 0) |
-                                                             iif(permissions & 16, 16, 0) |
-                                                             iif(permissions & 16, 32, 0) |
-                                                             iif(permissions & 32, 64, 0) |
-                                                             iif(permissions & 64, 128, 0) |
-                                                             iif(permissions & 64, 256, 0) |
-                                                             iif(permissions & 128, 512, 0) |
-                                                             iif(permissions & 256, 1024, 0);
+                    UPDATE dom_permissions SET permissions = IIF(permissions & 1, 1, 0) |
+                                                             IIF(permissions & 2, 2, 0) |
+                                                             IIF(permissions & 4, 4, 0) |
+                                                             IIF(permissions & 8, 8, 0) |
+                                                             IIF(permissions & 16, 16, 0) |
+                                                             IIF(permissions & 16, 32, 0) |
+                                                             IIF(permissions & 32, 64, 0) |
+                                                             IIF(permissions & 64, 128, 0) |
+                                                             IIF(permissions & 64, 256, 0) |
+                                                             IIF(permissions & 128, 512, 0) |
+                                                             IIF(permissions & 256, 1024, 0);
                 )");
                 if (!success)
                     return false;
@@ -1174,7 +1174,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
                     CREATE TABLE dom_instances (
                         instance TEXT NOT NULL,
-                        master TEXT GENERATED ALWAYS AS (iif(instr(instance, '/') > 0, substr(instance, 1, instr(instance, '/') - 1), NULL)) STORED
+                        master TEXT GENERATED ALWAYS AS (IIF(instr(instance, '/') > 0, substr(instance, 1, instr(instance, '/') - 1), NULL)) STORED
                                     REFERENCES dom_instances (instance),
                         generation INTEGER NOT NULL DEFAULT 0
                     );
@@ -1209,14 +1209,14 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
             case 19: {
                 bool success = db->RunMany(R"(
-                    UPDATE dom_permissions SET permissions = iif(permissions & 1, 1, 0) |
-                                                             iif(permissions & 2, 2, 0) |
-                                                             iif(permissions & 4, 4, 0) |
-                                                             iif(permissions & 8, 8, 0) |
-                                                             iif(permissions & 16, 16, 0) |
-                                                             iif(permissions & 128, 32, 0) |
-                                                             iif(permissions & 512, 64, 0) |
-                                                             iif(permissions & 1024, 128, 0);
+                    UPDATE dom_permissions SET permissions = IIF(permissions & 1, 1, 0) |
+                                                             IIF(permissions & 2, 2, 0) |
+                                                             IIF(permissions & 4, 4, 0) |
+                                                             IIF(permissions & 8, 8, 0) |
+                                                             IIF(permissions & 16, 16, 0) |
+                                                             IIF(permissions & 128, 32, 0) |
+                                                             IIF(permissions & 512, 64, 0) |
+                                                             IIF(permissions & 1024, 128, 0);
                 )");
                 if (!success)
                     return false;
@@ -1225,7 +1225,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
             case 20: {
                 bool success = db->RunMany(R"(
                     UPDATE dom_permissions SET permissions = permissions |
-                                                             iif(permissions & 1, 256, 0);
+                                                             IIF(permissions & 1, 256, 0);
                 )");
                 if (!success)
                     return false;
@@ -1475,7 +1475,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
             case 29: {
                 bool success = db->RunMany(R"(
                     UPDATE dom_permissions SET permissions = permissions |
-                                                             iif(permissions & 16, 512, 0);
+                                                             IIF(permissions & 16, 512, 0);
                 )");
                 if (!success)
                     return false;
@@ -1491,15 +1491,15 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
             case 31: {
                 bool success = db->RunMany(R"(
-                    UPDATE dom_permissions SET permissions = iif(permissions & 1, 1, 0) |
-                                                             iif(permissions & 2, 2, 0) |
-                                                             iif(permissions & 4, 4, 0) |
-                                                             iif(permissions & 16, 16, 0) |
-                                                             iif(permissions & 32, 32, 0) |
-                                                             iif(permissions & 64, 128, 0) |
-                                                             iif(permissions & 128, 8, 0) |
-                                                             iif(permissions & 256, 256, 0) |
-                                                             iif(permissions & 512, 64, 0);
+                    UPDATE dom_permissions SET permissions = IIF(permissions & 1, 1, 0) |
+                                                             IIF(permissions & 2, 2, 0) |
+                                                             IIF(permissions & 4, 4, 0) |
+                                                             IIF(permissions & 16, 16, 0) |
+                                                             IIF(permissions & 32, 32, 0) |
+                                                             IIF(permissions & 64, 128, 0) |
+                                                             IIF(permissions & 128, 8, 0) |
+                                                             IIF(permissions & 256, 256, 0) |
+                                                             IIF(permissions & 512, 64, 0);
                 )");
                 if (!success)
                     return false;
