@@ -1644,6 +1644,8 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
                     parser.ParseString(&instance);
                 } else if (key == "permissions") {
                     if (!parser.SkipNull()) {
+                        permissions = 0;
+
                         parser.ParseArray();
                         while (parser.InArray()) {
                             Span<const char> str = {};
