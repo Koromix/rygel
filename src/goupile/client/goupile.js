@@ -159,19 +159,17 @@ const goupile = new function() {
 
     async function syncProfile() {
         // Ask server (if needed)
-        {
-            try {
-                let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
+        try {
+            let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
 
-                let new_profile = await response.json();
-                await updateProfile(new_profile, true);
-            } catch (err) {
-                if (ENV.cache_offline) {
-                    if (!(err instanceof NetworkError))
-                        log.error(err);
-                } else {
-                    throw err;
-                }
+            let new_profile = await response.json();
+            await updateProfile(new_profile, true);
+        } catch (err) {
+            if (ENV.cache_offline) {
+                if (!(err instanceof NetworkError))
+                    log.error(err);
+            } else {
+                throw err;
             }
         }
 
