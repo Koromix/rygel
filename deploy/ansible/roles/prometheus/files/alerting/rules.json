@@ -4,7 +4,7 @@
             "orgID": 1,
             "name": "PKnet",
             "folder": "Alerts",
-            "interval": "60s",
+            "interval": "2m",
             "rules": [
                 {
                     "uid": "GQzJE4c4z",
@@ -121,7 +121,7 @@
                     "updated": "2022-12-12T19:59:54Z",
                     "noDataState": "NoData",
                     "execErrState": "Error",
-                    "for": "3m"
+                    "for": "6m"
                 },
                 {
                     "uid": "qIgDP4cVz",
@@ -237,7 +237,7 @@
                     "updated": "2022-12-12T19:59:54Z",
                     "noDataState": "NoData",
                     "execErrState": "Error",
-                    "for": "3m"
+                    "for": "6m"
                 },
                 {
                     "uid": "UvYkP4c4k",
@@ -354,7 +354,7 @@
                     "updated": "2022-12-12T19:59:54Z",
                     "noDataState": "NoData",
                     "execErrState": "Error",
-                    "for": "3m"
+                    "for": "6m"
                 },
                 {
                     "uid": "vIEyPVcVk",
@@ -471,7 +471,7 @@
                     "updated": "2022-12-12T19:59:54Z",
                     "noDataState": "NoData",
                     "execErrState": "Error",
-                    "for": "3m"
+                    "for": "6m"
                 }
             ]
         }
