@@ -3479,7 +3479,8 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
         RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
         RG_ASSERT(!(flags & (int)OpenFlag::Append));
 
-        oflags &= ~O_CREAT;
+        oflags &= ~(O_CREAT | O_WRONLY | O_RDWR | O_TRUNC);
+        oflags |= O_RDONLY;
     }
     if (flags & (int)OpenFlag::Exists) {
         RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
