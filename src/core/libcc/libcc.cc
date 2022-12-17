@@ -2131,6 +2131,7 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
     out_info->type = FileAttributesToType(attr.dwFileAttributes);
     out_info->size = ((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
     out_info->mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
+    out_info->btime = FileTimeToUnixTime(attr.ftCreationTime);
     out_info->mode = (out_info->type == FileType::Directory) ? 0755 : 0644;
 
     return StatResult::Success;
@@ -2281,6 +2282,42 @@ static FileType FileModeToType(mode_t mode)
 
 StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
+#ifdef __linux__
+    int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
+    int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
+
+    struct statx sxb;
+    if (statx(AT_FDCWD, filename, stat_flags, stat_mask, &sxb) < 0) {
+        switch (errno) {
+            case ENOENT: {
+                if (!(flags & (int)StatFlag::IgnoreMissing)) {
+                    LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                }
+                return StatResult::MissingPath;
+            } break;
+            case EACCES: {
+                LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                return StatResult::AccessDenied;
+            } break;
+            default: {
+                LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                return StatResult::OtherError;
+            } break;
+        }
+    }
+
+    out_info->type = FileModeToType(sxb.stx_mode);
+    out_info->size = (int64_t)sxb.stx_size;
+    out_info->mtime = (int64_t)sxb.stx_mtime.tv_sec * 1000 +
+                      (int64_t)sxb.stx_mtime.tv_nsec / 1000000;
+    if (sxb.stx_mask & STATX_BTIME) {
+        out_info->btime = (int64_t)sxb.stx_btime.tv_sec * 1000 +
+                          (int64_t)sxb.stx_btime.tv_nsec / 1000000;
+    } else {
+        out_info->btime = out_info->mtime;
+    }
+    out_info->mode = (unsigned int)sxb.stx_mode & ~S_IFMT;
+#else
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
 
     struct stat sb;
@@ -2305,16 +2342,19 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
 
     out_info->type = FileModeToType(sb.st_mode);
     out_info->size = (int64_t)sb.st_size;
-#if defined(__linux__)
-    out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
-                                  (int64_t)sb.st_mtim.tv_nsec / 1000000;
-#elif defined(__APPLE__)
+#ifdef __APPLE__
     out_info->mtime = (int64_t)sb.st_mtimespec.tv_sec * 1000 +
-                                  (int64_t)sb.st_mtimespec.tv_nsec / 1000000;
+                      (int64_t)sb.st_mtimespec.tv_nsec / 1000000;
+    out_info->btime = (int64_t)sb.st_birthtimespec.tv_sec * 1000 +
+                      (int64_t)sb.st_birthtimespec.tv_nsec / 1000000;
 #else
-    out_info->mtime = (int64_t)sb.st_mtime * 1000;
+    out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
+                      (int64_t)sb.st_mtim.tv_nsec / 1000000;
+    out_info->btime = (int64_t)sb.st_birthtim.tv_sec * 1000 +
+                      (int64_t)sb.st_birthtim.tv_nsec / 1000000;
 #endif
     out_info->mode = (unsigned int)sb.st_mode;
+#endif
 
     return StatResult::Success;
 }

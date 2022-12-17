@@ -3799,6 +3799,7 @@ struct FileInfo {
 
     int64_t size;
     int64_t mtime;
+    int64_t btime;
     unsigned int mode;
 };
 
