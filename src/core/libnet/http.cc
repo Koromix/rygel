@@ -168,14 +168,14 @@ bool http_Daemon::Start(const http_Config &config,
 
     // MHD options
     LocalArray<MHD_OptionItem, 16> mhd_options;
-    mhd_options.Append({MHD_OPTION_LISTEN_SOCKET, listen_fd});
+    mhd_options.Append({MHD_OPTION_LISTEN_SOCKET, listen_fd, nullptr});
     if (config.threads > 1) {
-        mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads});
+        mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads, nullptr});
     }
     if (config.max_connections) {
-        mhd_options.Append({MHD_OPTION_CONNECTION_LIMIT, config.max_connections});
+        mhd_options.Append({MHD_OPTION_CONNECTION_LIMIT, config.max_connections, nullptr});
     }
-    mhd_options.Append({MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout});
+    mhd_options.Append({MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout, nullptr});
     mhd_options.Append({MHD_OPTION_END, 0, nullptr});
     client_addr_mode = config.client_addr_mode;
 

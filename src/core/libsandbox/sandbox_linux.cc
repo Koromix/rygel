@@ -551,7 +551,7 @@ bool sb_SandboxBuilder::Apply()
                         for (unsigned int map_flags: map_combinations) {
                             ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 3,
                                                    SCMP_A2(SCMP_CMP_MASKED_EQ, prot_mask, prot_flags),
-                                                   SCMP_A3(SCMP_CMP_EQ, map_flags),
+                                                   SCMP_A3(SCMP_CMP_EQ, map_flags, 0),
                                                    SCMP_A4(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFu, 0xFFFFFFFFu));
                             if (ret < 0)
                                 break;
@@ -572,7 +572,7 @@ bool sb_SandboxBuilder::Apply()
                     for (unsigned int prot_flags: prot_combinations) {
                         ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 2,
                                                SCMP_A2(SCMP_CMP_MASKED_EQ, prot_mask, prot_flags),
-                                               SCMP_A3(SCMP_CMP_EQ, MAP_SHARED));
+                                               SCMP_A3(SCMP_CMP_EQ, MAP_SHARED, 0));
                         if (ret < 0)
                             break;
                     }

@@ -4190,15 +4190,15 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         int in_idx = -1, out_idx = -1, term_idx = -1;
         if (in_pfd[1] >= 0) {
             in_idx = pfds.len;
-            pfds.Append({in_pfd[1], POLLOUT});
+            pfds.Append({in_pfd[1], POLLOUT, 0});
         }
         if (out_pfd[0] >= 0) {
             out_idx = pfds.len;
-            pfds.Append({out_pfd[0], POLLIN});
+            pfds.Append({out_pfd[0], POLLIN, 0});
         }
         if (interrupt_pfd[0] >= 0) {
             term_idx = pfds.len;
-            pfds.Append({interrupt_pfd[0], POLLIN});
+            pfds.Append({interrupt_pfd[0], POLLIN, 0});
         }
 
         if (RG_POSIX_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {

@@ -133,7 +133,7 @@ class json_Parser {
             int64_t i;
             Span<const char> str;
             Span<const char> key;
-        } u;
+        } u = {};
 
         bool StartObject();
         bool EndObject(Size);

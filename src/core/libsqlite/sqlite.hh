@@ -110,7 +110,7 @@ class sq_Database {
     // It is also reentrant, so that running requests inside an exclusive
     // lock (inside a transaction basically) works correctly.
     std::mutex wait_mutex;
-    LockWaiter wait_root = { &wait_root, &wait_root };
+    LockWaiter wait_root = { &wait_root, &wait_root, {}, false };
     int running_exclusive = 0;
     int running_shared = 0;
     std::thread::id running_exclusive_thread;

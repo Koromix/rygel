@@ -1086,7 +1086,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
     }
 
     // Generate backup entries
-    entries.Append({&gp_domain.db, "goupile.db"});
+    entries.Append({&gp_domain.db, "goupile.db", nullptr});
     for (InstanceHolder *instance: instances) {
         if (filter == nullptr || instance == filter || instance->master == filter) {
             const char *filename = sqlite3_db_filename(*instance->db, "main");
@@ -1094,7 +1094,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
             const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
             basename = Fmt(&temp_alloc, "instances/%1", basename).ptr;
 
-            entries.Append({instance->db, basename});
+            entries.Append({instance->db, basename, nullptr});
         }
     }
     for (BackupEntry &entry: entries) {

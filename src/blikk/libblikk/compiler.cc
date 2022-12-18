@@ -50,12 +50,11 @@ struct PendingOperator {
 
 struct StackSlot {
     const bk_TypeInfo *type;
-    bk_VariableInfo *var;
 
-    bool lea;
-
-    Size indirect_addr;
-    Size indirect_imbalance;
+    bk_VariableInfo *var = nullptr;
+    bool lea = false;
+    Size indirect_addr = 0;
+    Size indirect_imbalance = 0;
 };
 
 enum class ExpressionFlag {
@@ -160,7 +159,7 @@ private:
     void EmitPop(int64_t count);
     void EmitReturn(Size size);
 
-    inline void Emit(bk_Opcode code) { IR.Append({code}); }
+    inline void Emit(bk_Opcode code) { IR.Append({code, {}, {}}); }
     inline void Emit(bk_Opcode code, bk_PrimitiveValue u2) { IR.Append({code, {}, u2}); }
     inline void Emit(bk_Opcode code, bool b) { IR.Append({code, {}, {.b = b}}); }
     inline void Emit(bk_Opcode code, int i) { IR.Append({code, {}, {.i = i}}); }
@@ -552,7 +551,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
             func->type = type->AsFunctionType();
 
             for (const bk_TypeInfo *type2: func->type->params) {
-                func->params.Append({"", type2});
+                func->params.Append({"", type2, false});
             }
         } else {
             bk_FunctionTypeInfo *func_type = program->function_types.AppendDefault();
@@ -576,7 +575,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
                         const bk_TypeInfo *type2 = program->types_map.FindValue(ptr, nullptr);
                         RG_ASSERT(type2);
 
-                        func->params.Append({"", type2});
+                        func->params.Append({"", type2, false});
                         func_type->params.Append(type2);
                         func_type->params_size += type2->size;
                     }
@@ -1705,7 +1704,11 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                         goto unexpected;
                     }
                 } else {
-                    operators.Append({tok.kind});
+                    PendingOperator op = {};
+
+                    op.kind = tok.kind;
+                    operators.Append(op);
+
                     parentheses++;
                 }
             } break;

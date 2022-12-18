@@ -2231,8 +2231,8 @@ static const SupportedCompiler CompilerTable[] = {
 
     {"EmCC", "emcc"},
 
-    {"Teensy (GCC AVR)"},
-    {"Teensy (GCC ARM)"}
+    {"Teensy (GCC AVR)", nullptr},
+    {"Teensy (GCC ARM)", nullptr}
 };
 const Span<const SupportedCompiler> SupportedCompilers = CompilerTable;
 
