@@ -17,7 +17,7 @@
 
 namespace RG {
 
-bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
+bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char>)
 {
     if (key == "Location") {
         return ssh_DecodeURL(value, this);

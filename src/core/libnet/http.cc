@@ -504,8 +504,7 @@ void http_Daemon::RunNextAsync(http_IO *io)
     }
 }
 
-void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
-                                   MHD_RequestTerminationCode toe)
+void http_Daemon::RequestCompleted(void *, MHD_Connection *, void **con_cls, MHD_RequestTerminationCode)
 {
     http_IO *io = *(http_IO **)con_cls;
 

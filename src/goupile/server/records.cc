@@ -50,6 +50,8 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
 
         if (!instance->db->Prepare(sql.data, out_stmt))
             return false;
+        sqlite3_bind_text(*out_stmt, 1, tid, -1, SQLITE_STATIC);
+        sqlite3_bind_int64(*out_stmt, 2, userid);
     } else {
         RG_ASSERT(stamp.HasPermission(UserPermission::DataLoad));
         RG_ASSERT(stamp.HasPermission(UserPermission::DataAudit));
@@ -75,14 +77,9 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                                           INNER JOIN rec_threads t ON (t.tid = e.tid)
                                           ORDER BY t.rowid, e.store, rec.idx DESC)", out_stmt))
             return false;
-    }
-
-    if (tid) {
         sqlite3_bind_text(*out_stmt, 1, tid, -1, SQLITE_STATIC);
-    } else {
-        sqlite3_bind_null(*out_stmt, 1);
+        sqlite3_bind_int64(*out_stmt, 2, anchor);
     }
-    sqlite3_bind_int64(*out_stmt, 2, anchor);
 
     return true;
 }

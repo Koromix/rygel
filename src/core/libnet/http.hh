@@ -97,8 +97,7 @@ private:
     static ssize_t HandleWrite(void *cls, uint64_t pos, char *buf, size_t max);
     void RunNextAsync(http_IO *io);
 
-    static void RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
-                                 MHD_RequestTerminationCode toe);
+    static void RequestCompleted(void *cls, MHD_Connection *, void **con_cls, MHD_RequestTerminationCode toe);
 
     friend http_IO;
 };

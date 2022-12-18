@@ -77,7 +77,7 @@ private:
     bool OpenAccess();
     bool DetermineRegion(const char *url);
 
-    Size PrepareHeaders(const char *method, const char *path, const char *query,
+    Size PrepareHeaders(const char *method, const char *path, const char *query, const char *mimetype,
                         Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers);
     void MakeSignature(const char *method, const char *path, const char *query,
                        const TimeSpec &date, const uint8_t sha256[32], uint8_t out_signature[32]);

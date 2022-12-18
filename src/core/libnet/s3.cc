@@ -25,7 +25,7 @@ namespace RG {
     #undef GetObject
 #endif
 
-bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
+bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char>)
 {
     if (key == "Location") {
         return s3_DecodeURL(value, this);
@@ -291,7 +291,7 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
         Fmt(&query, "&start-after="); http_EncodeUrlSafe(after, &query);
 
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path.ptr, query.ptr, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("GET", path.ptr, query.ptr, nullptr, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -371,7 +371,7 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
     LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, &temp_alloc, headers.data);
+    headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
     struct GetContext {
         Span<const char> key;
@@ -434,7 +434,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
     LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, &temp_alloc, headers.data);
+    headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
     struct GetContext {
         Span<const char> key;
@@ -502,7 +502,7 @@ bool s3_Session::HasObject(Span<const char> key)
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
     LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, {}, &temp_alloc, headers.data);
+    headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
     // Set CURL options
     {
@@ -543,7 +543,7 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
     LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("PUT", path.ptr, nullptr, data, &temp_alloc, headers.data);
+    headers.len = PrepareHeaders("PUT", path.ptr, nullptr, mimetype, data, &temp_alloc, headers.data);
 
     // Set CURL options
     {
@@ -596,7 +596,7 @@ bool s3_Session::DeleteObject(Span<const char> key)
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
     LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("DELETE", path.ptr, nullptr, {}, &temp_alloc, headers.data);
+    headers.len = PrepareHeaders("DELETE", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
     // Set CURL options
     {
@@ -644,7 +644,7 @@ bool s3_Session::OpenAccess()
         RG_DEFER { curl_easy_cleanup(curl); };
 
         LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path.ptr, nullptr, {}, &temp_alloc, headers.data);
+        headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
         // Set CURL options
         {
@@ -737,7 +737,7 @@ bool s3_Session::DetermineRegion(const char *url)
     return true;
 }
 
-Size s3_Session::PrepareHeaders(const char *method, const char *path, const char *query,
+Size s3_Session::PrepareHeaders(const char *method, const char *path, const char *query, const char *mimetype,
                                 Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers)
 {
     int64_t now = GetUnixTime();
@@ -755,6 +755,9 @@ Size s3_Session::PrepareHeaders(const char *method, const char *path, const char
     out_headers[len++].data = MakeAuthorization(signature, date, alloc).ptr;
     out_headers[len++].data = Fmt(alloc, "x-amz-date: %1", FmtTimeISO(date)).ptr;
     out_headers[len++].data = Fmt(alloc, "x-amz-content-sha256: %1", FormatSha256(sha256)).ptr;
+    if (mimetype) {
+        out_headers[len++].data = Fmt(alloc, "Content-Type: %1", mimetype).ptr;
+    }
 
     // Link request headers
     for (Size i = 0; i < len - 1; i++) {

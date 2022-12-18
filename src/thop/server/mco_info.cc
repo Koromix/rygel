@@ -523,7 +523,7 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
     }
 }
 
-void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http_IO *io)
+void ProduceMcoHighlight(const http_RequestInfo &request, const User *, http_IO *io)
 {
     const mco_TableIndex *index = GetIndexFromRequest(request, io);
     if (!index)

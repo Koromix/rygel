@@ -773,7 +773,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
     int64_t max_mtime = 0;
     bool complete = true;
 
-    EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
+    EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType) {
         const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
 
         FileInfo file_info;

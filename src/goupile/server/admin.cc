@@ -2394,7 +2394,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         const char *swap_directory = nullptr;
         RG_DEFER {
             if (swap_directory) {
-                EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType file_type) {
+                EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType) {
                     filename = Fmt(&io->allocator, "%1%/%2", swap_directory, filename).ptr;
                     UnlinkFile(filename);
 

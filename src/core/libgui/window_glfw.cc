@@ -35,7 +35,7 @@ static bool InitGLFW()
             return false;
         }
 
-        glfwSetErrorCallback([](int code, const char* description) {
+        glfwSetErrorCallback([](int, const char* description) {
             LogError("GLFW: %1", description);
         });
     }

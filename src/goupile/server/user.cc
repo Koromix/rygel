@@ -185,7 +185,7 @@ void InvalidateUserStamps(int64_t userid)
 }
 
 static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *instance,
-                             const http_RequestInfo &request, http_IO *io)
+                             const http_RequestInfo &, http_IO *io)
 {
     http_JsonPageBuilder json;
     if (!json.Init(io))
@@ -948,7 +948,7 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
 }
 
 static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
-                      const char *code, const http_RequestInfo &request, http_IO *io)
+                      const char *code, const http_RequestInfo &, http_IO *io)
 {
     int64_t time = GetUnixTime();
     int64_t counter = time / TotpPeriod;

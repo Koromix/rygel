@@ -82,7 +82,7 @@ static void MakePackCommand(Span<const char *const> pack_filenames, bool optimiz
     out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
-static bool ReadCommandOutput(const char *cmd_line, Size max_len, HeapArray<char> *out_output)
+static bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
 {
     int exit_code;
     if (!ExecuteCommandLine(cmd_line, {}, Kilobytes(4), out_output, &exit_code))
@@ -220,7 +220,7 @@ public:
             Fmt(cmd, "\"%1\" --version", compiler->cc);
 
             HeapArray<char> output;
-            if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
+            if (ReadCommandOutput(cmd, &output)) {
                 compiler->clang_ver = ParseVersion(cmd, output, "version");
             }
 
@@ -242,7 +242,7 @@ public:
                 }
 
                 HeapArray<char> output;
-                if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
+                if (ReadCommandOutput(cmd, &output)) {
                     compiler->lld_ver = ParseVersion(cmd, output, "LLD");
                 }
             }
@@ -724,7 +724,7 @@ public:
             Fmt(cmd, "\"%1\" -v", compiler->cc);
 
             HeapArray<char> output;
-            if (ReadCommandOutput(cmd, Kilobytes(4), &output)) {
+            if (ReadCommandOutput(cmd, &output)) {
                 compiler->gcc_ver = ParseVersion(cmd, output, "version");
                 compiler->i686 = FindStr(output, "i686") >= 0;
             }
@@ -1547,12 +1547,10 @@ public:
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
-                        Span<const char *const> definitions, Span<const char *const> include_directories,
-                        Span<const char *const> include_files, uint32_t features, bool env_flags,
-                        Allocator *alloc, Command *out_cmd) const override { RG_UNREACHABLE(); }
-    const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override { return nullptr; }
-    const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override { return nullptr; }
+    void MakePchCommand(const char *, SourceType, bool, Span<const char *const>, Span<const char *const>,
+                        Span<const char *const>, uint32_t, bool, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+    const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
+    const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
                            const char *pch_filename, Span<const char *const> definitions,
@@ -1676,8 +1674,7 @@ public:
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
-    void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
-                             Allocator *alloc, Command *out_cmd) const override { RG_UNREACHABLE(); }
+    void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, LinkType link_type,
@@ -1846,12 +1843,10 @@ public:
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
-                        Span<const char *const> definitions, Span<const char *const> include_directories,
-                        Span<const char *const> include_files, uint32_t features, bool env_flags,
-                        Allocator *alloc, Command *out_cmd) const override { RG_UNREACHABLE(); }
+    void MakePchCommand(const char *, SourceType, bool, Span<const char *const>, Span<const char *const>,
+                        Span<const char *const>, uint32_t, bool, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
-    const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override { return nullptr; }
+    const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
@@ -1932,12 +1927,11 @@ public:
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
-    void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
-                             Allocator *alloc, Command *out_cmd) const override { RG_UNREACHABLE(); }
+    void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, LinkType link_type,
-                         uint32_t features, bool env_flags, const char *dest_filename,
+                         uint32_t, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);

@@ -98,7 +98,7 @@ int RunCommand(Span<const char> code, const Config &config)
             return 1;
 
         // ... but don't tell the user if it fails!
-        SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {});
+        SetLogHandler([](LogLevel, const char *, const char *) {});
         RG_DEFER { SetLogHandler(DefaultLogHandler); };
 
         valid_with_fake_print = compiler.Compile(file);

@@ -44,6 +44,8 @@ public:
 };
 
 #define BK_ADD_FUNCTION(Compiler, Signature, Pure, Code) \
-    (Compiler).AddFunction((Signature), (Pure), [&](bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, Span<bk_PrimitiveValue> ret) Code)
+    (Compiler).AddFunction((Signature), (Pure), [&]([[maybe_unused]] bk_VirtualMachine *vm, \
+                                                    [[maybe_unused]] Span<const bk_PrimitiveValue> args, \
+                                                    [[maybe_unused]] Span<bk_PrimitiveValue> ret) Code)
 
 }
