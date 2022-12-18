@@ -413,7 +413,7 @@ public:
             Fmt(&buf, " -flto");
         }
         if (warnings) {
-            Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unknown-warning-option");
+            Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-unknown-warning-option");
         } else {
             Fmt(&buf, " -Wno-everything");
         }
@@ -882,7 +882,7 @@ public:
             Fmt(&buf, " -flto");
         }
         if (warnings) {
-            Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-cast-function-type");
+            Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-cast-function-type");
             if (src_type == SourceType::CXX) {
                 Fmt(&buf, " -Wno-init-list-lifetime");
             }
@@ -1587,7 +1587,7 @@ public:
             Fmt(&buf, " -flto");
         }
         if (warnings) {
-            Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter");
+            Fmt(&buf, " -Wall -Wextra");
         } else {
             Fmt(&buf, " -w");
         }
@@ -1887,7 +1887,7 @@ public:
             Fmt(&buf, " -O0 -ftrapv");
         }
         if (warnings) {
-            Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter");
+            Fmt(&buf, " -Wall -Wextra");
         } else {
             Fmt(&buf, " -Wno-everything");
         }
