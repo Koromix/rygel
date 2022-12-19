@@ -182,17 +182,26 @@ again:
 }
 #endif
 
+#ifdef _WIN32
+
+static bool ChangeFileOwner(const char *, uid_t, gid_t)
+{
+    return true;
+}
+
+#else
+
 static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 {
-#ifndef _WIN32
     if (chown(filename, uid, gid) < 0) {
         LogError("Failed to change '%1' owner: %2", filename, strerror(errno));
         return false;
     }
-#endif
 
     return true;
 }
+
+#endif
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                            const char *name, int64_t default_userid, bool demo, int *out_error)

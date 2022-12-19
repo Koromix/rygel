@@ -82,7 +82,7 @@ static bool ApplyProfile(Size idx)
 {
     // Should work first time...
     {
-        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc> func) {});
+        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
         RG_DEFER { PopLogFilter(); };
 
         if (ApplyLight(port, config.profiles[idx].settings)) {

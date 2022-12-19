@@ -402,7 +402,7 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
             Async async(&tasks);
 
             // Write unencrypted file
-            for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(rk_ChunkEntry)) {
+            for (Size offset = 0; offset < file_obj.len; offset += RG_SIZE(rk_ChunkEntry)) {
                 async.Run([=, this]() {
                     rk_ChunkEntry entry = {};
 
