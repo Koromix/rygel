@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <thread>
 #include <type_traits>
 #include <utility>
 #if defined(_WIN32)
@@ -38,8 +39,6 @@
 #elif !defined(__APPLE__) && (!defined(__linux__) || defined(__GLIBC__)) && __has_include(<ucontext.h>)
     #define RG_FIBER_USE_UCONTEXT
     #include <ucontext.h>
-#else
-    #include <thread>
 #endif
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
