@@ -162,7 +162,7 @@ bool S3Disk::TestFast(const char *path)
 {
     sq_Statement stmt;
     if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
-        return -1;
+        return false;
     sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
     return stmt.Step();

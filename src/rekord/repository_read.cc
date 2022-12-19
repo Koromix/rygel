@@ -207,8 +207,11 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
     std::shared_ptr<BlockAllocator> temp_alloc = std::make_shared<BlockAllocator>();
 
     for (Size offset = 0; offset < entries.len;) {
-        rk_FileEntry entry = {};
+        rk_FileEntry entry;
         const char *name = nullptr;
+
+        // Avoid MSVC error C2466
+        memset(&entry, 0, RG_SIZE(entry));
 
         if (type == rk_ObjectType::Directory1 || type == rk_ObjectType::Snapshot1) {
             rk_FileEntry::V1 *v1 = (rk_FileEntry::V1 *)(entries.ptr + offset);

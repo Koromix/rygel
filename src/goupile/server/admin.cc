@@ -1764,9 +1764,9 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
             }
 
             if (!session->IsRoot()) {
-                bool root = (sqlite3_column_int(stmt, 0) == 1);
+                bool is_root = (sqlite3_column_int(stmt, 0) == 1);
 
-                if (root) {
+                if (is_root) {
                     LogError("User ID '%1' does not exist", userid);
                     io->AttachError(404);
                     return;
@@ -1874,10 +1874,10 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     while (stmt.Step()) {
         int64_t userid = sqlite3_column_int64(stmt, 0);
         uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
-        bool root = (sqlite3_column_int(stmt, 2) == 1);
+        bool is_root = (sqlite3_column_int(stmt, 2) == 1);
         char buf[128];
 
-        if (root && !session->IsRoot())
+        if (is_root && !session->IsRoot())
             continue;
 
         if (instance->master != instance) {
@@ -2815,9 +2815,9 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             }
 
             if (!session->IsRoot()) {
-                bool root = (sqlite3_column_int(stmt, 0) == 1);
+                bool is_root = (sqlite3_column_int(stmt, 0) == 1);
 
-                if (root) {
+                if (is_root) {
                     LogError("User ID '%1' does not exist", userid);
                     io->AttachError(404);
                     return;
@@ -2932,9 +2932,9 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
             }
 
             if (!session->IsRoot()) {
-                bool root = (sqlite3_column_int(stmt, 2) == 1);
+                bool is_root = (sqlite3_column_int(stmt, 2) == 1);
 
-                if (root) {
+                if (is_root) {
                     LogError("User ID '%1' does not exist", userid);
                     io->AttachError(404);
                     return;
@@ -2991,9 +2991,9 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
 
     json.StartArray();
     while (stmt.Step()) {
-        bool root = (sqlite3_column_int(stmt, 4) == 1);
+        bool is_root = (sqlite3_column_int(stmt, 4) == 1);
 
-        if (root && !session->IsRoot())
+        if (is_root && !session->IsRoot())
             continue;
 
         json.StartObject();
@@ -3009,7 +3009,7 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         } else {
             json.Key("phone"); json.Null();
         }
-        json.Key("root"); json.Bool(root);
+        json.Key("root"); json.Bool(is_root);
         json.Key("confirm"); json.Bool(sqlite3_column_type(stmt, 5) != SQLITE_NULL);
         json.EndObject();
     }

@@ -241,9 +241,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         if (entry->kind == (int8_t)rk_FileEntry::Kind::Directory) {
             const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
 
-            PutResult ret = PutDirectory(filename, follow_symlinks, &entry->id);
-
-            if (ret == PutResult::Error)
+            if (PutDirectory(filename, follow_symlinks, &entry->id) == PutResult::Error)
                 return PutResult::Error;
         }
 
