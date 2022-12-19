@@ -991,9 +991,9 @@ static bool InitCriticalData(const mco_TableSet &table_set,
                              mco_PreparedSet *out_prepared_set, mco_ErrorSet *out_errors)
 {
     // Malformed, missing, incoherent (e.g. 2001/02/29)
-    static const int16_t birthdate_errors[3] = {14, 13, 39};
-    static const int16_t entry_date_errors[3] = {20, 19, 21};
-    static const int16_t exit_date_errors[3] = {29, 28, 30};
+    static const int16_t birthdate_errors[3] = { 14, 13, 39 };
+    static const int16_t entry_date_errors[3] = { 20, 19, 21 };
+    static const int16_t exit_date_errors[3] = { 29, 28, 30 };
 
     bool valid = true;
 

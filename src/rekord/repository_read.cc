@@ -42,7 +42,7 @@ class GetContext {
 
     Async tasks;
 
-    std::atomic<int64_t> stat_len {0};
+    std::atomic<int64_t> stat_len { 0 };
 
 public:
     GetContext(rk_Disk *disk);
@@ -73,7 +73,7 @@ static bool ReserveFile(int fd, const char *filename, int64_t len)
     }
     RG_DEFER { SetFilePointerEx(h, prev_pos, nullptr, FILE_BEGIN); };
 
-    if (!SetFilePointerEx(h, {.QuadPart = len}, nullptr, FILE_BEGIN)) {
+    if (!SetFilePointerEx(h, { .QuadPart = len }, nullptr, FILE_BEGIN)) {
         LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
         return false;
     }

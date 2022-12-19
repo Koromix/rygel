@@ -73,7 +73,7 @@ class http_Daemon {
 #else
     int stop_pfd[2] = {-1, -1};
 #endif
-    std::atomic_bool running {false};
+    std::atomic_bool running { false };
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
 

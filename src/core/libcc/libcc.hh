@@ -1123,7 +1123,7 @@ public:
 template <typename T>
 class RetainObject {
     mutable void (*delete_func)(T *) = nullptr;
-    mutable std::atomic_int refcount {0};
+    mutable std::atomic_int refcount { 0 };
 
 public:
     void Ref() const { refcount++; }
@@ -2274,9 +2274,9 @@ private:
                 }
                 count++;
                 MarkUsed(idx);
-                return {&data[idx], true};
+                return { &data[idx], true };
             } else {
-                return {it, false};
+                return { it, false };
             }
         } else {
             Rehash(RG_HASHTABLE_BASE_CAPACITY);
@@ -2284,7 +2284,7 @@ private:
             Size idx = HashToIndex(hash);
             count++;
             MarkUsed(idx);
-            return {&data[idx], true};
+            return { &data[idx], true };
         }
     }
 
@@ -2566,7 +2566,7 @@ public:
     }
 
     ValueType *Set(const KeyType &key, const ValueType &value)
-        { return &table.Set({key, value})->value; }
+        { return &table.Set({ key, value })->value; }
     ValueType *SetDefault(const KeyType &key)
     {
         Bucket *table_it = table.SetDefault(key);
@@ -2576,7 +2576,7 @@ public:
 
     std::pair<ValueType *, bool> TrySet(const KeyType &key, const ValueType &value)
     {
-        std::pair<Bucket *, bool> ret = table.TrySet({key, value});
+        std::pair<Bucket *, bool> ret = table.TrySet({ key, value });
         return { &ret.first->value, ret.second };
     }
     std::pair<ValueType *, bool> TrySetDefault(const KeyType &key)
@@ -2666,10 +2666,10 @@ union LocalDate {
     LocalDate() = default;
 #ifdef RG_BIG_ENDIAN
     LocalDate(int16_t year, int8_t month, int8_t day)
-        : st({year, month, day}) { RG_ASSERT(IsValid()); }
+        : st({ year, month, day }) { RG_ASSERT(IsValid()); }
 #else
     LocalDate(int16_t year, int8_t month, int8_t day)
-        : st({day, month, year}) { RG_ASSERT(IsValid()); }
+        : st({ day, month, year }) { RG_ASSERT(IsValid()); }
 #endif
 
     static inline bool IsLeapYear(int16_t year)
@@ -2678,7 +2678,7 @@ union LocalDate {
     }
     static inline int8_t DaysInMonth(int16_t year, int8_t month)
     {
-        static const int8_t DaysPerMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        static const int8_t DaysPerMonth[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
         return (int8_t)(DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year)));
     }
 
@@ -4082,8 +4082,8 @@ class Async {
     RG_DELETE_COPY(Async)
 
     bool stop_after_error;
-    std::atomic_bool success {true};
-    std::atomic_int remaining_tasks {0};
+    std::atomic_bool success { true };
+    std::atomic_int remaining_tasks { 0 };
 
     class AsyncPool *pool;
 

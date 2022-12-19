@@ -308,8 +308,8 @@ Options:
 
         profile_idx = config.default_idx;
     } else {
-        config.profiles.Append({.name = "Enable", .settings = {.mode = LightMode::Static}});
-        config.profiles.Append({.name = "Disable", .settings = {.mode = LightMode::Disabled}});
+        config.profiles.Append({ .name = "Enable", .settings = { .mode = LightMode::Static } });
+        config.profiles.Append({ .name = "Disable", .settings = { .mode = LightMode::Disabled } });
     }
 
     HINSTANCE module = GetModuleHandle(nullptr);

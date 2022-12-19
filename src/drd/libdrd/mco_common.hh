@@ -37,10 +37,10 @@ union mco_GhmRootCode {
     mco_GhmRootCode() = default;
 #ifdef RG_BIG_ENDIAN
     constexpr mco_GhmRootCode(int8_t cmd, char type, int8_t seq)
-        : parts {cmd, type, seq, 0} {}
+        : parts { cmd, type, seq, 0 } {}
 #else
     constexpr mco_GhmRootCode(int8_t cmd, char type, int8_t seq)
-        : parts {0, seq, type, cmd} {}
+        : parts { 0, seq, type, cmd } {}
 #endif
 
     static mco_GhmRootCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
@@ -132,10 +132,10 @@ union mco_GhmCode {
     mco_GhmCode() = default;
 #ifdef RG_BIG_ENDIAN
     constexpr mco_GhmCode(int8_t cmd, char type, int8_t seq, char mode)
-        : parts {cmd, type, seq, mode} {}
+        : parts { cmd, type, seq, mode } {}
 #else
     constexpr mco_GhmCode(int8_t cmd, char type, int8_t seq, char mode)
-        : parts {mode, seq, type, cmd} {}
+        : parts { mode, seq, type, cmd } {}
 #endif
 
     static mco_GhmCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,

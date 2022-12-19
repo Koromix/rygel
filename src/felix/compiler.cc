@@ -2023,11 +2023,11 @@ static void FindArduinoCompiler(const char *name, const char *compiler, Span<cha
     };
 
     static const TestPath test_paths[] = {
-        {nullptr, "/usr/share/arduino"},
-        {nullptr, "/usr/local/share/arduino"},
-        {"HOME",  ".local/share/arduino"},
+        { nullptr, "/usr/share/arduino" },
+        { nullptr, "/usr/local/share/arduino" },
+        { "HOME",  ".local/share/arduino" },
 #ifdef __APPLE__
-        {nullptr, "/Applications/Arduino.app/Contents/Java"}
+        { nullptr, "/Applications/Arduino.app/Contents/Java" }
 #endif
     };
 

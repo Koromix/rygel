@@ -34,7 +34,7 @@ static const char *const SyncModeNames[] = {
 };
 
 class InstanceHolder {
-    mutable std::atomic_int refcount {0};
+    mutable std::atomic_int refcount { 0 };
 
 public:
     int64_t unique = -1;

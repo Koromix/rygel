@@ -344,8 +344,8 @@ static bool ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &
             FAIL_PARSE_IF(table.filename, ghm_node.u.test.children_count > table.sections[0].values_count -
                                                                            ghm_node.u.test.children_idx);
         } else {
-            static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
-            static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' '};
+            static char chars1[] = { 0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' ' };
+            static char chars4[] = { 0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' ' };
 
             ghm_node.u.ghm.ghm.parts.cmd = (int8_t)raw_node.params[1];
             ghm_node.u.ghm.ghm.parts.type = chars1[(raw_node.children_idx / 1000) % 10];
@@ -796,7 +796,7 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
 
         // GHM root code
         {
-            static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
+            static char chars1[] = { 0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' ' };
 
             ghm_root.ghm_root.parts.cmd = (int8_t)raw_ghm_root.cmd;
             ghm_root.ghm_root.parts.type = chars1[raw_ghm_root.type_seq / 100 % 10];
@@ -962,9 +962,9 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
         }
 
         if (!current_ghs.ghm.IsValid()) {
-            static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z'};
-            static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J',
-                                    'Z', 'T', '1', '2', '3', '4'};
+            static char chars1[] = { 0, 'C', 'H', 'K', 'M', 'Z' };
+            static char chars4[] = { 0, 'A', 'B', 'C', 'D', 'E', 'J',
+                                     'Z', 'T', '1', '2', '3', '4' };
 
             current_ghs.ghm.parts.cmd = (int8_t)raw_ghs_node.cmd;
             current_ghs.ghm.parts.type = chars1[raw_ghs_node.type_seq / 10000 % 6];
@@ -1618,10 +1618,10 @@ bool mco_TableSetBuilder::CommitIndex(LocalDate start_date, LocalDate end_date,
     // - when we load a new main table, we need to reload secondary tables,
     // - when we load a new secondary table, we need to make a new version of the main table.
     static const std::pair<mco_TableType, mco_TableType> TableDependencies[] = {
-        {mco_TableType::ProcedureTable, mco_TableType::ProcedureAdditionTable},
-        {mco_TableType::ProcedureTable, mco_TableType::ProcedureExtensionTable},
-        {mco_TableType::PriceTablePublic, mco_TableType::GhsMinorationTable},
-        {mco_TableType::PriceTablePrivate, mco_TableType::GhsMinorationTable}
+        { mco_TableType::ProcedureTable, mco_TableType::ProcedureAdditionTable },
+        { mco_TableType::ProcedureTable, mco_TableType::ProcedureExtensionTable },
+        { mco_TableType::PriceTablePublic, mco_TableType::GhsMinorationTable },
+        { mco_TableType::PriceTablePrivate, mco_TableType::GhsMinorationTable }
     };
     HandleDependencies(current_tables, TableDependencies);
 

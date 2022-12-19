@@ -186,8 +186,8 @@ class AggregateSetBuilder {
 
     HashMap<Aggregate::Key, Size> aggregates_map;
     HashSet<mco_GhmRootCode> ghm_roots_set;
-    IndirectBlockAllocator units_alloc {&set.array_alloc, Kibibytes(4)};
-    IndirectBlockAllocator parts_alloc {&set.array_alloc, Kibibytes(16)};
+    IndirectBlockAllocator units_alloc { &set.array_alloc, Kibibytes(4) };
+    IndirectBlockAllocator parts_alloc { &set.array_alloc, Kibibytes(16) };
 
     // Reuse for performance
     HashMap<drd_UnitCode, Aggregate::Part> agg_parts_map;

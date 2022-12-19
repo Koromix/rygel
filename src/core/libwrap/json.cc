@@ -141,7 +141,7 @@ bool json_Parser::Handler::Key(const char *key, Size len, bool)
 }
 
 json_Parser::json_Parser(StreamReader *st, Allocator *alloc)
-    : st(st), handler({alloc})
+    : st(st), handler({ alloc })
 {
     RG_ASSERT(alloc);
     reader.IterativeParseInit();

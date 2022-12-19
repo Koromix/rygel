@@ -2891,7 +2891,7 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        int name[4] = {CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV};
+        int name[4] = { CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV };
 
         size_t argc;
         {
@@ -2927,7 +2927,7 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        int name[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+        int name[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
         size_t len = sizeof(executable_path);
 
         int ret = sysctl(name, RG_LEN(name), executable_path, &len, NULL, 0);
@@ -4000,8 +4000,8 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 static const pthread_t main_thread = pthread_self();
 #endif
-static std::atomic_bool flag_interrupt {false};
-static std::atomic_bool explicit_interrupt {false};
+static std::atomic_bool flag_interrupt { false };
+static std::atomic_bool explicit_interrupt { false };
 static int interrupt_pfd[2] = {-1, -1};
 
 void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev)
@@ -4190,15 +4190,15 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         int in_idx = -1, out_idx = -1, term_idx = -1;
         if (in_pfd[1] >= 0) {
             in_idx = pfds.len;
-            pfds.Append({in_pfd[1], POLLOUT, 0});
+            pfds.Append({ in_pfd[1], POLLOUT, 0 });
         }
         if (out_pfd[0] >= 0) {
             out_idx = pfds.len;
-            pfds.Append({out_pfd[0], POLLIN, 0});
+            pfds.Append({ out_pfd[0], POLLIN, 0 });
         }
         if (interrupt_pfd[0] >= 0) {
             term_idx = pfds.len;
-            pfds.Append({interrupt_pfd[0], POLLIN, 0});
+            pfds.Append({ interrupt_pfd[0], POLLIN, 0 });
         }
 
         if (RG_POSIX_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
@@ -4427,7 +4427,7 @@ void WaitDelay(int64_t delay)
 
 WaitForResult WaitForInterrupt(int64_t timeout)
 {
-    static std::atomic_bool message {false};
+    static std::atomic_bool message { false };
 
     flag_interrupt = true;
     SetSignalHandler(SIGUSR1, [](int) { message = true; });
@@ -5311,7 +5311,7 @@ class AsyncPool {
 
     HeapArray<TaskQueue> queues;
     int next_queue_idx = 0;
-    std::atomic_int pending_tasks {0};
+    std::atomic_int pending_tasks { 0 };
 
 public:
     AsyncPool(int threads, bool leak);
@@ -5460,7 +5460,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 
             std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
             if (lock_queue.owns_lock()) {
-                queue->tasks.Append({async, func});
+                queue->tasks.Append({ async, func });
                 break;
             }
         }
@@ -5468,7 +5468,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
         TaskQueue *queue = &queues[async_running_worker_idx];
 
         std::lock_guard<std::mutex> lock_queue(queue->queue_mutex);
-        queue->tasks.Append({async, func});
+        queue->tasks.Append({ async, func });
     }
 
     async->remaining_tasks++;
@@ -8301,15 +8301,15 @@ Vec2<int> ConsolePrompter::GetConsoleSize()
 
     CONSOLE_SCREEN_BUFFER_INFO screen;
     if (GetConsoleScreenBufferInfo(h, &screen))
-        return {screen.dwSize.X, screen.dwSize.Y};
+        return { screen.dwSize.X, screen.dwSize.Y };
 #else
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) >= 0 && ws.ws_col)
-        return {ws.ws_col, ws.ws_row};
+        return { ws.ws_col, ws.ws_row };
 #endif
 
     // Give up!
-    return {80, 24};
+    return { 80, 24 };
 }
 
 int32_t ConsolePrompter::ReadChar()

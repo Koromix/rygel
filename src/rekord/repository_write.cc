@@ -39,8 +39,8 @@ class PutContext {
 
     Async uploads;
 
-    std::atomic<int64_t> stat_len {0};
-    std::atomic<int64_t> stat_written {0};
+    std::atomic<int64_t> stat_len { 0 };
+    std::atomic<int64_t> stat_written { 0 };
 
 public:
     PutContext(rk_Disk *disk);

@@ -21,8 +21,8 @@ namespace RG {
 class S3Disk: public rk_Disk {
     s3_Session s3;
 
-    std::atomic_int cache_hits {0};
-    int cache_misses {0};
+    std::atomic_int cache_hits { 0 };
+    int cache_misses { 0 };
     std::mutex cache_mutex;
 
 public:

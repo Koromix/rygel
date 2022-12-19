@@ -722,7 +722,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
 
             bool fully_deployed = false;
             {
-                Span<const char> partial_path = {path.ptr, 1};
+                Span<const char> partial_path = { path.ptr, 1 };
                 for (;;) {
                     height += line_heights.TrySet(partial_path, 20.0f).second *
                               (20.0f + style.ItemSpacing.y);
@@ -885,7 +885,7 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                 int tree_depth = 0;
                 {
                     Size name_offset = 1;
-                    Span<const char> partial_path = {path.ptr, 1};
+                    Span<const char> partial_path = { path.ptr, 1 };
                     for (;;) {
                         LineData *line;
                         {

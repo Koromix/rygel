@@ -42,7 +42,7 @@ struct DomainConfig {
     TimeMode archive_zone = TimeMode::Local;
     int archive_retention = 7;
 
-    http_Config http = {.port = 8889};
+    http_Config http { .port = 8889 };
     const char *require_host = nullptr;
 
     smtp_Config smtp;

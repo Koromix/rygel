@@ -426,11 +426,11 @@ static const uint8_t raw_data[] = {)");
                 const BlobInfo &blob = blobs[i];
 
                 if (blob.source_map) {
-                    PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, \"%5\"},",
+                    PrintLn(&st, "    {\"%1\", %2, { raw_data + %3, %4 }, \"%5\"},",
                                  blob.name, (int)blob.compression_type, raw_offset, blob.len,
                                  blob.source_map);
                 } else {
-                    PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, 0},",
+                    PrintLn(&st, "    {\"%1\", %2, { raw_data + %3, %4 }, 0},",
                                  blob.name, (int)blob.compression_type, raw_offset, blob.len);
                 }
                 raw_offset += blob.len + 1;
@@ -450,12 +450,12 @@ static const uint8_t raw_data[] = {)");
 
             if (blob.source_map) {
                 PrintLn(&st, "EXPORT_SYMBOL EXTERN_SYMBOL const AssetInfo %1;", var);
-                PrintLn(&st, "const AssetInfo %1 = {\"%2\", %3, {raw_data + %4, %5}, \"%6\"};",
+                PrintLn(&st, "const AssetInfo %1 = {\"%2\", %3, { raw_data + %4, %5 }, \"%6\"};",
                              var, blob.name, (int)blob.compression_type, raw_offset,
                              blob.len, blob.source_map);
             } else {
                 PrintLn(&st, "EXPORT_SYMBOL EXTERN_SYMBOL const AssetInfo %1;", var);
-                PrintLn(&st, "const AssetInfo %1 = {\"%2\", %3, {raw_data + %4, %5}, 0};",
+                PrintLn(&st, "const AssetInfo %1 = {\"%2\", %3, { raw_data + %4, %5 }, 0};",
                              var, blob.name, (int)blob.compression_type, raw_offset, blob.len);
             }
             raw_offset += blob.len + 1;

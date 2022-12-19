@@ -366,7 +366,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     // Some compilers (such as MSVC) also build PCH object files that need to be linked
     if (build.features & (int)CompileFeature::PCH) {
         for (const char *filename: target.pchs) {
-            const char *pch_filename = build_map.FindValue({ns, filename}, nullptr);
+            const char *pch_filename = build_map.FindValue({ ns, filename }, nullptr);
 
             if (pch_filename) {
                 const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
@@ -411,7 +411,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         const char *text = Fmt(&str_alloc, "Build %!..+%1%!0 resource file", target.name).ptr;
         if (target.icon_filename) {
-            AppendNode(text, res_filename, cmd, {rc_filename, target.icon_filename}, ns);
+            AppendNode(text, res_filename, cmd, { rc_filename, target.icon_filename }, ns);
         } else {
             AppendNode(text, res_filename, cmd, rc_filename, ns);
         }
@@ -476,7 +476,7 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
         }
 
         if (pch) {
-            pch_filename = build_map.FindValue({ns, pch->filename}, nullptr);
+            pch_filename = build_map.FindValue({ ns, pch->filename }, nullptr);
 
             if (!pch_filename) {
                 pch_filename = BuildObjectPath(ns, pch->filename, cache_directory, pch_ext, &str_alloc);
@@ -519,7 +519,7 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
         }
     }
 
-    const char *obj_filename = build_map.FindValue({ns, src.filename}, nullptr);
+    const char *obj_filename = build_map.FindValue({ ns, src.filename }, nullptr);
 
     // Build object
     if (!obj_filename) {
@@ -538,7 +538,7 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", src.filename).ptr;
-        if (pch_filename ? AppendNode(text, obj_filename, cmd, {src.filename, pch_filename}, ns)
+        if (pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename }, ns)
                          : AppendNode(text, obj_filename, cmd, src.filename, ns)) {
             if (!build.fake && !EnsureDirectoryExists(obj_filename))
                 return nullptr;
@@ -779,7 +779,7 @@ bool Builder::AppendNode(const char *text, const char *dest_filename, const Comm
 {
     RG_ASSERT(src_filenames.len >= 1);
 
-    build_map.Set({ns, src_filenames[0]}, dest_filename);
+    build_map.Set({ ns, src_filenames[0] }, dest_filename);
     total++;
 
     if (NeedsRebuild(dest_filename, cmd, src_filenames)) {

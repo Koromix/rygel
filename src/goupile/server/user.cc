@@ -407,7 +407,7 @@ static const EventInfo *RegisterEvent(const char *where, const char *who, int64_
 {
     std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
 
-    EventInfo::Key key = {where, who};
+    EventInfo::Key key = { where, who };
     EventInfo *event = events_map.FindValue(key, nullptr);
 
     if (!event || event->until < GetMonotonicTime()) {
@@ -432,7 +432,7 @@ static int CountEvents(const char *where, const char *who)
 {
     std::shared_lock<std::shared_mutex> lock_shr(events_mutex);
 
-    EventInfo::Key key = {where, who};
+    EventInfo::Key key = { where, who };
     const EventInfo *event = events_map.FindValue(key, nullptr);
 
     // We don't need to use precise timing, and a ban can last a bit
