@@ -271,7 +271,11 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             ThrowError<Napi::Error>(env, "Struct '%1' size is too high (max = %2)", type->name, FmtMemSize(size));
             return env.Null();
         }
-        if (!members.TrySet(member.name).second) {
+
+        bool inserted;
+        members.TrySet(member.name, &inserted);
+
+        if (!inserted) {
             ThrowError<Napi::Error>(env, "Duplicate member '%1' in struct '%2'", member.name, type->name);
             return env.Null();
         }
@@ -287,9 +291,14 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     type->size = (int32_t)size;
 
     // If the insert succeeds, we cannot fail anymore
-    if (named && !instance->types_map.TrySet(type->name, type).second) {
-        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
-        return env.Null();
+    if (named) {
+        bool inserted;
+        instance->types_map.TrySet(type->name, type, &inserted);
+
+        if (!inserted) {
+            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+            return env.Null();
+        }
     }
     err_guard.Disable();
 
@@ -333,9 +342,14 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     type->align = 0;
 
     // If the insert succeeds, we cannot fail anymore
-    if (named && !instance->types_map.TrySet(type->name, type).second) {
-        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
-        return env.Null();
+    if (named) {
+        bool inserted;
+        instance->types_map.TrySet(type->name, type, &inserted);
+
+        if (!inserted) {
+            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+            return env.Null();
+        }
     }
     err_guard.Disable();
 
@@ -399,8 +413,11 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         memcpy((void *)copy, type, RG_SIZE(*type));
         copy->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
 
+        bool inserted;
+        instance->types_map.TrySet(copy->name, copy, &inserted);
+
         // If the insert succeeds, we cannot fail anymore
-        if (!instance->types_map.TrySet(copy->name, copy).second) {
+        if (!inserted) {
             ThrowError<Napi::Error>(env, "Duplicate type name '%1'", copy->name);
             return env.Null();
         }
@@ -532,9 +549,14 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     type->dispose_ref = Napi::Persistent(dispose_func);
 
     // If the insert succeeds, we cannot fail anymore
-    if (named && !instance->types_map.TrySet(type->name, type).second) {
-        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
-        return env.Null();
+    if (named) {
+        bool inserted;
+        instance->types_map.TrySet(type->name, type, &inserted);
+
+        if (!inserted) {
+            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+            return env.Null();
+        }
     }
     err_guard.Disable();
 
@@ -790,9 +812,10 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
 
-    std::pair<const TypeInfo **, bool> ret = instance->types_map.TrySet(alias, type);
+    bool inserted;
+    instance->types_map.TrySet(alias, type, &inserted);
 
-    if (!ret.second) {
+    if (!inserted) {
         ThrowError<Napi::Error>(env, "Type name '%1' already exists", alias);
         return env.Null();
     }
@@ -1510,8 +1533,9 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
     SetValueTag(instance, external, &TypeInfoMarker);
 
     for (const char *name: names) {
-        std::pair<const TypeInfo **, bool> ret = instance->types_map.TrySet(name, type);
-        RG_ASSERT(ret.second);
+        bool inserted;
+        instance->types_map.TrySet(name, type, &inserted);
+        RG_ASSERT(inserted);
 
         if (!EndsWith(name, "*")) {
             map.Set(name, external);

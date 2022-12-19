@@ -2142,36 +2142,56 @@ public:
     ValueType *Set(const ValueType &value)
     {
         const KeyType &key = Handler::GetKey(value);
-        ValueType *it = Insert(key).first;
-        *it = value;
-        return it;
+
+        bool inserted;
+        ValueType *ptr = Insert(key, &inserted);
+
+        *ptr = value;
+
+        return ptr;
     }
     ValueType *SetDefault(const KeyType &key)
     {
-        std::pair<ValueType *, bool> ret = Insert(key);
-        if (!ret.second) {
-            ret.first->~ValueType();
+        bool inserted;
+        ValueType *ptr = Insert(key, &inserted);
+
+        if (!inserted) {
+            ptr->~ValueType();
         }
-        new (ret.first) ValueType();
-        return ret.first;
+        new (ptr) ValueType();
+
+        return ptr;
     }
 
-    std::pair<ValueType *, bool> TrySet(const ValueType &value)
+    ValueType *TrySet(const ValueType &value, bool *out_inserted = nullptr)
     {
         const KeyType &key = Handler::GetKey(value);
-        std::pair<ValueType *, bool> ret = Insert(key);
-        if (ret.second) {
-            *ret.first = value;
+
+        bool inserted;
+        ValueType *ptr = Insert(key, &inserted);
+
+        if (inserted) {
+            *ptr = value;
         }
-        return ret;
+
+        if (out_inserted) {
+            *out_inserted = inserted;
+        }
+        return ptr;
     }
-    std::pair<ValueType *, bool> TrySetDefault(const KeyType &key)
+    ValueType *TrySetDefault(const KeyType &key, bool *out_inserted = nullptr)
     {
-        std::pair<ValueType *, bool> ret = Insert(key);
-        if (ret.second) {
-            new (ret.first) ValueType();
+        bool inserted;
+        ValueType *ptr = Insert(key, &inserted);
+
+        if (inserted) {
+            new (ptr) ValueType();
         }
-        return ret;
+
+        if (out_inserted) {
+            *out_inserted = inserted;
+        }
+        return ptr;
     }
 
     void Remove(ValueType *it)
@@ -2256,7 +2276,7 @@ private:
         }
     }
 
-    std::pair<ValueType *, bool> Insert(const KeyType &key)
+    ValueType *Insert(const KeyType &key, bool *out_inserted)
     {
         uint64_t hash = Handler::HashKey(key);
 
@@ -2273,9 +2293,12 @@ private:
                 }
                 count++;
                 MarkUsed(idx);
-                return { &data[idx], true };
+
+                *out_inserted = true;
+                return &data[idx];
             } else {
-                return { it, false };
+                *out_inserted = false;
+                return it;
             }
         } else {
             Rehash(RG_HASHTABLE_BASE_CAPACITY);
@@ -2283,7 +2306,9 @@ private:
             Size idx = HashToIndex(hash);
             count++;
             MarkUsed(idx);
-            return { &data[idx], true };
+
+            *out_inserted = true;
+            return &data[idx];
         }
     }
 
@@ -2573,16 +2598,24 @@ public:
         return &table_it->value;
     }
 
-    std::pair<ValueType *, bool> TrySet(const KeyType &key, const ValueType &value)
+    ValueType *TrySet(const KeyType &key, const ValueType &value, bool *out_inserted = nullptr)
     {
-        std::pair<Bucket *, bool> ret = table.TrySet({ key, value });
-        return { &ret.first->value, ret.second };
+        Bucket *ptr = table.TrySet({ key, value }, out_inserted);
+        return &ptr->value;
     }
-    std::pair<ValueType *, bool> TrySetDefault(const KeyType &key)
+    ValueType *TrySetDefault(const KeyType &key, bool *out_inserted = nullptr)
     {
-        std::pair<Bucket *, bool> ret = table.TrySetDefault(key);
-        ret.first->key = key;
-        return { &ret.first->value, ret.second };
+        bool inserted;
+        Bucket *ptr = table.TrySetDefault(key, &inserted);
+
+        if (inserted) {
+            ptr->key = key;
+        }
+
+        if (out_inserted) {
+            *out_inserted = inserted;
+        }
+        return &ptr->value;
     }
 
     void Remove(ValueType *it)
@@ -2635,7 +2668,8 @@ public:
         { return table.FindValue(value, default_value); }
 
     ValueType *Set(const ValueType &value) { return table.Set(value); }
-    std::pair<ValueType *, bool> TrySet(const ValueType &value) { return table.TrySet(value); }
+    ValueType *TrySet(const ValueType &value, bool *out_inserted = nullptr)
+        { return table.TrySet(value, out_inserted); }
 
     void Remove(ValueType *it) { table.Remove(it); }
     template <typename T = ValueType>

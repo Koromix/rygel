@@ -602,7 +602,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
 
     // Publish it!
     {
-        bk_FunctionInfo *head = *program->functions_map.TrySet(func).first;
+        bk_FunctionInfo *head = *program->functions_map.TrySet(func);
 
         if (head != func) {
             RG_ASSERT(!head->type->variadic && !func->type->variadic);
@@ -667,14 +667,15 @@ void bk_Parser::Preparse(Span<const Size> positions)
             fwd->pos = fwd_pos;
             fwd->skip = -1;
 
-            std::pair<ForwardInfo **, bool> ret = forwards_map.TrySet(fwd);
+            bool inserted;
+            ForwardInfo **ptr = forwards_map.TrySet(fwd, &inserted);
 
-            if (ret.second) {
+            if (inserted) {
                 fwd->var = CreateGlobal(fwd->name, bk_NullType, {{}}, true);
             } else {
-                ForwardInfo *prev = *ret.first;
+                ForwardInfo *prev = *ptr;
 
-                *ret.first = fwd;
+                *ptr = fwd;
                 fwd->next = prev;
 
                 fwd->var = prev->var;
@@ -686,14 +687,15 @@ void bk_Parser::Preparse(Span<const Size> positions)
 template<typename T>
 bk_TypeInfo *bk_Parser::InsertType(const T &type_buf, BucketArray<T> *out_types)
 {
-    std::pair<const bk_TypeInfo **, bool> ret = program->types_map.TrySetDefault(type_buf.signature);
+    bool inserted;
+    const bk_TypeInfo **ptr = program->types_map.TrySetDefault(type_buf.signature, &inserted);
 
     bk_TypeInfo *type;
-    if (ret.second) {
+    if (inserted) {
         type = out_types->Append(type_buf);
-        *ret.first = type;
+        *ptr = type;
     } else {
-        type = (bk_TypeInfo *)*ret.first;
+        type = (bk_TypeInfo *)*ptr;
     }
 
     return type;
@@ -968,7 +970,10 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
             definitions_map.Set(member, param_pos);
         }
 
-        if (RG_UNLIKELY(!program->types_map.TrySet(record_type).second)) {
+        bool inserted;
+        program->types_map.TrySet(record_type, &inserted);
+
+        if (RG_UNLIKELY(!inserted)) {
             MarkError(func_pos, "Duplicate type name '%1'", record_type->signature);
         }
 
@@ -1000,10 +1005,10 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
     // Publish function
     {
-        std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
-        bk_FunctionInfo *overload = *ret.first;
+        bool inserted;
+        bk_FunctionInfo *overload = *program->functions_map.TrySet(func, &inserted);
 
-        if (ret.second || record) {
+        if (inserted || record) {
             func->overload_prev = func;
             func->overload_next = func;
         } else if (!record) {
@@ -1125,11 +1130,12 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         HashMap<const char *, const bk_FunctionInfo::Parameter *> names;
 
         for (const bk_FunctionInfo::Parameter &param: func->params) {
-            std::pair<const bk_FunctionInfo::Parameter **, bool> ret = names.TrySet(param.name, &param);
+            bool inserted;
+            const bk_FunctionInfo::Parameter **ptr = names.TrySet(param.name, &param, &inserted);
 
-            if (RG_UNLIKELY(!ret.second)) {
+            if (RG_UNLIKELY(!inserted)) {
                 Size param_pos = definitions_map.FindValue(&param, -1);
-                Size previous_pos = definitions_map.FindValue(*ret.first, -1); 
+                Size previous_pos = definitions_map.FindValue(*ptr, -1); 
 
                 MarkError(param_pos, "Duplicate member name '%1'", param.name);
                 Hint(previous_pos, "Previous member was declared here");
@@ -1177,8 +1183,10 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
             label->name = ConsumeIdentifier();
             label->value = enum_type->labels.len - 1;
 
-            bool duplicate = !enum_type->labels_map.TrySet(label).second;
-            if (RG_UNLIKELY(duplicate)) {
+            bool inserted;
+            enum_type->labels_map.TrySet(label, &inserted);
+
+            if (RG_UNLIKELY(!inserted)) {
                 MarkError(pos - 1, "Label '%1' is already used", label->name);
             }
         } while (MatchToken(bk_TokenKind::Comma));
@@ -3173,11 +3181,15 @@ bk_VariableInfo *bk_Parser::CreateGlobal(const char *name, const bk_TypeInfo *ty
 
 bool bk_Parser::MapVariable(bk_VariableInfo *var, Size var_pos)
 {
-    std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySetDefault(var->name);
-    definitions_map.TrySet(var, var_pos);
+    bk_VariableInfo **ptr;
+    bk_VariableInfo *it;
+    {
+        bool inserted;
+        ptr = program->variables_map.TrySetDefault(var->name, &inserted);
+        it = inserted ? nullptr : *ptr;
+    }
 
-    bk_VariableInfo **ptr = ret.first;
-    bk_VariableInfo *it = ret.second ? nullptr : *ptr;
+    definitions_map.TrySet(var, var_pos);
 
     while (it && (int)it->local > (int)var->local) {
         RG_ASSERT(it != var);
@@ -3416,11 +3428,14 @@ bool bk_Parser::SkipNewLines()
 
 const char *bk_Parser::InternString(const char *str)
 {
-    std::pair<const char **, bool> ret = strings.TrySet(str);
-    if (ret.second) {
-        *ret.first = DuplicateString(str, &program->str_alloc).ptr;
+    bool inserted;
+    const char **ptr = strings.TrySet(str, &inserted);
+
+    if (inserted) {
+        *ptr = DuplicateString(str, &program->str_alloc).ptr;
     }
-    return *ret.first;
+
+    return *ptr;
 }
 
 bool bk_Parser::RecurseInc()

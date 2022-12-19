@@ -784,7 +784,10 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
                 parser.ParseKey(&filename);
                 parser.ParseString(&sha256);
 
-                if (!files.TrySet(filename, sha256).second) {
+                bool inserted;
+                files.TrySet(filename, sha256, &inserted);
+
+                if (!inserted) {
                     LogError("Duplicate file '%1'", filename);
                     io->AttachError(422);
                     return;

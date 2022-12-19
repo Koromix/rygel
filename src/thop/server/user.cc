@@ -200,7 +200,10 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
             rule_set.allow = allow.TrimAndLeak();
             rule_set.deny = deny.TrimAndLeak();
 
-            if (map.TrySet(user->name, set.users.len - 1).second) {
+            bool inserted;
+            map.TrySet(user->name, set.users.len - 1, &inserted);
+
+            if (inserted) {
                 rule_sets.Append(rule_set);
             } else {
                 LogError("Duplicate user '%1'", user->name);

@@ -253,13 +253,13 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
             RG_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
             if (user->mco_allowed_units.Find(unit)) {
-                std::pair<Aggregate::Part *, bool> ret =
-                    agg_parts_map.TrySetDefault(mono_result.stays[0].unit);
+                bool inserted;
+                Aggregate::Part *ptr = agg_parts_map.TrySetDefault(mono_result.stays[0].unit, &inserted);
 
-                ret.first->mono_count += multiplier;
-                ret.first->price_cents += multiplier * mono_pricing.price_cents;
+                ptr->mono_count += multiplier;
+                ptr->price_cents += multiplier * mono_pricing.price_cents;
 
-                if ((flags & (int)AggregationFlag::KeyOnUnits) && ret.second) {
+                if ((flags & (int)AggregationFlag::KeyOnUnits) && inserted) {
                     agg_units.Append(unit);
                 }
 
@@ -290,12 +290,14 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
 
             Aggregate *agg;
             {
-                std::pair<Size *, bool> ret = aggregates_map.TrySet(key, set.aggregates.len);
-                if (ret.second) {
+                bool inserted;
+                Size *ptr = aggregates_map.TrySet(key, set.aggregates.len, &inserted);
+
+                if (inserted) {
                     agg = set.aggregates.AppendDefault();
                     agg->key = key;
                 } else {
-                    agg = &set.aggregates[*ret.first];
+                    agg = &set.aggregates[*ptr];
                 }
             }
 
@@ -313,7 +315,10 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
                 agg->parts = agg_parts.TrimAndLeak();
             }
 
-            if (ghm_roots_set.TrySet(result.ghm.Root()).second) {
+            bool inserted;
+            ghm_roots_set.TrySet(result.ghm.Root(), &inserted);
+
+            if (inserted) {
                 ghm_roots.Append(result.ghm.Root());
             }
         }
@@ -357,13 +362,15 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, LocalDate mi
                         key.ghm = ghm_to_ghs_info.ghm;
                         key.ghs = ghm_to_ghs_info.Ghs(sector);
 
-                        std::pair<Size *, bool> ret = ghm_ghs_map.TrySet(key, out_ghm_ghs->len);
-                        if (ret.second) {
+                        bool inserted;
+                        Size *ptr = ghm_ghs_map.TrySet(key, out_ghm_ghs->len, &inserted);
+
+                        if (inserted) {
                             agg_ghm_ghs = out_ghm_ghs->AppendDefault();
                             agg_ghm_ghs->key = key;
                             agg_ghm_ghs->ghm_to_ghs_info = &ghm_to_ghs_info;
                         } else {
-                            agg_ghm_ghs = &(*out_ghm_ghs)[*ret.first];
+                            agg_ghm_ghs = &(*out_ghm_ghs)[*ptr];
                         }
                     }
 

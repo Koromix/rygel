@@ -1764,10 +1764,11 @@ const char *GetQualifiedEnv(const char *name)
     // Each accessed environment variable is kept in memory and thus leaked once
     static HashMap<const char *, const char *> values;
 
-    std::pair<const char **, bool> ret = values.TrySet(name, nullptr);
+    bool inserted;
+    const char **ptr = values.TrySet(name, nullptr, &inserted);
 
-    if (ret.second) {
-        const char *ptr = (const char *)EM_ASM_INT({
+    if (inserted) {
+        const char *str = (const char *)EM_ASM_INT({
             try {
                 var name = UTF8ToString($0);
                 var str = process.env[name];
@@ -1785,10 +1786,10 @@ const char *GetQualifiedEnv(const char *name)
             }
         }, buf.data);
 
-        *ret.first = ptr;
+        *ptr = str;
     }
 
-    return *ret.first;
+    return *ptr;
 #else
     return getenv(buf.data);
 #endif

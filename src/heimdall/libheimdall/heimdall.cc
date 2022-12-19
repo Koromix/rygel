@@ -724,8 +724,10 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
             {
                 Span<const char> partial_path = { path.ptr, 1 };
                 for (;;) {
-                    height += line_heights.TrySet(partial_path, 20.0f).second *
-                              (20.0f + style.ItemSpacing.y);
+                    bool inserted;
+                    line_heights.TrySet(partial_path, 20.0f, &inserted);
+
+                    height += inserted * (20.0f + style.ItemSpacing.y);
                     fully_deployed = state.deploy_paths.Find(partial_path);
 
                     if (!fully_deployed || partial_path.len == path.len)
@@ -736,10 +738,11 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
 
             if (fully_deployed) {
                 double new_height = ComputeElementHeight(state.settings, elmt.type) + style.ItemSpacing.y;
-                std::pair<double *, bool> ret = line_heights.TrySet(elmt.concept_name, 0.0f);
-                if (new_height > *ret.first) {
-                    height += new_height - *ret.first;
-                    *ret.first = new_height;
+                double *ptr = line_heights.TrySet(elmt.concept_name, 0.0f);
+
+                if (new_height > *ptr) {
+                    height += new_height - *ptr;
+                    *ptr = new_height;
                 }
             }
         }
@@ -889,9 +892,11 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                     for (;;) {
                         LineData *line;
                         {
-                            std::pair<Size *, bool> ret = lines_map.TrySet(partial_path, lines.len);
-                            if (!ret.second) {
-                                line = &lines[*ret.first];
+                            bool inserted;
+                            Size *ptr = lines_map.TrySet(partial_path, lines.len, &inserted);
+
+                            if (!inserted) {
+                                line = &lines[*ptr];
                                 tree_depth = line->depth + 1;
                             } else {
                                 line = lines.AppendDefault();
@@ -934,9 +939,11 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
                 {
                     LineData *line;
                     {
-                        std::pair<Size *, bool> ret = lines_map.TrySet(elmt.concept_name, lines.len);
-                        if (!ret.second) {
-                            line = &lines[*ret.first];
+                        bool inserted;
+                        Size *ptr = lines_map.TrySet(elmt.concept_name, lines.len, &inserted);
+
+                        if (!inserted) {
+                            line = &lines[*ptr];
                         } else {
                             line = lines.AppendDefault();
                             line->entity = &ent;
@@ -1070,9 +1077,11 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
 
     // Handle user interactions
     if (deploy_path.len) {
-        std::pair<Span<const char> *, bool> ret = state.deploy_paths.TrySet(deploy_path);
-        if (!ret.second) {
-            state.deploy_paths.Remove(ret.first);
+        bool inserted;
+        Span<const char> *ptr = state.deploy_paths.TrySet(deploy_path, &inserted);
+
+        if (!inserted) {
+            state.deploy_paths.Remove(ptr);
         }
 
         state.size_cache_valid = false;
@@ -1467,7 +1476,8 @@ static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> 
                               PathCopyMode copy_mode, ConceptSet *out_concept_set)
 {
     for (const auto &it: concepts.table) {
-        Concept *concept_info = out_concept_set->concepts_map.TrySetDefault(it.key.ptr).first;
+        Concept *concept_info = out_concept_set->concepts_map.TrySetDefault(it.key.ptr);
+
         if (!concept_info->name) {
             concept_info->name = DuplicateString(it.key.ptr, &out_concept_set->str_alloc).ptr;
         }
@@ -1488,7 +1498,8 @@ static void AddConceptsToView(const HashMap<Span<const char>, Span<const char>> 
 static void RemoveConceptsFromView(const HashMap<Span<const char>, Span<const char>> &concepts, ConceptSet *out_concept_set)
 {
     for (const auto &it: concepts.table) {
-        Concept *concept_info = out_concept_set->concepts_map.TrySetDefault(it.key.ptr).first;
+        Concept *concept_info = out_concept_set->concepts_map.TrySetDefault(it.key.ptr);
+
         if (!concept_info->name) {
             concept_info->name = DuplicateString(it.key.ptr, &out_concept_set->str_alloc).ptr;
         }
@@ -1503,7 +1514,8 @@ static void ChangeConceptsPath(ConceptSet *concept_set,
     new_path = DuplicateString(new_path, &concept_set->str_alloc).ptr;
 
     for (const auto &it: concepts.table) {
-        Concept *concept_info = concept_set->concepts_map.TrySetDefault(it.key.ptr).first;
+        Concept *concept_info = concept_set->concepts_map.TrySetDefault(it.key.ptr);
+
         if (!concept_info->name) {
             concept_info->name = DuplicateString(it.key.ptr, &concept_set->str_alloc).ptr;
         }

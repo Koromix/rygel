@@ -1603,7 +1603,8 @@ bool MigrateInstance(sq_Database *db)
                     const char *form = (const char *)sqlite3_column_text(stmt, 1);
                     int type = sqlite3_column_type(stmt, 2);
 
-                    auto ptr = sequences.table.TrySetDefault(form).first;
+                    auto ptr = sequences.table.TrySetDefault(form);
+
                     if (!ptr->value) {
                         ptr->key = DuplicateString(form, &temp_alloc).ptr;
                     }

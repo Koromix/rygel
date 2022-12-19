@@ -187,7 +187,10 @@ private:
                     FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16));
             }
 
-            if (RG_LIKELY(sessions_map.TrySet(handle).second))
+            bool inserted;
+            sessions_map.TrySet(handle, &inserted);
+
+            if (RG_LIKELY(inserted))
                 break;
         }
 

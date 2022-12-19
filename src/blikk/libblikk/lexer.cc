@@ -404,14 +404,18 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     }
                 }
 
-                // Intern string
-                std::pair<Span<const char> *, bool> ret = strings.TrySet(str_buf);
-                if (ret.second) {
-                    str_buf.Append(0);
-                    ret.first->ptr = str_buf.TrimAndLeak().ptr;
-                }
+                // Intern stirng
+                {
+                    bool inserted;
+                    Span<const char> *ptr = strings.TrySet(str_buf, &inserted);
 
-                tokens.Append({ bk_TokenKind::String, line, offset, { .str = ret.first->ptr } });
+                    if (inserted) {
+                        str_buf.Append(0);
+                        *ptr = str_buf.TrimAndLeak();
+                    }
+
+                    tokens.Append({ bk_TokenKind::String, line, offset, { .str = ptr->ptr } });
+                }
             } break;
 
             case '.': { Token1(bk_TokenKind::Dot); } break;
@@ -495,11 +499,15 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     tokens.Append({ keyword->kind, line, offset, keyword->u });
                 } else {
                     // Intern string
-                    std::pair<Span<const char> *, bool> ret = strings.TrySet(ident);
-                    if (ret.second) {
-                        ret.first->ptr = DuplicateString(ident, &file->str_alloc).ptr;
+
+                    bool inserted;
+                    Span<const char> *ptr = strings.TrySet(ident, &inserted);
+
+                    if (inserted) {
+                        *ptr = DuplicateString(ident, &file->str_alloc);
                     }
-                    tokens.Append({ bk_TokenKind::Identifier, line, offset, { .str = ret.first->ptr } });
+
+                    tokens.Append({ bk_TokenKind::Identifier, line, offset, { .str = ptr->ptr } });
                 }
             } break;
         }

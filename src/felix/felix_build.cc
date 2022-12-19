@@ -607,7 +607,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             // Match targets
             for (const TargetInfo &target: target_set.targets) {
                 if (MatchPathSpec(target.name, selector)) {
-                    if (handled_set.TrySet(target.name).second) {
+                    bool inserted;
+                    handled_set.TrySet(target.name, &inserted);
+
+                    if (inserted) {
                         if (!target.TestHosts(platform_spec.host)) {
                             LogError("Cannot build '%1' for host '%2'",
                                      target.name, HostPlatformNames[(int)platform_spec.host]);
@@ -623,7 +626,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             // Match source files
             for (const SourceFileInfo &src: target_set.sources) {
                 if (MatchPathSpec(src.filename, selector)) {
-                    if (handled_set.TrySet(src.filename).second) {
+                    bool inserted;
+                    handled_set.TrySet(src.filename, &inserted);
+
+                    if (inserted) {
                         if (src.target->TestHosts(platform_spec.host)) {
                             enabled_sources.Append(&src);
                             match = true;
