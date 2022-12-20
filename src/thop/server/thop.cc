@@ -68,7 +68,7 @@ static DictionarySet dictionary_set;
 static HashTable<Span<const char>, Route> routes;
 static BlockAllocator routes_alloc;
 
-static void ProduceSettings(const http_RequestInfo &request, const User *user, http_IO *io)
+static void ProduceSettings(const http_RequestInfo &, const User *user, http_IO *io)
 {
     http_JsonPageBuilder json;
     if (!json.Init(io))
@@ -140,7 +140,7 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
     json.Finish();
 }
 
-static void ProduceStructures(const http_RequestInfo &request, const User *user, http_IO *io)
+static void ProduceStructures(const http_RequestInfo &, const User *user, http_IO *io)
 {
     if (!user) {
         LogError("Not allowed to query structures");

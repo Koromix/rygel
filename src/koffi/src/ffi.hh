@@ -133,7 +133,7 @@ struct RecordMember {
 
 struct LibraryHolder {
     void *module = nullptr; // HMODULE on Windows
-    mutable std::atomic_int refcount {1};
+    mutable std::atomic_int refcount { 1 };
 
     LibraryHolder(void *module) : module(module) {}
     ~LibraryHolder();
@@ -192,7 +192,7 @@ struct ValueCast {
 
 // Also used for callbacks, even though many members are not used in this case
 struct FunctionInfo {
-    mutable std::atomic_int refcount {1};
+    mutable std::atomic_int refcount { 1 };
 
     const char *name;
     const char *decorated_name; // Only set for some platforms/calling conventions
@@ -250,7 +250,10 @@ struct InstanceData {
 
     bool debug;
     uint64_t tag_lower;
+
     const TypeInfo *void_type;
+    const TypeInfo *char_type;
+    const TypeInfo *char16_type;
 
     LocalArray<InstanceMemory *, 9> memories;
     int temporaries = 0;

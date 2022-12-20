@@ -173,9 +173,9 @@ async function test() {
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
     const ConcatenateToInt4 = lib.func('ConcatenateToInt4', 'int64_t', Array(12).fill('int32_t'));
     const ConcatenateToInt8 = lib.func('ConcatenateToInt8', 'int64_t', Array(12).fill('int64_t'));
-    const ConcatenateToStr1 = lib.func('ConcatenateToStr1', 'str', [...Array(8).fill('int8_t'), koffi.struct('IJK1', {i: 'int8_t', j: 'int8_t', k: 'int8_t'}), 'int8_t']);
-    const ConcatenateToStr4 = lib.func('ConcatenateToStr4', 'str', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', {i: 'int32_t', j: 'int32_t', k: 'int32_t'})), 'int32_t']);
-    const ConcatenateToStr8 = lib.func('ConcatenateToStr8', 'str', [...Array(8).fill('int64_t'), koffi.struct('IJK8', {i: 'int64_t', j: 'int64_t', k: 'int64_t'}), 'int64_t']);
+    const ConcatenateToStr1 = lib.func('ConcatenateToStr1', 'str', [...Array(8).fill('int8_t'), koffi.struct('IJK1', { i: 'int8_t', j: 'int8_t', k: 'int8_t' }), 'int8_t']);
+    const ConcatenateToStr4 = lib.func('ConcatenateToStr4', 'str', [...Array(8).fill('int32_t'), koffi.pointer(koffi.struct('IJK4', { i: 'int32_t', j: 'int32_t', k: 'int32_t' })), 'int32_t']);
+    const ConcatenateToStr8 = lib.func('ConcatenateToStr8', 'str', [...Array(8).fill('int64_t'), koffi.struct('IJK8', { i: 'int64_t', j: 'int64_t', k: 'int64_t' }), 'int64_t']);
     const MakeBFG = lib.func('BFG __stdcall MakeBFG(_Out_ BFG *p, int x, double y, const char *str)');
     const MakePackedBFG = lib.func('AliasBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const MakePolymorphBFG = lib.func('void MakePolymorphBFG(int type, int x, double y, const char *str, _Out_ void *p)');
@@ -224,6 +224,8 @@ async function test() {
     const ReturnEndianInt8UL = lib.func('uint64_le_t ReturnEndianInt8(uint64_be_t v)');
     const ReturnEndianInt8UB = lib.func('uint64_be_t ReturnEndianInt8(uint64_le_t v)');
     const ReverseBigText = lib.func('BigText ReverseBigText(BigText buf)');
+    const UpperCaseStrAscii = lib.func('size_t UpperCaseStrAscii(const char *str, _Out_ char *out)');
+    const UpperCaseStrAscii16 = lib.func('size_t UpperCaseStrAscii16(const char16_t *str16, _Out_ char16_t *out)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -312,9 +314,9 @@ async function test() {
         assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687);
         assert.equal(ConcatenateToInt4(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687);
         assert.equal(ConcatenateToInt8(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687);
-        assert.equal(ConcatenateToStr1(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
-        assert.equal(ConcatenateToStr4(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
-        assert.equal(ConcatenateToStr8(5, 6, 1, 2, 3, 9, 4, 4, {i: 0, j: 6, k: 8}, 7), '561239440687');
+        assert.equal(ConcatenateToStr1(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
+        assert.equal(ConcatenateToStr4(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
+        assert.equal(ConcatenateToStr8(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
     }
 
     // Big struct
@@ -515,5 +517,25 @@ async function test() {
 
         assert.equal(ret.len, big.len);
         assert.equal(Buffer.from(ret.text).toString(), expected);
+    }
+
+    // Test output string arguments
+    {
+        let str = ['\0'.repeat(32)];
+
+        let len = UpperCaseStrAscii('fooBAR_1x3', str);
+
+        assert.equal(len, 10);
+        assert.equal(str[0], 'FOOBAR_1X3');
+    }
+
+    // Test output string16 arguments
+    {
+        let str = ['\0'.repeat(32)];
+
+        let len = UpperCaseStrAscii16('fooBAR_1x3', str);
+
+        assert.equal(len, 10);
+        assert.equal(str[0], 'FOOBAR_1X3');
     }
 }

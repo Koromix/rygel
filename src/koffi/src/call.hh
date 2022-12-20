@@ -65,7 +65,7 @@ class alignas(8) CallData {
     } result;
     uint8_t *return_ptr = nullptr;
 
-    LinkedAllocator call_alloc;
+    BlockAllocator call_alloc;
 
 public:
     CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem);
@@ -97,8 +97,10 @@ private:
     template <typename T = uint8_t>
     T *AllocHeap(Size size, Size align);
 
-    bool PushString(Napi::Value value, const char **out_str);
-    bool PushString16(Napi::Value value, const char16_t **out_str16);
+    bool PushString(Napi::Value value, int directions, const char **out_str);
+    Size PushStringValue(Napi::Value value, const char **out_str);
+    bool PushString16(Napi::Value value, int directions, const char16_t **out_str16);
+    Size PushString16Value(Napi::Value value, const char16_t **out_str16);
     bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin, int16_t realign = 0);
     bool PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);
     bool PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign = 0);

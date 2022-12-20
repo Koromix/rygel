@@ -20,31 +20,31 @@
 namespace RG {
 
 static const HashMap<const char *, bk_Token> KeywordsMap {
-    {"func", {bk_TokenKind::Func}},
-    {"return", {bk_TokenKind::Return}},
-    {"let", {bk_TokenKind::Let}},
-    {"mut", {bk_TokenKind::Mut}},
-    {"begin", {bk_TokenKind::Begin}},
-    {"end", {bk_TokenKind::End}},
-    {"if", {bk_TokenKind::If}},
-    {"else", {bk_TokenKind::Else}},
-    {"while", {bk_TokenKind::While}},
-    {"for", {bk_TokenKind::For}},
-    {"in", {bk_TokenKind::In}},
-    {"break", {bk_TokenKind::Break}},
-    {"continue", {bk_TokenKind::Continue}},
-    {"do", {bk_TokenKind::Do}},
-    {"record", {bk_TokenKind::Record}},
-    {"enum", {bk_TokenKind::Enum}},
-    {"pass", {bk_TokenKind::Pass}},
+    { "func", { bk_TokenKind::Func, 0, 0, {} } },
+    { "return", { bk_TokenKind::Return, 0, 0, {} } },
+    { "let", { bk_TokenKind::Let, 0, 0, {} } },
+    { "mut", { bk_TokenKind::Mut, 0, 0, {} } },
+    { "begin", { bk_TokenKind::Begin, 0, 0, {} } },
+    { "end", { bk_TokenKind::End, 0, 0, {} } },
+    { "if", { bk_TokenKind::If, 0, 0, {} } },
+    { "else", { bk_TokenKind::Else, 0, 0, {} } },
+    { "while", { bk_TokenKind::While, 0, 0, {} } },
+    { "for", { bk_TokenKind::For, 0, 0, {} } },
+    { "in", { bk_TokenKind::In, 0, 0, {} } },
+    { "break", { bk_TokenKind::Break, 0, 0, {} } },
+    { "continue", { bk_TokenKind::Continue, 0, 0, {} } },
+    { "do", { bk_TokenKind::Do, 0, 0, {} } },
+    { "record", { bk_TokenKind::Record, 0, 0, {} } },
+    { "enum", { bk_TokenKind::Enum, 0, 0, {} } },
+    { "pass", { bk_TokenKind::Pass, 0, 0, {} } },
 
-    {"and", {bk_TokenKind::AndAnd}},
-    {"or", {bk_TokenKind::OrOr}},
-    {"not", {bk_TokenKind::Not}},
+    { "and", { bk_TokenKind::AndAnd, 0, 0, {} } },
+    { "or", { bk_TokenKind::OrOr, 0, 0, {} } },
+    { "not", { bk_TokenKind::Not, 0, 0, {} } },
 
-    {"null", {bk_TokenKind::Null}},
-    {"true", {bk_TokenKind::Boolean, 0, 0, {.b = true}}},
-    {"false", {bk_TokenKind::Boolean, 0, 0, {.b = false}}}
+    { "null", { bk_TokenKind::Null, 0, 0, {} } },
+    { "true", { bk_TokenKind::Boolean, 0, 0, { .b = true } } },
+    { "false", { bk_TokenKind::Boolean, 0, 0, { .b = false } } }
 };
 
 class bk_Lexer {
@@ -195,7 +195,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        tokens.Append({bk_TokenKind::Integer, line, offset, {.i = (int64_t)value}});
+                        tokens.Append({ bk_TokenKind::Integer, line, offset, { .i = (int64_t)value } });
                         continue;
                     } else if (code[next] == 'o') {
                         // We limit to IN64_MAX, but we build with -ftrapv in debug builds.
@@ -222,7 +222,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        tokens.Append({bk_TokenKind::Integer, line, offset, {.i = (int64_t)value}});
+                        tokens.Append({ bk_TokenKind::Integer, line, offset, { .i = (int64_t)value } });
                         continue;
                     } else if (code[next] == 'x') {
                         // We limit to IN64_MAX, but we build with -ftrapv in debug builds.
@@ -251,7 +251,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        tokens.Append({bk_TokenKind::Integer, line, offset, {.i = (int64_t)value}});
+                        tokens.Append({ bk_TokenKind::Integer, line, offset, { .i = (int64_t)value } });
                         continue;
                     } else {
                         MarkUnexpected(next, "Invalid literal base");
@@ -298,7 +298,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                         return false;
                     }
 
-                    tokens.Append({bk_TokenKind::Integer, line, offset, {.i = (int64_t)value}});
+                    tokens.Append({ bk_TokenKind::Integer, line, offset, { .i = (int64_t)value } });
                 }
             } break;
 
@@ -404,14 +404,18 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     }
                 }
 
-                // Intern string
-                std::pair<Span<const char> *, bool> ret = strings.TrySet(str_buf);
-                if (ret.second) {
-                    str_buf.Append(0);
-                    ret.first->ptr = str_buf.TrimAndLeak().ptr;
-                }
+                // Intern stirng
+                {
+                    bool inserted;
+                    Span<const char> *ptr = strings.TrySet(str_buf, &inserted);
 
-                tokens.Append({bk_TokenKind::String, line, offset, {.str = ret.first->ptr}});
+                    if (inserted) {
+                        str_buf.Append(0);
+                        *ptr = str_buf.TrimAndLeak();
+                    }
+
+                    tokens.Append({ bk_TokenKind::String, line, offset, { .str = ptr->ptr } });
+                }
             } break;
 
             case '.': { Token1(bk_TokenKind::Dot); } break;
@@ -492,14 +496,18 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                         file->prototypes.Append(tokens.len);
                     }
 
-                    tokens.Append({keyword->kind, line, offset, keyword->u});
+                    tokens.Append({ keyword->kind, line, offset, keyword->u });
                 } else {
                     // Intern string
-                    std::pair<Span<const char> *, bool> ret = strings.TrySet(ident);
-                    if (ret.second) {
-                        ret.first->ptr = DuplicateString(ident, &file->str_alloc).ptr;
+
+                    bool inserted;
+                    Span<const char> *ptr = strings.TrySet(ident, &inserted);
+
+                    if (inserted) {
+                        *ptr = DuplicateString(ident, &file->str_alloc);
                     }
-                    tokens.Append({bk_TokenKind::Identifier, line, offset, {.str = ret.first->ptr}});
+
+                    tokens.Append({ bk_TokenKind::Identifier, line, offset, { .str = ptr->ptr } });
                 }
             } break;
         }
@@ -522,14 +530,14 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
 
 inline bool bk_Lexer::Token1(bk_TokenKind kind)
 {
-    tokens.Append({kind, line, offset});
+    tokens.Append({ kind, line, offset, {} });
     return true;
 }
 
 inline bool bk_Lexer::Token2(char c, bk_TokenKind kind)
 {
     if (next < code.len && code[next] == c) {
-        tokens.Append({kind, line, offset});
+        tokens.Append({ kind, line, offset, {} });
         next++;
 
         return true;
@@ -541,7 +549,7 @@ inline bool bk_Lexer::Token2(char c, bk_TokenKind kind)
 inline bool bk_Lexer::Token3(char c1, char c2, bk_TokenKind kind)
 {
     if (next < code.len - 1 && code[next] == c1 && code[next + 1] == c2) {
-        tokens.Append({kind, line, offset});
+        tokens.Append({ kind, line, offset, {} });
         next += 2;
 
         return true;
@@ -553,7 +561,7 @@ inline bool bk_Lexer::Token3(char c1, char c2, bk_TokenKind kind)
 inline bool bk_Lexer::Token4(char c1, char c2, char c3, bk_TokenKind kind)
 {
     if (next < code.len - 2 && code[next] == c1 && code[next + 1] == c2 && code[next + 2] == c3) {
-        tokens.Append({kind, line, offset});
+        tokens.Append({ kind, line, offset, {} });
         next += 3;
 
         return true;
@@ -594,7 +602,7 @@ void bk_Lexer::TokenizeFloat()
         return;
     }
 
-    tokens.Append({bk_TokenKind::Float, line, offset, {.d = d}});
+    tokens.Append({ bk_TokenKind::Float, line, offset, { .d = d } });
 }
 
 bool bk_Tokenize(Span<const char> code, const char *filename, bk_TokenizedFile *out_file)

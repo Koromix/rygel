@@ -81,7 +81,7 @@ bool bk_VirtualMachine::Run()
         }
 
         CASE(Push): {
-            stack.Append({.i = inst->u2.i});
+            stack.Append({ .i = inst->u2.i });
             DISPATCH(++pc);
         }
         CASE(Reserve): {
@@ -99,36 +99,36 @@ bool bk_VirtualMachine::Run()
         }
 
         CASE(Lea): {
-            stack.Append({.i = inst->u2.i});
+            stack.Append({ .i = inst->u2.i });
             DISPATCH(++pc);
         }
         CASE(LeaLocal): {
-            stack.Append({.i = bp + inst->u2.i});
+            stack.Append({ .i = bp + inst->u2.i });
             DISPATCH(++pc);
         }
         CASE(LeaRel): {
-            stack.Append({.i = stack.len + inst->u2.i});
+            stack.Append({ .i = stack.len + inst->u2.i });
             DISPATCH(++pc);
         }
         CASE(Load): {
-            stack.Append({.i = stack[inst->u2.i].i});
+            stack.Append({ .i = stack[inst->u2.i].i });
             DISPATCH(++pc);
         }
         CASE(LoadLocal): {
-            stack.Append({.i = stack[bp + inst->u2.i].i});
+            stack.Append({ .i = stack[bp + inst->u2.i].i });
             DISPATCH(++pc);
         }
         CASE(LoadIndirect): {
             Size ptr = stack.ptr[--stack.len].i;
             for (Size i = 0; i < inst->u2.i; i++) {
-                stack.Append({.i = stack[ptr + i].i});
+                stack.Append({ .i = stack[ptr + i].i });
             }
             DISPATCH(++pc);
         }
         CASE(LoadIndirectK): {
             Size ptr = stack[stack.len - 1].i;
             for (Size i = 0; i < inst->u2.i; i++) {
-                stack.Append({.i = stack[ptr + i].i});
+                stack.Append({ .i = stack[ptr + i].i });
             }
             DISPATCH(++pc);
         }

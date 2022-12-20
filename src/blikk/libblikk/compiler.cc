@@ -50,12 +50,11 @@ struct PendingOperator {
 
 struct StackSlot {
     const bk_TypeInfo *type;
-    bk_VariableInfo *var;
 
-    bool lea;
-
-    Size indirect_addr;
-    Size indirect_imbalance;
+    bk_VariableInfo *var = nullptr;
+    bool lea = false;
+    Size indirect_addr = 0;
+    Size indirect_imbalance = 0;
 };
 
 enum class ExpressionFlag {
@@ -160,25 +159,25 @@ private:
     void EmitPop(int64_t count);
     void EmitReturn(Size size);
 
-    inline void Emit(bk_Opcode code) { IR.Append({code}); }
-    inline void Emit(bk_Opcode code, bk_PrimitiveValue u2) { IR.Append({code, {}, u2}); }
-    inline void Emit(bk_Opcode code, bool b) { IR.Append({code, {}, {.b = b}}); }
-    inline void Emit(bk_Opcode code, int i) { IR.Append({code, {}, {.i = i}}); }
-    inline void Emit(bk_Opcode code, int64_t i) { IR.Append({code, {}, {.i = i}}); }
-    inline void Emit(bk_Opcode code, double d) { IR.Append({code, {}, {.d = d}}); }
-    inline void Emit(bk_Opcode code, const char *str) { IR.Append({code, {}, {.str = str}}); }
-    inline void Emit(bk_Opcode code, const bk_TypeInfo *type) { IR.Append({code, {}, {.type = type}}); }
-    inline void Emit(bk_Opcode code, const bk_FunctionInfo *func) { IR.Append({code, {}, {.func = func}}); }
-    inline void Emit(bk_Opcode code, void *opaque) { IR.Append({code, {}, {.opaque = opaque}}); }
-    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, bk_PrimitiveValue u2) { IR.Append({code, u1, u2}); }
-    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, bool b) { IR.Append({code, u1, {.b = b}}); }
-    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, int i) { IR.Append({code, u1, {.i = i}}); }
-    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, int64_t i) { IR.Append({code, u1, {.i = i}}); }
-    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, double d) { IR.Append({code, u1, {.d = d}}); }
-    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, const char *str) { IR.Append({code, u1, {.str = str}}); }
-    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, const bk_TypeInfo *type) { IR.Append({code, u1, {.type = type}}); }
-    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, const bk_FunctionInfo *func) { IR.Append({code, u1, {.func = func}}); }
-    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, void *opaque) { IR.Append({code, u1, {.opaque = opaque}}); }
+    inline void Emit(bk_Opcode code) { IR.Append({ code, {}, {} }); }
+    inline void Emit(bk_Opcode code, bk_PrimitiveValue u2) { IR.Append({ code, {}, u2 }); }
+    inline void Emit(bk_Opcode code, bool b) { IR.Append({ code, {}, { .b = b } }); }
+    inline void Emit(bk_Opcode code, int i) { IR.Append({ code, {}, { .i = i } }); }
+    inline void Emit(bk_Opcode code, int64_t i) { IR.Append({ code, {}, { .i = i } }); }
+    inline void Emit(bk_Opcode code, double d) { IR.Append({ code, {}, { .d = d } }); }
+    inline void Emit(bk_Opcode code, const char *str) { IR.Append({ code, {}, { .str = str } }); }
+    inline void Emit(bk_Opcode code, const bk_TypeInfo *type) { IR.Append({ code, {}, { .type = type } }); }
+    inline void Emit(bk_Opcode code, const bk_FunctionInfo *func) { IR.Append({ code, {}, { .func = func } }); }
+    inline void Emit(bk_Opcode code, void *opaque) { IR.Append({ code, {}, { .opaque = opaque } }); }
+    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, bk_PrimitiveValue u2) { IR.Append({ code, u1, u2 }); }
+    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, bool b) { IR.Append({ code, u1, { .b = b } }); }
+    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, int i) { IR.Append({ code, u1, { .i = i } }); }
+    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, int64_t i) { IR.Append({ code, u1, { .i = i } }); }
+    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, double d) { IR.Append({ code, u1, { .d = d } }); }
+    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, const char *str) { IR.Append({ code, u1, { .str = str } }); }
+    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, const bk_TypeInfo *type) { IR.Append({ code, u1, { .type = type } }); }
+    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, const bk_FunctionInfo *func) { IR.Append({ code, u1, { .func = func } }); }
+    inline void Emit(bk_Opcode code, decltype(bk_Instruction::u1) u1, void *opaque) { IR.Append({ code, u1, { .opaque = opaque } }); }
 
     bk_VariableInfo *CreateGlobal(const char *name, const bk_TypeInfo *type,
                                   Span<const bk_PrimitiveValue> values, bool module);
@@ -385,7 +384,7 @@ bk_Parser::bk_Parser(bk_Program *program)
 
     // Base types
     for (const bk_TypeInfo &type: bk_BaseTypes) {
-        AddGlobal(type.signature, bk_TypeType, {{.type = &type}}, true);
+        AddGlobal(type.signature, bk_TypeType, { { .type = &type } }, true);
         program->types_map.Set(&type);
     }
 
@@ -395,9 +394,9 @@ bk_Parser::bk_Parser(bk_Program *program)
     AddGlobal("false", bk_BoolType, {{ .b = false }}, false);
 
     // Special values
-    AddGlobal("Version", bk_StringType, {{.str = FelixVersion}}, false);
-    AddGlobal("NaN", bk_FloatType, {{.d = (double)NAN}}, false);
-    AddGlobal("Inf", bk_FloatType, {{.d = (double)INFINITY}}, false);
+    AddGlobal("Version", bk_StringType, { { .str = FelixVersion } }, false);
+    AddGlobal("NaN", bk_FloatType, { { .d = (double)NAN } }, false);
+    AddGlobal("Inf", bk_FloatType, { { .d = (double)INFINITY } }, false);
 
     // Intrinsics
     AddFunction("toFloat(Int): Float", (int)bk_FunctionFlag::Pure, {});
@@ -488,7 +487,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     Preparse(file.prototypes);
 
     // Do the actual parsing!
-    src->lines.Append({IR.len, 0});
+    src->lines.Append({ IR.len, 0 });
     while (RG_LIKELY(pos < tokens.len)) {
         ParseStatement();
     }
@@ -552,7 +551,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
             func->type = type->AsFunctionType();
 
             for (const bk_TypeInfo *type2: func->type->params) {
-                func->params.Append({"", type2});
+                func->params.Append({"", type2, false});
             }
         } else {
             bk_FunctionTypeInfo *func_type = program->function_types.AppendDefault();
@@ -576,7 +575,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
                         const bk_TypeInfo *type2 = program->types_map.FindValue(ptr, nullptr);
                         RG_ASSERT(type2);
 
-                        func->params.Append({"", type2});
+                        func->params.Append({"", type2, false});
                         func_type->params.Append(type2);
                         func_type->params_size += type2->size;
                     }
@@ -603,7 +602,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
 
     // Publish it!
     {
-        bk_FunctionInfo *head = *program->functions_map.TrySet(func).first;
+        bk_FunctionInfo *head = *program->functions_map.TrySet(func);
 
         if (head != func) {
             RG_ASSERT(!head->type->variadic && !func->type->variadic);
@@ -623,7 +622,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
             func->overload_prev = func;
             func->overload_next = func;
 
-            AddGlobal(func->name, func->type, {{.func = func}}, true);
+            AddGlobal(func->name, func->type, { { .func = func } }, true);
         }
     }
 }
@@ -648,7 +647,7 @@ void bk_Parser::AddOpaque(const char *name)
 
     const bk_TypeInfo *type = InsertType(type_buf, &program->bare_types);
 
-    bk_VariableInfo *var = CreateGlobal(type_buf.signature, bk_TypeType, {{.type = type}}, true);
+    bk_VariableInfo *var = CreateGlobal(type_buf.signature, bk_TypeType, { { .type = type } }, true);
     MapVariable(var, -1);
 }
 
@@ -668,14 +667,15 @@ void bk_Parser::Preparse(Span<const Size> positions)
             fwd->pos = fwd_pos;
             fwd->skip = -1;
 
-            std::pair<ForwardInfo **, bool> ret = forwards_map.TrySet(fwd);
+            bool inserted;
+            ForwardInfo **ptr = forwards_map.TrySet(fwd, &inserted);
 
-            if (ret.second) {
+            if (inserted) {
                 fwd->var = CreateGlobal(fwd->name, bk_NullType, {{}}, true);
             } else {
-                ForwardInfo *prev = *ret.first;
+                ForwardInfo *prev = *ptr;
 
-                *ret.first = fwd;
+                *ptr = fwd;
                 fwd->next = prev;
 
                 fwd->var = prev->var;
@@ -687,14 +687,15 @@ void bk_Parser::Preparse(Span<const Size> positions)
 template<typename T>
 bk_TypeInfo *bk_Parser::InsertType(const T &type_buf, BucketArray<T> *out_types)
 {
-    std::pair<const bk_TypeInfo **, bool> ret = program->types_map.TrySetDefault(type_buf.signature);
+    bool inserted;
+    const bk_TypeInfo **ptr = program->types_map.TrySetDefault(type_buf.signature, &inserted);
 
     bk_TypeInfo *type;
-    if (ret.second) {
+    if (inserted) {
         type = out_types->Append(type_buf);
-        *ret.first = type;
+        *ptr = type;
     } else {
-        type = (bk_TypeInfo *)*ret.first;
+        type = (bk_TypeInfo *)*ptr;
     }
 
     return type;
@@ -752,7 +753,7 @@ bool bk_Parser::ParseStatement()
 {
     bool has_return = false;
 
-    src->lines.Append({IR.len, tokens[pos].line});
+    src->lines.Append({ IR.len, tokens[pos].line });
     show_errors = true;
 
     switch (tokens[pos].kind) {
@@ -969,7 +970,10 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
             definitions_map.Set(member, param_pos);
         }
 
-        if (RG_UNLIKELY(!program->types_map.TrySet(record_type).second)) {
+        bool inserted;
+        program->types_map.TrySet(record_type, &inserted);
+
+        if (RG_UNLIKELY(!inserted)) {
             MarkError(func_pos, "Duplicate type name '%1'", record_type->signature);
         }
 
@@ -1001,10 +1005,10 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
     // Publish function
     {
-        std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
-        bk_FunctionInfo *overload = *ret.first;
+        bool inserted;
+        bk_FunctionInfo *overload = *program->functions_map.TrySet(func, &inserted);
 
-        if (ret.second || record) {
+        if (inserted || record) {
             func->overload_prev = func;
             func->overload_next = func;
         } else if (!record) {
@@ -1078,7 +1082,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         current_func = func;
 
         func->src.filename = src->filename;
-        func->src.lines.Append(bk_SourceMap::Line {0, pos < tokens.len ? tokens[pos].line : 0});
+        func->src.lines.Append(bk_SourceMap::Line { 0, pos < tokens.len ? tokens[pos].line : 0 });
         src = &func->src;
         ir = &func->ir;
 
@@ -1126,11 +1130,12 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         HashMap<const char *, const bk_FunctionInfo::Parameter *> names;
 
         for (const bk_FunctionInfo::Parameter &param: func->params) {
-            std::pair<const bk_FunctionInfo::Parameter **, bool> ret = names.TrySet(param.name, &param);
+            bool inserted;
+            const bk_FunctionInfo::Parameter **ptr = names.TrySet(param.name, &param, &inserted);
 
-            if (RG_UNLIKELY(!ret.second)) {
+            if (RG_UNLIKELY(!inserted)) {
                 Size param_pos = definitions_map.FindValue(&param, -1);
-                Size previous_pos = definitions_map.FindValue(*ret.first, -1); 
+                Size previous_pos = definitions_map.FindValue(*ptr, -1); 
 
                 MarkError(param_pos, "Duplicate member name '%1'", param.name);
                 Hint(previous_pos, "Previous member was declared here");
@@ -1178,8 +1183,10 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
             label->name = ConsumeIdentifier();
             label->value = enum_type->labels.len - 1;
 
-            bool duplicate = !enum_type->labels_map.TrySet(label).second;
-            if (RG_UNLIKELY(duplicate)) {
+            bool inserted;
+            enum_type->labels_map.TrySet(label, &inserted);
+
+            if (RG_UNLIKELY(!inserted)) {
                 MarkError(pos - 1, "Label '%1' is already used", label->name);
             }
         } while (MatchToken(bk_TokenKind::Comma));
@@ -1224,7 +1231,7 @@ void bk_Parser::ParseReturn()
 
     StackSlot slot;
     if (PeekToken(bk_TokenKind::EndOfLine) || PeekToken(bk_TokenKind::Semicolon)) {
-        slot = {bk_NullType};
+        slot = { bk_NullType };
     } else {
         slot = ParseExpression();
     }
@@ -1279,7 +1286,7 @@ void bk_Parser::ParseLet()
             }
 
             Emit(bk_Opcode::Reserve, type->size);
-            slot = {type};
+            slot = { type };
         }
     }
 
@@ -1502,7 +1509,7 @@ void bk_Parser::ParseWhile()
         for (Size i = condition_line_idx; i < src->lines.len &&
                                           src->lines[i].addr < branch_addr; i++) {
             const bk_SourceMap::Line &line = src->lines[i];
-            src->lines.Append({IR.len + (line.addr - condition_addr), line.line});
+            src->lines.Append({ IR.len + (line.addr - condition_addr), line.line });
         }
         IR.Grow(branch_addr - condition_addr);
         IR.Append(IR.Take(condition_addr, branch_addr - condition_addr));
@@ -1565,7 +1572,7 @@ void bk_Parser::ParseFor()
     if (IR.len > body_addr + 4) {
         FixJumps(ctx.continue_addr, IR.len);
 
-        Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Integer}, 1);
+        Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Integer }, 1);
         Emit(bk_Opcode::AddInt);
         Emit(bk_Opcode::Jump, body_addr - IR.len);
         IR[body_addr + 3].u2.i = IR.len - (body_addr + 3);
@@ -1671,7 +1678,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
     RG_DEFER { stack.RemoveFrom(start_stack_len); };
 
     // Safety dummy
-    stack.Append({bk_NullType});
+    stack.Append({ bk_NullType });
 
     LocalArray<PendingOperator, 128> operators;
     bool expect_value = true;
@@ -1705,7 +1712,11 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                         goto unexpected;
                     }
                 } else {
-                    operators.Append({tok.kind});
+                    PendingOperator op = {};
+
+                    op.kind = tok.kind;
+                    operators.Append(op);
+
                     parentheses++;
                 }
             } break;
@@ -1743,31 +1754,31 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                     goto unexpected;
                 expect_value = false;
 
-                stack.Append({bk_NullType});
+                stack.Append({ bk_NullType });
             } break;
             case bk_TokenKind::Boolean: {
                 if (RG_UNLIKELY(!expect_value))
                     goto unexpected;
                 expect_value = false;
 
-                Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Boolean}, tok.u.b);
-                stack.Append({bk_BoolType});
+                Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Boolean }, tok.u.b);
+                stack.Append({ bk_BoolType });
             } break;
             case bk_TokenKind::Integer: {
                 if (RG_UNLIKELY(!expect_value))
                     goto unexpected;
                 expect_value = false;
 
-                Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Integer}, tok.u.i);
-                stack.Append({bk_IntType});
+                Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Integer }, tok.u.i);
+                stack.Append({ bk_IntType });
             } break;
             case bk_TokenKind::Float: {
                 if (RG_UNLIKELY(!expect_value))
                     goto unexpected;
                 expect_value = false;
 
-                Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Float}, tok.u.d);
-                stack.Append({bk_FloatType});
+                Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Float }, tok.u.d);
+                stack.Append({ bk_FloatType });
             } break;
             case bk_TokenKind::String: {
                 if (RG_UNLIKELY(!expect_value))
@@ -1777,8 +1788,8 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                 const char *str = InternString(tok.u.str);
                 str = str[0] ? str : nullptr;
 
-                Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::String}, str);
-                stack.Append({bk_StringType});
+                Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::String }, str);
+                stack.Append({ bk_StringType });
             } break;
 
             case bk_TokenKind::Func: {
@@ -1788,8 +1799,8 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
 
                 const bk_TypeInfo *type = ParseFunctionType();
 
-                Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Type}, type);
-                stack.Append({bk_TypeType});
+                Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Type }, type);
+                stack.Append({ bk_TypeType });
             } break;
 
             case bk_TokenKind::LeftBracket: {
@@ -1798,8 +1809,8 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
 
                     const bk_TypeInfo *type = ParseArrayType();
 
-                    Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Type}, type);
-                    stack.Append({bk_TypeType});
+                    Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Type }, type);
+                    stack.Append({ bk_TypeType });
                 } else if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Array) {
                     ParseArraySubscript();
                 } else {
@@ -1909,7 +1920,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                             do {
                                 if (it->type == hint) {
                                     IR[IR.len - 1].u2.func = it;
-                                    stack[stack.len - 1] = {it->type};
+                                    stack[stack.len - 1] = { it->type };
 
                                     ambiguous = false;
                                     break;
@@ -2077,7 +2088,7 @@ error:
         pos++;
     };
 
-    return {bk_NullType};
+    return { bk_NullType };
 }
 
 bool bk_Parser::ParseExpression(const bk_TypeInfo *expected_type)
@@ -2347,7 +2358,7 @@ bool bk_Parser::EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, con
         Emit(code);
         FoldInstruction(1, out_type);
 
-        stack[stack.len - 1] = {out_type};
+        stack[stack.len - 1] = { out_type };
 
         return true;
     } else {
@@ -2364,7 +2375,7 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
         Emit(code);
         FoldInstruction(2, out_type);
 
-        stack[--stack.len - 1] = {out_type};
+        stack[--stack.len - 1] = { out_type };
 
         return true;
     } else {
@@ -2621,7 +2632,7 @@ void bk_Parser::ParseArraySubscript()
         } else {
             Emit(bk_Opcode::CheckIndex, array_type->len);
             if (unit_type->size != 1) {
-                Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Integer}, unit_type->size);
+                Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Integer }, unit_type->size);
                 Emit(bk_Opcode::MultiplyInt);
             }
             Emit(bk_Opcode::AddInt);
@@ -2687,7 +2698,7 @@ void bk_Parser::ParseRecordDot()
                 IR[IR.len - 1].code == bk_Opcode::LeaRel) {
             IR[IR.len - 1].u2.i += member->offset;
         } else {
-            Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Integer}, member->offset);
+            Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Integer }, member->offset);
             Emit(bk_Opcode::AddInt);
         }
     }
@@ -2726,9 +2737,9 @@ void bk_Parser::ParseEnumDot()
         return;
     }
 
-    Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Enum}, label->value);
+    Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Enum }, label->value);
 
-    stack[stack.len - 1] = {enum_type};
+    stack[stack.len - 1] = { enum_type };
 }
 
 // Don't try to call from outside ParseExpression()!
@@ -2753,7 +2764,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
 
             if (variadic && args.len >= func_type->params.len) {
                 Size type_addr = IR.len;
-                Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Type}, bk_NullType);
+                Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Type }, bk_NullType);
 
                 const bk_TypeInfo *type = ParseExpression().type;
                 args.Append(type);
@@ -2771,7 +2782,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         ConsumeToken(bk_TokenKind::RightParenthesis);
     }
     if (variadic) {
-        Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Integer}, args_size - func_type->params.len);
+        Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Integer }, args_size - func_type->params.len);
         args_size++;
     }
 
@@ -2823,11 +2834,11 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         Size offset = 1 + args_size;
         Emit(bk_Opcode::CallIndirect, -offset);
 
-        stack[stack.len - 1] = {func_type->ret_type};
+        stack[stack.len - 1] = { func_type->ret_type };
     } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
         EmitIntrinsic(func->name, call_pos, call_addr, args);
     } else if (func->mode == bk_FunctionInfo::Mode::Record) {
-        stack.Append({func_type->ret_type});
+        stack.Append({ func_type->ret_type });
     } else {
         Emit(bk_Opcode::Call, func);
 
@@ -2836,7 +2847,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
             FoldInstruction(args_size, func_type->ret_type);
         }
 
-        stack.Append({func_type->ret_type});
+        stack.Append({ func_type->ret_type });
     }
 
     return true;
@@ -2850,14 +2861,14 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
             FoldInstruction(1, bk_FloatType);
         }
 
-        stack.Append({bk_FloatType});
+        stack.Append({ bk_FloatType });
     } else if (TestStr(name, "toInt")) {
         if (args[0] == bk_FloatType) {
             Emit(bk_Opcode::FloatToInt);
             FoldInstruction(1, bk_IntType);
         }
 
-        stack.Append({bk_IntType});
+        stack.Append({ bk_IntType });
     } else if (TestStr(name, "typeOf")) {
         // XXX: We can change the signature from typeOf(...) to typeOf(Any) after Any
         // is implemented, and remove this check.
@@ -2868,9 +2879,9 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 
         // typeOf() does not execute anything!
         TrimInstructions(IR.len - call_addr);
-        Emit(bk_Opcode::Push, {.primitive = bk_PrimitiveKind::Type}, args[0]);
+        Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Type }, args[0]);
 
-        stack.Append({bk_TypeType});
+        stack.Append({ bk_TypeType });
     } else if (TestStr(name, "iif")) {
         if (RG_UNLIKELY(args.len != 3)) {
             MarkError(call_pos, "Intrinsic function iif() takes three arguments");
@@ -2884,7 +2895,7 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
         Emit(bk_Opcode::InlineIf, args[1]->size);
         FoldInstruction(1 + args[1]->size * 2, args[1]);
 
-        stack.Append({args[1]});
+        stack.Append({ args[1] });
     } else {
         RG_UNREACHABLE();
     }
@@ -2893,12 +2904,12 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 void bk_Parser::EmitLoad(bk_VariableInfo *var)
 {
     if (!var->type->size) {
-        stack.Append({var->type, var, false});
+        stack.Append({ var->type, var, false });
     } else if (var->constant) {
         bk_Instruction inst = (*var->ir)[var->ir_addr - 1];
         IR.Append(inst);
 
-        stack.Append({var->type, var, false});
+        stack.Append({ var->type, var, false });
     } else if (var->type->IsComposite()) {
         RG_ASSERT(var->offset >= 0);
 
@@ -2906,14 +2917,14 @@ void bk_Parser::EmitLoad(bk_VariableInfo *var)
         Emit(code, var->offset);
         Emit(bk_Opcode::LoadIndirect, var->type->size);
 
-        stack.Append({var->type, var, true});
+        stack.Append({ var->type, var, true });
     } else {
         RG_ASSERT(var->offset >= 0);
 
         bk_Opcode code = var->local ? bk_Opcode::LoadLocal : bk_Opcode::Load;
         Emit(code, var->offset);
 
-        stack.Append({var->type, var, false});
+        stack.Append({ var->type, var, false });
     }
 
     if (current_func) {
@@ -2986,7 +2997,7 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
             bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
             bk_PrimitiveKind primitive = out_type->primitive;
 
-            Emit(bk_Opcode::Push, {.primitive = primitive}, value);
+            Emit(bk_Opcode::Push, { .primitive = primitive }, value);
         }
     } else {
         IR.len--;
@@ -3101,7 +3112,7 @@ bool bk_Parser::CopyBigConstant(Size size)
     }
 
     TrimInstructions(size);
-    program->globals.Append({bk_Opcode::Fetch, {.i = (int32_t)size}, {.i = program->ro.len}});
+    program->globals.Append({ bk_Opcode::Fetch, { .i = (int32_t)size }, { .i = program->ro.len } });
     program->ro.len += size;
 
     return true;
@@ -3159,9 +3170,9 @@ bk_VariableInfo *bk_Parser::CreateGlobal(const char *name, const bk_TypeInfo *ty
 
         program->ro.Append(values);
 
-        Emit(bk_Opcode::Fetch, {.i = (int32_t)values.len}, ptr);
+        Emit(bk_Opcode::Fetch, { .i = (int32_t)values.len }, ptr);
     } else if (values.len == 1) {
-        program->globals.Append({bk_Opcode::Push, {.primitive = type->primitive}, values[0]});
+        program->globals.Append({ bk_Opcode::Push, { .primitive = type->primitive }, values[0] });
     }
     var->ir_addr = program->globals.len;
 
@@ -3170,11 +3181,15 @@ bk_VariableInfo *bk_Parser::CreateGlobal(const char *name, const bk_TypeInfo *ty
 
 bool bk_Parser::MapVariable(bk_VariableInfo *var, Size var_pos)
 {
-    std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySetDefault(var->name);
-    definitions_map.TrySet(var, var_pos);
+    bk_VariableInfo **ptr;
+    bk_VariableInfo *it;
+    {
+        bool inserted;
+        ptr = program->variables_map.TrySetDefault(var->name, &inserted);
+        it = inserted ? nullptr : *ptr;
+    }
 
-    bk_VariableInfo **ptr = ret.first;
-    bk_VariableInfo *it = ret.second ? nullptr : *ptr;
+    definitions_map.TrySet(var, var_pos);
 
     while (it && (int)it->local > (int)var->local) {
         RG_ASSERT(it != var);
@@ -3402,7 +3417,7 @@ bool bk_Parser::SkipNewLines()
         while (MatchToken(bk_TokenKind::EndOfLine));
 
         if (RG_LIKELY(pos < tokens.len)) {
-            src->lines.Append({IR.len, tokens[pos].line});
+            src->lines.Append({ IR.len, tokens[pos].line });
         }
 
         return true;
@@ -3413,11 +3428,14 @@ bool bk_Parser::SkipNewLines()
 
 const char *bk_Parser::InternString(const char *str)
 {
-    std::pair<const char **, bool> ret = strings.TrySet(str);
-    if (ret.second) {
-        *ret.first = DuplicateString(str, &program->str_alloc).ptr;
+    bool inserted;
+    const char **ptr = strings.TrySet(str, &inserted);
+
+    if (inserted) {
+        *ptr = DuplicateString(str, &program->str_alloc).ptr;
     }
-    return *ret.first;
+
+    return *ptr;
 }
 
 bool bk_Parser::RecurseInc()

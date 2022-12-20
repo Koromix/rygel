@@ -67,10 +67,15 @@ bool SessionInfo::IsAdmin() const
         return false;
     if (confirm != SessionConfirm::None)
         return false;
-    if (!admin_until || admin_until <= GetMonotonicTime())
+    if (!admin_until)
         return false;
 
     return true;
+}
+
+bool SessionInfo::IsRoot() const
+{
+    return IsAdmin() && admin_root;
 }
 
 bool SessionInfo::HasPermission(const InstanceHolder *instance, UserPermission perm) const
@@ -180,7 +185,7 @@ void InvalidateUserStamps(int64_t userid)
 }
 
 static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *instance,
-                             const http_RequestInfo &request, http_IO *io)
+                             const http_RequestInfo &, http_IO *io)
 {
     http_JsonPageBuilder json;
     if (!json.Init(io))
@@ -281,7 +286,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                 }
                 json.EndObject();
 
-                if (stamp->HasPermission(UserPermission::AdminCode)) {
+                if (stamp->HasPermission(UserPermission::BuildCode)) {
                     json.Key("develop"); json.Bool(stamp->develop.load(std::memory_order_relaxed));
                 } else {
                     RG_ASSERT(!stamp->develop.load());
@@ -294,6 +299,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
         } else {
             json.Key("authorized"); json.Bool(session->IsAdmin());
             json.Key("admin"); json.Bool(session->admin_until != 0);
+            json.Key("root"); json.Bool(session->admin_root);
         }
     }
     json.EndObject();
@@ -323,7 +329,7 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     return ptr;
 }
 
-RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+RetainPtr<const SessionInfo> GetNormalSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
@@ -341,6 +347,18 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
 
         // sessions.Open(request, io, session);
     }
+
+    return session;
+}
+
+RetainPtr<const SessionInfo> GetAdminSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+
+    if (!session)
+        return nullptr;
+    if (!session->admin_until || session->admin_until <= GetMonotonicTime())
+        return nullptr;
 
     return session;
 }
@@ -389,7 +407,7 @@ static const EventInfo *RegisterEvent(const char *where, const char *who, int64_
 {
     std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
 
-    EventInfo::Key key = {where, who};
+    EventInfo::Key key = { where, who };
     EventInfo *event = events_map.FindValue(key, nullptr);
 
     if (!event || event->until < GetMonotonicTime()) {
@@ -414,7 +432,7 @@ static int CountEvents(const char *where, const char *who)
 {
     std::shared_lock<std::shared_mutex> lock_shr(events_mutex);
 
-    EventInfo::Key key = {where, who};
+    EventInfo::Key key = { where, who };
     const EventInfo *event = events_map.FindValue(key, nullptr);
 
     // We don't need to use precise timing, and a ban can last a bit
@@ -425,23 +443,40 @@ static int CountEvents(const char *where, const char *who)
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() mutable {
-        // Read POST values
-        const char *username;
-        const char *password;
+        const char *username = nullptr;
+        const char *password = nullptr;
         {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
-                io->AttachError(422);
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
                 return;
-            }
+            json_Parser parser(&st, &io->allocator);
 
-            username = values.FindValue("username", nullptr);
-            password = values.FindValue("password", nullptr);
-            if (!username || !password) {
-                LogError("Missing 'username' or 'password' parameter");
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "username") {
+                    parser.ParseString(&username);
+                } else if (key == "password") {
+                    parser.ParseString(&password);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
+
+        // Check for missing values
+        if (!username || !password) {
+            LogError("Missing 'username' or 'password' parameter");
+            io->AttachError(422);
+            return;
         }
 
         // We use this to extend/fix the response delay in case of error
@@ -453,7 +488,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 
             if (!instance->slaves.len) {
                 if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                                    u.admin, u.local_key, u.confirm, u.secret
+                                                    u.root, 0 AS admin,
+                                                    u.local_key, u.confirm, u.secret, p.permissions
                                              FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
@@ -470,7 +506,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 instance = master;
 
                 if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                                    u.admin, u.local_key, u.confirm, u.secret
+                                                    u.root, 0 AS admin,
+                                                    u.local_key, u.confirm, u.secret
                                              FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
@@ -483,12 +520,17 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 stmt.Run();
             }
         } else {
-            if (!gp_domain.db.Prepare(R"(SELECT userid, password_hash, change_password,
-                                                admin, local_key, confirm, secret
-                                         FROM dom_users
-                                         WHERE username = ?1 AND admin = 1)", &stmt))
+            if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
+                                                u.root, IIF(p.permissions IS NOT NULL, 1, 0) AS admin,
+                                                u.local_key, u.confirm, u.secret
+                                         FROM dom_users u
+                                         LEFT JOIN dom_permissions p ON (p.userid = u.userid AND
+                                                                         p.permissions & ?2)
+                                         WHERE u.username = ?1 AND (u.root = 1 OR
+                                                                    p.permissions IS NOT NULL))", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
 
             stmt.Run();
         }
@@ -497,10 +539,11 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             int64_t userid = sqlite3_column_int64(stmt, 0);
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
             bool change_password = (sqlite3_column_int(stmt, 2) == 1);
-            bool admin = (sqlite3_column_int(stmt, 3) == 1);
-            const char *local_key = (const char *)sqlite3_column_text(stmt, 4);
-            const char *confirm = (const char *)sqlite3_column_text(stmt, 5);
-            const char *secret = (const char *)sqlite3_column_text(stmt, 6);
+            bool root = (sqlite3_column_int(stmt, 3) == 1);
+            bool admin = (sqlite3_column_int(stmt, 4) == 1);
+            const char *local_key = (const char *)sqlite3_column_text(stmt, 5);
+            const char *confirm = (const char *)sqlite3_column_text(stmt, 6);
+            const char *secret = (const char *)sqlite3_column_text(stmt, 7);
 
             if (CountEvents(request.client_addr, username) >= BanThreshold) {
                 LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
@@ -541,15 +584,9 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 session->change_password = change_password;
 
                 if (RG_LIKELY(session)) {
-                    if (admin) {
-                        if (!instance) {
-                            // Require regular relogin (every 20 minutes) to access admin panel
-                            session->admin_until = GetMonotonicTime() + 1200 * 1000;
-                        } else {
-                            // Mark session as elevatable (can become admin) so the user gets
-                            // identity confirmation prompts when he tries to make admin requests.
-                            session->admin_until = -1;
-                        }
+                    if (!instance && (root || admin)) {
+                        session->admin_until = GetMonotonicTime() + 1200 * 1000;
+                        session->admin_root = root;
                     }
 
                     sessions.Open(request, io, session);
@@ -853,24 +890,40 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
 
     if (request.method == http_RequestMethod::Post) {
         io->RunAsync([=]() {
-            // Read POST values
-            const char *key;
+            const char *session_key = nullptr;
             {
-                HashMap<const char *, const char *> values;
-                if (!io->ReadPostValues(&io->allocator, &values)) {
-                    io->AttachError(422);
+                StreamReader st;
+                if (!io->OpenForRead(Kibibytes(1), &st))
                     return;
-                }
+                json_Parser parser(&st, &io->allocator);
 
-                key = values.FindValue("key", nullptr);
-                if (!key) {
-                    LogError("Missing 'key' parameter");
+                parser.ParseObject();
+                while (parser.InObject()) {
+                    Span<const char> key = {};
+                    parser.ParseKey(&key);
+
+                    if (key == "key") {
+                        parser.ParseString(&session_key);
+                    } else if (parser.IsValid()) {
+                        LogError("Unexpected key '%1'", key);
+                        io->AttachError(422);
+                        return;
+                    }
+                }
+                if (!parser.IsValid()) {
                     io->AttachError(422);
                     return;
                 }
             }
 
-            RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, key, nullptr, nullptr, &io->allocator);
+            // Check for missing values
+            if (!session_key) {
+                LogError("Missing 'key' parameter");
+                io->AttachError(422);
+                return;
+            }
+
+            RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key, nullptr, nullptr, &io->allocator);
             if (!session)
                 return;
 
@@ -880,11 +933,11 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachText(200, "Done!");
         return true;
     } else {
-        const char *key = request.GetQueryValue(instance->config.auto_key);
-        if (!key || !key[0])
+        const char *session_key = request.GetQueryValue(instance->config.auto_key);
+        if (!session_key || !session_key[0])
             return true;
 
-        RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, key, nullptr, nullptr, &io->allocator);
+        RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key, nullptr, nullptr, &io->allocator);
         if (!session)
             return false;
 
@@ -895,7 +948,7 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
 }
 
 static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
-                      const char *code, const http_RequestInfo &request, http_IO *io)
+                      const char *code, const http_RequestInfo &, http_IO *io)
 {
     int64_t time = GetUnixTime();
     int64_t counter = time / TotpPeriod;
@@ -944,21 +997,37 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
     }
 
     io->RunAsync([=]() {
-        // Read POST values
-        const char *code;
+        const char *code = nullptr;
         {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
-                io->AttachError(422);
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
                 return;
-            }
+            json_Parser parser(&st, &io->allocator);
 
-            code = values.FindValue("code", nullptr);
-            if (!code) {
-                LogError("Missing 'code' parameter");
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "code") {
+                    parser.ParseString(&code);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
+
+        // Check for missing values
+        if (!code) {
+            LogError("Missing 'code' parameter");
+            io->AttachError(422);
+            return;
         }
 
         if (CountEvents(request.client_addr, session->username) >= BanThreshold) {
@@ -1026,7 +1095,7 @@ void HandleSessionLogout(const http_RequestInfo &request, http_IO *io)
 
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
     WriteProfileJson(session.GetRaw(), instance, request, io);
 }
 
@@ -1054,29 +1123,43 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
     }
 
     io->RunAsync([=]() {
-        // Read POST values
-        const char *old_password;
-        const char *new_password;
+        const char *old_password = nullptr;
+        const char *new_password = nullptr;
         {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "old_password") {
+                    parser.SkipNull() || parser.ParseString(&old_password);
+                } else if (key == "new_password") {
+                    parser.ParseString(&new_password);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
 
+        // Check missing values
+        {
             bool valid = true;
 
-            if (!session->change_password) {
-                old_password = values.FindValue("old_password", nullptr);
-                if (!old_password) {
-                    LogError("Missing 'old_password' parameter");
-                    valid = false;
-                }
-            } else {
-                old_password = nullptr;
+            if (!old_password && !session->change_password) {
+                LogError("Missing 'old_password' parameter");
+                valid = false;
             }
-
-            new_password = values.FindValue("new_password", nullptr);
             if (!new_password) {
                 LogError("Missing 'new_password' parameter");
                 valid = false;
@@ -1087,7 +1170,6 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
                 return;
             }
         }
-
         RG_ASSERT(old_password || session->change_password);
 
         // Check password strength
@@ -1240,25 +1322,43 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        // Read POST values
-        const char *password;
-        const char *code;
+        const char *password = nullptr;
+        const char *code = nullptr;
         {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "password") {
+                    parser.ParseString(&password);
+                } else if (key == "code") {
+                    parser.ParseString(&code);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
 
+        // Check for missing values
+        {
             bool valid = true;
 
-            password = values.FindValue("password", nullptr);
             if (!password) {
                 LogError("Missing 'password' parameter");
                 valid = false;
             }
-
-            code = values.FindValue("code", nullptr);
             if (!code) {
                 LogError("Missing 'code' parameter");
                 valid = false;
@@ -1270,10 +1370,11 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
             }
         }
 
+        // We use this to extend/fix the response delay in case of error
+        int64_t now = GetMonotonicTime();
+
         // Authenticate with password
         {
-            // We use this to extend/fix the response delay in case of error
-            int64_t now = GetMonotonicTime();
 
             sq_Statement stmt;
             if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
@@ -1343,25 +1444,39 @@ void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
-        }
-
         bool develop = stamp->develop;
 
-        if (const char *str = values.FindValue("develop", nullptr); str) {
-            if (!ParseBool(str, &develop)) {
+        // Read changes
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "develop") {
+                    parser.SkipNull() || parser.ParseBool(&develop);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
+        }
 
-            if (develop && !stamp->HasPermission(UserPermission::AdminCode)) {
-                LogError("User is not allowed to code");
-                io->AttachError(403);
-                return;
-            }
+        // Check permissions
+        if (develop && !stamp->HasPermission(UserPermission::BuildCode)) {
+            LogError("User is not allowed to code");
+            io->AttachError(403);
+            return;
         }
 
         stamp->develop = develop;

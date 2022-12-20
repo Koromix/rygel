@@ -36,9 +36,9 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
         }
 
         if (fs_version == 0) {
-            RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+            RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
-            if (!session || !session->HasPermission(instance, UserPermission::AdminCode)) {
+            if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
                 LogError("You cannot access pages in development");
                 io->AttachError(403);
                 return;
@@ -91,6 +91,10 @@ static void AddMimeTypeHeader(const char *filename, http_IO *io)
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     const char *url = request.url + 1 + instance->key.len;
+
+    RG_ASSERT(url <= request.url + strlen(request.url));
+    RG_ASSERT(url[0] == '/');
+
     const char *client_etag = request.GetHeaderValue("If-None-Match");
     const char *client_sha256 = request.GetQueryValue("sha256");
 
@@ -119,9 +123,9 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         if (ParseInt(filename, &fs_version, 0, &remain) && remain.ptr[0] == '/') {
             if (fs_version == 0) {
-                RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+                RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
-                if (!session || !session->HasPermission(instance, UserPermission::AdminCode)) {
+                if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
                     LogError("You cannot access pages in development");
                     io->AttachError(403);
                     return true;
@@ -401,14 +405,14 @@ static bool CheckSha256(Span<const char> sha256)
 
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::AdminCode)) {
+    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to upload files");
         io->AttachError(403);
         return;
@@ -572,14 +576,14 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::AdminCode)) {
+    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to delete files");
         io->AttachError(403);
         return;
@@ -636,14 +640,14 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
 
 void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::AdminCode)) {
+    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to publish a new version");
         io->AttachError(403);
         return;
@@ -751,14 +755,14 @@ void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, 
 
 void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::AdminPublish)) {
+    if (!session->HasPermission(instance, UserPermission::BuildPublish)) {
         LogError("User is not allowed to publish a new version");
         io->AttachError(403);
         return;
@@ -766,12 +770,38 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
 
     io->RunAsync([=]() {
         HashMap<const char *, const char *> files;
-        if (!io->ReadPostValues(&io->allocator, &files)) {
-            io->AttachError(422);
-            return;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Megabytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                const char *filename = "";
+                const char *sha256 = "";
+
+                parser.ParseKey(&filename);
+                parser.ParseString(&sha256);
+
+                bool inserted;
+                files.TrySet(filename, sha256, &inserted);
+
+                if (!inserted) {
+                    LogError("Duplicate file '%1'", filename);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        instance->db->Transaction([&]() {
+        int64_t version = -1;
+
+        bool success = instance->db->Transaction([&]() {
             int64_t mtime = GetUnixTime();
 
             if (!instance->db->Run(R"(INSERT INTO fs_versions (mtime, userid, username, atomic)
@@ -779,7 +809,7 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
                                    mtime, session->userid, session->username))
                 return false;
 
-            int64_t version = sqlite3_last_insert_rowid(*instance->db);
+            version = sqlite3_last_insert_rowid(*instance->db);
 
             for (const auto &file: files.table) {
                 if (!file.key[0]) {
@@ -822,13 +852,17 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
 
             if (!instance->db->Run("UPDATE fs_settings SET value = ?1 WHERE key = 'FsVersion'", version))
                 return false;
-            instance->fs_version = version;
 
             const char *json = Fmt(&io->allocator, "{\"version\": %1}", version).ptr;
             io->AttachText(200, json, "application/json");
 
             return true;
         });
+        if (!success)
+            return;
+
+        RG_ASSERT(version >= 0);
+        instance->fs_version = version;
     });
 }
 

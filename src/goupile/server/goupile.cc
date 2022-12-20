@@ -273,7 +273,7 @@ static void AttachStatic(const AssetInfo &asset, int max_age, const char *etag,
 static void HandlePing(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     // Do this to renew session and clear invalid session cookies
-    GetCheckedSession(instance, request, io);
+    GetNormalSession(instance, request, io);
 
     io->AddCachingHeaders(0, nullptr);
     io->AttachText(200, "Pong!");
@@ -675,8 +675,12 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleFileDelta(instance, request, io);
     } else if (StartsWith(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {
         HandleFilePublish(instance, request, io);
-    } else if (TestStr(instance_url, "/api/records/load") && request.method == http_RequestMethod::Get) {
-        HandleRecordLoad(instance, request, io);
+    } else if (TestStr(instance_url, "/api/records/list") && request.method == http_RequestMethod::Get) {
+        HandleRecordList(instance, request, io);
+    } else if (TestStr(instance_url, "/api/records/get") && request.method == http_RequestMethod::Get) {
+        HandleRecordGet(instance, request, io);
+    } else if (TestStr(instance_url, "/api/records/audit") && request.method == http_RequestMethod::Get) {
+        HandleRecordAudit(instance, request, io);
     } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
         HandleRecordSave(instance, request, io);
     } else if (TestStr(instance_url, "/api/records/export") && request.method == http_RequestMethod::Get) {
@@ -769,7 +773,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
     int64_t max_mtime = 0;
     bool complete = true;
 
-    EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
+    EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType) {
         const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
 
         FileInfo file_info;

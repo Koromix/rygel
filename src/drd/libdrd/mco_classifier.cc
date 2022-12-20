@@ -991,9 +991,9 @@ static bool InitCriticalData(const mco_TableSet &table_set,
                              mco_PreparedSet *out_prepared_set, mco_ErrorSet *out_errors)
 {
     // Malformed, missing, incoherent (e.g. 2001/02/29)
-    static const int16_t birthdate_errors[3] = {14, 13, 39};
-    static const int16_t entry_date_errors[3] = {20, 19, 21};
-    static const int16_t exit_date_errors[3] = {29, 28, 30};
+    static const int16_t birthdate_errors[3] = { 14, 13, 39 };
+    static const int16_t entry_date_errors[3] = { 20, 19, 21 };
+    static const int16_t exit_date_errors[3] = { 29, 28, 30 };
 
     bool valid = true;
 
@@ -1295,12 +1295,16 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             HashSet<drd_DiagnosisCode> handled_codes;
             Size special_matches = 0;
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
-                if (diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
-                        handled_codes.TrySet(diag_info->diag).second) {
-                    special_matches += (diag_info == ctx.main_diag_info ||
-                                        diag_info == ctx.linked_diag_info);
-                    if (handled_codes.table.count >= 2 && handled_codes.table.count > special_matches)
-                        return 1;
+                if (diag_info->Test(ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
+                    bool inserted;
+                    handled_codes.TrySet(diag_info->diag, &inserted);
+
+                    if (inserted) {
+                        special_matches += (diag_info == ctx.main_diag_info ||
+                                            diag_info == ctx.linked_diag_info);
+                        if (handled_codes.table.count >= 2 && handled_codes.table.count > special_matches)
+                            return 1;
+                    }
                 }
             }
             return 0;

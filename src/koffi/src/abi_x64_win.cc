@@ -192,14 +192,14 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
             case PrimitiveKind::UInt64S: { PUSH_INTEGER_SWAP(uint64_t); } break;
             case PrimitiveKind::String: {
                 const char *str;
-                if (RG_UNLIKELY(!PushString(value, &str)))
+                if (RG_UNLIKELY(!PushString(value, param.directions, &str)))
                     return false;
 
                 *(const char **)(args_ptr++) = str;
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16;
-                if (RG_UNLIKELY(!PushString16(value, &str16)))
+                if (RG_UNLIKELY(!PushString16(value, param.directions, &str16)))
                     return false;
 
                 *(const char16_t **)(args_ptr++) = str16;
@@ -657,14 +657,14 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
         case PrimitiveKind::UInt64S: { RETURN_INTEGER_SWAP(uint64_t); } break;
         case PrimitiveKind::String: {
             const char *str;
-            if (RG_UNLIKELY(!PushString(value, &str)))
+            if (RG_UNLIKELY(!PushString(value, 1, &str)))
                 return;
 
             out_reg->rax = (uint64_t)str;
         } break;
         case PrimitiveKind::String16: {
             const char16_t *str16;
-            if (RG_UNLIKELY(!PushString16(value, &str16)))
+            if (RG_UNLIKELY(!PushString16(value, 1, &str16)))
                 return;
 
             out_reg->rax = (uint64_t)str16;

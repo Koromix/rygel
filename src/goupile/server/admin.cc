@@ -182,17 +182,26 @@ again:
 }
 #endif
 
+#ifdef _WIN32
+
+static bool ChangeFileOwner(const char *, uid_t, gid_t)
+{
+    return true;
+}
+
+#else
+
 static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 {
-#ifndef _WIN32
     if (chown(filename, uid, gid) < 0) {
         LogError("Failed to change '%1' owner: %2", filename, strerror(errno));
         return false;
     }
-#endif
 
     return true;
 }
+
+#endif
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                            const char *name, int64_t default_userid, bool demo, int *out_error)
@@ -401,7 +410,7 @@ Options:
 
     %!..+-u, --username <username>%!0    Name of default user
         %!..+--password <pwd>%!0         Password of default user
-        %!..+--totp%!0                   Enable TOTP for admin user
+        %!..+--totp%!0                   Enable TOTP for root user
 
         %!..+--archive_key <key>%!0      Set domain public archive key
 
@@ -604,7 +613,7 @@ retry_pwd:
     if (change_owner && !ChangeFileOwner(domain.config.database_filename, owner_uid, owner_gid))
         return 1;
 
-    // Create default admin user
+    // Create default root user
     {
         char hash[PasswordHashBytes];
         if (!HashPassword(password, hash))
@@ -619,7 +628,7 @@ retry_pwd:
         }
 
         if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                                     change_password, admin, local_key, confirm)
+                                                     change_password, root, local_key, confirm)
                               VALUES (1, ?1, ?2, 0, 1, ?3, ?4))", username, hash, local_key, totp ? "TOTP" : nullptr))
             return 1;
     }
@@ -905,21 +914,16 @@ Options:
 
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to create instances");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to create instances");
+        io->AttachError(403);
         return;
     }
 
@@ -930,34 +934,54 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *instance_key = nullptr;
+        const char *name = nullptr;
+        bool demo = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "key") {
+                    parser.ParseString(&instance_key);
+                } else if (key == "name") {
+                    parser.SkipNull() || parser.ParseString(&name);
+                } else if (key == "demo") {
+                    parser.ParseBool(&demo);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        const char *instance_key;
-        const char *name;
-        bool demo;
+        // Check missing or invalid values
         {
             bool valid = true;
 
-            instance_key = values.FindValue("key", nullptr);
             if (!instance_key) {
                 LogError("Missing 'key' parameter");
                 valid = false;
             } else if (!CheckInstanceKey(instance_key)) {
                 valid = false;
             }
-
-            name = values.FindValue("name", instance_key);
-            if (name && !name[0]) {
+            if (!name) {
+                name = instance_key;
+            } else if (!name[0]) {
                 LogError("Application name cannot be empty");
                 valid = false;
             }
-
-            valid &= ParseBool(values.FindValue("demo", "1"), &demo);
 
             if (!valid) {
                 io->AttachError(422);
@@ -1071,7 +1095,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
     }
 
     // Generate backup entries
-    entries.Append({&gp_domain.db, "goupile.db"});
+    entries.Append({ &gp_domain.db, "goupile.db", nullptr });
     for (InstanceHolder *instance: instances) {
         if (filter == nullptr || instance == filter || instance->master == filter) {
             const char *filename = sqlite3_db_filename(*instance->db, "main");
@@ -1079,7 +1103,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
             const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
             basename = Fmt(&temp_alloc, "instances/%1", basename).ptr;
 
-            entries.Append({instance->db, basename});
+            entries.Append({ instance->db, basename, nullptr });
         }
     }
     for (BackupEntry &entry: entries) {
@@ -1210,34 +1234,49 @@ bool ArchiveDomain()
 
 void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to delete instances");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to delete instances");
+        io->AttachError(403);
         return;
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *instance_key = nullptr;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "instance") {
+                    parser.ParseString(&instance_key);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        const char *instance_key = values.FindValue("key", nullptr);
+        // Check missing values
         if (!instance_key) {
-            LogError("Missing 'key' parameter");
+            LogError("Missing 'instance' parameter");
             io->AttachError(422);
             return;
         }
@@ -1337,7 +1376,7 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1345,28 +1384,96 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to configure instances");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to configure instances");
+        io->AttachError(403);
         return;
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *instance_key = nullptr;
+        decltype(InstanceHolder::config) config;
+        bool change_use_offline = false;
+        bool change_sync_mode = false;
+        bool change_allow_guests = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(4), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "instance") {
+                    parser.ParseString(&instance_key);
+                } else if (key == "name") {
+                    parser.SkipNull() || parser.ParseString(&config.name);
+                } else if (key == "use_offline") {
+                    if (!parser.SkipNull()) {
+                        parser.ParseBool(&config.use_offline);
+                        change_use_offline = true;
+                    }
+                } else if (key == "sync_mode") {
+                    if (!parser.SkipNull()) {
+                        Span<const char> str = {};
+
+                        if (parser.ParseString(&str)) {
+                            char mode[128];
+                            ConvertFromJsonName(str, mode);
+
+                            if (!OptionToEnum(SyncModeNames, mode, &config.sync_mode)) {
+                                LogError("Invalid sync mode '%1'", str);
+                                io->AttachError(422);
+                                return;
+                            }
+                        }
+
+                        change_sync_mode = true;
+                    }
+                } else if (key == "backup_key") {
+                    parser.SkipNull() || parser.ParseString(&config.backup_key);
+                } else if (key == "shared_key") {
+                    parser.SkipNull() || parser.ParseString(&config.shared_key);
+                } else if (key == "token_key") {
+                    parser.SkipNull() || parser.ParseString(&config.token_key);
+                } else if (key == "auto_key") {
+                    parser.SkipNull() || parser.ParseString(&config.auto_key);
+                } else if (key == "allow_guests") {
+                    if (!parser.SkipNull()) {
+                        parser.ParseBool(&config.allow_guests);
+                        change_allow_guests = true;
+                    }
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        const char *instance_key = values.FindValue("key", nullptr);
-        if (!instance_key) {
-            LogError("Missing 'key' parameter");
-            io->AttachError(422);
-            return;
+        // Check missing or invalid values
+        {
+            bool valid = true;
+
+            if (!instance_key) {
+                LogError("Missing 'instance' parameter");
+                valid = false;
+            }
+            if (config.name && !config.name[0]) {
+                LogError("Application name cannot be empty");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
         }
 
         InstanceHolder *instance = gp_domain.Ref(instance_key);
@@ -1377,55 +1484,22 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         }
         RG_DEFER_N(ref_guard) { instance->Unref(); };
 
-        // Parse new configuration values
-        decltype(InstanceHolder::config) config = instance->config;
-        {
-            bool valid = true;
-            char buf[128];
+        // Can this admin user touch this instance?
+        if (!session->IsRoot()) {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                         WHERE userid = ?1 AND instance = ?2 AND
+                                               permissions & ?3)", &stmt))
+                return;
+            sqlite3_bind_int64(stmt, 1, session->userid);
+            sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
-            if (const char *str = values.FindValue("name", nullptr); str) {
-                config.name = str;
-
-                if (!str[0]) {
-                    LogError("Application name cannot be empty");
-                    valid = false;
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("Instance '%1' does not exist", instance_key);
+                    io->AttachError(404);
                 }
-            }
-
-            if (const char *str = values.FindValue("use_offline", nullptr); str) {
-                Span<const char> str2 = ConvertFromJsonName(str, buf);
-                valid &= ParseBool(str2, &config.use_offline);
-            }
-
-            if (const char *str = values.FindValue("sync_mode", nullptr); str) {
-                Span<const char> str2 = ConvertFromJsonName(str, buf);
-                if (!OptionToEnum(SyncModeNames, str2, &config.sync_mode)) {
-                    LogError("Unknown sync mode '%1'", str);
-                    valid = false;
-                }
-            }
-
-            config.backup_key = values.FindValue("backup_key", config.backup_key);
-            if (config.backup_key && !config.backup_key[0])
-                config.backup_key = nullptr;
-            config.shared_key = values.FindValue("shared_key", config.shared_key);
-            if (config.shared_key && !config.shared_key[0])
-                config.shared_key = nullptr;
-
-            config.token_key = values.FindValue("token_key", config.token_key);
-            if (config.token_key && !config.token_key[0])
-                config.token_key = nullptr;
-            config.auto_key = values.FindValue("auto_key", config.auto_key);
-            if (config.auto_key && !config.auto_key[0])
-                config.auto_key = nullptr;
-
-            if (const char *str = values.FindValue("allow_guests", nullptr); str) {
-                Span<const char> str2 = ConvertFromJsonName(str, buf);
-                valid &= ParseBool(str2, &config.allow_guests);
-            }
-
-            if (!valid) {
-                io->AttachError(422);
                 return;
             }
         }
@@ -1443,17 +1517,17 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
             bool success = true;
 
-            success &= instance->db->Run(sql, "Name", config.name);
+            success &= !config.name || instance->db->Run(sql, "Name", config.name);
             if (instance->master == instance) {
-                success &= instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
-                success &= instance->db->Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
-                success &= instance->db->Run(sql, "BackupKey", config.backup_key);
-                success &= instance->db->Run(sql, "TokenKey", config.token_key);
-                success &= instance->db->Run(sql, "AutoKey", config.auto_key);
-                success &= instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
+                success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
+                success &= !change_sync_mode || instance->db->Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
+                success &= !config.backup_key || instance->db->Run(sql, "BackupKey", config.backup_key);
+                success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
+                success &= !config.auto_key || instance->db->Run(sql, "AutoKey", config.auto_key);
+                success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
             }
             if (!instance->slaves.len) {
-                success &= instance->db->Run(sql, "SharedKey", config.shared_key);
+                success &= !config.shared_key || instance->db->Run(sql, "SharedKey", config.shared_key);
             }
             if (!success)
                 return false;
@@ -1477,7 +1551,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1485,13 +1559,8 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to list instances");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to list instances");
+        io->AttachError(403);
         return;
     }
 
@@ -1504,8 +1573,25 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         return;
     char buf[128];
 
+    // Check allowed instances
+    HashSet<const char *> allowed_masters;
+    if (!session->IsRoot()) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare("SELECT instance FROM dom_permissions WHERE userid = ?1", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+
+        while (stmt.Step()) {
+            const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
+            allowed_masters.Set(DuplicateString(instance_key, &io->allocator).ptr);
+        }
+    }
+
     json.StartArray();
     for (InstanceHolder *instance: instances) {
+        if (!session->IsRoot() && !allowed_masters.Find(instance->master->key.ptr))
+            continue;
+
         json.StartObject();
 
         json.Key("key"); json.String(instance->key.ptr);
@@ -1543,31 +1629,9 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
     json.Finish();
 }
 
-static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
-{
-    uint32_t permissions = 0;
-
-    while (remain.len) {
-        Span<const char> js_perm = TrimStr(SplitStr(remain, ',', &remain), " ");
-
-        if (js_perm.len) {
-            char buf[128];
-            js_perm = ConvertFromJsonName(js_perm, buf);
-
-            if (!OptionToFlag(UserPermissionNames, js_perm, &permissions)) {
-                LogError("Unknown permission '%1'", js_perm);
-                return false;
-            }
-        }
-    }
-
-    *out_permissions = permissions;
-    return true;
-}
-
 void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1575,46 +1639,74 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to delete users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to delete users");
+        io->AttachError(403);
         return;
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        int64_t userid = -1;
+        const char *instance = nullptr;
+        uint32_t permissions = UINT32_MAX;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "userid") {
+                    parser.ParseInt(&userid);
+                } else if (key == "instance") {
+                    parser.ParseString(&instance);
+                } else if (key == "permissions") {
+                    if (!parser.SkipNull()) {
+                        permissions = 0;
+
+                        parser.ParseArray();
+                        while (parser.InArray()) {
+                            Span<const char> str = {};
+                            parser.ParseString(&str);
+
+                            char perm[128];
+                            ConvertFromJsonName(str, perm);
+
+                            if (!OptionToFlag(UserPermissionNames, perm, &permissions)) {
+                                LogError("Unknown permission '%1'", str);
+                                io->AttachError(422);
+                                return;
+                            }
+                        }
+                    }
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        int64_t userid;
-        const char *instance;
-        uint32_t permissions;
+        // Check missing values
         {
             bool valid = true;
 
-            if (const char *str = values.FindValue("userid", nullptr); str) {
-                valid &= ParseInt(str, &userid);
-            } else {
-                LogError("Missing 'userid' parameter");
+            if (userid < 0) {
+                LogError("Missing or invalid 'userid' parameter");
                 valid = false;
             }
-
-            instance = values.FindValue("instance", nullptr);
             if (!instance) {
                 LogError("Missing 'instance' parameter");
                 valid = false;
             }
-
-            if (const char *str = values.FindValue("permissions", nullptr); str) {
-                valid &= ParsePermissionList(str, &permissions);
-            } else {
+            if (permissions == UINT32_MAX) {
                 LogError("Missing 'permissions' parameter");
                 valid = false;
             }
@@ -1625,42 +1717,66 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
             }
         }
 
+        // Does instance exist?
+        {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
+                return;
+            sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
+
+            if (stmt.Step() && !session->IsRoot()) {
+                Span<const char> master = SplitStr(instance, '/');
+
+                if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                             WHERE userid = ?1 AND instance = ?2 AND
+                                                   permissions & ?3)", &stmt))
+                    return;
+                sqlite3_bind_int64(stmt, 1, session->userid);
+                sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
+                sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+
+                stmt.Step();
+            }
+
+            if (!stmt.IsRow()) {
+                if (stmt.IsValid()) {
+                    LogError("Instance '%1' does not exist", instance);
+                    io->AttachError(404);
+                }
+                return;
+            }
+        }
+
+        // Does user exist?
+        const char *username;
+        {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare("SELECT root, username FROM dom_users WHERE userid = ?1", &stmt))
+                return;
+            sqlite3_bind_int64(stmt, 1, userid);
+
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
+                }
+                return;
+            }
+
+            if (!session->IsRoot()) {
+                bool is_root = (sqlite3_column_int(stmt, 0) == 1);
+
+                if (is_root) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
+                    return;
+                }
+            }
+
+            username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &io->allocator).ptr;
+        }
+
         gp_domain.db.Transaction([&]() {
-            // Does instance exist?
-            {
-                sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
-                    return false;
-                sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
-
-                if (!stmt.Step()) {
-                    if (stmt.IsValid()) {
-                        LogError("Instance '%1' does not exist", instance);
-                        io->AttachError(404);
-                    }
-                    return false;
-                }
-            }
-
-            // Does user exist?
-            const char *username;
-            {
-                sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT username FROM dom_users WHERE userid = ?1", &stmt))
-                    return false;
-                sqlite3_bind_int64(stmt, 1, userid);
-
-                if (!stmt.Step()) {
-                    if (stmt.IsValid()) {
-                        LogError("User ID '%1' does not exist", userid);
-                        io->AttachError(404);
-                    }
-                    return false;
-                }
-
-                username = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &io->allocator).ptr;
-            }
-
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
@@ -1692,7 +1808,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1700,19 +1816,14 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to list users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to list users");
+        io->AttachError(403);
         return;
     }
 
-    const char *instance_key = request.GetQueryValue("key");
+    const char *instance_key = request.GetQueryValue("instance");
     if (!instance_key) {
-        LogError("Missing 'key' parameter");
+        LogError("Missing 'instance' parameter");
         io->AttachError(422);
         return;
     }
@@ -1725,10 +1836,32 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     }
     RG_DEFER { instance->Unref(); };
 
+    // Can this admin user touch this instance?
+    if (!session->IsRoot()) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                     WHERE userid = ?1 AND instance = ?2 AND
+                                           permissions & ?3)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Instance '%1' does not exist", instance_key);
+                io->AttachError(404);
+            }
+            return;
+        }
+    }
+
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT userid, permissions FROM dom_permissions
-                                 WHERE instance = ?1
-                                 ORDER BY instance)", &stmt))
+    if (!gp_domain.db.Prepare(R"(SELECT p.userid, p.permissions, u.root
+                                 FROM dom_permissions p
+                                 INNER JOIN dom_users u ON (u.userid = p.userid)
+                                 WHERE p.instance = ?1
+                                 ORDER BY p.instance)", &stmt))
         return;
     sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
 
@@ -1741,7 +1874,11 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     while (stmt.Step()) {
         int64_t userid = sqlite3_column_int64(stmt, 0);
         uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
+        bool is_root = (sqlite3_column_int(stmt, 2) == 1);
         char buf[128];
+
+        if (is_root && !session->IsRoot())
+            continue;
 
         if (instance->master != instance) {
             permissions &= UserPermissionSlaveMask;
@@ -1769,21 +1906,16 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to create archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to create archives");
+        io->AttachError(403);
         return;
     }
 
@@ -1802,35 +1934,49 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to delete archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to delete archives");
+        io->AttachError(403);
         return;
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *basename = nullptr;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "filename") {
+                    parser.ParseString(&basename);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        const char *basename = values.FindValue("filename", nullptr);
+        // Check missing values
         if (!basename) {
-            LogError("Missing 'filename' paramreter");
+            LogError("Missing 'filename' parameter");
             io->AttachError(422);
             return;
         }
@@ -1862,21 +2008,16 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to list archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Root user needs to confirm identity");
+        io->AttachError(401);
         return;
     }
 
@@ -1921,21 +2062,16 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to download archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to download archives");
+        io->AttachError(403);
         return;
     }
 
@@ -1975,21 +2111,16 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to upload archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to upload archives");
+        io->AttachError(403);
         return;
     }
 
@@ -2049,56 +2180,63 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to upload archives");
-            io->AttachError(403);
-        }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to upload archives");
+        io->AttachError(403);
         return;
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *basename = nullptr;
+        const char *decrypt_key = nullptr;
+        bool restore_users = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "filename") {
+                    parser.ParseString(&basename);
+                } else if (key == "key") {
+                    parser.ParseString(&decrypt_key);
+                } else if (key == "users") {
+                    parser.ParseBool(&restore_users);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Parse options
-        const char *basename;
-        const char *decrypt_key;
-        bool restore_users;
+        // Check missing values
         {
             bool valid = true;
-            char buf[32];
 
-            basename = values.FindValue("filename", nullptr);
             if (!basename) {
-                LogError("Missing 'filename' paramreter");
+                LogError("Missing 'filename' parameter");
                 valid = false;
             }
-
-            decrypt_key = values.FindValue("key", nullptr);
             if (!decrypt_key) {
                 LogError("Missing 'key' parameter");
                 valid = false;
-            }
-
-            if (const char *str = values.FindValue("users", nullptr); str) {
-                Span<const char> str2 = ConvertFromJsonName(str, buf);
-                valid &= ParseBool(str2, &restore_users);
-            } else {
-                restore_users = false;
             }
 
             if (!valid) {
@@ -2265,7 +2403,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         const char *swap_directory = nullptr;
         RG_DEFER {
             if (swap_directory) {
-                EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType file_type) {
+                EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType) {
                     filename = Fmt(&io->allocator, "%1%/%2", swap_directory, filename).ptr;
                     UnlinkFile(filename);
 
@@ -2310,7 +2448,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 {
                     sq_Statement stmt;
                     if (!main_db.Prepare(R"(SELECT userid, username, password_hash,
-                                                   admin, local_key, email, phone
+                                                   root, local_key, email, phone
                                             FROM dom_users)", &stmt))
                         return false;
 
@@ -2318,15 +2456,15 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                         int64_t userid = sqlite3_column_int64(stmt, 0);
                         const char *username = (const char *)sqlite3_column_text(stmt, 1);
                         const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
-                        int admin = sqlite3_column_int(stmt, 3);
+                        int root = sqlite3_column_int(stmt, 3);
                         const char *local_key = (const char *)sqlite3_column_text(stmt, 4);
                         const char *email = (const char *)sqlite3_column_text(stmt, 5);
                         const char *phone = (const char *)sqlite3_column_text(stmt, 6);
 
                         if (!gp_domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                                                        admin, local_key, email, phone)
+                                                                        root, local_key, email, phone)
                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
-                                              userid, username, password_hash, admin, local_key, email, phone))
+                                              userid, username, password_hash, root, local_key, email, phone))
                             return false;
                     }
                     if (!stmt.IsValid())
@@ -2397,7 +2535,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2405,44 +2543,60 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to create users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to create users");
+        io->AttachError(403);
         return;
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *username = nullptr;
+        const char *password = nullptr;
+        bool change_password = true;
+        bool confirm = false;
+        const char *email = nullptr;
+        const char *phone = nullptr;
+        bool root = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(4), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "username") {
+                    parser.ParseString(&username);
+                } else if (key == "password") {
+                    parser.ParseString(&password);
+                } else if (key == "change_password") {
+                    parser.ParseBool(&change_password);
+                } else if (key == "confirm") {
+                    parser.ParseBool(&confirm);
+                } else if (key == "email") {
+                    parser.ParseString(&email);
+                } else if (key == "phone") {
+                    parser.ParseString(&phone);
+                } else if (key == "root") {
+                    parser.ParseBool(&root);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        const char *username;
-        const char *password;
-        bool change_password = false;
-        bool confirm = false;
-        const char *email;
-        const char *phone;
-        bool admin;
+        // Check missing or invalid values
         {
             bool valid = true;
 
-            username = values.FindValue("username", nullptr);
-            password = values.FindValue("password", nullptr);
-            if (const char *str = values.FindValue("change_password", nullptr); str) {
-                valid &= ParseBool(str, &change_password);
-            }
-            if (const char *str = values.FindValue("confirm", nullptr); str) {
-                valid &= ParseBool(str, &confirm);
-            }
-            email = values.FindValue("email", nullptr);
-            phone = values.FindValue("phone", nullptr);
             if (!username || !password) {
                 LogError("Missing 'username' or 'password' parameter");
                 valid = false;
@@ -2454,7 +2608,6 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 LogError("Empty password");
                 valid = false;
             }
-
             if (email && !strchr(email, '@')) {
                 LogError("Invalid email address format");
                 valid = false;
@@ -2464,12 +2617,17 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 valid = false;
             }
 
-            valid &= ParseBool(values.FindValue("admin", "0"), &admin);
-
             if (!valid) {
                 io->AttachError(422);
                 return;
             }
+        }
+
+        // Safety checks
+        if (root && !session->IsRoot()) {
+            LogError("You cannot create a root user");
+            io->AttachError(403);
+            return;
         }
 
         // Hash password
@@ -2489,7 +2647,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             // Check for existing user
             {
                 sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?1", &stmt))
+                if (!gp_domain.db.Prepare("SELECT userid FROM dom_users WHERE username = ?1", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -2512,9 +2670,9 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 
             // Create user
             if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, change_password,
-                                                            email, phone, admin, local_key, confirm)
+                                                            email, phone, root, local_key, confirm)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
-                                  username, hash, 0 + change_password, email, phone, 0 + admin, local_key,
+                                  username, hash, 0 + change_password, email, phone, 0 + root, local_key,
                                   confirm ? "totp" : nullptr))
                 return false;
 
@@ -2526,7 +2684,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2534,56 +2692,74 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to edit users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to edit users");
+        io->AttachError(403);
         return;
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        int64_t userid = -1;
+        const char *username = nullptr;
+        const char *password = nullptr;
+        bool change_password = true;
+        bool confirm = false, set_confirm = false;
+        bool reset_secret = false;
+        const char *email = nullptr;
+        const char *phone = nullptr;
+        bool root = false, set_root = false;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(4), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "username") {
+                    parser.SkipNull() ||parser.ParseString(&username);
+                } else if (key == "password") {
+                    parser.SkipNull() ||parser.ParseString(&password);
+                } else if (key == "change_password") {
+                    parser.SkipNull() || parser.ParseBool(&change_password);
+                } else if (key == "confirm") {
+                    if (!parser.SkipNull()) {
+                        parser.ParseBool(&confirm);
+                        set_confirm = true;
+                    }
+                } else if (key == "reset_secret") {
+                    parser.SkipNull() || parser.ParseBool(&reset_secret);
+                } else if (key == "email") {
+                    parser.SkipNull() || parser.ParseString(&email);
+                } else if (key == "phone") {
+                    parser.SkipNull() || parser.ParseString(&phone);
+                } else if (key == "root") {
+                    if (!parser.SkipNull()) {
+                        parser.ParseBool(&root);
+                        set_root = true;
+                    }
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        int64_t userid = 0;
-        const char *username;
-        const char *password;
-        bool change_password = false;
-        bool confirm = false;
-        bool set_confirm = false;
-        bool reset_secret = false;
-        const char *email;
-        const char *phone;
-        bool admin = false, set_admin = false;
+        // Check missing or invalid values
         {
             bool valid = true;
 
-            // User ID
-            if (const char *str = values.FindValue("userid", nullptr); str) {
-                valid &= ParseInt(str, &userid);
-            } else {
-                LogError("Missing 'userid' parameter");
+            if (userid < 0) {
+                LogError("Missing or invalid 'userid' parameter");
                 valid = false;
             }
-
-            username = values.FindValue("username", nullptr);
-            password = values.FindValue("password", nullptr);
-            if (const char *str = values.FindValue("change_password", nullptr); str) {
-                valid &= ParseBool(str, &change_password);
-            }
-            if (const char *str = values.FindValue("confirm", nullptr); str) {
-                valid &= ParseBool(str, &confirm);
-                set_confirm = true;
-            }
-            email = values.FindValue("email", nullptr);
-            phone = values.FindValue("phone", nullptr);
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
@@ -2591,10 +2767,6 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 LogError("Empty password");
                 valid = false;
             }
-            if (const char *str = values.FindValue("reset_secret", nullptr); str) {
-                valid &= ParseBool(str, &reset_secret);
-            }
-
             if (email && !strchr(email, '@')) {
                 LogError("Invalid email address format");
                 valid = false;
@@ -2604,20 +2776,20 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 valid = false;
             }
 
-            if (const char *str = values.FindValue("admin", nullptr); str) {
-                valid &= ParseBool(str, &admin);
-                set_admin = true;
-            }
-
             if (!valid) {
                 io->AttachError(422);
                 return;
             }
         }
 
-        // Safety check
-        if (userid == session->userid && set_admin && admin != !!session->admin_until) {
-            LogError("You cannot change your admin privileges");
+        // Safety checks
+        if (root && !session->IsRoot()) {
+            LogError("You cannot create a root user");
+            io->AttachError(403);
+            return;
+        }
+        if (userid == session->userid && set_root && root != session->admin_root) {
+            LogError("You cannot change your root privileges");
             io->AttachError(403);
             return;
         }
@@ -2627,23 +2799,33 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         if (password && !HashPassword(password, hash))
             return;
 
-        gp_domain.db.Transaction([&]() {
-            // Check for existing user
-            {
-                sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT rowid FROM dom_users WHERE userid = ?1", &stmt))
-                    return false;
-                sqlite3_bind_int64(stmt, 1, userid);
+        // Check for existing user
+        {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare("SELECT root FROM dom_users WHERE userid = ?1", &stmt))
+                return;
+            sqlite3_bind_int64(stmt, 1, userid);
 
-                if (!stmt.Step()) {
-                    if (stmt.IsValid()) {
-                        LogError("User ID '%1' does not exist", userid);
-                        io->AttachError(404);
-                    }
-                    return false;
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
                 }
+                return;
             }
 
+            if (!session->IsRoot()) {
+                bool is_root = (sqlite3_column_int(stmt, 0) == 1);
+
+                if (is_root) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
+                    return;
+                }
+            }
+        }
+
+        gp_domain.db.Transaction([&]() {
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
@@ -2667,7 +2849,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 return false;
             if (phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
                 return false;
-            if (set_admin && !gp_domain.db.Run("UPDATE dom_users SET admin = ?2 WHERE userid = ?1", userid, 0 + admin))
+            if (set_root && !gp_domain.db.Run("UPDATE dom_users SET root = ?2 WHERE userid = ?1", userid, 0 + root))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -2678,7 +2860,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2686,53 +2868,59 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to delete users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to delete users");
+        io->AttachError(403);
         return;
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
-        }
-
-        // Read POST values
-        int64_t userid = 0;
+        int64_t userid = -1;
         {
-            bool valid = true;
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
 
-            // User ID
-            if (const char *str = values.FindValue("userid", nullptr); str) {
-                valid &= ParseInt(str, &userid);
-            } else {
-                LogError("Missing 'userid' parameter");
-                valid = false;
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "userid") {
+                    parser.ParseInt(&userid);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
             }
-
-            if (!valid) {
+            if (!parser.IsValid()) {
                 io->AttachError(422);
                 return;
             }
         }
 
-        // Safety check
+        // Check missing values
+        if (userid < 0) {
+            LogError("Missing or invalid 'userid' parameter");
+            io->AttachError(422);
+            return;
+        }
+
+        // Safety checks
         if (userid == session->userid) {
             LogError("You cannot delete yourself");
             io->AttachError(403);
             return;
         }
 
-        gp_domain.db.Transaction([&]() {
+        // Get user information
+        const char *username;
+        const char *local_key;
+        {
             sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT username, local_key FROM dom_users WHERE userid = ?1", &stmt))
-                return false;
+            if (!gp_domain.db.Prepare("SELECT username, local_key, root FROM dom_users WHERE userid = ?1", &stmt))
+                return;
             sqlite3_bind_int64(stmt, 1, userid);
 
             if (!stmt.Step()) {
@@ -2740,14 +2928,26 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
                     LogError("User ID '%1' does not exist", userid);
                     io->AttachError(404);
                 }
-                return false;
+                return;
             }
 
-            const char *username = (const char *)sqlite3_column_text(stmt, 0);
-            const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
-            int64_t time = GetUnixTime();
+            if (!session->IsRoot()) {
+                bool is_root = (sqlite3_column_int(stmt, 2) == 1);
 
+                if (is_root) {
+                    LogError("User ID '%1' does not exist", userid);
+                    io->AttachError(404);
+                    return;
+                }
+            }
+
+            username = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &io->allocator).ptr;
+            local_key = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &io->allocator).ptr;
+        }
+
+        gp_domain.db.Transaction([&]() {
             // Log action
+            int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
                                      VALUES (?1, ?2, ?3, ?4, ?5 || ':' || ?6))",
                                   time, request.client_addr, "delete_user", session->username,
@@ -2765,7 +2965,7 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserList(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2773,18 +2973,13 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        if (session->admin_until) {
-            LogError("Admin user needs to confirm identity");
-            io->AttachError(401);
-        } else {
-            LogError("Non-admin users are not allowed to list users");
-            io->AttachError(403);
-        }
+        LogError("Non-admin users are not allowed to list users");
+        io->AttachError(403);
         return;
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, admin, LOWER(confirm)
+    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, root, LOWER(confirm)
                                  FROM dom_users
                                  ORDER BY username)", &stmt))
         return;
@@ -2796,6 +2991,11 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
 
     json.StartArray();
     while (stmt.Step()) {
+        bool is_root = (sqlite3_column_int(stmt, 4) == 1);
+
+        if (is_root && !session->IsRoot())
+            continue;
+
         json.StartObject();
         json.Key("userid"); json.Int64(sqlite3_column_int64(stmt, 0));
         json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 1));
@@ -2809,7 +3009,7 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         } else {
             json.Key("phone"); json.Null();
         }
-        json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 4));
+        json.Key("root"); json.Bool(is_root);
         json.Key("confirm"); json.Bool(sqlite3_column_type(stmt, 5) != SQLITE_NULL);
         json.EndObject();
     }

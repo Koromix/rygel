@@ -322,7 +322,7 @@ static void ReportError(int error)
     SetEvent(stop_event);
 }
 
-static DWORD WINAPI ServiceHandler(DWORD ctrl, DWORD event, void *data, void *ctx)
+static DWORD WINAPI ServiceHandler(DWORD ctrl, DWORD, void *, void *)
 {
     switch (ctrl) {
         case SERVICE_CONTROL_SHUTDOWN:
@@ -816,7 +816,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
     return 0;
 }
 
-static void WINAPI RunService(DWORD argc, char **argv)
+static void WINAPI RunService(DWORD, char **)
 {
     if (!RedirectLogToWindowsEvents("SeatSH")) {
         ReportError(__LINE__);

@@ -21,25 +21,25 @@ namespace RG {
 class InstanceHolder;
 
 enum class UserPermission {
-    AdminCode = 1 << 0,
-    AdminPublish = 1 << 1,
-    AdminConfig = 1 << 2,
-    AdminAssign = 1 << 3,
+    BuildCode = 1 << 0,
+    BuildPublish = 1 << 1,
+    BuildAdmin = 1 << 2,
+    BuildBatch = 1 << 3,
     DataLoad = 1 << 4,
     DataSave = 1 << 5,
-    DataExport = 1 << 6,
-    DataBatch = 1 << 7,
+    DataAudit = 1 << 6,
+    DataExport = 1 << 7,
     DataMessage = 1 << 8
 };
 static const char *const UserPermissionNames[] = {
-    "AdminCode",
-    "AdminPublish",
-    "AdminConfig",
-    "AdminAssign",
+    "BuildCode",
+    "BuildPublish",
+    "BuildAdmin",
+    "BuildBatch",
     "DataLoad",
     "DataSave",
+    "DataAudit",
     "DataExport",
-    "DataBatch",
     "DataMessage"
 };
 static const uint32_t UserPermissionMasterMask = 0b000001111u;
@@ -84,6 +84,7 @@ public:
     SessionType type;
     int64_t userid;
     int64_t admin_until;
+    bool admin_root;
     char local_key[45];
     bool change_password;
     std::atomic<SessionConfirm> confirm;
@@ -91,6 +92,7 @@ public:
     char username[];
 
     bool IsAdmin() const;
+    bool IsRoot() const;
     bool HasPermission(const InstanceHolder *instance, UserPermission perm) const;
 
     SessionStamp *GetStamp(const InstanceHolder *instance) const;
@@ -101,7 +103,9 @@ public:
 
 void InvalidateUserStamps(int64_t userid);
 
-RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+RetainPtr<const SessionInfo> GetNormalSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+RetainPtr<const SessionInfo> GetAdminSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+
 void PruneSessions();
 
 bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes]);

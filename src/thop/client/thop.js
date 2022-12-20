@@ -202,7 +202,7 @@ const thop = new function() {
         // Fetch new settings
         {
             // We'll parse it manually to revive dates. It's relatively small anyway.
-            let url = util.pasteURL(`${ENV.base_url}api/user/settings`, {rnd: user.getSessionRnd()});
+            let url = util.pasteURL(`${ENV.base_url}api/user/settings`, { rnd: user.getSessionRnd() });
             let json = await net.fetch(url).then(response => response.text());
 
             settings = JSON.parse(json, (key, value) => {
@@ -219,9 +219,9 @@ const thop = new function() {
         if (ENV.has_users) {
             render(html`
                 ${!user.isConnected() ?
-                    html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : ''}
+                    html`<a href=${user.makeURL({ mode: 'login' })}>Se connecter</a>` : ''}
                 ${user.isConnected() ?
-                    html`${settings.username} (<a href=${user.makeURL({mode: 'login'})}>changer</a>,
+                    html`${settings.username} (<a href=${user.makeURL({ mode: 'login' })}>changer</a>,
                                                <a @click=${handleLogoutClick}>déconnexion</a>)` : ''}
             `, document.querySelector('#th_session'));
         }
@@ -276,20 +276,20 @@ const thop = new function() {
     function updateMenu(current_url) {
         render(html`
             <a class="category">Informations MCO</a>
-            ${makeMenuLink('Racines de GHM', mco_info.makeURL({mode: 'ghm_roots'}), current_url)}
-            ${makeMenuLink('Tarifs GHS', mco_info.makeURL({mode: 'ghs'}), current_url)}
-            ${makeMenuLink('Arbre de groupage', mco_info.makeURL({mode: 'tree'}), current_url)}
-            ${makeMenuLink('GHM / GHS', mco_info.makeURL({mode: 'ghmghs'}), current_url)}
-            ${makeMenuLink('Diagnostics', mco_info.makeURL({mode: 'diagnoses'}), current_url)}
-            ${makeMenuLink('Actes', mco_info.makeURL({mode: 'procedures'}), current_url)}
+            ${makeMenuLink('Racines de GHM', mco_info.makeURL({ mode: 'ghm_roots' }), current_url)}
+            ${makeMenuLink('Tarifs GHS', mco_info.makeURL({ mode: 'ghs' }), current_url)}
+            ${makeMenuLink('Arbre de groupage', mco_info.makeURL({ mode: 'tree' }), current_url)}
+            ${makeMenuLink('GHM / GHS', mco_info.makeURL({ mode: 'ghmghs' }), current_url)}
+            ${makeMenuLink('Diagnostics', mco_info.makeURL({ mode: 'diagnoses' }), current_url)}
+            ${makeMenuLink('Actes', mco_info.makeURL({ mode: 'procedures' }), current_url)}
 
             ${settings.permissions.mco_casemix ? html`
                 <a class="category">Activité MCO</a>
-                ${makeMenuLink('GHM', mco_casemix.makeURL({mode: 'ghm'}), current_url)}
-                ${makeMenuLink('Unités', mco_casemix.makeURL({mode: 'units'}), current_url)}
+                ${makeMenuLink('GHM', mco_casemix.makeURL({ mode: 'ghm' }), current_url)}
+                ${makeMenuLink('Unités', mco_casemix.makeURL({ mode: 'units' }), current_url)}
                 ${settings.permissions.mco_results ?
-                    makeMenuLink('Résumés (RSS)', mco_casemix.makeURL({mode: 'rss'}), current_url) : ''}
-                ${makeMenuLink('Valorisation', mco_casemix.makeURL({mode: 'valorisation'}), current_url)}
+                    makeMenuLink('Résumés (RSS)', mco_casemix.makeURL({ mode: 'rss' }), current_url) : ''}
+                ${makeMenuLink('Valorisation', mco_casemix.makeURL({ mode: 'valorisation' }), current_url)}
             ` : ''}
         `, document.querySelector('#th_menu'));
     }

@@ -21,8 +21,8 @@ namespace RG {
 class S3Disk: public rk_Disk {
     s3_Session s3;
 
-    std::atomic_int cache_hits {0};
-    int cache_misses {0};
+    std::atomic_int cache_hits { 0 };
+    int cache_misses { 0 };
     std::mutex cache_mutex;
 
 public:
@@ -162,7 +162,7 @@ bool S3Disk::TestFast(const char *path)
 {
     sq_Statement stmt;
     if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
-        return -1;
+        return false;
     sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
     return stmt.Step();

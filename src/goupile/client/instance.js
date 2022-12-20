@@ -86,24 +86,24 @@ function InstanceController() {
                     db.createStore('rec_records');
                 } // fallthrough
                 case 3: {
-                    db.createIndex('rec_records', 'form', 'fkey', {unique: false});
+                    db.createIndex('rec_records', 'form', 'fkey', { unique: false });
                 } // fallthrough
                 case 4: {
-                    db.createIndex('rec_records', 'parent', 'pkey', {unique: false});
+                    db.createIndex('rec_records', 'parent', 'pkey', { unique: false });
                 } // fallthrough
                 case 5: {
                     db.deleteIndex('rec_records', 'parent');
-                    db.createIndex('rec_records', 'parent', 'pfkey', {unique: false});
+                    db.createIndex('rec_records', 'parent', 'pfkey', { unique: false });
                 } // fallthrough
                 case 6: {
                     db.deleteIndex('rec_records', 'form');
                     db.deleteIndex('rec_records', 'parent');
-                    db.createIndex('rec_records', 'form', 'keys.form', {unique: false});
-                    db.createIndex('rec_records', 'parent', 'keys.parent', {unique: false});
+                    db.createIndex('rec_records', 'form', 'keys.form', { unique: false });
+                    db.createIndex('rec_records', 'parent', 'keys.parent', { unique: false });
                 } // fallthrough
                 case 7: {
-                    db.createIndex('rec_records', 'anchor', 'keys.anchor', {unique: false});
-                    db.createIndex('rec_records', 'sync', 'keys.sync', {unique: false});
+                    db.createIndex('rec_records', 'anchor', 'keys.anchor', { unique: false });
+                    db.createIndex('rec_records', 'sync', 'keys.sync', { unique: false });
                 } // fallthrough
                 case 8: {
                     db.deleteStore('usr_profiles');
@@ -219,7 +219,7 @@ function InstanceController() {
                         </div>
                     </div>
                 ` : ''}
-                ${!app.panels.editor && goupile.hasPermission('admin_code') ? html`
+                ${!app.panels.editor && goupile.hasPermission('build_code') ? html`
                     <div id="ins_drop" class="drop">
                         <button class="icon" style="background-position-y: calc(-230px + 1.2em);" @click=${ui.deployMenu}>Conception</button>
                         <div>
@@ -329,7 +329,7 @@ function InstanceController() {
                                     <hr/>
                                 ` : ''}
                             ` : ''}
-                            ${profile.admin ? html`
+                            ${profile.admin || goupile.hasPermission('build_admin') ? html`
                                 <button @click=${e => window.open('/admin/')}>Administration</button>
                                 <hr/>
                             ` : ''}
@@ -349,12 +349,11 @@ function InstanceController() {
             return;
 
         await mutex.run(async () => {
-            let query = new URLSearchParams;
-            query.set('develop', 0 + enable);
-
             let response = await net.fetch(`${ENV.urls.instance}api/change/mode`, {
                 method: 'POST',
-                body: query
+                body: JSON.stringify({
+                    develop: enable
+                })
             });
 
             if (response.ok) {
@@ -379,7 +378,7 @@ function InstanceController() {
     }
 
     async function generateExportKey(e) {
-        let response = await net.fetch(`${ENV.urls.instance}api/change/export_key`, {method: 'POST'});
+        let response = await net.fetch(`${ENV.urls.instance}api/change/export_key`, { method: 'POST' });
 
         if (!response.ok) {
             let err = await net.readError(response);
@@ -467,7 +466,7 @@ function InstanceController() {
                         <button ?disabled=${!fileHasChanged('main.js')}
                                 @click=${ui.wrapAction(applyMainScript)}>Appliquer</button>
                     ` : ''}
-                    ${goupile.hasPermission('admin_publish') ? html`<button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>` : ''}
+                    ${goupile.hasPermission('build_publish') ? html`<button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>` : ''}
                     <div style="flex: 1;"></div>
                     <button class=${ui.isPanelActive('view') ? 'icon active' : 'icon'}
                             style="background-position-y: calc(-626px + 1.2em);"
@@ -917,13 +916,13 @@ function InstanceController() {
                 model.actions = [];
 
                 if (nav_sequence.prev != null || nav_sequence.next != null) {
-                    form_builder.action('Précédent', {disabled: nav_sequence.prev == null}, async e => {
+                    form_builder.action('Précédent', { disabled: nav_sequence.prev == null }, async e => {
                         let url = nav_sequence.prev;
                         self.go(e, url);
                     });
 
                     if (nav_sequence.next != null) {
-                        form_builder.action('Continuer', {color: '#2d8261', always: true}, async e => {
+                        form_builder.action('Continuer', { color: '#2d8261', always: true }, async e => {
                             let url = nav_sequence.next;
 
                             if (!form_record.saved || form_state.hasChanged())
@@ -941,9 +940,9 @@ function InstanceController() {
                 if (nav_sequence.stay || nav_sequence.next == null) {
                     let name = (!form_record.saved || form_state.hasChanged()) ? 'Enregistrer' : '✓ Enregistré';
 
-                    form_builder.action(name, {disabled: !form_state.hasChanged(),
-                                               color: nav_sequence.next == null ? '#2d8261' : null,
-                                               always: nav_sequence.next == null}, async () => {
+                    form_builder.action(name, { disabled: !form_state.hasChanged(),
+                                                color: nav_sequence.next == null ? '#2d8261' : null,
+                                                always: nav_sequence.next == null }, async () => {
                         form_builder.triggerErrors();
 
                         await saveRecord(form_record, new_hid, form_values, route.page);
@@ -966,7 +965,7 @@ function InstanceController() {
                     if (form_state.hasChanged()) {
                         form_builder.action('-');
 
-                        form_builder.action('Oublier', {color: '#db0a0a', always: form_record.saved}, async e => {
+                        form_builder.action('Oublier', { color: '#db0a0a', always: form_record.saved }, async e => {
                             await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                                    'Oublier', () => {});
 
@@ -2679,7 +2678,7 @@ function InstanceController() {
 
             let enc = await goupile.encryptBackup(entries);
             let json = JSON.stringify(enc);
-            let blob = new Blob([json], {type: 'application/octet-stream'});
+            let blob = new Blob([json], { type: 'application/octet-stream' });
 
             let filename = `${ENV.urls.instance.replace(/\//g, '')}_${profile.username}_${dates.today()}.backup`;
             util.saveBlob(blob, filename);

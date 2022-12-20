@@ -42,7 +42,7 @@ class GetContext {
 
     Async tasks;
 
-    std::atomic<int64_t> stat_len {0};
+    std::atomic<int64_t> stat_len { 0 };
 
 public:
     GetContext(rk_Disk *disk);
@@ -73,7 +73,7 @@ static bool ReserveFile(int fd, const char *filename, int64_t len)
     }
     RG_DEFER { SetFilePointerEx(h, prev_pos, nullptr, FILE_BEGIN); };
 
-    if (!SetFilePointerEx(h, {.QuadPart = len}, nullptr, FILE_BEGIN)) {
+    if (!SetFilePointerEx(h, { .QuadPart = len }, nullptr, FILE_BEGIN)) {
         LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
         return false;
     }
@@ -128,12 +128,14 @@ static FILETIME UnixTimeToFileTime(int64_t time)
     return ft;
 }
 
-static void SetFileMetaData(int fd, const char *filename, int64_t mtime, uint32_t)
+static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t btime, uint32_t)
 {
     HANDLE h = (HANDLE)_get_osfhandle(fd);
-    FILETIME ft = UnixTimeToFileTime(mtime);
 
-    if (!SetFileTime(h, nullptr, nullptr, &ft)) {
+    FILETIME mft = UnixTimeToFileTime(mtime);
+    FILETIME bft = UnixTimeToFileTime(btime);
+
+    if (!SetFileTime(h, &bft, nullptr, &mft)) {
         LogError("Failed to set modification time of '%1': %2", filename, GetWin32ErrorString());
     }
 }
@@ -178,7 +180,7 @@ static bool CreateSymbolicLink(const char *filename, const char *target)
     return true;
 }
 
-static void SetFileMetaData(int fd, const char *filename, int64_t mtime, uint32_t mode)
+static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t, uint32_t mode)
 {
     struct timespec times[2] = {};
 
@@ -205,36 +207,73 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
     std::shared_ptr<BlockAllocator> temp_alloc = std::make_shared<BlockAllocator>();
 
     for (Size offset = 0; offset < entries.len;) {
-        const rk_FileEntry *ptr = (const rk_FileEntry *)(entries.ptr + offset);
+        rk_FileEntry entry;
+        const char *name = nullptr;
 
-        rk_FileEntry entry = *ptr;
-        const char *name = ptr->name;
-
-        entry.mtime = LittleEndian(entry.mtime);
-        entry.mode = LittleEndian(entry.mode);
-        entry.size = LittleEndian(entry.size);
+        // Avoid MSVC error C2466
+        memset(&entry, 0, RG_SIZE(entry));
 
         if (type == rk_ObjectType::Directory1 || type == rk_ObjectType::Snapshot1) {
-            name = (const char *)ptr + 45;
+            rk_FileEntry::V1 *v1 = (rk_FileEntry::V1 *)(entries.ptr + offset);
 
-            Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
-            Size entry_len = 45 + name_len + 1;
+            if (entries.len - offset < RG_SIZE(*v1)) {
+                LogError("Malformed entry in directory object");
+                return false;
+            }
 
-            offset += entry_len;
+            entry.id = v1->id;
+            entry.kind = v1->kind;
+            entry.mtime = LittleEndian(v1->mtime);
+            entry.btime = entry.mtime;
+            entry.mode = LittleEndian(v1->mode);
+            name = v1->name;
         } else if (type == rk_ObjectType::Directory2 || type == rk_ObjectType::Snapshot2) {
-            Size name_len = (Size)strnlen(name, entries.end() - (const uint8_t *)name);
-            Size entry_len = RG_SIZE(rk_FileEntry) + name_len + 1;
+            rk_FileEntry::V2 *v2 = (rk_FileEntry::V2 *)(entries.ptr + offset);
 
-            offset += entry_len;
+            if (entries.len - offset < RG_SIZE(*v2)) {
+                LogError("Malformed entry in directory object");
+                return false;
+            }
+
+            entry.id = v2->id;
+            entry.kind = v2->kind;
+            entry.mtime = LittleEndian(v2->mtime);
+            entry.btime = entry.mtime;
+            entry.mode = LittleEndian(v2->mode);
+            entry.size = LittleEndian(v2->size);
+            name = v2->name;
+        } else if (type == rk_ObjectType::Directory3 || type == rk_ObjectType::Snapshot3) {
+            rk_FileEntry *v3 = (rk_FileEntry *)(entries.ptr + offset);
+
+            if (entries.len - offset < RG_SIZE(*v3)) {
+                LogError("Malformed entry in directory object");
+                return false;
+            }
+
+            entry.id = v3->id;
+            entry.kind = v3->kind;
+            entry.mtime = LittleEndian(v3->mtime);
+            entry.btime = LittleEndian(v3->btime);
+            entry.mode = LittleEndian(v3->mode);
+            entry.size = LittleEndian(v3->size);
+            name = v3->name;
         } else {
             RG_UNREACHABLE();
         }
 
-        // Sanity checks
-        if (offset > entries.len) {
-            LogError("Malformed entry in directory object");
-            return false;
+        // Skip entry for next iteration
+        {
+            const uint8_t *end = (const uint8_t *)memchr(name, 0, entries.end() - (const uint8_t *)name);
+
+            if (!end) {
+                LogError("Malformed entry in directory object");
+                return false;
+            }
+
+            offset = end - entries.ptr + 1;
         }
+
+        // Sanity checks
         if (entry.kind != (int8_t)rk_FileEntry::Kind::Directory &&
                 entry.kind != (int8_t)rk_FileEntry::Kind::File &&
                 entry.kind != (int8_t)rk_FileEntry::Kind::Link) {
@@ -257,6 +296,7 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
         rk_ID entry_id = entry.id;
         int8_t entry_kind = entry.kind;
         int64_t entry_mtime = entry.mtime;
+        int64_t entry_btime = entry.btime;
         uint32_t entry_mode = entry.mode;
 
         const char *entry_filename;
@@ -278,7 +318,8 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
             switch (entry_kind) {
                 case (int8_t)rk_FileEntry::Kind::Directory: {
                     if (entry_type != rk_ObjectType::Directory1 &&
-                            entry_type != rk_ObjectType::Directory2) {
+                            entry_type != rk_ObjectType::Directory2 &&
+                            entry_type != rk_ObjectType::Directory3) {
                         LogError("Object '%1' is not a directory", entry_id);
                         return false;
                     }
@@ -292,7 +333,7 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
                     // Set directory metadata
                     {
                         int fd = OpenDescriptor(entry_filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
-                        SetFileMetaData(fd, entry_filename, entry_mtime, entry_mode);
+                        SetFileMetaData(fd, entry_filename, entry_mtime, entry_btime, entry_mode);
                         close(fd);
                     }
                 } break;
@@ -307,7 +348,7 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
                         return false;
                     RG_DEFER { close(fd); };
 
-                    SetFileMetaData(fd, entry_filename, entry_mtime, entry_mode);
+                    SetFileMetaData(fd, entry_filename, entry_mtime, entry_btime, entry_mode);
                 } break;
                 case (int8_t)rk_FileEntry::Kind::Link: {
                     if (entry_type != rk_ObjectType::Link) {
@@ -364,7 +405,7 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
             Async async(&tasks);
 
             // Write unencrypted file
-            for (Size idx = 0, offset = 0; offset < file_obj.len; idx++, offset += RG_SIZE(rk_ChunkEntry)) {
+            for (Size offset = 0; offset < file_obj.len; offset += RG_SIZE(rk_ChunkEntry)) {
                 async.Run([=, this]() {
                     rk_ChunkEntry entry = {};
 
@@ -420,8 +461,10 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
 
         case rk_ObjectType::Directory1:
         case rk_ObjectType::Directory2:
+        case rk_ObjectType::Directory3:
         case rk_ObjectType::Snapshot1:
         case rk_ObjectType::Snapshot2:
+        case rk_ObjectType::Snapshot3:
         case rk_ObjectType::Link: { RG_UNREACHABLE(); } break;
     }
 
@@ -458,7 +501,8 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
         } break;
 
         case rk_ObjectType::Directory1:
-        case rk_ObjectType::Directory2: {
+        case rk_ObjectType::Directory2:
+        case rk_ObjectType::Directory3: {
             if (TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
@@ -474,7 +518,8 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
         } break;
 
         case rk_ObjectType::Snapshot1:
-        case rk_ObjectType::Snapshot2: {
+        case rk_ObjectType::Snapshot2:
+        case rk_ObjectType::Snapshot3: {
             if (TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);

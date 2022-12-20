@@ -533,9 +533,9 @@ function FormBuilder(state, model, readonly = false) {
             return;
 
         return ui.runDialog(e, null, {}, (d, resolve, reject) => {
-            let number = d.number('number', 'Valeur :', {min: min, max: max, value: value});
+            let number = d.number('number', 'Valeur :', { min: min, max: max, value: value });
 
-            d.action('Modifier', {disabled: !d.isValid()}, () => {
+            d.action('Modifier', { disabled: !d.isValid() }, () => {
                 updateValue(key, number.value);
                 resolve(number.value);
             });
@@ -869,7 +869,7 @@ function FormBuilder(state, model, readonly = false) {
     }
 
     this.proposition = function(value, label) {
-        return {value: value, label: label || value};
+        return { value: value, label: label || value };
     };
 
     function normalizePropositions(props) {
@@ -878,18 +878,18 @@ function FormBuilder(state, model, readonly = false) {
 
         props = props.filter(c => c != null).map(c => {
             if (Array.isArray(c)) {
-                return {value: c[0], label: c[1] || c[0]};
+                return { value: c[0], label: c[1] || c[0] };
             } else if (typeof c === 'string') {
                 let sep_pos = c.indexOf(':::');
                 if (sep_pos >= 0) {
                     let value = c.substr(0, sep_pos);
                     let label = c.substr(sep_pos + 3);
-                    return {value: value, label: label || value};
+                    return { value: value, label: label || value };
                 } else {
-                    return {value: c, label: c};
+                    return { value: c, label: c };
                 }
             } else if (typeof c === 'number') {
-                return {value: c, label: c};
+                return { value: c, label: c };
             } else {
                 return c;
             }
@@ -1548,7 +1548,7 @@ instead of:
                 if (prev_widget != null)
                     widgets_ref.push(prev_widget);
                 widgets = widgets_ref;
-            }, {wide: wide});
+            }, { wide: wide });
 
             inline_widgets = widgets;
             inline_next = true;

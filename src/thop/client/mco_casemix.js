@@ -299,7 +299,7 @@ const mco_casemix = new function() {
 
     function renderGhmRootSelector(mco, current_ghm_root) {
         return html`
-            <select @change=${e => thop.go(self, {valorisation: {ghm_root: e.target.value}})}>
+            <select @change=${e => thop.go(self, { valorisation: { ghm_root: e.target.value } })}>
                 ${mco.ghm_roots.definitions.map(defn => {
                     let disabled = false;
                     let label = `${defn.describe()}${disabled ? ' *' : ''}`;
@@ -345,7 +345,7 @@ const mco_casemix = new function() {
         let ppik = new PeriodPicker;
 
         ppik.clickHandler = (e, start_date, end_date) =>
-            thop.go(self, {main: {start_date: start_date, end_date: end_date}});
+            thop.go(self, { main: { start_date: start_date, end_date: end_date } });
 
         ppik.setRange(min_date, max_date);
         ppik.setDates(start_date, end_date);
@@ -355,7 +355,7 @@ const mco_casemix = new function() {
 
     function renderAlgorithmSelector(algorithms, current_algorithm) {
         return html`
-            <label>Algorithme <select @change=${e => thop.go(self, {main: {algorithm: e.target.value}})}>
+            <label>Algorithme <select @change=${e => thop.go(self, { main: { algorithm: e.target.value } })}>
                 ${settings.mco.casemix.algorithms.map(algo => {
                     let selected = (route.main.algorithm === algo);
                     let label = `Algorithme ${algo}`;
@@ -368,20 +368,20 @@ const mco_casemix = new function() {
 
     function renderCoefficientCheckbox(current_coeff) {
         return html`<label>Coefficient <input type="checkbox" .checked=${current_coeff}
-                                              @change=${e => thop.go(self, {coeff: e.target.checked})}/></label>`;
+                                              @change=${e => thop.go(self, { coeff: e.target.checked })}/></label>`;
     }
 
     function renderUnitTree(structures, current_tab, current_units) {
         let tsel = new TreeSelector;
 
         tsel.clickHandler = (e, values, tab) =>
-            thop.go(self, {main: {units: values}, structure: tab});
+            thop.go(self, { main: { units: values }, structure: tab });
 
         tsel.setPrefix('Unités : ');
         for (let structure of structures) {
             tsel.addTab(structure.name);
             for (let ent of structure.entities)
-                tsel.addOption(ent.path, ent.unit, {selected: current_units.has(ent.unit)});
+                tsel.addOption(ent.path, ent.unit, { selected: current_units.has(ent.unit) });
         }
         tsel.setCurrentTab(current_tab);
 
@@ -392,17 +392,17 @@ const mco_casemix = new function() {
         let tsel = new TreeSelector;
 
         tsel.clickHandler = (e, values, tab) =>
-            thop.go(self, {main: {ghm_roots: values}});
+            thop.go(self, { main: { ghm_roots: values } });
 
         tsel.setPrefix('Racines de GHM : ');
         tsel.addTab('roots', 'Racines');
         for (let defn of mco.ghm_roots.definitions)
-            tsel.addOption(defn.describe(), defn.code, {selected: current_ghm_roots.has(defn.code)});
+            tsel.addOption(defn.describe(), defn.code, { selected: current_ghm_roots.has(defn.code) });
         for (let group of mco.ghm_roots.parents) {
             tsel.addTab(group, mco[group].title);
             for (let defn of mco.ghm_roots.definitions) {
                 let title = [defn.describeParent(group), defn.describe()];
-                tsel.addOption(title, defn.code, {selected: current_ghm_roots.has(defn.code)});
+                tsel.addOption(title, defn.code, { selected: current_ghm_roots.has(defn.code) });
             }
         }
         tsel.setCurrentTab('roots');

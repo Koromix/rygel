@@ -424,12 +424,18 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             }
 
             for (const TargetInfo *import2: import->imports) {
-                if (handled_imports.TrySet(import2->name).second) {
+                bool inserted;
+                handled_imports.TrySet(import2->name, &inserted);
+
+                if (inserted) {
                     target->imports.Append(import2);
                 }
             }
 
-            if (handled_imports.TrySet(import->name).second) {
+            bool inserted;
+            handled_imports.TrySet(import->name, &inserted);
+
+            if (inserted) {
                 target->imports.Append(import);
             }
         }
@@ -481,7 +487,11 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         Size j = 0;
         for (Size i = 0; i < target->libraries.len; i++) {
             target->libraries[j] = target->libraries[i];
-            j += handled.TrySet(target->libraries[i]).second;
+
+            bool inserted;
+            handled.TrySet(target->libraries[i], &inserted);
+
+            j += inserted;
         }
         target->libraries.len = j;
     }
@@ -493,7 +503,11 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         Size j = 0;
         for (Size i = 0; i < target->pchs.len; i++) {
             target->pchs[j] = target->pchs[i];
-            j += handled.TrySet(target->pchs[i]).second;
+
+            bool inserted;
+            handled.TrySet(target->pchs[i], &inserted);
+
+            j += inserted;
         }
         target->pchs.len = j;
     }
@@ -506,8 +520,10 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         for (Size i = 0; i < target->sources.len; i++) {
             target->sources[j] = target->sources[i];
 
-            const char *key = target->sources[i]->filename;
-            j += handled.TrySet(key).second;
+            bool inserted;
+            handled.TrySet(target->sources[i]->filename, &inserted);
+
+            j += inserted;
         }
         target->sources.len = j;
     }
@@ -516,8 +532,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     if (!ResolveFileSet(target_config->pack_file_set, &set.str_alloc, &target->pack_filenames))
         return nullptr;
 
-    bool appended = set.targets_map.TrySet(target).second;
-    RG_ASSERT(appended);
+    set.targets_map.Set(target);
 
     out_guard.Disable();
     return target;
@@ -526,9 +541,10 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 const SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, const char *filename,
                                                      SourceType type, const SourceFeatures *features)
 {
-    std::pair<SourceFileInfo **, bool> ret = set.sources_map.TrySetDefault(filename);
+    bool inserted;
+    SourceFileInfo **ptr = set.sources_map.TrySetDefault(filename, &inserted);
 
-    if (ret.second) {
+    if (inserted) {
         SourceFileInfo *src = set.sources.AppendDefault();
 
         src->target = target;
@@ -540,10 +556,10 @@ const SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, c
             src->disable_features = features->disable_features;
         }
 
-        *ret.first = src;
+        *ptr = src;
     }
 
-    return *ret.first;
+    return *ptr;
 }
 
 void TargetSetBuilder::Finish(TargetSet *out_set)

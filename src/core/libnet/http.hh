@@ -73,7 +73,7 @@ class http_Daemon {
 #else
     int stop_pfd[2] = {-1, -1};
 #endif
-    std::atomic_bool running {false};
+    std::atomic_bool running { false };
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
 
@@ -97,8 +97,7 @@ private:
     static ssize_t HandleWrite(void *cls, uint64_t pos, char *buf, size_t max);
     void RunNextAsync(http_IO *io);
 
-    static void RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
-                                 MHD_RequestTerminationCode toe);
+    static void RequestCompleted(void *cls, MHD_Connection *, void **con_cls, MHD_RequestTerminationCode toe);
 
     friend http_IO;
 };
@@ -226,7 +225,6 @@ public:
     bool OpenForWrite(int code, Size len, CompressionType encoding, StreamWriter *out_st);
     bool OpenForWrite(int code, Size len, StreamWriter *out_st)
         { return OpenForWrite(code, len, CompressionType::None, out_st); }
-    bool ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values);
 
     // These must be run in async context (with RunAsync), except for IsWS
     bool IsWS() const;

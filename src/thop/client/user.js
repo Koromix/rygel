@@ -96,13 +96,12 @@ const user = new function() {
     }
 
     this.login = async function(username, password) {
-        let query = new URLSearchParams;
-        query.set('username', username.toLowerCase());
-        query.set('password', password);
-
         let response = await net.fetch(`${ENV.base_url}api/user/login`, {
             method: 'POST',
-            body: query
+            body: JSON.stringify({
+                username: username.toLowerCase(),
+                password: password
+            })
         });
 
         if (response.ok) {
@@ -116,7 +115,7 @@ const user = new function() {
     };
 
     this.logout = async function() {
-        let response = await net.fetch(`${ENV.base_url}api/user/logout`, {method: 'POST'});
+        let response = await net.fetch(`${ENV.base_url}api/user/logout`, { method: 'POST' });
 
         if (response.ok) {
             log.info('Vous êtes déconnecté(e)');

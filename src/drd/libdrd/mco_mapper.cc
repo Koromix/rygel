@@ -34,12 +34,13 @@ static bool MergeConstraint(const mco_TableIndex &index,
             new_constraint.durations &= (DurationMask); \
             new_constraint.raac_durations = constraint.durations & (RaacMask); \
             if (new_constraint.durations) { \
-                std::pair<mco_GhmConstraint *, bool> ret = out_constraints->TrySet(new_constraint); \
-                if (!ret.second) { \
-                    ret.first->cmds |= new_constraint.cmds; \
-                    ret.first->durations |= new_constraint.durations; \
-                    ret.first->raac_durations |= new_constraint.raac_durations; \
-                    ret.first->warnings &= new_constraint.warnings; \
+                bool inserted; \
+                mco_GhmConstraint *ptr = out_constraints->TrySet(new_constraint, &inserted); \
+                if (!inserted) { \
+                    ptr->cmds |= new_constraint.cmds; \
+                    ptr->durations |= new_constraint.durations; \
+                    ptr->raac_durations |= new_constraint.raac_durations; \
+                    ptr->warnings &= new_constraint.warnings; \
                 } \
             } \
         } while (false)
@@ -128,9 +129,9 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size node_idx,
             } else if (ghm_node.u.test.params[0] == 1) {
                 uint64_t warn_cmd28_jumps;
                 {
-                    std::pair<uint64_t *, bool> ret =
-                        ctx.warn_cmd28_jumps_cache.TrySet(node_idx, 0);
-                    if (ret.second) {
+                    bool inserted;
+                    uint64_t *ptr = ctx.warn_cmd28_jumps_cache.TrySet(node_idx, 0, &inserted);
+                    if (inserted) {
                         warn_cmd28_jumps = UINT64_MAX;
                         RG_ASSERT(ghm_node.u.test.children_count <= 64);
                         for (const mco_DiagnosisInfo &diag_info: ctx.index->diagnoses) {
@@ -140,9 +141,9 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size node_idx,
                             }
                         }
 
-                        *ret.first = warn_cmd28_jumps;
+                        *ptr = warn_cmd28_jumps;
                     } else {
-                        warn_cmd28_jumps = *ret.first;
+                        warn_cmd28_jumps = *ptr;
                     }
                 }
 

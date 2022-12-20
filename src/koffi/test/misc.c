@@ -730,3 +730,43 @@ EXPORT int MakeVectors(int len, VectorCallback *func)
 
     return ret;
 }
+
+EXPORT size_t UpperCaseStrAscii(const char *str, char *out)
+{
+    size_t len = 0;
+
+    while (str[len]) {
+        char c = str[len];
+
+        if (c >= 'a' && c <= 'z') {
+            out[len] = (char)(c - 32);
+        } else {
+            out[len] = c;
+        }
+
+        len++;
+    }
+    out[len] = 0;
+
+    return len;
+}
+
+EXPORT size_t UpperCaseStrAscii16(const char16_t *str, char16_t *out)
+{
+    size_t len = 0;
+
+    while (str[len]) {
+        char16_t c = str[len];
+
+        if (c >= 'a' && c <= 'z') {
+            out[len] = (char16_t)(c - 32);
+        } else {
+            out[len] = c;
+        }
+
+        len++;
+    }
+    out[len] = 0;
+
+    return len;
+}

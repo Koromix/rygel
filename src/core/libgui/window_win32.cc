@@ -159,7 +159,8 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             thread_info->input.y = (int16_t)(lparam >> 16);
 
             if (!thread_info->input.mouseover) {
-                TRACKMOUSEEVENT tme = { RG_SIZE(tme) };
+                TRACKMOUSEEVENT tme = {};
+                tme.cbSize = RG_SIZE(tme);
                 tme.hwndTrack = thread_window->hwnd;
                 tme.dwFlags = TME_LEAVE;
                 TrackMouseEvent(&tme);
@@ -213,7 +214,8 @@ static HWND CreateMainWindow(const char *application_name)
         if (ConvertUtf8ToWin32Wide(application_name, application_name_w) < -1)
             return nullptr;
 
-        WNDCLASSEXW gl_cls = { RG_SIZE(gl_cls) };
+        WNDCLASSEXW gl_cls = {};
+        gl_cls.cbSize = RG_SIZE(gl_cls);
         gl_cls.hInstance = GetModuleHandle(nullptr);
         gl_cls.lpszClassName = application_name_w;
         gl_cls.lpfnWndProc = MainWindowProc;
@@ -278,7 +280,8 @@ static bool InitWGL(const char *application_name)
         if (ConvertUtf8ToWin32Wide(dummy_cls_name, dummy_cls_name_w) < 0)
             return false;
 
-        WNDCLASSEXW dummy_cls = { RG_SIZE(dummy_cls) };
+        WNDCLASSEXW dummy_cls = {};
+        dummy_cls.cbSize = RG_SIZE(dummy_cls);
         dummy_cls.hInstance = GetModuleHandle(nullptr);
         dummy_cls.lpszClassName = dummy_cls_name_w;
         dummy_cls.lpfnWndProc = DefWindowProcW;
@@ -307,7 +310,8 @@ static bool InitWGL(const char *application_name)
     RG_DEFER { DestroyWindow(dummy_wnd); };
 
     {
-        PIXELFORMATDESCRIPTOR pfd = { RG_SIZE(PIXELFORMATDESCRIPTOR) };
+        PIXELFORMATDESCRIPTOR pfd = {};
+        pfd.nSize = RG_SIZE(PIXELFORMATDESCRIPTOR);
         pfd.nVersion = 1;
         pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
         pfd.iPixelType = PFD_TYPE_RGBA;

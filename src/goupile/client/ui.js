@@ -431,7 +431,7 @@ const ui = new function() {
         return self.runDialog(e, title, {}, (d, resolve, reject) => {
             d.output(msg);
 
-            d.action(action, {disabled: !d.isValid()}, async e => {
+            d.action(action, { disabled: !d.isValid() }, async e => {
                 try {
                     await func(e);
                     resolve();

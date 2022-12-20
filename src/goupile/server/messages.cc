@@ -51,7 +51,7 @@ void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, h
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -76,22 +76,42 @@ void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, h
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
-        }
-
-        // Read POST values
-        const char *to;
+        const char *to = nullptr;
         smtp_MailContent content;
         {
-            bool valid = true;
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(256), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
 
-            to = values.FindValue("to", nullptr);
-            content.subject = values.FindValue("subject", nullptr);
-            content.text = values.FindValue("text", nullptr);
-            content.html = values.FindValue("html", nullptr);
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "to") {
+                    parser.ParseString(&to);
+                } else if (key == "subject") {
+                    parser.ParseString(&content.subject);
+                } else if (key == "text") {
+                    parser.ParseString(&content.text);
+                } else if (key == "html") {
+                    parser.ParseString(&content.html);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Check for missing of invalid values
+        {
+            bool valid = true;
 
             if (!to || !strchr(to, '@')) {
                 LogError("Missing or invalid 'to' parameter");
@@ -123,7 +143,7 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -148,20 +168,38 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
     }
 
     io->RunAsync([=]() {
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
+        const char *to = nullptr;
+        const char *message = nullptr;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "to") {
+                    parser.ParseString(&to);
+                } else if (key == "message") {
+                    parser.ParseString(&message);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
         }
 
-        // Read POST values
-        const char *to;
-        const char *message;
+        // Check missing values
         {
             bool valid = true;
-
-            to = values.FindValue("to", nullptr);
-            message = values.FindValue("message", nullptr);
 
             if (!to || !to[0]) {
                 LogError("Missing or empty 'to' parameter");
@@ -187,7 +225,7 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleSendTokenize(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");

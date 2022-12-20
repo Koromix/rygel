@@ -44,9 +44,9 @@ void bk_ImportPrint(bk_Compiler *out_compiler)
 
 void bk_ImportMath(bk_Compiler *out_compiler)
 {
-    out_compiler->AddGlobal("PI", bk_FloatType, {{.d = 3.141592653589793}});
-    out_compiler->AddGlobal("E", bk_FloatType, {{.d = 2.718281828459045}});
-    out_compiler->AddGlobal("TAU", bk_FloatType, {{.d = 6.283185307179586}});
+    out_compiler->AddGlobal("PI", bk_FloatType, { { .d = 3.141592653589793 } });
+    out_compiler->AddGlobal("E", bk_FloatType, { { .d = 2.718281828459045 } });
+    out_compiler->AddGlobal("TAU", bk_FloatType, { { .d = 6.283185307179586 } });
 
     BK_ADD_FUNCTION(*out_compiler, "isNormal(Float): Bool", (int)bk_FunctionFlag::Pure, { ret[0].b = std::isnormal(args[0].d); });
     BK_ADD_FUNCTION(*out_compiler, "isInfinity(Float): Bool", (int)bk_FunctionFlag::Pure, { ret[0].b = std::isinf(args[0].d); });

@@ -82,7 +82,7 @@ static bool ApplyProfile(Size idx)
 {
     // Should work first time...
     {
-        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc> func) {});
+        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
         RG_DEFER { PopLogFilter(); };
 
         if (ApplyLight(port, config.profiles[idx].settings)) {
@@ -308,8 +308,8 @@ Options:
 
         profile_idx = config.default_idx;
     } else {
-        config.profiles.Append({.name = "Enable", .settings = {.mode = LightMode::Static}});
-        config.profiles.Append({.name = "Disable", .settings = {.mode = LightMode::Disabled}});
+        config.profiles.Append({ .name = "Enable", .settings = { .mode = LightMode::Static } });
+        config.profiles.Append({ .name = "Disable", .settings = { .mode = LightMode::Disabled } });
     }
 
     HINSTANCE module = GetModuleHandle(nullptr);

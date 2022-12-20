@@ -255,7 +255,11 @@ RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_
         Concept concept_info;
         concept_info.name = DuplicateString((const char *)concepts.name[i], &inst->entity_set.str_alloc).ptr;
         concept_info.path = path;
-        if (!concept_set->concepts_map.TrySet(concept_info).second) {
+
+        bool inserted;
+        concept_set->concepts_map.TrySet(concept_info, &inserted);
+
+        if (!inserted) {
             LogError("Concept '%1' already exists", concept_info.name);
         }
     }

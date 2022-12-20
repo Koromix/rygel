@@ -1764,10 +1764,11 @@ const char *GetQualifiedEnv(const char *name)
     // Each accessed environment variable is kept in memory and thus leaked once
     static HashMap<const char *, const char *> values;
 
-    std::pair<const char **, bool> ret = values.TrySet(name, nullptr);
+    bool inserted;
+    const char **ptr = values.TrySet(name, nullptr, &inserted);
 
-    if (ret.second) {
-        const char *ptr = (const char *)EM_ASM_INT({
+    if (inserted) {
+        const char *str = (const char *)EM_ASM_INT({
             try {
                 var name = UTF8ToString($0);
                 var str = process.env[name];
@@ -1785,10 +1786,10 @@ const char *GetQualifiedEnv(const char *name)
             }
         }, buf.data);
 
-        *ret.first = ptr;
+        *ptr = str;
     }
 
-    return *ret.first;
+    return *ptr;
 #else
     return getenv(buf.data);
 #endif
@@ -2131,6 +2132,7 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
     out_info->type = FileAttributesToType(attr.dwFileAttributes);
     out_info->size = ((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
     out_info->mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
+    out_info->btime = FileTimeToUnixTime(attr.ftCreationTime);
     out_info->mode = (out_info->type == FileType::Directory) ? 0755 : 0644;
 
     return StatResult::Success;
@@ -2281,6 +2283,42 @@ static FileType FileModeToType(mode_t mode)
 
 StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
+#ifdef __linux__
+    int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
+    int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
+
+    struct statx sxb;
+    if (statx(AT_FDCWD, filename, stat_flags, stat_mask, &sxb) < 0) {
+        switch (errno) {
+            case ENOENT: {
+                if (!(flags & (int)StatFlag::IgnoreMissing)) {
+                    LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                }
+                return StatResult::MissingPath;
+            } break;
+            case EACCES: {
+                LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                return StatResult::AccessDenied;
+            } break;
+            default: {
+                LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                return StatResult::OtherError;
+            } break;
+        }
+    }
+
+    out_info->type = FileModeToType(sxb.stx_mode);
+    out_info->size = (int64_t)sxb.stx_size;
+    out_info->mtime = (int64_t)sxb.stx_mtime.tv_sec * 1000 +
+                      (int64_t)sxb.stx_mtime.tv_nsec / 1000000;
+    if (sxb.stx_mask & STATX_BTIME) {
+        out_info->btime = (int64_t)sxb.stx_btime.tv_sec * 1000 +
+                          (int64_t)sxb.stx_btime.tv_nsec / 1000000;
+    } else {
+        out_info->btime = out_info->mtime;
+    }
+    out_info->mode = (unsigned int)sxb.stx_mode & ~S_IFMT;
+#else
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
 
     struct stat sb;
@@ -2305,16 +2343,24 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
 
     out_info->type = FileModeToType(sb.st_mode);
     out_info->size = (int64_t)sb.st_size;
-#if defined(__linux__)
-    out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
-                                  (int64_t)sb.st_mtim.tv_nsec / 1000000;
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
     out_info->mtime = (int64_t)sb.st_mtimespec.tv_sec * 1000 +
-                                  (int64_t)sb.st_mtimespec.tv_nsec / 1000000;
+                      (int64_t)sb.st_mtimespec.tv_nsec / 1000000;
+    out_info->btime = (int64_t)sb.st_birthtimespec.tv_sec * 1000 +
+                      (int64_t)sb.st_birthtimespec.tv_nsec / 1000000;
+#elif defined(__OpenBSD__)
+    out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
+                      (int64_t)sb.st_mtim.tv_nsec / 1000000;
+    out_info->btime = (int64_t)sb.__st_birthtim.tv_sec * 1000 +
+                      (int64_t)sb.__st_birthtim.tv_nsec / 1000000;
 #else
-    out_info->mtime = (int64_t)sb.st_mtime * 1000;
+    out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
+                      (int64_t)sb.st_mtim.tv_nsec / 1000000;
+    out_info->btime = (int64_t)sb.st_birthtim.tv_sec * 1000 +
+                      (int64_t)sb.st_birthtim.tv_nsec / 1000000;
 #endif
     out_info->mode = (unsigned int)sb.st_mode;
+#endif
 
     return StatResult::Success;
 }
@@ -2851,7 +2897,7 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        int name[4] = {CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV};
+        int name[4] = { CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV };
 
         size_t argc;
         {
@@ -2887,7 +2933,7 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        int name[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+        int name[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
         size_t len = sizeof(executable_path);
 
         int ret = sysctl(name, RG_LEN(name), executable_path, &len, NULL, 0);
@@ -3439,7 +3485,8 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
         RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
         RG_ASSERT(!(flags & (int)OpenFlag::Append));
 
-        oflags &= ~O_CREAT;
+        oflags &= ~(O_CREAT | O_WRONLY | O_RDWR | O_TRUNC);
+        oflags |= O_RDONLY;
     }
     if (flags & (int)OpenFlag::Exists) {
         RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
@@ -3959,8 +4006,8 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 static const pthread_t main_thread = pthread_self();
 #endif
-static std::atomic_bool flag_interrupt {false};
-static std::atomic_bool explicit_interrupt {false};
+static std::atomic_bool flag_interrupt { false };
+static std::atomic_bool explicit_interrupt { false };
 static int interrupt_pfd[2] = {-1, -1};
 
 void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev)
@@ -4149,15 +4196,15 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
         int in_idx = -1, out_idx = -1, term_idx = -1;
         if (in_pfd[1] >= 0) {
             in_idx = pfds.len;
-            pfds.Append({in_pfd[1], POLLOUT});
+            pfds.Append({ in_pfd[1], POLLOUT, 0 });
         }
         if (out_pfd[0] >= 0) {
             out_idx = pfds.len;
-            pfds.Append({out_pfd[0], POLLIN});
+            pfds.Append({ out_pfd[0], POLLIN, 0 });
         }
         if (interrupt_pfd[0] >= 0) {
             term_idx = pfds.len;
-            pfds.Append({interrupt_pfd[0], POLLIN});
+            pfds.Append({ interrupt_pfd[0], POLLIN, 0 });
         }
 
         if (RG_POSIX_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
@@ -4386,7 +4433,7 @@ void WaitDelay(int64_t delay)
 
 WaitForResult WaitForInterrupt(int64_t timeout)
 {
-    static std::atomic_bool message {false};
+    static std::atomic_bool message { false };
 
     flag_interrupt = true;
     SetSignalHandler(SIGUSR1, [](int) { message = true; });
@@ -5270,7 +5317,7 @@ class AsyncPool {
 
     HeapArray<TaskQueue> queues;
     int next_queue_idx = 0;
-    std::atomic_int pending_tasks {0};
+    std::atomic_int pending_tasks { 0 };
 
 public:
     AsyncPool(int threads, bool leak);
@@ -5419,7 +5466,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 
             std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
             if (lock_queue.owns_lock()) {
-                queue->tasks.Append({async, func});
+                queue->tasks.Append({ async, func });
                 break;
             }
         }
@@ -5427,7 +5474,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
         TaskQueue *queue = &queues[async_running_worker_idx];
 
         std::lock_guard<std::mutex> lock_queue(queue->queue_mutex);
-        queue->tasks.Append({async, func});
+        queue->tasks.Append({ async, func });
     }
 
     async->remaining_tasks++;
@@ -8260,15 +8307,15 @@ Vec2<int> ConsolePrompter::GetConsoleSize()
 
     CONSOLE_SCREEN_BUFFER_INFO screen;
     if (GetConsoleScreenBufferInfo(h, &screen))
-        return {screen.dwSize.X, screen.dwSize.Y};
+        return { screen.dwSize.X, screen.dwSize.Y };
 #else
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) >= 0 && ws.ws_col)
-        return {ws.ws_col, ws.ws_row};
+        return { ws.ws_col, ws.ws_row };
 #endif
 
     // Give up!
-    return {80, 24};
+    return { 80, 24 };
 }
 
 int32_t ConsolePrompter::ReadChar()

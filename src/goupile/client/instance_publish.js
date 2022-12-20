@@ -88,7 +88,7 @@ function InstancePublisher(instance, db) {
                 </div>
             `);
 
-            d.action('Publier', {disabled: !d.isValid()}, async () => {
+            d.action('Publier', { disabled: !d.isValid() }, async () => {
                 await deploy(actions);
                 resolve();
             });
@@ -116,7 +116,7 @@ function InstancePublisher(instance, db) {
     function runAddFileDialog(e) {
         return ui.runDialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
             d.file('*file', 'Fichier :');
-            d.text('*filename', 'Chemin :', {value: d.values.file ? d.values.file.name : null});
+            d.text('*filename', 'Chemin :', { value: d.values.file ? d.values.file.name : null });
 
             if (d.values.filename) {
                 if (!d.values.filename.match(/^[A-Za-z0-9_\.]+(\/[A-Za-z0-9_\.]+)*$/))
@@ -125,7 +125,7 @@ function InstancePublisher(instance, db) {
                     d.error('filename', 'Le chemin ne doit pas contenir de composants \'..\'');
             }
 
-            d.action('Créer', {disabled: !d.isValid()}, async () => {
+            d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let progress = new log.Entry;
 
                 progress.progress('Enregistrement du fichier');
@@ -179,19 +179,19 @@ function InstancePublisher(instance, db) {
             if (actions.some(action => action.type == 'conflict'))
                 throw new Error('Conflits non résolus');
 
-            let query = new URLSearchParams;
+            let files = {};
             for (let i = 0; i < actions.length; i += 10) {
                 let p = actions.slice(i, i + 10).map(async action => {
                     switch (action.type) {
                         case 'push': {
                             if (action.to_sha256 != null)
-                                query.set(action.filename, action.to_sha256);
+                                files[action.filename] = action.to_sha256;
                         } break;
 
                         case 'noop':
                         case 'pull': {
                             if (action.from_sha256 != null)
-                                query.set(action.filename, action.from_sha256);
+                                files[action.filename] = action.from_sha256;
                         } break;
                     }
                 });
@@ -201,7 +201,7 @@ function InstancePublisher(instance, db) {
             // Publish!
             await net.fetchJson(`${ENV.urls.base}api/files/publish`, {
                 method: 'POST',
-                body: query
+                body: JSON.stringify(files)
             });
 
             progress.success('Publication effectuée');

@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <thread>
 #include <type_traits>
 #include <utility>
 #if defined(_WIN32)
@@ -38,8 +39,6 @@
 #elif !defined(__APPLE__) && (!defined(__linux__) || defined(__GLIBC__)) && __has_include(<ucontext.h>)
     #define RG_FIBER_USE_UCONTEXT
     #include <ucontext.h>
-#else
-    #include <thread>
 #endif
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
@@ -1123,7 +1122,7 @@ public:
 template <typename T>
 class RetainObject {
     mutable void (*delete_func)(T *) = nullptr;
-    mutable std::atomic_int refcount {0};
+    mutable std::atomic_int refcount { 0 };
 
 public:
     void Ref() const { refcount++; }
@@ -2143,36 +2142,56 @@ public:
     ValueType *Set(const ValueType &value)
     {
         const KeyType &key = Handler::GetKey(value);
-        ValueType *it = Insert(key).first;
-        *it = value;
-        return it;
+
+        bool inserted;
+        ValueType *ptr = Insert(key, &inserted);
+
+        *ptr = value;
+
+        return ptr;
     }
     ValueType *SetDefault(const KeyType &key)
     {
-        std::pair<ValueType *, bool> ret = Insert(key);
-        if (!ret.second) {
-            ret.first->~ValueType();
+        bool inserted;
+        ValueType *ptr = Insert(key, &inserted);
+
+        if (!inserted) {
+            ptr->~ValueType();
         }
-        new (ret.first) ValueType();
-        return ret.first;
+        new (ptr) ValueType();
+
+        return ptr;
     }
 
-    std::pair<ValueType *, bool> TrySet(const ValueType &value)
+    ValueType *TrySet(const ValueType &value, bool *out_inserted = nullptr)
     {
         const KeyType &key = Handler::GetKey(value);
-        std::pair<ValueType *, bool> ret = Insert(key);
-        if (ret.second) {
-            *ret.first = value;
+
+        bool inserted;
+        ValueType *ptr = Insert(key, &inserted);
+
+        if (inserted) {
+            *ptr = value;
         }
-        return ret;
+
+        if (out_inserted) {
+            *out_inserted = inserted;
+        }
+        return ptr;
     }
-    std::pair<ValueType *, bool> TrySetDefault(const KeyType &key)
+    ValueType *TrySetDefault(const KeyType &key, bool *out_inserted = nullptr)
     {
-        std::pair<ValueType *, bool> ret = Insert(key);
-        if (ret.second) {
-            new (ret.first) ValueType();
+        bool inserted;
+        ValueType *ptr = Insert(key, &inserted);
+
+        if (inserted) {
+            new (ptr) ValueType();
         }
-        return ret;
+
+        if (out_inserted) {
+            *out_inserted = inserted;
+        }
+        return ptr;
     }
 
     void Remove(ValueType *it)
@@ -2257,7 +2276,7 @@ private:
         }
     }
 
-    std::pair<ValueType *, bool> Insert(const KeyType &key)
+    ValueType *Insert(const KeyType &key, bool *out_inserted)
     {
         uint64_t hash = Handler::HashKey(key);
 
@@ -2274,9 +2293,12 @@ private:
                 }
                 count++;
                 MarkUsed(idx);
-                return {&data[idx], true};
+
+                *out_inserted = true;
+                return &data[idx];
             } else {
-                return {it, false};
+                *out_inserted = false;
+                return it;
             }
         } else {
             Rehash(RG_HASHTABLE_BASE_CAPACITY);
@@ -2284,7 +2306,9 @@ private:
             Size idx = HashToIndex(hash);
             count++;
             MarkUsed(idx);
-            return {&data[idx], true};
+
+            *out_inserted = true;
+            return &data[idx];
         }
     }
 
@@ -2566,7 +2590,7 @@ public:
     }
 
     ValueType *Set(const KeyType &key, const ValueType &value)
-        { return &table.Set({key, value})->value; }
+        { return &table.Set({ key, value })->value; }
     ValueType *SetDefault(const KeyType &key)
     {
         Bucket *table_it = table.SetDefault(key);
@@ -2574,16 +2598,24 @@ public:
         return &table_it->value;
     }
 
-    std::pair<ValueType *, bool> TrySet(const KeyType &key, const ValueType &value)
+    ValueType *TrySet(const KeyType &key, const ValueType &value, bool *out_inserted = nullptr)
     {
-        std::pair<Bucket *, bool> ret = table.TrySet({key, value});
-        return { &ret.first->value, ret.second };
+        Bucket *ptr = table.TrySet({ key, value }, out_inserted);
+        return &ptr->value;
     }
-    std::pair<ValueType *, bool> TrySetDefault(const KeyType &key)
+    ValueType *TrySetDefault(const KeyType &key, bool *out_inserted = nullptr)
     {
-        std::pair<Bucket *, bool> ret = table.TrySetDefault(key);
-        ret.first->key = key;
-        return { &ret.first->value, ret.second };
+        bool inserted;
+        Bucket *ptr = table.TrySetDefault(key, &inserted);
+
+        if (inserted) {
+            ptr->key = key;
+        }
+
+        if (out_inserted) {
+            *out_inserted = inserted;
+        }
+        return &ptr->value;
     }
 
     void Remove(ValueType *it)
@@ -2636,7 +2668,8 @@ public:
         { return table.FindValue(value, default_value); }
 
     ValueType *Set(const ValueType &value) { return table.Set(value); }
-    std::pair<ValueType *, bool> TrySet(const ValueType &value) { return table.TrySet(value); }
+    ValueType *TrySet(const ValueType &value, bool *out_inserted = nullptr)
+        { return table.TrySet(value, out_inserted); }
 
     void Remove(ValueType *it) { table.Remove(it); }
     template <typename T = ValueType>
@@ -2666,10 +2699,10 @@ union LocalDate {
     LocalDate() = default;
 #ifdef RG_BIG_ENDIAN
     LocalDate(int16_t year, int8_t month, int8_t day)
-        : st({year, month, day}) { RG_ASSERT(IsValid()); }
+        : st({ year, month, day }) { RG_ASSERT(IsValid()); }
 #else
     LocalDate(int16_t year, int8_t month, int8_t day)
-        : st({day, month, year}) { RG_ASSERT(IsValid()); }
+        : st({ day, month, year }) { RG_ASSERT(IsValid()); }
 #endif
 
     static inline bool IsLeapYear(int16_t year)
@@ -2678,7 +2711,7 @@ union LocalDate {
     }
     static inline int8_t DaysInMonth(int16_t year, int8_t month)
     {
-        static const int8_t DaysPerMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        static const int8_t DaysPerMonth[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
         return (int8_t)(DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year)));
     }
 
@@ -3799,6 +3832,7 @@ struct FileInfo {
 
     int64_t size;
     int64_t mtime;
+    int64_t btime;
     unsigned int mode;
 };
 
@@ -4081,8 +4115,8 @@ class Async {
     RG_DELETE_COPY(Async)
 
     bool stop_after_error;
-    std::atomic_bool success {true};
-    std::atomic_int remaining_tasks {0};
+    std::atomic_bool success { true };
+    std::atomic_int remaining_tasks { 0 };
 
     class AsyncPool *pool;
 

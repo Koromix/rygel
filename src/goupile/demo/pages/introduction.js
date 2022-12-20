@@ -1,6 +1,6 @@
 // Retirer le commentaire de la ligne suivante pour afficher les
 // champs (texte, numérique, etc.) à droite du libellé.
-// form.pushOptions({compact: true})
+// form.pushOptions({ compact: true })
 
 form.output(html`
     <p>Une fonction est composée d'un nom et de plusieurs paramètres et permet de proposer un <b>champ de saisie</b> (champ texte, menu déroulant ...).

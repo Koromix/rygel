@@ -451,12 +451,12 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         valid &= ParsePmsiInt(line.Take(12, 3), &test.error);
 
         if (valid) {
-            mco_Test *it = out_tests->TrySet(test).first;
-            it->cluster_len++;
+            mco_Test *ptr = out_tests->TrySet(test);
+            ptr->cluster_len++;
         } else {
-            mco_Test *it = out_tests->Find(test.bill_id);
-            if (it) {
-                it->cluster_len++;
+            mco_Test *ptr = out_tests->Find(test.bill_id);
+            if (ptr) {
+                ptr->cluster_len++;
             }
         }
     }

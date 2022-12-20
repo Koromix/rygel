@@ -330,8 +330,8 @@ pump:
         WSAResetEvent(ws_handle);
 #else
         struct pollfd pfds[2] = {
-            {ws_fd, POLLIN},
-            {daemon->stop_pfd[0], POLLIN}
+            { ws_fd, POLLIN, 0 },
+            { daemon->stop_pfd[0], POLLIN, 0 }
         };
 
         if (poll(pfds, RG_LEN(pfds), -1) < 0) {

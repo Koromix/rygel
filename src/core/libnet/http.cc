@@ -168,15 +168,15 @@ bool http_Daemon::Start(const http_Config &config,
 
     // MHD options
     LocalArray<MHD_OptionItem, 16> mhd_options;
-    mhd_options.Append({MHD_OPTION_LISTEN_SOCKET, listen_fd});
+    mhd_options.Append({ MHD_OPTION_LISTEN_SOCKET, listen_fd, nullptr });
     if (config.threads > 1) {
-        mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads});
+        mhd_options.Append({ MHD_OPTION_THREAD_POOL_SIZE, config.threads, nullptr });
     }
     if (config.max_connections) {
-        mhd_options.Append({MHD_OPTION_CONNECTION_LIMIT, config.max_connections});
+        mhd_options.Append({ MHD_OPTION_CONNECTION_LIMIT, config.max_connections, nullptr });
     }
-    mhd_options.Append({MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout});
-    mhd_options.Append({MHD_OPTION_END, 0, nullptr});
+    mhd_options.Append({ MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout, nullptr });
+    mhd_options.Append({ MHD_OPTION_END, 0, nullptr });
     client_addr_mode = config.client_addr_mode;
 
 #ifdef _WIN32
@@ -504,8 +504,7 @@ void http_Daemon::RunNextAsync(http_IO *io)
     }
 }
 
-void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
-                                   MHD_RequestTerminationCode toe)
+void http_Daemon::RequestCompleted(void *, MHD_Connection *, void **con_cls, MHD_RequestTerminationCode)
 {
     http_IO *io = *(http_IO **)con_cls;
 
@@ -806,85 +805,6 @@ bool http_IO::OpenForWrite(int code, Size len, CompressionType encoding, StreamW
 
     bool success = out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>", encoding);
     return success;
-}
-
-bool http_IO::ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values)
-{
-    RG_ASSERT(state != State::Sync);
-    RG_ASSERT(request.method == http_RequestMethod::Post);
-    RG_ASSERT(alloc);
-
-    struct PostProcessorContext {
-        HashMap<const char *, const char *> *values;
-        const char *key;
-        HeapArray<char> buf;
-    };
-
-    PostProcessorContext ctx = {};
-    ctx.values = out_values;
-    ctx.buf.allocator = alloc;
-
-    // Create POST data processor
-    MHD_PostProcessor *pp =
-        MHD_create_post_processor(request.conn, Kibibytes(32),
-                                  [](void *cls, enum MHD_ValueKind, const char *key,
-                                     const char *, const char *, const char *,
-                                     const char *data, uint64_t offset, size_t size) {
-        PostProcessorContext *ctx = (PostProcessorContext *)cls;
-
-        if (!ctx->key) {
-            ctx->key = DuplicateString(key, ctx->buf.allocator).ptr;
-        } else if (!TestStr(key, ctx->key)) {
-            ctx->buf.Append(0);
-
-            const char *value = ctx->buf.TrimAndLeak().ptr;
-            ctx->values->Set(ctx->key, value);
-
-            ctx->key = DuplicateString(key, ctx->buf.allocator).ptr;
-        }
-
-        RG_ASSERT(offset == (uint64_t)ctx->buf.len);
-        ctx->buf.Append(MakeSpan(data, (Size)size));
-
-        return MHD_YES;
-    }, &ctx);
-    if (!pp) {
-        LogError("Cannot parse this kind of POST data");
-        return false;
-    }
-    RG_DEFER { MHD_destroy_post_processor(pp); };
-
-    read_max = Kibibytes(32);
-
-    // Parse available upload data
-    for (;;) {
-        LocalArray<uint8_t, 1024> buf;
-        buf.len = Read(buf.data);
-        if (buf.len < 0) {
-            return false;
-        } else if (!buf.len) {
-            break;
-        }
-
-        if (MHD_post_process(pp, (const char *)buf.data, (size_t)buf.len) != MHD_YES) {
-            LogError("Failed to parse POST data");
-            return false;
-        }
-    }
-
-    // This may trigger a new call to the iterator callback with remaining buffered
-    // data, so we really need to do this before we handle our own leftovers.
-    MHD_destroy_post_processor(pp);
-    pp = nullptr;
-
-    if (ctx.key) {
-        ctx.buf.Append(0);
-
-        const char *value = ctx.buf.TrimAndLeak().ptr;
-        out_values->Set(ctx.key, value);
-    }
-
-    return true;
 }
 
 void http_IO::AddFinalizer(const std::function<void()> &func)

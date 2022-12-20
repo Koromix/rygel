@@ -39,8 +39,8 @@ class PutContext {
 
     Async uploads;
 
-    std::atomic<int64_t> stat_len {0};
-    std::atomic<int64_t> stat_written {0};
+    std::atomic<int64_t> stat_len { 0 };
+    std::atomic<int64_t> stat_written { 0 };
 
 public:
     PutContext(rk_Disk *disk);
@@ -139,6 +139,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         }
 
         entry->mtime = LittleEndian(file_info.mtime);
+        entry->btime = LittleEndian(file_info.btime);
         entry->mode = LittleEndian((uint32_t)file_info.mode);
         CopyString(basename, MakeSpan(entry->name, entry_len - RG_SIZE(rk_FileEntry)));
 
@@ -240,9 +241,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         if (entry->kind == (int8_t)rk_FileEntry::Kind::Directory) {
             const char *filename = Fmt(&temp_alloc, "%1%/%2", src_dirname, entry->name).ptr;
 
-            PutResult ret = PutDirectory(filename, follow_symlinks, &entry->id);
-
-            if (ret == PutResult::Error)
+            if (PutDirectory(filename, follow_symlinks, &entry->id) == PutResult::Error)
                 return PutResult::Error;
         }
 
@@ -281,7 +280,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     uploads.Run([dir_id, data = AsyncUpload(dir_obj.Leak()), this]() {
         Span<const uint8_t> obj = data.Get();
 
-        Size written = disk->WriteObject(dir_id, rk_ObjectType::Directory2, obj);
+        Size written = disk->WriteObject(dir_id, rk_ObjectType::Directory3, obj);
         if (written < 0)
             return false;
         stat_written += written;
@@ -505,6 +504,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         }
 
         entry->mtime = LittleEndian(file_info.mtime);
+        entry->btime = LittleEndian(file_info.btime);
         entry->mode = LittleEndian((uint32_t)file_info.mode);
     }
 
@@ -523,7 +523,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
         // Write snapshot object
         {
-            Size ret = disk->WriteObject(id, rk_ObjectType::Snapshot2, snapshot_obj);
+            Size ret = disk->WriteObject(id, rk_ObjectType::Snapshot3, snapshot_obj);
             if (ret < 0)
                 return false;
             total_written += ret;

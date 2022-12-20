@@ -51,11 +51,11 @@ public:
 
     void SetCookiePath(const char *new_path) { cookie_path = new_path; }
 
-    void Open(const http_RequestInfo &request, http_IO *io, RetainPtr<T> udata)
+    void Open(const http_RequestInfo &, http_IO *io, RetainPtr<T> udata)
     {
         std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
-        SessionHandle *handle = CreateHandle(request, io);
+        SessionHandle *handle = CreateHandle();
         if (!handle)
             return;
         int64_t now = GetMonotonicTime();
@@ -81,7 +81,7 @@ public:
         SessionHandle **ptr = FindHandle(request, &mismatch, &locked);
 
         sessions_map.Remove(ptr);
-        DeleteSessionCookies(request, io);
+        DeleteSessionCookies(io);
     }
 
     RetainPtr<T> Find(const http_RequestInfo &request, http_IO *io)
@@ -109,9 +109,9 @@ public:
                 lock_shr.unlock();
                 std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
-                handle = CreateHandle(request, io, locked ? session_rnd : nullptr);
+                handle = CreateHandle(locked ? session_rnd : nullptr);
                 if (!handle) {
-                    DeleteSessionCookies(request, io);
+                    DeleteSessionCookies(io);
                     return nullptr;
                 }
 
@@ -133,7 +133,7 @@ public:
                 return nullptr;
             }
         } else if (mismatch) {
-            DeleteSessionCookies(request, io);
+            DeleteSessionCookies(io);
             return nullptr;
         } else {
             return nullptr;
@@ -171,7 +171,7 @@ public:
     }
 
 private:
-    SessionHandle *CreateHandle(const http_RequestInfo &request, http_IO *io, const char *session_rnd = nullptr)
+    SessionHandle *CreateHandle(const char *session_rnd = nullptr)
     {
         SessionHandle *handle = sessions.AppendDefault();
 
@@ -187,7 +187,10 @@ private:
                     FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16));
             }
 
-            if (RG_LIKELY(sessions_map.TrySet(handle).second))
+            bool inserted;
+            sessions_map.TrySet(handle, &inserted);
+
+            if (RG_LIKELY(inserted))
                 break;
         }
 
@@ -241,7 +244,7 @@ private:
         return ptr;
     }
 
-    void DeleteSessionCookies(const http_RequestInfo &request, http_IO *io)
+    void DeleteSessionCookies(http_IO *io)
     {
         io->AddCookieHeader(cookie_path, "session_key", nullptr, true);
         io->AddCookieHeader(cookie_path, "session_rnd", nullptr, false);

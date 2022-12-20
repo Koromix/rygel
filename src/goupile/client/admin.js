@@ -27,7 +27,8 @@ function AdminController() {
 
         ui.createPanel('instances', ['users', 'archives'], 'users', renderInstances);
         ui.createPanel('users', [], null, renderUsers);
-        ui.createPanel('archives', [], null, renderArchives);
+        if (profile.root)
+            ui.createPanel('archives', [], null, renderArchives);
 
         ui.setPanelState('instances', true);
         if (ui.allowTwoPanels())
@@ -49,9 +50,11 @@ function AdminController() {
                 <button class=${'icon' + (ui.isPanelActive('users') ? ' active' : '')}
                         style="background-position-y: calc(-406px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
-                <button class=${'icon' + (ui.isPanelActive('archives') ? ' active' : '')}
-                        style="background-position-y: calc(-142px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'archives'))}>Archives</button>
+                ${profile.root ? html`
+                    <button class=${'icon' + (ui.isPanelActive('archives') ? ' active' : '')}
+                            style="background-position-y: calc(-142px + 1.2em);"
+                            @click=${ui.wrapAction(e => togglePanel(e, 'archives'))}>Archives</button>
+                ` : ''}
                 <div style="flex: 1;"></div>
                 <div class="drop right" @click=${ui.deployMenu}>
                     <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
@@ -75,7 +78,7 @@ function AdminController() {
         return html`
             <div class="padded" style="background: #f8f8f8;">
                 <div class="ui_quick">
-                    <a @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer un projet</a>
+                    ${profile.root ? html`<a @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer un projet</a>` : ''}
                     <div style="flex: 1;"></div>
                     Projets (<a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>rafraichir</a>)
                 </div>
@@ -83,10 +86,10 @@ function AdminController() {
                 <table class="ui_table fixed">
                     <colgroup>
                         <col/>
+                        ${profile.root ? html`<col style="width: 100px;"/>` : ''}
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
-                        <col style="width: 100px;"/>
-                        <col style="width: 100px;"/>
+                        ${profile.root ? html`<col style="width: 100px;"/>` : ''}
                     </colgroup>
 
                     <tbody>
@@ -98,13 +101,14 @@ function AdminController() {
                                     ${instance.master == null ? instance.key : ''}
                                     (<a href=${'/' + instance.key} target="_blank">accès</a>)
                                 </td>
-                                <td>${instance.master == null ?
-                                        html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
+                                ${profile.root && instance.master == null ?
+                                    html`<td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a></td>` : ''}
+                                ${profile.root && instance.master != null ? html`<td></td>` : ''}
                                 <td><a role="button" tabindex="0" href=${util.pasteURL('/admin/', { select: instance.key })} 
                                        @click=${ui.wrapAction(instance != selected_instance ? (e => ui.setPanelState('users', true))
                                                                                             : (e => { self.go(e, '/admin/'); e.preventDefault(); }))}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
-                                <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runDeleteInstanceDialog(e, instance))}>Supprimer</a></td>
+                                ${profile.root ? html`<td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runDeleteInstanceDialog(e, instance))}>Supprimer</a></td>` : ''}
                             </tr>
                         `)}
                     </tbody>
@@ -161,9 +165,9 @@ function AdminController() {
 
                             return html`
                                 <tr>
-                                    <td style=${'text-align: left;' + (user.admin ? ' color: #db0a0a;' : '')}>
+                                    <td style=${'text-align: left;' + (user.root ? ' color: #db0a0a;' : '')}>
                                         ${user.username}
-                                        ${user.admin ? html`<span title="Administrateur">♛\uFE0E</span>` : ''}
+                                        ${user.root ? html`<span title="Super-administrateur">♛\uFE0E</span>` : ''}
                                     </td>
                                     ${selected_instance == null ? html`
                                         <td style="text-align: left;">${user.email != null ? html`<a href=${'mailto:' + user.email}>${user.email}</a>` : ''}</td>
@@ -174,7 +178,7 @@ function AdminController() {
                                     ${selected_instance != null ? html`
                                         <td class=${!permissions.length ? 'missing' : ''}
                                             style="white-space: normal;">
-                                            ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : ''}
+                                            ${selected_instance.master == null ? makePermissionsTag(permissions, 'build_', '#b518bf') : ''}
                                             ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
                                             ${!permissions.length ? 'Non assigné' : ''}
                                         </td>
@@ -282,7 +286,7 @@ function AdminController() {
         return ui.runDialog(e, 'Envoi d\'archive', {}, (d, resolve, reject) => {
             d.file('*archive', 'Archive');
 
-            d.action('Envoyer', {disabled: !d.isValid()}, async () => {
+            d.action('Envoyer', { disabled: !d.isValid() }, async () => {
                 let progress = log.progress('Envoi en cours');
 
                 try {
@@ -319,18 +323,17 @@ function AdminController() {
             d.password('*key', 'Clé de restauration');
             d.boolean('*restore_users', 'Restaurer les utilisateurs et leurs droits', { value: false, untoggle: false });
 
-            d.action('Restaurer', {disabled: !d.isValid()}, async () => {
+            d.action('Restaurer', { disabled: !d.isValid() }, async () => {
                 let progress = log.progress('Restauration en cours');
 
                 try {
-                    let query = new URLSearchParams;
-                    query.set('filename', filename);
-                    query.set('key', d.values.key);
-                    query.set('users', 0 + d.values.restore_users);
-
                     let response = await net.fetch('/admin/api/archives/restore', {
                         method: 'POST',
-                        body: query
+                        body: JSON.stringify({
+                            filename: filename,
+                            key: d.values.key,
+                            users: d.values.restore_users
+                        })
                     });
 
                     if (response.ok) {
@@ -359,12 +362,11 @@ function AdminController() {
     function runDeleteBackupDialog(e, filename) {
         return ui.runConfirm(e, `Voulez-vous vraiment supprimer l'archive '${filename}' ?`,
                                 'Supprimer', async () => {
-            let query = new URLSearchParams;
-            query.set('filename', filename);
-
             let response = await net.fetch('/admin/api/archives/delete', {
                 method: 'POST',
-                body: query
+                body: JSON.stringify({
+                    filename: filename
+                })
             });
 
             if (response.ok) {
@@ -435,7 +437,7 @@ function AdminController() {
             new_selected = new_instances.find(instance => instance.key === new_selected.key);
         if (new_selected != null) {
             if (new_permissions == null || new_permissions.key != new_selected.key) {
-                let url = util.pasteURL('/admin/api/instances/permissions', {key: new_selected.key});
+                let url = util.pasteURL('/admin/api/instances/permissions', { instance: new_selected.key });
                 let permissions = await net.fetchJson(url);
 
                 new_permissions = {
@@ -484,18 +486,17 @@ function AdminController() {
                     'Caractères autorisés : a-z (minuscules), 0-9 et \'-\''
                 ]
             });
-            d.text('name', 'Nom', {value: d.values.key});
-            d.boolean('demo', 'Ajouter les pages par défaut', {value: true, untoggle: false});
+            d.text('name', 'Nom', { value: d.values.key });
+            d.boolean('demo', 'Ajouter les pages par défaut', { value: true, untoggle: false });
 
-            d.action('Créer', {disabled: !d.isValid()}, async () => {
-                let query = new URLSearchParams;
-                query.set('key', d.values.key);
-                query.set('name', d.values.name);
-                query.set('demo', 0 + d.values.demo);
-
+            d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',
-                    body: query
+                    body: JSON.stringify({
+                        key: d.values.key,
+                        name: d.values.name,
+                        demo: d.values.demo
+                    })
                 });
 
                 if (response.ok) {
@@ -519,14 +520,14 @@ function AdminController() {
 
     function runConfigureInstanceDialog(e, instance) {
         return ui.runDialog(e, `Configuration de ${instance.key}`, {}, (d, resolve, reject) => {
-            d.pushOptions({untoggle: false});
+            d.pushOptions({ untoggle: false });
 
             if (instance.master == null) {
                 d.tabs('tabs', () => {
                     d.tab('Basique', () => {
-                        d.text('*name', 'Nom', {value: instance.config.name});
-                        d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
-                        d.boolean('*allow_guests', 'Autoriser les invités', {value: instance.config.allow_guests});
+                        d.text('*name', 'Nom', { value: instance.config.name });
+                        d.boolean('*use_offline', 'Utilisation hors-ligne', { value: instance.config.use_offline });
+                        d.boolean('*allow_guests', 'Autoriser les invités', { value: instance.config.allow_guests });
                     });
 
                     d.tab('Avancé', () => {
@@ -534,10 +535,10 @@ function AdminController() {
                             ['online', 'En ligne'],
                             ['mirror', 'Miroir'],
                             ['offline', 'Hors ligne']
-                        ], {value: instance.config.sync_mode});
+                        ], { value: instance.config.sync_mode });
 
                         if (d.values.sync_mode == 'offline')
-                            d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key});
+                            d.text('backup_key', 'Clé d\'archivage', { value: instance.config.backup_key });
                         if (d.values.backup_key != null && !checkCryptoKey(d.values.backup_key))
                             d.error('backup_key', 'Format de clé non valide');
                         d.text('shared_key', 'Clé locale partagée', {
@@ -546,30 +547,27 @@ function AdminController() {
                         });
                         if (instance.slaves > 0 && d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
                             d.error('shared_key', 'Format de clé non valide');
-                        d.text('token_key', 'Session par token', {value: instance.config.token_key});
+                        d.text('token_key', 'Session par token', { value: instance.config.token_key });
                         if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
                             d.error('token_key', 'Format de clé non valide');
-                        d.text('auto_key', 'Session de requête', {value: instance.config.auto_key});
+                        d.text('auto_key', 'Session de requête', { value: instance.config.auto_key });
                     });
                 });
 
-                d.action('Configurer', {disabled: !d.isValid()}, async () => {
-                    let query = new URLSearchParams();
-                    query.set('key', instance.key);
-                    query.set('name', d.values.name);
-                    query.set('use_offline', 0 + d.values.use_offline);
-                    query.set('sync_mode', d.values.sync_mode);
-                    if (d.values.sync_mode === 'offline')
-                        query.set('backup_key', d.values.backup_key || '');
-                    if (!instance.slaves)
-                        query.set('shared_key', d.values.shared_key || '');
-                    query.set('token_key', d.values.token_key || '');
-                    query.set('auto_key', d.values.auto_key || '');
-                    query.set('allow_guests', 0 + d.values.allow_guests);
-
+                d.action('Configurer', { disabled: !d.isValid() }, async () => {
                     let response = await net.fetch('/admin/api/instances/configure', {
                         method: 'POST',
-                        body: query
+                        body: JSON.stringify({
+                            instance: instance.key,
+                            name: d.values.name,
+                            use_offline: d.values.use_offline,
+                            sync_mode: d.values.sync_mode,
+                            backup_key: d.values.backup_key,
+                            shared_key: d.values.shared_key,
+                            token_key: d.values.token_key,
+                            auto_key: d.values.auto_key,
+                            allow_guests: d.values.allow_guests
+                        })
                     });
 
                     if (response.ok) {
@@ -589,25 +587,24 @@ function AdminController() {
             } else {
                 d.tabs('tabs', () => {
                     d.tab('Basique', () => {
-                        d.text('*name', 'Nom', {value: instance.config.name});
+                        d.text('*name', 'Nom', { value: instance.config.name });
                     });
 
                     d.tab('Avancé', () => {
-                        d.text('shared_key', 'Clé locale partagée', {value: instance.config.shared_key});
+                        d.text('shared_key', 'Clé locale partagée', { value: instance.config.shared_key });
                         if (d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
                             d.error('shared_key', 'Format de clé non valide');
                     });
                 });
 
-                d.action('Configurer', {disabled: !d.isValid()}, async () => {
-                    let query = new URLSearchParams();
-                    query.set('key', instance.key);
-                    query.set('name', d.values.name);
-                    query.set('shared_key', d.values.shared_key || '');
-
+                d.action('Configurer', { disabled: !d.isValid() }, async () => {
                     let response = await net.fetch('/admin/api/instances/configure', {
                         method: 'POST',
-                        body: query
+                        body: JSON.stringify({
+                            instance: instance.key,
+                            name: d.values.name,
+                            shared_key: d.values.shared_key
+                        })
                     });
 
                     if (response.ok) {
@@ -642,12 +639,9 @@ function AdminController() {
             d.output(`Voulez-vous vraiment supprimer le projet '${instance.key}' ?`);
 
             d.action('Supprimer', {}, async () => {
-                let query = new URLSearchParams;
-                query.set('key', instance.key);
-
                 let response = await net.fetch('/admin/api/instances/delete', {
                     method: 'POST',
-                    body: query,
+                    body: JSON.stringify({ instance: instance.key }),
                     timeout: 180000
                 });
 
@@ -673,18 +667,17 @@ function AdminController() {
         return ui.runDialog(e, `Division de ${master}`, {}, (d, resolve, reject) => {
             d.calc('instance', 'Projet', master);
             d.text('*key', 'Clé du sous-projet');
-            d.text('name', 'Nom', {value: d.values.key});
+            d.text('name', 'Nom', { value: d.values.key });
 
-            d.action('Créer', {disabled: !d.isValid()}, async () => {
+            d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let full_key = master + '/' + d.values.key;
-
-                let query = new URLSearchParams;
-                query.set('key', full_key);
-                query.set('name', d.values.name);
 
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',
-                    body: query
+                    body: JSON.stringify({
+                        key: full_key,
+                        name: d.values.name
+                    })
                 });
 
                 if (response.ok) {
@@ -711,7 +704,7 @@ function AdminController() {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
             d.password('*password', 'Mot de passe');
-            d.password('*password2', null, {placeholder: 'Confirmation'});
+            d.password('*password2', null, { placeholder: 'Confirmation' });
             d.boolean('*change_password', 'Exiger un changement de mot de passe', {
                 value: true, untoggle: false
             });
@@ -733,23 +726,21 @@ function AdminController() {
             if (d.values.phone != null && !d.values.phone.startsWith('+'))
                 d.error('phone', 'Format non valide (préfixe obligatoire)');
 
-            d.boolean('*admin', 'Administrateur', {value: false, untoggle: false});
+            if (profile.root)
+                d.boolean('*root', 'Super-administrateur', { value: false, untoggle: false });
 
-            d.action('Créer', {disabled: !d.isValid()}, async () => {
-                let query = new URLSearchParams;
-                query.set('username', d.values.username);
-                query.set('password', d.values.password);
-                query.set('change_password', d.values.change_password ? 1 : 0);
-                query.set('confirm', 0 + d.values.confirm);
-                if (d.values.email != null)
-                    query.set('email', d.values.email);
-                if (d.values.phone != null)
-                    query.set('phone', d.values.phone);
-                query.set('admin', d.values.admin ? 1 : 0);
-
+            d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/users/create', {
                     method: 'POST',
-                    body: query
+                    body: JSON.stringify({
+                        username: d.values.username,
+                        password: d.values.password,
+                        change_password: d.values.change_password,
+                        confirm: d.values.confirm,
+                        email: d.values.email,
+                        phone: d.values.phone,
+                        root: d.values.root
+                    })
                 });
 
                 if (response.ok) {
@@ -773,14 +764,14 @@ function AdminController() {
     function runAssignUserDialog(e, instance, user, prev_permissions) {
         return ui.runDialog(e, `Droits de ${user.username} sur ${instance.key}`, {}, (d, resolve, reject) => {
             d.section("Développement", () => {
-                let props = ENV.permissions.filter(perm => perm.startsWith('admin_')).map(makePermissionProp);
-                let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('admin_')) : null;
+                let props = ENV.permissions.filter(perm => perm.startsWith('build_')).map(makePermissionProp);
+                let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('build_')) : null;
 
-                d.multiCheck('admin_permissions', null, props, {
+                d.multiCheck('build_permissions', null, props, {
                     value: value,
                     disabled: instance.master != null
                 });
-            }, {color: '#b518bf'});
+            }, { color: '#b518bf' });
             d.sameLine(true); d.section("Enregistrements", () => {
                 let props = ENV.permissions.filter(perm => perm.startsWith('data_')).map(makePermissionProp);
                 let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('data_')) : null;
@@ -789,20 +780,19 @@ function AdminController() {
                     value: value,
                     disabled: instance.slaves > 0
                 });
-            }, {color: '#258264'});
+            }, { color: '#258264' });
 
             // Now regroup permissions
-            let permissions = [...(d.values.admin_permissions || []), ...(d.values.data_permissions || [])];
+            let permissions = [...(d.values.build_permissions || []), ...(d.values.data_permissions || [])];
 
-            d.action('Modifier', {disabled: !d.isValid()}, async () => {
-                let query = new URLSearchParams;
-                query.set('instance', instance.key);
-                query.set('userid', user.userid);
-                query.set('permissions', permissions.join(','));
-
+            d.action('Modifier', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/instances/assign', {
                     method: 'POST',
-                    body: query
+                    body: JSON.stringify({
+                        instance: instance.key,
+                        userid: user.userid,
+                        permissions: permissions
+                    })
                 });
 
                 if (response.ok) {
@@ -829,20 +819,21 @@ function AdminController() {
 
     function runEditUserDialog(e, user) {
         return ui.runDialog(e, `Modification de ${user.username}`, {}, (d, resolve, reject) => {
-            d.pushOptions({untoggle: false});
+            d.pushOptions({ untoggle: false });
 
             d.tabs('tabs', () => {
                 d.tab('Identité', () => {
-                    d.text('username', 'Nom d\'utilisateur', {value: user.username});
+                    d.text('username', 'Nom d\'utilisateur', { value: user.username });
 
-                    d.text('email', 'Courriel', {value: user.email});
+                    d.text('email', 'Courriel', { value: user.email });
                     if (d.values.email != null && !d.values.email.includes('@'))
                         d.error('email', 'Format non valide');
-                    d.text('phone', 'Téléphone', {value: user.phone});
+                    d.text('phone', 'Téléphone', { value: user.phone });
                     if (d.values.phone != null && !d.values.phone.startsWith('+'))
                         d.error('phone', 'Format non valide (préfixe obligatoire)');
 
-                    d.boolean('*admin', 'Administrateur', {value: user.admin});
+                    if (profile.root)
+                        d.boolean('*root', 'Super-administrateur', { value: user.root });
                 });
 
                 d.tab('Sécurité', () => {
@@ -874,25 +865,20 @@ function AdminController() {
                 });
             });
 
-            d.action('Modifier', {disabled: !d.isValid()}, async () => {
-                let query = new URLSearchParams;
-                query.set('userid', user.userid);
-                if (d.values.username != null)
-                    query.set('username', d.values.username);
-                if (d.values.password != null)
-                    query.set('password', d.values.password);
-                query.set('change_password', 0 + d.values.change_password);
-                query.set('confirm', 0 + d.values.confirm);
-                query.set('reset_secret', 0 + d.values.reset_secret);
-                if (d.values.email != null)
-                    query.set('email', d.values.email);
-                if (d.values.phone != null)
-                    query.set('phone', d.values.phone);
-                query.set('admin', 0 + d.values.admin);
-
+            d.action('Modifier', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/users/edit', {
                     method: 'POST',
-                    body: query
+                    body: JSON.stringify({
+                        userid: user.userid,
+                        username: d.values.username,
+                        password: d.values.password,
+                        change_password: d.values.change_password,
+                        confirm: d.values.confirm,
+                        reset_secret: d.values.reset_secret,
+                        email: d.values.email,
+                        phone: d.values.phone,
+                        root: d.values.root
+                    })
                 });
 
                 if (response.ok) {
@@ -917,12 +903,11 @@ function AdminController() {
             d.output(`Voulez-vous vraiment supprimer l'utilisateur '${user.username}' ?`);
 
             d.action('Supprimer', {}, async () => {
-                let query = new URLSearchParams;
-                query.set('userid', user.userid);
-
                 let response = await net.fetch('/admin/api/users/delete', {
                     method: 'POST',
-                    body: query
+                    body: JSON.stringify({
+                        userid: user.userid
+                    })
                 });
 
                 if (response.ok) {
