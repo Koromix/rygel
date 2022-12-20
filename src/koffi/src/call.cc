@@ -441,13 +441,13 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     Napi::Array array = value.As<Napi::Array>();
                     Size len = (Size)member.type->size / member.type->ref.type->size;
 
-                    if (!PushNormalArray(array, len, member.type->ref.type, dest, realign))
+                    if (!PushNormalArray(array, len, member.type, dest, realign))
                         return false;
                 } else if (value.IsTypedArray()) {
                     Napi::TypedArray array = value.As<Napi::TypedArray>();
                     Size len = (Size)member.type->size / member.type->ref.type->size;
 
-                    if (!PushTypedArray(array, len, member.type->ref.type, dest, realign))
+                    if (!PushTypedArray(array, len, member.type, dest, realign))
                         return false;
                 } else if (value.IsString() && !realign) {
                     if (!PushStringArray(value, member.type, dest))
@@ -504,9 +504,11 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     return true;
 }
 
-bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign)
+bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type, uint8_t *origin, int16_t realign)
 {
     RG_ASSERT(array.IsArray());
+
+    const TypeInfo *ref = type->ref.type;
 
     if (RG_UNLIKELY(array.Length() != (size_t)len)) {
         ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.Length());
@@ -537,7 +539,10 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
         } while (false)
 
     switch (ref->primitive) {
-        case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+        case PrimitiveKind::Void: {
+            ThrowError<Napi::TypeError>(env, "Ambigous parameter type %1, use koffi.as(value, type)", type->name); \
+            return false;
+        } break;
 
         case PrimitiveKind::Bool: {
             PUSH_ARRAY(value.IsBoolean(), "boolean", {
@@ -676,13 +681,13 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
                     Napi::Array array2 = value.As<Napi::Array>();
                     Size len2 = (Size)ref->size / ref->ref.type->size;
 
-                    if (!PushNormalArray(array2, len2, ref->ref.type, dest, realign))
+                    if (!PushNormalArray(array2, len2, ref, dest, realign))
                         return false;
                 } else if (value.IsTypedArray()) {
                     Napi::TypedArray array2 = value.As<Napi::TypedArray>();
                     Size len2 = (Size)ref->size / ref->ref.type->size;
 
-                    if (!PushTypedArray(array2, len2, ref->ref.type, dest, realign))
+                    if (!PushTypedArray(array2, len2, ref, dest, realign))
                         return false;
                 } else if (value.IsString() && !realign) {
                     if (!PushStringArray(value, ref, dest))
@@ -748,9 +753,11 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *ref,
     return true;
 }
 
-bool CallData::PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *ref, uint8_t *origin, int16_t realign)
+bool CallData::PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *type, uint8_t *origin, int16_t realign)
 {
     RG_ASSERT(array.IsTypedArray());
+
+    const TypeInfo *ref = type->ref.type;
 
     if (RG_UNLIKELY(array.ElementLength() != (size_t)len)) {
         ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.ElementLength());
@@ -856,7 +863,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 ptr = AllocHeap(size, 16);
 
                 if (directions & 1) {
-                    if (!PushNormalArray(array, len, type->ref.type, ptr))
+                    if (!PushNormalArray(array, len, type, ptr))
                         return false;
                 } else {
                     memset(ptr, 0, size);
@@ -870,7 +877,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 ptr = AllocHeap(size, 16);
 
                 if (directions & 1) {
-                    if (!PushTypedArray(array, len, type->ref.type, ptr))
+                    if (!PushTypedArray(array, len, type, ptr))
                         return false;
                 } else {
                     if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(type->ref.type) &&

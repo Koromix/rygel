@@ -40,6 +40,7 @@ const SuperCallback = koffi.callback('void SuperCallback(int i, int v1, double v
 const ApplyCallback = koffi.callback('int __stdcall ApplyCallback(int a, int b, int c)');
 const IntCallback = koffi.callback('int IntCallback(int x)');
 const VectorCallback = koffi.callback('int VectorCallback(int len, Vec2 *vec)');
+const SortCallback = koffi.callback('int SortCallback(const void *ptr1, const void *ptr2)');
 
 const StructCallbacks = koffi.struct('StructCallbacks', {
     first: koffi.pointer(IntCallback),
@@ -73,6 +74,7 @@ async function test() {
     const SetCallback = lib.func('void SetCallback(IntCallback *func)');
     const CallCallback = lib.func('int CallCallback(int x)');
     const MakeVectors = lib.func('int MakeVectors(int len, VectorCallback *func)');
+    const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, SortCallback *cb)');
 
     // Simple test similar to README example
     {
@@ -213,5 +215,19 @@ async function test() {
         });
 
         assert.equal(ret, 424242);
+    }
+
+    // Test koffi.as() and koffi.decode() with qsort
+    {
+        let array = ['foo', 'bar', '123', 'foobar'];
+
+        CallQSort(koffi.as(array, 'char **'), array.length, koffi.sizeof('void *'), (ptr1, ptr2) => {
+            let str1 = koffi.decode(ptr1, 'char *');
+            let str2 = koffi.decode(ptr2, 'char *');
+
+            return str1.localeCompare(str2);
+        });
+
+        assert.deepEqual(array, ['123', 'bar', 'foo', 'foobar']);
     }
 }

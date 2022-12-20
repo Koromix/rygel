@@ -168,6 +168,7 @@ typedef struct Vec2 {
 } Vec2;
 
 typedef int VectorCallback(int len, Vec2 *vec);
+typedef int SortCallback(const void *ptr1, const void *ptr2);
 
 EXPORT int8_t GetMinusOne1(void)
 {
@@ -769,4 +770,9 @@ EXPORT size_t UpperCaseStrAscii16(const char16_t *str, char16_t *out)
     out[len] = 0;
 
     return len;
+}
+
+EXPORT void CallQSort(void *base, size_t nmemb, size_t size, SortCallback *cb)
+{
+    qsort(base, nmemb, size, cb);
 }

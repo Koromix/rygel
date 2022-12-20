@@ -422,6 +422,42 @@ let cb1 = koffi.register(store.get, 'IntCallback *'); // If a C function calls c
 let cb2 = koffi.register(store, store.get, 'IntCallback *'); // However in this case, this will match the store object
 ```
 
+### Pointer arguments
+
+*New in Koffi 2.2*
+
+Koffi does not have enough information to convert callback pointer arguments to an appropriate JS value. In this case, your JS function will receive an opaque *External* object.
+
+You can pass this value through to another C function that expects a pointer of the same type, or you can use `koffi.decode(value, offset, type, len)` to decode it into something you can use in Javascript.
+
+Some arguments are optional and this function can be called in several ways:
+
+- `koffi.decode(value, offset, type, len)`: this is the full signature, value is the JS external object, offset (optional, defaults to 0) is specified in bytes, type is the value type, and length (optional) can be used for arrays and strings.
+- `koffi.decode(value, type)`: no offset, expect NUL-terminated strings
+- `koffi.decode(value, type, len)`: use specified length when decoding strings and arrays
+- `koffi.decode(value, offset, type)`
+
+The following example sorts an array of strings (in-place) with `qsort()`:
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('libc.so.6');
+
+const SortCallback = koffi.callback('int SortCallback(const void *first, const void *second)');
+const qsort = lib.func('void qsort(_Inout_ void *array, size_t count, size_t size, SortCallback *cb)');
+
+let array = ['foo', 'bar', '123', 'foobar'];
+
+qsort(koffi.as(array, 'char **'), array.length, koffi.sizeof('void *'), (ptr1, ptr2) => {
+    let str1 = koffi.decode(ptr1, 'char *');
+    let str2 = koffi.decode(ptr2, 'char *');
+
+    return str1.localeCompare(str2);
+});
+
+console.log(array); // Prints ['123', 'bar', 'foo', 'foobar']
+```
+
 ### Handling of exceptions
 
 If an exception happens inside the JS callback, the C API will receive 0 or NULL (depending on the return value type).
