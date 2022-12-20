@@ -65,18 +65,18 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
         Napi::Array array = value.As<Napi::Array>();
 
         if (RG_UNLIKELY(!(directions & 2))) {
-            ThrowError<Napi::TypeError>(env, "A Unexpected %1 value, expected string", GetValueType(instance, value));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
             return false;
         }
         if (RG_UNLIKELY(array.Length() != 1)) {
-            ThrowError<Napi::TypeError>(env, "B Unexpected %1 value, expected string", GetValueType(instance, value));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
         }
 
         value = array[0u];
 
         if (RG_UNLIKELY(!value.IsString())) {
-            ThrowError<Napi::TypeError>(env, "C Unexpected %1 value, expected string", GetValueType(instance, array[0u]));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, array[0u]));
             return false;
         }
 
@@ -166,18 +166,18 @@ bool CallData::PushString16(Napi::Value value, int directions, const char16_t **
         Napi::Array array = value.As<Napi::Array>();
 
         if (RG_UNLIKELY(!(directions & 2))) {
-            ThrowError<Napi::TypeError>(env, "A Unexpected %1 value, expected string", GetValueType(instance, value));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
             return false;
         }
         if (RG_UNLIKELY(array.Length() != 1)) {
-            ThrowError<Napi::TypeError>(env, "B Unexpected %1 value, expected string", GetValueType(instance, value));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
         }
 
         value = array[0u];
 
         if (RG_UNLIKELY(!value.IsString())) {
-            ThrowError<Napi::TypeError>(env, "C Unexpected %1 value, expected string", GetValueType(instance, array[0u]));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, array[0u]));
             return false;
         }
 
