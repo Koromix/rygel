@@ -26,7 +26,7 @@ static_deploys:
   - name: koffi.dev/www
     repo: https://github.com/Koromix/rygel.git
     version: master
-    path: src/koffi/build/doc/html
+    path: web/koffi.dev/dist/html
     build:
       - cmd: '/root/.local/share/pypoetry/venv/bin/poetry install'
         chdir: '{{ static_root_path }}/repo/koffi.dev/www/web/koffi.dev'
