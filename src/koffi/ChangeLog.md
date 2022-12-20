@@ -2,6 +2,20 @@
 
 ## History
 
+### Koffi 2.2.0
+
+**New features:**
+
+- Add [koffi.decode()](callbacks.md#pointer-arguments) for callback pointer arguments
+- Support transparent [output string parameters](functions.md#output-parameters)
+- Add `koffi.offsetof()` utility function
+- Support optional *this* binding in `koffi.register()`
+
+**Other fixes:**
+
+- Correctly validate output parameter types
+- Fix assertion with `void *` parameters
+
 ### Koffi 2.1.5
 
 **Main fixes:**
