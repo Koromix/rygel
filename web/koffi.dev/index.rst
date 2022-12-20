@@ -26,6 +26,7 @@ Table of contents
    start
    types
    functions
+   callbacks
    memory
    benchmarks
    contribute

@@ -63,7 +63,7 @@ let ret = TransferToJS('Niels', 27, (str, age) => {
 console.log(ret);
 ```
 
-Koffi 1.x only supported [transient callbacks](functions.md#javascript-callbacks), you must use Koffi 2.x for registered callbacks.
+Koffi 1.x only supported [transient callbacks](callbacks.md#callbacks), you must use Koffi 2.x for registered callbacks.
 
 #### Opaque types
 
