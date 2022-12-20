@@ -2343,11 +2343,16 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
 
     out_info->type = FileModeToType(sb.st_mode);
     out_info->size = (int64_t)sb.st_size;
-#ifdef __APPLE__
+#if defined(__APPLE__)
     out_info->mtime = (int64_t)sb.st_mtimespec.tv_sec * 1000 +
                       (int64_t)sb.st_mtimespec.tv_nsec / 1000000;
     out_info->btime = (int64_t)sb.st_birthtimespec.tv_sec * 1000 +
                       (int64_t)sb.st_birthtimespec.tv_nsec / 1000000;
+#elif defined(__OpenBSD__)
+    out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
+                      (int64_t)sb.st_mtim.tv_nsec / 1000000;
+    out_info->btime = (int64_t)sb.__st_birthtim.tv_sec * 1000 +
+                      (int64_t)sb.__st_birthtim.tv_nsec / 1000000;
 #else
     out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
                       (int64_t)sb.st_mtim.tv_nsec / 1000000;
