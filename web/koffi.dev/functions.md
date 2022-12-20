@@ -115,6 +115,7 @@ For simplicity, and because Javascript only has value semantics for primitive ty
 
 - [Structs](types.md#struct-types) (to/from JS objects)
 - [Opaque types](types.md#opaque-types)
+- String buffers
 
 In order to change an argument from input-only to output or input/output, use the following functions:
 
@@ -175,6 +176,44 @@ if (sqlite3_open_v2(':memory:', out, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
 let db = out[0];
 
 sqlite3_close_v2(db);
+```
+
+#### String buffer example
+
+*New in Koffi 2.2*
+
+This example calls a C function to concatenate two strings to a pre-allocated string buffer. Since JS strings are immutable, you must pass an array with a single string instead.
+
+```c
+void ConcatToBuffer(const char *str1, const char *str2, char *out)
+{
+    size_t len = 0;
+
+    for (size_t i = 0; str1[i]; i++) {
+        out[len++] = str1[i];
+    }
+    for (size_t i = 0; str2[i]; i++) {
+        out[len++] = str2[i];
+    }
+
+    out[len] = 0;
+}
+```
+
+```js
+const ConcatToBuffer = lib.func('void ConcatToBuffer(const char *str1, const char *str2, _Out_ char *out)');
+
+let str1 = 'Hello ';
+let str2 = 'Friends!';
+
+// We need to reserve space for the output buffer! Including the NUL terminator
+// because ConcatToBuffer() expects so, but Koffi can convert back to a JS string
+// without it (if we reserve the right size).
+let out = ['\0'.repeat(str1.length + str2.length + 1)];
+
+ConcatToBuffer(str1, str2, out);
+
+console.log(out[0]);
 ```
 
 ### Polymorphic parameters
