@@ -972,16 +972,16 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
                 Napi::Object members = Napi::Object::New(env);
 
                 for (const RecordMember &member: type->members) {
-                    Napi::Object info = Napi::Object::New(env);
+                    Napi::Object obj = Napi::Object::New(env);
 
                     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)member.type);
                     SetValueTag(instance, external, &TypeInfoMarker);
 
-                    info.Set("name", member.name);
-                    info.Set("type", external);
-                    info.Set("offset", member.offset);
+                    obj.Set("name", member.name);
+                    obj.Set("type", external);
+                    obj.Set("offset", member.offset);
 
-                    members.Set(member.name, info);
+                    members.Set(member.name, obj);
                 }
 
                 defn.Set("members", members);
