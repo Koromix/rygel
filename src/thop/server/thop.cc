@@ -85,7 +85,7 @@ static void ProduceSettings(const http_RequestInfo &, const User *user, http_IO 
     {
         unsigned int permissions = user ? user->permissions : 0;
         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-            Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
+            Span<const char> key = json_ConvertToJsonName(UserPermissionNames[i], buf);
             json.Key(key.ptr, (size_t)key.len); json.Bool(permissions & (1 << i));
         }
     }

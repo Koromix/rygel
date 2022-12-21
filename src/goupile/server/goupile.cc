@@ -390,7 +390,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
                     json.Key("title"); json.String("Admin");
                     json.Key("permissions"); json.StartArray();
                     for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                        Span<const char> str = ConvertToJsonName(UserPermissionNames[i], buf);
+                        Span<const char> str = json_ConvertToJsonName(UserPermissionNames[i], buf);
                         json.String(str.ptr, (size_t)str.len);
                     }
                     json.EndArray();
@@ -599,7 +599,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     json.Key("buster"); json.String(master_etag);
                     json.Key("cache_offline"); json.Bool(master->config.use_offline);
                     {
-                        Span<const char> str = ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf);
+                        Span<const char> str = json_ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf);
                         json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
                     }
                     if (master->config.backup_key) {

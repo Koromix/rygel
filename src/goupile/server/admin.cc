@@ -1421,7 +1421,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 
                         if (parser.ParseString(&str)) {
                             char mode[128];
-                            ConvertFromJsonName(str, mode);
+                            json_ConvertFromJsonName(str, mode);
 
                             if (!OptionToEnum(SyncModeNames, mode, &config.sync_mode)) {
                                 LogError("Invalid sync mode '%1'", str);
@@ -1604,7 +1604,7 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
             json.Key("name"); json.String(instance->config.name);
             json.Key("use_offline"); json.Bool(instance->config.use_offline);
             {
-                Span<const char> str = ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
+                Span<const char> str = json_ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
                 json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
             }
             if (instance->config.backup_key) {
@@ -1673,7 +1673,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
                             parser.ParseString(&str);
 
                             char perm[128];
-                            ConvertFromJsonName(str, perm);
+                            json_ConvertFromJsonName(str, perm);
 
                             if (!OptionToFlag(UserPermissionNames, perm, &permissions)) {
                                 LogError("Unknown permission '%1'", str);
@@ -1891,7 +1891,7 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         json.Key(Fmt(buf, "%1", userid).ptr); json.StartArray();
         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
             if (permissions & (1 << i)) {
-                Span<const char> str = ConvertToJsonName(UserPermissionNames[i], buf);
+                Span<const char> str = json_ConvertToJsonName(UserPermissionNames[i], buf);
                 json.String(str.ptr, (size_t)str.len);
             }
         }

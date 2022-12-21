@@ -414,7 +414,7 @@ bool json_Writer::Raw(Span<const char> str)
     return true;
 }
 
-Span<const char> ConvertToJsonName(Span<const char> name, Span<char> out_buf)
+Span<const char> json_ConvertToJsonName(Span<const char> name, Span<char> out_buf)
 {
     RG_ASSERT(out_buf.len >= 2);
 
@@ -441,7 +441,7 @@ Span<const char> ConvertToJsonName(Span<const char> name, Span<char> out_buf)
     }
 }
 
-Span<const char> ConvertFromJsonName(Span<const char> name, Span<char> out_buf)
+Span<const char> json_ConvertFromJsonName(Span<const char> name, Span<char> out_buf)
 {
     RG_ASSERT(out_buf.len >= 2);
 

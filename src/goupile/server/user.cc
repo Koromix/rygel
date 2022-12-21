@@ -281,7 +281,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
 
                 json.Key("permissions"); json.StartObject();
                 for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                    Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
+                    Span<const char> key = json_ConvertToJsonName(UserPermissionNames[i], buf);
                     json.Key(key.ptr, (size_t)key.len); json.Bool(stamp->permissions & (1 << i));
                 }
                 json.EndObject();
