@@ -2,6 +2,12 @@
 
 ## History
 
+### Koffi 2.2.1
+
+**Main fixes:**
+
+- Fix crash when [calling callback again after FFI call inside previous callback](https://github.com/Koromix/rygel/issues/15)
+
 ### Koffi 2.2.0
 
 **New features:**
