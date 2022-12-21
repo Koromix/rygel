@@ -169,6 +169,7 @@ typedef struct Vec2 {
 
 typedef int VectorCallback(int len, Vec2 *vec);
 typedef int SortCallback(const void *ptr1, const void *ptr2);
+typedef int CharCallback(int idx, char c);
 
 EXPORT int8_t GetMinusOne1(void)
 {
@@ -775,4 +776,14 @@ EXPORT size_t UpperCaseStrAscii16(const char16_t *str, char16_t *out)
 EXPORT void CallQSort(void *base, size_t nmemb, size_t size, SortCallback *cb)
 {
     qsort(base, nmemb, size, cb);
+}
+
+EXPORT int CallMeChar(CharCallback *func)
+{
+    int ret = 0;
+
+    ret += func(0, 'a');
+    ret += func(1, 'b');
+
+    return ret;
 }

@@ -41,6 +41,7 @@ const ApplyCallback = koffi.callback('int __stdcall ApplyCallback(int a, int b, 
 const IntCallback = koffi.callback('int IntCallback(int x)');
 const VectorCallback = koffi.callback('int VectorCallback(int len, Vec2 *vec)');
 const SortCallback = koffi.callback('int SortCallback(const void *ptr1, const void *ptr2)');
+const CharCallback = koffi.callback('int CharCallback(int idx, char c)');
 
 const StructCallbacks = koffi.struct('StructCallbacks', {
     first: koffi.pointer(IntCallback),
@@ -75,6 +76,8 @@ async function test() {
     const CallCallback = lib.func('int CallCallback(int x)');
     const MakeVectors = lib.func('int MakeVectors(int len, VectorCallback *func)');
     const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, SortCallback *cb)');
+    const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
+    const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
 
     // Simple test similar to README example
     {
@@ -229,5 +232,21 @@ async function test() {
         });
 
         assert.deepEqual(array, ['123', 'bar', 'foo', 'foobar']);
+    }
+
+    // Make sure thread local CallData is restored after nested call inside callback
+    // Regression test for issue #15
+    {
+        let chars = [97, 98];
+
+        let cb = koffi.register((idx, c) => {
+            assert.equal(GetMinusOne1(), -1);
+            assert.equal(c, chars[idx]);
+
+            return c;
+        }, 'CharCallback *');
+
+        let ret = CallMeChar(cb);
+        assert.equal(ret, 97 + 98);
     }
 }

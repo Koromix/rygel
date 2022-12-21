@@ -46,6 +46,8 @@ CallData::~CallData()
     if (!--mem->depth && mem->temporary) {
         delete mem;
     }
+
+    instance = nullptr;
 }
 
 bool CallData::PushString(Napi::Value value, int directions, const char **out_str)
