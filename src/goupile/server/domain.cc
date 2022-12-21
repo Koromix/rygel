@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 32;
+const int DomainVersion = 33;
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
 
@@ -1503,9 +1503,25 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 32: {
+                bool success = db->RunMany(R"(
+                    UPDATE dom_permissions SET permissions = IIF(permissions & 1, 1, 0) |
+                                                             IIF(permissions & 2, 2, 0) |
+                                                             IIF(permissions & 4, 4, 0) |
+                                                             IIF(permissions & 8, 8, 0) |
+                                                             IIF(permissions & 16, 16, 0) |
+                                                             IIF(permissions & 32, 32 | 64 | 128, 0) |
+                                                             IIF(permissions & 64, 256, 0) |
+                                                             IIF(permissions & 128, 512, 0) |
+                                                             IIF(permissions & 256, 1024 | 2048, 0);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 32);
+            RG_STATIC_ASSERT(DomainVersion == 33);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

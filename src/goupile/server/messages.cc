@@ -59,7 +59,7 @@ void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, h
         return;
     }
     if (instance) {
-        if (!session->HasPermission(instance, UserPermission::DataMessage)) {
+        if (!session->HasPermission(instance, UserPermission::MiscMail)) {
             LogError("User is not allowed to send messages");
             io->AttachError(403);
             return;
@@ -151,7 +151,7 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
         return;
     }
     if (instance) {
-        if (!session->HasPermission(instance, UserPermission::DataMessage)) {
+        if (!session->HasPermission(instance, UserPermission::MiscTexto)) {
             LogError("User is not allowed to send messages");
             io->AttachError(403);
             return;
@@ -232,7 +232,8 @@ void HandleSendTokenize(InstanceHolder *instance, const http_RequestInfo &reques
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::DataMessage)) {
+    if (!session->HasPermission(instance, UserPermission::MiscMail) &&
+            !session->HasPermission(instance, UserPermission::MiscTexto)) {
         LogError("User is not allowed to send messages");
         io->AttachError(403);
         return;

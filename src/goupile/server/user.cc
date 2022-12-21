@@ -343,7 +343,9 @@ RetainPtr<const SessionInfo> GetNormalSession(InstanceHolder *instance, const ht
         }
 
         session = CreateUserSession(SessionType::Auto, 0, "Guest", local_key);
-        session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
+
+        uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
+        session->AuthorizeInstance(instance, permissions);
 
         // sessions.Open(request, io, session);
     }
@@ -725,7 +727,8 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         session = CreateUserSession(type, userid, username, local_key);
     }
 
-    session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
+    uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
+    session->AuthorizeInstance(instance, permissions);
 
     return session;
 }
@@ -1556,7 +1559,9 @@ RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, Insta
     userid = -userid;
 
     RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, key, local_key);
-    session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
+
+    uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
+    session->AuthorizeInstance(instance, permissions);
 
     sessions.Open(request, io, session);
 

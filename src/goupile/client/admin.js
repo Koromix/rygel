@@ -180,6 +180,7 @@ function AdminController() {
                                             style="white-space: normal;">
                                             ${selected_instance.master == null ? makePermissionsTag(permissions, 'build_', '#b518bf') : ''}
                                             ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
+                                            ${!selected_instance.slaves ? makePermissionsTag(permissions, 'misc_', '#c97f1a') : ''}
                                             ${!permissions.length ? 'Non assigné' : ''}
                                         </td>
                                         <td><a role="button" tabindex="0"
@@ -763,7 +764,7 @@ function AdminController() {
 
     function runAssignUserDialog(e, instance, user, prev_permissions) {
         return ui.runDialog(e, `Droits de ${user.username} sur ${instance.key}`, {}, (d, resolve, reject) => {
-            d.section("Développement", () => {
+            d.section('Projet', () => {
                 let props = ENV.permissions.filter(perm => perm.startsWith('build_')).map(makePermissionProp);
                 let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('build_')) : null;
 
@@ -772,7 +773,7 @@ function AdminController() {
                     disabled: instance.master != null
                 });
             }, { color: '#b518bf' });
-            d.sameLine(true); d.section("Enregistrements", () => {
+            d.sameLine(true); d.section('Données', () => {
                 let props = ENV.permissions.filter(perm => perm.startsWith('data_')).map(makePermissionProp);
                 let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('data_')) : null;
 
@@ -781,9 +782,22 @@ function AdminController() {
                     disabled: instance.slaves > 0
                 });
             }, { color: '#258264' });
+            d.sameLine(true); d.section('Autres', () => {
+                let props = ENV.permissions.filter(perm => perm.startsWith('misc_')).map(makePermissionProp);
+                let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('misc_')) : null;
+
+                d.multiCheck('misc_permissions', null, props, {
+                    value: value,
+                    disabled: instance.slaves > 0
+                });
+            }, { color: '#c97f1a' });
 
             // Now regroup permissions
-            let permissions = [...(d.values.build_permissions || []), ...(d.values.data_permissions || [])];
+            let permissions = [
+                ...(d.values.build_permissions || []),
+                ...(d.values.data_permissions || []),
+                ...(d.values.misc_permissions || [])
+            ];
 
             d.action('Modifier', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/instances/assign', {
