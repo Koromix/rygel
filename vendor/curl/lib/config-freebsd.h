@@ -148,9 +148,6 @@
 /* Define to 1 if you have the <arpa/tftp.h> header file. */
 #define HAVE_ARPA_TFTP_H 1
 
-/* Define to 1 if you have the <assert.h> header file. */
-#define HAVE_ASSERT_H 1
-
 /* Define to 1 if you have the basename function. */
 #define HAVE_BASENAME 1
 
@@ -194,9 +191,6 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
-/* Define to 1 if you have the <errno.h> header file. */
-#define HAVE_ERRNO_H 1
-
 /* Define to 1 if you have the <err.h> header file. */
 /* #undef HAVE_ERR_H */
 
@@ -211,6 +205,9 @@
 
 /* Define to 1 if you have the `fnmatch' function. */
 #define HAVE_FNMATCH 1
+
+/* Define to 1 if you have the `fork' function. */
+#define HAVE_FORK 1
 
 /* Define to 1 if you have the freeaddrinfo function. */
 #define HAVE_FREEADDRINFO 1
