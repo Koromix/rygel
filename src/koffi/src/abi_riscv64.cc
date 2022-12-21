@@ -410,6 +410,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
 void CallData::Execute()
 {
+    RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
     exec_call = this;
 
 #define PERFORM_CALL(Suffix) \
