@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 57;
+const int InstanceVersion = 58;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -1775,9 +1775,39 @@ bool MigrateInstance(sq_Database *db)
 
                 if (!db->Run("DELETE FROM rec_entries WHERE ctime < 0"))
                     return false;
+            } [[fallthrough]];
+
+            case 57: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_fragments_t;
+                    DROP INDEX rec_fragments_r;
+
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        previous INTEGER REFERENCES rec_fragments (anchor),
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid),
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        fs INTEGER NOT NULL REFERENCES fs_versions (version),
+                        data BLOB
+                    );
+                    CREATE INDEX rec_fragments_t ON rec_fragments (tid);
+                    CREATE INDEX rec_fragments_r ON rec_fragments (eid);
+
+                    INSERT INTO rec_fragments
+                        SELECT * FROM rec_fragments_BAK;
+
+                    DROP TABLE rec_fragments_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 57);
+            RG_STATIC_ASSERT(InstanceVersion == 58);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
