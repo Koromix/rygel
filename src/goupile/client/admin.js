@@ -542,12 +542,6 @@ function AdminController() {
                             d.text('backup_key', 'Clé d\'archivage', { value: instance.config.backup_key });
                         if (d.values.backup_key != null && !checkCryptoKey(d.values.backup_key))
                             d.error('backup_key', 'Format de clé non valide');
-                        d.text('shared_key', 'Clé locale partagée', {
-                            value: instance.config.shared_key,
-                            hidden: instance.slaves > 0
-                        });
-                        if (instance.slaves > 0 && d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
-                            d.error('shared_key', 'Format de clé non valide');
                         d.text('token_key', 'Session par token', { value: instance.config.token_key });
                         if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
                             d.error('token_key', 'Format de clé non valide');
@@ -564,7 +558,6 @@ function AdminController() {
                             use_offline: d.values.use_offline,
                             sync_mode: d.values.sync_mode,
                             backup_key: d.values.backup_key,
-                            shared_key: d.values.shared_key,
                             token_key: d.values.token_key,
                             auto_key: d.values.auto_key,
                             allow_guests: d.values.allow_guests
@@ -586,25 +579,14 @@ function AdminController() {
                     }
                 });
             } else {
-                d.tabs('tabs', () => {
-                    d.tab('Basique', () => {
-                        d.text('*name', 'Nom', { value: instance.config.name });
-                    });
-
-                    d.tab('Avancé', () => {
-                        d.text('shared_key', 'Clé locale partagée', { value: instance.config.shared_key });
-                        if (d.values.shared_key != null && !checkCryptoKey(d.values.shared_key))
-                            d.error('shared_key', 'Format de clé non valide');
-                    });
-                });
+                d.text('*name', 'Nom', { value: instance.config.name });
 
                 d.action('Configurer', { disabled: !d.isValid() }, async () => {
                     let response = await net.fetch('/admin/api/instances/configure', {
                         method: 'POST',
                         body: JSON.stringify({
                             instance: instance.key,
-                            name: d.values.name,
-                            shared_key: d.values.shared_key
+                            name: d.values.name
                         })
                     });
 

@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 58;
+const int InstanceVersion = 59;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -124,8 +124,6 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
                 if (TestStr(setting, "Name")) {
                     config.name = DuplicateString(value, &str_alloc).ptr;
-                } else if (TestStr(setting, "SharedKey")) {
-                    config.shared_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "LockKey")) {
                     config.lock_key = DuplicateString(value, &str_alloc).ptr;
                 }
@@ -1805,9 +1803,17 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 58: {
+                bool success = db->RunMany(R"(
+                    DELETE FROM fs_settings WHERE key = 'SharedKey';
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 58);
+            RG_STATIC_ASSERT(InstanceVersion == 59);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

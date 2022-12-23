@@ -719,29 +719,6 @@ const goupile = new function() {
     }
 
     async function updateProfile(new_profile) {
-        let usb_key;
-        if (new_profile.encrypt_usb) {
-            if (!electron)
-                throw new Error('La sécurisation USB n\'est disponible que sur le client Electron');
-
-            let ipcRenderer = require('electron').ipcRenderer;
-            let id = Sha256(ENV.urls.instance);
-
-            usb_key = ipcRenderer.sendSync('get_usb_key', id);
-            if (usb_key == null)
-                throw new Error('Insérez la clé USB de sécurité avant de continuer');
-            usb_key = base64ToBytes(usb_key);
-
-            let waiting = log.progress('Veuillez retirer la clé pour continuer');
-
-            try {
-                while (ipcRenderer.sendSync('has_usb_key', id))
-                    await util.waitFor(2000);
-            } finally {
-                waiting.close();
-            }
-        }
-
         profile = Object.assign({}, new_profile);
 
         // Keep keys local to "hide" (as much as JS allows..) them
@@ -751,13 +728,6 @@ const goupile = new function() {
 
             for (let key in profile_keys) {
                 let value = base64ToBytes(profile_keys[key]);
-                if (usb_key != null) {
-                    let salt = value.slice(0, 24);
-                    let combined = new Uint8Array(value.length + usb_key.length);
-                    combined.set(value, 0);
-                    combined.set(usb_key, value.length);
-                    value = await deriveKey(combined, salt);
-                }
                 profile_keys[key] = value;
             }
         } else {

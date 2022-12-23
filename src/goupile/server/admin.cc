@@ -1434,8 +1434,6 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                     }
                 } else if (key == "backup_key") {
                     parser.SkipNull() || parser.ParseString(&config.backup_key);
-                } else if (key == "shared_key") {
-                    parser.SkipNull() || parser.ParseString(&config.shared_key);
                 } else if (key == "token_key") {
                     parser.SkipNull() || parser.ParseString(&config.token_key);
                 } else if (key == "auto_key") {
@@ -1526,9 +1524,6 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 success &= !config.auto_key || instance->db->Run(sql, "AutoKey", config.auto_key);
                 success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
             }
-            if (!instance->slaves.len) {
-                success &= !config.shared_key || instance->db->Run(sql, "SharedKey", config.shared_key);
-            }
             if (!success)
                 return false;
 
@@ -1609,9 +1604,6 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
             }
             if (instance->config.backup_key) {
                 json.Key("backup_key"); json.String(instance->config.backup_key);
-            }
-            if (instance->config.shared_key) {
-                json.Key("shared_key"); json.String(instance->config.shared_key);
             }
             if (instance->config.token_key) {
                 json.Key("token_key"); json.String(instance->config.token_key);

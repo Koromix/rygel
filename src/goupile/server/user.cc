@@ -245,25 +245,14 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                 }
 
                 json.Key("namespaces"); json.StartObject();
-                if (instance->config.shared_key) {
-                    json.Key("records"); json.String("global");
-                } else {
-                    json.Key("records"); json.Int64(session->userid);
-                }
+                json.Key("records"); json.Int64(session->userid);
                 json.EndObject();
                 json.Key("keys"); json.StartObject();
-                if (instance->config.shared_key) {
-                    json.Key("records"); json.String(instance->config.shared_key);
-                } else {
-                    json.Key("records"); json.String(session->local_key);
-                }
+                json.Key("records"); json.String(session->local_key);
                 if (session->type == SessionType::Login) {
                     json.Key("lock"); json.String(instance->config.lock_key);
                 }
                 json.EndObject();
-                if (instance->config.shared_key) {
-                    json.Key("encrypt_usb"); json.Bool(true);
-                }
 
                 if (master->slaves.len) {
                     json.Key("instances"); json.StartArray();
