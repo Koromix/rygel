@@ -417,6 +417,10 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
                 LogError("Cannot import non-library target '%1'", import->name);
                 return nullptr;
             }
+            if ((target_config->platforms & import->platforms) != target_config->platforms) {
+                LogError("Import '%1' does not support as many platforms", import->name);
+                return nullptr;
+            }
 
             for (const TargetInfo *import2: import->imports) {
                 bool inserted;
