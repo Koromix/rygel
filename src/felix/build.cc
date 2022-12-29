@@ -274,9 +274,10 @@ bool Builder::AddTarget(const TargetInfo &target)
                 core = core_targets.AppendDefault();
 
                 core->name = Fmt(&str_alloc, "Cores/%1", ns).ptr;
-                core->type = TargetType::ExternalLibrary;
+                core->type = TargetType::Library;
                 core->hosts = 1u << (int)build.compiler->host;
                 std::swap(core->definitions, core_definitions);
+                core->disable_features = (int)CompileFeature::Warnings;
 
                 for (const char *core_filename: core_filenames) {
                     SourceFileInfo src = {};
@@ -335,11 +336,11 @@ bool Builder::AddTarget(const TargetInfo &target)
             Command cmd = {};
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  false, nullptr, {"EXPORT"}, {}, {}, features, build.env,
+                                                  nullptr, {"EXPORT"}, {}, {}, features, build.env,
                                                   obj_filename, &str_alloc, &cmd);
             } else {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  false, nullptr, {}, {}, {}, features, build.env,
+                                                  nullptr, {}, {}, {}, features, build.env,
                                                   obj_filename,  &str_alloc, &cmd);
             }
 
@@ -389,7 +390,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         Command cmd = {};
         build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                          false, nullptr, {}, {}, {}, features, build.env,
+                                          nullptr, {}, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 version file", target.name).ptr;
@@ -482,14 +483,13 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
                 pch_filename = BuildObjectPath(ns, pch->filename, cache_directory, pch_ext, &str_alloc);
 
                 const char *cache_filename = build.compiler->GetPchCache(pch_filename, &str_alloc);
-                bool warnings = (pch->target->type != TargetType::ExternalLibrary);
 
                 uint32_t features = build.features;
                 features = pch->target->CombineFeatures(features);
                 features = pch->CombineFeatures(features);
 
                 Command cmd = {};
-                build.compiler->MakePchCommand(pch_filename, pch->type, warnings,
+                build.compiler->MakePchCommand(pch_filename, pch->type,
                                                pch->target->definitions, pch->target->include_directories,
                                                pch->target->include_files, features, build.env, &str_alloc, &cmd);
 
@@ -525,14 +525,13 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
     if (!obj_filename) {
         obj_filename = BuildObjectPath(ns, src.filename, cache_directory,
                                        build.compiler->GetObjectExtension(), &str_alloc);
-        bool warnings = (src.target->type != TargetType::ExternalLibrary);
 
         uint32_t features = build.features;
         features = src.target->CombineFeatures(features);
         features = src.CombineFeatures(features);
 
         Command cmd = {};
-        build.compiler->MakeObjectCommand(src.filename, src.type, warnings,
+        build.compiler->MakeObjectCommand(src.filename, src.type,
                                           pch_filename, src.target->definitions, src.target->include_directories,
                                           src.target->include_files, features, build.env,
                                           obj_filename, &str_alloc, &cmd);

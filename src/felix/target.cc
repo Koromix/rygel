@@ -205,13 +205,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
             // Type property must be specified first
             if (prop.key == "Type") {
-                if (prop.value == "Executable") {
-                    target_config.type = TargetType::Executable;
-                    target_config.enable_by_default = true;
-                } else if (prop.value == "Library") {
-                    target_config.type = TargetType::Library;
-                } else if (prop.value == "ExternalLibrary") {
-                    target_config.type = TargetType::ExternalLibrary;
+                if (OptionToEnum(TargetTypeNames, prop.value, &target_config.type)) {
+                    target_config.enable_by_default = (target_config.type == TargetType::Executable);
                 } else {
                     LogError("Unknown target type '%1'", prop.value);
                     valid = false;
@@ -418,7 +413,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
                 LogError("Cannot import from unknown target '%1'", import_name);
                 return nullptr;
             }
-            if (import->type != TargetType::Library && import->type != TargetType::ExternalLibrary) {
+            if (import->type != TargetType::Library) {
                 LogError("Cannot import non-library target '%1'", import->name);
                 return nullptr;
             }

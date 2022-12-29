@@ -24,8 +24,11 @@ struct SourceFeatures;
 
 enum class TargetType {
     Executable,
-    Library,
-    ExternalLibrary
+    Library
+};
+static const char *const TargetTypeNames[] = {
+    "Executable",
+    "Library"
 };
 
 struct SourceFileInfo {

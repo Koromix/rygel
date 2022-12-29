@@ -266,6 +266,7 @@ public:
         }
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::PCH;
+        supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
         supported |= (int)CompileFeature::ASan;
@@ -345,13 +346,13 @@ public:
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
+    void MakePchCommand(const char *pch_filename, SourceType src_type,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
                         Span<const char *const> include_files, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, warnings, nullptr, definitions, include_directories,
+        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories,
                           include_files, features, env_flags, nullptr, alloc, out_cmd);
     }
 
@@ -364,7 +365,7 @@ public:
     }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
+    void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> include_files,
                            uint32_t features, bool env_flags, const char *dest_filename,
@@ -412,7 +413,7 @@ public:
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto");
         }
-        if (warnings) {
+        if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-unknown-warning-option");
         } else {
             Fmt(&buf, " -Wno-everything");
@@ -744,6 +745,7 @@ public:
             supported |= (int)CompileFeature::Ccache;
         }
         supported |= (int)CompileFeature::HotAssets;
+        supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
         if (host != HostPlatform::Windows) {
@@ -814,13 +816,13 @@ public:
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
+    void MakePchCommand(const char *pch_filename, SourceType src_type,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
                         Span<const char *const> include_files, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, warnings, nullptr, definitions,
+        MakeObjectCommand(pch_filename, src_type, nullptr, definitions,
                           include_directories, include_files, features, env_flags, nullptr, alloc, out_cmd);
     }
 
@@ -833,7 +835,7 @@ public:
     }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
+    void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> include_files,
                            uint32_t features, bool env_flags, const char *dest_filename,
@@ -881,7 +883,7 @@ public:
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto");
         }
-        if (warnings) {
+        if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-cast-function-type");
             if (src_type == SourceType::CXX) {
                 Fmt(&buf, " -Wno-init-list-lifetime");
@@ -1145,6 +1147,7 @@ public:
         supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::PCH;
+        supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
         supported |= (int)CompileFeature::ASan;
@@ -1195,13 +1198,13 @@ public:
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
+    void MakePchCommand(const char *pch_filename, SourceType src_type,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
                         Span<const char *const> include_files, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, warnings, nullptr, definitions, include_directories,
+        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories,
                           include_files, features, env_flags, nullptr, alloc, out_cmd);
     }
 
@@ -1220,7 +1223,7 @@ public:
         return obj_filename;
     }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
+    void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> include_files,
                            uint32_t features, bool env_flags, const char *dest_filename,
@@ -1258,7 +1261,7 @@ public:
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " /GL");
         }
-        if (warnings) {
+        if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " /W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4815");
         } else {
             Fmt(&buf, " /w");
@@ -1464,6 +1467,7 @@ public:
 
         supported |= (int)CompileFeature::OptimizeSpeed;
         supported |= (int)CompileFeature::OptimizeSize;
+        supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::LTO;
 
@@ -1547,12 +1551,12 @@ public:
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *, SourceType, bool, Span<const char *const>, Span<const char *const>,
+    void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
                         Span<const char *const>, uint32_t, bool, Allocator *, Command *) const override { RG_UNREACHABLE(); }
     const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
+    void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> include_files,
                            uint32_t features, bool env_flags, const char *dest_filename,
@@ -1584,7 +1588,7 @@ public:
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto");
         }
-        if (warnings) {
+        if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra");
         } else {
             Fmt(&buf, " -w");
@@ -1790,6 +1794,7 @@ public:
 
         supported |= (int)CompileFeature::OptimizeSpeed;
         supported |= (int)CompileFeature::OptimizeSize;
+        supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::Cxx17;
 
@@ -1843,13 +1848,13 @@ public:
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *, SourceType, bool, Span<const char *const>, Span<const char *const>,
+    void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
                         Span<const char *const>, uint32_t, bool, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
     const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
+    void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> include_files,
                            uint32_t features, bool env_flags, const char *dest_filename,
@@ -1881,7 +1886,7 @@ public:
         } else {
             Fmt(&buf, " -O0 -ftrapv");
         }
-        if (warnings) {
+        if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra");
         } else {
             Fmt(&buf, " -Wno-everything");

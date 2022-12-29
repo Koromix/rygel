@@ -79,30 +79,32 @@ static const char *const HostPlatformNames[] = {
 enum class CompileFeature {
     PCH = 1 << 0,
     Ccache = 1 << 1,
-    DebugInfo = 1 << 2,
-    StaticLink = 1 << 3,
-    OptimizeSpeed = 1 << 4,
-    OptimizeSize = 1 << 5,
-    HotAssets = 1 << 6,
-    ASan = 1 << 7,
-    TSan = 1 << 8,
-    UBSan = 1 << 9,
-    LTO = 1 << 10,
-    SafeStack = 1 << 11,
-    ZeroInit = 1 << 12,
-    CFI = 1 << 13,
-    ShuffleCode = 1 << 14,
-    Cxx17 = 1 << 15,
-    NoConsole = 1 << 16,
+    Warnings = 1 << 2,
+    DebugInfo = 1 << 3,
+    StaticLink = 1 << 4,
+    OptimizeSpeed = 1 << 5,
+    OptimizeSize = 1 << 6,
+    HotAssets = 1 << 7,
+    ASan = 1 << 8,
+    TSan = 1 << 9,
+    UBSan = 1 << 10,
+    LTO = 1 << 11,
+    SafeStack = 1 << 12,
+    ZeroInit = 1 << 13,
+    CFI = 1 << 14,
+    ShuffleCode = 1 << 15,
+    Cxx17 = 1 << 16,
+    NoConsole = 1 << 17,
 
-    SSE41 = 1 << 17,
-    SSE42 = 1 << 18,
-    AVX2 = 1 << 19,
-    AVX512 = 1 << 20
+    SSE41 = 1 << 18,
+    SSE42 = 1 << 19,
+    AVX2 = 1 << 20,
+    AVX512 = 1 << 21
 };
 static const OptionDesc CompileFeatureOptions[] = {
     {"PCH",           "Use precompiled headers for faster compilation"},
     {"Ccache",        "Use Ccache accelerator (must be in PATH)"},
+    {"Warnings",      "Enable compiler warnings"},
     {"DebugInfo",     "Add debug information to generated binaries"},
     {"StaticLink",    "Static link base system libraries (libc, etc.)"},
     {"OptimizeSpeed", "Optimize generated builds for speed"},
@@ -174,14 +176,14 @@ public:
                                  Allocator *alloc, Command *out_cmd) const = 0;
 
     virtual void MakePchCommand(const char *pch_filename, SourceType src_type,
-                                bool warnings, Span<const char *const> definitions,
+                                Span<const char *const> definitions,
                                 Span<const char *const> include_directories, Span<const char *const> include_files,
                                 uint32_t features, bool env_flags, Allocator *alloc, Command *out_cmd) const = 0;
     virtual const char *GetPchCache(const char *pch_filename, Allocator *alloc) const = 0;
     virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
     virtual void MakeObjectCommand(const char *src_filename, SourceType src_type,
-                                   bool warnings, const char *pch_filename, Span<const char *const> definitions,
+                                   const char *pch_filename, Span<const char *const> definitions,
                                    Span<const char *const> include_directories, Span<const char *const> include_files,
                                    uint32_t features, bool env_flags, const char *dest_filename,
                                    Allocator *alloc, Command *out_cmd) const = 0;

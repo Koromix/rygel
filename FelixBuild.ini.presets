@@ -12,7 +12,7 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 [Debug]
-Features = ?PCH, ?Ccache, DebugInfo, HotAssets
+Features = ?PCH, ?Ccache, Warnings, DebugInfo, HotAssets
 
 [ASan]
 Template = Debug
@@ -31,59 +31,59 @@ Template = Debug
 Features = +ASan +UBSan
 
 [Fast]
-Features = ?PCH, ?Ccache, DebugInfo, OptimizeSpeed
+Features = ?PCH, ?Ccache, Warnings, DebugInfo, OptimizeSpeed
 
 [LTO]
-Features = DebugInfo, OptimizeSpeed, LTO
+Features = Warnings, DebugInfo, OptimizeSpeed, LTO
 
 [Paranoid]
 Host = ,clang,lld
-Features = OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
+Features = Warnings, OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
 [NodeJS]
 Host = Emscripten/Node
-Features = DebugInfo, OptimizeSpeed
+Features = Warnings, DebugInfo, OptimizeSpeed
 
 [WebJS]
 Host = Emscripten/Web
-Features = DebugInfo, OptimizeSpeed
+Features = Warnings, DebugInfo, OptimizeSpeed
 
 [WasmBox]
 Host = Emscripten/Box
-Features = DebugInfo, OptimizeSpeed
+Features = Warnings, DebugInfo, OptimizeSpeed
 
 [Teensy20]
 Host = Teensy20
-Features = OptimizeSize
+Features = Warnings, OptimizeSize
 
 [Teensy20++]
 Host = Teensy20++
-Features = OptimizeSize
+Features = Warnings, OptimizeSize
 
 [TeensyLC]
 Host = TeensyLC
-Features = OptimizeSize
+Features = Warnings, OptimizeSize
 
 [Teensy30]
 Host = Teensy30
-Features = OptimizeSize
+Features = Warnings, OptimizeSize
 
 [Teensy31]
 Host = Teensy31
-Features = OptimizeSize
+Features = Warnings, OptimizeSize
 
 [Teensy35]
 Host = Teensy35
-Features = OptimizeSize
+Features = Warnings, OptimizeSize
 
 [Teensy36]
 Host = Teensy36
-Features = OptimizeSize
+Features = Warnings, OptimizeSize
 
 [Teensy40]
 Host = Teensy40
-Features = OptimizeSize
+Features = Warnings, OptimizeSize
 
 [Teensy41]
 Host = Teensy41
-Features = OptimizeSize
+Features = Warnings, OptimizeSize
