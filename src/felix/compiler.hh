@@ -61,17 +61,17 @@ static const char *const HostPlatformNames[] = {
 };
 
 #if defined(_WIN32)
-    static const HostPlatform NativeHost = HostPlatform::Windows;
+    static const HostPlatform NativePlatform = HostPlatform::Windows;
 #elif defined(__APPLE__)
-    static const HostPlatform NativeHost = HostPlatform::macOS;
+    static const HostPlatform NativePlatform = HostPlatform::macOS;
 #elif defined(__linux__)
-    static const HostPlatform NativeHost = HostPlatform::Linux;
+    static const HostPlatform NativePlatform = HostPlatform::Linux;
 #elif defined(__OpenBSD__)
-    static const HostPlatform NativeHost = HostPlatform::OpenBSD;
+    static const HostPlatform NativePlatform = HostPlatform::OpenBSD;
 #elif defined(__FreeBSD__)
-    static const HostPlatform NativeHost = HostPlatform::FreeBSD;
+    static const HostPlatform NativePlatform = HostPlatform::FreeBSD;
 #elif defined(__EMSCRIPTEN__)
-    static const HostPlatform NativeHost = HostPlatform::EmscriptenNode;
+    static const HostPlatform NativePlatform = HostPlatform::EmscriptenNode;
 #else
     #error Unsupported platform
 #endif
@@ -156,7 +156,7 @@ class Compiler {
     RG_DELETE_COPY(Compiler)
 
 public:
-    HostPlatform host;
+    HostPlatform platform;
     const char *name;
 
     virtual ~Compiler() {}
@@ -198,7 +198,7 @@ public:
                                  Allocator *alloc, Command *out_cmd) const = 0;
 
 protected:
-    Compiler(HostPlatform host, const char *name) : host(host), name(name) {}
+    Compiler(HostPlatform platform, const char *name) : platform(platform), name(name) {}
 };
 
 struct SupportedCompiler {
@@ -206,15 +206,15 @@ struct SupportedCompiler {
     const char *cc;
 };
 
-struct PlatformSpecifier {
-    HostPlatform host = NativeHost;
+struct HostSpecifier {
+    HostPlatform platform = NativePlatform;
     const char *cc = nullptr;
     const char *ld = nullptr;
 };
 
 extern const Span<const SupportedCompiler> SupportedCompilers;
 
-std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec);
+std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec);
 
 RG_EXPORT bool DetermineSourceType(const char *filename, SourceType *out_type = nullptr);
 

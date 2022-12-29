@@ -33,7 +33,7 @@ namespace RG {
 struct BuildPreset {
     const char *name;
 
-    PlatformSpecifier platform_spec;
+    HostSpecifier host_spec;
     bool changed_spec;
 
     BuildSettings build;
@@ -141,33 +141,33 @@ static const char *BuildGitVersionString(Allocator *alloc)
     return output.TrimAndLeak().ptr;
 }
 
-static bool ParseHostString(Span<const char> str, Allocator *alloc, PlatformSpecifier *out_platform_spec)
+static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifier *out_spec)
 {
-    Span<const char> host = SplitStr(str, ',', &str);
+    Span<const char> platform = SplitStr(str, ',', &str);
     Span<const char> cc = SplitStr(str, ',', &str);
     Span<const char> ld = SplitStr(str, ',', &str);
 
-    if (host.len) {
-        if (host == "Native") {
-            out_platform_spec->host = NativeHost;
+    if (platform.len) {
+        if (platform == "Native") {
+            out_spec->platform = NativePlatform;
         } else {
-            unsigned int hosts = ParseSupportedHosts(host);
+            unsigned int platforms = ParseSupportedPlatforms(platform);
 
-            if (!hosts) {
+            if (!platforms) {
                 return false;
-            } else if (PopCount(hosts) > 1) {
-                LogError("Ambiguous host '%1' (multiple matches)", host);
+            } else if (PopCount(platforms) > 1) {
+                LogError("Ambiguous platform '%1' (multiple matches)", platform);
                 return false;
             } else {
-                int ctz = CountTrailingZeros(hosts);
-                out_platform_spec->host = (HostPlatform)ctz;
+                int ctz = CountTrailingZeros(platforms);
+                out_spec->platform = (HostPlatform)ctz;
             }
         }
     } else {
-        out_platform_spec->host = NativeHost;
+        out_spec->platform = NativePlatform;
     }
-    out_platform_spec->cc = cc.len ? NormalizePath(cc, alloc).ptr : nullptr;
-    out_platform_spec->ld = ld.len ? DuplicateString(ld, alloc).ptr : nullptr;
+    out_spec->cc = cc.len ? NormalizePath(cc, alloc).ptr : nullptr;
+    out_spec->ld = ld.len ? DuplicateString(ld, alloc).ptr : nullptr;
 
     return true;
 }
@@ -204,7 +204,7 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_features, uin
 }
 
 static bool LoadPresetFile(const char *basename, Allocator *alloc,
-                           const char **out_preset_name, PlatformSpecifier *out_platform_spec,
+                           const char **out_preset_name, HostSpecifier *out_spec,
                            int *out_jobs, HeapArray<BuildPreset> *out_presets)
 {
     // This function assumes the file is in the current working directory
@@ -226,11 +226,11 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                 if (prop.key == "Preset") {
                     *out_preset_name = DuplicateString(prop.value, alloc).ptr;
                 } else if (prop.key == "Host") {
-                    valid &= ParseHostString(prop.value, alloc, out_platform_spec);
+                    valid &= ParseHostString(prop.value, alloc, out_spec);
 
                     for (BuildPreset &preset: *out_presets) {
                         if (!preset.changed_spec) {
-                            preset.platform_spec = *out_platform_spec;
+                            preset.host_spec = *out_spec;
                         }
                     }
                 } else if (prop.key == "Jobs") {
@@ -253,7 +253,7 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                 if (preset == out_presets->end()) {
                     preset = out_presets->AppendDefault();
                     preset->name = DuplicateString(prop.section, alloc).ptr;
-                    preset->platform_spec = *out_platform_spec;
+                    preset->host_spec = *out_spec;
                 }
 
                 if (prop.key == "Template") {
@@ -281,7 +281,7 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                     } else if (prop.key == "Directory") {
                         preset->build.output_directory = NormalizePath(prop.value, GetWorkingDirectory(), alloc).ptr;
                     } else if (prop.key == "Host") {
-                        valid &= ParseHostString(prop.value, alloc, &preset->platform_spec);
+                        valid &= ParseHostString(prop.value, alloc, &preset->host_spec);
                         preset->changed_spec = true;
                     } else if (prop.key == "Features") {
                         valid &= ParseFeatureString(prop.value.ptr, &preset->build.features,
@@ -309,7 +309,7 @@ int RunBuild(Span<const char *> arguments)
     const char *config_filename = nullptr;
     bool load_presets = true;
     const char *preset_name = nullptr;
-    PlatformSpecifier platform_spec = {};
+    HostSpecifier host_spec = {};
     BuildSettings build = {};
     uint32_t maybe_features = 0;
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_THREADS);
@@ -334,7 +334,7 @@ Options:
                                  %!D..(FelixBuild.ini.presets, FelixBuild.ini.user)%!0
     %!..+-p, --preset <preset>%!0        Select specific preset
 
-    %!..+-h, --host <host>%!0            Override host, compiler and/or linker
+    %!..+-h, --host <host>%!0            Override platform, compiler and/or linker
     %!..+-f, --features <features>%!0    Override compilation features
                                  %!D..(start with -All to reset and set only new flags)%!0
 
@@ -356,7 +356,7 @@ Options:
                                  %!D..(all remaining arguments are passed as-is)%!0
         %!..+--run_here <target>%!0      Same thing, but run from current directory
 
-Supported hosts:)", FelixTarget, jobs);
+Supported platforms:)", FelixTarget, jobs);
 
         for (const char *name: HostPlatformNames) {
             PrintLn(fp, "    %!..+%1%!0", name);
@@ -374,7 +374,7 @@ Supported compilers:)");
         }
 
         PrintLn(fp, R"(
-Use %!..+--host=<host>%!0 to specify a custom host, such as: %!..+felix --host=Teensy35%!0.
+Use %!..+--host=<host>%!0 to specify a custom platform, such as: %!..+felix --host=Teensy35%!0.
 You can also use %!..+--host=,<binary>%!0 to specify a custom C compiler, such as: %!..+felix --host=,clang-11%!0.
 Felix will use the matching C++ compiler automatically. Finally, you can also use this option to
 change the linker: %!..+felix --host=,clang-11,lld-11%!0 or %!..+felix --host=,,gold%!0.
@@ -455,11 +455,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         const char *default_preset = nullptr;
 
         if (TestFile(presets_filename) && !LoadPresetFile(presets_filename, &temp_alloc,
-                                                          &default_preset, &platform_spec,
+                                                          &default_preset, &host_spec,
                                                           &jobs, &presets))
             return 1;
         if (TestFile(user_filename) && !LoadPresetFile(user_filename, &temp_alloc,
-                                                       &default_preset, &platform_spec,
+                                                       &default_preset, &host_spec,
                                                        &jobs, &presets))
             return 1;
 
@@ -488,7 +488,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
         if (preset) {
             preset_name = preset->name;
-            platform_spec = preset->platform_spec;
+            host_spec = preset->host_spec;
             build = preset->build;
             maybe_features = preset->maybe_features;
         }
@@ -515,7 +515,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("-h", "--host", OptionType::Value)) {
-                if (!ParseHostString(opt.current_value, &temp_alloc, &platform_spec))
+                if (!ParseHostString(opt.current_value, &temp_alloc, &host_spec))
                     return 1;
             } else if (opt.Test("-f", "--features", OptionType::Value)) {
                 if (!ParseFeatureString(opt.current_value, &build.features, &maybe_features))
@@ -569,7 +569,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Initialize and check compiler
-    std::unique_ptr<const Compiler> compiler = PrepareCompiler(platform_spec);
+    std::unique_ptr<const Compiler> compiler = PrepareCompiler(host_spec);
     if (!compiler)
         return 1;
     if (!compiler->CheckFeatures(build.features, maybe_features, &build.features))
@@ -587,7 +587,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // Load configuration file
     LogInfo("Loading targets...");
     TargetSet target_set;
-    if (!LoadTargetSet(config_filename, platform_spec.host, &target_set))
+    if (!LoadTargetSet(config_filename, host_spec.platform, &target_set))
         return 1;
     if (!target_set.targets.len) {
         LogError("Configuration file does not contain any target");
@@ -611,9 +611,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                     handled_set.TrySet(target.name, &inserted);
 
                     if (inserted) {
-                        if (!target.TestHosts(platform_spec.host)) {
-                            LogError("Cannot build '%1' for host '%2'",
-                                     target.name, HostPlatformNames[(int)platform_spec.host]);
+                        if (!target.TestPlatforms(host_spec.platform)) {
+                            LogError("Cannot build '%1' for platform '%2'",
+                                     target.name, HostPlatformNames[(int)host_spec.platform]);
                             valid = false;
                         }
 
@@ -630,12 +630,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                     handled_set.TrySet(src.filename, &inserted);
 
                     if (inserted) {
-                        if (src.target->TestHosts(platform_spec.host)) {
+                        if (src.target->TestPlatforms(host_spec.platform)) {
                             enabled_sources.Append(&src);
                             match = true;
                         } else {
-                            LogError("Cannot build '%1' for host '%2' (ignoring)",
-                                     src.filename, HostPlatformNames[(int)platform_spec.host]);
+                            LogError("Cannot build '%1' for platform '%2' (ignoring)",
+                                     src.filename, HostPlatformNames[(int)host_spec.platform]);
                         }
                     }
                 }
@@ -651,13 +651,13 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             return 1;
     } else {
         for (const TargetInfo &target: target_set.targets) {
-            if (target.enable_by_default && target.TestHosts(platform_spec.host)) {
+            if (target.enable_by_default && target.TestPlatforms(host_spec.platform)) {
                 enabled_targets.Append(&target);
             }
         }
 
         if (!enabled_targets.len) {
-            LogError("No target to build by default for host '%1'", HostPlatformNames[(int)platform_spec.host]);
+            LogError("No target to build by default for platform '%1'", HostPlatformNames[(int)host_spec.platform]);
             return 1;
         }
     }
@@ -665,7 +665,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // Find and check target used with --run
     const TargetInfo *run_target = nullptr;
     if (run_target_name) {
-        if (platform_spec.host != NativeHost) {
+        if (host_spec.platform != NativePlatform) {
             LogError("Cannot use --run when cross-compiling");
             return 1;
         }
@@ -693,7 +693,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // We're ready to output stuff
     LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
     LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
-    LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)platform_spec.host]);
+    LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)host_spec.platform]);
     LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
     LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
     LogInfo("  Version string: %!..+%1%!0", build.version_str ? build.version_str : "(unknown version)");

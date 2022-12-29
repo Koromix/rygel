@@ -56,7 +56,7 @@ struct SourceFileInfo {
 struct TargetInfo {
     const char *name;
     TargetType type;
-    unsigned int hosts;
+    unsigned int platforms;
     bool enable_by_default;
 
     const char *icon_filename = nullptr;
@@ -89,7 +89,7 @@ struct TargetInfo {
         return defaults;
     }
 
-    bool TestHosts(HostPlatform host) const { return hosts & (1 << (int)host); }
+    bool TestPlatforms(HostPlatform platform) const { return platforms & (1 << (int)platform); }
 
     RG_HASHTABLE_HANDLER(TargetInfo, name);
 };
@@ -107,14 +107,14 @@ struct TargetSet {
 class TargetSetBuilder {
     RG_DELETE_COPY(TargetSetBuilder)
 
-    HostPlatform host;
+    HostPlatform platform;
 
     BlockAllocator temp_alloc;
 
     TargetSet set;
 
 public:
-    TargetSetBuilder(HostPlatform host) : host(host) {}
+    TargetSetBuilder(HostPlatform platform) : platform(platform) {}
 
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
@@ -126,11 +126,11 @@ private:
     const SourceFileInfo *CreateSource(const TargetInfo *target, const char *filename,
                                        SourceType type, const SourceFeatures *features);
 
-    bool MatchHostSuffix(Span<const char> str, bool *out_match);
+    bool MatchPlatformSuffix(Span<const char> str, bool *out_match);
 };
 
-unsigned int ParseSupportedHosts(Span<const char> str);
+unsigned int ParseSupportedPlatforms(Span<const char> str);
 
-bool LoadTargetSet(Span<const char *const> filenames, HostPlatform host, TargetSet *out_set);
+bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, TargetSet *out_set);
 
 }

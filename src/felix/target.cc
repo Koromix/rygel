@@ -32,7 +32,7 @@ struct SourceFeatures {
 struct TargetConfig {
     const char *name;
     TargetType type;
-    unsigned int hosts;
+    unsigned int platforms;
     bool enable_by_default;
 
     const char *icon_filename;
@@ -200,8 +200,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 valid = false;
             }
             target_config.type = TargetType::Executable;
-            target_config.hosts = ParseSupportedHosts("Desktop Emscripten");
-            RG_ASSERT(target_config.hosts);
+            target_config.platforms = ParseSupportedPlatforms("Desktop Emscripten");
+            RG_ASSERT(target_config.platforms);
 
             // Type property must be specified first
             if (prop.key == "Type") {
@@ -217,20 +217,20 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
             }
 
             while (ini.NextInSection(&prop)) {
-                // These properties do not support host suffixes
+                // These properties do not support platform suffixes
                 if (prop.key == "Type") {
                     LogError("Target type cannot be changed");
                     valid = false;
-                } else if (prop.key == "Hosts" || prop.key == "Platforms") {
-                    target_config.hosts = ParseSupportedHosts(prop.value);
-                    valid &= !!target_config.hosts;
+                } else if (prop.key == "Platforms" || prop.key == "Hosts") {
+                    target_config.platforms = ParseSupportedPlatforms(prop.value);
+                    valid &= !!target_config.platforms;
                 } else {
                     Span<const char> suffix;
                     prop.key = SplitStr(prop.key, '_', &suffix);
 
                     if (suffix.len) {
                         bool use_property = false;
-                        valid &= MatchHostSuffix(suffix, &use_property);
+                        valid &= MatchPlatformSuffix(suffix, &use_property);
 
                         if (!use_property)
                             continue;
@@ -390,7 +390,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     // Copy/steal simple values
     target->name = target_config->name;
     target->type = target_config->type;
-    target->hosts = target_config->hosts;
+    target->platforms = target_config->platforms;
     target->enable_by_default = target_config->enable_by_default;
     target->icon_filename = target_config->icon_filename;
     std::swap(target->definitions, target_config->definitions);
@@ -562,19 +562,19 @@ void TargetSetBuilder::Finish(TargetSet *out_set)
     std::swap(*out_set, set);
 }
 
-bool TargetSetBuilder::MatchHostSuffix(Span<const char> str, bool *out_match)
+bool TargetSetBuilder::MatchPlatformSuffix(Span<const char> str, bool *out_match)
 {
-    unsigned int hosts = ParseSupportedHosts(str);
-    if (!hosts)
+    unsigned int platforms = ParseSupportedPlatforms(str);
+    if (!platforms)
         return false;
 
-    *out_match = (hosts & (1 << (int)host));
+    *out_match = (platforms & (1 << (int)platform));
     return true;
 }
 
-unsigned int ParseSupportedHosts(Span<const char> str)
+unsigned int ParseSupportedPlatforms(Span<const char> str)
 {
-    unsigned int hosts = 0;
+    unsigned int platforms = 0;
 
     Span<const char> remain = str;
     while (remain.len) {
@@ -582,7 +582,7 @@ unsigned int ParseSupportedHosts(Span<const char> str)
 
         if (part == "Win32") {
             // Old name, supported for compatibility (easier bisect)
-            hosts |= 1 << (int)HostPlatform::Windows;
+            platforms |= 1 << (int)HostPlatform::Windows;
             continue;
         }
 
@@ -594,7 +594,7 @@ unsigned int ParseSupportedHosts(Span<const char> str)
                     Size len = StartsWith(name, part);
 
                     if (len == name.len || name[len] == '/') {
-                        hosts |= 1u << i;
+                        platforms |= 1u << i;
                         break;
                     }
 
@@ -603,16 +603,16 @@ unsigned int ParseSupportedHosts(Span<const char> str)
             }
         }
     }
-    if (!hosts) {
-        LogError("Unknown host or host family '%1'", str);
+    if (!platforms) {
+        LogError("Unknown platform or platform family '%1'", str);
     }
 
-    return hosts;
+    return platforms;
 }
 
-bool LoadTargetSet(Span<const char *const> filenames, HostPlatform host, TargetSet *out_set)
+bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, TargetSet *out_set)
 {
-    TargetSetBuilder target_set_builder(host);
+    TargetSetBuilder target_set_builder(platform);
     if (!target_set_builder.LoadFiles(filenames))
         return false;
     target_set_builder.Finish(out_set);

@@ -181,11 +181,11 @@ class ClangCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    ClangCompiler(HostPlatform host) : Compiler(host, "Clang") {}
+    ClangCompiler(HostPlatform platform) : Compiler(platform, "Clang") {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc, const char *ld)
+    static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc, const char *ld)
     {
-        std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(host);
+        std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(platform);
 
         // Prefer LLD
         if (!ld && FindExecutableInPath("ld.lld")) {
@@ -273,18 +273,18 @@ public:
         supported |= (int)CompileFeature::UBSan;
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::ZeroInit;
-        if (host != HostPlatform::OpenBSD) {
+        if (platform != HostPlatform::OpenBSD) {
             supported |= (int)CompileFeature::CFI; // LTO only
         }
-        if (host != HostPlatform::Windows) {
+        if (platform != HostPlatform::Windows) {
             supported |= (int)CompileFeature::TSan;
             supported |= (int)CompileFeature::ShuffleCode; // Requires lld version >= 11
         }
-        if (host == HostPlatform::Linux) {
+        if (platform == HostPlatform::Linux) {
             supported |= (int)CompileFeature::SafeStack;
         }
         supported |= (int)CompileFeature::Cxx17;
-        if (host == HostPlatform::Windows) {
+        if (platform == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
         supported |= (int)CompileFeature::SSE41;
@@ -324,12 +324,12 @@ public:
 
     const char *GetObjectExtension() const override
     {
-        const char *ext = (host == HostPlatform::Windows) ? ".obj" : ".o";
+        const char *ext = (platform == HostPlatform::Windows) ? ".obj" : ".o";
         return ext;
     }
     const char *GetLinkExtension() const override
     {
-        const char *ext = (host == HostPlatform::Windows) ? ".exe" : "";
+        const char *ext = (platform == HostPlatform::Windows) ? ".exe" : "";
         return ext;
     }
     const char *GetPostExtension() const override { return nullptr; }
@@ -439,7 +439,7 @@ public:
 #endif
 
         // Platform flags
-        switch (host) {
+        switch (platform) {
             case HostPlatform::Windows: {
                 Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
                           " -D_MT -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -D_VC_NODEFAULTLIB"
@@ -468,7 +468,7 @@ public:
         if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " -g");
         }
-        if (host == HostPlatform::Windows) {
+        if (platform == HostPlatform::Windows) {
             if (features & (int)CompileFeature::StaticLink) {
                 if (src_type == SourceType::CXX) {
                     Fmt(&buf, " -Xclang -flto-visibility-public-std -D_SILENCE_CLANG_CONCEPTS_MESSAGE");
@@ -487,7 +487,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-        if (host == HostPlatform::Linux && (clang_ver >= 110000)) {
+        if (platform == HostPlatform::Linux && (clang_ver >= 110000)) {
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::SafeStack) {
@@ -582,7 +582,7 @@ public:
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto");
 
-            if (host != HostPlatform::Windows) {
+            if (platform != HostPlatform::Windows) {
                 Fmt(&buf, " -Wl,-O1");
             }
         }
@@ -592,7 +592,7 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         for (const char *lib: libraries) {
-            if (host == HostPlatform::macOS && lib[0] == '!') {
+            if (platform == HostPlatform::macOS && lib[0] == '!') {
                 Fmt(&buf, " -framework %1", lib + 1);
             } else {
                 Fmt(&buf, " -l%1", lib);
@@ -600,7 +600,7 @@ public:
         }
 
         // Platform flags
-        switch (host) {
+        switch (platform) {
             case HostPlatform::Windows: {
                 const char *suffix = (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) ? "" : "d";
 
@@ -623,7 +623,7 @@ public:
 
             default: {
                 Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
-                if (host == HostPlatform::Linux) {
+                if (platform == HostPlatform::Linux) {
                     Fmt(&buf, " -ldl -lrt");
                 }
                 if (link_type == LinkType::Executable) {
@@ -640,7 +640,7 @@ public:
         // Features
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
-            if (host == HostPlatform::Windows && !(features & (int)CompileFeature::StaticLink)) {
+            if (platform == HostPlatform::Windows && !(features & (int)CompileFeature::StaticLink)) {
                 Fmt(&buf, " -shared-libasan");
             }
         }
@@ -699,11 +699,11 @@ class GnuCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    GnuCompiler(HostPlatform host) : Compiler(host, "GCC") {}
+    GnuCompiler(HostPlatform platform) : Compiler(platform, "GCC") {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc, const char *ld)
+    static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc, const char *ld)
     {
-        std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>(host);
+        std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>(platform);
 
         // Find executables
         {
@@ -748,7 +748,7 @@ public:
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
-        if (host != HostPlatform::Windows) {
+        if (platform != HostPlatform::Windows) {
             // Sometimes it works, somestimes not and the object files are
             // corrupt... just avoid PCH on MinGW
             supported |= (int)CompileFeature::PCH;
@@ -762,7 +762,7 @@ public:
             supported |= (int)CompileFeature::CFI;
         }
         supported |= (int)CompileFeature::Cxx17;
-        if (host == HostPlatform::Windows) {
+        if (platform == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
         supported |= (int)CompileFeature::SSE41;
@@ -799,7 +799,7 @@ public:
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension() const override
     {
-        const char *ext = (host == HostPlatform::Windows) ? ".exe" : "";
+        const char *ext = (platform == HostPlatform::Windows) ? ".exe" : "";
         return ext;
     }
     const char *GetPostExtension() const override { return nullptr; }
@@ -912,7 +912,7 @@ public:
 #endif
 
         // Platform flags
-        switch (host) {
+        switch (platform) {
             case HostPlatform::Windows: {
                 Fmt(&buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
                           " -D__USE_MINGW_ANSI_STDIO=1");
@@ -949,7 +949,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-        if (host != HostPlatform::Windows) {
+        if (platform != HostPlatform::Windows) {
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::ZeroInit) {
@@ -1036,7 +1036,7 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         for (const char *lib: libraries) {
-            if (host == HostPlatform::macOS && lib[0] == '!') {
+            if (platform == HostPlatform::macOS && lib[0] == '!') {
                 Fmt(&buf, " -framework %1", lib + 1);
             } else {
                 Fmt(&buf, " -l%1", lib);
@@ -1044,7 +1044,7 @@ public:
         }
 
         // Platform flags and libraries
-        switch (host) {
+        switch (platform) {
             case HostPlatform::Windows: {
                 Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat");
                 if (!i686) {
@@ -1058,7 +1058,7 @@ public:
 
             default: {
                 Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
-                if (host == HostPlatform::Linux) {
+                if (platform == HostPlatform::Linux) {
                     Fmt(&buf, " -ldl -lrt");
                 }
                 if (link_type == LinkType::Executable) {
@@ -1082,7 +1082,7 @@ public:
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
-        if (host == HostPlatform::Windows) {
+        if (platform == HostPlatform::Windows) {
             Fmt(&buf, " -lssp");
         }
         if (features & (int)CompileFeature::NoConsole) {
@@ -1154,7 +1154,7 @@ public:
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::CFI;
         supported |= (int)CompileFeature::Cxx17;
-        if (host == HostPlatform::Windows) {
+        if (platform == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
         supported |= (int)CompileFeature::SSE41;
@@ -1423,14 +1423,14 @@ class TeensyCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    TeensyCompiler(HostPlatform host) : Compiler(host, "GCC") {}
+    TeensyCompiler(HostPlatform platform) : Compiler(platform, "GCC") {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc)
+    static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc)
     {
-        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(host);
+        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(platform);
 
         // Decode model string
-        switch (host) {
+        switch (platform) {
             case HostPlatform::Teensy20: { compiler->model = Model::Teensy20; } break;
             case HostPlatform::Teensy20pp: { compiler->model = Model::Teensy20pp; } break;
             case HostPlatform::TeensyLC: { compiler->model = Model::TeensyLC; } break;
@@ -1758,11 +1758,11 @@ class EmCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    EmCompiler(HostPlatform host) : Compiler(host, "EmCC") {}
+    EmCompiler(HostPlatform platform) : Compiler(platform, "EmCC") {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc)
+    static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc)
     {
-        std::unique_ptr<EmCompiler> compiler = std::make_unique<EmCompiler>(host);
+        std::unique_ptr<EmCompiler> compiler = std::make_unique<EmCompiler>(platform);
 
         // Find executables
         {
@@ -1770,7 +1770,7 @@ public:
                 LogError("Could not find '%1' in PATH", cc);
                 return nullptr;
             }
-            if (host == HostPlatform::EmscriptenBox && !FindExecutableInPath("wasm2c")) {
+            if (platform == HostPlatform::EmscriptenBox && !FindExecutableInPath("wasm2c")) {
                 LogError("Could not find 'wasm2c' in PATH");
                 return nullptr;
             }
@@ -1819,7 +1819,7 @@ public:
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension() const override
     {
-        switch (host) {
+        switch (platform) {
             case HostPlatform::EmscriptenNode: return ".js";
             case HostPlatform::EmscriptenWeb: return ".html";
             case HostPlatform::EmscriptenBox: return ".wasm";
@@ -1829,7 +1829,7 @@ public:
     }
     const char *GetPostExtension() const override
     {
-        if (host == HostPlatform::EmscriptenBox) {
+        if (platform == HostPlatform::EmscriptenBox) {
             return ".c";
         } else {
             return nullptr;
@@ -1961,7 +1961,7 @@ public:
 
         // Features
         Fmt(&buf, " -s STANDALONE_WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=2147483648");
-        if (host == HostPlatform::EmscriptenNode) {
+        if (platform == HostPlatform::EmscriptenNode) {
             Fmt(&buf, " -s NODERAWFS=1 -lnodefs.js");
         }
 
@@ -2062,9 +2062,9 @@ static void FindArduinoCompiler(const char *name, const char *compiler, Span<cha
 #endif
 }
 
-std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
+std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 {
-    if (spec.host == NativeHost) {
+    if (spec.platform == NativePlatform) {
         if (!spec.cc) {
             for (const SupportedCompiler &supported: SupportedCompilers) {
                 if (supported.cc && FindExecutableInPath(supported.cc)) {
@@ -2109,9 +2109,9 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
         }
 
         if (IdentifyCompiler(spec.cc, "clang")) {
-            return ClangCompiler::Create(spec.host, spec.cc, spec.ld);
+            return ClangCompiler::Create(spec.platform, spec.cc, spec.ld);
         } else if (IdentifyCompiler(spec.cc, "gcc")) {
-            return GnuCompiler::Create(spec.host, spec.cc, spec.ld);
+            return GnuCompiler::Create(spec.platform, spec.cc, spec.ld);
 #ifdef _WIN32
         } else if (IdentifyCompiler(spec.cc, "cl")) {
             if (spec.ld) {
@@ -2125,7 +2125,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             LogError("Cannot find driver for compiler '%1'", spec.cc);
             return nullptr;
         }
-    } else if (StartsWith(HostPlatformNames[(int)spec.host], "WASM/Emscripten/")) {
+    } else if (StartsWith(HostPlatformNames[(int)spec.platform], "WASM/Emscripten/")) {
         if (!spec.cc) {
             spec.cc = "emcc";
         }
@@ -2135,13 +2135,13 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
         }
 
         if (spec.ld) {
-            LogError("Cannot use custom linker for host '%1'", HostPlatformNames[(int)spec.host]);
+            LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
             return nullptr;
         }
 
-        return EmCompiler::Create(spec.host, spec.cc);
+        return EmCompiler::Create(spec.platform, spec.cc);
 #ifdef __linux__
-    } else if (spec.host == HostPlatform::Windows) {
+    } else if (spec.platform == HostPlatform::Windows) {
         if (!spec.cc) {
             LogError("Path to cross-platform MinGW must be explicitly specified");
             return nullptr;
@@ -2151,9 +2151,9 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             return nullptr;
         }
 
-        return GnuCompiler::Create(spec.host, spec.cc, spec.ld);
+        return GnuCompiler::Create(spec.platform, spec.cc, spec.ld);
 #endif
-    } else if (StartsWith(HostPlatformNames[(int)spec.host], "Embedded/Teensy/AVR/")) {
+    } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/AVR/")) {
         if (!spec.cc) {
             static std::once_flag flag;
             static char cc[2048];
@@ -2169,12 +2169,12 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
         }
 
         if (spec.ld) {
-            LogError("Cannot use custom linker for host '%1'", HostPlatformNames[(int)spec.host]);
+            LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
             return nullptr;
         }
 
-        return TeensyCompiler::Create(spec.host, spec.cc);
-    } else if (StartsWith(HostPlatformNames[(int)spec.host], "Embedded/Teensy/ARM/")) {
+        return TeensyCompiler::Create(spec.platform, spec.cc);
+    } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/ARM/")) {
         if (!spec.cc) {
             static std::once_flag flag;
             static char cc[2048];
@@ -2190,14 +2190,14 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
         }
 
         if (spec.ld) {
-            LogError("Cannot use custom linker for host '%1'", HostPlatformNames[(int)spec.host]);
+            LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
             return nullptr;
         }
 
-        return TeensyCompiler::Create(spec.host, spec.cc);
+        return TeensyCompiler::Create(spec.platform, spec.cc);
     } else {
-        LogError("Cross-compilation from host '%1' to '%2' is not supported",
-                 HostPlatformNames[(int)NativeHost], HostPlatformNames[(int)spec.host]);
+        LogError("Cross-compilation from platform '%1' to '%2' is not supported",
+                 HostPlatformNames[(int)NativePlatform], HostPlatformNames[(int)spec.platform]);
         return nullptr;
     }
 }

@@ -231,9 +231,9 @@ Builder::Builder(const BuildSettings &build)
     RG_ASSERT(build.output_directory);
     RG_ASSERT(build.compiler);
 
-    const char *short_host = SplitStrReverse(HostPlatformNames[(int)build.compiler->host], '/').ptr;
+    const char *short_platform = SplitStrReverse(HostPlatformNames[(int)build.compiler->platform], '/').ptr;
 
-    cache_directory = Fmt(&str_alloc, "%1%/%2_%3", build.output_directory, short_host, build.compiler->name).ptr;
+    cache_directory = Fmt(&str_alloc, "%1%/%2_%3", build.output_directory, short_platform, build.compiler->name).ptr;
     cache_filename = Fmt(&str_alloc, "%1%/Shared%/FelixCache.bin", build.output_directory).ptr;
 
     LoadCache();
@@ -255,7 +255,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 {
     HeapArray<const char *> obj_filenames;
 
-    // Core host source files (e.g. Teensy core)
+    // Core platform source files (e.g. Teensy core)
     TargetInfo *core = nullptr;
     const char *ns = nullptr;
     {
@@ -275,7 +275,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
                 core->name = Fmt(&str_alloc, "Cores/%1", ns).ptr;
                 core->type = TargetType::Library;
-                core->hosts = 1u << (int)build.compiler->host;
+                core->platforms = 1u << (int)build.compiler->platform;
                 std::swap(core->definitions, core_definitions);
                 core->disable_features = (int)CompileFeature::Warnings;
 
@@ -400,7 +400,8 @@ bool Builder::AddTarget(const TargetInfo &target)
     }
 
     // Resource file (Windows only)
-    if (build.compiler->host == HostPlatform::Windows && target.type == TargetType::Executable) {
+    if (build.compiler->platform == HostPlatform::Windows &&
+            target.type == TargetType::Executable) {
         const char *rc_filename = Fmt(&str_alloc, "%1%/Misc%/%2.rc", cache_directory, target.name).ptr;
         const char *res_filename = Fmt(&str_alloc, "%1%/Misc%/%2.res", cache_directory, target.name).ptr;
 
