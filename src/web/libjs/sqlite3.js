@@ -14,23 +14,40 @@
 const sqlite3 = new function() {
     let self = this;
 
-    this.worker = 'sqlite3-worker1.js';
-
-    if (document.currentScript && document.currentScript.src) {
-        let parts = document.currentScript.src.split('/');
-        parts.pop();
-        this.worker = parts.join('/') + '/' + this.worker;
-    }
-
     let promiser = null;
     let id = 0;
 
+    this.init = async function(worker) {
+        if (promiser != null)
+            return;
+
+        promiser = await new Promise((resolve, reject) => {
+            let sqlite3 = null;
+
+            if (typeof worker === 'string') {
+                worker = new Worker(worker);
+            } else if (typeof worker === 'function') {
+                worker = worker();
+            } else if (!(worker instanceof Worker)) {
+                reject(new Error('Missing URL for SQLite3 worker script'));
+            }
+            worker.onerror = e => reject(new Error('Failed to load SQLite3 worker script'));
+
+            let config = {
+                worker: worker,
+                onready: () => resolve(sqlite3)
+            };
+
+            sqlite3 = sqlite3Worker1Promiser(config);
+        });
+    }
+
     this.open = async function(filename) {
-        await init();
+        if (promiser == null)
+            throw new Error('Call sqlite3.init() first');
 
         if (filename == null)
             filename = ':memory:';
-
         if (filename != ':memory:') {
             if (!self.hasPersistence())
                 throw new Error('This browser does not support persistent SQLite3 databases');
@@ -68,30 +85,6 @@ const sqlite3 = new function() {
 
         return true;
     };
-
-    async function init() {
-        if (promiser != null)
-            return;
-
-        promiser = await new Promise((resolve, reject) => {
-            let sqlite3 = null;
-            let worker = null;
-
-            if (typeof self.worker === 'string') {
-                worker = new Worker(self.worker);
-            } else if (typeof self.worker === 'function') {
-                worker = self.worker();
-            }
-            worker.onerror = e => reject(new Error('Failed to load SQLite3 worker script'));
-
-            let config = {
-                worker: worker,
-                onready: () => resolve(sqlite3)
-            };
-
-            sqlite3 = sqlite3Worker1Promiser(config);
-        });
-    }
 
     function DatabaseWrapper(promiser, db) {
         let self = this;
