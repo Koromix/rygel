@@ -603,10 +603,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     json.Key("version"); json.Int64(fs_version);
                     json.Key("buster"); json.String(master_etag);
                     json.Key("cache_offline"); json.Bool(master->config.use_offline);
-                    {
-                        Span<const char> str = json_ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf);
-                        json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
-                    }
+                    json.Key("sync_mode"); json.String(json_ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf).ptr);
                     if (master->config.backup_key) {
                         json.Key("backup_key"); json.String(master->config.backup_key);
                     }
