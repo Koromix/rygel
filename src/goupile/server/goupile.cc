@@ -542,6 +542,11 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
+    // Enable COEP for offlines instances to get SharedArrayBuffer
+    if (instance->config.use_offline) {
+        io->AddHeader("Cross-Origin-Embedder-Policy", "require-corp");
+    }
+
     // Handle sessions triggered by query parameters
     if (request.method == http_RequestMethod::Get) {
         if (instance->config.auto_key && !HandleSessionKey(instance, request, io))
@@ -734,7 +739,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
     io->AddHeader("Cross-Origin-Opener-Policy", "same-origin");
-    io->AddHeader("Cross-Origin-Embedder-Policy", "require-corp");
     io->AddHeader("X-Robots-Tag", "noindex");
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
 
