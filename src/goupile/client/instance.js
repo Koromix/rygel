@@ -1477,7 +1477,7 @@ function InstanceController() {
     async function syncEditor() {
         if (editor_el == null) {
             if (typeof ace === 'undefined')
-                await net.loadScript(`${ENV.urls.static}ace.js`);
+                await net.loadScript(`${ENV.urls.static}ace/ace.js`);
 
             editor_el = document.createElement('div');
             editor_el.setAttribute('style', 'flex: 1;');
