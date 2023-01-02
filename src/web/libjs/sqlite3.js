@@ -100,6 +100,17 @@ const sqlite3 = new function() {
             }
         };
 
+        this.transaction = async function(func) {
+            try {
+                await self.exec('BEGIN');
+                await func(self);
+                await self.exec('COMMIT');
+            } catch (err) {
+                await self.exec('ROLLBACK');
+                throw err;
+            }
+        };
+
         this.fetch1 = async function(sql, ...args) {
             let result = await new Promise((resolve, reject) => {
                 let p = promiser({ type: 'exec', dbId: db, args: {
