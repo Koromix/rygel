@@ -519,6 +519,7 @@ function snapshot() {
                                        parts[1] == 'miniz' ||
                                        parts[1] == 'node-addon-api' ||
                                        parts[1] == 'raylib' ||
+                                       parts[1] == 'sqlite3' ||
                                        parts[1] == 'sqlite3mc';
         } else if (parts[0] == 'web') {
             return parts[1] == null || parts[1] == 'koffi.dev';

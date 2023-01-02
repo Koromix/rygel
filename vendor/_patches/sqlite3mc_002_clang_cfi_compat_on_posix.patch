@@ -1,7 +1,7 @@
-diff --git a/vendor/sqlite3mc/sqlite3.c b/vendor/sqlite3mc/sqlite3.c
+diff --git a/vendor/sqlite3/sqlite3.c b/vendor/sqlite3/sqlite3.c
 index fba4945eb..e8ed83b8f 100644
---- a/vendor/sqlite3mc/sqlite3.c
-+++ b/vendor/sqlite3mc/sqlite3.c
+--- a/vendor/sqlite3/sqlite3.c
++++ b/vendor/sqlite3/sqlite3.c
 @@ -34340,19 +34340,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {
@@ -206,10 +206,10 @@ index fba4945eb..e8ed83b8f 100644
  #endif
  
  }; /* End of the overrideable system calls */
-diff --git a/vendor/sqlite3mc/sqlite3mc.c b/vendor/sqlite3mc/sqlite3mc.c
+diff --git a/vendor/sqlite3/sqlite3mc.c b/vendor/sqlite3/sqlite3mc.c
 index fba4945eb..e8ed83b8f 100644
---- a/vendor/sqlite3mc/sqlite3mc.c
-+++ b/vendor/sqlite3mc/sqlite3mc.c
+--- a/vendor/sqlite3/sqlite3mc.c
++++ b/vendor/sqlite3/sqlite3mc.c
 @@ -34340,19 +34340,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {

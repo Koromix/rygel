@@ -14,7 +14,7 @@
 #pragma once
 
 #include "src/core/libcc/libcc.hh"
-#include "vendor/sqlite3mc/sqlite3mc.h"
+#include "vendor/sqlite3/sqlite3mc.h"
 #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
 #include <thread>

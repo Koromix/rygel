@@ -100,7 +100,7 @@ endif()
 
 # ---- SQLite ----
 
-add_library(sqlite3 SHARED ../../../vendor/sqlite3mc/sqlite3.c)
+add_library(sqlite3 SHARED ../../../vendor/sqlite3/sqlite3.c)
 set_target_properties(sqlite3 PROPERTIES PREFIX "")
 
 if(WIN32)

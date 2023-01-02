@@ -1,7 +1,7 @@
-diff --git a/vendor/sqlite3mc/sqlite3mc.c b/vendor/sqlite3mc/sqlite3mc.c
+diff --git a/vendor/sqlite3/sqlite3mc.c b/vendor/sqlite3/sqlite3mc.c
 index 34a455a9d..9d970ce05 100644
---- a/vendor/sqlite3mc/sqlite3mc.c
-+++ b/vendor/sqlite3mc/sqlite3mc.c
+--- a/vendor/sqlite3/sqlite3mc.c
++++ b/vendor/sqlite3/sqlite3mc.c
 @@ -260580,12 +260580,9 @@ void RijndaelDecrypt(Rijndael* rijndael, UINT8 a[16], UINT8 b[16]);
  #define AES_HARDWARE_NI    1
  #define AES_HARDWARE_NEON  2
