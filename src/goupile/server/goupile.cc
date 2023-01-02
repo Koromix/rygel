@@ -610,17 +610,6 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     if (master->config.backup_key) {
                         json.Key("backup_key"); json.String(master->config.backup_key);
                     }
-                    if (master->slaves.len) {
-                        json.Key("instances"); json.StartArray();
-                        for (const InstanceHolder *slave: master->slaves) {
-                            json.StartObject();
-                            json.Key("title"); json.String(slave->title);
-                            json.Key("name"); json.String(slave->config.name);
-                            json.Key("url"); json.String(Fmt(buf, "/%1/", slave->key).ptr);
-                            json.EndObject();
-                        }
-                        json.EndArray();
-                    }
                     json.EndObject();
                 } else if (TestStr(key, "HEAD_TAGS")) {
                     if (master->config.use_offline) {
