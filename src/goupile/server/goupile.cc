@@ -239,7 +239,8 @@ static void InitAssets()
             assets_for_cache.Append("/favicon.png");
         } else if (TestStr(asset.name, "src/goupile/client/images/admin.png")) {
             assets_map.Set("/admin/favicon.png", &asset);
-        } else if (StartsWith(asset.name, "src/goupile/client/")) {
+        } else if (StartsWith(asset.name, "src/goupile/client/") ||
+                   StartsWith(asset.name, "vendor/opensans/")) {
             const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
             const char *url = Fmt(&assets_alloc, "/static/%1/%2", shared_etag, name).ptr;
 
