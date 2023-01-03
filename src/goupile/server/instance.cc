@@ -197,6 +197,16 @@ bool MigrateInstance(sq_Database *db)
         return true;
     }
 
+    // Work around version mismatch caused by goupile2 branch
+    if (version == 57) {
+        sq_Statement stmt;
+        if (!db->Prepare("SELECT rowid FROM sqlite_master WHERE name = 'rec_fragments' AND sql LIKE '%tags TEXT%'", &stmt))
+            return false;
+        if (!stmt.Step() && !stmt.IsValid())
+            return false;
+        version -= stmt.IsRow();
+    }
+
     LogInfo("Migrate instance database '%1': %2 to %3",
             SplitStrReverseAny(filename, RG_PATH_SEPARATORS), version, InstanceVersion);
 
