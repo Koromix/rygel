@@ -488,7 +488,7 @@ function AdminController() {
                 ]
             });
             d.text('name', 'Nom', { value: d.values.key });
-            d.boolean('demo', 'Ajouter les pages par défaut', { value: true, untoggle: false });
+            d.boolean('demo', 'Paramétrer les pages de démonstration', { value: true, untoggle: false });
 
             d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let response = await net.fetch('/admin/api/instances/create', {
