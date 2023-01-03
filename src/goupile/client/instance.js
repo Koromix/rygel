@@ -333,6 +333,7 @@ function InstanceController() {
                                 <button @click=${e => window.open('/admin/')}>Administration</button>
                                 <hr/>
                             ` : ''}
+                            ${profile.userid < 0 ? html`<button @click=${ui.wrapAction(goupile.logout)}>Changer de compte</button>` : ''}
                             <button @click=${ui.wrapAction(goupile.logout)}>${profile.userid ? 'Se déconnecter' : 'Se connecter'}</button>
                         </div>
                     </div>
