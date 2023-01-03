@@ -42,7 +42,7 @@ function AdminController() {
     function renderMenu() {
         return html`
             <nav class="ui_toolbar" id="ui_top" style="z-index: 999999;">
-                <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                <button class="icon" style="background-position-y: calc(-714px + 1.2em);"
                         @click=${e => self.go(e, '/admin/')}>Admin</button>
                 <button class=${'icon' + (ui.isPanelActive('instances') ? ' active' : '')}
                         style="background-position-y: calc(-362px + 1.2em);"
