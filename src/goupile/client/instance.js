@@ -1945,11 +1945,14 @@ function InstanceController() {
                                               new_route.page !== route.page)) {
                     let autosave = route.page.getOption('autosave', form_record, false);
 
-                    if (autosave) {
+                    if (autosave || profile.userid < 0) {
+                        if (!autosave)
+                            form_builder.triggerErrors();
                         await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
-                        new_route.version = null;
 
+                        new_route.version = null;
                         options.reload = true;
+
                         continue;
                     } else {
                         try {
