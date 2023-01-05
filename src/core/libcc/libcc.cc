@@ -2396,7 +2396,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
 {
     int fd = -1;
     if (!(flags & (int)RenameFlag::Overwrite)) {
-        fd = open(dest_filename, O_CREAT | O_EXCL, 0644);
+        fd = RG_POSIX_RESTART_EINTR(open(dest_filename, O_CREAT | O_EXCL, 0644), < 0);
         if (fd < 0) {
             if (errno == EEXIST) {
                 LogError("File '%1' already exists", dest_filename);
