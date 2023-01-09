@@ -34,6 +34,7 @@
     update_cache: yes
     pkg:
       - grafana
+      - sqlite3
     state: latest
   become: yes
 
@@ -105,10 +106,22 @@
     follow: no
   become: yes
 
-- name: Restart Grafana services
+- name: Stop Grafana services
   service:
     name: grafana-server
-    state: restarted
+    state: stopped
+  when: 'not ansible_check_mode'
+  become: yes
+
+- name: Enable WAL mode for grafana.db
+  command: '/usr/bin/sqlite3 "{{ grafana_root_path }}/data/grafana.db" "PRAGMA journal_mode = WAL;"'
+  when: 'not ansible_check_mode'
+  become: yes
+
+- name: Start Grafana services
+  service:
+    name: grafana-server
+    state: started
     enabled: yes
   when: 'not ansible_check_mode'
   become: yes
