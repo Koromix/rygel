@@ -18,6 +18,10 @@
 const util = require('util');
 
 let filename = __dirname + '/../build/koffi.node';
-module.exports = require(filename);
 
-module.exports.handle = util.deprecate(module.exports.opaque, 'The koffi.handle() function was deprecated in Koffi 2.1, use koffi.opaque() instead', 'KOFFI001');
+module.exports = {
+    ...require(filename),
+
+    // Deprecated functions
+    handle: util.deprecate(module.exports.opaque, 'The koffi.handle() function was deprecated in Koffi 2.1, use koffi.opaque() instead', 'KOFFI001');
+};
