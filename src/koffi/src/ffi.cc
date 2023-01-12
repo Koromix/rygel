@@ -1891,7 +1891,9 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
     if (RG_LIKELY(exec_call)) {
         exec_call->RelaySafe(idx, own_sp, caller_sp, out_reg);
     } else {
-        Napi::Env env = shared.trampolines[idx].func.Env();
+        TrampolineInfo *trampoline = &shared.trampolines[idx];
+
+        Napi::Env env = trampoline->func.Env();
         InstanceData *instance = env.GetInstanceData<InstanceData>();
 
         InstanceMemory *mem = AllocateMemory(instance, instance->async_stack_size, instance->async_heap_size);
@@ -1899,6 +1901,10 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
             ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
             return;
         }
+
+        // Avoid triggering the "use callback beyond FFI" check
+        RG_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
+        trampoline->generation = -1;
 
         CallData call(env, instance, mem);
         call.RelaySafe(idx, own_sp, caller_sp, out_reg);

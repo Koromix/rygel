@@ -73,9 +73,10 @@ async function test() {
     const ApplyStd = lib.func('int ApplyStd(int a, int b, int c, ApplyCallback *func)');
     const ApplyMany = lib.func('int ApplyMany(int x, IntCallback **funcs, int length)');
     const ApplyStruct = lib.func('int ApplyStruct(int x, StructCallbacks callbacks)');
-    const SetCallback = lib.func('void SetCallback(IntCallback *func)');
-    const CallCallback = lib.func('int CallCallback(int x)');
-    const CallFromThread = lib.func('int CallFromThread(int x)');
+    const SetIndirect = lib.func('void SetIndirect(IntCallback *func)');
+    const CallIndirect = lib.func('int CallIndirect(int x)');
+    const CallIndirectThreaded = lib.func('int CallIndirectThreaded(int x)');
+    const CallDirectThreaded = lib.func('int CallDirectThreaded(IntCallback *func, int x)');
     const MakeVectors = lib.func('int MakeVectors(int len, VectorCallback *func)');
     const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, SortCallback *cb)');
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
@@ -164,12 +165,12 @@ async function test() {
 
     // Persistent callback
     {
-        SetCallback(x => -x);
-        assert.throws(() => CallCallback(27), { message: /non-registered callback/ });
+        SetIndirect(x => -x);
+        assert.throws(() => CallIndirect(27), { message: /non-registered callback/ });
 
         let cb = koffi.register(x => -x, koffi.pointer(IntCallback));
-        SetCallback(cb);
-        assert.equal(CallCallback(27), -27);
+        SetIndirect(cb);
+        assert.equal(CallIndirect(27), -27);
 
         assert.equal(koffi.unregister(cb), null);
         assert.throws(() => koffi.unregister(cb));
@@ -185,8 +186,8 @@ async function test() {
         let mult = new Multiplier(5);
         let cb = koffi.register(mult, mult.multiply, 'IntCallback *');
 
-        SetCallback(cb);
-        assert.equal(CallCallback(42), 5 * 42);
+        SetIndirect(cb);
+        assert.equal(CallIndirect(42), 5 * 42);
 
         assert.equal(koffi.unregister(cb), null);
         assert.throws(() => koffi.unregister(cb));
@@ -262,12 +263,16 @@ async function test() {
         assert.equal(ret, 97 + 2 * 98);
     }
 
-    // Use callback from secondary thread
+    // Use temporary callback from secondary thread
+    for (let i = 0; i < 128; i++)
+        assert.equal(await util.promisify(CallDirectThreaded.async)(x => -x - 2, 27), -29);
+
+    // Use registered callback from secondary thread
     for (let i = 0; i < 128; i++) {
         let cb = koffi.register(x => -x - 2, koffi.pointer(IntCallback));
 
-        SetCallback(cb);
-        assert.equal(await util.promisify(CallFromThread.async)(27), -29);
+        SetIndirect(cb);
+        assert.equal(await util.promisify(CallIndirectThreaded.async)(27), -29);
 
         koffi.unregister(cb);
     }

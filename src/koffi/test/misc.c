@@ -669,19 +669,19 @@ EXPORT int ApplyStruct(int x, StructCallbacks callbacks)
 
 static IntCallback *callback;
 
-EXPORT void SetCallback(IntCallback *cb)
+EXPORT void SetIndirect(IntCallback *cb)
 {
     callback = cb;
 }
 
-EXPORT int CallCallback(int x)
+EXPORT int CallIndirect(int x)
 {
     return callback(x);
 }
 
 #ifdef _WIN32
 
-static DWORD WINAPI CallFromThreadFunc(void *udata)
+static DWORD WINAPI CallIndirectThreadedFunc(void *udata)
 {
     int *ptr = (int *)udata;
     *ptr = callback(*ptr);
@@ -689,9 +689,9 @@ static DWORD WINAPI CallFromThreadFunc(void *udata)
     return 0;
 }
 
-EXPORT int CallFromThread(int x)
+EXPORT int CallIndirectThreaded(int x)
 {
-    HANDLE h = CreateThread(NULL, 0, CallFromThreadFunc, &x, 0, NULL);
+    HANDLE h = CreateThread(NULL, 0, CallIndirectThreadedFunc, &x, 0, NULL);
     if (!h) {
         perror("CreateThread");
         exit(1);
@@ -705,7 +705,7 @@ EXPORT int CallFromThread(int x)
 
 #else
 
-static void *CallFromThreadFunc(void *udata)
+static void *CallIndirectThreadedFunc(void *udata)
 {
     int *ptr = (int *)udata;
     *ptr = callback(*ptr);
@@ -713,11 +713,11 @@ static void *CallFromThreadFunc(void *udata)
     return NULL;
 }
 
-EXPORT int CallFromThread(int x)
+EXPORT int CallIndirectThreaded(int x)
 {
     pthread_t thread;
 
-    if (pthread_create(&thread, NULL, CallFromThreadFunc, &x)) {
+    if (pthread_create(&thread, NULL, CallIndirectThreadedFunc, &x)) {
         perror("pthread_create");
         exit(1);
     }
@@ -728,6 +728,12 @@ EXPORT int CallFromThread(int x)
 }
 
 #endif
+
+EXPORT int CallDirectThreaded(IntCallback *func, int x)
+{
+    callback = func;
+    return CallIndirectThreaded(x);
+}
 
 EXPORT void ReverseBytes(void *p, int len)
 {
