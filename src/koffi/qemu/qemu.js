@@ -342,7 +342,7 @@ async function prepare() {
                 log(machine, `${suite} > Status`, chalk.bold.red(`[manual]`));
                 needed = true;
             } else {
-                log(machine, `${suite} > Status`, chalk.bold.red(`[build]`));
+                log(machine, `${suite} > Status`, chalk.bold.red(`[missing]`));
                 needed = true;
             }
         }
