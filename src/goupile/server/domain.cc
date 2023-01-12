@@ -1519,9 +1519,17 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 33: {
+                bool success = db->RunMany(R"(
+                    UPDATE dom_users SET confirm = 'TOTP' WHERE confirm = 'totp';
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 33);
+            RG_STATIC_ASSERT(DomainVersion == 34);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

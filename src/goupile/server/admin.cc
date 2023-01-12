@@ -2665,7 +2665,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                                                             email, phone, root, local_key, confirm)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
                                   username, hash, 0 + change_password, email, phone, 0 + root, local_key,
-                                  confirm ? "totp" : nullptr))
+                                  confirm ? "TOTP" : nullptr))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -2833,7 +2833,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 return false;
             if (change_password && !gp_domain.db.Run("UPDATE dom_users SET change_password = ?2 WHERE userid = ?1", userid, 0 + change_password))
                 return false;
-            if (set_confirm && !gp_domain.db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm ? "totp" : nullptr))
+            if (set_confirm && !gp_domain.db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm ? "TOTP" : nullptr))
                 return false;
             if (reset_secret && !gp_domain.db.Run("UPDATE dom_users SET secret = NULL WHERE userid = ?1", userid))
                 return false;
