@@ -263,6 +263,8 @@ struct InstanceData {
     int16_t temp_trampolines = 0;
     uint32_t registered_trampolines = 0;
 
+    napi_threadsafe_function broker = nullptr;
+
     BlockAllocator str_alloc;
 
     Size sync_stack_size = DefaultSyncStackSize;

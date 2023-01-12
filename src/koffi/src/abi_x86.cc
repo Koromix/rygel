@@ -113,8 +113,6 @@ static void *const Trampolines[][2] = {
 };
 RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines * 2);
 
-static RG_THREAD_LOCAL CallData *exec_call;
-
 bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 {
     if (!func->lib && func->convention != CallConvention::Cdecl &&
@@ -366,9 +364,6 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
 
 void CallData::Execute()
 {
-    RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
-    exec_call = this;
-
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
             auto ret = (func->fast ? ForwardCallR ## Suffix(func->func, new_sp, &old_sp) \
@@ -682,8 +677,13 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegister
     const TypeInfo *type = proto->ret.type;
 
     // Make the call
-    napi_value ret = CallSwitchStack(&func, (size_t)arguments.len, arguments.data, old_sp, &mem->stack,
-                                     [](Napi::Function *func, size_t argc, napi_value *argv) { return (napi_value)func->Call(argv[0], argc - 1, argv + 1); });
+    napi_value ret;
+    if (async) {
+        ret = (napi_value)func.Call(arguments[0], arguments.len - 1, arguments.data + 1);
+    } else {
+        ret = CallSwitchStack(&func, (size_t)arguments.len, arguments.data, old_sp, &mem->stack,
+                              [](Napi::Function *func, size_t argc, napi_value *argv) { return (napi_value)func->Call(argv[0], argc - 1, argv + 1); });
+    }
     Napi::Value value(env, ret);
 
     if (RG_UNLIKELY(env.IsExceptionPending()))
@@ -865,11 +865,6 @@ void *GetTrampoline(Size idx, const FunctionInfo *proto)
 {
     bool x87 = IsFloat(proto->ret.type);
     return Trampolines[idx][x87];
-}
-
-extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
-{
-    exec_call->Relay(idx, own_sp, caller_sp, out_reg);
 }
 
 }

@@ -44,6 +44,8 @@ namespace RG {
 const int TypeInfoMarker = 0xDEADBEEF;
 const int CastMarker = 0xDEADBEEF;
 
+static RG_THREAD_LOCAL CallData *exec_call;
+
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
     Napi::Env env = value.Env();
@@ -1057,7 +1059,10 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, func, mem);
+    CallData call(env, instance, func, mem, false);
+
+    RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
+    exec_call = &call;
 
     if (!RG_UNLIKELY(call.Prepare(info)))
         return env.Null();
@@ -1065,7 +1070,14 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     if (instance->debug) {
         call.DumpForward();
     }
-    call.Execute();
+
+    // Execute call
+    {
+        RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
+        exec_call = &call;
+
+        call.Execute();
+    }
 
     return call.Complete();
 }
@@ -1124,7 +1136,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         return env.Null();
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, &func, mem);
+    CallData call(env, instance, &func, mem, false);
 
     if (!RG_UNLIKELY(call.Prepare(info)))
         return env.Null();
@@ -1132,7 +1144,14 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
     if (instance->debug) {
         call.DumpForward();
     }
-    call.Execute();
+
+    // Execute call
+    {
+        RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
+        exec_call = &call;
+
+        call.Execute();
+    }
 
     return call.Complete();
 }
@@ -1148,7 +1167,7 @@ public:
     AsyncCall(Napi::Env env, InstanceData *instance, const FunctionInfo *func,
               InstanceMemory *mem, Napi::Function &callback)
         : Napi::AsyncWorker(callback), env(env), func(func->Ref()),
-          call(env, instance, func, mem) {}
+          call(env, instance, func, mem, true) {}
     ~AsyncCall() { func->Unref(); }
 
     bool Prepare(const Napi::CallbackInfo &info) {
@@ -1170,6 +1189,9 @@ public:
 void AsyncCall::Execute()
 {
     if (prepared) {
+        RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
+        exec_call = &call;
+
         call.Execute();
     }
 }
@@ -1673,6 +1695,10 @@ InstanceData::~InstanceData()
     for (InstanceMemory *mem: memories) {
         delete mem;
     }
+
+    if (broker) {
+        napi_release_threadsafe_function(broker, napi_tsfn_abort);
+    }
 }
 
 static Napi::Value CastValue(const Napi::CallbackInfo &info)
@@ -1828,6 +1854,30 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     return env.Null();
 }
 
+extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+{
+    exec_call->RelaySafe(idx, own_sp, caller_sp, out_reg);
+}
+
+static InstanceData *CreateInstance(Napi::Env env)
+{
+    InstanceData *instance = new InstanceData();
+    RG_DEFER_N(err_guard) { delete instance; };
+
+    Napi::String resource_name = Napi::String::New(env, "Koffi Async Callback Broker");
+
+    if (napi_create_threadsafe_function(env, nullptr, nullptr, resource_name,
+                                        0, 1, nullptr, nullptr, nullptr,
+                                        CallData::RelayAsync, &instance->broker) != napi_ok) {
+        LogError("Failed to create async callback broker");
+        return nullptr;
+    }
+    napi_unref_threadsafe_function(env, instance->broker);
+
+    err_guard.Disable();
+    return instance;
+}
+
 template <typename Func>
 static void SetExports(Napi::Env env, Func func)
 {
@@ -1906,7 +1956,9 @@ static void InitInternal(v8::Local<v8::Object> target, v8::Local<v8::Value>,
         delete env_napi;
     }, env_napi);
 
-    InstanceData *instance = new InstanceData();
+    InstanceData *instance = CreateInstance(env_cxx);
+    RG_CRITICAL(instance, "Failed to initialize Koffi");
+
     env_cxx.SetInstanceData(instance);
 
     instance->debug = GetDebugFlag("DUMP_CALLS");
@@ -1922,7 +1974,9 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
     using namespace RG;
 
-    InstanceData *instance = new InstanceData();
+    InstanceData *instance = CreateInstance(env);
+    RG_CRITICAL(instance, "Failed to initialize Koffi");
+
     env.SetInstanceData(instance);
 
     instance->debug = GetDebugFlag("DUMP_CALLS");

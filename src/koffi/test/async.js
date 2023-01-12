@@ -28,6 +28,8 @@ const PackedBFG = koffi.pack('PackedBFG', {
     })
 });
 
+const CharCallback = koffi.callback('int CharCallback(int idx, char c)');
+
 main();
 
 async function main() {
@@ -46,6 +48,7 @@ async function test() {
 
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
     const MakePackedBFG = lib.func('PackedBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
+    const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
 
     let promises = [];
 

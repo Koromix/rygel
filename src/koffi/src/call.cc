@@ -20,9 +20,23 @@
 
 namespace RG {
 
-CallData::CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem)
+struct RelayContext {
+    CallData *call;
+
+    Size idx;
+    uint8_t *own_sp;
+    uint8_t *caller_sp;
+    BackRegisters *out_reg;
+
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool done = false;
+};
+
+CallData::CallData(Napi::Env env, InstanceData *instance,
+                   const FunctionInfo *func, InstanceMemory *mem, bool async)
     : env(env), instance(instance), func(func),
-      mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap)
+      mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap), async(async)
 {
     mem->generation += !mem->depth;
     mem->depth++;
@@ -48,6 +62,41 @@ CallData::~CallData()
     }
 
     instance = nullptr;
+}
+
+void CallData::RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+{
+    if (async) {
+        RelayContext ctx;
+
+        ctx.call = this;
+        ctx.idx = idx;
+        ctx.own_sp = own_sp;
+        ctx.caller_sp = caller_sp;
+        ctx.out_reg = out_reg;
+
+        napi_call_threadsafe_function(instance->broker, &ctx, napi_tsfn_blocking);
+
+        // Wait until it executes
+        std::unique_lock<std::mutex> lock(ctx.mutex);
+        while (!ctx.done) {
+            ctx.cv.wait(lock);
+        }
+    } else {
+        Relay(idx, own_sp, caller_sp, out_reg);
+    }
+}
+
+void CallData::RelayAsync(napi_env, napi_value, void *, void *udata)
+{
+    RelayContext *ctx = (RelayContext *)udata;
+
+    ctx->call->Relay(ctx->idx, ctx->own_sp, ctx->caller_sp, ctx->out_reg);
+
+    // We're done!
+    std::lock_guard<std::mutex> lock(ctx->mutex);
+    ctx->done = true;
+    ctx->cv.notify_one();
 }
 
 bool CallData::PushString(Napi::Value value, int directions, const char **out_str)

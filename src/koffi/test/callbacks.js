@@ -15,6 +15,7 @@
 
 const koffi = require('./build/koffi.node');
 const assert = require('assert');
+const util = require('util');
 
 const BFG = koffi.struct('BFG', {
     a: 'int8_t',
@@ -248,5 +249,15 @@ async function test() {
 
         let ret = CallMeChar(cb);
         assert.equal(ret, 97 + 98);
+    }
+
+    // Test callback inside async function
+    {
+        let chars = [97, 98];
+
+        let cb = koffi.register((idx, c) => (idx + 1) * c, 'CharCallback *');
+        let ret = await util.promisify(CallMeChar.async)(cb);
+
+        assert.equal(ret, 97 + 2 * 98);
     }
 }

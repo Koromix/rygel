@@ -42,6 +42,8 @@ class alignas(8) CallData {
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
 
+    bool async;
+
     int16_t used_trampolines = 0;
 
     LocalArray<OutArgument, MaxOutParameters> out_arguments;
@@ -68,7 +70,8 @@ class alignas(8) CallData {
     BlockAllocator call_alloc;
 
 public:
-    CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem);
+    CallData(Napi::Env env, InstanceData *instance,
+             const FunctionInfo *func, InstanceMemory *mem, bool async);
     ~CallData();
 
 #ifdef UNITY_BUILD
@@ -88,6 +91,8 @@ public:
 #undef INLINE_IF_UNITY
 
     void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg);
+    void RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg);
+    static void RelayAsync(napi_env, napi_value, void *, void *udata);
 
     void DumpForward() const;
 
