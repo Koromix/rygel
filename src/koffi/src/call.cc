@@ -33,10 +33,9 @@ struct RelayContext {
     bool done = false;
 };
 
-CallData::CallData(Napi::Env env, InstanceData *instance,
-                   const FunctionInfo *func, InstanceMemory *mem, bool async)
+CallData::CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem)
     : env(env), instance(instance), func(func),
-      mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap), async(async)
+      mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap)
 {
     mem->generation += !mem->depth;
     mem->depth++;
@@ -66,7 +65,7 @@ CallData::~CallData()
 
 void CallData::RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
-    if (async) {
+    if (std::this_thread::get_id() != instance->main_thread_id) {
         RelayContext ctx;
 
         ctx.call = this;
@@ -83,7 +82,7 @@ void CallData::RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegi
             ctx.cv.wait(lock);
         }
     } else {
-        Relay(idx, own_sp, caller_sp, out_reg);
+        Relay(idx, own_sp, caller_sp, false, out_reg);
     }
 }
 
@@ -91,7 +90,7 @@ void CallData::RelayAsync(napi_env, napi_value, void *, void *udata)
 {
     RelayContext *ctx = (RelayContext *)udata;
 
-    ctx->call->Relay(ctx->idx, ctx->own_sp, ctx->caller_sp, ctx->out_reg);
+    ctx->call->Relay(ctx->idx, ctx->own_sp, ctx->caller_sp, true, ctx->out_reg);
 
     // We're done!
     std::lock_guard<std::mutex> lock(ctx->mutex);

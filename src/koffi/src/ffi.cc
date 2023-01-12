@@ -1059,7 +1059,7 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, func, mem, false);
+    CallData call(env, instance, func, mem);
 
     RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
     exec_call = &call;
@@ -1136,7 +1136,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         return env.Null();
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, &func, mem, false);
+    CallData call(env, instance, &func, mem);
 
     if (!RG_UNLIKELY(call.Prepare(info)))
         return env.Null();
@@ -1167,7 +1167,7 @@ public:
     AsyncCall(Napi::Env env, InstanceData *instance, const FunctionInfo *func,
               InstanceMemory *mem, Napi::Function &callback)
         : Napi::AsyncWorker(callback), env(env), func(func->Ref()),
-          call(env, instance, func, mem, true) {}
+          call(env, instance, func, mem) {}
     ~AsyncCall() { func->Unref(); }
 
     bool Prepare(const Napi::CallbackInfo &info) {
@@ -1864,9 +1864,10 @@ static InstanceData *CreateInstance(Napi::Env env)
     InstanceData *instance = new InstanceData();
     RG_DEFER_N(err_guard) { delete instance; };
 
-    Napi::String resource_name = Napi::String::New(env, "Koffi Async Callback Broker");
+    instance->main_thread_id = std::this_thread::get_id();
 
-    if (napi_create_threadsafe_function(env, nullptr, nullptr, resource_name,
+    if (napi_create_threadsafe_function(env, nullptr, nullptr,
+                                        Napi::String::New(env, "Koffi Async Callback Broker"),
                                         0, 1, nullptr, nullptr, nullptr,
                                         CallData::RelayAsync, &instance->broker) != napi_ok) {
         LogError("Failed to create async callback broker");

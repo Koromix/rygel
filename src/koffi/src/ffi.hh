@@ -263,6 +263,7 @@ struct InstanceData {
     int16_t temp_trampolines = 0;
     uint32_t registered_trampolines = 0;
 
+    std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
 
     BlockAllocator str_alloc;

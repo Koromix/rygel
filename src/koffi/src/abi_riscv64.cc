@@ -524,7 +524,7 @@ Napi::Value CallData::Complete()
     RG_UNREACHABLE();
 }
 
-void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, BackRegisters *out_reg)
 {
     if (RG_UNLIKELY(env.IsExceptionPending()))
         return;
