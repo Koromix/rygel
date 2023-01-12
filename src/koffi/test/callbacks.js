@@ -263,7 +263,7 @@ async function test() {
     }
 
     // Use callback from secondary thread
-    {
+    for (let i = 0; i < 128; i++) {
         let cb = koffi.register(x => -x - 2, koffi.pointer(IntCallback));
 
         SetCallback(cb);

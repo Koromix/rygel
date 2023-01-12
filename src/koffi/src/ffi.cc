@@ -1888,7 +1888,21 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
-    exec_call->RelaySafe(idx, own_sp, caller_sp, out_reg);
+    if (RG_LIKELY(exec_call)) {
+        exec_call->RelaySafe(idx, own_sp, caller_sp, out_reg);
+    } else {
+        Napi::Env env = shared.trampolines[idx].func.Env();
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+        InstanceMemory *mem = AllocateMemory(instance, instance->async_stack_size, instance->async_heap_size);
+        if (RG_UNLIKELY(!mem)) {
+            ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
+            return;
+        }
+
+        CallData call(env, instance, mem);
+        call.RelaySafe(idx, own_sp, caller_sp, out_reg);
+    }
 }
 
 static InstanceData *CreateInstance(Napi::Env env)
