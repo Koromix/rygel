@@ -168,6 +168,14 @@ qsort(koffi.as(array, 'char **'), array.length, koffi.sizeof('void *'), (ptr1, p
 console.log(array); // Prints ['123', 'bar', 'foo', 'foobar']
 ```
 
+## Asynchronous callbacks
+
+*New in Koffi 2.2.2*
+
+In Koffi, [asynchronous native calls](functions.md#asynchronous-calls) happen on a secondary thread. However, JS execution is inherently single-threaded, callbacks must run on the main thread.
+
+Koffi deals with this by running the JS callback function in the Node.js event loop. This means the callback cannot run while the engine is busy running synchronous code.
+
 ## Handling of exceptions
 
 If an exception happens inside the JS callback, the C API will receive 0 or NULL (depending on the return value type).
