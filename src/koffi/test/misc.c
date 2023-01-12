@@ -698,6 +698,7 @@ EXPORT int CallFromThread(int x)
     }
 
     WaitForSingleObject(h, INFINITE);
+    CloseHandle(h);
 
     return x;
 }
