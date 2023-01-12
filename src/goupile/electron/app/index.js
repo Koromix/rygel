@@ -20,15 +20,7 @@ if (app.requestSingleInstanceLock()) {
             }
         });
 
-        let menu = Menu.buildFromTemplate(Menu.getApplicationMenu().items);
-        menu.insert(menu.items.length - 1, new MenuItem({
-            label: 'Print',
-            click: () => win.webContents.print({
-                silent: false,
-                printBackground: true,
-            })
-        }));
-        win.setMenu(menu);
+        customizeMenu(win);
 
         win.loadURL(settings.homepage);
     });
@@ -42,6 +34,24 @@ if (app.requestSingleInstanceLock()) {
     });
 } else {
     app.quit()
+}
+
+function customizeMenu(win) {
+    let menu = Menu.buildFromTemplate(Menu.getApplicationMenu().items);
+
+    menu.insert(menu.items.length - 1, new MenuItem({
+        label: 'Print',
+        click: () => win.webContents.print({
+            silent: false,
+            printBackground: true,
+        })
+    }));
+    win.setMenu(menu);
+
+    win.webContents.on('did-create-window', (win, details) => {
+        console.log('z');
+        customizeMenu(win);
+    });
 }
 
 function isPackaged() {
