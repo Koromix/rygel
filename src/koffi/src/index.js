@@ -13,6 +13,9 @@
 
 'use strict';
 
+if (process.versions.napi == null || process.versions.napi < 8)
+    throw new Error('This platform does not support N-API 8');
+
 const util = require('util');
 
 let filename = __dirname + '/../build/koffi.node';
