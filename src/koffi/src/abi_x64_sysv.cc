@@ -588,7 +588,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
     if (RG_UNLIKELY(env.IsExceptionPending()))
         return;
 
-    const TrampolineInfo &trampoline = instance->trampolines[idx];
+    const TrampolineInfo &trampoline = shared.trampolines[idx];
 
     const FunctionInfo *proto = trampoline.proto;
     Napi::Function func = trampoline.func.Value();

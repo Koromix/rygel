@@ -233,14 +233,6 @@ struct InstanceMemory {
     bool temporary;
 };
 
-struct TrampolineInfo {
-    const FunctionInfo *proto;
-    Napi::FunctionReference func;
-    Napi::Reference<Napi::Value> recv;
-
-    int32_t generation;
-};
-
 struct InstanceData {
     ~InstanceData();
 
@@ -257,11 +249,6 @@ struct InstanceData {
 
     LocalArray<InstanceMemory *, 9> memories;
     int temporaries = 0;
-
-    TrampolineInfo trampolines[MaxTrampolines * 2];
-    int16_t next_trampoline = 0;
-    int16_t temp_trampolines = 0;
-    uint32_t registered_trampolines = 0;
 
     std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
@@ -280,5 +267,23 @@ RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(InstanceData::memories.data
 RG_STATIC_ASSERT(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
 RG_STATIC_ASSERT(MaxAsyncCalls >= DefaultMaxAsyncCalls);
 RG_STATIC_ASSERT(MaxTrampolines <= 16);
+
+struct TrampolineInfo {
+    const FunctionInfo *proto;
+    Napi::FunctionReference func;
+    Napi::Reference<Napi::Value> recv;
+
+    int32_t generation;
+};
+
+struct SharedData {
+    std::mutex mutex;
+
+    TrampolineInfo trampolines[MaxTrampolines * 2];
+    uint32_t temp_trampolines = 0;
+    uint32_t registered_trampolines = 0;
+};
+
+extern SharedData shared;
 
 }

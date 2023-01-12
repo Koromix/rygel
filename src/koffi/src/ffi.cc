@@ -40,6 +40,8 @@
 
 namespace RG {
 
+SharedData shared;
+
 // Value does not matter, the tag system uses memory addresses
 const int TypeInfoMarker = 0xDEADBEEF;
 const int CastMarker = 0xDEADBEEF;
@@ -1434,18 +1436,22 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
+    int idx;
+    {
+        std::lock_guard<std::mutex> lock(shared.mutex);
 
-    int idx = CountTrailingZeros(~instance->registered_trampolines);
+        idx = CountTrailingZeros(~shared.registered_trampolines);
 
-    if (RG_UNLIKELY(idx >= MaxTrampolines)) {
-        ThrowError<Napi::Error>(env, "Too many registered callbacks are in use (max = %1)", MaxTrampolines);
-        return env.Null();
+        if (RG_UNLIKELY(idx >= MaxTrampolines)) {
+            ThrowError<Napi::Error>(env, "Too many registered callbacks are in use (max = %1)", MaxTrampolines);
+            return env.Null();
+        }
+
+        shared.registered_trampolines |= 1u << idx;
+        idx += MaxTrampolines;
     }
 
-    instance->registered_trampolines |= 1u << idx;
-    idx += MaxTrampolines;
-
-    TrampolineInfo *trampoline = &instance->trampolines[idx];
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
 
     trampoline->proto = type->ref.proto;
     trampoline->func.Reset(func, 1);
@@ -1481,19 +1487,26 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     Napi::External<void> external = info[0].As<Napi::External<void>>();
     void *ptr = external.Data();
 
-    for (Size i = 0; i < MaxTrampolines; i++) {
-        Size idx = i + MaxTrampolines;
+    // Release shared trampoline safely
+    {
+        std::lock_guard<std::mutex> lock(shared.mutex);
 
-        if (!(instance->registered_trampolines & (1u << i)))
-            continue;
+        for (Size i = 0; i < MaxTrampolines; i++) {
+            Size idx = i + MaxTrampolines;
 
-        TrampolineInfo *trampoline = &instance->trampolines[idx];
+            if (!(shared.registered_trampolines & (1u << i)))
+                continue;
 
-        if (GetTrampoline(idx, trampoline->proto) == ptr) {
-            instance->registered_trampolines &= ~(1u << i);
-            trampoline->recv.Reset();
+            TrampolineInfo *trampoline = &shared.trampolines[idx];
 
-            return env.Undefined();
+            if (GetTrampoline(idx, trampoline->proto) == ptr) {
+                shared.registered_trampolines &= ~(1u << i);
+
+                trampoline->func.Reset();
+                trampoline->recv.Reset();
+
+                return env.Undefined();
+            }
         }
     }
 
@@ -1694,6 +1707,25 @@ InstanceData::~InstanceData()
 {
     for (InstanceMemory *mem: memories) {
         delete mem;
+    }
+
+    // Clean-up leftover registered trampolines
+    {
+        std::lock_guard<std::mutex> lock(shared.mutex);
+
+        for (Size i = 0; i < MaxTrampolines; i++) {
+            Size idx = i + MaxTrampolines;
+
+            if (!(shared.registered_trampolines & (1u << i)))
+                continue;
+
+            TrampolineInfo *trampoline = &shared.trampolines[idx];
+
+            if (trampoline->func.Env().GetInstanceData<InstanceData>() == this) {
+                trampoline->func.Reset();
+                trampoline->recv.Reset();
+            }
+        }
     }
 
     if (broker) {

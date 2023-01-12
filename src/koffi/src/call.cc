@@ -53,7 +53,21 @@ CallData::~CallData()
     mem->stack = old_stack_mem;
     mem->heap = old_heap_mem;
 
-    instance->temp_trampolines -= used_trampolines;
+    if (used_trampolines) {
+        std::lock_guard<std::mutex> lock(shared.mutex);
+
+        for (Size i = 0; i < MaxTrampolines; i++) {
+            if (used_trampolines & (1u << i)) {
+                TrampolineInfo *trampoline = &shared.trampolines[i];
+
+                trampoline->func.Reset();
+                trampoline->recv.Reset();
+            }
+        }
+
+        shared.temp_trampolines ^= used_trampolines;
+    }
+
     instance->temporaries -= mem->temporary;
 
     if (!--mem->depth && mem->temporary) {
@@ -1011,18 +1025,22 @@ void CallData::PopOutArguments()
 
 void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
 {
-    if (RG_UNLIKELY(instance->temp_trampolines >= MaxTrampolines)) {
-        ThrowError<Napi::Error>(env, "Too many temporary callbacks are in use (max = %1)", MaxTrampolines);
-        return nullptr;
+    int idx;
+    {
+        std::lock_guard<std::mutex> lock(shared.mutex);
+
+        idx = CountTrailingZeros(~shared.temp_trampolines);
+
+        if (RG_UNLIKELY(idx >= MaxTrampolines)) {
+            ThrowError<Napi::Error>(env, "Too many temporary callbacks are in use (max = %1)", MaxTrampolines);
+            return env.Null();
+        }
+
+        shared.temp_trampolines |= 1u << idx;
+        used_trampolines |= 1u << idx;
     }
 
-    int idx = instance->next_trampoline;
-
-    instance->next_trampoline = (int16_t)((instance->next_trampoline + 1) % MaxTrampolines);
-    instance->temp_trampolines++;
-    used_trampolines++;
-
-    TrampolineInfo *trampoline = &instance->trampolines[idx];
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
 
     trampoline->proto = proto;
     trampoline->func.Reset(func, 1);
