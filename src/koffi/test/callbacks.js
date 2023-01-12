@@ -75,6 +75,7 @@ async function test() {
     const ApplyStruct = lib.func('int ApplyStruct(int x, StructCallbacks callbacks)');
     const SetCallback = lib.func('void SetCallback(IntCallback *func)');
     const CallCallback = lib.func('int CallCallback(int x)');
+    const CallFromThread = lib.func('int CallFromThread(int x)');
     const MakeVectors = lib.func('int MakeVectors(int len, VectorCallback *func)');
     const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, SortCallback *cb)');
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
@@ -259,5 +260,15 @@ async function test() {
         let ret = await util.promisify(CallMeChar.async)(cb);
 
         assert.equal(ret, 97 + 2 * 98);
+    }
+
+    // Use callback from secondary thread
+    {
+        let cb = koffi.register(x => -x - 2, koffi.pointer(IntCallback));
+
+        SetCallback(cb);
+        assert.equal(await util.promisify(CallFromThread.async)(27), -29);
+
+        koffi.unregister(cb);
     }
 }

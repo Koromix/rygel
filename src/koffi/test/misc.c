@@ -22,6 +22,14 @@
     typedef uint16_t char16_t;
     typedef uint32_t char32_t;
 #endif
+#ifdef _WIN32
+    #define NOMINMAX
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+#else
+    #include <errno.h>
+    #include <pthread.h>
+#endif
 
 #ifdef _WIN32
     #define EXPORT __declspec(dllexport)
@@ -670,6 +678,55 @@ EXPORT int CallCallback(int x)
 {
     return callback(x);
 }
+
+#ifdef _WIN32
+
+static DWORD WINAPI CallFromThreadFunc(void *udata)
+{
+    int *ptr = (int *)udata;
+    *ptr = callback(*ptr);
+
+    return 0;
+}
+
+EXPORT int CallFromThread(int x)
+{
+    HANDLE h = CreateThread(NULL, 0, CallFromThreadFunc, &x, 0, NULL);
+    if (!h) {
+        perror("CreateThread");
+        exit(1);
+    }
+
+    WaitForSingleObject(h, INFINITE);
+
+    return x;
+}
+
+#else
+
+static void *CallFromThreadFunc(void *udata)
+{
+    int *ptr = (int *)udata;
+    *ptr = callback(*ptr);
+
+    return NULL;
+}
+
+EXPORT int CallFromThread(int x)
+{
+    pthread_t thread;
+
+    if (pthread_create(&thread, NULL, CallFromThreadFunc, &x)) {
+        perror("pthread_create");
+        exit(1);
+    }
+
+    pthread_join(thread, NULL);
+
+    return x;
+}
+
+#endif
 
 EXPORT void ReverseBytes(void *p, int len)
 {
