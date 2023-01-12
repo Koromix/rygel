@@ -1059,16 +1059,16 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, func, mem);
+    CallData call(env, instance, mem);
 
     RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
     exec_call = &call;
 
-    if (!RG_UNLIKELY(call.Prepare(info)))
+    if (!RG_UNLIKELY(call.Prepare(func, info)))
         return env.Null();
 
     if (instance->debug) {
-        call.DumpForward();
+        call.DumpForward(func);
     }
 
     // Execute call
@@ -1076,10 +1076,10 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
         RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
-        call.Execute();
+        call.Execute(func);
     }
 
-    return call.Complete();
+    return call.Complete(func);
 }
 
 static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
@@ -1136,13 +1136,13 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         return env.Null();
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, &func, mem);
+    CallData call(env, instance, mem);
 
-    if (!RG_UNLIKELY(call.Prepare(info)))
+    if (!RG_UNLIKELY(call.Prepare(&func, info)))
         return env.Null();
 
     if (instance->debug) {
-        call.DumpForward();
+        call.DumpForward(&func);
     }
 
     // Execute call
@@ -1150,10 +1150,10 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
-        call.Execute();
+        call.Execute(&func);
     }
 
-    return call.Complete();
+    return call.Complete(&func);
 }
 
 class AsyncCall: public Napi::AsyncWorker {
@@ -1167,11 +1167,11 @@ public:
     AsyncCall(Napi::Env env, InstanceData *instance, const FunctionInfo *func,
               InstanceMemory *mem, Napi::Function &callback)
         : Napi::AsyncWorker(callback), env(env), func(func->Ref()),
-          call(env, instance, func, mem) {}
+          call(env, instance, mem) {}
     ~AsyncCall() { func->Unref(); }
 
     bool Prepare(const Napi::CallbackInfo &info) {
-        prepared = call.Prepare(info);
+        prepared = call.Prepare(func, info);
 
         if (!prepared) {
             Napi::Error err = env.GetAndClearPendingException();
@@ -1180,7 +1180,7 @@ public:
 
         return prepared;
     }
-    void DumpForward() { call.DumpForward(); }
+    void DumpForward() { call.DumpForward(func); }
 
     void Execute() override;
     void OnOK() override;
@@ -1192,7 +1192,7 @@ void AsyncCall::Execute()
         RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
-        call.Execute();
+        call.Execute(func);
     }
 }
 
@@ -1205,7 +1205,7 @@ void AsyncCall::OnOK()
     Napi::Value self = env.Null();
     napi_value args[] = {
         env.Null(),
-        call.Complete()
+        call.Complete(func)
     };
 
     callback.Call(self, RG_LEN(args), args);

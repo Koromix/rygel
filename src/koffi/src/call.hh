@@ -36,7 +36,6 @@ class alignas(8) CallData {
 
     Napi::Env env;
     InstanceData *instance;
-    const FunctionInfo *func;
 
     InstanceMemory *mem;
     Span<uint8_t> old_stack_mem;
@@ -68,7 +67,7 @@ class alignas(8) CallData {
     BlockAllocator call_alloc;
 
 public:
-    CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem);
+    CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem);
     ~CallData();
 
 #ifdef UNITY_BUILD
@@ -81,9 +80,9 @@ public:
     #define INLINE_IF_UNITY
 #endif
 
-    INLINE_IF_UNITY bool Prepare(const Napi::CallbackInfo &info);
-    INLINE_IF_UNITY void Execute();
-    INLINE_IF_UNITY Napi::Value Complete();
+    INLINE_IF_UNITY bool Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info);
+    INLINE_IF_UNITY void Execute(const FunctionInfo *func);
+    INLINE_IF_UNITY Napi::Value Complete(const FunctionInfo *func);
 
 #undef INLINE_IF_UNITY
 
@@ -91,7 +90,7 @@ public:
     void RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg);
     static void RelayAsync(napi_env, napi_value, void *, void *udata);
 
-    void DumpForward() const;
+    void DumpForward(const FunctionInfo *func) const;
 
 private:
     template <typename T>

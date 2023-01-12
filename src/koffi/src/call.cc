@@ -33,8 +33,8 @@ struct RelayContext {
     bool done = false;
 };
 
-CallData::CallData(Napi::Env env, InstanceData *instance, const FunctionInfo *func, InstanceMemory *mem)
-    : env(env), instance(instance), func(func),
+CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
+    : env(env), instance(instance),
       mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap)
 {
     mem->generation += !mem->depth;
@@ -1033,7 +1033,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     return ptr;
 }
 
-void CallData::DumpForward() const
+void CallData::DumpForward(const FunctionInfo *func) const
 {
     PrintLn(stderr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
 

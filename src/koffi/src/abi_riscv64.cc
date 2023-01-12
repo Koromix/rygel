@@ -196,7 +196,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
     return true;
 }
 
-bool CallData::Prepare(const Napi::CallbackInfo &info)
+bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     uint64_t *args_ptr = nullptr;
     uint64_t *gpr_ptr = nullptr;
@@ -406,7 +406,7 @@ bool CallData::Prepare(const Napi::CallbackInfo &info)
     return true;
 }
 
-void CallData::Execute()
+void CallData::Execute(const FunctionInfo *func)
 {
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
@@ -462,7 +462,7 @@ void CallData::Execute()
 #undef PERFORM_CALL
 }
 
-Napi::Value CallData::Complete()
+Napi::Value CallData::Complete(const FunctionInfo *func)
 {
     RG_DEFER {
        PopOutArguments();
