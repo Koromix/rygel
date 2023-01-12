@@ -63,6 +63,7 @@ async function main() {
         switch (process.argv[2]) {
             case 'pack': { command = pack; } break;
             case 'publish': { command = publish; } break;
+            case 'prepare': { command = prepare; } break;
             case 'test': { command = test; } break;
             case 'start': { command = start; } break;
             case 'stop': { command = stop; } break;
@@ -190,7 +191,7 @@ async function main() {
     console.log();
 
     try {
-        let success = await command();
+        let success = !!(await command());
         process.exit(!success);
     } catch (err) {
         console.error(err);
@@ -205,6 +206,7 @@ Commands:
     test                         Run the machines and perform the tests (default)
     pack                         Create NPM package with prebuilt Koffi binaries
     publish                      Publish NPM package with prebuilt Koffi binaries
+    prepare                      Prepare distribution-ready NPM package directory
 
     start                        Start the machines but don't run anythingh
     stop                         Stop running machines
@@ -290,10 +292,9 @@ async function start(detach = true) {
 
 async function pack() {
     let pack_dir = script_dir + '/../build';
-    let dist_dir = script_dir + '/../build/dist';
+    let dist_dir = await prepare(dist_dir);
 
-    let success = await prepare(dist_dir);
-    if (!success)
+    if (dist_dir == null)
         return false;
 
     let npm = (process.platform == 'win32') ? 'npm.cmd' : 'npm';
@@ -305,10 +306,9 @@ async function pack() {
 }
 
 async function publish() {
-    let dist_dir = script_dir + '/../build/dist';
+    let dist_dir = await prepare();
 
-    let success = await prepare(dist_dir);
-    if (!success)
+    if (dist_dir == null)
         return false;
 
     let npm = (process.platform == 'win32') ? 'npm.cmd' : 'npm';
@@ -319,7 +319,8 @@ async function publish() {
     });
 }
 
-async function prepare(dist_dir) {
+async function prepare() {
+    let dist_dir = script_dir + '/../build/dist';
     let snapshot_dir = snapshot();
 
     let json = fs.readFileSync(root_dir + '/src/koffi/package.json', { encoding: 'utf-8' });
@@ -457,7 +458,7 @@ async function prepare(dist_dir) {
         if (!success) {
             console.log('');
             console.log('>> Status: ' + chalk.bold.red('FAILED'));
-            return false;
+            return null;
         }
     }
 
@@ -495,7 +496,7 @@ async function prepare(dist_dir) {
         fs.renameSync(dist_dir + '/web/koffi.dev', dist_dir + '/doc');
     }
 
-    return true;
+    return dist_dir;
 }
 
 function snapshot() {
