@@ -134,4 +134,4 @@ if __name__ == "__main__":
         'TrampolineX{0}:\n    trampoline_x87 {0}'
     )
 
-    write_cxx_trampolines(src_dir + '/call_trampolines.inc', args.n)
+    write_cxx_trampolines(src_dir + '/abi_trampolines.inc', args.n)
