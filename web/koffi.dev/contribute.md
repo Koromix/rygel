@@ -59,7 +59,7 @@ These machines are not included directly in this repository (for license and siz
 For example, if you want to run the tests on Debian ARM64, run the following commands:
 
 ```sh
-cd rygel/src/koffi/qemu/
+cd rygel/src/koffi/tools/
 wget -q -O- https://koromix.dev/files/machines/qemu_debian_arm64.tar.zst | zstd -d | tar xv
 sha256sum -c --ignore-missing registry/sha256sum.txt
 ```

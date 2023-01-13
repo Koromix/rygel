@@ -494,6 +494,7 @@ async function prepare() {
         fs.renameSync(dist_dir + '/src/koffi/LICENSE.txt', dist_dir + '/LICENSE.txt');
         fs.renameSync(dist_dir + '/src/koffi/ChangeLog.md', dist_dir + '/ChangeLog.md');
         fs.renameSync(dist_dir + '/web/koffi.dev', dist_dir + '/doc');
+        fs.rmdirSync(dist_dir + '/web');
     }
 
     return dist_dir;
@@ -514,6 +515,8 @@ function snapshot() {
         } else if (parts[0] == 'src') {
             return parts[1] == null || parts[1] == 'cnoke' ||
                                        parts[1] == 'koffi';
+        } else if (parts[0] == 'tools') {
+            return parts[1] == null || parts[1] != 'qemu';
         } else if (parts[0] == 'vendor') {
             return parts[1] == null || parts[1] == 'brotli' ||
                                        parts[1] == 'dragonbox' ||

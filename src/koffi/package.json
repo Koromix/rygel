@@ -21,11 +21,11 @@
   "main": "src/index.js",
   "scripts": {
     "install": "cnoke --prebuild",
-    "test": "node qemu/qemu.js test",
+    "test": "node tools/qemu.js test",
     "prepack": "echo 'Use \"npm run prepare\" instead' && false",
     "prepublishOnly": "echo 'Use \"npm run release\" instead' && false",
-    "prepare": "node qemu/qemu.js pack",
-    "release": "node qemu/qemu.js publish"
+    "prepare": "node tools/qemu.js prepare",
+    "release": "node tools/qemu.js publish"
   },
   "license": "AGPL-3.0",
   "dependencies": {
