@@ -254,6 +254,8 @@ struct InstanceData {
     std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
 
+    HashMap<void *, int16_t> trampolines_map;
+
     BlockAllocator str_alloc;
 
     Size sync_stack_size = DefaultSyncStackSize;

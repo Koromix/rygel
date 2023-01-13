@@ -1466,6 +1466,9 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
     SetValueTag(instance, external, type->ref.marker);
 
+    // Cache index for fast unregistration
+    instance->trampolines_map.Set(ptr, idx);
+
     return external;
 }
 
@@ -1486,29 +1489,33 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     Napi::External<void> external = info[0].As<Napi::External<void>>();
     void *ptr = external.Data();
 
+    int16_t idx;
+    {
+        int16_t *it = instance->trampolines_map.Find(ptr);
+
+        if (RG_UNLIKELY(!it)) {
+            ThrowError<Napi::Error>(env, "Could not find matching registered callback");
+            return env.Null();
+        }
+
+        idx = *it;
+        instance->trampolines_map.Remove(it);
+    }
+
     // Release shared trampoline safely
     {
         std::lock_guard<std::mutex> lock(shared.mutex);
 
-        for (int16_t idx = 0; idx < MaxTrampolines; idx++) {
-            TrampolineInfo *trampoline = &shared.trampolines[idx];
+        TrampolineInfo *trampoline = &shared.trampolines[idx];
+        RG_ASSERT(!trampoline->func.IsEmpty());
 
-            if (trampoline->func.IsEmpty())
-                continue;
+        trampoline->func.Reset();
+        trampoline->recv.Reset();
 
-            if (GetTrampoline(idx, trampoline->proto) == ptr) {
-                trampoline->func.Reset();
-                trampoline->recv.Reset();
-
-                shared.available.Append(idx);
-
-                return env.Undefined();
-            }
-        }
+        shared.available.Append(idx);
     }
 
-    ThrowError<Napi::Error>(env, "Could not find matching registered callback");
-    return env.Null();
+    return env.Undefined();
 }
 
 LibraryHolder::~LibraryHolder()
