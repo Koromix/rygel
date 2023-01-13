@@ -78,4 +78,4 @@ static void *const Trampolines[][2] = {
     { &Trampoline30, &TrampolineX30 },
     { &Trampoline31, &TrampolineX31 }
 };
-RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines * 2);
+RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines);

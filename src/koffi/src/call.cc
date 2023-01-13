@@ -53,19 +53,20 @@ CallData::~CallData()
     mem->stack = old_stack_mem;
     mem->heap = old_heap_mem;
 
-    if (used_trampolines) {
+    if (used_trampolines.len) {
         std::lock_guard<std::mutex> lock(shared.mutex);
 
-        for (Size i = 0; i < MaxTrampolines; i++) {
-            if (used_trampolines & (1u << i)) {
-                TrampolineInfo *trampoline = &shared.trampolines[i];
+        for (Size i = used_trampolines.len - 1; i >= 0; i--) {
+            int16_t idx = used_trampolines[i];
+            TrampolineInfo *trampoline = &shared.trampolines[idx];
 
-                trampoline->func.Reset();
-                trampoline->recv.Reset();
-            }
+            RG_ASSERT(!trampoline->func.IsEmpty());
+
+            trampoline->func.Reset();
+            trampoline->recv.Reset();
+
+            shared.available.Append(idx);
         }
-
-        shared.temp_trampolines ^= used_trampolines;
     }
 
     instance->temporaries -= mem->temporary;
@@ -1025,19 +1026,17 @@ void CallData::PopOutArguments()
 
 void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
 {
-    int idx;
+    int16_t idx;
     {
         std::lock_guard<std::mutex> lock(shared.mutex);
 
-        idx = CountTrailingZeros(~shared.temp_trampolines);
-
-        if (RG_UNLIKELY(idx >= MaxTrampolines)) {
-            ThrowError<Napi::Error>(env, "Too many temporary callbacks are in use (max = %1)", MaxTrampolines);
+        if (RG_UNLIKELY(!shared.available.len)) {
+            ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
             return env.Null();
         }
 
-        shared.temp_trampolines |= 1u << idx;
-        used_trampolines |= 1u << idx;
+        idx = shared.available.data[--shared.available.len];
+        used_trampolines.Append(idx);
     }
 
     TrampolineInfo *trampoline = &shared.trampolines[idx];
@@ -1048,6 +1047,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     trampoline->generation = (int32_t)mem->generation;
 
     void *ptr = GetTrampoline(idx, proto);
+
     return ptr;
 }
 

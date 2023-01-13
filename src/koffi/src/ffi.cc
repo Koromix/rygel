@@ -1436,19 +1436,16 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    int idx;
+    int16_t idx;
     {
         std::lock_guard<std::mutex> lock(shared.mutex);
 
-        idx = CountTrailingZeros(~shared.registered_trampolines);
-
-        if (RG_UNLIKELY(idx >= MaxTrampolines)) {
-            ThrowError<Napi::Error>(env, "Too many registered callbacks are in use (max = %1)", MaxTrampolines);
+        if (RG_UNLIKELY(!shared.available.len)) {
+            ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
             return env.Null();
         }
 
-        shared.registered_trampolines |= 1u << idx;
-        idx += MaxTrampolines;
+        idx = shared.available.data[--shared.available.len];
     }
 
     TrampolineInfo *trampoline = &shared.trampolines[idx];
@@ -1491,19 +1488,17 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     {
         std::lock_guard<std::mutex> lock(shared.mutex);
 
-        for (Size i = 0; i < MaxTrampolines; i++) {
-            Size idx = i + MaxTrampolines;
-
-            if (!(shared.registered_trampolines & (1u << i)))
-                continue;
-
+        for (int16_t idx = 0; idx < MaxTrampolines; idx++) {
             TrampolineInfo *trampoline = &shared.trampolines[idx];
 
-            if (GetTrampoline(idx, trampoline->proto) == ptr) {
-                shared.registered_trampolines &= ~(1u << i);
+            if (trampoline->func.IsEmpty())
+                continue;
 
+            if (GetTrampoline(idx, trampoline->proto) == ptr) {
                 trampoline->func.Reset();
                 trampoline->recv.Reset();
+
+                shared.available.Append(idx);
 
                 return env.Undefined();
             }
@@ -1709,17 +1704,15 @@ InstanceData::~InstanceData()
         delete mem;
     }
 
-    // Clean-up leftover registered trampolines
+    // Clean-up leftover trampoline references
     {
         std::lock_guard<std::mutex> lock(shared.mutex);
 
-        for (Size i = 0; i < MaxTrampolines; i++) {
-            Size idx = i + MaxTrampolines;
-
-            if (!(shared.registered_trampolines & (1u << i)))
-                continue;
-
+        for (int16_t idx = 0; idx < MaxTrampolines; idx++) {
             TrampolineInfo *trampoline = &shared.trampolines[idx];
+
+            if (trampoline->func.IsEmpty())
+                continue;
 
             if (trampoline->func.Env().GetInstanceData<InstanceData>() == this) {
                 trampoline->func.Reset();

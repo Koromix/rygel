@@ -41,8 +41,7 @@ class alignas(8) CallData {
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
 
-    uint32_t used_trampolines = 0;
-
+    LocalArray<int16_t, MaxTrampolines> used_trampolines;
     LocalArray<OutArgument, MaxOutParameters> out_arguments;
 
     uint8_t *new_sp;
@@ -112,7 +111,6 @@ private:
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 };
-RG_STATIC_ASSERT(MaxTrampolines <= 32);
 
 template <typename T>
 inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
@@ -165,6 +163,6 @@ inline T *CallData::AllocHeap(Size size, Size align)
     }
 }
 
-void *GetTrampoline(Size idx, const FunctionInfo *proto);
+void *GetTrampoline(int16_t idx, const FunctionInfo *proto);
 
 }

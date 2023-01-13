@@ -75,8 +75,7 @@ async function test() {
     const ApplyStruct = lib.func('int ApplyStruct(int x, StructCallbacks callbacks)');
     const SetIndirect = lib.func('void SetIndirect(IntCallback *func)');
     const CallIndirect = lib.func('int CallIndirect(int x)');
-    const CallIndirectThreaded = lib.func('int CallIndirectThreaded(int x)');
-    const CallDirectThreaded = lib.func('int CallDirectThreaded(IntCallback *func, int x)');
+    const CallThreaded = lib.func('int CallThreaded(IntCallback *func, int x)');
     const MakeVectors = lib.func('int MakeVectors(int len, VectorCallback *func)');
     const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, SortCallback *cb)');
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
@@ -263,16 +262,18 @@ async function test() {
         assert.equal(ret, 97 + 2 * 98);
     }
 
-    // Use temporary callback from secondary thread
-    for (let i = 0; i < 128; i++)
-        assert.equal(await util.promisify(CallDirectThreaded.async)(x => -x - 2, 27), -29);
-
-    // Use registered callback from secondary thread
-    for (let i = 0; i < 128; i++) {
+    // Use callbacks from secondary threads
+    for (let i = 0; i < 1024; i++) {
         let cb = koffi.register(x => -x - 2, koffi.pointer(IntCallback));
-
         SetIndirect(cb);
-        assert.equal(await util.promisify(CallIndirectThreaded.async)(27), -29);
+
+        let results = await Promise.all([
+            util.promisify(CallThreaded.async)(x => -x - 4, 27),
+            util.promisify(CallThreaded.async)(null, 27)
+        ]);
+
+        assert.equal(results[0], -31);
+        assert.equal(results[1], -29);
 
         koffi.unregister(cb);
     }

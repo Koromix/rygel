@@ -70,7 +70,7 @@ def write_cxx_trampolines(filename, n):
             else:
                 print('    {{ &Trampoline{0}, &TrampolineX{0} }}'.format(i), file = f)
         print('};', file = f)
-        print('RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines * 2);', file = f)
+        print('RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines);', file = f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Generate static trampolines')

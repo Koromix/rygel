@@ -794,7 +794,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
     err_guard.Disable();
 }
 
-void *GetTrampoline(Size idx, const FunctionInfo *proto)
+void *GetTrampoline(int16_t idx, const FunctionInfo *proto)
 {
     bool x87 = IsFloat(proto->ret.type);
     return Trampolines[idx][x87];

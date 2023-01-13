@@ -30,7 +30,7 @@ static const Size DefaultMaxTypeSize = Mebibytes(64);
 static const int MaxAsyncCalls = 256;
 static const Size MaxParameters = 32;
 static const Size MaxOutParameters = 16;
-static const Size MaxTrampolines = 16;
+static const Size MaxTrampolines = 32;
 
 extern const int TypeInfoMarker;
 extern const int CastMarker;
@@ -266,7 +266,6 @@ struct InstanceData {
 RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(InstanceData::memories.data) - 1);
 RG_STATIC_ASSERT(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
 RG_STATIC_ASSERT(MaxAsyncCalls >= DefaultMaxAsyncCalls);
-RG_STATIC_ASSERT(MaxTrampolines <= 16);
 
 struct TrampolineInfo {
     const FunctionInfo *proto;
@@ -279,10 +278,19 @@ struct TrampolineInfo {
 struct SharedData {
     std::mutex mutex;
 
-    TrampolineInfo trampolines[MaxTrampolines * 2];
-    uint32_t temp_trampolines = 0;
-    uint32_t registered_trampolines = 0;
+    TrampolineInfo trampolines[MaxTrampolines];
+    LocalArray<int16_t, MaxTrampolines> available;
+
+    SharedData()
+    {
+        available.len = MaxTrampolines;
+
+        for (Size i = 0; i < MaxTrampolines; i++) {
+            available[i] = i;
+        }
+    }
 };
+RG_STATIC_ASSERT(MaxTrampolines <= INT16_MAX);
 
 extern SharedData shared;
 
