@@ -22,22 +22,24 @@ import stat
 import sys
 import tempfile
 
-DEFAULT_REMOTES = {
-    'goupile': 'git@framagit.org:interhop/goupile.git',
-    'ansible-hds': 'git@framagit.org:interhop/hds/ansible-hds.git'
+PROJECTS = {
+    'goupile': ['goupile2', 'git@framagit.org:interhop/goupile.git'],
+    'ansible-hds': ['master', 'git@framagit.org:interhop/hds/ansible-hds.git']
 }
 
-def update_repository(root_directory, clone_directory, remote_url):
+def update_repository(root_directory, clone_directory, remote_url, remote_branch):
     # Clone or update repository
-    if os.path.exists(clone_directory + '/.git'):
-        os.chdir(clone_directory)
-        subprocess.run(['git', 'reset', '--hard', 'origin/master'], check = True)
-        subprocess.run(['git', 'pull'], check = True)
-    else:
+    if not os.path.exists(clone_directory + '/.git'):
         os.makedirs(os.path.dirname(clone_directory), exist_ok = True)
         subprocess.run(['git', 'clone', '--no-local', root_directory, clone_directory], check = True)
         os.chdir(clone_directory)
         subprocess.run(['git', 'remote', 'add', 'peer', remote_url], check = True)
+    else:
+        os.chdir(clone_directory)
+
+    subprocess.run(['git', 'checkout', 'master'], check = True)
+    subprocess.run(['git', 'fetch'], check = True)
+    subprocess.run(['git', 'reset', '--hard', 'origin/' + remote_branch], check = True)
 
 def publish_peer(master, deploy):
     subprocess.run(['git', 'fetch', 'peer'], check = True)
@@ -65,18 +67,23 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Clone Goupile-specific repository')
     parser.add_argument('-O', '--clone_dir', dest = 'clone_dir', action = 'store', help = 'Clone in this directory')
     parser.add_argument('--remote', dest = 'remote_url', action = 'store', help = 'Change remote URL')
+    parser.add_argument('--branch', dest = 'remote_branch', action = 'store', help = 'Change remote branch')
     parser.add_argument('--no_master', dest = 'master', action = 'store_false', help = 'Disable push to master branch')
     parser.add_argument('-d', '--deploy', dest = 'deploy', action = 'store', nargs = '+', default = [], help = 'Push to deploy branches')
     parser.add_argument('project', help = 'Project to rewrite and publish')
     args = parser.parse_args()
 
     # Find remote URL
-    if not args.project in DEFAULT_REMOTES:
+    if not args.project in PROJECTS:
         raise ValueError(f'Invalid project {args.project}')
     if args.remote_url is None:
-        remote_url = DEFAULT_REMOTES[args.project]
+        remote_url = PROJECTS[args.project][1]
     else:
         remote_url = args.remote_url
+    if args.remote_branch is None:
+        remote_branch = PROJECTS[args.project][0]
+    else:
+        remote_branch = args.remote_branch
 
     # Always work from project directory
     script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -97,7 +104,7 @@ if __name__ == "__main__":
     else:
         clone_directory = os.path.normpath(os.path.join(start_directory, args.clone_dir))
 
-    update_repository(root_directory, clone_directory, remote_url)
+    update_repository(root_directory, clone_directory, remote_url, remote_branch)
 
     # Run the rewrite script
     # Why the hell is it so "complicated" to import and run Python code? Why is import so weird?
