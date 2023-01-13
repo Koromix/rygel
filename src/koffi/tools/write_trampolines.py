@@ -90,7 +90,8 @@ if __name__ == "__main__":
         '    EXPORT Trampoline{0}',
         '    EXPORT TrampolineX{0}',
         'Trampoline{0} PROC\n    trampoline {0}\n    ENDP',
-        'TrampolineX{0} PROC\n    trampoline_vec {0}\n    ENDP'
+        'TrampolineX{0} PROC\n    trampoline_vec {0}\n    ENDP',
+        '    END'
     )
     write_asm_trampolines(src_dir + '/abi_arm64_fwd.S', '#', args.n,
         '.global SYMBOL(Trampoline{0})',
