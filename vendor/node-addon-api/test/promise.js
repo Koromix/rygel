@@ -5,7 +5,7 @@ const common = require('./common');
 
 module.exports = common.runTest(test);
 
-async function test(binding) {
+async function test (binding) {
   assert.strictEqual(binding.promise.isPromise({}), false);
 
   const resolving = binding.promise.resolvePromise('resolved');
@@ -15,4 +15,6 @@ async function test(binding) {
   const rejecting = binding.promise.rejectPromise('error');
   await assert.strictEqual(binding.promise.isPromise(rejecting), true);
   rejecting.then(common.mustNotCall()).catch(common.mustCall());
+
+  assert(binding.promise.promiseReturnsCorrectEnv());
 }
