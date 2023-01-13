@@ -1001,6 +1001,8 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
 
 static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
 {
+    std::lock_guard<std::mutex> lock(instance->memories_mutex);
+
     for (Size i = 1; i < instance->memories.len; i++) {
         InstanceMemory *mem = instance->memories[i];
 
