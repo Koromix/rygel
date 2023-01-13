@@ -191,7 +191,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     if (RG_UNLIKELY(!ptr))
                         return false;
                 } else if (CheckValueTag(instance, value, param.type->ref.marker)) {
-                    ptr = value.As<Napi::External<uint8_t>>().Data();
+                    ptr = value.As<Napi::External<void>>().Data();
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
@@ -671,7 +671,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                 if (RG_UNLIKELY(!ptr))
                     return;
             } else if (CheckValueTag(instance, value, type->ref.marker)) {
-                ptr = value.As<Napi::External<uint8_t>>().Data();
+                ptr = value.As<Napi::External<void>>().Data();
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
             } else {
