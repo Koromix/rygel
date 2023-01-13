@@ -41,7 +41,7 @@ class alignas(8) CallData {
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
 
-    LocalArray<int16_t, MaxTrampolines> used_trampolines;
+    LocalArray<int16_t, 16> used_trampolines;
     LocalArray<OutArgument, MaxOutParameters> out_arguments;
 
     uint8_t *new_sp;
