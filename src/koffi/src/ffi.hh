@@ -288,7 +288,7 @@ struct SharedData {
     {
         available.len = MaxTrampolines;
 
-        for (Size i = 0; i < MaxTrampolines; i++) {
+        for (int16_t i = 0; i < MaxTrampolines; i++) {
             available[i] = i;
         }
     }
