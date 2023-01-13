@@ -1065,9 +1065,6 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-    RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
-    exec_call = &call;
-
     if (!RG_UNLIKELY(call.Prepare(func, info)))
         return env.Null();
 
