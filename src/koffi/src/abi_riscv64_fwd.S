@@ -133,73 +133,9 @@ ForwardCallXDD:
     forward_gpr
     epilogue
 
-# Callback trampolines
+# Callbacks
 # ----------------------------
 
-.global Trampoline0
-.global Trampoline1
-.global Trampoline2
-.global Trampoline3
-.global Trampoline4
-.global Trampoline5
-.global Trampoline6
-.global Trampoline7
-.global Trampoline8
-.global Trampoline9
-.global Trampoline10
-.global Trampoline11
-.global Trampoline12
-.global Trampoline13
-.global Trampoline14
-.global Trampoline15
-.global Trampoline16
-.global Trampoline17
-.global Trampoline18
-.global Trampoline19
-.global Trampoline20
-.global Trampoline21
-.global Trampoline22
-.global Trampoline23
-.global Trampoline24
-.global Trampoline25
-.global Trampoline26
-.global Trampoline27
-.global Trampoline28
-.global Trampoline29
-.global Trampoline30
-.global Trampoline31
-.global TrampolineX0
-.global TrampolineX1
-.global TrampolineX2
-.global TrampolineX3
-.global TrampolineX4
-.global TrampolineX5
-.global TrampolineX6
-.global TrampolineX7
-.global TrampolineX8
-.global TrampolineX9
-.global TrampolineX10
-.global TrampolineX11
-.global TrampolineX12
-.global TrampolineX13
-.global TrampolineX14
-.global TrampolineX15
-.global TrampolineX16
-.global TrampolineX17
-.global TrampolineX18
-.global TrampolineX19
-.global TrampolineX20
-.global TrampolineX21
-.global TrampolineX22
-.global TrampolineX23
-.global TrampolineX24
-.global TrampolineX25
-.global TrampolineX26
-.global TrampolineX27
-.global TrampolineX28
-.global TrampolineX29
-.global TrampolineX30
-.global TrampolineX31
 .global RelayCallback
 .global CallSwitchStack
 
@@ -264,6 +200,97 @@ ForwardCallXDD:
     addi sp, sp, 176
     ret
 .endm
+
+# When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
+# The problem is that we're still running on the separate Koffi stack, and V8 will
+# probably misdetect this as a "stack overflow". We have to restore the old
+# stack pointer, call Node.js/V8 and go back to ours.
+# The first three parameters (a0, a1, a2) are passed through untouched.
+CallSwitchStack:
+    addi sp, sp, -16
+    sd ra, 0(sp)
+    sd s1, 8(sp)
+    mv s1, sp
+    ld t0, 0(a4)
+    sub t0, sp, t0
+    andi t0, t0, -16
+    sd t0, 8(a4)
+    mv sp, a3
+    jalr a5
+    mv sp, s1
+    ld ra, 0(sp)
+    ld s1, 8(sp)
+    addi sp, sp, 16
+    ret
+
+# Trampolines
+# ----------------------------
+
+.global Trampoline0
+.global Trampoline1
+.global Trampoline2
+.global Trampoline3
+.global Trampoline4
+.global Trampoline5
+.global Trampoline6
+.global Trampoline7
+.global Trampoline8
+.global Trampoline9
+.global Trampoline10
+.global Trampoline11
+.global Trampoline12
+.global Trampoline13
+.global Trampoline14
+.global Trampoline15
+.global Trampoline16
+.global Trampoline17
+.global Trampoline18
+.global Trampoline19
+.global Trampoline20
+.global Trampoline21
+.global Trampoline22
+.global Trampoline23
+.global Trampoline24
+.global Trampoline25
+.global Trampoline26
+.global Trampoline27
+.global Trampoline28
+.global Trampoline29
+.global Trampoline30
+.global Trampoline31
+
+.global TrampolineX0
+.global TrampolineX1
+.global TrampolineX2
+.global TrampolineX3
+.global TrampolineX4
+.global TrampolineX5
+.global TrampolineX6
+.global TrampolineX7
+.global TrampolineX8
+.global TrampolineX9
+.global TrampolineX10
+.global TrampolineX11
+.global TrampolineX12
+.global TrampolineX13
+.global TrampolineX14
+.global TrampolineX15
+.global TrampolineX16
+.global TrampolineX17
+.global TrampolineX18
+.global TrampolineX19
+.global TrampolineX20
+.global TrampolineX21
+.global TrampolineX22
+.global TrampolineX23
+.global TrampolineX24
+.global TrampolineX25
+.global TrampolineX26
+.global TrampolineX27
+.global TrampolineX28
+.global TrampolineX29
+.global TrampolineX30
+.global TrampolineX31
 
 Trampoline0:
     trampoline 0
@@ -394,25 +421,3 @@ TrampolineX30:
     trampoline_vec 30
 TrampolineX31:
     trampoline_vec 31
-
-# When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
-# The problem is that we're still running on the separate Koffi stack, and V8 will
-# probably misdetect this as a "stack overflow". We have to restore the old
-# stack pointer, call Node.js/V8 and go back to ours.
-# The first three parameters (a0, a1, a2) are passed through untouched.
-CallSwitchStack:
-    addi sp, sp, -16
-    sd ra, 0(sp)
-    sd s1, 8(sp)
-    mv s1, sp
-    ld t0, 0(a4)
-    sub t0, sp, t0
-    andi t0, t0, -16
-    sd t0, 8(a4)
-    mv sp, a3
-    jalr a5
-    mv sp, s1
-    ld ra, 0(sp)
-    ld s1, 8(sp)
-    addi sp, sp, 16
-    ret

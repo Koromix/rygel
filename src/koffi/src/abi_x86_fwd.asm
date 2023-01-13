@@ -86,73 +86,9 @@ ForwardCallRD proc
     epilogue
 ForwardCallRD endp
 
-; Callback trampolines
+; Callbacks
 ; ----------------------------
 
-public Trampoline0
-public Trampoline1
-public Trampoline2
-public Trampoline3
-public Trampoline4
-public Trampoline5
-public Trampoline6
-public Trampoline7
-public Trampoline8
-public Trampoline9
-public Trampoline10
-public Trampoline11
-public Trampoline12
-public Trampoline13
-public Trampoline14
-public Trampoline15
-public Trampoline16
-public Trampoline17
-public Trampoline18
-public Trampoline19
-public Trampoline20
-public Trampoline21
-public Trampoline22
-public Trampoline23
-public Trampoline24
-public Trampoline25
-public Trampoline26
-public Trampoline27
-public Trampoline28
-public Trampoline29
-public Trampoline30
-public Trampoline31
-public TrampolineX0
-public TrampolineX1
-public TrampolineX2
-public TrampolineX3
-public TrampolineX4
-public TrampolineX5
-public TrampolineX6
-public TrampolineX7
-public TrampolineX8
-public TrampolineX9
-public TrampolineX10
-public TrampolineX11
-public TrampolineX12
-public TrampolineX13
-public TrampolineX14
-public TrampolineX15
-public TrampolineX16
-public TrampolineX17
-public TrampolineX18
-public TrampolineX19
-public TrampolineX20
-public TrampolineX21
-public TrampolineX22
-public TrampolineX23
-public TrampolineX24
-public TrampolineX25
-public TrampolineX26
-public TrampolineX27
-public TrampolineX28
-public TrampolineX29
-public TrampolineX30
-public TrampolineX31
 extern RelayCallback : PROC
 public CallSwitchStack
 
@@ -210,6 +146,103 @@ l2:
     lea esp, dword ptr [esp+ecx+44]
     ret
 endm
+
+; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
+; The problem is that we're still running on the separate Koffi stack, and V8 will
+; probably misdetect this as a "stack overflow". We have to restore the old
+; stack pointer, call Node.js/V8 and go back to ours.
+CallSwitchStack proc
+    endbr32
+    push ebx
+    mov ebx, esp
+    mov edx, dword ptr [esp+28]
+    mov ecx, dword ptr [esp+24]
+    mov eax, esp
+    sub eax, dword ptr [ecx+0]
+    and eax, -16
+    mov dword ptr [ecx+4], eax
+    mov esp, dword ptr [esp+20]
+    sub esp, 28
+    mov eax, dword ptr [ebx+8]
+    mov dword ptr [esp+0], eax
+    mov eax, dword ptr [ebx+12]
+    mov dword ptr [esp+4], eax
+    mov eax, dword ptr [ebx+16]
+    mov dword ptr [esp+8], eax
+    call edx
+    mov esp, ebx
+    pop ebx
+    ret
+CallSwitchStack endp
+
+; Trampolines
+; ----------------------------
+
+public Trampoline0
+public Trampoline1
+public Trampoline2
+public Trampoline3
+public Trampoline4
+public Trampoline5
+public Trampoline6
+public Trampoline7
+public Trampoline8
+public Trampoline9
+public Trampoline10
+public Trampoline11
+public Trampoline12
+public Trampoline13
+public Trampoline14
+public Trampoline15
+public Trampoline16
+public Trampoline17
+public Trampoline18
+public Trampoline19
+public Trampoline20
+public Trampoline21
+public Trampoline22
+public Trampoline23
+public Trampoline24
+public Trampoline25
+public Trampoline26
+public Trampoline27
+public Trampoline28
+public Trampoline29
+public Trampoline30
+public Trampoline31
+
+public TrampolineX0
+public TrampolineX1
+public TrampolineX2
+public TrampolineX3
+public TrampolineX4
+public TrampolineX5
+public TrampolineX6
+public TrampolineX7
+public TrampolineX8
+public TrampolineX9
+public TrampolineX10
+public TrampolineX11
+public TrampolineX12
+public TrampolineX13
+public TrampolineX14
+public TrampolineX15
+public TrampolineX16
+public TrampolineX17
+public TrampolineX18
+public TrampolineX19
+public TrampolineX20
+public TrampolineX21
+public TrampolineX22
+public TrampolineX23
+public TrampolineX24
+public TrampolineX25
+public TrampolineX26
+public TrampolineX27
+public TrampolineX28
+public TrampolineX29
+public TrampolineX30
+public TrampolineX31
 
 Trampoline0 proc
     trampoline 0
@@ -404,33 +437,5 @@ TrampolineX30 endp
 TrampolineX31 proc
     trampoline_x87 31
 TrampolineX31 endp
-
-; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
-; The problem is that we're still running on the separate Koffi stack, and V8 will
-; probably misdetect this as a "stack overflow". We have to restore the old
-; stack pointer, call Node.js/V8 and go back to ours.
-CallSwitchStack proc
-    endbr32
-    push ebx
-    mov ebx, esp
-    mov edx, dword ptr [esp+28]
-    mov ecx, dword ptr [esp+24]
-    mov eax, esp
-    sub eax, dword ptr [ecx+0]
-    and eax, -16
-    mov dword ptr [ecx+4], eax
-    mov esp, dword ptr [esp+20]
-    sub esp, 28
-    mov eax, dword ptr [ebx+8]
-    mov dword ptr [esp+0], eax
-    mov eax, dword ptr [ebx+12]
-    mov dword ptr [esp+4], eax
-    mov eax, dword ptr [ebx+16]
-    mov dword ptr [esp+8], eax
-    call edx
-    mov esp, ebx
-    pop ebx
-    ret
-CallSwitchStack endp
 
 end

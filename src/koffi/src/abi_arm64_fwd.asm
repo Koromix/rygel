@@ -111,73 +111,9 @@ ForwardCallXDDDD PROC
     epilogue
     ENDP
 
-; Callback trampolines
+; Callbacks
 ; ----------------------------
 
-    EXPORT Trampoline0
-    EXPORT Trampoline1
-    EXPORT Trampoline2
-    EXPORT Trampoline3
-    EXPORT Trampoline4
-    EXPORT Trampoline5
-    EXPORT Trampoline6
-    EXPORT Trampoline7
-    EXPORT Trampoline8
-    EXPORT Trampoline9
-    EXPORT Trampoline10
-    EXPORT Trampoline11
-    EXPORT Trampoline12
-    EXPORT Trampoline13
-    EXPORT Trampoline14
-    EXPORT Trampoline15
-    EXPORT Trampoline16
-    EXPORT Trampoline17
-    EXPORT Trampoline18
-    EXPORT Trampoline19
-    EXPORT Trampoline20
-    EXPORT Trampoline21
-    EXPORT Trampoline22
-    EXPORT Trampoline23
-    EXPORT Trampoline24
-    EXPORT Trampoline25
-    EXPORT Trampoline26
-    EXPORT Trampoline27
-    EXPORT Trampoline28
-    EXPORT Trampoline29
-    EXPORT Trampoline30
-    EXPORT Trampoline31
-    EXPORT TrampolineX0
-    EXPORT TrampolineX1
-    EXPORT TrampolineX2
-    EXPORT TrampolineX3
-    EXPORT TrampolineX4
-    EXPORT TrampolineX5
-    EXPORT TrampolineX6
-    EXPORT TrampolineX7
-    EXPORT TrampolineX8
-    EXPORT TrampolineX9
-    EXPORT TrampolineX10
-    EXPORT TrampolineX11
-    EXPORT TrampolineX12
-    EXPORT TrampolineX13
-    EXPORT TrampolineX14
-    EXPORT TrampolineX15
-    EXPORT TrampolineX16
-    EXPORT TrampolineX17
-    EXPORT TrampolineX18
-    EXPORT TrampolineX19
-    EXPORT TrampolineX20
-    EXPORT TrampolineX21
-    EXPORT TrampolineX22
-    EXPORT TrampolineX23
-    EXPORT TrampolineX24
-    EXPORT TrampolineX25
-    EXPORT TrampolineX26
-    EXPORT TrampolineX27
-    EXPORT TrampolineX28
-    EXPORT TrampolineX29
-    EXPORT TrampolineX30
-    EXPORT TrampolineX31
     EXPORT RelayCallback
     EXTERN RelayCallback
     EXPORT CallSwitchStack
@@ -235,6 +171,96 @@ ForwardCallXDDDD PROC
     ldp x29, x30, [sp], 16
     ret
     MEND
+
+; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
+; The problem is that we're still running on the separate Koffi stack, and V8 will
+; probably misdetect this as a "stack overflow". We have to restore the old
+; stack pointer, call Node.js/V8 and go back to ours.
+; The first three parameters (x0, x1, x2) are passed through untouched.
+CallSwitchStack PROC
+    stp x29, x30, [sp, -16]!
+    mov x29, sp
+    ldr x9, [x4, 0]
+    sub x9, sp, x9
+    and x9, x9, #-16
+    str x9, [x4, 8]
+    mov sp, x3
+    blr x5
+    mov sp, x29
+    ldp x29, x30, [sp], 16
+    ret
+    ENDP
+
+    END
+
+; Trampolines
+; ----------------------------
+
+    EXPORT Trampoline0
+    EXPORT Trampoline1
+    EXPORT Trampoline2
+    EXPORT Trampoline3
+    EXPORT Trampoline4
+    EXPORT Trampoline5
+    EXPORT Trampoline6
+    EXPORT Trampoline7
+    EXPORT Trampoline8
+    EXPORT Trampoline9
+    EXPORT Trampoline10
+    EXPORT Trampoline11
+    EXPORT Trampoline12
+    EXPORT Trampoline13
+    EXPORT Trampoline14
+    EXPORT Trampoline15
+    EXPORT Trampoline16
+    EXPORT Trampoline17
+    EXPORT Trampoline18
+    EXPORT Trampoline19
+    EXPORT Trampoline20
+    EXPORT Trampoline21
+    EXPORT Trampoline22
+    EXPORT Trampoline23
+    EXPORT Trampoline24
+    EXPORT Trampoline25
+    EXPORT Trampoline26
+    EXPORT Trampoline27
+    EXPORT Trampoline28
+    EXPORT Trampoline29
+    EXPORT Trampoline30
+    EXPORT Trampoline31
+
+    EXPORT TrampolineX0
+    EXPORT TrampolineX1
+    EXPORT TrampolineX2
+    EXPORT TrampolineX3
+    EXPORT TrampolineX4
+    EXPORT TrampolineX5
+    EXPORT TrampolineX6
+    EXPORT TrampolineX7
+    EXPORT TrampolineX8
+    EXPORT TrampolineX9
+    EXPORT TrampolineX10
+    EXPORT TrampolineX11
+    EXPORT TrampolineX12
+    EXPORT TrampolineX13
+    EXPORT TrampolineX14
+    EXPORT TrampolineX15
+    EXPORT TrampolineX16
+    EXPORT TrampolineX17
+    EXPORT TrampolineX18
+    EXPORT TrampolineX19
+    EXPORT TrampolineX20
+    EXPORT TrampolineX21
+    EXPORT TrampolineX22
+    EXPORT TrampolineX23
+    EXPORT TrampolineX24
+    EXPORT TrampolineX25
+    EXPORT TrampolineX26
+    EXPORT TrampolineX27
+    EXPORT TrampolineX28
+    EXPORT TrampolineX29
+    EXPORT TrampolineX30
+    EXPORT TrampolineX31
 
 Trampoline0 PROC
     trampoline 0
@@ -429,24 +455,3 @@ TrampolineX30 PROC
 TrampolineX31 PROC
     trampoline_vec 31
     ENDP
-
-; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
-; The problem is that we're still running on the separate Koffi stack, and V8 will
-; probably misdetect this as a "stack overflow". We have to restore the old
-; stack pointer, call Node.js/V8 and go back to ours.
-; The first three parameters (x0, x1, x2) are passed through untouched.
-CallSwitchStack PROC
-    stp x29, x30, [sp, -16]!
-    mov x29, sp
-    ldr x9, [x4, 0]
-    sub x9, sp, x9
-    and x9, x9, #-16
-    str x9, [x4, 8]
-    mov sp, x3
-    blr x5
-    mov sp, x29
-    ldp x29, x30, [sp], 16
-    ret
-    ENDP
-
-    END

@@ -118,73 +118,9 @@ SYMBOL(ForwardCallXDDDD):
     forward_gpr
     epilogue
 
-# Callback trampolines
+# Callbacks
 # ----------------------------
 
-.global SYMBOL(Trampoline0)
-.global SYMBOL(Trampoline1)
-.global SYMBOL(Trampoline2)
-.global SYMBOL(Trampoline3)
-.global SYMBOL(Trampoline4)
-.global SYMBOL(Trampoline5)
-.global SYMBOL(Trampoline6)
-.global SYMBOL(Trampoline7)
-.global SYMBOL(Trampoline8)
-.global SYMBOL(Trampoline9)
-.global SYMBOL(Trampoline10)
-.global SYMBOL(Trampoline11)
-.global SYMBOL(Trampoline12)
-.global SYMBOL(Trampoline13)
-.global SYMBOL(Trampoline14)
-.global SYMBOL(Trampoline15)
-.global SYMBOL(Trampoline16)
-.global SYMBOL(Trampoline17)
-.global SYMBOL(Trampoline18)
-.global SYMBOL(Trampoline19)
-.global SYMBOL(Trampoline20)
-.global SYMBOL(Trampoline21)
-.global SYMBOL(Trampoline22)
-.global SYMBOL(Trampoline23)
-.global SYMBOL(Trampoline24)
-.global SYMBOL(Trampoline25)
-.global SYMBOL(Trampoline26)
-.global SYMBOL(Trampoline27)
-.global SYMBOL(Trampoline28)
-.global SYMBOL(Trampoline29)
-.global SYMBOL(Trampoline30)
-.global SYMBOL(Trampoline31)
-.global SYMBOL(TrampolineX0)
-.global SYMBOL(TrampolineX1)
-.global SYMBOL(TrampolineX2)
-.global SYMBOL(TrampolineX3)
-.global SYMBOL(TrampolineX4)
-.global SYMBOL(TrampolineX5)
-.global SYMBOL(TrampolineX6)
-.global SYMBOL(TrampolineX7)
-.global SYMBOL(TrampolineX8)
-.global SYMBOL(TrampolineX9)
-.global SYMBOL(TrampolineX10)
-.global SYMBOL(TrampolineX11)
-.global SYMBOL(TrampolineX12)
-.global SYMBOL(TrampolineX13)
-.global SYMBOL(TrampolineX14)
-.global SYMBOL(TrampolineX15)
-.global SYMBOL(TrampolineX16)
-.global SYMBOL(TrampolineX17)
-.global SYMBOL(TrampolineX18)
-.global SYMBOL(TrampolineX19)
-.global SYMBOL(TrampolineX20)
-.global SYMBOL(TrampolineX21)
-.global SYMBOL(TrampolineX22)
-.global SYMBOL(TrampolineX23)
-.global SYMBOL(TrampolineX24)
-.global SYMBOL(TrampolineX25)
-.global SYMBOL(TrampolineX26)
-.global SYMBOL(TrampolineX27)
-.global SYMBOL(TrampolineX28)
-.global SYMBOL(TrampolineX29)
-.global SYMBOL(TrampolineX30)
-.global SYMBOL(TrampolineX31)
 .global SYMBOL(RelayCallback)
 .global SYMBOL(CallSwitchStack)
 
@@ -259,6 +195,103 @@ SYMBOL(ForwardCallXDDDD):
     ret
     .cfi_endproc
 .endm
+
+# When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
+# The problem is that we're still running on the separate Koffi stack, and V8 will
+# probably misdetect this as a "stack overflow". We have to restore the old
+# stack pointer, call Node.js/V8 and go back to ours.
+# The first three parameters (x0, x1, x2) are passed through untouched.
+SYMBOL(CallSwitchStack):
+    .cfi_startproc
+    hint #34
+    stp x29, x30, [sp, -16]!
+    .cfi_def_cfa sp, 16
+    .cfi_offset 29, 16
+    .cfi_offset 30, 8
+    mov x29, sp
+    ldr x9, [x4, 0]
+    sub x9, sp, x9
+    and x9, x9, #-16
+    str x9, [x4, 8]
+    mov sp, x3
+    blr x5
+    mov sp, x29
+    .cfi_def_cfa sp, 16
+    ldp x29, x30, [sp], 16
+    .cfi_def_cfa sp, 0
+    .cfi_restore 30
+    .cfi_restore 29
+    ret
+    .cfi_endproc
+
+# Trampolines
+# ----------------------------
+
+.global SYMBOL(Trampoline0)
+.global SYMBOL(Trampoline1)
+.global SYMBOL(Trampoline2)
+.global SYMBOL(Trampoline3)
+.global SYMBOL(Trampoline4)
+.global SYMBOL(Trampoline5)
+.global SYMBOL(Trampoline6)
+.global SYMBOL(Trampoline7)
+.global SYMBOL(Trampoline8)
+.global SYMBOL(Trampoline9)
+.global SYMBOL(Trampoline10)
+.global SYMBOL(Trampoline11)
+.global SYMBOL(Trampoline12)
+.global SYMBOL(Trampoline13)
+.global SYMBOL(Trampoline14)
+.global SYMBOL(Trampoline15)
+.global SYMBOL(Trampoline16)
+.global SYMBOL(Trampoline17)
+.global SYMBOL(Trampoline18)
+.global SYMBOL(Trampoline19)
+.global SYMBOL(Trampoline20)
+.global SYMBOL(Trampoline21)
+.global SYMBOL(Trampoline22)
+.global SYMBOL(Trampoline23)
+.global SYMBOL(Trampoline24)
+.global SYMBOL(Trampoline25)
+.global SYMBOL(Trampoline26)
+.global SYMBOL(Trampoline27)
+.global SYMBOL(Trampoline28)
+.global SYMBOL(Trampoline29)
+.global SYMBOL(Trampoline30)
+.global SYMBOL(Trampoline31)
+
+.global SYMBOL(TrampolineX0)
+.global SYMBOL(TrampolineX1)
+.global SYMBOL(TrampolineX2)
+.global SYMBOL(TrampolineX3)
+.global SYMBOL(TrampolineX4)
+.global SYMBOL(TrampolineX5)
+.global SYMBOL(TrampolineX6)
+.global SYMBOL(TrampolineX7)
+.global SYMBOL(TrampolineX8)
+.global SYMBOL(TrampolineX9)
+.global SYMBOL(TrampolineX10)
+.global SYMBOL(TrampolineX11)
+.global SYMBOL(TrampolineX12)
+.global SYMBOL(TrampolineX13)
+.global SYMBOL(TrampolineX14)
+.global SYMBOL(TrampolineX15)
+.global SYMBOL(TrampolineX16)
+.global SYMBOL(TrampolineX17)
+.global SYMBOL(TrampolineX18)
+.global SYMBOL(TrampolineX19)
+.global SYMBOL(TrampolineX20)
+.global SYMBOL(TrampolineX21)
+.global SYMBOL(TrampolineX22)
+.global SYMBOL(TrampolineX23)
+.global SYMBOL(TrampolineX24)
+.global SYMBOL(TrampolineX25)
+.global SYMBOL(TrampolineX26)
+.global SYMBOL(TrampolineX27)
+.global SYMBOL(TrampolineX28)
+.global SYMBOL(TrampolineX29)
+.global SYMBOL(TrampolineX30)
+.global SYMBOL(TrampolineX31)
 
 SYMBOL(Trampoline0):
     trampoline 0
@@ -389,31 +422,3 @@ SYMBOL(TrampolineX30):
     trampoline_vec 30
 SYMBOL(TrampolineX31):
     trampoline_vec 31
-
-# When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
-# The problem is that we're still running on the separate Koffi stack, and V8 will
-# probably misdetect this as a "stack overflow". We have to restore the old
-# stack pointer, call Node.js/V8 and go back to ours.
-# The first three parameters (x0, x1, x2) are passed through untouched.
-SYMBOL(CallSwitchStack):
-    .cfi_startproc
-    hint #34
-    stp x29, x30, [sp, -16]!
-    .cfi_def_cfa sp, 16
-    .cfi_offset 29, 16
-    .cfi_offset 30, 8
-    mov x29, sp
-    ldr x9, [x4, 0]
-    sub x9, sp, x9
-    and x9, x9, #-16
-    str x9, [x4, 8]
-    mov sp, x3
-    blr x5
-    mov sp, x29
-    .cfi_def_cfa sp, 16
-    ldp x29, x30, [sp], 16
-    .cfi_def_cfa sp, 0
-    .cfi_restore 30
-    .cfi_restore 29
-    ret
-    .cfi_endproc
