@@ -1110,7 +1110,7 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
     for (Size i = func.parameters.len; i < (Size)info.Length(); i += 2) {
         ParameterInfo param = {};
 
-        param.type = ResolveType(info[i], &param.directions);
+        param.type = ResolveType(info[(uint32_t)i], &param.directions);
 
         if (RG_UNLIKELY(!param.type))
             return env.Null();
