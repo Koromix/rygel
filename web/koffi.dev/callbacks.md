@@ -172,9 +172,16 @@ console.log(array); // Prints ['123', 'bar', 'foo', 'foobar']
 
 *New in Koffi 2.2.2*
 
-In Koffi, [asynchronous native calls](functions.md#asynchronous-calls) happen on a secondary thread. However, JS execution is inherently single-threaded, callbacks must run on the main thread.
+JS execution is inherently single-threaded, so JS callbacks must run on the main thread. There are two ways you may want to call a callback function from another thread:
 
-Koffi deals with this by running the JS callback function in the Node.js event loop. This means the callback cannot run while the engine is busy running synchronous code.
+- Call the callback from an asynchronous FFI call (e.g. `waitpid.async`)
+- Inside a synchronous FFI call, pass the callback to another thread
+
+In both cases, Koffi will queue the call back to JS to run on the main thread, as soon as the JS event loop has a chance to run (for example when you await a promise).
+
+```{warning}
+Be careful, you can easily get into a deadlock situation if you call a callback from a secondary thread and your main thread never lets the JS event loop run (for example, if the main thread waits for the secondary thread to finish something itself).
+```
 
 ## Handling of exceptions
 
