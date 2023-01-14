@@ -1893,6 +1893,9 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
     if (RG_LIKELY(exec_call)) {
         exec_call->RelaySafe(idx, own_sp, caller_sp, out_reg);
     } else {
+        // This happens if the callback pointer is called from a different thread
+        // than the one that runs the FFI call (sync or async).
+
         TrampolineInfo *trampoline = &shared.trampolines[idx];
 
         Napi::Env env = trampoline->func.Env();

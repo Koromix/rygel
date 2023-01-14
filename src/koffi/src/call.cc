@@ -81,6 +81,9 @@ CallData::~CallData()
 void CallData::RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
     if (std::this_thread::get_id() != instance->main_thread_id) {
+        // JS/V8 is single-threaded, and runs on main_thread_id. Forward the call
+        // to the JS event loop.
+
         RelayContext ctx;
 
         ctx.call = this;
