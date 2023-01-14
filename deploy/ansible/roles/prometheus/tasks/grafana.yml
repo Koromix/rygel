@@ -11,21 +11,30 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: Add Grafana repository key
+- name: Configure Grafana repository key
   ansible.builtin.apt_key:
-    url: https://packages.grafana.com/gpg.key
-    id: 4E40DDF6D76E284A4A6780E48C8C34C524098CB6
-    state: present
-  become: yes
-
-- name: Add Grafana repository
-  apt_repository:
-    repo: 'deb https://packages.grafana.com/oss/deb {{ item.channel }} main'
+    url: '{{ item.url }}'
+    id: '{{ item.id }}'
     state: '{{ item.state }}'
   loop:
-    - channel: stable
+    - url: 'https://apt.grafana.com/gpg.key'
+      id: 9E439B102CF3C0C6
       state: present
-    - channel: beta
+    - url: 'https://packages.grafana.com/gpg.key'
+      id: 4E40DDF6D76E284A4A6780E48C8C34C524098CB6
+      state: absent
+  become: yes
+
+- name: Configure Grafana repository
+  apt_repository:
+    repo: '{{ item.repo }}'
+    state: '{{ item.state }}'
+  loop:
+    - repo: 'deb https://apt.grafana.com stable main'
+      state: present
+    - repo: 'deb https://packages.grafana.com/oss/deb stable main'
+      state: absent
+    - repo: 'deb https://packages.grafana.com/oss/deb beta main'
       state: absent
   become: yes
 
