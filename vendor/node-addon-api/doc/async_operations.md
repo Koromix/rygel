@@ -19,7 +19,7 @@ asynchronous operations:
 
 - **[`Napi::AsyncWorker`](async_worker.md)**
 
-This class helps manage asynchronous operations through an abstraction
+These class helps manage asynchronous operations through an abstraction
 of the concept of moving data between the **event loop** and **worker threads**.
 
 Also, the above class may not be appropriate for every scenario. When using any

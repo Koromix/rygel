@@ -26,8 +26,7 @@ Value ValueOf(const CallbackInfo& info) {
 Value OperatorValue(const CallbackInfo& info) {
   Date input = info[0].As<Date>();
 
-  return Boolean::New(info.Env(),
-                      input.ValueOf() == static_cast<double>(input));
+  return Boolean::New(info.Env(), input.ValueOf() == static_cast<double>(input));
 }
 
 }  // anonymous namespace

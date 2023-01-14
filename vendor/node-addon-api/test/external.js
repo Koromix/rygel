@@ -27,59 +27,62 @@ if (process.argv.length === 3) {
   // exception is thrown from a native `SetImmediate()` we cannot catch it
   // anywhere except in the process' `uncaughtException` handler.
   let maxGCTries = 10;
-  (function gcInterval () {
+  (function gcInterval() {
     global.gc();
     if (!interval) {
       interval = setInterval(gcInterval, 100);
     } else if (--maxGCTries === 0) {
       throw new Error('Timed out waiting for the gc to throw');
+      process.exit(1);
     }
   })();
-} else {
-  module.exports = require('./common').runTestWithBindingPath(test);
 
-  function test (bindingPath) {
-    const binding = require(bindingPath);
+  return;
+}
 
-    const child = spawnSync(process.execPath, [
-      '--expose-gc', __filename, bindingPath
-    ], { stdio: 'inherit' });
-    assert.strictEqual(child.status, 0);
-    assert.strictEqual(child.signal, null);
+module.exports = require('./common').runTestWithBindingPath(test);
 
-    return testUtil.runGCTests([
-      'External without finalizer',
-      () => {
-        const test = binding.external.createExternal();
-        assert.strictEqual(typeof test, 'object');
-        binding.external.checkExternal(test);
-        assert.strictEqual(0, binding.external.getFinalizeCount());
-      },
-      () => {
-        assert.strictEqual(0, binding.external.getFinalizeCount());
-      },
+function test(bindingPath) {
+  const binding = require(bindingPath);
 
-      'External with finalizer',
-      () => {
-        const test = binding.external.createExternalWithFinalize();
-        assert.strictEqual(typeof test, 'object');
-        binding.external.checkExternal(test);
-        assert.strictEqual(0, binding.external.getFinalizeCount());
-      },
-      () => {
-        assert.strictEqual(1, binding.external.getFinalizeCount());
-      },
+  const child = spawnSync(process.execPath, [
+    '--expose-gc', __filename, bindingPath
+  ], { stdio: 'inherit' });
+  assert.strictEqual(child.status, 0);
+  assert.strictEqual(child.signal, null);
 
-      'External with finalizer hint',
-      () => {
-        const test = binding.external.createExternalWithFinalizeHint();
-        assert.strictEqual(typeof test, 'object');
-        binding.external.checkExternal(test);
-        assert.strictEqual(0, binding.external.getFinalizeCount());
-      },
-      () => {
-        assert.strictEqual(1, binding.external.getFinalizeCount());
-      }
-    ]);
-  }
+  return testUtil.runGCTests([
+    'External without finalizer',
+    () => {
+      const test = binding.external.createExternal();
+      assert.strictEqual(typeof test, 'object');
+      binding.external.checkExternal(test);
+      assert.strictEqual(0, binding.external.getFinalizeCount());
+    },
+    () => {
+      assert.strictEqual(0, binding.external.getFinalizeCount());
+    },
+
+    'External with finalizer',
+    () => {
+      const test = binding.external.createExternalWithFinalize();
+      assert.strictEqual(typeof test, 'object');
+      binding.external.checkExternal(test);
+      assert.strictEqual(0, binding.external.getFinalizeCount());
+    },
+    () => {
+      assert.strictEqual(1, binding.external.getFinalizeCount());
+    },
+
+    'External with finalizer hint',
+    () => {
+      const test = binding.external.createExternalWithFinalizeHint();
+      assert.strictEqual(typeof test, 'object');
+      binding.external.checkExternal(test);
+      assert.strictEqual(0, binding.external.getFinalizeCount());
+    },
+    () => {
+      assert.strictEqual(1, binding.external.getFinalizeCount());
+    },
+  ]);
 }

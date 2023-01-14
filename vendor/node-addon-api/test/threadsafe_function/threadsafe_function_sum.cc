@@ -1,8 +1,8 @@
-#include <condition_variable>
-#include <cstdlib>
-#include <mutex>
-#include <thread>
 #include "napi.h"
+#include <thread>
+#include <cstdlib>
+#include <condition_variable>
+#include <mutex>
 
 #if (NAPI_VERSION > 3)
 
@@ -11,8 +11,9 @@ using namespace Napi;
 namespace {
 
 struct TestData {
-  TestData(Promise::Deferred&& deferred) : deferred(std::move(deferred)){};
 
+  TestData(Promise::Deferred&& deferred) : deferred(std::move(deferred)) {};
+  
   // Native Promise returned to JavaScript
   Promise::Deferred deferred;
 
@@ -27,7 +28,7 @@ struct TestData {
   size_t expected_calls = 0;
 };
 
-void FinalizerCallback(Napi::Env env, TestData* finalizeData) {
+void FinalizerCallback(Napi::Env env, TestData* finalizeData){
   for (size_t i = 0; i < finalizeData->threads.size(); ++i) {
     finalizeData->threads[i].join();
   }
@@ -41,8 +42,8 @@ void FinalizerCallback(Napi::Env env, TestData* finalizeData) {
 
 void entryWithTSFN(ThreadSafeFunction tsfn, int threadId) {
   std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100 + 1));
-  tsfn.BlockingCall([=](Napi::Env env, Function callback) {
-    callback.Call({Number::New(env, static_cast<double>(threadId))});
+  tsfn.BlockingCall( [=](Napi::Env env, Function callback) {
+    callback.Call( { Number::New(env, static_cast<double>(threadId))});
   });
   tsfn.Release();
 }
@@ -53,20 +54,15 @@ static Value TestWithTSFN(const CallbackInfo& info) {
 
   // We pass the test data to the Finalizer for cleanup. The finalizer is
   // responsible for deleting this data as well.
-  TestData* testData = new TestData(Promise::Deferred::New(info.Env()));
+  TestData *testData = new TestData(Promise::Deferred::New(info.Env()));
 
   ThreadSafeFunction tsfn = ThreadSafeFunction::New(
-      info.Env(),
-      cb,
-      "Test",
-      0,
-      threadCount,
-      std::function<decltype(FinalizerCallback)>(FinalizerCallback),
-      testData);
+      info.Env(), cb, "Test", 0, threadCount,
+      std::function<decltype(FinalizerCallback)>(FinalizerCallback), testData);
 
   for (int i = 0; i < threadCount; ++i) {
     // A copy of the ThreadSafeFunction will go to the thread entry point
-    testData->threads.push_back(std::thread(entryWithTSFN, tsfn, i));
+    testData->threads.push_back( std::thread(entryWithTSFN, tsfn, i) );
   }
 
   return testData->deferred.Promise();
@@ -74,7 +70,7 @@ static Value TestWithTSFN(const CallbackInfo& info) {
 
 // Task instance created for each new std::thread
 class DelayedTSFNTask {
- public:
+public:
   // Each instance has its own tsfn
   ThreadSafeFunction tsfn;
 
@@ -94,7 +90,8 @@ class DelayedTSFNTask {
 };
 
 struct TestDataDelayed {
-  TestDataDelayed(Promise::Deferred&& deferred)
+
+  TestDataDelayed(Promise::Deferred &&deferred)
       : deferred(std::move(deferred)){};
   ~TestDataDelayed() { taskInsts.clear(); };
   // Native Promise returned to JavaScript
@@ -110,7 +107,7 @@ struct TestDataDelayed {
   ThreadSafeFunction tsfn = ThreadSafeFunction();
 };
 
-void FinalizerCallbackDelayed(Napi::Env env, TestDataDelayed* finalizeData) {
+void FinalizerCallbackDelayed(Napi::Env env, TestDataDelayed *finalizeData) {
   for (size_t i = 0; i < finalizeData->threads.size(); ++i) {
     finalizeData->threads[i].join();
   }
@@ -118,19 +115,15 @@ void FinalizerCallbackDelayed(Napi::Env env, TestDataDelayed* finalizeData) {
   delete finalizeData;
 }
 
-static Value TestDelayedTSFN(const CallbackInfo& info) {
+static Value TestDelayedTSFN(const CallbackInfo &info) {
   int threadCount = info[0].As<Number>().Int32Value();
   Function cb = info[1].As<Function>();
 
-  TestDataDelayed* testData =
+  TestDataDelayed *testData =
       new TestDataDelayed(Promise::Deferred::New(info.Env()));
 
   testData->tsfn =
-      ThreadSafeFunction::New(info.Env(),
-                              cb,
-                              "Test",
-                              0,
-                              threadCount,
+      ThreadSafeFunction::New(info.Env(), cb, "Test", 0, threadCount,
                               std::function<decltype(FinalizerCallbackDelayed)>(
                                   FinalizerCallbackDelayed),
                               testData);
@@ -144,7 +137,7 @@ static Value TestDelayedTSFN(const CallbackInfo& info) {
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100 + 1));
 
-  for (auto& task : testData->taskInsts) {
+  for (auto &task : testData->taskInsts) {
     std::lock_guard<std::mutex> lk(task->mtx);
     task->tsfn = testData->tsfn;
     task->cv.notify_all();
@@ -156,7 +149,7 @@ static Value TestDelayedTSFN(const CallbackInfo& info) {
 void AcquireFinalizerCallback(Napi::Env env,
                               TestData* finalizeData,
                               TestData* context) {
-  (void)context;
+  (void) context;
   for (size_t i = 0; i < finalizeData->threads.size(); ++i) {
     finalizeData->threads[i].join();
   }
@@ -168,13 +161,13 @@ void entryAcquire(ThreadSafeFunction tsfn, int threadId) {
   tsfn.Acquire();
   TestData* testData = tsfn.GetContext();
   std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100 + 1));
-  tsfn.BlockingCall([=](Napi::Env env, Function callback) {
+  tsfn.BlockingCall( [=](Napi::Env env, Function callback) {
     // This lambda runs on the main thread so it's OK to access the variables
     // `expected_calls` and `mainWantsRelease`.
     testData->expected_calls--;
     if (testData->expected_calls == 0 && testData->mainWantsRelease)
       testData->tsfn.Release();
-    callback.Call({Number::New(env, static_cast<double>(threadId))});
+    callback.Call( { Number::New(env, static_cast<double>(threadId))});
   });
   tsfn.Release();
 }
@@ -189,7 +182,7 @@ static Value CreateThread(const CallbackInfo& info) {
   ThreadSafeFunction tsfn = testData->tsfn;
   int threadId = testData->threads.size();
   // A copy of the ThreadSafeFunction will go to the thread entry point
-  testData->threads.push_back(std::thread(entryAcquire, tsfn, threadId));
+  testData->threads.push_back( std::thread(entryAcquire, tsfn, threadId) );
   return Number::New(info.Env(), threadId);
 }
 
@@ -205,29 +198,21 @@ static Value TestAcquire(const CallbackInfo& info) {
 
   // We pass the test data to the Finalizer for cleanup. The finalizer is
   // responsible for deleting this data as well.
-  TestData* testData = new TestData(Promise::Deferred::New(info.Env()));
+  TestData *testData = new TestData(Promise::Deferred::New(info.Env()));
 
-  testData->tsfn =
-      ThreadSafeFunction::New(env,
-                              cb,
-                              "Test",
-                              0,
-                              1,
-                              testData,
-                              std::function<decltype(AcquireFinalizerCallback)>(
-                                  AcquireFinalizerCallback),
-                              testData);
+  testData->tsfn = ThreadSafeFunction::New(
+    env, cb, "Test", 0, 1, testData,
+    std::function<decltype(AcquireFinalizerCallback)>(AcquireFinalizerCallback),
+    testData);
 
   Object result = Object::New(env);
-  result["createThread"] =
-      Function::New(env, CreateThread, "createThread", testData);
-  result["stopThreads"] =
-      Function::New(env, StopThreads, "stopThreads", testData);
+  result["createThread"] = Function::New( env, CreateThread, "createThread", testData);
+  result["stopThreads"] = Function::New( env, StopThreads, "stopThreads", testData);
   result["promise"] = testData->deferred.Promise();
 
   return result;
 }
-}  // namespace
+}
 
 Object InitThreadSafeFunctionSum(Env env) {
   Object exports = Object::New(env);

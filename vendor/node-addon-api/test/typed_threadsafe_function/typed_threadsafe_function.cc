@@ -40,23 +40,23 @@ static void TSFNCallJS(Env env,
 }
 
 using TSFN = TypedThreadSafeFunction<ThreadSafeFunctionInfo, int, TSFNCallJS>;
-static TSFN s_tsfn;
+static TSFN tsfn;
 
 // Thread data to transmit to JS
 static int ints[ARRAY_LENGTH];
 
 static void SecondaryThread() {
-  if (s_tsfn.Release() != napi_ok) {
+  if (tsfn.Release() != napi_ok) {
     Error::Fatal("TypedSecondaryThread", "ThreadSafeFunction.Release() failed");
   }
 }
 
 // Source thread producing the data
 static void DataSourceThread() {
-  ThreadSafeFunctionInfo* info = s_tsfn.GetContext();
+  ThreadSafeFunctionInfo* info = tsfn.GetContext();
 
   if (info->startSecondary) {
-    if (s_tsfn.Acquire() != napi_ok) {
+    if (tsfn.Acquire() != napi_ok) {
       Error::Fatal("TypedDataSourceThread",
                    "ThreadSafeFunction.Acquire() failed");
     }
@@ -71,13 +71,13 @@ static void DataSourceThread() {
 
     switch (info->type) {
       case ThreadSafeFunctionInfo::DEFAULT:
-        status = s_tsfn.BlockingCall();
+        status = tsfn.BlockingCall();
         break;
       case ThreadSafeFunctionInfo::BLOCKING:
-        status = s_tsfn.BlockingCall(&ints[index]);
+        status = tsfn.BlockingCall(&ints[index]);
         break;
       case ThreadSafeFunctionInfo::NON_BLOCKING:
-        status = s_tsfn.NonBlockingCall(&ints[index]);
+        status = tsfn.NonBlockingCall(&ints[index]);
         break;
     }
 
@@ -117,7 +117,7 @@ static void DataSourceThread() {
     Error::Fatal("TypedDataSourceThread", "Queue was never closing");
   }
 
-  if (!queueWasClosing && s_tsfn.Release() != napi_ok) {
+  if (!queueWasClosing && tsfn.Release() != napi_ok) {
     Error::Fatal("TypedDataSourceThread",
                  "ThreadSafeFunction.Release() failed");
   }
@@ -127,9 +127,9 @@ static Value StopThread(const CallbackInfo& info) {
   tsfnInfo.jsFinalizeCallback = Napi::Persistent(info[0].As<Function>());
   bool abort = info[1].As<Boolean>();
   if (abort) {
-    s_tsfn.Abort();
+    tsfn.Abort();
   } else {
-    s_tsfn.Release();
+    tsfn.Release();
   }
   {
     std::lock_guard<std::mutex> _(tsfnInfo.protect);
@@ -160,15 +160,15 @@ static Value StartThreadInternal(const CallbackInfo& info,
   tsfnInfo.maxQueueSize = info[3].As<Number>().Uint32Value();
   tsfnInfo.closeCalledFromJs = false;
 
-  s_tsfn = TSFN::New(info.Env(),
-                     info[0].As<Function>(),
-                     Object::New(info.Env()),
-                     "Test",
-                     tsfnInfo.maxQueueSize,
-                     2,
-                     &tsfnInfo,
-                     JoinTheThreads,
-                     threads);
+  tsfn = TSFN::New(info.Env(),
+                   info[0].As<Function>(),
+                   Object::New(info.Env()),
+                   "Test",
+                   tsfnInfo.maxQueueSize,
+                   2,
+                   &tsfnInfo,
+                   JoinTheThreads,
+                   threads);
 
   threads[0] = std::thread(DataSourceThread);
 
@@ -176,7 +176,7 @@ static Value StartThreadInternal(const CallbackInfo& info,
 }
 
 static Value Release(const CallbackInfo& /* info */) {
-  if (s_tsfn.Release() != napi_ok) {
+  if (tsfn.Release() != napi_ok) {
     Error::Fatal("Release", "TypedThreadSafeFunction.Release() failed");
   }
   return Value();

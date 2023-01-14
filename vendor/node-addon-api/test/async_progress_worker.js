@@ -1,18 +1,17 @@
 'use strict';
 
-const common = require('./common');
+const common = require('./common')
 const assert = require('assert');
 
 module.exports = common.runTest(test);
 
-async function test ({ asyncprogressworker }) {
+async function test({ asyncprogressworker }) {
   await success(asyncprogressworker);
   await fail(asyncprogressworker);
-  await signalTest(asyncprogressworker.doMalignTest);
-  await signalTest(asyncprogressworker.doSignalAfterProgressTest);
+  await malignTest(asyncprogressworker);
 }
 
-function success (binding) {
+function success(binding) {
   return new Promise((resolve, reject) => {
     const expected = [0, 1, 2, 3];
     const actual = [];
@@ -33,11 +32,11 @@ function success (binding) {
   });
 }
 
-function fail (binding) {
+function fail(binding) {
   return new Promise((resolve) => {
     binding.doWork(-1,
       common.mustCall((err) => {
-        assert.throws(() => { throw err; }, /test error/);
+        assert.throws(() => { throw err }, /test error/)
         resolve();
       }),
       common.mustNotCall()
@@ -45,9 +44,9 @@ function fail (binding) {
   });
 }
 
-function signalTest (bindingFunction) {
+function malignTest(binding) {
   return new Promise((resolve, reject) => {
-    bindingFunction(
+    binding.doMalignTest(
       common.mustCall((err) => {
         if (err) {
           return reject(err);
@@ -55,11 +54,7 @@ function signalTest (bindingFunction) {
         resolve();
       }),
       common.mustCallAtLeast((error, reason) => {
-        try {
-          assert(!error, reason);
-        } catch (e) {
-          reject(e);
-        }
+        assert(!error, reason);
       }, 1)
     );
   });

@@ -2,7 +2,6 @@
 'use strict';
 const assert = require('assert');
 const path = require('path');
-const { access } = require('node:fs/promises');
 
 const noop = () => {};
 
@@ -76,41 +75,9 @@ exports.mustNotCall = function (msg) {
   };
 };
 
-const buildTypes = {
-  Release: 'Release',
-  Debug: 'Debug'
-};
-
-async function checkBuildType (buildType) {
-  try {
-    await access(path.join(path.resolve('./test/build'), buildType));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function whichBuildType () {
-  let buildType = 'Release';
-  const envBuildType = process.env.NODE_API_BUILD_CONFIG;
-  if (envBuildType) {
-    if (Object.values(buildTypes).includes(envBuildType)) {
-      if (await checkBuildType(envBuildType)) {
-        buildType = envBuildType;
-      } else {
-        throw new Error(`The ${envBuildType} build doesn't exists.`);
-      }
-    } else {
-      throw new Error('Invalid value for NODE_API_BUILD_CONFIG environment variable. It should be set to Release or Debug.');
-    }
-  }
-  return buildType;
-}
-
-exports.whichBuildType = whichBuildType;
-
 exports.runTest = async function (test, buildType, buildPathRoot = process.env.BUILD_PATH || '') {
-  buildType = buildType || await whichBuildType();
+  buildType = buildType || process.config.target_defaults.default_configuration || 'Release';
+
   const bindings = [
     path.join(buildPathRoot, `../build/${buildType}/binding.node`),
     path.join(buildPathRoot, `../build/${buildType}/binding_noexcept.node`),
@@ -125,7 +92,7 @@ exports.runTest = async function (test, buildType, buildPathRoot = process.env.B
 };
 
 exports.runTestWithBindingPath = async function (test, buildType, buildPathRoot = process.env.BUILD_PATH || '') {
-  buildType = buildType || await whichBuildType();
+  buildType = buildType || process.config.target_defaults.default_configuration || 'Release';
 
   const bindings = [
     path.join(buildPathRoot, `../build/${buildType}/binding.node`),
@@ -140,7 +107,7 @@ exports.runTestWithBindingPath = async function (test, buildType, buildPathRoot 
 };
 
 exports.runTestWithBuildType = async function (test, buildType) {
-  buildType = buildType || await whichBuildType();
+  buildType = buildType || process.config.target_defaults.default_configuration || 'Release';
 
   await Promise.resolve(test(buildType))
     .finally(exports.mustCall());

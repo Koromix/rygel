@@ -17,10 +17,11 @@ class Addon {
  public:
   class VerboseIndicator : public Napi::ObjectWrap<VerboseIndicator> {
    public:
-    VerboseIndicator(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<VerboseIndicator>(info) {
-      info.This().As<Napi::Object>()["verbose"] = Napi::Boolean::New(
-          info.Env(), info.Env().GetInstanceData<Addon>()->verbose);
+    VerboseIndicator(const Napi::CallbackInfo& info):
+        Napi::ObjectWrap<VerboseIndicator>(info) {
+      info.This().As<Napi::Object>()["verbose"] =
+          Napi::Boolean::New(info.Env(),
+                             info.Env().GetInstanceData<Addon>()->verbose);
     }
 
     Napi::Value Getter(const Napi::CallbackInfo& info) {
@@ -33,11 +34,11 @@ class Addon {
     }
 
     static Napi::FunctionReference Init(Napi::Env env) {
-      return Napi::Persistent(DefineClass(
-          env,
-          "VerboseIndicator",
-          {InstanceAccessor<&VerboseIndicator::Getter,
-                            &VerboseIndicator::Setter>("verbose")}));
+      return Napi::Persistent(DefineClass(env, "VerboseIndicator", {
+        InstanceAccessor<
+                         &VerboseIndicator::Getter,
+                         &VerboseIndicator::Setter>("verbose")
+      }));
     }
   };
 
@@ -50,7 +51,7 @@ class Addon {
     info.Env().GetInstanceData<Addon>()->verbose = info[0].As<Napi::Boolean>();
   }
 
-  Addon(Napi::Env env) : VerboseIndicator(VerboseIndicator::Init(env)) {}
+  Addon(Napi::Env env): VerboseIndicator(VerboseIndicator::Init(env)) {}
   ~Addon() {
     if (verbose) {
       fprintf(stderr, "addon_data: Addon::~Addon\n");
@@ -59,7 +60,7 @@ class Addon {
 
   static void DeleteAddon(Napi::Env, Addon* addon, uint32_t* hint) {
     delete addon;
-    fprintf(stderr, "hint: %u\n", *hint);
+    fprintf(stderr, "hint: %d\n", *hint);
     delete hint;
   }
 
@@ -75,7 +76,7 @@ class Addon {
                                                         new uint32_t(hint));
     Napi::Object result = Napi::Object::New(env);
     result.DefineProperties({
-        Napi::PropertyDescriptor::Accessor<Getter, Setter>("verbose"),
+      Napi::PropertyDescriptor::Accessor<Getter, Setter>("verbose"),
     });
 
     return result;
