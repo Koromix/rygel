@@ -2,6 +2,20 @@
 
 ## History
 
+### Koffi 2.2.2
+
+**Main fixes:**
+
+- Support transparent [asynchronous callbacks](callbacks.md#asynchronous-callbacks)
+- Expand from a maximum of 16+16 to 1024 callbacks running in parallel
+
+**Other fixes:**
+
+- Fix bundler support by removing shebang from index.js
+- Fix bugs when loading Koffi multiples times in same process (context aware module)
+- Check N-API version when module is loaded
+- Optimize callback unregistration
+
 ### Koffi 2.2.1
 
 **Main fixes:**
