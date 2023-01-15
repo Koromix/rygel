@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 33;
+const int DomainVersion = 34;
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
 
