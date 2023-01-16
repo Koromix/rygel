@@ -1014,13 +1014,66 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
         return nullptr;
 
     InstanceMemory *mem = new InstanceMemory();
+    RG_DEFER_N(mem_guard) { delete mem; };
 
-    mem->stack.len = stack_size;
 #if defined(_WIN32)
-    mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    {
+        struct FiberContext {
+            InstanceMemory *mem;
+            void *self;
+            bool was_fiber;
+        };
+
+        FiberContext ctx;
+        bool is_fiber = IsThreadAFiber();
+
+        ctx.mem = mem;
+        ctx.self = is_fiber ? GetCurrentFiber() : ConvertThreadToFiber(nullptr);
+        if (!ctx.self) {
+            LogError("Failed to make initial fiber: %1", GetWin32ErrorString());
+            return nullptr;
+        }
+        RG_DEFER {
+            if (!is_fiber) {
+                ConvertFiberToThread();
+            }
+        };
+
+        // Work around issue with CreateFiber() API and stack size
+        // See here: https://github.com/google/marl/issues/12
+        mem->fiber = CreateFiberEx(stack_size - 1, stack_size,
+                                   FIBER_FLAG_FLOAT_SWITCH, [](void *udata) {
+            FiberContext *ctx = (FiberContext *)udata;
+
+            // Handle initial call just below
+#if defined(__aarch64__) || defined(_M_ARM64)
+            NT_TIB *tib = (NT_TIB *)__getReg(18);
+#elif defined(__x86_64__) || defined(_M_AMD64)
+            NT_TIB *tib = (NT_TIB *)__readgsqword(0x30);
+#else
+            NT_TIB *tib = (NT_TIB *)__readfsdword(0x18);
+#endif
+
+            ctx->mem->stack.ptr = (uint8_t *)tib->StackLimit;
+            ctx->mem->stack.len = (uint8_t *)tib->StackBase - ctx->mem->stack.ptr;
+
+            SwitchToFiber(ctx->self);
+        }, &ctx);
+
+        if (!mem->fiber) {
+            LogError("Failed to create Win32 fiber: %1", GetWin32ErrorString());
+            return nullptr;
+        }
+
+        SwitchToFiber(mem->fiber);
+    }
+
+    RG_ASSERT(mem->stack.ptr);
 #elif defined(__APPLE__)
+    mem->stack.len = stack_size;
     mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
 #else
+    mem->stack.len = stack_size;
     mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
 #endif
     RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
@@ -1051,6 +1104,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
         mem->temporary = true;
     }
 
+    mem_guard.Disable();
     return mem;
 }
 
@@ -1691,8 +1745,8 @@ void FunctionInfo::Unref() const
 InstanceMemory::~InstanceMemory()
 {
 #ifdef _WIN32
-    if (stack.ptr) {
-        VirtualFree(stack.ptr, 0, MEM_RELEASE);
+    if (fiber) {
+        DeleteFiber(fiber);
     }
     if (heap.ptr) {
         VirtualFree(heap.ptr, 0, MEM_RELEASE);
