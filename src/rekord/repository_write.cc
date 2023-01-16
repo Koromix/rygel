@@ -35,7 +35,9 @@ enum class PutResult {
 
 class PutContext {
     rk_Disk *disk;
+
     Span<const uint8_t> salt;
+    uint64_t salt64;
 
     Async uploads;
 
@@ -88,6 +90,7 @@ PutContext::PutContext(rk_Disk *disk)
     : disk(disk), salt(disk->GetSalt()), uploads(disk->GetThreads())
 {
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
+    memcpy(&salt64, salt.ptr, RG_SIZE(salt64));
 }
 
 PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, rk_ID *out_id)
@@ -307,7 +310,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id)
 
     // Split the file
     {
-        rk_Splitter splitter(ChunkAverage, ChunkMin, ChunkMax);
+        rk_Splitter splitter(ChunkAverage, ChunkMin, ChunkMax, salt64);
 
         HeapArray<uint8_t> buf;
         {

@@ -100,7 +100,7 @@ static Size CenterSize(Size avg, Size min, Size max)
     return size;
 }
 
-rk_Splitter::rk_Splitter(Size avg, Size min, Size max)
+rk_Splitter::rk_Splitter(Size avg, Size min, Size max, uint64_t salt64)
     : avg(avg), min(min), max(max)
 {
     RG_ASSERT(AverageMin <= avg && avg <= AverageMax);
@@ -108,10 +108,26 @@ rk_Splitter::rk_Splitter(Size avg, Size min, Size max)
     RG_ASSERT(MaximumMin <= max && max <= MaximumMax);
     RG_ASSERT(min < avg && avg < max);
 
-    int bits = (int)round(log2((double)avg));
+    // Init masks
+    {
+        int bits = (int)round(log2((double)avg));
 
-    mask1 = (1u << (bits + 1)) - 1;
-    mask2 = (1u << (bits - 1)) - 1;
+        mask1 = (1u << (bits + 1)) - 1;
+        mask2 = (1u << (bits - 1)) - 1;
+    }
+
+    // Init salt
+    {
+        union {
+            uint64_t salt64;
+            uint8_t salt[8];
+        } u;
+        RG_STATIC_ASSERT(RG_SIZE(salt) == RG_SIZE(u.salt));
+        RG_STATIC_ASSERT(RG_SIZE(u.salt) == RG_SIZE(salt64));
+
+        u.salt64 = LittleEndian(salt64);
+        memcpy(salt, u.salt, RG_SIZE(salt));
+    }
 }
 
 Size rk_Splitter::Process(Span<const uint8_t> buf, bool last,
@@ -147,14 +163,15 @@ Size rk_Splitter::Cut(Span<const uint8_t> buf, bool last)
     Size offset = min;
     Size limit = CenterSize(avg, min, buf.len);
     uint32_t hash = 0;
+    size_t byte = (size_t)total % 8;
 
     while (offset < limit) {
-        hash = (hash >> 1) + GearTable[buf.ptr[offset++]];
+        hash = (hash >> 1) + GearTable[buf.ptr[offset++] ^ salt[byte++ % 8]];
         if (!(hash & mask1))
             return offset;
     }
     while (offset < buf.len) {
-        hash = (hash >> 1) + GearTable[buf.ptr[offset++]];
+        hash = (hash >> 1) + GearTable[buf.ptr[offset++] ^ salt[byte++ % 8]];
         if (!(hash & mask2))
             return offset;
     }
