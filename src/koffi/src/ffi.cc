@@ -1030,6 +1030,9 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     mem->stack.len -= 16;
 #endif
 
+    // Keep real stack limits intact, in case we need them
+    mem->stack0 = mem->stack;
+
     mem->heap.len = heap_size;
 #ifdef _WIN32
     mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -1928,6 +1931,18 @@ static InstanceData *CreateInstance(Napi::Env env)
         return nullptr;
     }
     napi_unref_threadsafe_function(env, instance->broker);
+
+#if defined(_WIN32) && (defined(__x86_64__) || defined(_M_AMD64))
+    NT_TIB *tib = (NT_TIB *)__readgsqword(0x30);
+
+    instance->main_stack_base = tib->StackBase;
+    instance->main_stack_limit = tib->StackLimit;
+#elif defined(_WIN32) && (defined(__i386__) || defined(_M_IX86))
+    NT_TIB *tib = (NT_TIB *)__readfsdword(0x18);
+
+    instance->main_stack_base = tib->StackBase;
+    instance->main_stack_limit = tib->StackLimit;
+#endif
 
     err_guard.Disable();
     return instance;

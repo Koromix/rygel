@@ -225,6 +225,7 @@ struct InstanceMemory {
     ~InstanceMemory();
 
     Span<uint8_t> stack;
+    Span<uint8_t> stack0;
     Span<uint8_t> heap;
 
     uint16_t generation; // Can wrap without risk
@@ -253,6 +254,11 @@ struct InstanceData {
 
     std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
+
+#ifdef _WIN32
+    void *main_stack_base;
+    void *main_stack_limit;
+#endif
 
     HashMap<void *, int16_t> trampolines_map;
 

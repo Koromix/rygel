@@ -18,6 +18,16 @@
 #include "call.hh"
 #include "util.hh"
 
+#ifdef _WIN32
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+#endif
+
 #include <napi.h>
 
 namespace RG {
@@ -297,6 +307,18 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 void CallData::Execute(const FunctionInfo *func)
 {
+#ifdef _WIN32
+    NT_TIB *tib = (NT_TIB *)__readfsdword(0x18);
+
+    // Adjust TIB stack limits so SEH works correctly
+    RG_DEFER_C(base = tib->StackBase, limit = tib->StackLimit) {
+        tib->StackBase = base;
+        tib->StackLimit = limit;
+    };
+    tib->StackBase = mem->stack0.end();
+    tib->StackLimit = mem->stack0.ptr;
+#endif
+
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
             auto ret = (func->fast ? ForwardCallR ## Suffix(func->func, new_sp, &old_sp) \
@@ -394,10 +416,22 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
     RG_UNREACHABLE();
 }
 
-void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, BackRegisters *out_reg)
+void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool async, BackRegisters *out_reg)
 {
     if (RG_UNLIKELY(env.IsExceptionPending()))
         return;
+
+#ifdef _WIN32
+    NT_TIB *tib = (NT_TIB *)__readfsdword(0x18);
+
+    // Restore real thread stack limits
+    RG_DEFER_C(base = tib->StackBase, limit = tib->StackLimit) {
+        tib->StackBase = base;
+        tib->StackLimit = limit;
+    };
+    tib->StackBase = instance->main_stack_base;
+    tib->StackLimit = instance->main_stack_limit;
+#endif
 
     const TrampolineInfo &trampoline = shared.trampolines[idx];
 
