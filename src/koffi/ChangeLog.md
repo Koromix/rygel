@@ -2,6 +2,16 @@
 
 ## History
 
+### Koffi 2.2.3
+
+**Main fixes:**
+
+- Support native code that uses [Structured Exception Handling (SEH)](https://learn.microsoft.com/en-us/cpp/cpp/structured-exception-handling-c-cpp) on Windows (x86, x64 and ARM64)
+
+**Other changes:**
+
+- Try to use ebp/rbp as frame pointer in x86/x64 ASM code
+
 ### Koffi 2.2.2
 
 **Main fixes:**
