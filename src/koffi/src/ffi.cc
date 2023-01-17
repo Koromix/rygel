@@ -1020,59 +1020,42 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     RG_DEFER_N(mem_guard) { delete mem; };
 
 #if defined(_WIN32)
+    static const int PageSize = ([]() {
+        SYSTEM_INFO info = {};
+
+        GetNativeSystemInfo(&info);
+        RG_ASSERT(info.dwPageSize);
+
+        return (int)info.dwPageSize;
+    })();
+
+    // Allocate stack memory
     {
-        struct FiberContext {
-            InstanceMemory *mem;
-            void *self;
-            bool was_fiber;
-        };
+        mem->stack.len = stack_size;
+        mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len + 2 * PageSize, MEM_RESERVE, PAGE_NOACCESS);
 
-        FiberContext ctx;
-        bool is_fiber = IsThreadAFiber();
+        RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 
-        ctx.mem = mem;
-        ctx.self = is_fiber ? GetCurrentFiber() : ConvertThreadToFiber(nullptr);
-        if (!ctx.self) {
-            LogError("Failed to make initial fiber: %1", GetWin32ErrorString());
-            return nullptr;
-        }
-        RG_DEFER {
-            if (!is_fiber) {
-                ConvertFiberToThread();
-            }
-        };
+        bool success = true;
 
-        // Work around issue with CreateFiber() API and stack size
-        // See here: https://github.com/google/marl/issues/12
-        mem->fiber = CreateFiberEx(stack_size - 1, stack_size,
-                                   FIBER_FLAG_FLOAT_SWITCH, [](void *udata) {
-            FiberContext *ctx = (FiberContext *)udata;
+        success &= !!VirtualAlloc(mem->stack.ptr + 0 * PageSize, PageSize, MEM_COMMIT, PAGE_NOACCESS);
+        success &= !!VirtualAlloc(mem->stack.ptr + 1 * PageSize, PageSize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
+        success &= !!VirtualAlloc(mem->stack.ptr + 2 * PageSize, mem->stack.len, MEM_COMMIT, PAGE_READWRITE);
 
-            TEB *teb = GetTEB();
-
-            ctx->mem->stack.ptr = (uint8_t *)teb->DeallocationStack;
-            ctx->mem->stack.len = (uint8_t *)teb->StackBase - ctx->mem->stack.ptr;
-
-            SwitchToFiber(ctx->self);
-        }, &ctx);
-
-        if (!mem->fiber) {
-            LogError("Failed to create Win32 fiber: %1", GetWin32ErrorString());
-            return nullptr;
-        }
-
-        SwitchToFiber(mem->fiber);
+        RG_CRITICAL(success, "Cannot commit stack memory: %1", GetWin32ErrorString());
     }
 
-    RG_ASSERT(mem->stack.ptr);
 #elif defined(__APPLE__)
     mem->stack.len = stack_size;
     mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+
+    RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 #else
     mem->stack.len = stack_size;
     mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
-#endif
+
     RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
+#endif
 
 #ifdef __OpenBSD__
     // Make sure the SP points inside the MAP_STACK area, or (void) functions may crash on OpenBSD i386
