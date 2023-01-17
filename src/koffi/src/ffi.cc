@@ -1987,15 +1987,15 @@ static InstanceData *CreateInstance(Napi::Env env)
     napi_unref_threadsafe_function(env, instance->broker);
 
 #if defined(_WIN32) && (defined(__x86_64__) || defined(_M_AMD64))
-    NT_TIB *tib = (NT_TIB *)__readgsqword(0x30);
+    void *teb = (void *)__readgsqword(0x30);
 
-    instance->main_stack_base = tib->StackBase;
-    instance->main_stack_limit = tib->StackLimit;
+    instance->main_stack_max = *(void **)((uint8_t *)teb + 0x08); // StackBase
+    instance->main_stack_min = *(void **)((uint8_t *)teb + 0x1478); // DeallocationStack
 #elif defined(_WIN32) && (defined(__i386__) || defined(_M_IX86))
-    NT_TIB *tib = (NT_TIB *)__readfsdword(0x18);
+    void *teb = (void *)__readfsdword(0x18);
 
-    instance->main_stack_base = tib->StackBase;
-    instance->main_stack_limit = tib->StackLimit;
+    instance->main_stack_max = *(void **)((uint8_t *)teb + 0x04); // StackBase
+    instance->main_stack_min = *(void **)((uint8_t *)teb + 0xE0C); // DeallocationStack
 #endif
 
     err_guard.Disable();

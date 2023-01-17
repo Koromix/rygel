@@ -260,8 +260,8 @@ struct InstanceData {
     napi_threadsafe_function broker = nullptr;
 
 #ifdef _WIN32
-    void *main_stack_base;
-    void *main_stack_limit;
+    void *main_stack_max;
+    void *main_stack_min;
 #endif
 
     HashMap<void *, int16_t> trampolines_map;

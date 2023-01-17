@@ -18,16 +18,6 @@
 #include "call.hh"
 #include "util.hh"
 
-#ifdef _WIN32
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <windows.h>
-#endif
-
 #include <napi.h>
 
 namespace RG {
@@ -55,6 +45,12 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
 #include "abi_trampolines.inc"
+
+#ifdef _WIN32
+    #define TEB_STACK_BASE(TEB) (*(void **)((uint8_t *)(TEB) + 0x04))
+    #define TEB_STACK_LIMIT(TEB) (*(void **)((uint8_t *)(TEB) + 0x08))
+    #define TEB_DEALLOCATION_STACK(TEB) (*(void **)((uint8_t *)(TEB) + 0xE0C))
+#endif
 
 bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 {
@@ -308,15 +304,21 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 void CallData::Execute(const FunctionInfo *func)
 {
 #ifdef _WIN32
-    NT_TIB *tib = (NT_TIB *)__readfsdword(0x18);
+    void *teb = (void *)__readfsdword(0x18);
 
-    // Adjust TIB stack limits so SEH works correctly
-    RG_DEFER_C(base = tib->StackBase, limit = tib->StackLimit) {
-        tib->StackBase = base;
-        tib->StackLimit = limit;
+    // Store current stack limits
+    RG_DEFER_C(base = TEB_STACK_BASE(teb),
+               limit = TEB_STACK_LIMIT(teb),
+               dealloc = TEB_DEALLOCATION_STACK(teb)) {
+        TEB_STACK_BASE(teb) = base;
+        TEB_STACK_LIMIT(teb) = limit;
+        TEB_DEALLOCATION_STACK(teb) = dealloc;
     };
-    tib->StackBase = mem->stack0.end();
-    tib->StackLimit = mem->stack0.ptr;
+
+    // Adjust stack limits so SEH works correctly
+    TEB_STACK_BASE(teb) = mem->stack0.end();
+    TEB_STACK_LIMIT(teb) = mem->stack0.ptr;
+    TEB_DEALLOCATION_STACK(teb) = mem->stack0.ptr;
 #endif
 
 #define PERFORM_CALL(Suffix) \
@@ -422,15 +424,20 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool async, BackRe
         return;
 
 #ifdef _WIN32
-    NT_TIB *tib = (NT_TIB *)__readfsdword(0x18);
+    void *teb = (void *)__readfsdword(0x18);
+
+    RG_DEFER_C(base = TEB_STACK_BASE(teb),
+               limit = TEB_STACK_LIMIT(teb),
+               dealloc = TEB_DEALLOCATION_STACK(teb)) {
+        TEB_STACK_BASE(teb) = base;
+        TEB_STACK_LIMIT(teb) = limit;
+        TEB_DEALLOCATION_STACK(teb) = dealloc;
+    };
 
     // Restore real thread stack limits
-    RG_DEFER_C(base = tib->StackBase, limit = tib->StackLimit) {
-        tib->StackBase = base;
-        tib->StackLimit = limit;
-    };
-    tib->StackBase = instance->main_stack_base;
-    tib->StackLimit = instance->main_stack_limit;
+    TEB_STACK_BASE(teb) = instance->main_stack_max;
+    TEB_STACK_LIMIT(teb) = instance->main_stack_min;
+    TEB_DEALLOCATION_STACK(teb) = instance->main_stack_min;
 #endif
 
     const TrampolineInfo &trampoline = shared.trampolines[idx];
