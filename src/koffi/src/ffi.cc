@@ -16,6 +16,9 @@
 #include "call.hh"
 #include "parser.hh"
 #include "util.hh"
+#ifdef _WIN32
+    #include "win32.hh"
+#endif
 
 #ifdef _WIN32
     #ifndef NOMINMAX
@@ -1045,17 +1048,10 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
                                    FIBER_FLAG_FLOAT_SWITCH, [](void *udata) {
             FiberContext *ctx = (FiberContext *)udata;
 
-            // Handle initial call just below
-#if defined(__aarch64__) || defined(_M_ARM64)
-            NT_TIB *tib = (NT_TIB *)__getReg(18);
-#elif defined(__x86_64__) || defined(_M_AMD64)
-            NT_TIB *tib = (NT_TIB *)__readgsqword(0x30);
-#else
-            NT_TIB *tib = (NT_TIB *)__readfsdword(0x18);
-#endif
+            TEB *teb = GetTEB();
 
-            ctx->mem->stack.ptr = (uint8_t *)tib->StackLimit;
-            ctx->mem->stack.len = (uint8_t *)tib->StackBase - ctx->mem->stack.ptr;
+            ctx->mem->stack.ptr = (uint8_t *)teb->DeallocationStack;
+            ctx->mem->stack.len = (uint8_t *)teb->StackBase - ctx->mem->stack.ptr;
 
             SwitchToFiber(ctx->self);
         }, &ctx);
