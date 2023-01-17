@@ -1019,6 +1019,8 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     InstanceMemory *mem = new InstanceMemory();
     RG_DEFER_N(mem_guard) { delete mem; };
 
+    stack_size = AlignLen(stack_size, Kibibytes(64));
+
 #if defined(_WIN32)
     static const int PageSize = ([]() {
         SYSTEM_INFO info = {};
