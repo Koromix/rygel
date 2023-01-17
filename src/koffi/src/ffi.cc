@@ -33,6 +33,9 @@
     #include <dlfcn.h>
     #include <unistd.h>
     #include <sys/mman.h>
+    #ifndef MAP_STACK
+        #define MAP_STACK 0
+    #endif
 #endif
 
 #include <napi.h>
@@ -1046,12 +1049,6 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 
         RG_CRITICAL(success, "Cannot commit stack memory: %1", GetWin32ErrorString());
     }
-
-#elif defined(__APPLE__)
-    mem->stack.len = stack_size;
-    mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-
-    RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 #else
     mem->stack.len = stack_size;
     mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
