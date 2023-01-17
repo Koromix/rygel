@@ -654,8 +654,6 @@ async function stop(all = true) {
 
     console.log('>> Sending shutdown commands...');
     await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine))
-            return;
         if (machine.qemu == null)
             return;
         if (!machine.started && !all)
