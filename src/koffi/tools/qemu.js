@@ -571,7 +571,7 @@ async function upload(snapshot_dir, func) {
         }
 
         let status = copied ? chalk.bold.green('[ok]') : chalk.bold.red('[error]');
-        log(machine, 'Copy', status);
+        log(machine, 'Upload', status);
     }));
 
     return success;
