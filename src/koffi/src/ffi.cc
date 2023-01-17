@@ -1761,6 +1761,38 @@ InstanceMemory::~InstanceMemory()
 #endif
 }
 
+static InstanceData *CreateInstance(Napi::Env env)
+{
+    InstanceData *instance = new InstanceData();
+    RG_DEFER_N(err_guard) { delete instance; };
+
+    instance->main_thread_id = std::this_thread::get_id();
+
+    if (napi_create_threadsafe_function(env, nullptr, nullptr,
+                                        Napi::String::New(env, "Koffi Async Callback Broker"),
+                                        0, 1, nullptr, nullptr, nullptr,
+                                        CallData::RelayAsync, &instance->broker) != napi_ok) {
+        LogError("Failed to create async callback broker");
+        return nullptr;
+    }
+    napi_unref_threadsafe_function(env, instance->broker);
+
+#if defined(_WIN32) && (defined(__x86_64__) || defined(_M_AMD64))
+    void *teb = (void *)__readgsqword(0x30);
+
+    instance->main_stack_max = *(void **)((uint8_t *)teb + 0x08); // StackBase
+    instance->main_stack_min = *(void **)((uint8_t *)teb + 0x1478); // DeallocationStack
+#elif defined(_WIN32) && (defined(__i386__) || defined(_M_IX86))
+    void *teb = (void *)__readfsdword(0x18);
+
+    instance->main_stack_max = *(void **)((uint8_t *)teb + 0x04); // StackBase
+    instance->main_stack_min = *(void **)((uint8_t *)teb + 0xE0C); // DeallocationStack
+#endif
+
+    err_guard.Disable();
+    return instance;
+}
+
 InstanceData::~InstanceData()
 {
     for (InstanceMemory *mem: memories) {
@@ -1968,38 +2000,6 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
         CallData call(env, instance, mem);
         call.RelaySafe(idx, own_sp, caller_sp, out_reg);
     }
-}
-
-static InstanceData *CreateInstance(Napi::Env env)
-{
-    InstanceData *instance = new InstanceData();
-    RG_DEFER_N(err_guard) { delete instance; };
-
-    instance->main_thread_id = std::this_thread::get_id();
-
-    if (napi_create_threadsafe_function(env, nullptr, nullptr,
-                                        Napi::String::New(env, "Koffi Async Callback Broker"),
-                                        0, 1, nullptr, nullptr, nullptr,
-                                        CallData::RelayAsync, &instance->broker) != napi_ok) {
-        LogError("Failed to create async callback broker");
-        return nullptr;
-    }
-    napi_unref_threadsafe_function(env, instance->broker);
-
-#if defined(_WIN32) && (defined(__x86_64__) || defined(_M_AMD64))
-    void *teb = (void *)__readgsqword(0x30);
-
-    instance->main_stack_max = *(void **)((uint8_t *)teb + 0x08); // StackBase
-    instance->main_stack_min = *(void **)((uint8_t *)teb + 0x1478); // DeallocationStack
-#elif defined(_WIN32) && (defined(__i386__) || defined(_M_IX86))
-    void *teb = (void *)__readfsdword(0x18);
-
-    instance->main_stack_max = *(void **)((uint8_t *)teb + 0x04); // StackBase
-    instance->main_stack_min = *(void **)((uint8_t *)teb + 0xE0C); // DeallocationStack
-#endif
-
-    err_guard.Disable();
-    return instance;
 }
 
 template <typename Func>
