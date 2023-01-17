@@ -33,11 +33,11 @@ public ForwardCallXD
 prologue macro
     endbr64
     mov rax, rcx
-    push rbx
-    .pushreg rbx
-    mov rbx, rsp
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
     mov qword ptr [r8+0], rsp
-    .setframe rbx, 0
+    .setframe rbp, 0
     .endprolog
     mov rsp, rdx
 endm
@@ -47,8 +47,8 @@ endm
 ; The return value is passed untouched through RAX or XMM0.
 epilogue macro
     call rax
-    mov rsp, rbx
-    pop rbx
+    mov rsp, rbp
+    pop rbp
     ret
 endm
 
@@ -169,10 +169,10 @@ endm
 ; The first three parameters (rcx, rdx, r8) are passed through untouched.
 CallSwitchStack proc frame
     endbr64
-    push rbx
-    .pushreg rbx
-    mov rbx, rsp
-    .setframe rbx, 0
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
+    .setframe rbp, 0
     .endprolog
     mov rax, qword ptr [rsp+56]
     mov r10, rsp
@@ -182,8 +182,8 @@ CallSwitchStack proc frame
     mov qword ptr [r11+8], r10
     lea rsp, [r9-32]
     call rax
-    mov rsp, rbx
-    pop rbx
+    mov rsp, rbp
+    pop rbp
     ret
 CallSwitchStack endp
 

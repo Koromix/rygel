@@ -27,10 +27,10 @@
     .cfi_startproc
     .cfi_def_cfa esp, 4
     ENDBR32
-    push %ebx
+    push %ebp
     .cfi_def_cfa esp, 8
-    movl %esp, %ebx
-    .cfi_def_cfa ebx, 8
+    movl %esp, %ebp
+    .cfi_def_cfa ebp, 8
     movl 16(%esp), %eax
     movl %esp, 0(%eax)
     movl 8(%esp), %eax
@@ -48,8 +48,8 @@
 # The return value is passed back untouched.
 .macro epilogue
     call *%eax
-    movl %ebx, %esp
-    pop %ebx
+    movl %ebp, %esp
+    pop %ebp
     .cfi_def_cfa esp, 4
     ret
     .cfi_endproc
@@ -168,10 +168,10 @@ CallSwitchStack:
     .cfi_startproc
     .cfi_def_cfa esp, 4
     ENDBR32
-    push %ebx
+    push %ebp
     .cfi_def_cfa esp, 8
-    movl %esp, %ebx
-    .cfi_def_cfa ebx, 8
+    movl %esp, %ebp
+    .cfi_def_cfa ebp, 8
     movl 28(%esp), %edx
     movl 24(%esp), %ecx
     movl %esp, %eax
@@ -180,16 +180,16 @@ CallSwitchStack:
     movl %eax, 4(%ecx)
     movl 20(%esp), %esp
     subl $28, %esp
-    movl 8(%ebx), %eax
+    movl 8(%ebp), %eax
     movl %eax, 0(%esp)
-    movl 12(%ebx), %eax
+    movl 12(%ebp), %eax
     movl %eax, 4(%esp)
-    movl 16(%ebx), %eax
+    movl 16(%ebp), %eax
     movl %eax, 8(%esp)
     call *%edx
-    mov %ebx, %esp
+    mov %ebp, %esp
     .cfi_def_cfa esp, 8
-    pop %ebx
+    pop %ebp
     .cfi_def_cfa esp, 4
     ret
     .cfi_endproc

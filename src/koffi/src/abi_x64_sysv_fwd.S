@@ -45,11 +45,11 @@
     .cfi_def_cfa rsp, 8
     ENDBR64
     movq %rdi, %r11
-    pushq %rbx
+    pushq %rbp
     .cfi_def_cfa rsp, 16
     movq %rsp, (%rdx)
-    movq %rsp, %rbx
-    .cfi_def_cfa rbx, 16
+    movq %rsp, %rbp
+    .cfi_def_cfa rbp, 16
     leaq 112(%rsi), %rsp
 .endm
 
@@ -58,8 +58,8 @@
 # The return value is passed untouched through RAX or XMM0.
 .macro epilogue
     call *%r11
-    movq %rbx, %rsp
-    popq %rbx
+    movq %rbp, %rsp
+    popq %rbp
     .cfi_def_cfa rsp, 8
     ret
     .cfi_endproc
@@ -241,9 +241,9 @@ SYMBOL(CallSwitchStack):
     .cfi_startproc
     .cfi_def_cfa rsp, 8
     ENDBR64
-    push %rbx
+    push %rbp
     .cfi_def_cfa rsp, 16
-    movq %rsp, %rbx
+    movq %rsp, %rbp
     movq %rsp, %r10
     subq 0(%r8), %r10
     andq $-16, %r10
@@ -251,9 +251,9 @@ SYMBOL(CallSwitchStack):
     movq %rcx, %rsp
     .cfi_def_cfa rsp, 16
     call *%r9
-    mov %rbx, %rsp
+    mov %rbp, %rsp
     .cfi_def_cfa rsp, 16
-    pop %rbx
+    pop %rbp
     .cfi_def_cfa rsp, 8
     ret
     .cfi_endproc

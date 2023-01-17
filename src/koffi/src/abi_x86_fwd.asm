@@ -29,8 +29,8 @@ public ForwardCallRD
 ; Save ESP in EBX (non-volatile), and use carefully assembled stack provided by caller.
 prologue macro
     endbr32
-    push ebx
-    mov ebx, esp
+    push ebp
+    mov ebp, esp
     mov eax, dword ptr [esp+16]
     mov dword ptr [eax+0], esp
     mov eax, dword ptr [esp+8]
@@ -48,8 +48,8 @@ endm
 ; The return value is passed back untouched.
 epilogue macro
     call eax
-    mov esp, ebx
-    pop ebx
+    mov esp, ebp
+    pop ebp
     ret
 endm
 
@@ -153,8 +153,8 @@ endm
 ; stack pointer, call Node.js/V8 and go back to ours.
 CallSwitchStack proc
     endbr32
-    push ebx
-    mov ebx, esp
+    push ebp
+    mov ebp, esp
     mov edx, dword ptr [esp+28]
     mov ecx, dword ptr [esp+24]
     mov eax, esp
@@ -163,15 +163,15 @@ CallSwitchStack proc
     mov dword ptr [ecx+4], eax
     mov esp, dword ptr [esp+20]
     sub esp, 28
-    mov eax, dword ptr [ebx+8]
+    mov eax, dword ptr [ebp+8]
     mov dword ptr [esp+0], eax
-    mov eax, dword ptr [ebx+12]
+    mov eax, dword ptr [ebp+12]
     mov dword ptr [esp+4], eax
-    mov eax, dword ptr [ebx+16]
+    mov eax, dword ptr [ebp+16]
     mov dword ptr [esp+8], eax
     call edx
-    mov esp, ebx
-    pop ebx
+    mov esp, ebp
+    pop ebp
     ret
 CallSwitchStack endp
 
