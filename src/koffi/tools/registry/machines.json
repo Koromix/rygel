@@ -230,7 +230,11 @@
                     "Test Async": "C:\\Node32\\node32.cmd node test/async.js",
                     "Test Callbacks": "C:\\Node32\\node32.cmd node test/callbacks.js",
                     "Test Raylib": "seatsh C:\\Node32\\node32.cmd node test/raylib.js",
-                    "Test SQLite": "C:\\Node32\\node32.cmd node test/sqlite.js"
+                    "Test SQLite": "C:\\Node32\\node32.cmd node test/sqlite.js",
+                    "Test Win32": {
+                        "command": "C:\\Node32\\node32.cmd node test/win32.js",
+                        "repeat": 8
+                    }
                 }
             },
 
@@ -244,7 +248,11 @@
                     "Test Async": "C:\\Node64\\node64.cmd node test/async.js",
                     "Test Callbacks": "C:\\Node64\\node64.cmd node test/callbacks.js",
                     "Test Raylib": "seatsh C:\\Node64\\node64.cmd node test/raylib.js",
-                    "Test SQLite": "C:\\Node64\\node64.cmd node test/sqlite.js"
+                    "Test SQLite": "C:\\Node64\\node64.cmd node test/sqlite.js",
+                    "Test Win32": {
+                        "command": "C:\\Node64\\node64.cmd node test/win32.js",
+                        "repeat": 8
+                    }
                 }
             }
         }

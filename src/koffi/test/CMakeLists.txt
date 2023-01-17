@@ -116,3 +116,10 @@ if(MSVC)
     target_compile_options(misc PRIVATE /wd4116)
     target_link_options(misc PRIVATE "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/misc.def")
 endif()
+
+# ---- Win32 ----
+
+if(WIN32)
+    add_library(win32 SHARED win32.c)
+    set_target_properties(win32 PROPERTIES PREFIX "")
+endif()

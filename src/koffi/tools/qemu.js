@@ -605,7 +605,7 @@ async function test() {
                 let ret = await exec_remote(machine, cmd, cwd);
                 let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
-                if (ret.code == 0) {
+                if (ret.code === 0) {
                     log(machine, `${suite} > ${name}`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
                 } else {
                     log(machine, `${suite} > ${name}`, chalk.bold.red('[error]'));
@@ -914,19 +914,32 @@ function log(machine, action, status) {
 }
 
 async function exec_remote(machine, cmd, cwd = null) {
+    if (typeof cmd == 'string') {
+        cmd = {
+            command: cmd,
+            repeat: 1
+        };
+    }
+
     try {
+        let ret = { code: 0 };
+
         if (machine.platform == 'win32') {
+            let cmd_line = cmd.command;
+
             if (cwd != null) {
                 cwd = cwd.replaceAll('/', '\\');
-                cmd = `cd "${cwd}" && ${cmd}`;
+                cmd_line = `cd "${cwd}" && ${cmd_line}`;
             }
 
-            let ret = await machine.ssh.execCommand(cmd);
-            return ret;
+            for (let i = 0; ret.code === 0 && i < cmd.repeat; i++)
+                ret = await machine.ssh.execCommand(cmd_line);
         } else {
-            let ret = await machine.ssh.execCommand(cmd, { cwd: cwd });
-            return ret;
+            for (let i = 0; ret.code === 0 && i < cmd.repeat; i++)
+                ret = await machine.ssh.execCommand(cmd.command, { cwd: cwd });
         }
+
+        return ret;
     } catch (err) {
         console.log(err);
         return err;
