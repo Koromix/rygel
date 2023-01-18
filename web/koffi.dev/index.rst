@@ -25,9 +25,11 @@ Table of contents
    platforms
    start
    types
+   pointers
    functions
+   calls
    callbacks
-   memory
+   misc
    benchmarks
    contribute
    changes

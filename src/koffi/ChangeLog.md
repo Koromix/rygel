@@ -37,7 +37,7 @@
 **New features:**
 
 - Add [koffi.decode()](callbacks.md#pointer-arguments) for callback pointer arguments
-- Support transparent [output string parameters](functions.md#output-parameters)
+- Support transparent [output string parameters](calls.md#output-parameters)
 - Add `koffi.offsetof()` utility function
 - Support optional *this* binding in `koffi.register()`
 
@@ -85,7 +85,7 @@
 
 **Main changes:**
 
-- Add [koffi.as()](functions.md#polymorphic-parameters) to support polymorphic APIs based on `void *` parameters
+- Add [koffi.as()](calls.md#polymorphic-parameters) to support polymorphic APIs based on `void *` parameters
 - Add [endian-sensitive integer types](types.md#endian-sensitive-types): `intX_le_t`, `intX_be_t`, `uintX_le_t`, `uintX_be_t`
 - Accept typed arrays for `void *` parameters
 - Introduce `koffi.opaque()` to replace `koffi.handle()` (which remains supported until Koffi 3.0)
@@ -109,7 +109,7 @@
 
 **Major new features:**
 
-- Add [disposable types](functions.md#heap-allocated-values) for automatic disposal of C values (such as heap-allocated strings)
+- Add [disposable types](calls.md#heap-allocated-values) for automatic disposal of C values (such as heap-allocated strings)
 - Add support for [registered callbacks](callbacks.md#registered-callbacks), that can be called after the initial FFI call
 - Support named pointer types
 - Support complex type specifications outside of prototype parser
