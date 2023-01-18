@@ -294,8 +294,8 @@ bool DomainHolder::Open(const char *filename)
         return false;
     if (!db.SetSynchronousFull(config.sync_full))
         return false;
-    if (!db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
-        return false;
+    // if (!db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
+    //     return false;
 
     // Make sure tmp and instances live on the same volume, because we need to
     // perform atomic renames in some cases.
@@ -614,10 +614,10 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                 complete = false;
                 continue;
             }
-            if (!db->SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay)) {
-                complete = false;
-                continue;
-            }
+            // if (!db->SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay)) {
+            //     complete = false;
+            //     continue;
+            // }
 
             LogDebug("Open instance '%1' @%2", start.instance_key, unique);
 
