@@ -232,10 +232,6 @@ struct InstanceMemory {
 
     int16_t depth;
     bool temporary;
-
-#ifdef _WIN32
-    void *fiber;
-#endif
 };
 
 struct InstanceData {
