@@ -17,6 +17,9 @@
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"
+#ifdef _WIN32
+    #include "win32.hh"
+#endif
 
 #include <napi.h>
 
@@ -494,6 +497,24 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 void CallData::Execute(const FunctionInfo *func)
 {
+#ifdef _WIN32
+    TEB *teb = GetTEB();
+
+    // Restore previous stack limits at the end
+    RG_DEFER_C(base = teb->StackBase,
+               limit = teb->StackLimit,
+               dealloc = teb->DeallocationStack) {
+        teb->StackBase = base;
+        teb->StackLimit = limit;
+        teb->DeallocationStack = dealloc;
+    };
+
+    // Adjust stack limits so SEH works correctly
+    teb->StackBase = mem->stack0.end();
+    teb->StackLimit = mem->stack0.ptr;
+    teb->DeallocationStack = mem->stack0.ptr;
+#endif
+
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
             auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, new_sp, &old_sp) \
@@ -610,6 +631,24 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
 {
     if (RG_UNLIKELY(env.IsExceptionPending()))
         return;
+
+#ifdef _WIN32
+    TEB *teb = GetTEB();
+
+    // Restore previous stack limits at the end
+    RG_DEFER_C(base = teb->StackBase,
+               limit = teb->StackLimit,
+               dealloc = teb->DeallocationStack) {
+        teb->StackBase = base;
+        teb->StackLimit = limit;
+        teb->DeallocationStack = dealloc;
+    };
+
+    // Adjust stack limits so SEH works correctly
+    teb->StackBase = instance->main_stack_max;
+    teb->StackLimit = instance->main_stack_min;
+    teb->DeallocationStack = instance->main_stack_min;
+#endif
 
     const TrampolineInfo &trampoline = shared.trampolines[idx];
 
