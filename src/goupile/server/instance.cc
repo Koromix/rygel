@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 59;
+const int InstanceVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -198,13 +198,16 @@ bool MigrateInstance(sq_Database *db)
     }
 
     // Work around version mismatch caused by goupile2 branch
-    if (version == 57) {
+    if (version >= 57 && version < 60) {
         sq_Statement stmt;
         if (!db->Prepare("SELECT rowid FROM sqlite_master WHERE name = 'rec_fragments' AND sql LIKE '%tags TEXT%'", &stmt))
             return false;
-        if (!stmt.Step() && !stmt.IsValid())
+
+        if (stmt.Step()) {
+            version = 56;
+        } else if (!stmt.IsValid()) {
             return false;
-        version -= stmt.IsRow();
+        }
     }
 
     LogInfo("Migrate instance database '%1': %2 to %3",
@@ -1821,9 +1824,20 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 59: {
+                bool success = db->RunMany(R"(
+                    DELETE FROM seq_counters WHERE type = 'record';
+
+                    INSERT INTO seq_counters (type, key, counter)
+                        SELECT 'record', form, MAX(sequence) AS sequence FROM rec_entries GROUP BY 2;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 59);
+            RG_STATIC_ASSERT(InstanceVersion == 60);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
