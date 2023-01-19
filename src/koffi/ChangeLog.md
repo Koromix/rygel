@@ -2,6 +2,16 @@
 
 ## History
 
+### Koffi 2.2.4
+
+**Main fixes:**
+
+- Fix memory leak on Windows (in Koffi 2.2.3) when running many async calls
+
+**Other changes:**
+
+- Reorganize documentation pages
+
 ### Koffi 2.2.3
 
 **Main fixes:**
