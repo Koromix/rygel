@@ -299,6 +299,79 @@ bool json_Parser::SkipNull()
     }
 }
 
+class CopyHandler {
+    json_Writer json;
+    int depth = 0;
+
+public:
+    CopyHandler(StreamWriter *writer) : json(writer) {}
+
+    int GetDepth() const { return depth; }
+
+    bool StartObject() { json.StartObject(); depth++; return json.IsValid(); }
+    bool EndObject(Size) { json.EndObject(); depth--; return json.IsValid(); }
+    bool StartArray() { json.StartArray(); depth++; return json.IsValid(); }
+    bool EndArray(Size) { json.EndArray(); depth--; return json.IsValid(); }
+
+    bool Null() { json.Null(); return json.IsValid(); }
+    bool Bool(bool b) { json.Bool(b); return json.IsValid(); }
+    bool RawNumber(const char *str, Size len, bool) { json.RawNumber(str, len); return json.IsValid(); }
+    bool String(const char *str, Size len, bool) { json.String(str, len); return json.IsValid(); }
+
+    bool Key(const char *key, Size len, bool) { json.Key(key, len); return json.IsValid(); }
+
+    bool Double(double) { RG_UNREACHABLE(); }
+    bool Int(int) { RG_UNREACHABLE(); }
+    bool Int64(int64_t) { RG_UNREACHABLE(); }
+    bool Uint(unsigned int) { RG_UNREACHABLE(); }
+    bool Uint64(uint64_t) { RG_UNREACHABLE(); }
+};
+
+bool json_Parser::PassThrough(StreamWriter *writer)
+{
+    if (RG_UNLIKELY(error))
+        return false;
+
+    RG_ASSERT(handler.token == json_TokenType::Invalid);
+    RG_ASSERT(!eof);
+
+    CopyHandler copier(writer);
+    bool empty = true;
+
+    if (reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, copier)) {
+        empty = false;
+        while (copier.GetDepth() && reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, copier));
+    }
+
+    if (reader.HasParseError()) {
+        rapidjson::ParseErrorCode err = reader.GetParseErrorCode();
+        LogError("%1", GetParseError_En(err));
+
+        error = true;
+    } else if (reader.IterativeParseComplete()) {
+        eof = true;
+
+        if (empty || copier.GetDepth()) {
+            LogError("Unexpected end of JSON file");
+            error = true;
+        }
+    }
+
+    return !error;
+}
+
+bool json_Parser::PassThrough(Span<char> *out_buf)
+{
+    HeapArray<uint8_t> buf(handler.allocator);
+    StreamWriter st(&buf);
+
+    if (!PassThrough(&st))
+        return false;
+
+    *out_buf = buf.Leak().As<char>();
+    return true;
+}
+
 void json_Parser::PushLogFilter()
 {
     RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {

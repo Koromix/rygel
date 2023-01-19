@@ -159,6 +159,9 @@ public:
 
     bool Skip();
     bool SkipNull();
+    bool PassThrough(StreamWriter *writer);
+    bool PassThrough(Span<char> *out_buf);
+    bool PassThrough(Span<const char> *out_buf) { return PassThrough((Span<char> *)out_buf); }
 
     void PushLogFilter();
 
@@ -180,6 +183,8 @@ public:
 
     json_StreamWriter(StreamWriter *st) : st(st) {}
 
+    bool IsValid() const { return st->IsValid(); }
+
     void Put(char c);
     void Put(Span<const char> str);
     void Flush();
@@ -192,6 +197,8 @@ class json_Writer: public rapidjson::Writer<json_StreamWriter> {
 
 public:
     json_Writer(StreamWriter *st) : rapidjson::Writer<json_StreamWriter>(writer), writer(st) {}
+
+    bool IsValid() const { return writer.IsValid(); }
 
     // Hacky helpers to write long strings: call StartString() and write directly to
     // the stream. Call EndString() when done. Make sure you escape properly!
