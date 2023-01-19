@@ -38,7 +38,7 @@
         "esm": "^3.2.25"
     },
     "devDependencies": {
-        "electron": "^22.0.1",
-        "electron-builder": "^23.6.0"
+        "electron": "^21.3.5",
+        "electron-builder": "^22.14.13"
     }
 }
