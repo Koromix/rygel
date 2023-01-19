@@ -1,4 +1,4 @@
-{{ "```{include} " ~ root ~ "/ChangeLog.md" ~ "\n```" }}
+{{ "```{include} " ~ root ~ "/CHANGELOG.md" ~ "\n```" }}
 
 ## Migration guide
 
