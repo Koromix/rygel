@@ -22,7 +22,9 @@ if (app.requestSingleInstanceLock()) {
 
         customizeMenu(win);
 
-        win.loadURL(settings.homepage);
+        // For some reason, with some Electron versions/in some cases, loadURL() fails to load a cached
+        // offline page. But it works if we use loadFile() and then use JS to redirect to the correct page.
+        win.loadFile('index.html', { query: { "url": settings.homepage } });
     });
 
     app.on('second-instance', (e, cmdline, cwd) => {

@@ -3,9 +3,9 @@
     "homepage": "XXXXX",
     "version": "XXXXX",
     "description": "",
-    "main": "index.js",
+    "main": "main.js",
     "scripts": {
-        "start": "electron index.js",
+        "start": "electron main.js",
         "pack": "electron-builder --dir --ia32 --win",
         "dist": "electron-builder --ia32 --win"
     },
