@@ -840,6 +840,7 @@ const mco_info = new function() {
                         intersect: false,
                         mode: 'index',
                     },
+                    animations: false,
                     plugins: {
                         legend: {
                             reverse: true,
