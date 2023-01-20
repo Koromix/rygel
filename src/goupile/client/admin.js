@@ -546,6 +546,11 @@ function AdminController() {
                         if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
                             d.error('token_key', 'Format de clé non valide');
                         d.text('auto_key', 'Session de requête', { value: instance.config.auto_key });
+
+                        d.number('fs_version', 'Version FS', {
+                            suffix: 'Actuelle : ' + instance.config.fs_version,
+                            help: 'Attention, ceci remet les développements à zéro'
+                        });
                     });
                 });
 
@@ -560,7 +565,8 @@ function AdminController() {
                             backup_key: d.values.backup_key,
                             token_key: d.values.token_key,
                             auto_key: d.values.auto_key,
-                            allow_guests: d.values.allow_guests
+                            allow_guests: d.values.allow_guests,
+                            fs_version: d.values.fs_version
                         })
                     });
 
