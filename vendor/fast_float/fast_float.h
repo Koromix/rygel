@@ -203,12 +203,11 @@ from_chars_result from_chars_advanced(const char *first, const char *last,
 #endif
 
 #ifndef FASTFLOAT_ASSERT
-#define FASTFLOAT_ASSERT(x)  { if (!(x)) abort(); }
+#define FASTFLOAT_ASSERT(x)  { ((void)(x)); }
 #endif
 
 #ifndef FASTFLOAT_DEBUG_ASSERT
-#include <cassert>
-#define FASTFLOAT_DEBUG_ASSERT(x) assert(x)
+#define FASTFLOAT_DEBUG_ASSERT(x) { ((void)(x)); }
 #endif
 
 // rust style `try!()` macro, or `?` operator
@@ -575,6 +574,23 @@ fastfloat_really_inline void to_float(bool negative, adjusted_mantissa am, T &va
 #endif
 }
 
+#if FASTFLOAT_SKIP_WHITE_SPACE // disabled by default
+inline bool is_space(uint8_t c) {
+   static const bool table[] = {
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+   return table[c];
+ }
+#endif
 } // namespace fast_float
 
 #endif
@@ -673,7 +689,11 @@ parsed_number_string parse_number_string(const char *p, const char *pend, parse_
   answer.valid = false;
   answer.too_many_digits = false;
   answer.negative = (*p == '-');
+#if FASTFLOAT_ALLOWS_LEADING_PLUS // disabled by default
+  if ((*p == '-') || (*p == '+')) {
+#else
   if (*p == '-') { // C++17 20.19.3.(7.1) explicitly forbids '+' sign here
+#endif
     ++p;
     if (p == pend) {
       return answer;
@@ -2383,7 +2403,11 @@ parsed_number_string parse_number_string(const char *p, const char *pend, parse_
   answer.valid = false;
   answer.too_many_digits = false;
   answer.negative = (*p == '-');
+#if FASTFLOAT_ALLOWS_LEADING_PLUS // disabled by default
+  if ((*p == '-') || (*p == '+')) {
+#else
   if (*p == '-') { // C++17 20.19.3.(7.1) explicitly forbids '+' sign here
+#endif
     ++p;
     if (p == pend) {
       return answer;
@@ -3056,6 +3080,11 @@ from_chars_result from_chars_advanced(const char *first, const char *last,
 
 
   from_chars_result answer;
+#if FASTFLOAT_SKIP_WHITE_SPACE  // disabled by default
+  while ((first != last) && fast_float::is_space(uint8_t(*first))) {
+    first++;
+  }
+#endif
   if (first == last) {
     answer.ec = std::errc::invalid_argument;
     answer.ptr = first;
