@@ -1829,9 +1829,8 @@ bool MigrateInstance(sq_Database *db)
             case 59: {
                 bool success = db->RunMany(R"(
                     DELETE FROM seq_counters WHERE type = 'record';
-
                     INSERT INTO seq_counters (type, key, counter)
-                        SELECT 'record', form, MAX(sequence) AS sequence FROM rec_entries GROUP BY 2;
+                        SELECT 'record', store, MAX(sequence) AS sequence FROM rec_entries GROUP BY 2;
                 )");
                 if (!success)
                     return false;
