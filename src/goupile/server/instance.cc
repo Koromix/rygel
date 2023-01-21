@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 60;
+const int InstanceVersion = 61;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -1834,9 +1834,89 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 60: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_threads_t;
+                    DROP INDEX rec_entries_ts;
+                    DROP INDEX rec_entries_e;
+                    DROP INDEX rec_entries_cs;
+                    DROP INDEX rec_fragments_t;
+                    DROP INDEX rec_fragments_r;
+                    DROP INDEX ins_claims_ut;
+
+                    ALTER TABLE rec_threads RENAME TO rec_threads_BAK;
+                    ALTER TABLE rec_entries RENAME TO rec_entries_BAK;
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+                    ALTER TABLE ins_claims RENAME TO ins_claims_BAK;
+
+                    CREATE TABLE rec_threads (
+                        tid TEXT NOT NULL,
+                        stores TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX rec_threads_t ON rec_threads (tid);
+
+                    CREATE TABLE rec_entries (
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL,
+                        anchor INTEGER NOT NULL,
+                        ctime INTEGER NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        store TEXT NOT NULL,
+                        sequence INTEGER NOT NULL,
+                        deleted INTEGER CHECK(deleted IN (0, 1)) NOT NULL,
+                        data BLOB
+                    );
+                    CREATE UNIQUE INDEX rec_entries_ts ON rec_entries (tid, store);
+                    CREATE UNIQUE INDEX rec_entries_e ON rec_entries (eid);
+                    CREATE UNIQUE INDEX rec_entries_ss ON rec_entries (store, sequence);
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        previous INTEGER REFERENCES rec_fragments (anchor),
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        fs INTEGER NOT NULL REFERENCES fs_versions (version),
+                        data BLOB
+                    );
+                    CREATE INDEX rec_fragments_t ON rec_fragments (tid);
+                    CREATE INDEX rec_fragments_r ON rec_fragments (eid);
+
+                    CREATE TABLE ins_claims (
+                        userid INTEGER NOT NULL,
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid)
+                    );
+                    CREATE UNIQUE INDEX ins_claims_ut ON ins_claims (userid, tid);
+
+                    INSERT INTO rec_threads (tid, stores)
+                        SELECT tid, '{}' FROM rec_threads_BAK;
+                    INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, sequence, deleted, data)
+                        SELECT e.tid, e.eid, e.anchor, e.ctime, e.mtime, e.store,
+                               e.sequence, IIF(f.data IS NULL, 1, 0), e.data FROM rec_entries_BAK e
+                        INNER JOIN rec_fragments_BAK f ON (f.anchor = e.anchor);
+                    INSERT INTO rec_fragments
+                        SELECT * FROM rec_fragments_BAK;
+                    INSERT INTO ins_claims
+                        SELECT * FROM ins_claims_BAK;
+
+                    DROP TABLE ins_claims_BAK;
+                    DROP TABLE rec_fragments_BAK;
+                    DROP TABLE rec_entries_BAK;
+                    DROP TABLE rec_threads_BAK;
+
+                    DELETE FROM seq_counters WHERE type = 'record';
+                    INSERT INTO seq_counters (type, key, counter)
+                        SELECT 'record', store, MAX(sequence) AS sequence FROM rec_entries GROUP BY 2;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 60);
+            RG_STATIC_ASSERT(InstanceVersion == 61);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
