@@ -176,7 +176,7 @@ function AdminController() {
                                     <td><a role="button" tabindex="0"
                                            @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
                                     ${selected_instance != null ? html`
-                                        <td class=${!permissions.length ? 'missing' : ''}
+                                        <td class=${!permissions.length ? 'ui_sub' : ''}
                                             style="white-space: normal;">
                                             ${selected_instance.master == null ? makePermissionsTag(permissions, 'build_', '#b518bf') : ''}
                                             ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}

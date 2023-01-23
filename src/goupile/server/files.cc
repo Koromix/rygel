@@ -638,6 +638,134 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     });
 }
 
+void HandleFileHistory(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
+        LogError("User is not allowed to consult file history");
+        io->AttachError(403);
+        return;
+    }
+
+    const char *filename = request.GetQueryValue("filename");
+    if (!filename) {
+        LogError("Missing 'filename' parameter");
+        io->AttachError(422);
+        return;
+    }
+
+    sq_Statement stmt;
+    if (!instance->db->Prepare(R"(SELECT v.version, v.mtime, i.sha256 FROM fs_index i
+                                  INNER JOIN fs_versions v ON (v.version = i.version)
+                                  WHERE i.filename = ?1 ORDER BY i.version)", &stmt))
+        return;
+    sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
+
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            LogError("File '%1' does not exist", filename);
+            io->AttachError(404);
+        }
+        return;
+    }
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartArray();
+    do {
+        json.StartObject();
+        json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 0));
+        json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 1));
+        json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt, 2));
+        json.EndObject();
+    } while (stmt.Step());
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish();
+}
+
+void HandleFileRestore(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::BuildCode)) {
+        LogError("User is not allowed to restore file");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        const char *filename = nullptr;
+        const char *sha256 = nullptr;
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Megabytes(1), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "filename") {
+                    parser.ParseString(&filename);
+                } else if (key == "sha256") {
+                    parser.ParseString(&sha256);
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Check missing or invalid values
+        {
+            bool valid = true;
+
+            if (!filename || !filename[0]) {
+                LogError("Missing or empty 'filename' value");
+                valid = false;
+            }
+            if (!sha256 || !sha256[0]) {
+                LogError("Missing or empty 'sha256' value");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        if (!instance->db->Run("UPDATE fs_index SET sha256 = ?2 WHERE filename = ?1 AND version = 0",
+                               filename, sha256))
+            return;
+
+        io->AttachText(200, "Done!");
+    });
+}
+
 void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);

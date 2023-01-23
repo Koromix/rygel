@@ -24,6 +24,8 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleFileHistory(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleFileRestore(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 

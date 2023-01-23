@@ -670,6 +670,10 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleFilePut(instance, request, io);
     } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Delete) {
         HandleFileDelete(instance, request, io);
+    } else if (StartsWith(instance_url, "/api/files/history") && request.method == http_RequestMethod::Get) {
+        HandleFileHistory(instance, request, io);
+    } else if (StartsWith(instance_url, "/api/files/restore") && request.method == http_RequestMethod::Post) {
+        HandleFileRestore(instance, request, io);
     } else if (StartsWith(instance_url, "/api/files/delta") && request.method == http_RequestMethod::Get) {
         HandleFileDelta(instance, request, io);
     } else if (StartsWith(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {

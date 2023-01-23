@@ -382,8 +382,9 @@ function InstanceController() {
                                                            @click=${ui.wrapAction(e => toggleEditorFile(e, tab.filename))}>${tab.title}</button>`)}
                         </div>
                     </div>
+                    <div style="flex: 1;"></div>
+                    <button @click=${ui.wrapAction(e => runHistoryDialog(e, editor_filename))}>Historique</button>
                     ${editor_filename === 'main.js' ? html`
-                        <div style="flex: 1;"></div>
                         <button ?disabled=${!fileHasChanged('main.js')}
                                 @click=${ui.wrapAction(applyMainScript)}>Appliquer</button>
                     ` : ''}
@@ -416,6 +417,91 @@ function InstanceController() {
             tab.active = (editor_filename == tab.filename);
 
         return tabs;
+    }
+
+    async function runHistoryDialog(e, filename) {
+        await uploadFsChanges();
+        await fetchCode(filename);
+
+        let url = util.pasteURL(`${ENV.urls.base}api/files/history`, { filename: filename });
+        let versions = await net.fetchJson(url);
+
+        let buffer = code_buffers.get(filename);
+        let copy = Object.assign({}, code_buffers.get(filename));
+
+        // Don't trash the undo/redo buffer
+        buffer.session = null;
+
+        let p = ui.runDialog(e, 'Historique du fichier', {}, (d, resolve, reject) => {
+            d.output(html`
+                <table class="ui_table">
+                    <colgroup>
+                        <col/>
+                        <col/>
+                        <col/>
+                    </colgroup>
+
+                    <tbody>
+                        <tr class=${buffer.version == 0 ? 'active' : ''}>
+                            <td class="ui_sub">(dev)</td>
+                            <td>En développement</td>
+                            <td><a @click=${ui.wrapAction(e => loadFile(filename, 0))}>Charger</a></td>
+                        </tr>
+
+                        ${util.mapRange(0, versions.length - 1, idx => {
+                            let version = versions[versions.length - idx - 1];
+
+                            return html`
+                                <tr class=${buffer.version == version.version ? 'active' : ''}>
+                                    <td class="ui_sub">${version.version}</td>
+                                    <td>${(new Date(version.mtime)).toLocaleString()}</td>
+                                    <td><a @click=${ui.wrapAction(e => loadFile(filename, version.version))}>Charger</a></td>
+                                </tr>
+                            `;
+                        })}
+                    </tbody>
+                </table>
+            `);
+
+            d.action('Restaurer', { disabled: !d.isValid() }, async () => {
+                await restoreFile(filename, buffer.sha256);
+                resolve();
+            });
+        });
+        p.catch(err => {
+            code_buffers.set(filename, copy);
+            self.go();
+
+            throw err;
+        });
+
+        return p;
+    }
+
+    async function loadFile(filename, version) {
+        await fetchCode(filename, version);
+        return self.go();
+    }
+
+    async function restoreFile(filename, sha256) {
+        let response = await net.fetch(`${ENV.urls.base}api/files/restore`, {
+            method: 'POST',
+            body: JSON.stringify({
+                filename: filename,
+                sha256: sha256
+            })
+        });
+        if (!response.ok && response.status !== 409) {
+            let err = await net.readError(response);
+            throw new Error(err)
+        }
+
+        let key = `${profile.userid}:${filename}`;
+        await db.delete('fs_changes', key);
+
+        code_buffers.delete(filename);
+
+        return self.go();
     }
 
     async function applyMainScript() {
@@ -1084,10 +1170,10 @@ function InstanceController() {
             syncFormHighlight(false);
     }
 
-    async function fetchCode(filename) {
+    async function fetchCode(filename, version = null) {
         let code = null;
 
-        if (profile.develop) {
+        if (profile.develop && version == null) {
             // Anything in cache or in the editor?
             {
                 let buffer = code_buffers.get(filename);
@@ -1113,7 +1199,8 @@ function InstanceController() {
 
         // The server is our last hope
         if (code == null) {
-            let response = await net.fetch(`${ENV.urls.files}${filename}`);
+            let url = (version != null) ? `${ENV.urls.base}files/${version}/${filename}` : `${ENV.urls.files}${filename}`;
+            let response = await net.fetch(url);
 
             if (response.ok) {
                 code = await response.text();
@@ -1133,7 +1220,8 @@ function InstanceController() {
                     code: code,
                     sha256: sha256,
                     orig_sha256: sha256,
-                    session: null
+                    session: null,
+                    version: version || 0
                 };
                 code_buffers.set(filename, buffer);
             } else {
@@ -1147,6 +1235,7 @@ function InstanceController() {
 
                 buffer.code = code;
                 buffer.sha256 = sha256;
+                buffer.version = version || 0;
             }
         }
 
