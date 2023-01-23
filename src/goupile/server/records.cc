@@ -166,7 +166,11 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
 
                 json.Key(store); json.StartObject();
                     json.Key("eid"); json.String((const char *)sqlite3_column_text(stmt, 3));
-                    json.Key("deleted"); json.Bool(sqlite3_column_int(stmt, 4));
+                    if (stamp->HasPermission(UserPermission::DataAudit)) {
+                        json.Key("deleted"); json.Bool(sqlite3_column_int(stmt, 4));
+                    } else {
+                        RG_ASSERT(!sqlite3_column_int(stmt, 4));
+                    }
                     json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
                     json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
                     json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
@@ -272,7 +276,11 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             json.Key(store); json.StartObject();
 
             json.Key("eid"); json.String((const char *)sqlite3_column_text(stmt, 3));
-            json.Key("deleted"); json.Bool(sqlite3_column_int(stmt, 4));
+            if (stamp->HasPermission(UserPermission::DataAudit)) {
+                json.Key("deleted"); json.Bool(sqlite3_column_int(stmt, 4));
+            } else {
+                RG_ASSERT(!sqlite3_column_int(stmt, 4));
+            }
             json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
             json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
             json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
