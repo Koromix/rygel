@@ -388,10 +388,9 @@ const util = new function() {
             // to provide options, or this needs to be moved to Goupile.
 
             for (let str of lines) {
-                let m = str.match(/ > Function:([0-9]+):[0-9]+/) ||
-                        str.match(/, <anonymous>:([0-9]+):[0-9]+/);
+                let m = null;
 
-                if (m = str.match(/ > Function:([0-9]+):[0-9]+/) ||
+                if (m = str.match(/ > (?:Async)?Function:([0-9]+):[0-9]+/) ||
                         str.match(/, <anonymous>:([0-9]+):[0-9]+/)) {
                     // Can someone explain to me why do I have to offset by -2?
                     line_no = parseInt(m[1], 10) - 2;

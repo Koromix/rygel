@@ -70,7 +70,7 @@ const ui = new function() {
         document.documentElement.classList.toggle('mobile', mobile);
     }
 
-    this.render = function() {
+    this.render = async function() {
         let render_main = true;
 
         // Run dialog functions
@@ -96,8 +96,8 @@ const ui = new function() {
             render(html`
                 ${menu_render != null ? menu_render() : ''}
                 <main id="ui_panels">
-                    ${primary_panel != null ? primary_panel.render() : ''}
-                    ${dual_panel != null ? dual_panel.render() : ''}
+                    ${primary_panel != null ? await primary_panel.render() : ''}
+                    ${dual_panel != null ? await dual_panel.render() : ''}
                 </main>
             `, document.querySelector('#ui_main'));
 
@@ -425,7 +425,7 @@ const ui = new function() {
         document.body.classList.toggle('gp_loading', empty);
     }
 
-    this.runConfirm = function(e, msg, action, func) {
+    this.runConfirm = function(e, msg, action, func = null) {
         let title = action + ' (confirmation)';
 
         return self.runDialog(e, title, {}, (d, resolve, reject) => {
@@ -433,7 +433,8 @@ const ui = new function() {
 
             d.action(action, { disabled: !d.isValid() }, async e => {
                 try {
-                    await func(e);
+                    if (func != null)
+                        await func(e);
                     resolve();
                 } catch (err) {
                     log.error(err);

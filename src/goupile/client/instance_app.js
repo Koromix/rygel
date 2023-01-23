@@ -42,25 +42,11 @@ function PageInfo(key, title, stack) {
     this.form = null;
     this.url = null;
 
-    this.getOption = function(key, record, default_value = undefined) {
+    this.getOption = function(key, default_value = undefined) {
         for (let i = stack.length - 1; i >= 0; i--) {
             let options = stack[i];
 
-            if (typeof options === 'function') {
-                if (record == null)
-                    continue;
-
-                options = options(record, self);
-            }
-
             let value = options[key];
-
-            if (typeof value === 'function') {
-                if (record == null)
-                    continue;
-
-                value = value(record, self);
-            }
 
             if (value != null)
                 return value;
@@ -162,7 +148,7 @@ function ApplicationBuilder(app) {
 
     function showMenuRec(form) {
         for (let page of form.pages.values()) {
-            if (page.getOption('menu', null, true))
+            if (page.getOption('menu', true))
                 return true;
         }
 
@@ -206,7 +192,7 @@ function ApplicationBuilder(app) {
         }
         page.url = `${ENV.urls.instance}main/${key}`;
 
-        if (page.getOption('menu', null, true)) {
+        if (page.getOption('menu', true)) {
             let item = {
                 key: key,
                 title: title,

@@ -26,17 +26,11 @@ function InstanceController() {
         ulid: null,
         version: null
     };
-    let nav_sequence = null;
 
     let head_length = Number.MAX_SAFE_INTEGER;
     let page_div = document.createElement('div');
 
-    let form_record;
     let form_state;
-    let form_builder;
-    let form_values;
-    let form_dictionaries = {};
-    let new_hid;
 
     let editor_el;
     let editor_ace;
@@ -49,12 +43,6 @@ function InstanceController() {
     let ignore_editor_change = false;
     let ignore_editor_scroll = 0;
     let ignore_page_scroll = 0;
-    let autosave_timer;
-
-    let data_form;
-    let data_rows;
-    let data_filter;
-    let data_date;
 
     let prev_anchor;
 
@@ -73,43 +61,11 @@ function InstanceController() {
     };
 
     async function openInstanceDB() {
-        let db_name = `goupile:${ENV.urls.instance}`;
-        db = await indexeddb.open(db_name, 10, (db, old_version) => {
+        let db_name = `goupile/instances${ENV.urls.instance}`;
+
+        db = await indexeddb.open(db_name, 1, (db, old_version) => {
             switch (old_version) {
                 case null: {
-                    db.createStore('usr_profiles');
-                } // fallthrough
-                case 1: {
-                    db.createStore('fs_files');
-                } // fallthrough
-                case 2: {
-                    db.createStore('rec_records');
-                } // fallthrough
-                case 3: {
-                    db.createIndex('rec_records', 'form', 'fkey', { unique: false });
-                } // fallthrough
-                case 4: {
-                    db.createIndex('rec_records', 'parent', 'pkey', { unique: false });
-                } // fallthrough
-                case 5: {
-                    db.deleteIndex('rec_records', 'parent');
-                    db.createIndex('rec_records', 'parent', 'pfkey', { unique: false });
-                } // fallthrough
-                case 6: {
-                    db.deleteIndex('rec_records', 'form');
-                    db.deleteIndex('rec_records', 'parent');
-                    db.createIndex('rec_records', 'form', 'keys.form', { unique: false });
-                    db.createIndex('rec_records', 'parent', 'keys.parent', { unique: false });
-                } // fallthrough
-                case 7: {
-                    db.createIndex('rec_records', 'anchor', 'keys.anchor', { unique: false });
-                    db.createIndex('rec_records', 'sync', 'keys.sync', { unique: false });
-                } // fallthrough
-                case 8: {
-                    db.deleteStore('usr_profiles');
-                } // fallthrough
-                case 9: {
-                    db.deleteStore('fs_files');
                     db.createStore('fs_changes');
                 } // fallthrough
             }
@@ -123,7 +79,7 @@ function InstanceController() {
             let new_app = new ApplicationInfo;
             let builder = new ApplicationBuilder(new_app);
 
-            await runCodeAsync('Application', code, {
+            await runUserCode('Application', code, {
                 app: builder
             });
             if (!new_app.pages.size)
@@ -162,13 +118,10 @@ function InstanceController() {
         ui.setMenu(renderMenu);
 
         ui.createPanel('editor', ['view'], 'view', renderEditor);
-        ui.createPanel('data', ['view'], null, renderData);
         ui.createPanel('view', [], null, renderPage);
 
         if (app.panels.editor) {
             ui.setPanelState('editor', true);
-        } else if (app.panels.data) {
-            ui.setPanelState('data', true);
         } else if (app.panels.view) {
             ui.setPanelState('view', true);
         }
@@ -177,26 +130,21 @@ function InstanceController() {
     this.hasUnsavedData = function() {
         if (form_state == null)
             return false;
-        if (!route.page.getOption('safety', form_record, true))
+        if (!route.page.getOption('safety', true))
             return false;
 
         return form_state.hasChanged();
     };
 
     this.runTasks = async function(online) {
-        if (online && ENV.sync_mode !== 'offline')
-            await mutex.chain(syncRecords);
+        // Nothing to do for now
     };
     this.runTasks = util.serialize(this.runTasks, mutex);
 
     function renderMenu() {
-        let history = (!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null);
         let menu = (profile.lock == null && (route.form.menu.length > 1 || route.form.chain.length > 1));
         let title = !menu;
         let wide = (route.form.chain[0].menu.length > 3);
-
-        if (!form_record.saved && !form_state.hasChanged() && !ui.isPanelActive('view'))
-            menu = false;
 
         let user_icon = goupile.isLoggedOnline() ? 450 : 494;
         let tabs = getEditorTabs();
@@ -227,39 +175,22 @@ function InstanceController() {
                         </div>
                     </div>
                 ` : ''}
-                ${app.panels.data ? html`
-                    <button class=${'icon' + (ui.isPanelActive('data') ? ' active' : '')}
-                            style="background-position-y: calc(-274px + 1.2em);"
-                            @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
-                ` : ''}
                 ${profile.lock != null ? html`
                     <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
                             @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
                 ` : ''}
                 <div style="flex: 1; min-width: 15px;"></div>
 
-                ${history ? html`
-                    <button class="ins_hid"
-                            @click=${goupile.hasPermission('data_audit') ? ui.wrapAction(e => runTrailDialog(e, route.ulid)) : null}>
-                        <span>
-                            ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
-                            ${form_record.historical ? html`<br/><span class="ins_note">${form_record.ctime.toLocaleString()}</span>` : ''}
-                        </span>
-                    </button>
-                    <div style="width: 15px;"></div>
-                ` : ''}
                 ${menu && wide ? route.form.chain.map(form => {
-                    let meta = form_record.map[form.key];
-
                     if (form.menu.length > 1) {
                         return html`
                             <div id="ins_drop" class="drop">
                                 <button title=${form.title} @click=${ui.deployMenu}>${form.title}</button>
-                                <div>${util.map(form.menu, item => renderDropItem(meta, item))}</div>
+                                <div>${util.map(form.menu, item => renderDropItem(item))}</div>
                             </div>
                         `;
                     } else {
-                        return renderDropItem(meta, form);
+                        return renderDropItem(form);
                     }
                 }) : ''}
                 ${menu && !wide ? html`
@@ -267,30 +198,21 @@ function InstanceController() {
                         let active = ui.isPanelActive('view') &&
                                      (route.form.chain.some(form => form === item.form) || item.page === route.page);
                         let drop = (item.type === 'form' && item.form.menu.length > 1);
-                        let enabled = (item.type === 'form') ? isFormEnabled(item.form, form_record) : isPageEnabled(item.page, form_record);
 
                         if (drop) {
-                            let meta = form_record.map[route.form.chain[Math.min(route.form.chain.length - 1, 1)].key];
-
                             return html`
                                 <div id="ins_drop" class="drop">
-                                    <button title=${item.title} class=${active ? 'active' : ''} ?disabled=${!enabled}
+                                    <button title=${item.title} class=${active ? 'active' : ''}
                                             @click=${ui.deployMenu}>${item.title}</button>
-                                    <div>${util.map(item.form.menu, item => renderDropItem(meta, item))}</div>
+                                    <div>${util.map(item.form.menu, item => renderDropItem(item))}</div>
                                 </div>
                             `;
                         } else {
-                            let meta = form_record.map[route.form.chain[0].key];
-                            return renderDropItem(meta, item);
+                            return renderDropItem(item);
                         }
                     })}
                 ` : ''}
                 ${title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
-                ${app.panels.data && (!ui.isPanelActive('view') || form_record.chain[0].saved) ? html`
-                    <div style="width: 15px;"></div>
-                    <button class="icon" style="background-position-y: calc(-758px + 1.2em);"
-                            @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Ajouter</button>
-                ` : ''}
                 <div style="flex: 1; min-width: 15px;"></div>
 
                 ${!goupile.isLocked() && profile.instances == null ?
@@ -360,9 +282,7 @@ function InstanceController() {
             if (response.ok) {
                 try {
                     if (enable) {
-                        let url = contextualizeURL(route.page.url, form_record);
-
-                        url = util.pasteURL(url, { p: 'editor|view' });
+                        url = util.pasteURL(route.page.url, { p: 'editor|view' });
                         goupile.syncHistory(url, false);
                     }
 
@@ -396,32 +316,23 @@ function InstanceController() {
         });
     }
 
-    function renderDropItem(meta, item) {
+    function renderDropItem(item) {
         let active;
         let url;
         let title;
-        let status;
 
         if (item instanceof PageInfo || item.type === 'page') {
             let page = item.page || item;
 
-            if (!isPageEnabled(page, form_record))
-                return '';
-
             active = (page === route.page);
             url = page.url;
             title = page.title;
-            status = (meta.status[page.key] != null);
         } else if (item instanceof FormInfo || item.type === 'form') {
             let form = item.form || item;
-
-            if (!isFormEnabled(form, form_record))
-                return '';
 
             active = route.form.chain.some(parent => form === parent);
             url = form.url;
             title = form.multi || form.title;
-            status = (meta.status[form.key] != null);
         } else {
             throw new Error(`Unknown item type '${item.type}'`);
         }
@@ -430,7 +341,6 @@ function InstanceController() {
             <button class=${active && ui.isPanelActive('view') ? 'active' : ''}
                     @click=${ui.wrapAction(e => active ? togglePanel(e, 'view', true) : self.go(e, url))}>
                 <div style="flex: 1;">${title}</div>
-                ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
            </button>
         `;
     }
@@ -489,7 +399,7 @@ function InstanceController() {
         });
         tabs.push({
             title: 'Formulaire',
-            filename: route.page.getOption('filename', form_record),
+            filename: route.page.getOption('filename'),
             active: false
         });
 
@@ -506,11 +416,11 @@ function InstanceController() {
         let builder = new ApplicationBuilder(new_app);
 
         try {
-            await runCodeAsync('Application', code, {
+            await runUserCode('Application', code, {
                 app: builder
             });
         } catch (err) {
-            // Don't log, because runCodeAsync does it already
+            // Don't log, because runUserCode does it already
             return;
         }
         if (!new_app.pages.size)
@@ -520,489 +430,22 @@ function InstanceController() {
         document.location.reload();
     }
 
-    function renderData() {
-        let visible_rows = data_rows;
-
-        if (data_filter != null) {
-            let func = makeFilterFunction(data_filter);
-            visible_rows = visible_rows.filter(meta => func(meta.hid));
-        }
-        if (data_date != null) {
-            visible_rows = visible_rows.filter(meta => {
-                if (meta.ctime.getFullYear() == data_date.year &&
-                        meta.ctime.getMonth() + 1 == data_date.month &&
-                        meta.ctime.getDate() == data_date.day)
-                    return true;
-
-                /*for (let key in meta.status) {
-                    let status = meta.status[key];
-                    if (status.ctime.toDateString() == data_date.toDateString())
-                        return true;
-                }*/
-
-                return false;
-            });
-        }
-
-        let column_stats = {};
-        let hid_width = 80;
-        for (let row of visible_rows) {
-            for (let key of data_form.pages.keys())
-                column_stats[key] = (column_stats[key] || 0) + (row.status[key] != null);
-            for (let key of data_form.forms.keys())
-                column_stats[key] = (column_stats[key] || 0) + (row.status[key] != null);
-
-            hid_width = Math.max(hid_width, computeHidWidth(row.hid));
-        }
-
-        let recording = (form_record.chain[0].saved || form_state.hasChanged());
-        let recording_new = !form_record.chain[0].saved && form_state.hasChanged();
-
-        return html`
-            <div class="padded">
-                <button class=${ui.isPanelActive('view') ? 'ui_pin active' : 'ui_pin'}
-                        @click=${ui.wrapAction(e => togglePanel(e, 'view'))}></button>
-
-                <div class="ui_quick" style="margin-right: 2.2em;">
-                    <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
-                           @input=${e => { data_filter = e.target.value || null; self.run(); }} />
-                    <div style="flex: 1;"></div>
-                    <label>
-                        Date de création :
-                        <input type="date" .value=${data_date != null ? data_date.toString() : ''}
-                               @input=${e => { data_date = e.target.value ? dates.parse(e.target.value) : null; self.run(); }} />
-                    </label>
-                    <div style="flex: 1;"></div>
-                    <p>
-                        ${visible_rows.length} ${visible_rows.length < data_rows.length ? `/ ${data_rows.length} ` : ''} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
-                        ${ENV.sync_mode !== 'offline' ? html`(<a @click=${ui.wrapAction(e => syncRecords(true, true))}>synchroniser</a>)` : ''}
-                    </p>
-                </div>
-
-                <table class="ui_table fixed" id="ins_data"
-                       style=${'min-width: ' + (5 + 5 * data_form.menu.length) + 'em;'}>
-                    <colgroup>
-                        <col style=${'width: ' + hid_width + 'px;'} />
-                        <col style="width: 8em;"/>
-                        ${util.mapRange(0, data_form.menu.length, () => html`<col/>`)}
-                        <col style="width: 2em;"/>
-                    </colgroup>
-
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Création</th>
-                            ${data_form.menu.map(item => {
-                                let prec = `${column_stats[item.key] || 0} / ${visible_rows.length}`;
-                                let title = `${item.title}\nDisponible : ${prec} ${visible_rows.length > 1 ? 'lignes' : 'ligne'}`;
-
-                                return html`
-                                    <th title=${title}>
-                                        ${item.title}<br/>
-                                        <span style="font-size: 0.7em; font-weight: normal;">${prec}</span>
-                                    </th>
-                                `;
-                            })}
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        ${visible_rows.map(row => {
-                            let active = form_record.chain.some(record => record.ulid === row.ulid);
-
-                            return html`
-                                <tr>
-                                    <td class=${(row.hid == null ? 'missing' : '') +
-                                                (active ? ' active' : '')}
-                                        title=${row.hid || ''}>${row.hid != null ? row.hid : 'NA'}</td>
-                                    <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
-                                    ${row.form.menu.map(item => {
-                                        if (item.type === 'page') {
-                                            let page = item.page;
-                                            let url = page.url + `/${row.ulid}`;
-
-                                            if (row.status[page.key] != null) {
-                                                let status = row.status[page.key];
-                                                let tooltip = 'Créé : ' + status.ctime.toLocaleString() +
-                                                              (status.mtime.getTime() != status.ctime.getTime() ? '\nModifié : ' + status.mtime.toLocaleString() : '');
-
-                                                return html`
-                                                    <td class=${active && page === route.page ? 'saved active' : 'saved'} title=${tooltip}>
-                                                        <a href=${url}>${status.mtime.toLocaleDateString()}</a>
-                                                    </td>`;
-                                            } else {
-                                                return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}
-                                                                title=${item.title}><a href=${url}>Afficher</a></td>`;
-                                            }
-                                        } else if (item.type === 'form') {
-                                            let form = item.form;
-
-                                            if (row.status[form.key] != null) {
-                                                let child = row.children[form.key][0];
-                                                let url = form.url + `/${child.ulid}`;
-
-                                                let status = row.status[form.key];
-                                                let tooltip = 'Créé : ' + status.ctime.toLocaleString() +
-                                                              (status.mtime.getTime() != status.ctime.getTime() ? '\nModifié : ' + status.mtime.toLocaleString() : '');
-
-                                                return html`
-                                                    <td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'} title=${tooltip}>
-                                                        <a href=${url}>${status.mtime.toLocaleDateString()}</a>
-                                                    </td>`;
-                                            } else {
-                                                let url = form.url + `/${row.ulid}`;
-
-                                                return html`<td class=${active && route.form.chain.includes(form) ? 'missing active' : 'missing'}
-                                                                title=${item.title}><a href=${url}>Afficher</a></td>`;
-                                            }
-                                        }
-                                    })}
-                                    ${goupile.hasPermission('data_save') ?
-                                        html`<th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
-                                </tr>
-                            `;
-                        })}
-                        ${!visible_rows.length && !recording ? html`<tr><td colspan=${2 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
-                        ${recording_new ? html`
-                            <tr>
-                                <td class="missing">NA</td>
-                                <td class="missing">NA</td>
-                                <td class="missing" colspan=${data_form.menu.length}><a @click=${e => togglePanel(e, 'view', true)}>Nouvel enregistrement</a></td>
-                            </tr>
-                        ` : ''}
-                    </tbody>
-                </table>
-
-                <div class="ui_quick">
-                    ${goupile.hasPermission('data_export') ? html`
-                        <a href=${ENV.urls.instance + 'api/records/export'} download>Exporter les données</a>
-                    ` : ''}
-                    <div style="flex: 1;"></div>
-                    ${ENV.backup_key != null ? html`
-                        <a @click=${ui.wrapAction(backupRecords)}>Faire une sauvegarde chiffrée</a>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    function computeHidWidth(hid) {
-        let ctx = computeHidWidth.ctx;
-
-        if (ctx == null) {
-            let canvas = document.createElement('canvas');
-            let style = window.getComputedStyle(document.body);
-
-            ctx = canvas.getContext('2d');
-            ctx.font = style.getPropertyValue('font-size') + ' ' +
-                       style.getPropertyValue('font-family');
-
-            computeHidWidth.ctx = ctx;
-        }
-
-        let metrics = ctx.measureText(hid != null ? hid : 'NA');
-        let width = Math.ceil(metrics.width * 1.04) + 20;
-
-        width = Math.min(width, 700);
-
-        return width;
-    }
-
-    function makeFilterFunction(filter) {
-        let re = '';
-        for (let i = 0; i < filter.length; i++) {
-            let c = filter[i].toLowerCase();
-
-            switch (c) {
-                case 'e':
-                case 'ê':
-                case 'é':
-                case 'è': { re += '[eèéê]'; } break;
-                case 'a':
-                case 'à':
-                case 'â': { re += '[aàâ]'; } break;
-                case 'i':
-                case 'ï': { re += '[iï]'; } break;
-                case 'u':
-                case 'ù': { re += '[uù]'; } break;
-                case 'ô': { re += '[ôo]'; } break;
-                case 'o': {
-                    if (filter[i + 1] === 'e') {
-                        re += '(oe|œ)';
-                        i++;
-                    } else {
-                        re += '[ôo]';
-                    }
-                } break;
-                case 'œ': { re += '(oe|œ)'; } break;
-                case '—':
-                case '–':
-                case '-': { re += '[—–\\-]'; } break;
-
-                // Escape special regex characters
-                case '/':
-                case '+':
-                case '*':
-                case '?':
-                case '<':
-                case '>':
-                case '&':
-                case '|':
-                case '\\':
-                case '^':
-                case '$':
-                case '(':
-                case ')':
-                case '{':
-                case '}':
-                case '[':
-                case ']': { re += `\\${c}`; } break;
-
-                // Special case '.' for CIM-10 codes
-                case '.': { re += `\\.?`; } break;
-
-                default: { re += c; } break;
-            }
-        }
-        re = new RegExp(re, 'i');
-
-        let func = value => {
-            if (value != null) {
-                if (typeof value !== 'string')
-                    value = value.toLocaleString();
-                return value.match(re);
-            } else {
-                return false;
-            }
-        };
-
-        return func;
-    }
-
-    function runDeleteRecordDialog(e, ulid) {
-        return ui.runConfirm(e, 'Voulez-vous vraiment supprimer cet enregistrement ?',
-                                'Supprimer', () => deleteRecord(ulid));
-    }
-
-    function renderPage() {
-        let filename = route.page.getOption('filename', form_record);
+    async function renderPage() {
+        let filename = route.page.getOption('filename');
         let code = code_buffers.get(filename).code;
 
         let model = new FormModel;
-        let readonly = !goupile.hasPermission('data_save') || form_record.historical;
-        form_builder = new FormBuilder(form_state, model, readonly);
+        let builder = new FormBuilder(form_state, model);
 
         try {
-            form_builder.pushOptions({});
-
-            // Previous and next page?
-            {
-                let sequence = (profile.lock != null) ? profile.lock.pages : route.page.getOption('sequence', form_record);
-
-                if (sequence === false)
-                    sequence = null;
-                if (sequence != null) {
-                    let root = route.form.chain[0];
-                    let pages = getAllPages(root.menu);
-
-                    sequence = pages.filter(page => page.getOption('sequence', form_record) === sequence).map(page => page.key);
-                    console.log(sequence);
-                }
-
-                nav_sequence = {
-                    prev: null,
-                    next: null,
-                    stay: true
-                };
-
-                if (sequence != null) {
-                    let idx = sequence.indexOf(route.page.key);
-
-                    if (idx - 1 >= 0) {
-                        let page = app.pages.get(sequence[idx - 1]);
-
-                        if (page != null) {
-                            nav_sequence.prev = page.url;
-                            nav_sequence.stay = form_record.saved;
-                        }
-                    }
-
-                    if (idx >= 0 && idx + 1 < sequence.length) {
-                        let page = app.pages.get(sequence[idx + 1]);
-
-                        if (page != null) {
-                            nav_sequence.next = page.url;
-                            nav_sequence.stay = form_record.saved;
-                        }
-                    }
-                }
-            }
-
-            let meta = Object.assign({}, form_record);
-            runCodeSync('Formulaire', code, {
+            await runUserCode('Formulaire', code, {
                 app: app,
-
-                form: form_builder,
-                meta: meta,
-                forms: meta.forms,
-                values: form_state.values,
-
-                nav: {
-                    form: route.form,
-                    page: route.page,
-                    go: (url) => self.go(null, url),
-
-                    url: (key) => {
-                        let page = app.pages.get(key);
-                        return page ? page.url : null;
-                    },
-
-                    save: async () => {
-                        await saveRecord(form_record, new_hid, form_values, route.page);
-                        await self.run();
-                    },
-                    delete: (e, ulid, confirm = true) => {
-                        if (e != null && e.target == null)
-                            [e, ulid, confirm] = [null, e, ulid];
-
-                        if (confirm) {
-                            runDeleteRecordDialog(e, ulid);
-                        } else {
-                            deleteRecord(ulid);
-                        }
-                    },
-
-                    lock: (e, keys) => {
-                        if (e != null && e.target == null)
-                            [e, keys] = [null, e];
-
-                        let lock = {
-                            ulid: form_record.chain[0].ulid,
-                            pages: keys
-                        };
-
-                        return goupile.runLockDialog(e, lock);
-                    },
-                    isLocked: goupile.isLocked
-                },
-
-                data: {
-                    dict: form_dictionaries,
-
-                    store: (idx, values) => {
-                        let form = route.form.chain[route.form.chain.length - idx - 1];
-                        if (form == null)
-                            throw new Error(`Parent ${idx} does not exist`);
-
-                        let ptr = form_values[form.key];
-                        if (ptr == null) {
-                            ptr = {};
-                            form_values[form.key] = ptr;
-                        }
-                        Object.assign(ptr, values);
-                    }
-                }
+                form: builder,
+                values: form_state.values
             });
-            new_hid = meta.hid;
 
-            form_builder.popOptions({});
             if (model.hasErrors())
-                form_builder.errorList();
-
-            let default_actions = goupile.hasPermission('data_save') &&
-                                  route.page.getOption('default_actions', form_record, true);
-
-            if (default_actions && model.variables.length) {
-                let prev_actions = model.actions;
-                model.actions = [];
-
-                if (nav_sequence.prev != null || nav_sequence.next != null) {
-                    form_builder.action('Précédent', { disabled: nav_sequence.prev == null }, async e => {
-                        let url = nav_sequence.prev;
-                        self.go(e, url);
-                    });
-
-                    if (nav_sequence.next != null) {
-                        form_builder.action('Continuer', { color: '#2d8261', always: true }, async e => {
-                            let url = nav_sequence.next;
-
-                            if (!form_record.saved || form_state.hasChanged())
-                                form_builder.triggerErrors();
-                            if (!form_record.saved && form_state.hasChanged())
-                                await saveRecord(form_record, new_hid, form_values, route.page);
-
-                            self.go(e, url);
-                        });
-                    }
-
-                    if (nav_sequence.stay)
-                        form_builder.action('-');
-                }
-                if (nav_sequence.stay || nav_sequence.next == null) {
-                    let name = (!form_record.saved || form_state.hasChanged()) ? 'Enregistrer' : '✓ Enregistré';
-
-                    form_builder.action(name, { disabled: !form_state.hasChanged(),
-                                                color: nav_sequence.next == null ? '#2d8261' : null,
-                                                always: nav_sequence.next == null }, async () => {
-                        form_builder.triggerErrors();
-
-                        await saveRecord(form_record, new_hid, form_values, route.page);
-                        self.run();
-                    });
-                }
-
-                if (!goupile.isLocked()) {
-                    if (form_state.just_triggered) {
-                        form_builder.action('Forcer l\'enregistrement', {}, async e => {
-                            await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
-                                                   'Enregistrer', () => {});
-
-                            await saveRecord(form_record, new_hid, form_values, route.page);
-
-                            self.run();
-                        });
-                    }
-
-                    if (form_state.hasChanged()) {
-                        form_builder.action('-');
-
-                        form_builder.action('Oublier', { color: '#db0a0a', always: form_record.saved }, async e => {
-                            await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
-                                                   'Oublier', () => {});
-
-                            if (form_record.saved) {
-                                let record = await loadRecord(form_record.ulid, null);
-
-                                let load = route.page.getOption('load', record, []);
-                                await expandRecord(record, load);
-
-                                updateContext(route, record);
-                            } else {
-                                let record = Object.assign({}, form_record);
-                                record.values = {};
-
-                                updateContext(route, record);
-                            }
-
-                            self.run();
-                        });
-                    }
-
-                    if (route.form.multi && form_record.saved) {
-                        form_builder.action('-');
-                        form_builder.action('Supprimer', {}, e => runDeleteRecordDialog(e, form_record.ulid));
-                        form_builder.action('Nouveau', {}, e => {
-                            let url = contextualizeURL(route.page.url, form_record.parent);
-                            return self.go(e, url);
-                        });
-                    }
-                }
-
-                if (prev_actions.length) {
-                    form_builder.action('-');
-                    model.actions.push(...prev_actions);
-                }
-            }
+                builder.errorList();
 
             render(model.renderWidgets(), page_div);
             page_div.classList.remove('disabled');
@@ -1025,13 +468,7 @@ function InstanceController() {
         return html`
             <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
-                    <div id="ins_menu">${menu ? html`
-                        ${util.mapRange(1 - wide, route.form.chain.length, idx => renderFormMenu(route.form.chain[idx]))}
-                        ${sections.length > 1 ? html`
-                            <h1>${route.page.title}</h1>
-                            <ul>${sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
-                        ` : ''}
-                    ` : ''}</div>
+                    <div id="ins_menu">${menu ? util.mapRange(1 - wide, route.form.chain.length, idx => renderFormMenu(route.form.chain[idx])) : ''}</div>
 
                     <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
                         ${page_div}
@@ -1039,47 +476,18 @@ function InstanceController() {
 
                     <div id="ins_actions">
                         ${model.renderActions()}
-                        ${form_record.historical ? html`<p class="historical">${form_record.ctime.toLocaleString()}</p>` : ''}
 
-                        ${route.form.chain.map(form => {
-                            let meta = form_record.map[form.key];
-
-                            if (profile.lock != null)
-                                return '';
-                            if (meta == null || meta.siblings == null)
-                                return '';
-
-                            return html`
-                                <h1>${form.multi}</h1>
-                                <ul>
-                                    ${meta.siblings.map(sibling => {
-                                        let url = route.page.url + `/${sibling.ulid}`;
-                                        return html`<li><a href=${url} class=${sibling.ulid === meta.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a></li>`;
-                                    })}
-                                    <li><a href=${contextualizeURL(route.page.url, meta.parent)} class=${!meta.saved ? 'active' : ''}>Nouvelle fiche</a></li>
-                                </ul>
-                            `;
-                        })}
+                        ${sections.length > 1 ? html`
+                            <h1>${route.page.title}</h1>
+                            <ul>${sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
+                        ` : ''}
                     </div>
                 </div>
                 <div style="flex: 1;"></div>
 
-                ${!isPageEnabled(route.page, form_record, true) ? html`
-                    <div id="ins_develop">
-                        Cette page n'est théoriquement pas activée<br/>
-                        Le mode de conception vous permet d'y accéder.
-                    </div>
-                ` : ''}
-
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                    ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
-                        <button class="ins_hid" style=${form_record.historical ? 'color: #00ffff;' : ''}
-                                @click=${goupile.hasPermission('data_audit') ? ui.wrapAction(e => runTrailDialog(e, route.ulid)) : null}>
-                            ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
-                            ${form_record.historical ? html`<br/><span style="font-size: 0.5em;">(historique)</span>` : ''}
-                        </button>
-                    ` : ''}
                     <div style="flex: 1;"></div>
+
                     ${model.actions.some(action => !action.options.always) ? html`
                         <div class="drop up right">
                             <button @click=${ui.deployMenu}>Actions</button>
@@ -1118,10 +526,8 @@ function InstanceController() {
     }
 
     function renderFormMenu(form) {
-        let meta = form_record.map[form.key];
-
         let show = (form.menu.length > 1);
-        let title = form.multi ? (meta.saved ? meta.ctime.toLocaleString() : 'Nouvelle fiche') : form.title;
+        let title = form.title;
 
         return html`
             ${show ? html`
@@ -1134,18 +540,10 @@ function InstanceController() {
                             let cls = '';
                             if (page === route.page)
                                 cls += ' active';
-                            if (!isPageEnabled(page, form_record, true)) {
-                                if (profile.develop) {
-                                    cls += ' disabled';
-                                } else {
-                                    return '';
-                                }
-                            }
 
                             return html`
-                                <li><a class=${cls} href=${contextualizeURL(page.url, form_record)}>
+                                <li><a class=${cls} href=${page.url}>
                                     <div style="flex: 1;">${page.title}</div>
-                                    ${meta && meta.status[page.key] != null ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                                 </a></li>
                             `;
                         } else if (item.type === 'form') {
@@ -1154,18 +552,10 @@ function InstanceController() {
                             let cls = '';
                             if (route.form.chain.some(parent => form === parent))
                                 cls += ' active';
-                            if (!isFormEnabled(form, form_record, true)) {
-                                if (profile.develop) {
-                                    cls += ' disabled';
-                                } else {
-                                    return '';
-                                }
-                            }
 
                             return html`
-                                <li><a class=${cls} href=${contextualizeURL(form.url, form_record)} style="display: flex;">
+                                <li><a class=${cls} href=${form.url} style="display: flex;">
                                     <div style="flex: 1;">${form.multi || form.title}</div>
-                                    ${meta && meta.status[form.key] != null ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                                 </a></li>
                             `;
                         }
@@ -1175,7 +565,7 @@ function InstanceController() {
         `;
     }
 
-    async function runCodeAsync(title, code, arguments) {
+    async function runUserCode(title, code, args) {
         let entry = error_entries[title];
         if (entry == null) {
             entry = new log.Entry;
@@ -1185,8 +575,8 @@ function InstanceController() {
         try {
             let AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 
-            let func = new AsyncFunction(...Object.keys(arguments), code);
-            await func(...Object.values(arguments));
+            let func = new AsyncFunction(...Object.keys(args), code);
+            await func(...Object.values(args));
 
             entry.close();
         } catch (err) {
@@ -1198,28 +588,9 @@ function InstanceController() {
         }
     }
 
-    function runCodeSync(title, code, arguments) {
-        let entry = error_entries[title];
-        if (entry == null) {
-            entry = new log.Entry;
-            error_entries[title] = entry;
-        }
+    async function runTrailDialog(e, tid) {
+        let fragments = [];
 
-        try {
-            let func = new Function(...Object.keys(arguments), code);
-            func(...Object.values(arguments));
-
-            entry.close();
-        } catch (err) {
-            let line = util.parseEvalErrorLine(err);
-            let msg = `Erreur sur ${title}\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
-
-            entry.error(msg, -1);
-            throw new Error(msg);
-        }
-    }
-
-    function runTrailDialog(e, ulid) {
         return ui.runDialog(e, 'Historique', {}, (d, resolve, reject) => {
             d.output(html`
                 <table class="ui_table">
@@ -1235,18 +606,18 @@ function InstanceController() {
                             <td colspan="2">Version actuelle</td>
                         </tr>
 
-                        ${util.mapRange(0, form_record.fragments.length, idx => {
-                            let version = form_record.fragments.length - idx;
-                            let fragment = form_record.fragments[version - 1];
+                        ${util.mapRange(0, fragments.length, idx => {
+                            let version = fragments.length - idx;
+                            let frag = fragments[version - 1];
 
-                            let page = app.pages.get(fragment.page) || route.page;
+                            let page = app.pages.get(frag.page) || route.page;
                             let url = page.url + `/${route.ulid}@${version}`;
 
                             return html`
                                 <tr class=${version === route.version ? 'active' : ''}>
                                     <td><a href=${url}>🔍\uFE0E</a></td>
-                                    <td>${fragment.user}</td>
-                                    <td>${fragment.mtime.toLocaleString()}</td>
+                                    <td>${frag.user}</td>
+                                    <td>${frag.mtime.toLocaleString()}</td>
                                 </tr>
                             `;
                         })}
@@ -1254,225 +625,6 @@ function InstanceController() {
                 </table>
             `);
         });
-    }
-
-    async function saveRecord(record, hid, values, page, silent = false) {
-        if (!goupile.hasPermission('data_save'))
-            throw new Error('You are not allowed to save data');
-
-        await mutex.run(async () => {
-            let progress = log.progress('Enregistrement en cours');
-
-            try {
-                let ulid = record.ulid;
-                let page_key = page.key;
-                let ptr = values[record.form.key];
-
-                await db.transaction('rw', ['rec_records'], async t => {
-                    do {
-                        let fragment;
-                        if (ptr != null) {
-                            fragment = {
-                                type: 'save',
-                                user: profile.username,
-                                mtime: new Date,
-                                fs: ENV.version,
-                                page: page_key,
-                                values: ptr
-                            };
-                        } else {
-                            fragment = null;
-                        }
-
-                        let key = profile.namespaces.records + `:${record.ulid}`;
-                        let obj = await t.load('rec_records', key);
-
-                        let entry;
-                        if (obj != null) {
-                            entry = await goupile.decryptSymmetric(obj.enc, ['records', 'lock']);
-                            if (hid != null)
-                                entry.hid = hid;
-                        } else {
-                            obj = {
-                                keys: {
-                                    form: null,
-                                    parent: null,
-                                    anchor: null,
-                                    sync: null
-                                },
-                                enc: null
-                            };
-                            entry = {
-                                ulid: record.ulid,
-                                hid: hid,
-                                parent: null,
-                                form: record.form.key,
-                                fragments: []
-                            };
-
-                            if (record.parent != null) {
-                                entry.parent = {
-                                    ulid: record.parent.ulid,
-                                    version: record.parent.version
-                                };
-                            }
-                        }
-
-                        if (record.version !== entry.fragments.length)
-                            throw new Error('Cannot overwrite old record fragment');
-                        if (fragment != null)
-                            entry.fragments.push(fragment);
-
-                        // Always rewrite keys to fix potential namespace changes
-                        obj.keys.form = `${profile.namespaces.records}/${record.form.key}`;
-                        if (record.parent != null) {
-                            let mtime = entry.fragments.length ? entry.fragments[entry.fragments.length - 1].mtime.getTime() : null;
-                            obj.keys.parent = `${profile.namespaces.records}:${record.parent.ulid}/${record.form.key}@${mtime}`;
-                        }
-                        obj.keys.sync = profile.namespaces.records;
-
-                        obj.enc = await goupile.encryptSymmetric(entry, 'records');
-                        await t.saveWithKey('rec_records', key, obj);
-
-                        do {
-                            page_key = record.form.key;
-                            record = record.parent;
-                            if (record == null)
-                                break;
-                            ptr = form_values[record.form.key];
-                        } while (record.saved && ptr == null);
-                    } while (record != null);
-                });
-
-                data_rows = null;
-
-                if (ENV.sync_mode !== 'offline') {
-                    try {
-                        if (!goupile.isLoggedOnline())
-                            throw new Error('Cannot save online');
-
-                        await mutex.chain(() => syncRecords(false));
-                        if (!silent) {
-                            progress.success('Enregistrement effectué');
-                        } else {
-                            progress.close();
-                        }
-                    } catch (err) {
-                        progress.info('Enregistrement local effectué');
-                        enablePersistence();
-                    }
-                } else {
-                    if (!silent) {
-                        progress.success('Enregistrement local effectué');
-                    } else {
-                        progress.close();
-                    }
-                    enablePersistence();
-                }
-
-                record = await loadRecord(ulid, null);
-
-                let load = page.getOption('load', record, []);
-                await expandRecord(record, load);
-
-                updateContext(route, record);
-            } catch (err) {
-                progress.close();
-                throw err;
-            }
-        });
-    }
-
-    async function deleteRecord(ulid) {
-        if (!goupile.hasPermission('data_save'))
-            throw new Error('You are not allowed to delete data');
-
-        await mutex.run(async () => {
-            let progress = log.progress('Suppression en cours');
-
-            try {
-                // XXX: Delete children (cascade)?
-                await db.transaction('rw', ['rec_records'], async t => {
-                    let key = profile.namespaces.records + `:${ulid}`;
-                    let obj = await t.load('rec_records', key);
-
-                    if (obj == null)
-                        throw new Error('Cet enregistrement est introuvable');
-
-                    let entry = await goupile.decryptSymmetric(obj.enc, ['records', 'lock']);
-
-                    // Mark as deleted with special fragment
-                    let fragment = {
-                        type: 'delete',
-                        user: profile.username,
-                        mtime: new Date,
-                        fs: ENV.version
-                    };
-                    entry.fragments.push(fragment);
-
-                    obj.keys.parent = null;
-                    obj.keys.form = null;
-                    obj.keys.sync = profile.namespaces.records;
-
-                    obj.enc = await goupile.encryptSymmetric(entry, 'records');
-                    await t.saveWithKey('rec_records', key, obj);
-                });
-
-                if (ENV.sync_mode !== 'offline') {
-                    try {
-                        if (!goupile.isLoggedOnline())
-                            throw new Error('Cannot delete online');
-
-                        await mutex.chain(() => syncRecords(false));
-                        progress.success('Suppression effectuée');
-                    } catch (err) {
-                        progress.info('Suppression effectuée (non synchronisée)');
-                        console.log(err);
-                    }
-                } else {
-                    progress.success('Suppression locale effectuée');
-                }
-
-                data_rows = null;
-
-                // Redirect if needed
-                {
-                    let idx = form_record.chain.findIndex(record => record.ulid === ulid);
-
-                    if (idx >= 0) {
-                        if (idx > 0) {
-                            let record = form_record.chain[idx];
-                            let url = contextualizeURL(record.form.multi ? route.page.url : record.parent.form.url, record.parent);
-
-                            self.go(null, url, { force: true });
-                        } else {
-                            self.go(null, route.form.chain[0].url + '/new', { force: true });
-                        }
-                    } else {
-                        self.go();
-                    }
-                }
-            } catch (err) {
-                progress.close();
-                throw err;
-            }
-        });
-    }
-
-    function enablePersistence() {
-        let storage_warning = 'Impossible d\'activer le stockage local persistant';
-
-        if (navigator.storage && navigator.storage.persist) {
-            navigator.storage.persist().then(granted => {
-                if (granted) {
-                    console.log('Stockage persistant activé');
-                } else {
-                    console.log(storage_warning);
-                }
-            });
-        } else {
-            console.log(storage_warning);
-        }
     }
 
     async function syncEditor() {
@@ -1536,7 +688,6 @@ function InstanceController() {
         } else {
             return togglePanel(e, 'editor', false);
         }
-
     }
 
     async function handleFileChange(filename) {
@@ -1571,38 +722,40 @@ function InstanceController() {
     }
 
     async function uploadFsChanges() {
-        let progress = log.progress('Envoi des modifications');
+        await mutex.run(async () => {
+            let progress = log.progress('Envoi des modifications');
 
-        try {
-            let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
-            let changes = await db.loadAll('fs_changes', range);
+            try {
+                let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
+                let changes = await db.loadAll('fs_changes', range);
 
-            for (let file of changes) {
-                let url = util.pasteURL(`${ENV.urls.base}files/${file.filename}`, { sha256: file.sha256 });
+                for (let file of changes) {
+                    let url = util.pasteURL(`${ENV.urls.base}files/${file.filename}`, { sha256: file.sha256 });
 
-                let response = await net.fetch(url, {
-                    method: 'PUT',
-                    body: file.blob,
-                    timeout: null
-                });
-                if (!response.ok && response.status !== 409) {
-                    let err = await net.readError(response);
-                    throw new Error(err)
+                    let response = await net.fetch(url, {
+                        method: 'PUT',
+                        body: file.blob,
+                        timeout: null
+                    });
+                    if (!response.ok && response.status !== 409) {
+                        let err = await net.readError(response);
+                        throw new Error(err)
+                    }
+
+                    let key = `${profile.userid}:${file.filename}`;
+                    await db.delete('fs_changes', key);
                 }
 
-                let key = `${profile.userid}:${file.filename}`;
-                await db.delete('fs_changes', key);
+                progress.close();
+            } catch (err) {
+                progress.close();
+                log.error(err);
             }
 
-            progress.close();
-        } catch (err) {
-            progress.close();
-            log.error(err);
-        }
-
-        if (code_timer != null)
-            clearTimeout(code_timer);
-        code_timer = null;
+            if (code_timer != null)
+                clearTimeout(code_timer);
+            code_timer = null;
+        });
     }
 
     function syncFormScroll() {
@@ -1789,9 +942,6 @@ function InstanceController() {
         options = Object.assign({ push_history: true }, options);
 
         let new_route = Object.assign({}, route);
-        let new_record;
-        let new_dictionaries;
-        let new_code;
         let explicit_panels = false;
 
         // Parse new URL
@@ -1819,12 +969,6 @@ function InstanceController() {
             let path = url.pathname.substr(ENV.urls.instance.length + 5);
             let [key, what] = path.split('/').map(str => str.trim());
 
-            // Support shorthand URLs: /main/<ULID>(@<VERSION>)
-            if (key && key.match(/^[A-Z0-9]{26}(@[0-9]+)?$/)) {
-                what = key;
-                key = app.home.key;
-            }
-
             // Follow lock sequence
             if (profile.lock != null) {
                 if (!profile.lock.pages.includes(key))
@@ -1839,52 +983,7 @@ function InstanceController() {
             }
             new_route.form = new_route.page.form;
 
-            let [ulid, version] = what ? what.split('@') : [null, null];
-
-            // Popping history
-            if (!ulid && !options.push_history)
-                ulid = 'new';
-
-            // Go to default record?
-            if (!ulid && !app.panels.data) {
-                if (profile.lock != null) {
-                    ulid = profile.lock.ulid;
-                } else if (profile.userid) {
-                    let range = IDBKeyRange.only(profile.namespaces.records + `/${new_route.form.key}`);
-                    let keys = await db.list('rec_records/form', range);
-
-                    if (keys.length) {
-                        let key = keys[0];
-                        ulid = key.primary.substr(key.primary.indexOf(':') + 1);
-                    }
-                }
-            }
-
-            // Deal with ULID
-            if (ulid && ulid !== new_route.ulid) {
-                if (ulid === 'new') {
-                    new_route.ulid = null;
-                    new_route.version = null;
-                } else if (form_record == null || !form_record.chain.some(record => record.ulid === ulid)) {
-                    new_route.ulid = ulid;
-                    new_route.version = null;
-                }
-            }
-
-            // And with version!
-            if (version != null) {
-                version = version.trim();
-
-                if (version.match(/^[0-9]+$/)) {
-                    new_route.version = parseInt(version, 10);
-                } else if (!version.length) {
-                    new_route.version = null;
-                } else {
-                    log.error('L\'indicateur de version n\'est pas un nombre');
-                    new_route.version = null;
-                }
-            }
-
+            // Restore explicit panels (if any)
             let panels = url.searchParams.get('p');
             if (panels) {
                 panels = panels.split('|');
@@ -1895,209 +994,27 @@ function InstanceController() {
             }
         }
 
-        // Match requested page, record type, available page, etc.
-        // We may need to restart in some cases, hence the fake loop to do it with continue.
-        for (;;) {
-            new_record = form_record;
-            new_values = form_values;
-
-            // Get to the record damn it
-            if (new_record != null && options.reload) {
-                new_route.version = null;
-                new_record = null;
-            }
-            if (new_record != null) {
-                let version = new_record.historical ? new_record.version : null;
-                let mismatch = (new_route.ulid !== new_record.ulid ||
-                                new_route.version !== version);
-
-                if (mismatch)
-                    new_record = null;
-            }
-            if (new_record == null && new_route.ulid != null)
-                new_record = await loadRecord(new_route.ulid, new_route.version, !goupile.isLocked());
-            if (new_record != null && new_record.form !== new_route.form)
-                new_record = await moveToAppropriateRecord(new_record, new_route.form, true);
-            if (new_route.ulid == null || new_record == null)
-                new_record = await createRecord(new_route.form, new_route.ulid);
-
-            // Load close records (parents, siblings, children)
-            let load = new_route.page.getOption('load', new_record, []);
-            await expandRecord(new_record, load);
-
-            // Safety checks
-            if (profile.lock != null && !new_record.chain.some(record => record.ulid === profile.lock.ulid))
-                throw new Error('Enregistrement non autorisé');
-            if (!isPageEnabled(new_route.page, new_record)) {
-                new_route.page = findEnabledPage(new_route.form, new_record);
-                if (new_route.page == null)
-                    throw new Error('Cette page n\'est pas activée pour cet enregistrement');
-
-                if (new_route.page.form !== new_route.form) {
-                    new_route.form = new_route.page.form;
-                    continue;
-                }
-            }
-
-            // Confirm dangerous actions (at risk of data loss)
-            if (!options.reload && !options.force) {
-                if (self.hasUnsavedData() && (new_record !== form_record || 
-                                              new_route.page !== route.page)) {
-                    let autosave = route.page.getOption('autosave', form_record, false);
-
-                    if (autosave || profile.userid < 0) {
-                        if (!autosave)
-                            form_builder.triggerErrors();
-                        await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
-
-                        new_route.version = null;
-                        options.reload = true;
-
-                        continue;
-                    } else {
-                        try {
-                            await ui.runDialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
-                                d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
-
-                                d.enumRadio('action', 'Que souhaitez-vous faire avant de continuer ?', [
-                                    [true, "Enregistrer mes modifications"],
-                                    [false, "Oublier mes modifications"]
-                                ], { value: true, untoggle: false });
-
-                                if (d.values.action) {
-                                    d.action('Enregistrer', {}, async e => {
-                                        try {
-                                            form_builder.triggerErrors();
-                                            await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
-                                        } catch (err) {
-                                            reject(err);
-                                        }
-
-                                        new_route.version = null;
-                                        options.reload = true;
-
-                                        resolve();
-                                    });
-                                } else {
-                                    d.action('Oublier', {}, resolve);
-                                }
-                            });
-
-                            if (options.reload)
-                                continue;
-                        } catch (err) {
-                            if (err != null)
-                                log.error(err);
-
-                            // If we're popping state, this will fuck up navigation history but we can't
-                            // refuse popstate events. History mess is better than data loss.
-                            await mutex.chain(self.run);
-                            return;
-                        }
-                    }
-                }
-            }
-
-            break;
-        }
-
-        // Dictionaries
-        new_dictionaries = {};
-        {
-            let dictionaries = new_route.page.getOption('dictionaries', new_record, []);
-
-            for (let dict of dictionaries) {
-                let records = form_dictionaries[dict];
-                if (records == null)
-                    new_dictionaries[dict] = await loadRecords(null, dict);
-                new_dictionaries[dict] = records;
-            }
-        }
+        // Confirm dangerous actions
+        if (self.hasUnsavedData() && new_route.page != route.page)
+            await ui.runConfirm(e, 'Si vous continuer vous allez perdre les modifications non enregistrées, voulez-vous continuer ?', 'Oublier');
 
         // Fetch and cache page code for page panel
         {
-            let filename = new_route.page.getOption('filename', new_record);
+            let filename = new_route.page.getOption('filename');
             await fetchCode(filename);
         }
 
-        // Help the user fill new or selected forms and pages
-        if (form_record != null && (new_record.ulid !== form_record.ulid ||
-                                    new_route.page !== route.page)) {
-            setTimeout(() => {
-                let el = document.querySelector('#ins_page');
-                if (el != null)
-                    el.parentNode.scrollTop = 0;
-            }, 0);
-
-            if (!explicit_panels && !ui.isPanelActive('view') && app.panels.view) {
-                ui.setPanelState('view', true);
-                ui.setPanelState('data', false);
-            }
-        } else if (new_record.chain[0].saved) {
-            if (!explicit_panels && !ui.isPanelActive('view') && app.panels.view) {
-                ui.setPanelState('view', true);
-                ui.setPanelState('data', false);
-            }
-        }
-
         // Commit!
-        updateContext(new_route, new_record);
-        form_dictionaries = new_dictionaries;
+        updateContext(new_route);
 
         await mutex.chain(() => self.run(options.push_history));
     };
     this.go = util.serialize(this.go, mutex);
 
-    function findEnabledPage(form, record, parents = true) {
-        for (let item of form.menu) {
-            if (item.type === 'page') {
-                if (isPageEnabled(item.page, record))
-                    return item.page;
-            } else if (item.type === 'form') {
-                let page = findEnabledPage(item.form, record, false);
-                if (page != null)
-                    return page;
-            }
-        }
-
-        if (parents && form.chain.length >= 2) {
-            let parent = form.chain[form.chain.length - 2];
-            return findEnabledPage(parent, record);
-        }
-
-        return null;
-    }
-
-    function isFormEnabled(form, record, reality = false) {
-        for (let page of form.pages.values()) {
-            if (isPageEnabled(page, record, reality))
-                return true;
-        }
-        for (let child of form.forms.values()) {
-            if (isFormEnabled(child, record, reality))
-                return true;
-        }
-
-        return false;
-    }
-
-    function isPageEnabled(page, record, reality = false) {
-        if (!reality && profile.develop)
-            return true;
-
-        let restrict = page.getOption('restrict', record, false);
-        let enabled = page.getOption('enabled', record, true);
-
-        if (goupile.isLocked() && restrict)
-            return false;
-
-        return enabled;
-    }
-
     this.run = async function(push_history = true) {
         // Fetch and cache page code for page panel
         // Again to make sure we are up to date (e.g. publication)
-        let filename = route.page.getOption('filename', form_record);
+        let filename = route.page.getOption('filename');
         await fetchCode(filename);
 
         // Sync editor (if needed)
@@ -2108,26 +1025,9 @@ function InstanceController() {
             await syncEditor();
         }
 
-        // Load rows for data panel
-        if (ui.isPanelActive('data')) {
-            if (data_form !== form_record.chain[0].form) {
-                data_form = form_record.chain[0].form;
-                data_rows = null;
-            }
-
-            if (data_rows == null) {
-                data_rows = await loadRecords(null, data_form.key);
-                data_rows.sort(util.makeComparator(meta => meta.hid, navigator.language, {
-                    numeric: true,
-                    ignorePunctuation: true,
-                    sensitivity: 'base'
-                }));
-            }
-        }
-
         // Update URL and title
         {
-            let url = contextualizeURL(route.page.url, form_record);
+            let url = route.page.url;
 
             let panels;
             if (app.panels.data + app.panels.view < 2) {
@@ -2156,86 +1056,21 @@ function InstanceController() {
     };
     this.run = util.serialize(this.run, mutex);
 
-    function updateContext(new_route, new_record) {
-        let copy_ui = (new_route.page === route.page);
+    function updateContext(new_route) {
+        if (new_route.page != route.page) {
+            form_state = new FormState();
+            form_state.changeHandler = handleStateChange;
+        }
 
         route = new_route;
-        route.ulid = new_record.ulid;
-        if (route.version != null)
-            route.version = new_record.version;
-
-        if (new_record !== form_record) {
-            form_record = new_record;
-
-            let new_state = new FormState(new_record.values);
-
-            new_state.changeHandler = handleStateChange;
-            if (form_state != null && copy_ui) {
-                new_state.state_tabs = form_state.state_tabs;
-                new_state.state_sections = form_state.state_sections;
-                if (new_record.saved && new_record.ulid == form_record.ulid)
-                    new_state.take_delayed = form_state.take_delayed;
-            }
-            form_state = new_state;
-
-            form_values = {};
-            form_values[new_record.form.key] = form_state.values;
-        }
-
-        new_hid = new_record.hid;
-
-        if (new_record !== form_record || !copy_ui) {
-            if (autosave_timer != null)
-                clearTimeout(autosave_timer);
-            autosave_timer = null;
-        }
     }
 
     async function handleStateChange() {
         await self.run();
 
-        let autosave = route.page.getOption('autosave', form_record, false);
-
-        if (autosave) {
-            if (autosave_timer != null)
-                clearTimeout(autosave_timer);
-
-            if (typeof autosave !== 'number')
-                autosave = 5000;
-
-            autosave_timer = setTimeout(util.serialize(async () => {
-                if (self.hasUnsavedData()) {
-                    try {
-                        await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page, true));
-                    } catch (err) {
-                        log.error(err);
-                    }
-
-                    self.run();
-                }
-
-                autosave_timer = null;
-            }, mutex), autosave);
-        }
-
         // Highlight might need to change (conditions, etc.)
         if (ui.isPanelActive('editor'))
             syncFormHighlight(false);
-    }
-
-    function contextualizeURL(url, record, default_ctx = '') {
-        while (record != null && !record.saved)
-            record = record.parent;
-
-        if (record != null) {
-            url += `/${record.ulid}`;
-            if (record.historical)
-                url += `@${record.version}`;
-        } else {
-            url += default_ctx;
-        }
-
-        return url;
     }
 
     async function fetchCode(filename) {
@@ -2316,568 +1151,5 @@ function InstanceController() {
         } else {
             return false;
         }
-    }
-
-    async function createRecord(form, ulid = null, parent_record = null) {
-        let record = {
-            form: form,
-            ulid: ulid || util.makeULID(),
-            hid: null,
-            version: 0,
-            historical: false,
-            ctime: null,
-            mtime: null,
-            fragments: [],
-            status: {},
-            saved: false,
-            values: {},
-
-            parent: null,
-            children: {},
-            chain: null, // Will be set later
-            map: null, // Will be set later
-            forms: null, // Will be set later
-            siblings: null // Same, for multi-children only
-        };
-        record.ctime = new Date(util.decodeULIDTime(record.ulid));
-
-        if (form.chain.length > 1) {
-            if (parent_record == null)
-                parent_record = await createRecord(form.chain[form.chain.length - 2]);
-            record.parent = parent_record;
-
-            if (form.multi) {
-                record.siblings = await listChildren(record.parent.ulid, record.form.key);
-                record.siblings.sort(util.makeComparator(record => record.ulid));
-            }
-        }
-
-        return record;
-    }
-
-    async function loadRecord(ulid, version, error_missing = false) {
-        let key = profile.namespaces.records + `:${ulid}`;
-        let obj = await db.load('rec_records', key);
-
-        if (obj != null) {
-            let record = await decryptRecord(obj, version, false);
-
-            if (record.form.multi && record.parent != null) {
-                record.siblings = await listChildren(record.parent.ulid, record.form.key);
-                record.siblings.sort(util.makeComparator(record => record.ulid));
-            }
-
-            return record;
-        } else if (error_missing) {
-            throw new Error('L\'enregistrement demandé n\'existe pas');
-        } else {
-            return null;
-        }
-    }
-
-    async function expandRecord(record, load_children = []) {
-        // Load record parents
-        if (record.chain == null) {
-            let chain = [];
-            let map = {};
-
-            record.chain = chain;
-            record.map = map;
-            record.forms = map;
-            chain.push(record);
-            map[record.form.key] = record;
-
-            let it = record;
-            while (it.parent != null) {
-                let parent = it.parent;
-
-                if (parent.values == null) {
-                    parent = await loadRecord(it.parent.ulid, null);
-                    parent.historical = record.historical; // XXX
-                }
-
-                parent.chain = chain;
-                parent.map = map;
-                parent.forms = map;
-                chain.push(parent);
-                map[parent.form.key] = parent;
-                it.parent = parent;
-
-                it = parent;
-            }
-
-            chain.reverse();
-        }
-
-        // Load children (if requested)
-        for (let key of load_children) {
-            let form = app.forms.get(key);
-
-            try {
-                let child = await moveToAppropriateRecord(record, form, false);
-
-                if (child != null) {
-                    if (form.multi) {
-                        let children = await loadRecords(child.parent.ulid, form.key);
-                        for (let child of children)
-                            child.historical = record.historical; // XXX
-                        record.map[key] = children;
-                    } else {
-                        child.historical = record.historical; // XXX
-                        record.map[key] = child;
-                    }
-                } else {
-                    record.map[key] = null;
-                }
-            } catch (err) {
-                record.map[key] = null;
-                console.log(err);
-            }
-        }
-    }
-
-    async function loadRecords(parent_ulid = null, form_key = null)
-    {
-        let objects;
-        if (parent_ulid != null && form_key != null) {
-            let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/${form_key}`,
-                                          profile.namespaces.records + `:${parent_ulid}/${form_key}\``, false, true);
-            objects = await db.loadAll('rec_records/parent', range);
-        } else if (parent_ulid != null) {
-            let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/`,
-                                          profile.namespaces.records + `:${parent_ulid}\``, false, true);
-            objects = await db.loadAll('rec_records/parent', range);
-        } else if (form_key != null) {
-            let range = IDBKeyRange.only(profile.namespaces.records + `/${form_key}`);
-            objects = await db.loadAll('rec_records/form', range);
-        }
-
-        let records = [];
-        for (let obj of objects) {
-            try {
-                let record = await decryptRecord(obj, null, false);
-                records.push(record);
-            } catch (err) {
-                console.log(err);
-            }
-        }
-
-        return records;
-    }
-
-    async function listChildren(parent_ulid, form_key = null)
-    {
-        let keys;
-        if (form_key != null) {
-            let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/${form_key}`,
-                                          profile.namespaces.records + `:${parent_ulid}/${form_key}\``, false, true);
-            keys = await db.list('rec_records/parent', range);
-        } else {
-            let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/`,
-                                          profile.namespaces.records + `:${parent_ulid}\``, false, true);
-            keys = await db.list('rec_records/parent', range);
-        }
-
-        let children = [];
-        for (let key of keys) {
-            let child = {
-                form: key.index.substr(key.index.indexOf('/') + 1),
-                ulid: key.primary.substr(key.primary.indexOf(':') + 1),
-                ctime: null,
-                mtime: null
-            };
-
-            child.ctime = new Date(util.decodeULIDTime(child.ulid));
-            if (child.form.includes('@')) {
-                let pos = child.form.indexOf('@');
-                child.mtime = new Date(parseInt(child.form.substr(pos + 1), 10));
-                child.form = child.form.substr(0, pos);
-            }
-            if (child.mtime == null || isNaN(child.mtime))
-                child.mtime = new Date(child.ctime);
-
-            children.push(child);
-        }
-
-        return children;
-    }
-
-    async function decryptRecord(obj, version, allow_deleted) {
-        let historical = (version != null);
-
-        let entry = await goupile.decryptSymmetric(obj.enc, ['records', 'lock']);
-        let fragments = entry.fragments;
-
-        let form = app.forms.get(entry.form);
-        if (form == null)
-            throw new Error(`Le formulaire '${entry.form}' n'existe pas ou plus`);
-
-        if (version == null) {
-            version = fragments.length;
-        } else if (version > fragments.length) {
-            throw new Error(`Cet enregistrement n'a pas de version ${version}`);
-        }
-
-        let values = {};
-        let status = {};
-        for (let i = 0; i < version; i++) {
-            let fragment = fragments[i];
-
-            if (fragment.type === 'save') {
-                Object.assign(values, fragment.values);
-
-                if (form.pages.get(fragment.page)) {
-                    if (status[fragment.page] == null) {
-                        status[fragment.page] = {
-                            ctime: new Date(fragment.mtime),
-                            mtime: null
-                        };
-                    }
-
-                    status[fragment.page].mtime = new Date(fragment.mtime);
-                }
-            }
-        }
-        for (let fragment of fragments)
-            fragment.mtime = new Date(fragment.mtime);
-
-        if (!allow_deleted && fragments.length && fragments[fragments.length - 1].type === 'delete')
-            throw new Error('L\'enregistrement demandé est supprimé');
-
-        let children_map = {};
-        {
-            let children = await listChildren(entry.ulid);
-
-            for (let child of children) {
-                let array = children_map[child.form];
-                if (array == null) {
-                    array = [];
-                    children_map[child.form] = array;
-                }
-
-                array.push(child);
-
-                status[child.form] = {
-                    ctime: child.ctime,
-                    mtime: child.mtime
-                };
-            }
-        }
-
-        let record = {
-            form: form,
-            ulid: entry.ulid,
-            hid: entry.hid,
-            version: version,
-            historical: historical,
-            ctime: new Date(util.decodeULIDTime(entry.ulid)),
-            mtime: fragments.length ? fragments[version - 1].mtime : null,
-            fragments: fragments,
-            status: status,
-            saved: true,
-            values: values,
-
-            parent: entry.parent,
-            children: children_map,
-            chain: null, // Will be set later
-            map: null, // Will be set later
-            siblings: null // Same, for multi-children only
-        };
-
-        return record;
-    }
-
-    async function moveToAppropriateRecord(record, target_form, create_new) {
-        let path = computePath(record.form, target_form);
-
-        if (path != null) {
-            for (let form of path.up) {
-                record = record.parent;
-                if (record.values == null)
-                    record = await loadRecord(record.ulid, null);
-
-                if (record.form !== form)
-                    throw new Error('Saut impossible en raison d\'un changement de schéma');
-            }
-
-            for (let i = 0; i < path.down.length; i++) {
-                let form = path.down[i];
-                let follow = !form.multi || !create_new;
-
-                if (follow && record.children[form.key] != null) {
-                    let children = record.children[form.key];
-                    let child = children[children.length - 1];
-
-                    record = await loadRecord(child.ulid, null);
-                    if (record.form !== form)
-                        throw new Error('Saut impossible en raison d\'un changement de schéma');
-                } else if (create_new) {
-                    record = await createRecord(form, null, record);
-                } else {
-                    return null;
-                }
-            }
-
-            return record;
-        } else {
-            return null;
-        }
-    }
-
-    // Assumes from != to
-    function computePath(from, to) {
-        let prefix_len = 0;
-        while (prefix_len < from.chain.length && prefix_len < to.chain.length) {
-            let parent1 = from.chain[prefix_len];
-            let parent2 = to.chain[prefix_len];
-
-            if (parent1 !== parent2)
-                break;
-
-            prefix_len++;
-        }
-        prefix_len--;
-
-        if (from.chain[prefix_len] === to) {
-            let path = {
-                up: from.chain.slice(prefix_len, from.chain.length - 1).reverse(),
-                down: []
-            };
-            return path;
-        } else if (to.chain[prefix_len] === from) {
-            let path = {
-                up: [],
-                down: to.chain.slice(prefix_len + 1)
-            };
-            return path;
-        } else if (prefix_len >= 0) {
-            let path = {
-                up: from.chain.slice(prefix_len, from.chain.length - 1).reverse(),
-                down: to.chain.slice(prefix_len + 1)
-            };
-            return path;
-        } else {
-            return null;
-        }
-    }
-
-    async function backupRecords() {
-        let progress = log.progress('Archivage sécurisé des données');
-
-        try {
-            let entries = [];
-            {
-                let range = IDBKeyRange.bound(profile.namespaces.records + ':', profile.namespaces.records + '`', false, true);
-                let objects = await db.loadAll('rec_records', range);
-
-                for (let obj of objects) {
-                    try {
-                        let entry = await goupile.decryptSymmetric(obj.enc, ['records', 'lock']);
-                        entries.push(entry);
-                    } catch (err) {
-                        console.log(err);
-                    }
-                }
-            }
-
-            let enc = await goupile.encryptBackup(entries);
-            let json = JSON.stringify(enc);
-            let blob = new Blob([json], { type: 'application/octet-stream' });
-
-            let filename = `${ENV.urls.instance.replace(/\//g, '')}_${profile.username}_${dates.today()}.backup`;
-            util.saveBlob(blob, filename);
-
-            console.log('Archive sécurisée créée');
-            progress.close();
-        } catch (err) {
-            progress.close();
-            throw err;
-        }
-    }
-
-    async function syncRecords(standalone = true, full = false) {
-        standalone &= (form_record != null);
-
-        await mutex.run(async () => {
-            let progress = standalone ? log.progress('Synchronisation en cours') : null;
-
-            try {
-                let changed = false;
-
-                // Upload new fragments
-                {
-                    let range = IDBKeyRange.only(profile.namespaces.records);
-                    let objects = await db.loadAll('rec_records/sync', range);
-
-                    let uploads = [];
-                    let buckets = {};
-                    let ulids = new Set;
-                    for (let obj of objects) {
-                        try {
-                            let record = await decryptRecord(obj, null, true);
-
-                            let upload = {
-                                form: record.form.key,
-                                ulid: record.ulid,
-                                hid: record.hid,
-                                parent: record.parent,
-                                fragments: record.fragments.map((fragment, idx) => ({
-                                    type: fragment.type,
-                                    mtime: fragment.mtime.toISOString(),
-                                    fs: (fragment.fs != null) ? fragment.fs : ENV.version, // Use ENV.version for transition,
-                                                                                           // will be removed eventually
-                                    page: fragment.page,
-                                    json: JSON.stringify(fragment.values)
-                                }))
-                            };
-
-                            if (upload.parent == null) {
-                                uploads.push(upload);
-                            } else {
-                                let bucket = buckets[upload.parent.ulid];
-                                if (bucket == null) {
-                                    bucket = [];
-                                    buckets[upload.parent.ulid] = bucket;
-                                }
-                                bucket.push(upload);
-                            }
-                            ulids.add(record.ulid);
-                        } catch (err) {
-                            console.log(err);
-                        }
-                    }
-
-                    // For the topological sort to be correct we first need to find records
-                    // that are not real roots but are parents of other records that we
-                    // want to upload.
-                    // We append to the array as we go, and I couldn't make sure that
-                    // a for of loop is okay with that (even though it probably is).
-                    // So instead I use a dumb increment to be sure it works correctly.
-                    for (let ulid in buckets) {
-                        if (!ulids.has(ulid)) {
-                            uploads.push(...buckets[ulid]);
-                            delete buckets[ulid];
-                        }
-                    }
-                    for (let i = 0; i < uploads.length; i++) {
-                        let upload = uploads[i];
-                        let bucket = buckets[upload.ulid];
-
-                        if (bucket != null) {
-                            uploads.push(...bucket);
-                            delete buckets[upload.ulid];
-                        }
-                    }
-                    for (let ulid in buckets) {
-                        let bucket = buckets[ulid];
-                        uploads.push(...bucket);
-                    }
-
-                    if (uploads.length) {
-                        let url = `${ENV.urls.instance}api/records/save`;
-                        let response = await net.fetch(url, {
-                            method: 'POST',
-                            body: JSON.stringify(uploads),
-                            timeout: 30000
-                        });
-
-                        if (!response.ok) {
-                            let err = await net.readError(response);
-                            throw new Error(err);
-                        }
-                    }
-                }
-
-                // Download new fragments
-                {
-                    let range = IDBKeyRange.bound(profile.namespaces.records + '@',
-                                                  profile.namespaces.records + '`', false, true);
-                    let [, anchor] = await db.limits('rec_records/anchor', range);
-
-                    if (!full && anchor != null) {
-                        anchor = anchor.toString();
-                        anchor = anchor.substr(anchor.indexOf('@') + 1);
-                        anchor = parseInt(anchor, 10);
-                    } else {
-                        anchor = 0;
-                    }
-
-                    let url = util.pasteURL(`${ENV.urls.instance}api/records/load`, {
-                        anchor: anchor
-                    });
-                    let downloads = await net.fetchJson(url, {
-                        timeout: 120000
-                    });
-
-                    for (let download of downloads) {
-                        let key = profile.namespaces.records + `:${download.ulid}`;
-                        let mtime = download.fragments.length ? (new Date(download.fragments[download.fragments.length - 1].mtime)).getTime() : null;
-
-                        let obj = {
-                            keys: {
-                                form: profile.namespaces.records + `/${download.form}`,
-                                parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}@${mtime}`) : null,
-                                anchor: profile.namespaces.records + `@${(download.anchor + 1).toString().padStart(16, '0')}`,
-                                sync: null
-                            },
-                            enc: null
-                        };
-                        if (download.fragments.length && download.fragments[download.fragments.length - 1].type == 'delete') {
-                            obj.keys.form = null;
-                            obj.keys.parent = null;
-                        }
-
-                        let entry = {
-                            ulid: download.ulid,
-                            hid: download.hid,
-                            form: download.form,
-                            parent: download.parent,
-                            fragments: download.fragments.map(fragment => {
-                                anchor = Math.max(anchor, fragment.anchor + 1);
-
-                                let frag = {
-                                    anchor: fragment.anchor,
-                                    type: fragment.type,
-                                    user: fragment.username,
-                                    mtime: new Date(fragment.mtime),
-                                    fs: fragment.fs,
-                                    page: fragment.page,
-                                    values: fragment.values
-                                };
-                                return frag;
-                            })
-                        };
-
-                        obj.enc = await goupile.encryptSymmetric(entry, 'records');
-                        await db.saveWithKey('rec_records', key, obj);
-
-                        changed = true;
-                    }
-
-                    // Detect changes from other tabs
-                    if (prev_anchor != null && anchor !== prev_anchor)
-                        changed = true;
-                    prev_anchor = anchor;
-                }
-
-                if (changed && standalone) {
-                    progress.success('Synchronisation effectuée');
-
-                    if (form_record != null) {
-                        data_rows = null;
-
-                        let reload = form_record.saved && !form_state.hasChanged();
-                        self.go(null, window.location.href, { reload: reload });
-                    }
-                } else {
-                    if (standalone)
-                        progress.close();
-                }
-            } catch (err) {
-                if (standalone)
-                    progress.close();
-                throw err;
-            }
-        });
     }
 };
