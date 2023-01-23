@@ -184,7 +184,6 @@ html:not(.small) #ui_panels > div:not(:only-child) #ins_tasks {
     border: 12px solid black;
 }
 html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
-html:not(.small) #ui_panels > div:not(:only-child) #ins_page { border-bottom-width: calc(2.8em + 2 * 12px); }
 
 /* -------------------- Misc -------------------- */
 

@@ -494,29 +494,31 @@ function InstanceController() {
                 </div>
                 <div style="flex: 1;"></div>
 
-                <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                    <div style="flex: 1;"></div>
+                ${model.actions.length ? html`
+                    <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
+                        <div style="flex: 1;"></div>
 
-                    ${model.actions.some(action => !action.options.always) ? html`
-                        <div class="drop up right">
-                            <button @click=${ui.deployMenu}>Actions</button>
-                            <div>
-                                ${model.actions.map(action => action.render())}
+                        ${model.actions.some(action => !action.options.always) ? html`
+                            <div class="drop up right">
+                                <button @click=${ui.deployMenu}>Actions</button>
+                                <div>
+                                    ${model.actions.map(action => action.render())}
+                                </div>
                             </div>
-                        </div>
-                        <hr/>
-                    ` : ''}
-                    ${util.mapRange(0, model.actions.length, idx => {
-                        let action = model.actions[model.actions.length - idx - 1];
+                            <hr/>
+                        ` : ''}
+                        ${util.mapRange(0, model.actions.length, idx => {
+                            let action = model.actions[model.actions.length - idx - 1];
 
-                        if (action.label.match(/^\-+$/))
-                            return '';
-                        if (!action.options.always)
-                            return '';
+                            if (action.label.match(/^\-+$/))
+                                return '';
+                            if (!action.options.always)
+                                return '';
 
-                        return action.render();
-                    })}
-                </nav>
+                            return action.render();
+                        })}
+                    </nav>
+                ` : ''}
             </div>
         `;
     }
