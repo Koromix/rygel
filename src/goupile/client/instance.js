@@ -779,12 +779,8 @@ function InstanceController() {
     }
 
     function toggleEditorFile(e, filename) {
-        if (!ui.isPanelActive('editor') || editor_filename != filename) {
-            editor_filename = filename;
-            return togglePanel(e, 'editor', true);
-        } else {
-            return togglePanel(e, 'editor', false);
-        }
+        editor_filename = filename;
+        return togglePanel(e, 'editor', true);
     }
 
     async function handleFileChange(filename) {
