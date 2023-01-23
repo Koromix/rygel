@@ -967,7 +967,7 @@ function InstanceController() {
                 url.pathname += '/';
 
             // Goodbye!
-            if (!url.pathname.startsWith(`${ENV.urls.instance}main/`)) {
+            if (!url.pathname.startsWith(ENV.urls.instance)) {
                 if (self.hasUnsavedData())
                     await goupile.confirmDangerousAction(e);
 
@@ -977,7 +977,7 @@ function InstanceController() {
                 return;
             }
 
-            let path = url.pathname.substr(ENV.urls.instance.length + 5);
+            let path = url.pathname.substr(ENV.urls.instance.length);
             let [key, what] = path.split('/').map(str => str.trim());
 
             // Follow lock sequence

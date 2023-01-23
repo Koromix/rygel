@@ -190,7 +190,7 @@ function ApplicationBuilder(app) {
         } else {
             page.form = new FormInfo(key, title);
         }
-        page.url = `${ENV.urls.instance}main/${key}`;
+        page.url = ENV.urls.instance + key;
 
         if (page.getOption('menu', true)) {
             let item = {

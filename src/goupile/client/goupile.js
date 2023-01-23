@@ -40,14 +40,6 @@ const goupile = new function() {
         } else {
             controller = new InstanceController;
             document.documentElement.className = 'instance';
-
-            // Detect base URLs
-            {
-                let parts = url.pathname.split('/', 3);
-
-                if (parts[2] && parts[2] !== 'main')
-                    ENV.urls.instance += `${parts[2]}/`;
-            }
         }
 
         // Try to work around Safari bug:

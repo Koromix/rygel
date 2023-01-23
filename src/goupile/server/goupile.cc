@@ -568,8 +568,8 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         return;
 
     // Try static assets
-    if (request.method == http_RequestMethod::Get) {
-        if (StartsWith(instance_url, "/main/")) {
+    if (request.method == http_RequestMethod::Get && !StartsWith(instance_url, "/api/")) {
+        if (!GetPathExtension(instance_url).len) {
             instance_url = "/";
         }
 
@@ -603,7 +603,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     json.StartObject();
                     json.Key("urls"); json.StartObject();
                         json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
-                        json.Key("instance"); json.String(Fmt(buf, "/%1/", master->key).ptr);
+                        json.Key("instance"); json.String(Fmt(buf, "/%1/", instance->key).ptr);
                         json.Key("static"); json.String(Fmt(buf, "/%1/static/%2/", master->key, shared_etag).ptr);
                         json.Key("files"); json.String(Fmt(buf, "/%1/files/%2/", master->key, fs_version).ptr);
                     json.EndObject();
