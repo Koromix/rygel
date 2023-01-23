@@ -15,7 +15,7 @@
   },
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "bin": "cnoke.js",
-  "license": "AGPL-3.0",
+  "license": "LGPL-3.0",
   "files": [
     "cnoke.js",
     "LICENSE.txt",

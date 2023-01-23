@@ -1,19 +1,21 @@
 # Projects
 
-| Project    | Description                                                                | Build tool | Quality  |
-| ---------- | -------------------------------------------------------------------------- | ---------- | -------- |
-| *blikk*    | Embeddable beginner-friendly language with static types, fast compilation  | Felix      | **WIP**  |
-| *core*     | Base C++ libraries (such as libcc) and small wrappers (R, rapidjson...)    | Felix      | **Good** |
-| *cnoke*    | Simple alternative to cmake.js, without any dependency                     | Node.js    | **Good** |
-| *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Felix/R    | **Good** |
-| *felix*    | Small build system made specifically for this repository                   | Felix      | **Good** |
-| *goupile*  | Programmable electronic data capture application                           | Felix      | **WIP**  |
-| *heimdall* | Medical timeline visualization (proof-of-concept)                          | Felix/R    | **POC**  |
-| *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js             | Node.js    | **Good** |
-| *rekord*   | Public-key backup tool with deduplication                                  | Felix      | **WIP**  |
-| *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Felix      | **Good** |
-| *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Felix      | **Good** |
-| *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Felix      | **Good** |
+Most projects are licensed under the [AGPL 3.0 license](https://www.gnu.org/licenses/agpl-3.0.html), with a few exceptions listed below.
+
+| Project    | Description                                                                | Build tool | Quality  | License  |
+| ---------- | -------------------------------------------------------------------------- | ---------- | -------- | -------- |
+| *blikk*    | Embeddable beginner-friendly language with static types, fast compilation  | Felix      | **WIP**  | AGPL 3   |
+| *core*     | Base C++ libraries (such as libcc) and small wrappers (R, rapidjson...)    | Felix      | **Good** | *LGPL 3* |
+| *cnoke*    | Simple alternative to cmake.js, without any dependency                     | Node.js    | **Good** | *LGPL 3* |
+| *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Felix/R    | **Good** | AGPL 3   |
+| *felix*    | Small build system made specifically for this repository                   | Felix      | **Good** | AGPL 3   |
+| *goupile*  | Programmable electronic data capture application                           | Felix      | **WIP**  | AGPL 3   |
+| *heimdall* | Medical timeline visualization (proof-of-concept)                          | Felix/R    | **POC**  | AGPL 3   |
+| *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js             | Node.js    | **Good** | *LGPL 3* |
+| *rekord*   | Public-key backup tool with deduplication                                  | Felix      | **WIP**  | AGPL 3   |
+| *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Felix      | **Good** | AGPL 3   |
+| *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Felix      | **Good** | AGPL 3   |
+| *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Felix      | **Good** | AGPL 3   |
 
 # How to build
 
