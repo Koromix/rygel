@@ -529,7 +529,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     return false;
 
                 if (stmt.Step()) {
-                    anchor = sqlite3_column_int64(stmt, 7);
+                    anchor = sqlite3_column_int64(stmt, 5);
                 } else if (stmt.IsValid()) {
                     anchor = -1;
                 } else {
@@ -584,6 +584,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                             if (!TestStr(store, frag.store)) {
                                 LogError("Record entry store mismatch");
+                                io->AttachError(409);
                                 return false;
                             }
 
