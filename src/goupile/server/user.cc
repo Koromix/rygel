@@ -154,6 +154,22 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 
 void SessionInfo::InvalidateStamps()
 {
+    if (admin_until && !admin_root) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT IIF(p.permissions IS NOT NULL, 1, 0) AS admin
+                                     FROM dom_users u
+                                     INNER JOIN dom_permissions p ON (p.userid = u.userid AND
+                                                                      p.permissions & ?2)
+                                     WHERE u.userid = ?1)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, userid);
+        sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
+
+        if (!stmt.Step()) {
+            admin_until = 0;
+        }
+    }
+
     std::lock_guard<std::shared_mutex> lock_excl(mutex);
     stamps_map.Clear();
 
