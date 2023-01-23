@@ -492,7 +492,7 @@ async function prepare() {
         fs.unlinkSync(dist_dir + '/src/koffi/.gitignore');
         fs.renameSync(dist_dir + '/src/koffi/README.md', dist_dir + '/README.md');
         fs.renameSync(dist_dir + '/src/koffi/LICENSE.txt', dist_dir + '/LICENSE.txt');
-        fs.renameSync(dist_dir + '/src/koffi/ChangeLog.md', dist_dir + '/ChangeLog.md');
+        fs.renameSync(dist_dir + '/src/koffi/CHANGELOG.md', dist_dir + '/CHANGELOG.md');
         fs.renameSync(dist_dir + '/web/koffi.dev', dist_dir + '/doc');
         fs.rmdirSync(dist_dir + '/web');
     }
