@@ -147,7 +147,6 @@ function InstanceController() {
         let wide = (route.form.chain[0].menu.length > 3);
 
         let user_icon = goupile.isLoggedOnline() ? 450 : 494;
-        let tabs = getEditorTabs();
 
         return html`
             <nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'} id="ui_top" style="z-index: 999999;">
@@ -155,15 +154,16 @@ function InstanceController() {
                     <div class="drop">
                         <button class=${'icon' + (ui.isPanelActive('editor') ? ' active' : '')}
                                 style="background-position-y: calc(-230px + 1.2em);"
-                                @click=${ui.deployMenu}>Conception</button>
+                                @click=${ui.deployMenu}>Code</button>
                         <div>
                             <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>
                                 <div style="flex: 1;">Mode conception</div>
                                 <div>&nbsp;✓\uFE0E</div>
                             </button>
-                            <hr/>
-                            ${tabs.map(tab => html`<button class=${tab.active ? 'active' : ''}
-                                                           @click=${ui.wrapAction(e => toggleEditorFile(e, tab.filename))}>${tab.title}</button>`)}
+                            ${profile.develop && goupile.hasPermission('build_publish') ? html`
+                                <hr/>
+                                <button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>
+                            ` : ''}
                         </div>
                     </div>
                 ` : ''}
@@ -369,15 +369,24 @@ function InstanceController() {
         // Ask ACE to adjust if needed, it needs to happen after the render
         setTimeout(() => editor_ace.resize(false), 0);
 
+        let tabs = getEditorTabs();
+        let active_tab = tabs.find(tab => tab.active);
+
         return html`
             <div style="--menu_color: #1d1d1d; --menu_color_n1: #2c2c2c;">
                 <div class="ui_toolbar">
-                    <div style="flex: 1;"></div>
+                    <div class="drop">
+                        <button @click=${ui.deployMenu}>${active_tab.title}</button>
+                        <div>
+                            ${tabs.map(tab => html`<button class=${tab.active ? 'active' : ''}
+                                                           @click=${ui.wrapAction(e => toggleEditorFile(e, tab.filename))}>${tab.title}</button>`)}
+                        </div>
+                    </div>
                     ${editor_filename === 'main.js' ? html`
+                        <div style="flex: 1;"></div>
                         <button ?disabled=${!fileHasChanged('main.js')}
                                 @click=${ui.wrapAction(applyMainScript)}>Appliquer</button>
                     ` : ''}
-                    ${goupile.hasPermission('build_publish') ? html`<button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>` : ''}
                     <div style="flex: 1;"></div>
                     <button class=${ui.isPanelActive('view') ? 'icon active' : 'icon'}
                             style="background-position-y: calc(-626px + 1.2em);"
