@@ -456,17 +456,21 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                             } else if (key == "mtime") {
                                 parser.ParseInt(&frag->mtime);
                             } else if (key == "data") {
-                                if (parser.PassThrough(&frag->data)) {
-                                    if (frag->data == "null") {
+                                switch (parser.PeekToken()) {
+                                    case json_TokenType::Null: {
                                         frag->data = {};
                                         frag->has_data = true;
-                                    } else if (StartsWith(frag->data, "{")) {
+                                    } break;
+                                    case json_TokenType::StartObject: {
+                                        parser.PassThrough(&frag->data);
                                         frag->has_data = true;
-                                    } else {
+                                    } break;
+
+                                    default: {
                                         LogError("Unexpected value type for fragment data");
                                         io->AttachError(422);
-                                        return; 
-                                    }
+                                        return;
+                                    } break;
                                 }
                             } else if (parser.IsValid()) {
                                 LogError("Unexpected key '%1'", key);

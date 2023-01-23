@@ -13,6 +13,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "json.hh"
+#include "vendor/fast_float/fast_float.h"
 
 namespace RG {
 
@@ -86,43 +87,14 @@ bool json_Parser::Handler::Bool(bool b)
     return true;
 }
 
-bool json_Parser::Handler::Double(double d)
+bool json_Parser::Handler::RawNumber(const char *str, Size len, bool)
 {
-    token = json_TokenType::Double;
-    u.d = d;
-    return true;
-}
+    token = json_TokenType::Number;
 
-bool json_Parser::Handler::Int(int i)
-{
-    token = json_TokenType::Integer;
-    u.i = (int64_t)i;
-    return true;
-}
+    u.num.len = std::min(len, RG_SIZE(u.num.data) - 1);
+    memcpy_safe(u.num.data, str, len);
+    u.num.data[u.num.len] = 0;
 
-bool json_Parser::Handler::Int64(int64_t i)
-{
-    token = json_TokenType::Integer;
-    u.i = i;
-    return true;
-}
-
-bool json_Parser::Handler::Uint(unsigned int i)
-{
-    token = json_TokenType::Integer;
-    u.i = (int64_t)i;
-    return true;
-}
-
-bool json_Parser::Handler::Uint64(uint64_t i)
-{
-    if (RG_UNLIKELY(i > INT64_MAX)) {
-        LogError("Integer value %1 is too big", i);
-        return false;
-    }
-
-    token = json_TokenType::Integer;
-    u.i = (int64_t)i;
     return true;
 }
 
@@ -136,7 +108,7 @@ bool json_Parser::Handler::String(const char *str, Size len, bool)
 bool json_Parser::Handler::Key(const char *key, Size len, bool)
 {
     token = json_TokenType::Key;
-    u.key = DuplicateString(MakeSpan(key, len), allocator);
+    u.str = DuplicateString(MakeSpan(key, len), allocator);
     return true;
 }
 
@@ -150,7 +122,7 @@ json_Parser::json_Parser(StreamReader *st, Allocator *alloc)
 bool json_Parser::ParseKey(Span<const char> *out_key)
 {
     if (ConsumeToken(json_TokenType::Key)) {
-        *out_key = handler.u.key;
+        *out_key = handler.u.str;
         return true;
     } else {
         return false;
@@ -160,7 +132,7 @@ bool json_Parser::ParseKey(Span<const char> *out_key)
 bool json_Parser::ParseKey(const char **out_key)
 {
     if (ConsumeToken(json_TokenType::Key)) {
-        *out_key = handler.u.key.ptr;
+        *out_key = handler.u.str.ptr;
         return true;
     } else {
         return false;
@@ -216,9 +188,9 @@ bool json_Parser::ParseBool(bool *out_b)
 
 bool json_Parser::ParseInt(int64_t *out_i)
 {
-    if (ConsumeToken(json_TokenType::Integer)) {
-        *out_i = handler.u.i;
-        return true;
+    if (ConsumeToken(json_TokenType::Number)) {
+        error |= !RG::ParseInt(handler.u.num, out_i);
+        return !error;
     } else {
         return false;
     }
@@ -226,9 +198,15 @@ bool json_Parser::ParseInt(int64_t *out_i)
 
 bool json_Parser::ParseDouble(double *out_d)
 {
-    if (ConsumeToken(json_TokenType::Double)) {
-        *out_d = handler.u.d;
-        return true;
+    if (ConsumeToken(json_TokenType::Number)) {
+        fast_float::from_chars_result ret = fast_float::from_chars(handler.u.num.data, handler.u.num.end(), *out_d);
+
+        if (RG_UNLIKELY(ret.ec != std::errc())) {
+            LogError("Malformed float number");
+            error = true;
+        }
+
+        return !error;
     } else {
         return false;
     }
@@ -276,8 +254,7 @@ bool json_Parser::Skip()
 
         case json_TokenType::Null:
         case json_TokenType::Bool:
-        case json_TokenType::Double:
-        case json_TokenType::Integer:
+        case json_TokenType::Number:
         case json_TokenType::String: { handler.token = json_TokenType::Invalid; } break;
 
         case json_TokenType::Key: {
@@ -332,16 +309,32 @@ bool json_Parser::PassThrough(StreamWriter *writer)
     if (RG_UNLIKELY(error))
         return false;
 
-    RG_ASSERT(handler.token == json_TokenType::Invalid);
-    RG_ASSERT(!eof);
-
     CopyHandler copier(writer);
     bool empty = true;
 
-    if (reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, copier)) {
+    if (handler.token == json_TokenType::Invalid) {
+        empty &= !reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, copier);
+    } else {
+        switch (handler.token) {
+            case json_TokenType::Invalid: { RG_UNREACHABLE(); } break;
+
+            case json_TokenType::StartObject: { copier.StartObject(); } break;
+            case json_TokenType::EndObject: { copier.EndObject(0); } break;
+            case json_TokenType::StartArray: { copier.StartArray(); } break;
+            case json_TokenType::EndArray: { copier.EndArray(0); } break;
+
+            case json_TokenType::Null: { copier.Null(); } break;
+            case json_TokenType::Bool: { copier.Bool(handler.u.b); } break;
+            case json_TokenType::Number: { copier.RawNumber(handler.u.num.data, handler.u.num.len, true); } break;
+            case json_TokenType::String: { copier.String(handler.u.str.ptr, handler.u.str.len, true); } break;
+
+            case json_TokenType::Key: { copier.Key(handler.u.str.ptr, handler.u.str.len, true); } break;
+        }
+
+        handler.token = json_TokenType::Invalid;
         empty = false;
-        while (copier.GetDepth() && reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, copier));
     }
+    while (copier.GetDepth() && reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, copier));
 
     if (reader.HasParseError()) {
         rapidjson::ParseErrorCode err = reader.GetParseErrorCode();
@@ -389,7 +382,7 @@ json_TokenType json_Parser::PeekToken()
         return json_TokenType::Invalid;
 
     if (handler.token == json_TokenType::Invalid &&
-            !reader.IterativeParseNext<rapidjson::kParseDefaultFlags>(st, handler)) {
+            !reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, handler)) {
         if (reader.HasParseError()) {
             if (!error) {
                 rapidjson::ParseErrorCode err = reader.GetParseErrorCode();

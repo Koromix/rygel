@@ -69,8 +69,7 @@ enum class json_TokenType {
 
     Null,
     Bool,
-    Double,
-    Integer,
+    Number,
     String,
 
     Key
@@ -85,8 +84,7 @@ static const char *const json_TokenTypeNames[] = {
 
     "Null",
     "Boolean",
-    "Double",
-    "Integer",
+    "Number",
     "String",
 
     "Key"
@@ -101,10 +99,8 @@ class json_Parser {
         json_TokenType token = json_TokenType::Invalid;
         union {
             bool b;
-            double d;
-            int64_t i;
+            LocalArray<char, 128> num;
             Span<const char> str;
-            Span<const char> key;
         } u = {};
 
         bool StartObject();
@@ -114,16 +110,15 @@ class json_Parser {
 
         bool Null();
         bool Bool(bool b);
-        bool Double(double d);
-        bool Int(int i);
-        bool Int64(int64_t i);
-        bool Uint(unsigned int i);
-        bool Uint64(uint64_t i);
+        bool Double(double) { RG_UNREACHABLE(); }
+        bool Int(int) { RG_UNREACHABLE(); }
+        bool Int64(int64_t) { RG_UNREACHABLE(); }
+        bool Uint(unsigned int) { RG_UNREACHABLE(); }
+        bool Uint64(uint64_t) { RG_UNREACHABLE(); }
+        bool RawNumber(const char *, Size, bool);
         bool String(const char *str, Size len, bool);
 
         bool Key(const char *key, Size len, bool);
-
-        bool RawNumber(const char *, Size, bool) { RG_UNREACHABLE(); }
     };
 
     json_StreamReader st;
