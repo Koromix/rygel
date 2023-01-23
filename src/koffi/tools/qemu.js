@@ -469,7 +469,21 @@ async function prepare() {
         unlink_recursive(dist_dir);
         fs.mkdirSync(dist_dir, { mode: 0o755, recursive: true });
 
-        copy_recursive(snapshot_dir, dist_dir);
+        copy_recursive(snapshot_dir, dist_dir, filename => {
+            let parts = filename.split('/');
+
+            if (parts[0] == 'src') {
+                return parts[1] == null || parts[1] == 'core' ||
+                                           parts[1] == 'koffi';
+            } else if (parts[0] == 'vendor') {
+                return parts[1] != 'sqlite3' &&
+                       parts[1] != 'raylib';
+            } else if (parts[0] == 'web') {
+                return true;
+            } else {
+                return false;
+            }
+        });
         fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
 
         for (let artifact of artifacts) {
