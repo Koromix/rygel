@@ -2,6 +2,12 @@
 
 ## History
 
+### Koffi 2.2.5
+
+**Main changes:**
+
+- Relicense Koffi under LGPL 3.0
+
 ### Koffi 2.2.4
 
 **Main fixes:**
