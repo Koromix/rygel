@@ -77,6 +77,28 @@ static inline bool IsObject(Napi::Value value)
     return value.IsObject() && !IsNullOrUndefined(value) && !value.IsArray();
 }
 
+static inline bool IsRawBuffer(Napi::Value value)
+{
+    return value.IsTypedArray() || value.IsArrayBuffer();
+}
+
+static inline Span<uint8_t> GetRawBuffer(Napi::Value value)
+{
+    if (value.IsTypedArray()) {
+        Napi::TypedArray array = value.As<Napi::TypedArray>();
+        Napi::ArrayBuffer buffer = array.ArrayBuffer();
+        Size offset = array.ByteOffset();
+
+        return MakeSpan((uint8_t *)buffer.Data() + offset, (Size)buffer.ByteLength() - offset);
+    } else if (value.IsArrayBuffer()) {
+        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+
+        return MakeSpan((uint8_t *)buffer.Data(), (Size)buffer.ByteLength());
+    }
+
+    RG_UNREACHABLE();
+}
+
 int GetTypedArrayType(const TypeInfo *type);
 
 template <typename T>
@@ -100,7 +122,7 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
 void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
 void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
-void DecodeArrayBuffer(Napi::Value value, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
+void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
 
 static inline Napi::Value NewBigInt(Napi::Env env, int64_t value)
 {

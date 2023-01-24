@@ -251,6 +251,8 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
         }
     } else if (value.IsArrayBuffer()) {
         return "ArrayBuffer";
+    } else if (value.IsBuffer()) {
+        return "Buffer";
     }
 
     switch (value.Type()) {
@@ -503,7 +505,9 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 }); \
             } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
-                DecodeArrayBuffer(array, origin, type->ref.type, realign); \
+                Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
+                 \
+                DecodeBuffer(buffer, origin, type->ref.type, realign); \
                  \
                 return array; \
             } \
@@ -518,7 +522,9 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 }); \
             } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
-                DecodeArrayBuffer(array, origin, type->ref.type, realign); \
+                Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
+                 \
+                DecodeBuffer(buffer, origin, type->ref.type, realign); \
                  \
                 return array; \
             } \
@@ -787,36 +793,29 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
 #undef POP_ARRAY
 }
 
-void DecodeArrayBuffer(Napi::Value value, const uint8_t *origin, const TypeInfo *ref, int16_t realign)
+void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref, int16_t realign)
 {
-    RG_ASSERT(value.IsTypedArray() || value.IsArrayBuffer());
-
-    Napi::ArrayBuffer buffer = value.IsTypedArray() ? value.As<Napi::TypedArray>().ArrayBuffer()
-                                                    : value.As<Napi::ArrayBuffer>();
-    uint8_t *ptr = (uint8_t *)buffer.Data();
-    Size size = (Size)buffer.ByteLength();
-
     if (realign) {
         Size offset = 0;
         Size step = ref->size;
 
-        for (Size i = 0; i < size; i += step) {
+        for (Size i = 0; i < buffer.len; i += step) {
             offset = AlignLen(offset, realign);
 
-            uint8_t *dest = ptr + i;
+            uint8_t *dest = buffer.ptr + i;
             const uint8_t *src = origin + offset;
 
             memcpy(dest, src, step);
             offset += step;
         }
     } else {
-        memcpy_safe(ptr, origin, (size_t)size);
+        memcpy_safe(buffer.ptr, origin, (size_t)buffer.len);
     }
 
 #define SWAP(CType) \
         do { \
-            CType *data = (CType *)ptr; \
-            Size len = size / RG_SIZE(CType); \
+            CType *data = (CType *)buffer.ptr; \
+            Size len = buffer.len / RG_SIZE(CType); \
              \
             for (Size i = 0; i < len; i++) { \
                 data[i] = ReverseBytes(data[i]); \

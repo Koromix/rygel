@@ -1854,17 +1854,16 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     if (value.IsExternal()) {
         Napi::External<void> external = value.As<Napi::External<void>>();
         ptr = (const uint8_t *)external.Data();
-    } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
-        Napi::ArrayBuffer buffer = value.IsTypedArray() ? value.As<Napi::TypedArray>().ArrayBuffer()
-                                                        : value.As<Napi::ArrayBuffer>();
+    } else if (IsRawBuffer(value)) {
+        Span<uint8_t> buffer = GetRawBuffer(value);
 
-        if (RG_UNLIKELY((Size)buffer.ByteLength() - offset < type->size)) {
+        if (RG_UNLIKELY(buffer.len - offset < type->size)) {
             ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
                                     type->name, type->size + offset);
             return env.Null();
         }
 
-        ptr = (const uint8_t *)buffer.Data();
+        ptr = (const uint8_t *)buffer.ptr;
     } else {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected external or TypedArray", GetValueType(instance, info[0]));
         return env.Null();

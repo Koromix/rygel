@@ -541,20 +541,25 @@ async function test() {
 
     // Use raw buffers for struct output
     {
-        let ptr1 = [null];
-        let ptr2 = Buffer.allocUnsafe(koffi.sizeof('Float3'));
+        let buf = Buffer.alloc(koffi.sizeof('Float3') * 8);
 
-        // Output type
-        let type = koffi.pointer(koffi.array('uint8_t', koffi.sizeof('Float3')));
+        for (let i = 0; i < 8; i++) {
+            let ptr1 = [null];
+            let ptr2 = buf.subarray(i * koffi.sizeof('Float3'), koffi.sizeof('Float3'));
 
-        PackFloat3(20.0, 30.0, 40.0, koffi.as(ptr1, type));
-        PackFloat3(25.0, -30.0, -31.0, ptr2);
+            // Output type
+            let type = koffi.pointer(koffi.array('uint8_t', koffi.sizeof('Float3')));
 
-        assert.deepEqual(koffi.decode(ptr1[0], 'Float3'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
-        assert.deepEqual(koffi.decode(ptr1[0].buffer, 'Float3'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
+            PackFloat3(20.0, 30.0, 40.0, koffi.as(ptr1, type));
+            PackFloat3(i * 2, -30.0, -31.0, ptr2);
 
-        assert.ok(ptr2 instanceof Buffer);
-        assert.deepEqual(koffi.decode(ptr2, 'Float3'), { a: 25.0, b: Float32Array.from([-30.0, -31.0])});
+            assert.deepEqual(koffi.decode(ptr1[0], 'Float3'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
+            assert.deepEqual(koffi.decode(ptr1[0].buffer, 'Float3'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
+
+            assert.ok(ptr2 instanceof Buffer);
+            assert.deepEqual(koffi.decode(ptr2, 'Float3'), { a: i * 2, b: Float32Array.from([-30.0, -31.0])});
+            assert.deepEqual(koffi.decode(ptr2.buffer, 'Float3'), { a: 0, b: Float32Array.from([-30.0, -31.0])});
+        }
     }
 
     // Use buffers as _Inout_ argument

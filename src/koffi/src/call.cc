@@ -511,8 +511,10 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
                     if (!PushNormalArray(array, len, member.type, dest, realign))
                         return false;
-                } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
-                    if (!PushArrayBuffer(value, member.type->size, member.type, dest, realign))
+                } else if (IsRawBuffer(value)) {
+                    Span<const uint8_t> buffer = GetRawBuffer(value);
+
+                    if (!PushBuffer(buffer, member.type->size, member.type, dest, realign))
                         return false;
                 } else if (value.IsString() && !realign) {
                     if (!PushStringArray(value, member.type, dest))
@@ -748,8 +750,10 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
 
                     if (!PushNormalArray(array2, len2, ref, dest, realign))
                         return false;
-                } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
-                    if (!PushArrayBuffer(value, ref->size, ref, dest, realign))
+                } else if (IsRawBuffer(value)) {
+                    Span<const uint8_t> buffer = GetRawBuffer(value);
+
+                    if (!PushBuffer(buffer, ref->size, ref, dest, realign))
                         return false;
                 } else if (value.IsString() && !realign) {
                     if (!PushStringArray(value, ref, dest))
@@ -815,16 +819,10 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
     return true;
 }
 
-bool CallData::PushArrayBuffer(Napi::Value value, Size size, const TypeInfo *type, uint8_t *origin, int16_t realign)
+bool CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin, int16_t realign)
 {
-    RG_ASSERT(value.IsTypedArray() || value.IsArrayBuffer());
-
-    Napi::ArrayBuffer buffer = value.IsTypedArray() ? value.As<Napi::TypedArray>().ArrayBuffer()
-                                                    : value.As<Napi::ArrayBuffer>();
-    const uint8_t *ptr = (const uint8_t *)buffer.Data();
-
-    if (RG_UNLIKELY(buffer.ByteLength() != (size_t)size)) {
-        ThrowError<Napi::Error>(env, "Expected array or buffer of size %1, got %2", size, buffer.ByteLength());
+    if (RG_UNLIKELY(buffer.len != size)) {
+        ThrowError<Napi::Error>(env, "Expected array or buffer of size %1, got %2", size, buffer.len);
         return false;
     }
 
@@ -832,17 +830,17 @@ bool CallData::PushArrayBuffer(Napi::Value value, Size size, const TypeInfo *typ
         Size offset = 0;
         Size step = type->ref.type->size;
 
-        for (Size i = 0; i < size; i += step) {
+        for (Size i = 0; i < buffer.len; i += step) {
             offset = AlignLen(offset, realign);
 
             uint8_t *dest = origin + offset;
-            const uint8_t *src = ptr + i;
+            const uint8_t *src = buffer.ptr + i;
 
             memcpy(dest, src, step);
             offset += step;
         }
     } else {
-        memcpy_safe(origin, ptr, (size_t)buffer.ByteLength());
+        memcpy_safe(origin, buffer.ptr, (size_t)buffer.len);
     }
 
     return true;
@@ -922,21 +920,18 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     if (!PushNormalArray(array, len, type, ptr))
                         return false;
                 } else {
-                    memset(ptr, 0, size);
+                    memset_safe(ptr, 0, size);
                 }
-            } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
-                Napi::ArrayBuffer buffer = value.IsTypedArray() ? value.As<Napi::TypedArray>().ArrayBuffer()
-                                                                : value.As<Napi::ArrayBuffer>();
+            } else if (IsRawBuffer(value)) {
+                Span<const uint8_t> buffer = GetRawBuffer(value);
 
-                Size size = (Size)buffer.ByteLength();
-
-                ptr = AllocHeap(size, 16);
+                ptr = AllocHeap(buffer.len, 16);
 
                 if (directions & 1) {
-                    if (!PushArrayBuffer(buffer, size, type, ptr))
+                    if (!PushBuffer(buffer, buffer.len, type, ptr))
                         return false;
                 } else {
-                    memset(ptr, 0, size);
+                    memset_safe(ptr, 0, (size_t)buffer.len);
                 }
             } else if (RG_LIKELY(type->ref.type->primitive == PrimitiveKind::Record)) {
                 Napi::Object obj = value.As<Napi::Object>();
@@ -948,7 +943,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     if (!PushObject(obj, type->ref.type, ptr))
                         return false;
                 } else {
-                    memset(ptr, 0, type->size);
+                    memset_safe(ptr, 0, type->size);
                 }
             } else {
                 goto unexpected;
@@ -995,8 +990,9 @@ void CallData::PopOutArguments()
         if (value.IsArray()) {
             Napi::Array array(env, value);
             DecodeNormalArray(array, out.ptr, out.type);
-        } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
-            DecodeArrayBuffer(value, out.ptr, out.type);
+        } else if (IsRawBuffer(value)) {
+            Span<uint8_t> buffer = GetRawBuffer(value);
+            DecodeBuffer(buffer, out.ptr, out.type);
         } else {
             Napi::Object obj(env, value);
             DecodeObject(obj, out.ptr, out.type);
