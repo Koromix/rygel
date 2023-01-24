@@ -511,11 +511,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
                     if (!PushNormalArray(array, len, member.type, dest, realign))
                         return false;
-                } else if (value.IsTypedArray()) {
-                    Napi::TypedArray array = value.As<Napi::TypedArray>();
-                    Size len = (Size)member.type->size / member.type->ref.type->size;
-
-                    if (!PushTypedArray(array, len, member.type, dest, realign))
+                } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
+                    if (!PushArrayBuffer(value, member.type->size, member.type, dest, realign))
                         return false;
                 } else if (value.IsString() && !realign) {
                     if (!PushStringArray(value, member.type, dest))
@@ -751,11 +748,8 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
 
                     if (!PushNormalArray(array2, len2, ref, dest, realign))
                         return false;
-                } else if (value.IsTypedArray()) {
-                    Napi::TypedArray array2 = value.As<Napi::TypedArray>();
-                    Size len2 = (Size)ref->size / ref->ref.type->size;
-
-                    if (!PushTypedArray(array2, len2, ref, dest, realign))
+                } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
+                    if (!PushArrayBuffer(value, ref->size, ref, dest, realign))
                         return false;
                 } else if (value.IsString() && !realign) {
                     if (!PushStringArray(value, ref, dest))
@@ -821,40 +815,34 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
     return true;
 }
 
-bool CallData::PushTypedArray(Napi::TypedArray array, Size len, const TypeInfo *type, uint8_t *origin, int16_t realign)
+bool CallData::PushArrayBuffer(Napi::Value value, Size size, const TypeInfo *type, uint8_t *origin, int16_t realign)
 {
-    RG_ASSERT(array.IsTypedArray());
+    RG_ASSERT(value.IsTypedArray() || value.IsArrayBuffer());
 
-    const TypeInfo *ref = type->ref.type;
+    Napi::ArrayBuffer buffer = value.IsTypedArray() ? value.As<Napi::TypedArray>().ArrayBuffer()
+                                                    : value.As<Napi::ArrayBuffer>();
+    const uint8_t *ptr = (const uint8_t *)buffer.Data();
 
-    if (RG_UNLIKELY(array.ElementLength() != (size_t)len)) {
-        ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.ElementLength());
-        return false;
-    }
-
-    const uint8_t *buf = (const uint8_t *)array.ArrayBuffer().Data();
-
-    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(ref) &&
-                    ref != instance->void_type)) {
-        ThrowError<Napi::TypeError>(env, "Cannot use %1 value for %2 array", GetValueType(instance, array), ref->name);
+    if (RG_UNLIKELY(buffer.ByteLength() != (size_t)size)) {
+        ThrowError<Napi::Error>(env, "Expected array or buffer of size %1, got %2", size, buffer.ByteLength());
         return false;
     }
 
     if (realign) {
         Size offset = 0;
-        Size size = (Size)array.ElementSize();
+        Size step = type->ref.type->size;
 
-        for (Size i = 0; i < len; i++) {
+        for (Size i = 0; i < size; i += step) {
             offset = AlignLen(offset, realign);
 
             uint8_t *dest = origin + offset;
-            const uint8_t *src = buf + i * size;
+            const uint8_t *src = ptr + i;
 
-            memcpy(dest, src, size);
-            offset += size;
+            memcpy(dest, src, step);
+            offset += step;
         }
     } else {
-        memcpy_safe(origin, buf, (size_t)array.ByteLength());
+        memcpy_safe(origin, ptr, (size_t)buffer.ByteLength());
     }
 
     return true;
@@ -936,24 +924,18 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 } else {
                     memset(ptr, 0, size);
                 }
-            } else if (value.IsTypedArray()) {
-                Napi::TypedArray array = value.As<Napi::TypedArray>();
+            } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
+                Napi::ArrayBuffer buffer = value.IsTypedArray() ? value.As<Napi::TypedArray>().ArrayBuffer()
+                                                                : value.As<Napi::ArrayBuffer>();
 
-                Size len = (Size)array.ElementLength();
-                Size size = (Size)array.ByteLength();
+                Size size = (Size)buffer.ByteLength();
 
                 ptr = AllocHeap(size, 16);
 
                 if (directions & 1) {
-                    if (!PushTypedArray(array, len, type, ptr))
+                    if (!PushArrayBuffer(buffer, size, type, ptr))
                         return false;
                 } else {
-                    if (RG_UNLIKELY(array.TypedArrayType() != GetTypedArrayType(type->ref.type) &&
-                                    type->ref.type != instance->void_type)) {
-                        ThrowError<Napi::TypeError>(env, "Cannot use %1 value for %2 array", GetValueType(instance, array), type->ref.type->name);
-                        return false;
-                    }
-
                     memset(ptr, 0, size);
                 }
             } else if (RG_LIKELY(type->ref.type->primitive == PrimitiveKind::Record)) {
@@ -1013,9 +995,8 @@ void CallData::PopOutArguments()
         if (value.IsArray()) {
             Napi::Array array(env, value);
             DecodeNormalArray(array, out.ptr, out.type);
-        } else if (value.IsTypedArray()) {
-            Napi::TypedArray array(env, value);
-            DecodeTypedArray(array, out.ptr, out.type);
+        } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
+            DecodeArrayBuffer(value, out.ptr, out.type);
         } else {
             Napi::Object obj(env, value);
             DecodeObject(obj, out.ptr, out.type);

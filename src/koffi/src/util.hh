@@ -100,7 +100,7 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
 void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
 void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
-void DecodeTypedArray(Napi::TypedArray array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
+void DecodeArrayBuffer(Napi::Value value, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
 
 static inline Napi::Value NewBigInt(Napi::Env env, int64_t value)
 {

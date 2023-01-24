@@ -1846,24 +1846,27 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     if (RG_UNLIKELY(!type))
         return env.Null();
 
-    const uint8_t *ptr = nullptr;
+    Napi::Value value = info[0];
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
 
-    if (info[0].IsExternal()) {
-        Napi::External<void> external = info[0].As<Napi::External<void>>();
-        ptr = (const uint8_t *)external.Data();
-    } else if (info[0].IsTypedArray() && info[0].As<Napi::TypedArray>().TypedArrayType() == napi_uint8_array) {
-        Napi::TypedArray array = info[0].As<Napi::TypedArray>();
-        Napi::ArrayBuffer buffer = array.ArrayBuffer();
+    const uint8_t *ptr = nullptr;
 
-        if (RG_UNLIKELY((Size)array.ByteLength() - offset < type->size)) {
-            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)", type->name, type->size);
+    if (value.IsExternal()) {
+        Napi::External<void> external = value.As<Napi::External<void>>();
+        ptr = (const uint8_t *)external.Data();
+    } else if (value.IsTypedArray() || value.IsArrayBuffer()) {
+        Napi::ArrayBuffer buffer = value.IsTypedArray() ? value.As<Napi::TypedArray>().ArrayBuffer()
+                                                        : value.As<Napi::ArrayBuffer>();
+
+        if (RG_UNLIKELY((Size)buffer.ByteLength() - offset < type->size)) {
+            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
+                                    type->name, type->size + offset);
             return env.Null();
         }
 
         ptr = (const uint8_t *)buffer.Data();
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected external or Uint8Array", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected external or TypedArray", GetValueType(instance, info[0]));
         return env.Null();
     }
 

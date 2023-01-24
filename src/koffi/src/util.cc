@@ -249,6 +249,8 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
             case napi_bigint64_array: return "BigInt64Array";
             case napi_biguint64_array: return "BigUint64Array";
         }
+    } else if (value.IsArrayBuffer()) {
+        return "ArrayBuffer";
     }
 
     switch (value.Type()) {
@@ -501,7 +503,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 }); \
             } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
-                DecodeTypedArray(array, origin, type->ref.type, realign); \
+                DecodeArrayBuffer(array, origin, type->ref.type, realign); \
                  \
                 return array; \
             } \
@@ -516,7 +518,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 }); \
             } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
-                DecodeTypedArray(array, origin, type->ref.type, realign); \
+                DecodeArrayBuffer(array, origin, type->ref.type, realign); \
                  \
                 return array; \
             } \
@@ -785,40 +787,36 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
 #undef POP_ARRAY
 }
 
-void DecodeTypedArray(Napi::TypedArray array, const uint8_t *origin, const TypeInfo *ref, int16_t realign)
+void DecodeArrayBuffer(Napi::Value value, const uint8_t *origin, const TypeInfo *ref, int16_t realign)
 {
-    Napi::Env env = array.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    RG_ASSERT(value.IsTypedArray() || value.IsArrayBuffer());
 
-    RG_ASSERT(array.IsTypedArray());
-    RG_ASSERT(GetTypedArrayType(ref) == array.TypedArrayType() ||
-              ref == instance->void_type);
-
-    uint8_t *buf = (uint8_t *)array.ArrayBuffer().Data();
+    Napi::ArrayBuffer buffer = value.IsTypedArray() ? value.As<Napi::TypedArray>().ArrayBuffer()
+                                                    : value.As<Napi::ArrayBuffer>();
+    uint8_t *ptr = (uint8_t *)buffer.Data();
+    Size size = (Size)buffer.ByteLength();
 
     if (realign) {
         Size offset = 0;
-        Size len = (Size)array.ElementLength();
-        Size size = (Size)array.ElementSize();
+        Size step = ref->size;
 
-        for (Size i = 0; i < len; i++) {
+        for (Size i = 0; i < size; i += step) {
             offset = AlignLen(offset, realign);
 
-            uint8_t *dest = buf + i * size;
+            uint8_t *dest = ptr + i;
             const uint8_t *src = origin + offset;
 
-            memcpy(dest, src, size);
-
-            offset += size;
+            memcpy(dest, src, step);
+            offset += step;
         }
     } else {
-        memcpy_safe(buf, origin, (size_t)array.ByteLength());
+        memcpy_safe(ptr, origin, (size_t)size);
     }
 
 #define SWAP(CType) \
         do { \
-            CType *data = (CType *)buf; \
-            Size len = (Size)array.ElementLength(); \
+            CType *data = (CType *)ptr; \
+            Size len = size / RG_SIZE(CType); \
              \
             for (Size i = 0; i < len; i++) { \
                 data[i] = ReverseBytes(data[i]); \
