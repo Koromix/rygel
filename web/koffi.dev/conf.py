@@ -37,7 +37,8 @@ if root is None:
 
 extensions = [
     'myst_parser',
-    'sphinx.ext.autosectionlabel'
+    'sphinx.ext.autosectionlabel',
+    'sphinxext.rediraffe'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -100,3 +101,9 @@ myst_heading_anchors = 3
 myst_linkify_fuzzy_links = False
 
 myst_number_code_blocks = ['c', 'js', 'sh', 'batch']
+
+# -- Redirections -------------------------------------------------
+
+rediraffe_redirects = {
+    "changes.md": "changelog.md"
+}

@@ -13,7 +13,7 @@ In Koffi 1.x, it could only be used with struct types and returned the object pa
 
 Starting in Koffi 2.2, each record member is exposed as an object containing the name, the type and the offset within the record.
 
-Consult the [migration guide](changes.md) for more information.
+Consult the [migration guide](migration.md) for more information.
 ```
 
 Use `koffi.introspect(type)` to get detailed information about a type: name, primitive, size, alignment, members (record types), reference type (array, pointer) and length (array).

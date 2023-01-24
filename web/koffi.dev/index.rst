@@ -32,7 +32,8 @@ Table of contents
    misc
    benchmarks
    contribute
-   changes
+   changelog
+   migration
 
 License
 -------

@@ -153,7 +153,7 @@ Now, you must use them through a pointer, and use an array for output parameters
 
 In addition to this, you should use `koffi.opaque()` (introduced in Koffi 2.1) instead of `koffi.handle()` which is deprecated, and will be removed eventually in Koffi 3.0.
 
-Consult the [migration guide](changes.md) for more information.
+Consult the [migration guide](migration.md) for more information.
 ```
 
 The full example below implements an iterative string builder (concatenator) in C, and uses it from Javascript to output a mix of Hello World and FizzBuzz. The builder is hidden behind an opaque type, and is created and destroyed using a pair of C functions: `ConcatNew` (or `ConcatNewOut`) and `ConcatFree`.

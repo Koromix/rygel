@@ -1,6 +1,6 @@
 # Changelog
 
-## History
+## Koffi 2.x
 
 ### Koffi 2.2.5
 
@@ -143,7 +143,9 @@
 - Change handling of opaque handles, which must be used through pointers
 - Support all types in `koffi.introspect(type)`
 
-Consult the [migration guide](changes.md#migration-guide) for more information.
+Consult the [migration guide](migration.md) for more information.
+
+## Koffi 1.x
 
 ### Koffi 1.3.12
 

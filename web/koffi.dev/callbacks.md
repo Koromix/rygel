@@ -21,7 +21,7 @@ In Koffi 1.x, callbacks were defined in a way that made them usable directly as 
 
 Now, you must use them through a pointer: `void CallIt(CallbackType func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version 2.0 and newer.
 
-Consult the [migration guide](changes.md) for more information.
+Consult the [migration guide](migration.md) for more information.
 ```
 
 ## Callback types
