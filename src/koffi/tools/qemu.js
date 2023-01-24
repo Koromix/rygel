@@ -472,9 +472,12 @@ async function prepare() {
         copy_recursive(snapshot_dir, dist_dir, filename => {
             let parts = filename.split('/');
 
-            if (parts[0] == 'src') {
-                return parts[1] == null || parts[1] == 'core' ||
-                                           parts[1] == 'koffi';
+            if (parts[0] == 'src' && parts[1] == 'koffi') {
+                return parts[2] != 'benchmark' &&
+                       parts[2] != 'test' &&
+                       parts[2] != 'tools';
+            } else if (parts[0] == 'src') {
+                return parts[1] == null || parts[1] == 'core';
             } else if (parts[0] == 'vendor') {
                 return parts[1] != 'sqlite3' &&
                        parts[1] != 'raylib';
@@ -495,8 +498,7 @@ async function prepare() {
 
         pkg.main = "src/koffi/src/index.js";
         pkg.scripts = {
-            install: "cnoke --prebuild -d src/koffi",
-            test: "node src/koffi/qemu/qemu.js test"
+            install: "cnoke --prebuild -d src/koffi"
         };
         pkg.cnoke.prebuild = "src/koffi/" + pkg.cnoke.prebuild;
         pkg.cnoke.require = "./src/koffi/build/koffi.node";
