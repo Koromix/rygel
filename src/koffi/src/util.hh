@@ -89,7 +89,7 @@ static inline Span<uint8_t> GetRawBuffer(Napi::Value value)
         Napi::ArrayBuffer buffer = array.ArrayBuffer();
         Size offset = array.ByteOffset();
 
-        return MakeSpan((uint8_t *)buffer.Data() + offset, (Size)buffer.ByteLength() - offset);
+        return MakeSpan((uint8_t *)buffer.Data() + offset, (Size)array.ByteLength());
     } else if (value.IsArrayBuffer()) {
         Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
 

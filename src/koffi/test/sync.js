@@ -545,7 +545,7 @@ async function test() {
 
         for (let i = 0; i < 8; i++) {
             let ptr1 = [null];
-            let ptr2 = buf.subarray(i * koffi.sizeof('Float3'), koffi.sizeof('Float3'));
+            let ptr2 = buf.subarray(i * koffi.sizeof('Float3'), (i + 1) * koffi.sizeof('Float3'));
 
             // Output type
             let type = koffi.pointer(koffi.array('uint8_t', koffi.sizeof('Float3')));
