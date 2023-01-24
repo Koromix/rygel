@@ -1,5 +1,7 @@
 # Callbacks
 
+## Callback types
+
 In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.
 
 ```js
@@ -24,7 +26,7 @@ Now, you must use them through a pointer: `void CallIt(CallbackType func)` in Ko
 Consult the [migration guide](migration.md) for more information.
 ```
 
-## Callback types
+## Transient and registered callbacks
 
 Koffi only uses predefined static trampolines, and does not need to generate code at runtime, which makes it compatible with platforms with hardened W^X migitations (such as PaX mprotect). However, this imposes some restrictions on the maximum number of callbacks, and their duration.
 
