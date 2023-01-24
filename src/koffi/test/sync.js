@@ -538,4 +538,15 @@ async function test() {
         assert.equal(len, 10);
         assert.equal(str[0], 'FOOBAR_1X3');
     }
+
+    // Decode raw buffer
+    {
+        let f3p = [null];
+
+        let type = koffi.pointer(koffi.array('uint8_t', koffi.sizeof('Float3')));
+        let f3 = PackFloat3(20.0, 30.0, 40.0, koffi.as(f3p, type));
+
+        console.log(f3p[0]);
+        console.log(koffi.decode(f3p[0], 'Float3'));
+    }
 }

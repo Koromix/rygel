@@ -1837,25 +1837,39 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, info.Length());
         return env.Null();
     }
-    if (RG_UNLIKELY(!info[0].IsExternal())) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected pointer (external)", GetValueType(instance, info[0]));
-        return env.Null();
-    }
     if (has_len && RG_UNLIKELY(!info[2u + has_offset].IsNumber())) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, info[2 + has_offset]));
         return env.Null();
     }
 
-    Napi::External<void> external = info[0].As<Napi::External<void>>();
-    int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
-    const uint8_t *ptr = (const uint8_t *)external.Data() + offset;
-
-    if (!ptr)
-        return env.Null();
-
     const TypeInfo *type = ResolveType(info[1u + has_offset]);
     if (RG_UNLIKELY(!type))
         return env.Null();
+
+    const uint8_t *ptr = nullptr;
+    int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
+
+    if (info[0].IsExternal()) {
+        Napi::External<void> external = info[0].As<Napi::External<void>>();
+        ptr = (const uint8_t *)external.Data();
+    } else if (info[0].IsTypedArray() && info[0].As<Napi::TypedArray>().TypedArrayType() == napi_uint8_array) {
+        Napi::TypedArray array = info[0].As<Napi::TypedArray>();
+        Napi::ArrayBuffer buffer = array.ArrayBuffer();
+
+        if (RG_UNLIKELY((Size)array.ByteLength() - offset < type->size)) {
+            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)", type->name, type->size);
+            return env.Null();
+        }
+
+        ptr = (const uint8_t *)buffer.Data();
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected external or Uint8Array", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    if (!ptr)
+        return env.Null();
+    ptr += offset;
 
     // Used for strings and arrays, ignored otherwise
     int64_t len = has_len ? info[2u + has_offset].As<Napi::Number>().Int64Value() : -1;
