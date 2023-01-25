@@ -134,7 +134,7 @@ let cb1 = koffi.register(store.get, 'IntCallback *'); // If a C function calls c
 let cb2 = koffi.register(store, store.get, 'IntCallback *'); // However in this case, this will match the store object
 ```
 
-## Pointer arguments
+## Decoding pointer arguments
 
 *New in Koffi 2.2, changed in Koffi 2.3*
 

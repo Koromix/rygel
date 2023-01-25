@@ -261,7 +261,7 @@ console.log(vec1); // { x: 3, y: 2, z: 1 }
 console.log(vec2); // { x: 1, y: 2, z: 3 }
 ```
 
-See [pointer arguments](callbacks.md#pointer-arguments) for more information about the decode function.
+See [pointer arguments](callbacks.md#decoding-pointer-arguments) for more information about the decode function.
 
 ## Heap-allocated values
 
