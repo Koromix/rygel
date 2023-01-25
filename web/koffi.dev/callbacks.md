@@ -134,7 +134,9 @@ let cb1 = koffi.register(store.get, 'IntCallback *'); // If a C function calls c
 let cb2 = koffi.register(store, store.get, 'IntCallback *'); // However in this case, this will match the store object
 ```
 
-## Decoding pointer arguments
+## Special considerations
+
+### Decoding pointer arguments
 
 *New in Koffi 2.2, changed in Koffi 2.3*
 
@@ -177,7 +179,7 @@ There is also an optional ending `length` argument that you can use in two cases
 In Koffi 2.2 and earlier versions, the length argument is only used to decode strings and is ignored otherwise.
 ```
 
-## Asynchronous callbacks
+### Asynchronous callbacks
 
 *New in Koffi 2.2.2*
 
