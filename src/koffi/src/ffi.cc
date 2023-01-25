@@ -626,7 +626,8 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    TypeInfo::ArrayHint hint;
+    const TypeInfo *type = nullptr;
+
     if (info.Length() >= 3 && !IsNullOrUndefined(info[2])) {
         if (!info[2].IsString()) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(instance, info[2]));
@@ -634,6 +635,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         }
 
         std::string to = info[2].As<Napi::String>();
+        TypeInfo::ArrayHint hint = {};
 
         if (to == "typed") {
             hint = TypeInfo::ArrayHint::TypedArray;
@@ -650,24 +652,13 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
             ThrowError<Napi::Error>(env, "Array conversion hint must be 'typed', 'array' or 'string'");
             return env.Null();
         }
-    } else if (TestStr(ref->name, "char") || TestStr(ref->name, "char16") ||
-                                             TestStr(ref->name, "char16_t")) {
-        hint = TypeInfo::ArrayHint::String;
+
+        type = MakeArrayType(instance, ref, len, hint);
     } else {
-        hint = TypeInfo::ArrayHint::TypedArray;
+        type = MakeArrayType(instance, ref, len);
     }
 
-    TypeInfo *type = instance->types.AppendDefault();
-
-    type->name = Fmt(&instance->str_alloc, "%1[%2]", ref->name, len).ptr;
-
-    type->primitive = PrimitiveKind::Array;
-    type->align = ref->align;
-    type->size = (int32_t)(len * ref->size);
-    type->ref.type = ref;
-    type->hint = hint;
-
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
     SetValueTag(instance, external, &TypeInfoMarker);
 
     return external;
