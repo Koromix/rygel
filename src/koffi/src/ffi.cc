@@ -1828,10 +1828,6 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, info.Length());
         return env.Null();
     }
-    if (has_len && RG_UNLIKELY(!info[2u + has_offset].IsNumber())) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, info[2 + has_offset]));
-        return env.Null();
-    }
 
     const TypeInfo *type = ResolveType(info[1u + has_offset]);
     if (RG_UNLIKELY(!type))
@@ -1866,6 +1862,17 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 
     // Used for strings and arrays, ignored otherwise
     int64_t len = has_len ? info[2u + has_offset].As<Napi::Number>().Int64Value() : -1;
+
+    if (has_len) {
+        if (RG_UNLIKELY(len < 0)) {
+            ThrowError<Napi::TypeError>(env, "Length must not be a negative value");
+            return env.Null();
+        }
+
+        if (type->primitive != PrimitiveKind::String && type->primitive != PrimitiveKind::String16) {
+            type = MakeArrayType(instance, type, len);
+        }
+    }
 
 #define RETURN_INT(Type, NewCall) \
         do { \

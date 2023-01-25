@@ -559,6 +559,8 @@ async function test() {
             assert.ok(ptr2 instanceof Buffer);
             assert.deepEqual(koffi.decode(ptr2, 'Float3'), { a: i * 2, b: Float32Array.from([-30.0, -31.0])});
             assert.deepEqual(koffi.decode(ptr2.buffer, 'Float3'), { a: 0, b: Float32Array.from([-30.0, -31.0])});
+
+            assert.deepEqual(koffi.decode(ptr2, 'float', 3), Float32Array.from([i * 2, -30.0, -31.0]));
         }
     }
 
