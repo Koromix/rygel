@@ -2,6 +2,25 @@
 
 ## Version history
 
+### Koffi 2.3
+
+#### Koffi 2.3.0
+
+**Main changes:**
+
+- Allow buffers (TypedArray or ArrayBuffer) values for input and/or output pointer arguments (for polymorphic arguments)
+- Support opaque buffers (TypedArray or ArrayBuffer) values in `koffi.decode()` to [decode output buffers](calls.md#output-parameters)
+- Decode non-string types as arrays when an [explicit length is passed to koffi.decode()](callbacks.md#pointer-arguments)
+
+**Other changes:**
+
+- Drop TypedArray type check for array and pointer values (only the size matters)
+- Allow ArrayBuffer everywhere TypedArray is supported
+- Add TypeScript definition for Koffi ([@insraq](https://github.com/insraq))
+- Improve documentation about opaque and polymorphic structs
+- Improve documentation for `koffi.decode()`
+- Reduce NPM package size (from 100 MB to 25 MB) by removing test code and dependencies
+
 ### Koffi 2.2
 
 #### Koffi 2.2.5
