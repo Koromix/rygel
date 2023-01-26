@@ -496,12 +496,13 @@ async function prepare() {
 
         let pkg = JSON.parse(json);
 
-        pkg.main = "src/koffi/src/index.js";
+        pkg.main = "src/koffi/" + pkg.main;
+        pkg.types = "src/koffi/" + pkg.types;
         pkg.scripts = {
             install: "cnoke --prebuild -d src/koffi"
         };
         pkg.cnoke.prebuild = "src/koffi/" + pkg.cnoke.prebuild;
-        pkg.cnoke.require = "./src/koffi/build/koffi.node";
+        pkg.cnoke.require = pkg.cnoke.require.replace("./", "./src/koffi/");
 
         fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
         fs.unlinkSync(dist_dir + '/src/koffi/package.json');

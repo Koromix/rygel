@@ -19,6 +19,7 @@
   "homepage": "https://koffi.dev/",
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "main": "src/index.js",
+  "types": "src/index.d.ts",
   "scripts": {
     "test": "node tools/qemu.js test",
     "prepack": "echo 'Use \"npm run prepare\" instead' && false",
