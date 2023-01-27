@@ -287,7 +287,6 @@ The following example illustrates the use of a disposable type derived from *str
 const koffi = require('koffi');
 const lib = koffi.load('libc.so.6');
 
-// You can also use: const strdup = lib.func('const char *! strdup(const char *str)')
 const HeapStr = koffi.disposable('str');
 const strdup = lib.cdecl('strdup', HeapStr, ['str']);
 
