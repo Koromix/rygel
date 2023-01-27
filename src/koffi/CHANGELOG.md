@@ -9,7 +9,7 @@
 **Main changes:**
 
 - Allow buffers (TypedArray or ArrayBuffer) values for input and/or output pointer arguments (for polymorphic arguments)
-- Support opaque buffers (TypedArray or ArrayBuffer) values in `koffi.decode()` to [decode output buffers](calls.md#output-parameters)
+- Support opaque buffers (TypedArray or ArrayBuffer) values in `koffi.decode()` to [decode output buffers](calls.md#output-buffers)
 - Decode non-string types as arrays when an [explicit length is passed to koffi.decode()](callbacks.md#pointer-arguments)
 
 **Other changes:**

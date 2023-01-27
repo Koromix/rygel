@@ -159,7 +159,7 @@ console.log(out[0]);
 
 ## Polymorphic parameters
 
-### Input parameters
+### Input polymorphism
 
 *New in Koffi 2.1*
 
@@ -221,7 +221,7 @@ let hdr = {};
 console.log('PNG header:', hdr);
 ```
 
-### Output parameters
+### Output buffers
 
 *New in Koffi 2.3*
 
