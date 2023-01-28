@@ -923,15 +923,17 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     memset_safe(ptr, 0, size);
                 }
             } else if (IsRawBuffer(value)) {
-                Span<const uint8_t> buffer = GetRawBuffer(value);
+                Span<uint8_t> buffer = GetRawBuffer(value);
 
-                ptr = AllocHeap(buffer.len, 16);
+                if (directions == 1) {
+                    ptr = AllocHeap(buffer.len, 16);
 
-                if (directions & 1) {
                     if (!PushBuffer(buffer, buffer.len, type, ptr))
                         return false;
                 } else {
-                    memset_safe(ptr, 0, (size_t)buffer.len);
+                    // Fast no-copy path
+                    ptr = buffer.ptr;
+                    directions = 1;
                 }
             } else if (RG_LIKELY(type->ref.type->primitive == PrimitiveKind::Record)) {
                 Napi::Object obj = value.As<Napi::Object>();

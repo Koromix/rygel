@@ -107,19 +107,6 @@ Each machine is configured to run a VNC server available locally, which you can 
 node qemu.js info debian_x64
 ```
 
-## Todo list
-
-The following features and improvements are planned, not necessarily in that order:
-
-- Optimize passing of structs and arrays (avoid setting named properties one by one? separate HFA-specific helper functions?)
-- Automate Windows/AArch64 (qemu) and macOS/AArch64 (how? ... thanks Apple) tests
-- Create a real-world example, using several libraries (Raylib, SQLite, libsodium) to illustrate various C API styles
-- Add simple struct type parser
-- Add more ways to manually encode and decode various types to and from byte arrays
-- Add support for unions
-- Port Koffi to PowerPC (POWER9+) ABI
-- Fix assembly unwind and CFI directives for better debugging experience
-
 ## Code style
 
 Koffi is programmed in a mix of C++ and assembly code (architecture-specific code). It uses [node-addon-api](https://github.com/nodejs/node-addon-api) (C++ N-API wrapper) to interact with Node.js.

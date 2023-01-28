@@ -170,6 +170,50 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
     return ref;
 }
 
+static const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len,
+                                     TypeInfo::ArrayHint hint, bool insert)
+{
+    RG_ASSERT(len > 0);
+    RG_ASSERT(len <= instance->max_type_size / ref->size);
+
+    TypeInfo *type = instance->types.AppendDefault();
+
+    type->name = Fmt(&instance->str_alloc, "%1[%2]", ref->name, len).ptr;
+
+    type->primitive = PrimitiveKind::Array;
+    type->align = ref->align;
+    type->size = (int32_t)(len * ref->size);
+    type->ref.type = ref;
+    type->hint = hint;
+
+    if (insert) {
+        bool inserted;
+        type = (TypeInfo *)*instance->types_map.TrySet(type->name, type, &inserted);
+        instance->types.RemoveLast(!inserted);
+    }
+
+    return type;
+}
+
+const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len)
+{
+    TypeInfo::ArrayHint hint = {};
+
+    if (TestStr(ref->name, "char") || TestStr(ref->name, "char16") ||
+                                             TestStr(ref->name, "char16_t")) {
+        hint = TypeInfo::ArrayHint::String;
+    } else {
+        hint = TypeInfo::ArrayHint::TypedArray;
+    }
+
+    return MakeArrayType(instance, ref, len, hint, true);
+}
+
+const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, TypeInfo::ArrayHint hint)
+{
+    return MakeArrayType(instance, ref, len, hint, false);
+}
+
 bool CanPassType(const TypeInfo *type, int directions)
 {
     if (directions & 2) {

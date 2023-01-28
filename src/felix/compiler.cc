@@ -506,7 +506,7 @@ public:
                 Fmt(&buf, " -fsanitize-cfi-icall-generalize-pointers");
             }
 
-            if (clang_ver >= 140000) {
+            if (clang_ver >= 150000) {
                 Fmt(&buf, " -cfprotection=branch");
             }
         }

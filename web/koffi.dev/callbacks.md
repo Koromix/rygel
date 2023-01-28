@@ -134,20 +134,20 @@ let cb1 = koffi.register(store.get, 'IntCallback *'); // If a C function calls c
 let cb2 = koffi.register(store, store.get, 'IntCallback *'); // However in this case, this will match the store object
 ```
 
-## Pointer arguments
+## Special considerations
 
-*New in Koffi 2.2*
+### Decoding pointer arguments
+
+*New in Koffi 2.2, changed in Koffi 2.3*
 
 Koffi does not have enough information to convert callback pointer arguments to an appropriate JS value. In this case, your JS function will receive an opaque *External* object.
 
-You can pass this value through to another C function that expects a pointer of the same type, or you can use `koffi.decode(value, offset, type, len)` to decode it into something you can use in Javascript.
+You can pass this value through to another C function that expects a pointer of the same type, or you can use `koffi.decode()` to decode it into something you can use in Javascript.
 
 Some arguments are optional and this function can be called in several ways:
 
-- `koffi.decode(value, offset, type, len)`: this is the full signature, value is the JS external object, offset (optional, defaults to 0) is specified in bytes, type is the value type, and length (optional) can be used for arrays and strings.
 - `koffi.decode(value, type)`: no offset, expect NUL-terminated strings
-- `koffi.decode(value, type, len)`: use specified length when decoding strings and arrays
-- `koffi.decode(value, offset, type)`
+- `koffi.decode(value, offset, type)`: explicit offset to add to the pointer before decoding
 
 The following example sorts an array of strings (in-place) with `qsort()`:
 
@@ -170,7 +170,16 @@ qsort(koffi.as(array, 'char **'), array.length, koffi.sizeof('void *'), (ptr1, p
 console.log(array); // Prints ['123', 'bar', 'foo', 'foobar']
 ```
 
-## Asynchronous callbacks
+There is also an optional ending `length` argument that you can use in two cases:
+
+- Use it to give the number of bytes to decode in non-NUL terminated strings: `koffi.decode(value, 'char *', 5)`
+- Decode consecutive values into an array. For example, here is how you can decode an array with 3 float values: `koffi.decode(value, 'float', 3)`. This is equivalent to `koffi.decode(value, koffi.array('float', 3))`.
+
+```{note}
+In Koffi 2.2 and earlier versions, the length argument is only used to decode strings and is ignored otherwise.
+```
+
+### Asynchronous callbacks
 
 *New in Koffi 2.2.2*
 

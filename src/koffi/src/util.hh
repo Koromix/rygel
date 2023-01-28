@@ -55,7 +55,10 @@ static inline bool IsRegularSize(Size size, Size max)
 
 const TypeInfo *ResolveType(Napi::Value value, int *out_directions = nullptr);
 const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str, int *out_directions = nullptr);
-const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *type, int count = 1);
+
+const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count = 1);
+const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
+const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, TypeInfo::ArrayHint hint);
 
 bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);
