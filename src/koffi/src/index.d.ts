@@ -12,98 +12,98 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 declare module "koffi" {
-   export function load(path: string): IKoffiLib;
+    export function load(path: string): IKoffiLib;
 
-   interface IKoffiCType {
-      __brand: "IKoffiCType";
-   }
-   interface IKoffiPointerCast {
-      __brand: "IKoffiPointerCast";
-   }
-   interface IKoffiRegisteredCallback {
-      __brand: "IKoffiRegisteredCallback";
-   }
+    interface IKoffiCType {
+        __brand: "IKoffiCType";
+    }
+    interface IKoffiPointerCast {
+        __brand: "IKoffiPointerCast";
+    }
+    interface IKoffiRegisteredCallback {
+        __brand: "IKoffiRegisteredCallback";
+    }
 
-   type TypeSpec = string | IKoffiCType;
-   type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
-   type TypeInfo = {
-      name: string;
-      primitive: string;
-      size: number;
-      alignment: number;
-      length: number;
-      ref: IKoffiCType;
-      members: Record<string, { name: string; type: Record<string, unknown>; offset: number }>;
-   };
-   type KoffiFunction = Function & { async: Function };
+    type TypeSpec = string | IKoffiCType;
+    type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
+    type TypeInfo = {
+        name: string;
+        primitive: string;
+        size: number;
+        alignment: number;
+        length: number;
+        ref: IKoffiCType;
+        members: Record<string, { name: string; type: Record<string, unknown>; offset: number }>;
+    };
+    type KoffiFunction = Function & { async: Function };
 
-   export interface IKoffiLib {
-      func(definition: string): KoffiFunction;
-      func(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+    export interface IKoffiLib {
+        func(definition: string): KoffiFunction;
+        func(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
-      cdecl(definition: string): KoffiFunction;
-      cdecl(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+        cdecl(definition: string): KoffiFunction;
+        cdecl(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
-      stdcall(definition: string): KoffiFunction;
-      stdcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+        stdcall(definition: string): KoffiFunction;
+        stdcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
-      fastcall(definition: string): KoffiFunction;
-      fastcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+        fastcall(definition: string): KoffiFunction;
+        fastcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
-      thiscall(definition: string): KoffiFunction;
-      thiscall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
-   }
+        thiscall(definition: string): KoffiFunction;
+        thiscall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+    }
 
-   export function struct(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
-   export function struct(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    export function struct(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    export function struct(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
-   export function pack(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
-   export function pack(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    export function pack(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    export function pack(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
-   export function opaque(name: string): IKoffiCType;
-   export function opaque(): IKoffiCType;
+    export function opaque(name: string): IKoffiCType;
+    export function opaque(): IKoffiCType;
 
-   export function pointer(value: TypeSpec): IKoffiCType;
-   export function pointer(value: TypeSpec, asteriskCount: number): IKoffiCType;
-   export function pointer(name: string, value: TypeSpec, asteriskCount: number): IKoffiCType;
+    export function pointer(value: TypeSpec): IKoffiCType;
+    export function pointer(value: TypeSpec, asteriskCount: number): IKoffiCType;
+    export function pointer(name: string, value: TypeSpec, asteriskCount: number): IKoffiCType;
 
-   export function out(value: TypeSpec): IKoffiCType;
-   export function inout(value: TypeSpec): IKoffiCType;
+    export function out(value: TypeSpec): IKoffiCType;
+    export function inout(value: TypeSpec): IKoffiCType;
 
-   export function as(value: Record<string, unknown>, type: TypeSpec): IKoffiPointerCast;
+    export function as(value: Record<string, unknown>, type: TypeSpec): IKoffiPointerCast;
 
-   export function disposable(type: TypeSpec): IKoffiCType;
-   export function disposable(name: string, type: TypeSpec): IKoffiCType;
-   export function disposable(name: string, type: TypeSpec, freeFunction: Function): IKoffiCType;
+    export function disposable(type: TypeSpec): IKoffiCType;
+    export function disposable(name: string, type: TypeSpec): IKoffiCType;
+    export function disposable(name: string, type: TypeSpec, freeFunction: Function): IKoffiCType;
 
-   export function callback(definition: string): IKoffiCType;
-   export function callback(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
+    export function callback(definition: string): IKoffiCType;
+    export function callback(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 
-   interface IKoffiRegisteredCallback {
-      __brand: "IKoffiRegisteredCallback";
-   }
-   export function register(callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
-   export function register(thisValue: any, callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
-   export function unregister(callback: IKoffiRegisteredCallback): void;
+    interface IKoffiRegisteredCallback {
+        __brand: "IKoffiRegisteredCallback";
+    }
+    export function register(callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
+    export function register(thisValue: any, callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
+    export function unregister(callback: IKoffiRegisteredCallback): void;
 
-   export function decode(value: Record<string, unknown>, type: TypeSpec): Record<string, unknown>;
-   export function decode(value: Record<string, unknown>, type: TypeSpec, len: number): Record<string, unknown>;
-   export function decode(value: Record<string, unknown>, offset: number, type: TypeSpec): Record<string, unknown>;
-   export function decode(
-      value: Record<string, unknown>,
-      offset: number,
-      type: TypeSpec,
-      len: number
-   ): Record<string, unknown>;
+    export function decode(value: Record<string, unknown>, type: TypeSpec): Record<string, unknown>;
+    export function decode(value: Record<string, unknown>, type: TypeSpec, len: number): Record<string, unknown>;
+    export function decode(value: Record<string, unknown>, offset: number, type: TypeSpec): Record<string, unknown>;
+    export function decode(
+        value: Record<string, unknown>,
+        offset: number,
+        type: TypeSpec,
+        len: number
+    ): Record<string, unknown>;
 
-   export function sizeof(type: TypeSpec): number;
-   export function alignof(type: TypeSpec): number;
-   export function offsetof(type: TypeSpec): number;
-   export function resolve(type: TypeSpec): IKoffiCType;
-   export function introspect(type: TypeSpec): TypeInfo;
+    export function sizeof(type: TypeSpec): number;
+    export function alignof(type: TypeSpec): number;
+    export function offsetof(type: TypeSpec): number;
+    export function resolve(type: TypeSpec): IKoffiCType;
+    export function introspect(type: TypeSpec): TypeInfo;
 
-   export function alias(name: string, type: TypeSpec): IKoffiCType;
+    export function alias(name: string, type: TypeSpec): IKoffiCType;
 
-   export function config(): Record<string, unknown>;
-   export function config(cfg: Record<string, unknown>): Record<string, unknown>;
+    export function config(): Record<string, unknown>;
+    export function config(cfg: Record<string, unknown>): Record<string, unknown>;
 }
