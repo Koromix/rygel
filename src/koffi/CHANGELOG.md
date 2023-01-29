@@ -4,6 +4,14 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.1
+
+**Main changes:**
+
+- Error out when trying to use ambiguous `void *` arguments (input and/or output)
+- Adjust TypeScript definitions ([@insraq](https://github.com/insraq))
+- Fix possible crash when parsing invalid prototype
+
 #### Koffi 2.3.0
 
 **Main changes:**
