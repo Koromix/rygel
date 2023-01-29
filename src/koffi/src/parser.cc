@@ -152,6 +152,7 @@ const TypeInfo *PrototypeParser::ParseType()
         offset++;
     }
     offset += (offset < tokens.len && tokens[offset] == "!");
+    offset = std::min(tokens.len - 1, offset);
 
     while (offset >= start) {
         Span<const char> str = MakeSpan(tokens[start].ptr, tokens[offset].end() - tokens[start].ptr);
