@@ -908,6 +908,12 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         case napi_object: {
             uint8_t *ptr = nullptr;
 
+            if (RG_UNLIKELY(!type->ref.type->size)) {
+                ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to void *, use koffi.as()",
+                                            type->ref.type != instance->void_type ? "opaque" : "ambiguous");
+                return false;
+            }
+
             if (value.IsArray()) {
                 Napi::Array array = value.As<Napi::Array>();
 
