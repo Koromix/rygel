@@ -27,7 +27,7 @@ declare module 'koffi' {
         alignment: number;
         length: number;
         ref: IKoffiCType;
-        members: Record<string, { name: string, type: {}, offset: number }>;
+        members: Record<string, { name: string, type: IKoffiCType, offset: number }>;
     };
     type KoffiFunction = Function & { async: Function };
 
