@@ -908,13 +908,13 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         case napi_object: {
             uint8_t *ptr = nullptr;
 
-            if (RG_UNLIKELY(!type->ref.type->size)) {
-                ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to void *, use koffi.as()",
-                                            type->ref.type != instance->void_type ? "opaque" : "ambiguous");
-                return false;
-            }
-
             if (value.IsArray()) {
+                if (RG_UNLIKELY(!type->ref.type->size)) {
+                    ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to void *, use koffi.as()",
+                                                type->ref.type != instance->void_type ? "opaque" : "ambiguous");
+                    return false;
+                }
+
                 Napi::Array array = value.As<Napi::Array>();
 
                 Size len = (Size)array.Length();
@@ -942,6 +942,12 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     directions = 1;
                 }
             } else if (RG_LIKELY(type->ref.type->primitive == PrimitiveKind::Record)) {
+                if (RG_UNLIKELY(!type->ref.type->size)) {
+                    ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to void *, use koffi.as()",
+                                                type->ref.type != instance->void_type ? "opaque" : "ambiguous");
+                    return false;
+                }
+
                 Napi::Object obj = value.As<Napi::Object>();
                 RG_ASSERT(IsObject(value));
 
