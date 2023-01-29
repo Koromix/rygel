@@ -64,7 +64,7 @@ declare module 'koffi' {
     export function out(value: TypeSpec): IKoffiCType;
     export function inout(value: TypeSpec): IKoffiCType;
 
-    export function as(value: unknown, type: TypeSpec): IKoffiPointerCast;
+    export function as(value: any, type: TypeSpec): IKoffiPointerCast;
 
     export function disposable(type: TypeSpec): IKoffiCType;
     export function disposable(name: string, type: TypeSpec): IKoffiCType;
@@ -74,13 +74,13 @@ declare module 'koffi' {
     export function callback(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 
     export function register(callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
-    export function register(thisValue: unknown, callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
+    export function register(thisValue: any, callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
     export function unregister(callback: IKoffiRegisteredCallback): void;
 
-    export function decode(value: unknown, type: TypeSpec): unknown;
-    export function decode(value: unknown, type: TypeSpec, len: number): unknown;
-    export function decode(value: unknown, offset: number, type: TypeSpec): unknown;
-    export function decode(value: unknown, offset: number, type: TypeSpec, len: number): unknown;
+    export function decode(value: any, type: TypeSpec): any;
+    export function decode(value: any, type: TypeSpec, len: number): any;
+    export function decode(value: any, offset: number, type: TypeSpec): any;
+    export function decode(value: any, offset: number, type: TypeSpec, len: number): any;
 
     export function sizeof(type: TypeSpec): number;
     export function alignof(type: TypeSpec): number;
