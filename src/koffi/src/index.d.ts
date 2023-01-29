@@ -21,15 +21,15 @@ declare module 'koffi' {
     type TypeSpec = string | IKoffiCType;
     type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
     type TypeInfo = {
-        name: string,
-        primitive: string,
-        size: number,
-        alignment: number,
-        length: number,
-        ref: IKoffiCType,
-        members: Record<string, { name: string, type: {}, offset: number }>
+        name: string;
+        primitive: string;
+        size: number;
+        alignment: number;
+        length: number;
+        ref: IKoffiCType;
+        members: Record<string, { name: string, type: {}, offset: number }>;
     };
-    type KoffiFunction = Function | { async: Function };
+    type KoffiFunction = Function & { async: Function };
 
     export interface IKoffiLib {
         func(definition: string): KoffiFunction;
@@ -64,7 +64,7 @@ declare module 'koffi' {
     export function out(value: TypeSpec): IKoffiCType;
     export function inout(value: TypeSpec): IKoffiCType;
 
-    export function as(value: {}, type: TypeSpec): IKoffiPointerCast;
+    export function as(value: unknown, type: TypeSpec): IKoffiPointerCast;
 
     export function disposable(type: TypeSpec): IKoffiCType;
     export function disposable(name: string, type: TypeSpec): IKoffiCType;
@@ -73,15 +73,14 @@ declare module 'koffi' {
     export function callback(definition: string): IKoffiCType;
     export function callback(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 
-    interface IKoffiRegisteredCallback { __brand: 'IKoffiRegisteredCallback' }
     export function register(callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
-    export function register(thisValue: any, callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
+    export function register(thisValue: unknown, callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
     export function unregister(callback: IKoffiRegisteredCallback): void;
 
-    export function decode(value: {}, type: TypeSpec): {};
-    export function decode(value: {}, type: TypeSpec, len: number): {};
-    export function decode(value: {}, offset: number, type: TypeSpec): {};
-    export function decode(value: {}, offset: number, type: TypeSpec, len: number): {};
+    export function decode(value: unknown, type: TypeSpec): unknown;
+    export function decode(value: unknown, type: TypeSpec, len: number): unknown;
+    export function decode(value: unknown, offset: number, type: TypeSpec): unknown;
+    export function decode(value: unknown, offset: number, type: TypeSpec, len: number): unknown;
 
     export function sizeof(type: TypeSpec): number;
     export function alignof(type: TypeSpec): number;
@@ -91,6 +90,6 @@ declare module 'koffi' {
 
     export function alias(name: string, type: TypeSpec): IKoffiCType;
 
-    export function config(): {}
-    export function config({}): {}
+    export function config(): Record<string, unknown>;
+    export function config(cfg: Record<string, unknown>): Record<string, unknown>;
 }
