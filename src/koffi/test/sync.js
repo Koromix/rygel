@@ -183,7 +183,7 @@ async function test() {
                             lib.stdcall(1, koffi.disposable('str', koffi.free), ['str']) :
                             lib.func('const char * __stdcall ReturnBigString(const char *str)');
     const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
-    const Concat16 = lib.func('const char16_t *! Concat16(const char16_t *str1, const char16_t *str2)')
+    const Concat16 = lib.func('const char16_t *! Concat16(const char16_t *str1, const char16_t *str2)');
     const ReturnFixedStr = lib.func('FixedString ReturnFixedStr(FixedString str)');
     const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
     const ReturnFixedWide = lib.func('FixedWide ReturnFixedWide(FixedWide str)');

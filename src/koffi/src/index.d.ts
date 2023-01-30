@@ -30,7 +30,14 @@ declare module 'koffi' {
         ref: IKoffiCType;
         members: Record<string, { name: string, type: IKoffiCType, offset: number }>;
     };
-    type KoffiFunction = Function & { async: Function };
+    type KoffiFunction = Function & {
+        async: Function;
+        info: {
+            name: string,
+            arguments: IKoffiCType[],
+            result: IKoffiCType
+        };
+    };
 
     export interface IKoffiLib {
         func(definition: string): KoffiFunction;
