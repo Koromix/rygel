@@ -197,6 +197,14 @@ static inline bool CheckAlignment(int64_t align)
     return valid;
 }
 
+static inline Napi::External<TypeInfo> WrapType(Napi::Env env, InstanceData *instance, const TypeInfo *type)
+{
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
+}
+
 static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 {
     Napi::Env env = info.Env();
@@ -312,10 +320,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     }
     err_guard.Disable();
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
+    return WrapType(env, instance, type);
 }
 
 static Napi::Value CreatePaddedStructType(const Napi::CallbackInfo &info)
@@ -363,10 +368,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     }
     err_guard.Disable();
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
+    return WrapType(env, instance, type);
 }
 
 static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
@@ -436,10 +438,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         type = copy;
     }
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
+    return WrapType(env, instance, type);
 }
 
 static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int directions)
@@ -463,13 +462,10 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
         return env.Null();
     }
 
-    // We need to lose the const for Napi::External to work
-    TypeInfo *marked = (TypeInfo *)((uint8_t *)type + directions - 1);
+    // Embed direction in unused pointer bits
+    const TypeInfo *marked = (const TypeInfo *)((uint8_t *)type + directions - 1);
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, marked);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
+    return WrapType(env, instance, marked);
 }
 
 static Napi::Value MarkIn(const Napi::CallbackInfo &info)
@@ -570,10 +566,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     }
     err_guard.Disable();
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
+    return WrapType(env, instance, type);
 }
 
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
@@ -658,10 +651,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         type = MakeArrayType(instance, ref, len);
     }
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
+    return WrapType(env, instance, type);
 }
 
 static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value ret,
@@ -786,10 +776,7 @@ static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
 
     instance->types_map.Set(type->name, type);
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
+    return WrapType(env, instance, type);
 }
 
 static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
@@ -821,10 +808,7 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
+    return WrapType(env, instance, type);
 }
 
 static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
@@ -907,10 +891,7 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
+    return WrapType(env, instance, type);
 }
 
 static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
@@ -965,10 +946,8 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
                 defn.Set("length", Napi::Number::New(env, (double)len));
             } [[fallthrough]];
             case PrimitiveKind::Pointer: {
-                Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type->ref.type);
-                SetValueTag(instance, external, &TypeInfoMarker);
-
-                defn.Set("ref", external);
+                Napi::Value value = WrapType(env, instance, type->ref.type);
+                defn.Set("ref", value);
             } break;
             case PrimitiveKind::Record: {
                 Napi::Object members = Napi::Object::New(env);
@@ -976,11 +955,8 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
                 for (const RecordMember &member: type->members) {
                     Napi::Object obj = Napi::Object::New(env);
 
-                    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)member.type);
-                    SetValueTag(instance, external, &TypeInfoMarker);
-
                     obj.Set("name", member.name);
-                    obj.Set("type", external);
+                    obj.Set("type", WrapType(env, instance, member.type));
                     obj.Set("offset", member.offset);
 
                     members.Set(member.name, obj);
@@ -1592,8 +1568,7 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
         type->ref.marker = marker;
     }
 
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, type);
-    SetValueTag(instance, external, &TypeInfoMarker);
+    Napi::Value wrapper = WrapType(env, instance, type);
 
     for (const char *name: names) {
         bool inserted;
@@ -1601,7 +1576,7 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
         RG_ASSERT(inserted);
 
         if (!EndsWith(name, "*")) {
-            map.Set(name, external);
+            map.Set(name, wrapper);
         }
     }
 }
