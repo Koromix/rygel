@@ -934,6 +934,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
         defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
         defn.Set("size", Napi::Number::New(env, (double)type->size));
         defn.Set("alignment", Napi::Number::New(env, (double)type->align));
+        defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
 
         switch (type->primitive) {
             case PrimitiveKind::Void:

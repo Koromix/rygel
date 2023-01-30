@@ -25,6 +25,7 @@ declare module 'koffi' {
         primitive: string;
         size: number;
         alignment: number;
+        disposable: boolean;
         length: number;
         ref: IKoffiCType;
         members: Record<string, { name: string, type: IKoffiCType, offset: number }>;
