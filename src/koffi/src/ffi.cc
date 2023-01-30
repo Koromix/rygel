@@ -1329,19 +1329,19 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
 
     // Create info object
     {
-        Napi::Object info = Napi::Object::New(env);
+        Napi::Object meta = Napi::Object::New(env);
         Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
 
-        info.Set("name", Napi::String::New(env, func->name));
-        info.Set("arguments", arguments);
-        info.Set("result", WrapType(env, instance, func->ret.type));
+        meta.Set("name", Napi::String::New(env, func->name));
+        meta.Set("arguments", arguments);
+        meta.Set("result", WrapType(env, instance, func->ret.type));
 
         for (Size i = 0; i < func->parameters.len; i++) {
             const ParameterInfo &param = func->parameters[i];
-            arguments.Set(i, WrapType(env, instance, param.type));
+            arguments.Set((uint32_t)i, WrapType(env, instance, param.type));
         }
 
-        wrapper.Set("info", info);
+        wrapper.Set("info", meta);
     }
 
     return wrapper;
