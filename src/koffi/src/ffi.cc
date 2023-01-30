@@ -575,7 +575,7 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
     if (!info[0].IsExternal() || CheckValueTag(instance, info[0], &TypeInfoMarker)) {
