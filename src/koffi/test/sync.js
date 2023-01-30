@@ -355,27 +355,39 @@ async function test() {
 
     // Variadic
     {
+        let disposed = koffi.stats().disposed;
+
         let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'str', 'BAR');
         assert.equal(str, 'foo 200 1.5 BAR');
+
+        assert.equal(koffi.stats().disposed, disposed + 1);
     }
 
     // UTF-16LE strings
     {
+        let disposed = koffi.stats().disposed;
+
         let ret = koffi.introspect(Concat16.info.result);
         assert.ok(ret.disposable);
 
         let str = Concat16('Hello ', 'World!');
         assert.equal(str, 'Hello World!');
+
+        assert.equal(koffi.stats().disposed, disposed + 1);
     }
 
     // Test output disposable type parsed with '!'
     {
+        let disposed = koffi.stats().disposed;
+
         let arg2 = koffi.introspect(Concat16Out.info.arguments[2]);
         let ref = koffi.introspect(arg2.ref);
 
         let ptr = [null];
         Concat16Out('Hello ', 'World...', ptr);
         assert.equal(ptr[0], 'Hello World...');
+
+        assert.equal(koffi.stats().disposed, disposed + 1);
     }
 
     // String to/from fixed-size buffers
