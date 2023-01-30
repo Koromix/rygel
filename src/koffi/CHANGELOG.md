@@ -14,7 +14,7 @@
 
 **Other changes:**
 
-- Avoid CNoke dependencies
+- Avoid CNoke dependency
 - Clear out development dependencies from package.json
 
 #### Koffi 2.3.1
