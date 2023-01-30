@@ -155,7 +155,13 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
             memcpy((void *)copy, (const void *)type, RG_SIZE(*type));
             copy->name = "<anonymous>";
             copy->members.allocator = GetNullAllocator();
-            copy->dispose = [](Napi::Env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
+
+            copy->dispose = [](Napi::Env env, const TypeInfo *, const void *ptr) {
+                InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+                free((void *)ptr);
+                instance->stats.disposed++;
+            };
 
             type = copy;
         }

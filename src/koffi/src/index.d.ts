@@ -100,4 +100,5 @@ declare module 'koffi' {
 
     export function config(): Record<string, unknown>;
     export function config(cfg: Record<string, unknown>): Record<string, unknown>;
+    export function stats(): Record<string, unknown>;
 }

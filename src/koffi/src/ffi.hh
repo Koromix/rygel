@@ -271,6 +271,10 @@ struct InstanceData {
     int resident_async_pools = DefaultResidentAsyncPools;
     int max_temporaries = DefaultMaxAsyncCalls - DefaultResidentAsyncPools;
     Size max_type_size = DefaultMaxTypeSize;
+
+    struct {
+        int64_t disposed = 0;
+    } stats;
 };
 RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(InstanceData::memories.data) - 1);
 RG_STATIC_ASSERT(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
