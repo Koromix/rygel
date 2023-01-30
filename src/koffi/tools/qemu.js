@@ -477,7 +477,7 @@ async function prepare() {
                        parts[2] != 'test' &&
                        parts[2] != 'tools';
             } else if (parts[0] == 'src') {
-                return parts[1] == null || parts[1] == 'core';
+                return true;
             } else if (parts[0] == 'vendor') {
                 return parts[1] != 'sqlite3' &&
                        parts[1] != 'raylib';
@@ -499,7 +499,7 @@ async function prepare() {
         pkg.main = "src/koffi/" + pkg.main;
         pkg.types = "src/koffi/" + pkg.types;
         pkg.scripts = {
-            install: "cnoke --prebuild -d src/koffi"
+            install: "./src/cnoke/cnoke.js --prebuild -d src/koffi"
         };
         pkg.cnoke.prebuild = "src/koffi/" + pkg.cnoke.prebuild;
         pkg.cnoke.require = pkg.cnoke.require.replace("./", "./src/koffi/");
