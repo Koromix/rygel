@@ -501,6 +501,7 @@ async function prepare() {
         pkg.scripts = {
             install: "./src/cnoke/cnoke.js --prebuild -d src/koffi"
         };
+        delete pkg.devDependencies;
         pkg.cnoke.prebuild = "src/koffi/" + pkg.cnoke.prebuild;
         pkg.cnoke.require = pkg.cnoke.require.replace("./", "./src/koffi/");
 
