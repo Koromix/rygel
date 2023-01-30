@@ -184,6 +184,7 @@ async function test() {
                             lib.func('const char * __stdcall ReturnBigString(const char *str)');
     const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
     const Concat16 = lib.func('const char16_t *! Concat16(const char16_t *str1, const char16_t *str2)');
+    const Concat16Out = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const char16_t *!*)');
     const ReturnFixedStr = lib.func('FixedString ReturnFixedStr(FixedString str)');
     const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
     const ReturnFixedWide = lib.func('FixedWide ReturnFixedWide(FixedWide str)');
@@ -360,8 +361,21 @@ async function test() {
 
     // UTF-16LE strings
     {
+        let ret = koffi.introspect(Concat16.info.result);
+        assert.ok(ret.disposable);
+
         let str = Concat16('Hello ', 'World!');
         assert.equal(str, 'Hello World!');
+    }
+
+    // Test output disposable type parsed with '!'
+    {
+        let arg2 = koffi.introspect(Concat16Out.info.arguments[2]);
+        let ref = koffi.introspect(arg2.ref);
+
+        let ptr = [null];
+        Concat16Out('Hello ', 'World...', ptr);
+        assert.equal(ptr[0], 'Hello World...');
     }
 
     // String to/from fixed-size buffers

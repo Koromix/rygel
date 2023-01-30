@@ -1011,10 +1011,6 @@ void CallData::PopOutArguments()
             Napi::Object obj(env, value);
             DecodeObject(obj, out.ptr, out.type);
         }
-
-        if (out.type->dispose) {
-            out.type->dispose(env, out.type, out.ptr);
-        }
     }
 }
 

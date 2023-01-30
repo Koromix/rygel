@@ -492,6 +492,21 @@ EXPORT const char16_t *Concat16(const char16_t *str1, const char16_t *str2)
     return ptr;
 }
 
+EXPORT void Concat16Out(const char16_t *str1, const char16_t *str2, const char16_t **out)
+{
+    const int size = 1024;
+    char16_t *ptr = malloc(size * 2);
+
+    size_t len1 = Length16(str1);
+    size_t len2 = Length16(str2);
+
+    memcpy(ptr, str1, len1 * 2);
+    memcpy(ptr + len1, str2, len2 * 2);
+    ptr[len1 + len2] = 0;
+
+    *out = ptr;
+}
+
 EXPORT FixedString ReturnFixedStr(FixedString str)
 {
     return str;
