@@ -27,7 +27,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
 
     if (value.IsString()) {
         std::string str = value.As<Napi::String>();
-        const TypeInfo *type = ResolveType(instance, str.c_str(), out_directions);
+        const TypeInfo *type = ResolveType(env, str.c_str(), out_directions);
 
         if (!type) {
             ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str.c_str());
@@ -53,47 +53,81 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
     }
 }
 
-const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str, int *out_directions)
+static inline bool IsIdentifierStart(char c)
 {
-    Span<const char> remain = TrimStr(str);
+    return IsAsciiAlpha(c) || c == '_';
+}
+
+static inline bool IsIdentifierChar(char c)
+{
+    return IsAsciiAlphaOrDigit(c) || c == '_';
+}
+
+const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_directions)
+{
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     int indirect = 0;
-    bool dispose = false;
+    uint8_t disposables = 0;
 
-    while (remain.len >= 6 && StartsWith(remain, "const") && IsAsciiWhite(remain[5])) {
-        remain = remain.Take(6, remain.len - 6);
-        remain = TrimStr(remain);
+    // Skip initial const qualifiers
+    while (str.len >= 6 && StartsWith(str, "const") && IsAsciiWhite(str[5])) {
+        str = str.Take(6, str.len - 6);
+        str = TrimStr(str);
     }
-    if (remain.len && remain[remain.len - 1] == '!') {
-        dispose = true;
+    str = TrimStr(str);
 
-        remain = remain.Take(0, remain.len - 1);
+    Span<const char> remain = str;
+
+    // Consume one or more identifiers (e.g. unsigned int)
+    for (;;) {
         remain = TrimStr(remain);
+
+        if (!remain.len || !IsIdentifierStart(remain[0]))
+            break;
+
+        do {
+            remain.ptr++;
+            remain.len--;
+        } while (remain.len && IsIdentifierChar(remain[0]));
     }
+
+    Span<const char> name = TrimStr(MakeSpan(str.ptr, remain.ptr - str.ptr));
+
+    // Consume pointer indirections
     while (remain.len) {
-        if (remain[remain.len - 1] == '*') {
-            remain = remain.Take(0, remain.len - 1);
+        if (remain[0] == '*') {
+            remain = remain.Take(1, remain.len - 1);
             indirect++;
-        } else if (remain.len >= 6 && EndsWith(remain, "const") && IsAsciiWhite(remain[remain.len - 6])) {
-            remain = remain.Take(0, remain.len - 6);
+
+            if (RG_UNLIKELY(indirect) >= RG_SIZE(disposables) * 8) {
+                ThrowError<Napi::Error>(env, "Too many pointer indirections");
+                return nullptr;
+            }
+        } else if (remain[0] == '!') {
+            remain = remain.Take(1, remain.len - 1);
+            disposables |= (1u << indirect);
+        } else if (remain.len >= 6 && StartsWith(remain, "const") && !IsIdentifierStart(remain[6])) {
+            remain = remain.Take(6, remain.len - 6);
         } else {
             break;
         }
+
         remain = TrimStr(remain);
     }
 
-    const TypeInfo *type = instance->types_map.FindValue(remain, nullptr);
+    const TypeInfo *type = instance->types_map.FindValue(name, nullptr);
 
     if (!type) {
         // Try with cleaned up spaces
-        if (remain.len < 256) {
+        if (name.len < 256) {
             LocalArray<char, 256> buf;
-            for (Size i = 0; i < remain.len; i++) {
-                char c = remain[i];
+            for (Size i = 0; i < name.len; i++) {
+                char c = name[i];
 
                 if (IsAsciiWhite(c)) {
                     buf.Append(' ');
-                    while (++i < remain.len && IsAsciiWhite(remain[i]));
+                    while (++i < name.len && IsAsciiWhite(name[i]));
                     i--;
                 } else {
                     buf.Append(c);
@@ -107,25 +141,30 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str, int *o
             return nullptr;
     }
 
-    if (indirect) {
-        type = MakePointerType(instance, type, indirect);
+    for (int i = 0;; i++) {
+        if (disposables & (1u << i)) {
+            if (RG_UNLIKELY(type->primitive != PrimitiveKind::Pointer &&
+                            type->primitive != PrimitiveKind::String &&
+                            type->primitive != PrimitiveKind::String16)) {
+                ThrowError<Napi::Error>(env, "Cannot create disposable type for non-pointer");
+                return nullptr;
+            }
+
+            TypeInfo *copy = instance->types.AppendDefault();
+
+            memcpy((void *)copy, (const void *)type, RG_SIZE(*type));
+            copy->name = "<anonymous>";
+            copy->members.allocator = GetNullAllocator();
+            copy->dispose = [](Napi::Env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
+
+            type = copy;
+        }
+
+        if (i >= indirect)
+            break;
+
+        type = MakePointerType(instance, type);
         RG_ASSERT(type);
-    }
-
-    if (dispose) {
-        if (type->primitive != PrimitiveKind::String &&
-                type->primitive != PrimitiveKind::String16 &&
-                indirect != 1)
-            return nullptr;
-
-        TypeInfo *copy = instance->types.AppendDefault();
-
-        memcpy((void *)copy, (const void *)type, RG_SIZE(*type));
-        copy->name = "<anonymous>";
-        copy->members.allocator = GetNullAllocator();
-        copy->dispose = [](Napi::Env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
-
-        type = copy;
     }
 
     if (out_directions) {

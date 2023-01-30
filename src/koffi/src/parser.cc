@@ -141,34 +141,36 @@ const TypeInfo *PrototypeParser::ParseType()
 
     if (offset >= tokens.len) {
         MarkError("Unexpected end of prototype, expected type");
-        return instance->types_map.FindValue("void", nullptr);
+        return instance->void_type;
     } else if (!IsIdentifier(tokens[offset])) {
         MarkError("Unexpected token '%1', expected type", tokens[offset]);
-        return instance->types_map.FindValue("void", nullptr);
+        return instance->void_type;
     }
 
-    while (offset < tokens.len && (IsIdentifier(tokens[offset]) ||
-                                   tokens[offset] == '*')) {
-        offset++;
-    }
-    offset += (offset < tokens.len && tokens[offset] == "!");
-    offset = std::min(tokens.len - 1, offset);
+    while (++offset < tokens.len && IsIdentifier(tokens[offset]));
+    offset--;
+    while (++offset < tokens.len && (tokens[offset] == '*' ||
+                                     tokens[offset] == '!' ||
+                                     tokens[offset] == "const"));
+    offset--;
 
     while (offset >= start) {
         Span<const char> str = MakeSpan(tokens[start].ptr, tokens[offset].end() - tokens[start].ptr);
-        const TypeInfo *type = ResolveType(instance, str);
+        const TypeInfo *type = ResolveType(env, str);
 
         if (type) {
             offset++;
             return type;
         }
+        if (RG_UNLIKELY(env.IsExceptionPending()))
+            return instance->void_type;
 
         offset--;
     }
     offset = start;
 
     MarkError("Unknown or invalid type name '%1'", tokens[offset]);
-    return instance->types_map.FindValue("void", nullptr);
+    return instance->void_type;
 }
 
 const char *PrototypeParser::ParseIdentifier()
