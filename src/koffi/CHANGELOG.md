@@ -4,6 +4,19 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.2
+
+**Main changes:**
+
+- Fix type parser issues (such as ignoring some [disposable qualifiers](calls.md#heap-allocated-values))
+- Fix crash when using disposable types in output parameters
+- Add basic [koffi.stats()](misc.md#usage-statistics) interface
+
+**Other changes:**
+
+- Avoid CNoke dependencies
+- Clear out development dependencies from package.json
+
 #### Koffi 2.3.1
 
 **Main changes:**
