@@ -122,13 +122,8 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             return env.Null();
         }
 
-        Size sync_stack_size = instance->sync_stack_size;
-        Size sync_heap_size = instance->sync_heap_size;
-        Size async_stack_size = instance->async_stack_size;
-        Size async_heap_size = instance->async_heap_size;
-        int resident_async_pools = instance->resident_async_pools;
-        int max_async_calls = resident_async_pools + instance->max_temporaries;
-        Size max_type_size = instance->max_type_size;
+        decltype(instance->config) new_config = instance->config;
+        int max_async_calls = new_config.resident_async_pools + new_config.max_temporaries;
 
         Napi::Object obj = info[0].As<Napi::Object>();
         Napi::Array keys = obj.GetPropertyNames();
@@ -138,25 +133,25 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             Napi::Value value = obj[key];
 
             if (key == "sync_stack_size") {
-                if (!ChangeMemorySize(key.c_str(), value, &sync_stack_size))
+                if (!ChangeMemorySize(key.c_str(), value, &new_config.sync_stack_size))
                     return env.Null();
             } else if (key == "sync_heap_size") {
-                if (!ChangeMemorySize(key.c_str(), value, &sync_heap_size))
+                if (!ChangeMemorySize(key.c_str(), value, &new_config.sync_heap_size))
                     return env.Null();
             } else if (key == "async_stack_size") {
-                if (!ChangeMemorySize(key.c_str(), value, &async_stack_size))
+                if (!ChangeMemorySize(key.c_str(), value, &new_config.async_stack_size))
                     return env.Null();
             } else if (key == "async_heap_size") {
-                if (!ChangeMemorySize(key.c_str(), value, &async_heap_size))
+                if (!ChangeMemorySize(key.c_str(), value, &new_config.async_heap_size))
                     return env.Null();
             } else if (key == "resident_async_pools") {
-                if (!ChangeAsyncLimit(key.c_str(), value, RG_LEN(instance->memories.data) - 1, &resident_async_pools))
+                if (!ChangeAsyncLimit(key.c_str(), value, RG_LEN(instance->memories.data) - 1, &new_config.resident_async_pools))
                     return env.Null();
             } else if (key == "max_async_calls") {
                 if (!ChangeAsyncLimit(key.c_str(), value, MaxAsyncCalls, &max_async_calls))
                     return env.Null();
             } else if (key == "max_type_size") {
-                if (!ChangeSize(key.c_str(), value, 32, Mebibytes(512), &max_type_size))
+                if (!ChangeSize(key.c_str(), value, 32, Mebibytes(512), &new_config.max_type_size))
                     return env.Null();
             } else {
                 ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
@@ -164,29 +159,24 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             }
         }
 
-        if (max_async_calls < resident_async_pools) {
+        if (max_async_calls < new_config.resident_async_pools) {
             ThrowError<Napi::Error>(env, "Setting max_async_calls must be >= to resident_async_pools");
             return env.Null();
         }
 
-        instance->sync_stack_size = sync_stack_size;
-        instance->sync_heap_size = sync_heap_size;
-        instance->async_stack_size = async_stack_size;
-        instance->async_heap_size = async_heap_size;
-        instance->resident_async_pools = resident_async_pools;
-        instance->max_temporaries = max_async_calls - resident_async_pools;
-        instance->max_type_size = max_type_size;
+        new_config.max_temporaries =  max_async_calls - new_config.resident_async_pools;
+        instance->config = new_config;
     }
 
     Napi::Object obj = Napi::Object::New(env);
 
-    obj.Set("sync_stack_size", instance->sync_stack_size);
-    obj.Set("sync_heap_size", instance->sync_heap_size);
-    obj.Set("async_stack_size", instance->async_stack_size);
-    obj.Set("async_heap_size", instance->async_heap_size);
-    obj.Set("resident_async_pools", instance->resident_async_pools);
-    obj.Set("max_async_calls", instance->resident_async_pools + instance->max_temporaries);
-    obj.Set("max_type_size", instance->max_type_size);
+    obj.Set("sync_stack_size", instance->config.sync_stack_size);
+    obj.Set("sync_heap_size", instance->config.sync_heap_size);
+    obj.Set("async_stack_size", instance->config.async_stack_size);
+    obj.Set("async_heap_size", instance->config.async_heap_size);
+    obj.Set("resident_async_pools", instance->config.resident_async_pools);
+    obj.Set("max_async_calls", instance->config.resident_async_pools + instance->config.max_temporaries);
+    obj.Set("max_type_size", instance->config.max_type_size);
 
     return obj;
 }
@@ -297,7 +287,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         size = member.offset + member.type->size;
         type->align = std::max(type->align, align);
 
-        if (size > instance->max_type_size) {
+        if (size > instance->config.max_type_size) {
             ThrowError<Napi::Error>(env, "Struct '%1' size is too high (max = %2)", type->name, FmtMemSize(size));
             return env.Null();
         }
@@ -632,8 +622,8 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
         return env.Null();
     }
-    if (len > instance->max_type_size / ref->size) {
-        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->max_type_size / ref->size);
+    if (len > instance->config.max_type_size / ref->size) {
+        ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / ref->size);
         return env.Null();
     }
 
@@ -1002,7 +992,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
             return mem;
     }
 
-    if (RG_UNLIKELY(instance->temporaries >= instance->max_temporaries))
+    if (RG_UNLIKELY(instance->temporaries >= instance->config.max_temporaries))
         return nullptr;
 
     InstanceMemory *mem = new InstanceMemory();
@@ -1060,7 +1050,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 
     mem->depth = 0;
 
-    if (instance->memories.len <= instance->resident_async_pools) {
+    if (instance->memories.len <= instance->config.resident_async_pools) {
         instance->memories.Append(mem);
         mem->temporary = false;
     } else {
@@ -1251,7 +1241,7 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    InstanceMemory *mem = AllocateMemory(instance, instance->async_stack_size, instance->async_heap_size);
+    InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
     if (RG_UNLIKELY(!mem)) {
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
         return env.Null();
@@ -1380,7 +1370,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     }
 
     if (!instance->memories.len) {
-        AllocateMemory(instance, instance->sync_stack_size, instance->sync_heap_size);
+        AllocateMemory(instance, instance->config.sync_stack_size, instance->config.sync_heap_size);
         RG_ASSERT(instance->memories.len);
     }
 
@@ -1985,7 +1975,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
         Napi::Env env = trampoline->func.Env();
         InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-        InstanceMemory *mem = AllocateMemory(instance, instance->async_stack_size, instance->async_heap_size);
+        InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
         if (RG_UNLIKELY(!mem)) {
             ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
             return;

@@ -264,13 +264,15 @@ struct InstanceData {
 
     BlockAllocator str_alloc;
 
-    Size sync_stack_size = DefaultSyncStackSize;
-    Size sync_heap_size = DefaultSyncHeapSize;
-    Size async_stack_size = DefaultAsyncStackSize;
-    Size async_heap_size = DefaultAsyncHeapSize;
-    int resident_async_pools = DefaultResidentAsyncPools;
-    int max_temporaries = DefaultMaxAsyncCalls - DefaultResidentAsyncPools;
-    Size max_type_size = DefaultMaxTypeSize;
+    struct {
+        Size sync_stack_size = DefaultSyncStackSize;
+        Size sync_heap_size = DefaultSyncHeapSize;
+        Size async_stack_size = DefaultAsyncStackSize;
+        Size async_heap_size = DefaultAsyncHeapSize;
+        int resident_async_pools = DefaultResidentAsyncPools;
+        int max_temporaries = DefaultMaxAsyncCalls - DefaultResidentAsyncPools;
+        Size max_type_size = DefaultMaxTypeSize;
+    } config;
 
     struct {
         int64_t disposed = 0;

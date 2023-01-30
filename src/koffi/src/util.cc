@@ -219,7 +219,7 @@ static const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref
                                      TypeInfo::ArrayHint hint, bool insert)
 {
     RG_ASSERT(len > 0);
-    RG_ASSERT(len <= instance->max_type_size / ref->size);
+    RG_ASSERT(len <= instance->config.max_type_size / ref->size);
 
     TypeInfo *type = instance->types.AppendDefault();
 
