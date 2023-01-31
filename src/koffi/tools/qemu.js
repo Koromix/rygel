@@ -499,7 +499,7 @@ async function prepare() {
         pkg.main = "src/koffi/" + pkg.main;
         pkg.types = "src/koffi/" + pkg.types;
         pkg.scripts = {
-            install: "./src/cnoke/cnoke.js --prebuild -d src/koffi"
+            install: "node src/cnoke/cnoke.js --prebuild -d src/koffi"
         };
         delete pkg.devDependencies;
         pkg.cnoke.prebuild = "src/koffi/" + pkg.cnoke.prebuild;
