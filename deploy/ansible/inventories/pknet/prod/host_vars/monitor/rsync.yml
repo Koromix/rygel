@@ -12,7 +12,7 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 rsync_server: zh2625@zh2625.rsync.net
-rsync_path: pknet/prod/host1
+rsync_path: pknet/prod/monitor
 
 rsync_key: !vault |
   $ANSIBLE_VAULT;1.1;AES256
@@ -192,8 +192,6 @@ rsync_key: !vault |
 
 rsync_backups:
   - /opt/nginx/nginx.conf
-  - '{{ goupile_root_path }}/sync/sync.ini'
-  - '{{ goupile_archive_path }}/'
-  - '{{ goupile_snapshot_path }}/'
+  - /opt/static/live/
 
 rsync_time: '03:00 UTC'

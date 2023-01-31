@@ -40,7 +40,7 @@
       tags:
         - borg
     - name: rsync
-      when: 'rsync_dest is defined'
+      when: 'rsync_server is defined'
       tags:
         - rsync
     - name: thop

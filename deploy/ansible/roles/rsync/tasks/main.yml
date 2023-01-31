@@ -35,7 +35,6 @@
     pkg:
       - rsync
     state: latest
-  become: yes
   when: 'ansible_os_family != "Debian" or ansible_distribution_version != "10"'
   become: yes
 

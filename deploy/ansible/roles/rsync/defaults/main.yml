@@ -13,9 +13,12 @@
 
 rsync_root_path: /opt/rsync
 
-# rsync_dest:
+# rsync_server:
 rsync_port: 22
+# rsync_path:
+
+# rsync_fingerprint:
 # rsync_key:
-# rsync_paths:
+# rsync_backups:
 
 rsync_time: '01:00 UTC' # systemd timestamp
