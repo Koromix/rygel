@@ -358,5 +358,12 @@
                 }
             ]
         }
+    ],
+
+    "deleteRules": [
+        {
+            "orgID": 1,
+            "uid": "UvYkP4c4k"
+        }
     ]
 }
