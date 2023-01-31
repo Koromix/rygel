@@ -39,6 +39,10 @@
       when: 'borg_directories is defined or borg_server'
       tags:
         - borg
+    - name: rsync
+      when: 'rsync_dest is defined'
+      tags:
+        - rsync
     - name: thop
       when: 'thop_tables is defined'
       tags:
