@@ -4,6 +4,12 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.3
+
+**Main fixes:**
+
+- Fix error when installing Koffi on Windows (2.3.2)
+
 #### Koffi 2.3.2
 
 **Main changes:**
