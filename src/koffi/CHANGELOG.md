@@ -37,7 +37,7 @@
 
 - Allow buffers (TypedArray or ArrayBuffer) values for input and/or output pointer arguments (for polymorphic arguments)
 - Support opaque buffers (TypedArray or ArrayBuffer) values in `koffi.decode()` to [decode output buffers](calls.md#output-buffers)
-- Decode non-string types as arrays when an [explicit length is passed to koffi.decode()](callbacks.md#pointer-arguments)
+- Decode non-string types as arrays when an [explicit length is passed to koffi.decode()](callbacks.md#decoding-pointer-arguments)
 
 **Other changes:**
 
@@ -100,7 +100,7 @@
 
 **New features:**
 
-- Add [koffi.decode()](callbacks.md#pointer-arguments) for callback pointer arguments
+- Add [koffi.decode()](callbacks.md#decoding-pointer-arguments) for callback pointer arguments
 - Support transparent [output string parameters](calls.md#output-parameters)
 - Add `koffi.offsetof()` utility function
 - Support optional *this* binding in `koffi.register()`
