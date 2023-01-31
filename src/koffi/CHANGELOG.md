@@ -4,7 +4,7 @@
 
 ### Koffi 2.3
 
-#### Koffi 2.3.3
+#### Koffi 2.3.4
 
 **Main fixes:**
 
