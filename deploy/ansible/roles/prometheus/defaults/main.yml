@@ -55,15 +55,6 @@ prometheus_packages:
     port: 9558
     args: |
       --web.listen-address 127.0.0.1:9558
-  borg_exporter:
-    src: borg_exporter
-    binary: borg_exporter
-    port: 9559
-    args: |
-      --web.listen-address 127.0.0.1:9559 \
-          --collector.info-file="{{ borg_root_path }}/status/info.json" \
-          --collector.list-file="{{ borg_root_path }}/status/list.json"
-    scrape_interval: 2m
 
 # Define these to export Prometheus
 # prometheus_exporters:

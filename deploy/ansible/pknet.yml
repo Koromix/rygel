@@ -35,10 +35,6 @@
       when: 'static_deploys is defined'
       tags:
         - static
-    - name: borg
-      when: 'borg_directories is defined or borg_server'
-      tags:
-        - borg
     - name: rsync
       when: 'rsync_server is defined'
       tags:

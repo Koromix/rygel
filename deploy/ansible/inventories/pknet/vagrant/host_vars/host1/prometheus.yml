@@ -17,4 +17,3 @@ prometheus_exporters:
   - node_exporter
   - nginx_exporter
   - systemd_exporter
-  - borg_exporter
