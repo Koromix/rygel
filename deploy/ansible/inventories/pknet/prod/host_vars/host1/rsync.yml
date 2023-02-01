@@ -196,4 +196,4 @@ rsync_backups:
   - '{{ goupile_archive_path }}/'
   - '{{ goupile_snapshot_path }}/'
 
-rsync_time: '03:00 UTC'
+rsync_time: hourly
