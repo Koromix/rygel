@@ -40,6 +40,15 @@ declare module 'koffi' {
         };
     };
 
+    export type KoffiFunc<T extends (...args: any) => any> = T & {
+       async: (...args: [...Parameters<T>, (err: any, result: ReturnType<T>) => void]) => void;
+       info: {
+          name: string;
+          arguments: IKoffiCType[];
+          result: IKoffiCType;
+       };
+    };
+
     export interface IKoffiLib {
         func(definition: string): KoffiFunction;
         func(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
