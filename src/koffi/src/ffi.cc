@@ -335,6 +335,115 @@ static Napi::Value CreatePackedStructType(const Napi::CallbackInfo &info)
     return CreateStructType(info, false);
 }
 
+static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    bool named = info.Length() > 1;
+
+    if (named && !info[0].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+    if (!IsObject(info[named])) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+
+    TypeInfo *type = instance->types.AppendDefault();
+    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
+
+    std::string name = named ? info[0].As<Napi::String>() : std::string("<anonymous>");
+    Napi::Object obj = info[named].As<Napi::Object>();
+    Napi::Array keys = obj.GetPropertyNames();
+
+    type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+
+    type->primitive = PrimitiveKind::Union;
+    type->align = 1;
+
+    HashSet<const char *> members;
+    int32_t size = 0;
+
+    for (uint32_t i = 0; i < keys.Length(); i++) {
+        RecordMember member = {};
+
+        std::string key = ((Napi::Value)keys[i]).As<Napi::String>();
+        Napi::Value value = obj[key];
+        int16_t align = 0;
+
+        member.name = DuplicateString(key.c_str(), &instance->str_alloc).ptr;
+
+        if (value.IsArray()) {
+            Napi::Array array = value.As<Napi::Array>();
+
+            if (array.Length() != 2 || !((Napi::Value)array[0u]).IsNumber()) {
+                ThrowError<Napi::Error>(env, "Member specifier array must contain alignement value and type");
+                return env.Null();
+            }
+
+            int64_t align64 = ((Napi::Value)array[0u]).As<Napi::Number>().Int64Value();
+
+            if (!CheckAlignment(align64)) {
+                ThrowError<Napi::Error>(env, "Alignment of member '%1' must be 1, 2, 4 or 8", member.name);
+                return env.Null();
+            }
+
+            value = array[1u];
+            align = (int16_t)align64;
+        }
+ 
+        member.type = ResolveType(value);
+        if (!member.type)
+            return env.Null();
+        if (!CanStoreType(member.type)) {
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a member (maybe try %1 *)", member.type->name);
+            return env.Null();
+        }
+
+        align = align ? align : member.type->align;
+        size = std::max(size, member.type->size);
+        type->align = std::max(type->align, align);
+
+        bool inserted;
+        members.TrySet(member.name, &inserted);
+
+        if (!inserted) {
+            ThrowError<Napi::Error>(env, "Duplicate member '%1' in union '%2'", member.name, type->name);
+            return env.Null();
+        }
+
+        type->members.Append(member);
+    }
+
+    size = (int32_t)AlignLen(size, type->align);
+    if (!size) {
+        ThrowError<Napi::Error>(env, "Empty union '%1' is not allowed in C", type->name);
+        return env.Null();
+    }
+    type->size = (int32_t)size;
+
+    // If the insert succeeds, we cannot fail anymore
+    if (named) {
+        bool inserted;
+        instance->types_map.TrySet(type->name, type, &inserted);
+
+        if (!inserted) {
+            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+            return env.Null();
+        }
+    }
+    err_guard.Disable();
+
+    return WrapType(env, instance, type);
+}
+
 static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -957,7 +1066,8 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
                 Napi::Value value = WrapType(env, instance, type->ref.type);
                 defn.Set("ref", value);
             } break;
-            case PrimitiveKind::Record: {
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
                 Napi::Object members = Napi::Object::New(env);
 
                 for (const RecordMember &member: type->members) {
@@ -1998,6 +2108,7 @@ static void SetExports(Napi::Env env, Func func)
 
     func("struct", Napi::Function::New(env, CreatePaddedStructType));
     func("pack", Napi::Function::New(env, CreatePackedStructType));
+    func("union", Napi::Function::New(env, CreateUnionType));
     func("opaque", Napi::Function::New(env, CreateOpaqueType));
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("array", Napi::Function::New(env, CreateArrayType));
