@@ -13,9 +13,12 @@
 
 function ApplicationInfo() {
     this.head = null;
-    this.forms = new Map;
+
     this.pages = new Map;
-    this.home = null;
+    this.homepage = null;
+
+    this.stores = new Set;
+
     this.panels = {
         editor: profile.develop,
         data: profile.userid > 0 && profile.lock == null,
@@ -23,59 +26,24 @@ function ApplicationInfo() {
     };
 }
 
-function FormInfo(key, title) {
-    this.key = key;
-    this.title = title;
-    this.chain = [];
-    this.pages = new Map;
-    this.forms = new Map;
-    this.menu = [];
-    this.multi = null;
-    this.url = null;
-}
-
-function PageInfo(key, title, stack) {
-    let self = this;
-
-    this.key = key;
-    this.title = title;
-    this.form = null;
-    this.url = null;
-
-    this.getOption = function(key, default_value = undefined) {
-        for (let i = stack.length - 1; i >= 0; i--) {
-            let options = stack[i];
-
-            let value = options[key];
-
-            if (value != null)
-                return value;
-        }
-
-        return default_value;
-    };
-}
-
 function ApplicationBuilder(app) {
     let self = this;
 
+    let current_menu = null;
+    let current_store = null;
+
     let options_stack = [
-        // {
-        //     enabled: true,
-        //     restrict: false,
-        //     dictionaries: null,
-        //     load: null,
-        //     default_actions: true,
-        //     autosave: false
-        // }
+        {
+            warn_unsaved: true
+        }
     ];
-    let form_ref = null;
 
     this.home = function(home) { app.home = home; };
     this.panel = function(panel, enable) { app.panels[panel] = enable; };
 
     this.pushOptions = function(options = {}) {
-        options_stack = expandOptions(options);
+        options = expandOptions(options);
+        options_stack.push(options);
     };
     this.popOptions = function() {
         if (options_stack.length < 2)
@@ -86,130 +54,113 @@ function ApplicationBuilder(app) {
 
     this.head = function(head) { app.head = head; };
 
-    this.form = function(key, title, func = null, options = null) {
-        checkKey(key);
-        if (app.forms.has(key))
-            throw new Error(`Form key '${key}' is already used`);
-
-        title = title || key;
-
-        if (options == null && typeof func === 'object') {
-            options = func;
-            func = null;
-        }
-
-        let prev_options = Array.from(options_stack);
-        let prev_form = form_ref;
-
-        try {
-            options_stack = expandOptions(options);
-
-            form_ref = new FormInfo(key, title);
-            if (prev_form != null)
-                form_ref.chain.push(...prev_form.chain);
-            form_ref.chain.push(form_ref);
-
-            if (typeof func === 'function') {
-                func(self);
-
-                if (!form_ref.menu.length)
-                    self.page(key, title);
-            } else {
-                self.page(key, func || title);
-            }
-
-            // Determine URL
-            if (form_ref.pages.size) {
-                form_ref.url = form_ref.pages.values().next().value.url;
-            } else {
-                form_ref.url = form_ref.forms.values().next().value.url;
-            }
-
-            if (prev_form != null && showMenuRec(form_ref)) {
-                let item = {
-                    key: key,
-                    title: title,
-                    type: 'form',
-                    form: form_ref,
-                    url: form_ref.url
-                };
-                prev_form.menu.push(item);
-
-                prev_form.forms.set(key, form_ref);
-            }
-            app.forms.set(key, form_ref);
-
-            return form_ref;
-        } finally {
-            options_stack = prev_options;
-            form_ref = prev_form;
-        }
-    };
-
-    function showMenuRec(form) {
-        for (let page of form.pages.values()) {
-            if (page.getOption('menu', true))
-                return true;
-        }
-
-        for (let child of form.forms.values()) {
-            if (showMenuRec(child))
-                return true;
-        }
-
-        return false;
-    }
-
-    this.many = function(key, multi, title, func = null, options = {}) {
-        if (form_ref == null)
-            throw new Error('many cannot be used for top-level forms');
-
-        let form = self.form(key, title, func, options);
-        form.multi = multi;
-        return form;
-    };
-    this.formMulti = this.many;
-
     this.page = function(key, title, options = null) {
-        checkKey(key);
+        checkKeySyntax(key);
         if (app.pages.has(key))
             throw new Error(`Page key '${key}' is already used`);
-        if (form_ref == null)
-            throw new Error('Cannot make page without enclosing form');
 
         title = title || key;
+        options = expandOptions(options);
 
-        options = expandOptions(options, {
-            filename: `pages/${key}.js`
-        });
+        let page = {
+            key: key,
+            title: title,
+            filename: `pages/${key}.js`,
+            url: ENV.urls.instance + key,
 
-        let page = new PageInfo(key, title, options);
+            menu: null,
+            store: current_store,
 
-        if (form_ref != null) {
-            page.form = form_ref;
+            options: options
+        };
+
+        let item = {
+            key: key,
+            title: title,
+            url: page.url,
+
+            chain: null,
+            children: [],
+
+            page: page
+        };
+
+        if (current_menu != null) {
+            item.chain = [...current_menu.chain, item];
+
+            for (let item of current_menu.chain) {
+                if (item.url == null)
+                    item.url = page.url;
+            }
+
+            current_menu.children.push(item);
         } else {
-            page.form = new FormInfo(key, title);
+            item.chain = [item];
         }
-        page.url = ENV.urls.instance + key;
+        page.menu = item;
 
-        if (page.getOption('menu', true)) {
-            let item = {
-                key: key,
-                title: title,
-                type: 'page',
-                page: page,
-                url: page.url
-            };
-            page.form.menu.push(item);
-        }
-
-        page.form.pages.set(key, page);
         app.pages.set(key, page);
 
         return page;
     };
 
-    function checkKey(key) {
+    this.form = function(key, title, func = null, options = null) {
+        checkKeySyntax(key);
+        if (app.stores.has(key))
+            throw new Error(`Store key '${key}' is already used`);
+
+        title = title || key;
+
+        if (options == null && typeof func == 'object') {
+            options = func;
+            func = null;
+        }
+
+        let prev_store = current_store;
+        let prev_menu = current_menu;
+        let prev_options = options_stack;
+
+        try {
+            current_menu = {
+                key: key,
+                title: title,
+                url: null,
+
+                chain: (current_menu != null) ? current_menu.chain.slice() : [],
+                children: [],
+
+                page: null
+            };
+            current_menu.chain.push(current_menu);
+            current_store = key;
+
+            options_stack = [expandOptions(options)];
+
+            if (typeof func == 'function') {
+                func();
+            } else {
+                self.page(key, func || title);
+            }
+
+            if (prev_menu != null && current_menu.children.length) {
+                if (current_menu.children.length > 1) {
+                    prev_menu.children.push(current_menu);
+                } else {
+                    let item0 = current_menu.children[0];
+                    item0.chain.splice(item0.chain.length - 2, 1);
+                    prev_menu.children.push(item0);
+                }
+            }
+
+            app.stores.add(key);
+        } finally {
+            current_menu = prev_menu;
+            current_store = prev_store;
+            options_stack = prev_options;
+        }
+    };
+
+    function checkKeySyntax(key) {
         if (!key)
             throw new Error('Empty keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
@@ -218,14 +169,8 @@ function ApplicationBuilder(app) {
             throw new Error('Keys must not start with \'__\'');
     }
 
-    function expandOptions(options, defaults = null) {
-        let stack = options_stack;
-
-        if (defaults != null)
-            stack = [defaults, ...stack];
-        if (options != null)
-            stack = [...stack, options];
-
-        return stack;
+    function expandOptions(options) {
+        options = Object.assign({}, options_stack[options_stack.length - 1], options);
+        return options;
     }
 }

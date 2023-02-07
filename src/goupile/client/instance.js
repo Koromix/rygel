@@ -21,10 +21,8 @@ function InstanceController() {
     let mutex = new Mutex;
 
     let route = {
-        form: null,
         page: null,
-        ulid: null,
-        version: null
+        menu: null
     };
 
     let head_length = Number.MAX_SAFE_INTEGER;
@@ -85,7 +83,7 @@ function InstanceController() {
             if (!new_app.pages.size)
                 throw new Error('Main script does not define any page');
 
-            new_app.home = new_app.pages.values().next().value;
+            new_app.homepage = new_app.pages.values().next().value;
             app = util.deepFreeze(new_app);
         } catch (err) {
             if (app == null) {
@@ -93,9 +91,9 @@ function InstanceController() {
                 let builder = new ApplicationBuilder(new_app);
 
                 // For simplicity, a lot of code assumes at least one page exists
-                builder.form("default", "Défaut", "Page par défaut");
+                builder.form('default', 'Défaut', 'Page par défaut');
 
-                new_app.home = new_app.pages.values().next().value;
+                new_app.homepage = new_app.pages.values().next().value;
                 app = util.deepFreeze(new_app);
             }
         }
@@ -130,7 +128,7 @@ function InstanceController() {
     this.hasUnsavedData = function() {
         if (form_state == null)
             return false;
-        if (!route.page.getOption('safety', true))
+        if (!route.page.options.warn_unsaved)
             return false;
 
         return form_state.hasChanged();
@@ -142,9 +140,9 @@ function InstanceController() {
     this.runTasks = util.serialize(this.runTasks, mutex);
 
     function renderMenu() {
-        let menu = (profile.lock == null && (route.form.menu.length > 1 || route.form.chain.length > 1));
-        let title = !menu;
-        let wide = (route.form.chain[0].menu.length > 3);
+        let show_menu = (profile.lock == null && (route.menu.chain.length > 2 || route.menu.chain[0].children.length > 1));
+        let show_title = !show_menu;
+        let menu_is_wide = (show_menu && route.menu.chain[0].children.length > 3);
 
         let user_icon = goupile.isLoggedOnline() ? 450 : 494;
 
@@ -181,38 +179,37 @@ function InstanceController() {
                 ` : ''}
                 <div style="flex: 1; min-width: 15px;"></div>
 
-                ${menu && wide ? route.form.chain.map(form => {
-                    if (form.menu.length > 1) {
+                ${show_menu && !menu_is_wide ? util.map(route.menu.chain[0].children, item => {
+                    if (item.children.length) {
+                        let active = route.menu.chain.includes(item);
+
+                        if (!ui.isPanelActive('view'))
+                            active = false;
+
                         return html`
                             <div id="ins_drop" class="drop">
-                                <button title=${form.title} @click=${ui.deployMenu}>${form.title}</button>
-                                <div>${util.map(form.menu, item => renderDropItem(item))}</div>
+                                <button title=${item.title} class=${active ? 'active' : ''}
+                                        @click=${ui.deployMenu}>${item.title}</button>
+                                <div>${util.map(item.children, item => renderDropItem(item))}</div>
                             </div>
                         `;
                     } else {
-                        return renderDropItem(form);
+                        return renderDropItem(item);
                     }
                 }) : ''}
-                ${menu && !wide ? html`
-                    ${util.map(route.form.chain[0].menu, item => {
-                        let active = ui.isPanelActive('view') &&
-                                     (route.form.chain.some(form => form === item.form) || item.page === route.page);
-                        let drop = (item.type === 'form' && item.form.menu.length > 1);
-
-                        if (drop) {
-                            return html`
-                                <div id="ins_drop" class="drop">
-                                    <button title=${item.title} class=${active ? 'active' : ''}
-                                            @click=${ui.deployMenu}>${item.title}</button>
-                                    <div>${util.map(item.form.menu, item => renderDropItem(item))}</div>
-                                </div>
-                            `;
-                        } else {
-                            return renderDropItem(item);
-                        }
-                    })}
-                ` : ''}
-                ${title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
+                ${show_menu && menu_is_wide ? route.menu.chain.map(item => {
+                    if (item.children.length) {
+                        return html`
+                            <div id="ins_drop" class="drop">
+                                <button title=${item.title} @click=${ui.deployMenu}>${item.title}</button>
+                                <div>${util.map(item.children, child => renderDropItem(child))}</div>
+                            </div>
+                        `;
+                    } else {
+                        return renderDropItem(item);
+                    }
+                }) : ''}
+                ${show_title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
                 <div style="flex: 1; min-width: 15px;"></div>
 
                 ${!goupile.isLocked() && profile.instances == null ?
@@ -317,30 +314,12 @@ function InstanceController() {
     }
 
     function renderDropItem(item) {
-        let active;
-        let url;
-        let title;
-
-        if (item instanceof PageInfo || item.type === 'page') {
-            let page = item.page || item;
-
-            active = (page === route.page);
-            url = page.url;
-            title = page.title;
-        } else if (item instanceof FormInfo || item.type === 'form') {
-            let form = item.form || item;
-
-            active = route.form.chain.some(parent => form === parent);
-            url = form.url;
-            title = form.multi || form.title;
-        } else {
-            throw new Error(`Unknown item type '${item.type}'`);
-        }
+        let active = route.menu.chain.includes(item);
 
         return html`
             <button class=${active && ui.isPanelActive('view') ? 'active' : ''}
-                    @click=${ui.wrapAction(e => active ? togglePanel(e, 'view', true) : self.go(e, url))}>
-                <div style="flex: 1;">${title}</div>
+                    @click=${ui.wrapAction(e => active ? togglePanel(e, 'view', true) : self.go(e, item.url))}>
+                <div style="flex: 1;">${item.title}</div>
            </button>
         `;
     }
@@ -409,7 +388,7 @@ function InstanceController() {
         });
         tabs.push({
             title: 'Formulaire',
-            filename: route.page.getOption('filename'),
+            filename: route.page.filename,
             active: false
         });
 
@@ -526,7 +505,7 @@ function InstanceController() {
     }
 
     async function renderPage() {
-        let filename = route.page.getOption('filename');
+        let filename = route.page.filename;
         let code = code_buffers.get(filename).code;
 
         let model = new FormModel;
@@ -552,10 +531,11 @@ function InstanceController() {
             console.error(err);
         }
 
-        let menu = (profile.lock == null) && (route.form.menu.length > 1 || route.form.chain.length > 1);
-        let wide = (route.form.chain[0].menu.length > 3);
+        let show_menu = (profile.lock == null && (route.menu.chain.length > 2 || route.menu.chain[0].children.length > 1));
+        let menu_is_wide = (show_menu && route.menu.chain[0].children.length > 3);
 
-        let sections = model.widgets.filter(intf => intf.options.anchor).map(intf => ({
+        // Quick access to page sections
+        let page_sections = model.widgets.filter(intf => intf.options.anchor).map(intf => ({
             title: intf.label,
             anchor: intf.options.anchor
         }));
@@ -563,7 +543,8 @@ function InstanceController() {
         return html`
             <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
-                    <div id="ins_menu">${menu ? util.mapRange(1 - wide, route.form.chain.length, idx => renderFormMenu(route.form.chain[idx])) : ''}</div>
+                    <div id="ins_menu">${show_menu ? util.mapRange(1 - menu_is_wide, route.menu.chain.length,
+                                                                   idx => renderPageMenu(route.menu.chain[idx])) : ''}</div>
 
                     <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
                         ${page_div}
@@ -572,9 +553,9 @@ function InstanceController() {
                     <div id="ins_actions">
                         ${model.renderActions()}
 
-                        ${sections.length > 1 ? html`
+                        ${page_sections.length > 1 ? html`
                             <h1>${route.page.title}</h1>
-                            <ul>${sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
+                            <ul>${page_sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
                         ` : ''}
                     </div>
                 </div>
@@ -609,56 +590,23 @@ function InstanceController() {
         `;
     }
 
-    function getAllPages(items) {
-        let pages = items.flatMap(item => {
-            if (item.type === 'form') {
-                let form = item.form;
-                return getAllPages(form.menu);
-            } else if (item.type == 'page') {
-                return item.page;
-            }
-        })
-
-        return pages;
-    }
-
-    function renderFormMenu(form) {
-        let show = (form.menu.length > 1);
-        let title = form.title;
+    function renderPageMenu(menu) {
+        if (!menu.children.length)
+            return '';
 
         return html`
-            ${show ? html`
-                <h1>${title}</h1>
-                <ul>
-                    ${util.map(form.menu, item => {
-                        if (item.type === 'page') {
-                            let page = item.page;
+            <h1>${menu.title}</h1>
+            <ul>
+                ${util.map(menu.children, item => {
+                    let active = route.menu.chain.includes(item);
 
-                            let cls = '';
-                            if (page === route.page)
-                                cls += ' active';
-
-                            return html`
-                                <li><a class=${cls} href=${page.url}>
-                                    <div style="flex: 1;">${page.title}</div>
-                                </a></li>
-                            `;
-                        } else if (item.type === 'form') {
-                            let form = item.form;
-
-                            let cls = '';
-                            if (route.form.chain.some(parent => form === parent))
-                                cls += ' active';
-
-                            return html`
-                                <li><a class=${cls} href=${form.url} style="display: flex;">
-                                    <div style="flex: 1;">${form.multi || form.title}</div>
-                                </a></li>
-                            `;
-                        }
-                    })}
-                </ul>
-            ` : ''}
+                    return html`
+                        <li><a class=${active ? 'active' : ''} href=${item.url}>
+                            <div style="flex: 1;">${item.title}</div>
+                        </a></li>
+                    `;
+                })}
+            </ul>
         `;
     }
 
@@ -1042,7 +990,7 @@ function InstanceController() {
             if (!(url instanceof URL))
                 url = new URL(url, window.location.href);
             if (url.pathname === ENV.urls.instance)
-                url = new URL(app.home.url, window.location.href);
+                url = new URL(app.homepage.url, window.location.href);
             goupile.setCurrentHash(url.hash);
 
             if (!url.pathname.endsWith('/'))
@@ -1072,9 +1020,9 @@ function InstanceController() {
             new_route.page = app.pages.get(key);
             if (new_route.page == null) {
                 log.error(`La page '${key}' n'existe pas`);
-                new_route.page = app.home;
+                new_route.page = app.homepage;
             }
-            new_route.form = new_route.page.form;
+            new_route.menu = new_route.page.menu;
 
             // Restore explicit panels (if any)
             let panels = url.searchParams.get('p');
@@ -1093,7 +1041,7 @@ function InstanceController() {
 
         // Fetch and cache page code for page panel
         {
-            let filename = new_route.page.getOption('filename');
+            let filename = new_route.page.filename;
             await fetchCode(filename);
         }
 
@@ -1107,7 +1055,7 @@ function InstanceController() {
     this.run = async function(push_history = true) {
         // Fetch and cache page code for page panel
         // Again to make sure we are up to date (e.g. publication)
-        let filename = route.page.getOption('filename');
+        let filename = route.page.filename;
         await fetchCode(filename);
 
         // Sync editor (if needed)
