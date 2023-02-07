@@ -14,7 +14,6 @@
 function InstanceController() {
     let self = this;
 
-    let db;
     let app;
 
     // Explicit mutex to serialize (global) state-changing functions
@@ -36,6 +35,7 @@ function InstanceController() {
     let code_buffers = new LruMap(32);
     let code_timer;
 
+    let dev_db;
     let error_entries = {};
 
     let ignore_editor_change = false;
@@ -48,9 +48,10 @@ function InstanceController() {
         if (profile.develop) {
             ENV.urls.files = `${ENV.urls.base}files/0/`;
             ENV.version = 0;
+
+            await openInstanceDB();
         }
 
-        await openInstanceDB();
         await initApp();
         initUI();
 
@@ -61,7 +62,7 @@ function InstanceController() {
     async function openInstanceDB() {
         let db_name = `goupile/instances${ENV.urls.instance}`;
 
-        db = await indexeddb.open(db_name, 1, (db, old_version) => {
+        dev_db = await indexeddb.open(db_name, 1, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('fs_changes');
@@ -476,7 +477,7 @@ function InstanceController() {
         }
 
         let key = `${profile.userid}:${filename}`;
-        await db.delete('fs_changes', key);
+        await dev_db.delete('fs_changes', key);
 
         code_buffers.delete(filename);
 
@@ -744,7 +745,7 @@ function InstanceController() {
             let blob = new Blob([code]);
             let sha256 = await goupile.computeSha256(blob);
 
-            await db.saveWithKey('fs_changes', key, {
+            await dev_db.saveWithKey('fs_changes', key, {
                 filename: filename,
                 size: blob.size,
                 sha256: sha256,
@@ -768,7 +769,7 @@ function InstanceController() {
 
             try {
                 let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
-                let changes = await db.loadAll('fs_changes', range);
+                let changes = await dev_db.loadAll('fs_changes', range);
 
                 for (let file of changes) {
                     let url = util.pasteURL(`${ENV.urls.base}files/${file.filename}`, { sha256: file.sha256 });
@@ -784,7 +785,7 @@ function InstanceController() {
                     }
 
                     let key = `${profile.userid}:${file.filename}`;
-                    await db.delete('fs_changes', key);
+                    await dev_db.delete('fs_changes', key);
                 }
 
                 progress.close();
@@ -973,7 +974,7 @@ function InstanceController() {
     async function runPublishDialog(e) {
         await uploadFsChanges();
 
-        let publisher = new InstancePublisher(self, db);
+        let publisher = new InstancePublisher(self, dev_db);
         await publisher.runDialog(e);
 
         self.run();
@@ -1129,7 +1130,7 @@ function InstanceController() {
             // Try locally saved files
             if (code == null) {
                 let key = `${profile.userid}:${filename}`;
-                let file = await db.load('fs_changes', key);
+                let file = await dev_db.load('fs_changes', key);
 
                 if (file != null) {
                     if (file.blob != null) {
