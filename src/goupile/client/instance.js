@@ -49,7 +49,7 @@ function InstanceController() {
             ENV.urls.files = `${ENV.urls.base}files/0/`;
             ENV.version = 0;
 
-            await openInstanceDB();
+            await openDevelopDB();
         }
 
         await initApp();
@@ -59,8 +59,8 @@ function InstanceController() {
             code_timer = setTimeout(uploadFsChanges, 1000);
     };
 
-    async function openInstanceDB() {
-        let db_name = `goupile/instances${ENV.urls.instance}`;
+    async function openDevelopDB() {
+        let db_name = `goupile/dev${ENV.urls.instance}`;
 
         dev_db = await indexeddb.open(db_name, 1, (db, old_version) => {
             switch (old_version) {
