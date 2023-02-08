@@ -460,6 +460,8 @@ public:
                 }
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
                     Fmt(&buf, " -D_FORTIFY_SOURCE=2");
+                } else {
+                    Fmt(&buf, " -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
                 }
             } break;
         }
@@ -926,6 +928,8 @@ public:
                 Fmt(&buf, " -D_FILE_OFFSET_BITS=64 -pthread -fPIC -fno-semantic-interposition");
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
                     Fmt(&buf, " -D_FORTIFY_SOURCE=2");
+                } else {
+                    Fmt(&buf, " -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
                 }
 
                 // XXX: Ugly, but cross-compilation is not yet supported for this platform anyway
