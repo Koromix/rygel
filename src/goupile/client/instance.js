@@ -59,7 +59,7 @@ function InstanceController() {
         initUI();
 
         if (profile.develop)
-            fs_timer = setTimeout(uploadFsChanges, 1000);
+            uploadFsChanges();
     };
 
     async function openDevelopDB() {
@@ -148,6 +148,9 @@ function InstanceController() {
     };
 
     this.hasUnsavedData = function() {
+        if (fs_timer != null)
+            return true;
+
         if (form_state == null)
             return false;
         if (!route.page.options.warn_unsaved)
@@ -709,7 +712,7 @@ function InstanceController() {
 
             if (fs_timer != null)
                 clearTimeout(fs_timer);
-            fs_timer = setTimeout(uploadFsChanges, 3000);
+            fs_timer = setTimeout(uploadFsChanges, 2000);
         }
 
         if (filename == 'main.js')
@@ -1102,30 +1105,26 @@ function InstanceController() {
     async function updateCode(filename, code, version = null) {
         let buffer = code_buffers.get(filename);
 
-        if (buffer == null) {
-            let sha256 = Sha256(code);
+        let sha256 = Sha256(code);
 
+        if (buffer == null) {
             buffer = {
                 code: code,
-                sha256: sha256,
-                orig_sha256: sha256,
+                sha256: null,
+                original_sha256: sha256,
                 session: null,
-                version: version || 0
+                version: null
             };
             code_buffers.set(filename, buffer);
-        } else {
-            let sha256 = Sha256(code);
-
-            if (buffer.session != null && sha256 !== buffer.sha256) {
-                ignore_editor_change = true;
-                buffer.session.doc.setValue(code);
-                ignore_editor_change = false;
-            }
-
-            buffer.code = code;
-            buffer.sha256 = sha256;
-            buffer.version = version || 0;
+        } else if (buffer.session != null && sha256 !== buffer.sha256) {
+            ignore_editor_change = true;
+            buffer.session.doc.setValue(code);
+            ignore_editor_change = false;
         }
+
+        buffer.code = code;
+        buffer.sha256 = sha256;
+        buffer.version = version || 0;
 
         return code;
     }
@@ -1134,7 +1133,7 @@ function InstanceController() {
         let buffer = code_buffers.get(filename);
 
         if (buffer != null) {
-            let changed = (buffer.sha256 !== buffer.orig_sha256);
+            let changed = (buffer.sha256 !== buffer.original_sha256);
             return changed;
         } else {
             return false;
