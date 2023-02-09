@@ -240,13 +240,13 @@ const goupile = new function() {
 
         // Save for offline login
         if (ENV.cache_offline && new_profile.permissions.misc_offline) {
-            let db = await openProfileDB();
+            let db = await self.openIndexedDB();
 
             let salt = nacl.randomBytes(24);
             let key = await deriveKey(password, salt);
             let enc = await encryptSecretBox(new_profile, key);
 
-            await db.saveWithKey('usr_profiles', new_profile.username, {
+            await db.saveWithKey('profiles', new_profile.username, {
                 salt: bytesToBase64(salt),
                 errors: 0,
                 profile: enc
@@ -657,8 +657,8 @@ const goupile = new function() {
             return new_profile;
         } else {
             if (response.status === 403) {
-                let db = await openProfileDB();
-                await db.delete('usr_profiles', username);
+                let db = await self.openIndexedDB();
+                await db.delete('profiles', username);
             }
 
             let err = await net.readError(response);
@@ -667,12 +667,12 @@ const goupile = new function() {
     }
 
     async function loginOffline(username, password) {
-        let db = await openProfileDB();
+        let db = await self.openIndexedDB();
 
         // Instantaneous login feels weird
         await util.waitFor(800);
 
-        let obj = await db.load('usr_profiles', username);
+        let obj = await db.load('profiles', username);
         if (obj == null)
             throw new Error('Profil hors ligne inconnu');
 
@@ -686,16 +686,16 @@ const goupile = new function() {
             // Reset errors after successful offline login
             if (obj.errors) {
                 obj.errors = 0;
-                await db.saveWithKey('usr_profiles', username, obj);
+                await db.saveWithKey('profiles', username, obj);
             }
         } catch (err) {
             obj.errors = (obj.errors || 0) + 1;
 
             if (obj.errors >= 5) {
-                await db.delete('usr_profiles', username);
+                await db.delete('profiles', username);
                 throw new Error('Mot de passe non reconnu, connexion hors ligne désactivée');
             } else {
-                await db.saveWithKey('usr_profiles', username, obj);
+                await db.saveWithKey('profiles', username, obj);
                 throw new Error('Mot de passe non reconnu');
             }
         }
@@ -706,13 +706,20 @@ const goupile = new function() {
         return new_profile;
     }
 
-    async function openProfileDB() {
+    this.openIndexedDB = async function() {
         let db_name = `goupile+${ENV.urls.base}`;
 
-        let db = await indexeddb.open(db_name, 1, (db, old_version) => {
+        let db = await indexeddb.open(db_name, 2, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('usr_profiles');
+                } // fallthrough
+
+                case 1: {
+                    db.deleteStore('usr_profiles');
+
+                    db.createStore('profiles');
+                    db.createStore('changes');
                 } // fallthrough
             }
         });

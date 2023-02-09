@@ -443,7 +443,7 @@ function InstanceController() {
     }
 
     async function restoreFile(filename, sha256) {
-        let db = await openInstanceDB();
+        let db = await goupile.openIndexedDB();
 
         let response = await net.fetch(`${ENV.urls.base}api/files/restore`, {
             method: 'POST',
@@ -457,8 +457,8 @@ function InstanceController() {
             throw new Error(err)
         }
 
-        let key = `${profile.userid}:${filename}`;
-        await db.delete('fs', key);
+        let key = `${profile.userid}/${filename}`;
+        await db.delete('changes', key);
 
         code_buffers.delete(filename);
 
@@ -673,16 +673,16 @@ function InstanceController() {
         if (ignore_editor_change)
             return;
 
-        let db = await openInstanceDB();
+        let db = await goupile.openIndexedDB();
 
         let buffer = code_buffers.get(filename);
         let code = buffer.session.doc.getValue();
-
-        let key = `${profile.userid}:${filename}`;
         let blob = new Blob([code]);
         let sha256 = await Sha256.async(blob);
 
-        await db.saveWithKey('fs', key, {
+        let key = `${profile.userid}/${filename}`;
+
+        await db.saveWithKey('changes', key, {
             filename: filename,
             size: blob.size,
             sha256: sha256,
@@ -706,10 +706,11 @@ function InstanceController() {
             let progress = log.progress('Envoi des modifications');
 
             try {
-                let db = await openInstanceDB();
+                let db = await goupile.openIndexedDB();
 
-                let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
-                let changes = await db.loadAll('fs', range);
+                let range = IDBKeyRange.bound(profile.userid + '/',
+                                              profile.userid + '`', false, true);
+                let changes = await db.loadAll('changes', range);
 
                 for (let file of changes) {
                     let url = util.pasteURL(`${ENV.urls.base}files/${file.filename}`, { sha256: file.sha256 });
@@ -724,8 +725,8 @@ function InstanceController() {
                         throw new Error(err)
                     }
 
-                    let key = `${profile.userid}:${file.filename}`;
-                    await db.delete('fs', key);
+                    let key = `${profile.userid}/${file.filename}`;
+                    await db.delete('changes', key);
                 }
 
                 progress.close();
@@ -914,9 +915,7 @@ function InstanceController() {
     async function runPublishDialog(e) {
         await uploadFsChanges();
 
-        let db = await openInstanceDB();
-        let publisher = new InstancePublisher(self, db);
-
+        let publisher = new InstancePublisher(self);
         await publisher.runDialog(e);
 
         self.run();
@@ -1056,27 +1055,6 @@ function InstanceController() {
         route = new_route;
     }
 
-    async function openInstanceDB() {
-        let db_name = `goupile/instances${ENV.urls.instance}`;
-
-        let db = await indexeddb.open(db_name, 2, (db, old_version) => {
-            switch (old_version) {
-                case null: {
-                    db.createStore('fs_changes');
-                } // fallthrough
-
-                case 1: {
-                    db.deleteStore('fs_changes');
-
-                    db.createStore('fs');
-                    db.createStore('records');
-                } // fallthrough
-            }
-        });
-
-        return db;
-    }
-
     async function fetchCode(filename) {
         // Anything in cache
         {
@@ -1088,10 +1066,10 @@ function InstanceController() {
 
         // Try locally saved files
         if (profile.develop) {
-            let db = await openInstanceDB();
+            let db = await goupile.openIndexedDB();
 
-            let key = `${profile.userid}:${filename}`;
-            let file = await db.load('fs', key);
+            let key = `${profile.userid}/${filename}`;
+            let file = await db.load('changes', key);
 
             if (file != null) {
                 if (file.blob != null) {
