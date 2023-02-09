@@ -420,6 +420,8 @@ function InstanceController() {
         });
         p.catch(err => {
             code_buffers.set(filename, copy);
+            if (filename == 'main.js')
+                runMainScript();
             self.go();
 
             throw err;
@@ -430,6 +432,8 @@ function InstanceController() {
 
     async function loadFile(filename, version) {
         await fetchCode(filename, version);
+        if (filename == 'main.js')
+            runMainScript();
         return self.go();
     }
 
