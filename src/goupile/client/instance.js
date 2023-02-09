@@ -38,7 +38,6 @@ function InstanceController() {
     let editor_ace;
     let editor_filename;
 
-    let dev_db = null;
     let error_entries = {};
 
     let ignore_editor_change = false;
@@ -51,8 +50,6 @@ function InstanceController() {
         if (profile.develop) {
             ENV.urls.files = `${ENV.urls.base}files/0/`;
             ENV.version = 0;
-
-            await openDevelopDB();
         }
 
         await initApp(fallback);
@@ -61,18 +58,6 @@ function InstanceController() {
         if (profile.develop)
             uploadFsChanges();
     };
-
-    async function openDevelopDB() {
-        let db_name = `goupile/dev${ENV.urls.instance}`;
-
-        dev_db = await indexeddb.open(db_name, 1, (db, old_version) => {
-            switch (old_version) {
-                case null: {
-                    db.createStore('fs_changes');
-                } // fallthrough
-            }
-        });
-    }
 
     async function initApp(fallback) {
         try {
@@ -458,6 +443,8 @@ function InstanceController() {
     }
 
     async function restoreFile(filename, sha256) {
+        let db = await openDevelopDB();
+
         let response = await net.fetch(`${ENV.urls.base}api/files/restore`, {
             method: 'POST',
             body: JSON.stringify({
@@ -471,7 +458,7 @@ function InstanceController() {
         }
 
         let key = `${profile.userid}:${filename}`;
-        await dev_db.delete('fs_changes', key);
+        await db.delete('fs_changes', key);
 
         code_buffers.delete(filename);
 
@@ -686,29 +673,28 @@ function InstanceController() {
         if (ignore_editor_change)
             return;
 
+        let db = await openDevelopDB();
+
         let buffer = code_buffers.get(filename);
         let code = buffer.session.doc.getValue();
 
-        // Should never fail, but who knows..
-        if (buffer != null) {
-            let key = `${profile.userid}:${filename}`;
-            let blob = new Blob([code]);
-            let sha256 = await Sha256.async(blob);
+        let key = `${profile.userid}:${filename}`;
+        let blob = new Blob([code]);
+        let sha256 = await Sha256.async(blob);
 
-            await dev_db.saveWithKey('fs_changes', key, {
-                filename: filename,
-                size: blob.size,
-                sha256: sha256,
-                blob: blob
-            });
+        await db.saveWithKey('fs_changes', key, {
+            filename: filename,
+            size: blob.size,
+            sha256: sha256,
+            blob: blob
+        });
 
-            buffer.code = code;
-            buffer.sha256 = sha256;
+        buffer.code = code;
+        buffer.sha256 = sha256;
 
-            if (fs_timer != null)
-                clearTimeout(fs_timer);
-            fs_timer = setTimeout(uploadFsChanges, 2000);
-        }
+        if (fs_timer != null)
+            clearTimeout(fs_timer);
+        fs_timer = setTimeout(uploadFsChanges, 2000);
 
         if (filename == 'main.js')
             runMainScript();
@@ -720,8 +706,10 @@ function InstanceController() {
             let progress = log.progress('Envoi des modifications');
 
             try {
+                let db = await openDevelopDB();
+
                 let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
-                let changes = await dev_db.loadAll('fs_changes', range);
+                let changes = await db.loadAll('fs_changes', range);
 
                 for (let file of changes) {
                     let url = util.pasteURL(`${ENV.urls.base}files/${file.filename}`, { sha256: file.sha256 });
@@ -737,7 +725,7 @@ function InstanceController() {
                     }
 
                     let key = `${profile.userid}:${file.filename}`;
-                    await dev_db.delete('fs_changes', key);
+                    await db.delete('fs_changes', key);
                 }
 
                 progress.close();
@@ -926,7 +914,9 @@ function InstanceController() {
     async function runPublishDialog(e) {
         await uploadFsChanges();
 
-        let publisher = new InstancePublisher(self, dev_db);
+        let db = await openDevelopDB();
+        let publisher = new InstancePublisher(self, db);
+
         await publisher.runDialog(e);
 
         self.run();
@@ -1066,6 +1056,20 @@ function InstanceController() {
         route = new_route;
     }
 
+    async function openDevelopDB() {
+        let db_name = `goupile/dev${ENV.urls.instance}`;
+
+        let db = await indexeddb.open(db_name, 1, (db, old_version) => {
+            switch (old_version) {
+                case null: {
+                    db.createStore('fs_changes');
+                } // fallthrough
+            }
+        });
+
+        return db;
+    }
+
     async function fetchCode(filename) {
         // Anything in cache
         {
@@ -1077,8 +1081,10 @@ function InstanceController() {
 
         // Try locally saved files
         if (profile.develop) {
+            let db = await openDevelopDB();
+
             let key = `${profile.userid}:${filename}`;
-            let file = await dev_db.load('fs_changes', key);
+            let file = await db.load('fs_changes', key);
 
             if (file != null) {
                 if (file.blob != null) {

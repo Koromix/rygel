@@ -708,6 +708,7 @@ const goupile = new function() {
 
     async function openProfileDB() {
         let db_name = `goupile+${ENV.urls.base}`;
+
         let db = await indexeddb.open(db_name, 1, (db, old_version) => {
             switch (old_version) {
                 case null: {
