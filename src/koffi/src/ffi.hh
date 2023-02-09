@@ -98,13 +98,18 @@ struct FunctionInfo;
 
 typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
 
-struct TypeInfo {
-    enum class ArrayHint {
-        Array,
-        TypedArray,
-        String
-    };
+enum class ArrayHint {
+    Array,
+    Typed,
+    String
+};
+static const char *const ArrayHintNames[] = {
+    "Array",
+    "Typed",
+    "String"
+};
 
+struct TypeInfo {
     const char *name;
 
     PrimitiveKind primitive;

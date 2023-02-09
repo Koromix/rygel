@@ -339,7 +339,7 @@ Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C,
 Koffi applies the following conversion rules when passing arrays to/from C:
 
 - **JS to C**: Koffi can take a normal Array (e.g. `[1, 2]`) or a TypedArray of the correct type (e.g. `Uint8Array` for an array of `uint8_t` numbers)
-- **C to JS** (return value, output parameters, callbacks): Koffi will use a TypedArray if possible. But you can change this behavior when you create the array type with the optional hint argument: `koffi.array('uint8_t', 64, 'array')`. For non-number types, such as arrays of strings or structs, Koffi creates normal arrays.
+- **C to JS** (return value, output parameters, callbacks): Koffi will use a TypedArray if possible. But you can change this behavior when you create the array type with the optional hint argument: `koffi.array('uint8_t', 64, 'Array')`. For non-number types, such as arrays of strings or structs, Koffi creates normal arrays.
 
 See the example below:
 
@@ -353,7 +353,7 @@ const Foo1 = koffi.struct('Foo', {
 });
 const Foo2 = koffi.struct('Foo', {
     i: 'int',
-    a16: koffi.array('int16_t', 8, 'array')
+    a16: koffi.array('int16_t', 8, 'Array')
 });
 
 // Uses an hypothetical C function that just returns the struct passed as a parameter
@@ -371,7 +371,7 @@ Koffi can also convert JS strings to fixed-sized arrays in the following cases:
 - **char arrays** are filled with the UTF-8 encoded string, truncated if needed. The buffer is always NUL-terminated.
 - **char16 (or char16_t) arrays** are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.
 
-The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16 and char16_t arrays, but you can also explicitly ask for this with the `string` array hint (e.g. `koffi.array('char', 8, 'string')`).
+The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16 and char16_t arrays, but you can also explicitly ask for this with the `String` array hint (e.g. `koffi.array('char', 8, 'String')`).
 
 ### Array pointers (dynamic arrays)
 

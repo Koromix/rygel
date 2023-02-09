@@ -58,7 +58,7 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
 
 const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count = 1);
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
-const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, TypeInfo::ArrayHint hint);
+const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
 bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);

@@ -216,7 +216,7 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 }
 
 static const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len,
-                                     TypeInfo::ArrayHint hint, bool insert)
+                                     ArrayHint hint, bool insert)
 {
     RG_ASSERT(len > 0);
     RG_ASSERT(len <= instance->config.max_type_size / ref->size);
@@ -242,19 +242,19 @@ static const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref
 
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len)
 {
-    TypeInfo::ArrayHint hint = {};
+    ArrayHint hint = {};
 
     if (TestStr(ref->name, "char") || TestStr(ref->name, "char16") ||
                                              TestStr(ref->name, "char16_t")) {
-        hint = TypeInfo::ArrayHint::String;
+        hint = ArrayHint::String;
     } else {
-        hint = TypeInfo::ArrayHint::TypedArray;
+        hint = ArrayHint::Typed;
     }
 
     return MakeArrayType(instance, ref, len, hint, true);
 }
 
-const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, TypeInfo::ArrayHint hint)
+const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint)
 {
     return MakeArrayType(instance, ref, len, hint, false);
 }
@@ -587,7 +587,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         } while (false)
 #define POP_NUMBER_ARRAY(TypedArrayType, CType) \
         do { \
-            if (type->hint == TypeInfo::ArrayHint::Array) { \
+            if (type->hint == ArrayHint::Array) { \
                 POP_ARRAY({ \
                     double d = (double)*(CType *)src; \
                     array.Set(i, Napi::Number::New(env, d)); \
@@ -603,7 +603,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         } while (false)
 #define POP_NUMBER_ARRAY_SWAP(TypedArrayType, CType) \
         do { \
-            if (type->hint == TypeInfo::ArrayHint::Array) { \
+            if (type->hint == ArrayHint::Array) { \
                 POP_ARRAY({ \
                     CType v = *(CType *)src; \
                     double d = (double)ReverseBytes(v); \
@@ -629,7 +629,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
             });
         } break;
         case PrimitiveKind::Int8: {
-            if (type->hint == TypeInfo::ArrayHint::String) {
+            if (type->hint == ArrayHint::String) {
                 RG_ASSERT(!realign);
 
                 const char *ptr = (const char *)origin;
@@ -643,7 +643,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         } break;
         case PrimitiveKind::UInt8: { POP_NUMBER_ARRAY(Uint8Array, uint8_t); } break;
         case PrimitiveKind::Int16: {
-            if (type->hint == TypeInfo::ArrayHint::String) {
+            if (type->hint == ArrayHint::String) {
                 RG_ASSERT(!realign);
 
                 const char16_t *ptr = (const char16_t *)origin;

@@ -163,7 +163,7 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
             type->align = 1;
             type->size = (int32_t)len;
             type->ref.type = instance->char_type;
-            type->hint = TypeInfo::ArrayHint::String;
+            type->hint = ArrayHint::String;
         }
 
         // Prepare output argument
@@ -264,7 +264,7 @@ bool CallData::PushString16(Napi::Value value, int directions, const char16_t **
             type->align = 1;
             type->size = (int32_t)(len * 2);
             type->ref.type = instance->char16_type;
-            type->hint = TypeInfo::ArrayHint::String;
+            type->hint = ArrayHint::String;
         }
 
         // Prepare output argument

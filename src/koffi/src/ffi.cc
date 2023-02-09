@@ -745,21 +745,21 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         }
 
         std::string to = info[2].As<Napi::String>();
-        TypeInfo::ArrayHint hint = {};
+        ArrayHint hint = {};
 
-        if (to == "typed") {
-            hint = TypeInfo::ArrayHint::TypedArray;
-        } else if (to == "array") {
-            hint = TypeInfo::ArrayHint::Array;
-        } else if (to == "string") {
+        if (to == "Typed" || to == "typed") {
+            hint = ArrayHint::Typed;
+        } else if (to == "Array" || to == "array") {
+            hint = ArrayHint::Array;
+        } else if (to == "String" || to == "string") {
             if (ref->primitive != PrimitiveKind::Int8 && ref->primitive != PrimitiveKind::Int16) {
-                ThrowError<Napi::Error>(env, "Array hint 'string' can only be used with 8 and 16-bit signed integer types");
+                ThrowError<Napi::Error>(env, "Array hint 'String' can only be used with 8 and 16-bit signed integer types");
                 return env.Null();
             }
 
-            hint = TypeInfo::ArrayHint::String;
+            hint = ArrayHint::String;
         } else {
-            ThrowError<Napi::Error>(env, "Array conversion hint must be 'typed', 'array' or 'string'");
+            ThrowError<Napi::Error>(env, "Array conversion hint must be 'Typed', 'Array' or 'String'");
             return env.Null();
         }
 
@@ -1061,6 +1061,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
             case PrimitiveKind::Array: {
                 uint32_t len = type->size / type->ref.type->size;
                 defn.Set("length", Napi::Number::New(env, (double)len));
+                defn.Set("hint", ArrayHintNames[(int)type->hint]);
             } [[fallthrough]];
             case PrimitiveKind::Pointer: {
                 Napi::Value value = WrapType(env, instance, type->ref.type);

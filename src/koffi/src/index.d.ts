@@ -18,6 +18,8 @@ declare module 'koffi' {
     interface IKoffiPointerCast { __brand: 'IKoffiPointerCast' }
     interface IKoffiRegisteredCallback { __brand: 'IKoffiRegisteredCallback' }
 
+    type ArrayHint = "Array" | "Typed" | "String";
+
     type TypeSpec = string | IKoffiCType;
     type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
     type TypeInfo = {
@@ -27,6 +29,7 @@ declare module 'koffi' {
         alignment: number;
         disposable: boolean;
         length?: number;
+        hint?: ArrayHint;
         ref?: IKoffiCType;
         members?: Record<string, { name: string, type: IKoffiCType, offset: number }>;
     };
