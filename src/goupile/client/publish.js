@@ -130,7 +130,7 @@ function InstancePublisher(instance, db) {
 
                 progress.progress('Enregistrement du fichier');
                 try {
-                    let sha256 = await goupile.computeSha256(d.values.file);
+                    let sha256 = await Sha256.async(d.values.file);
                     let url = util.pasteURL(`${ENV.urls.base}files/${d.values.filename}`, { sha256: sha256 });
 
                     let response = await net.fetch(url, {

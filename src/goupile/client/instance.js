@@ -693,7 +693,7 @@ function InstanceController() {
         if (buffer != null) {
             let key = `${profile.userid}:${filename}`;
             let blob = new Blob([code]);
-            let sha256 = await goupile.computeSha256(blob);
+            let sha256 = await Sha256.async(blob);
 
             await dev_db.saveWithKey('fs_changes', key, {
                 filename: filename,

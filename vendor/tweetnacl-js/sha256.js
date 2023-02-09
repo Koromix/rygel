@@ -237,3 +237,27 @@ function Sha256(data) {
         return this.finalize();
     }
 }
+
+// Javascript Blob/File API sucks, plain and simple
+Sha256.async = async function(blob) {
+    let sha256 = new Sha256;
+
+    for (let offset = 0; offset < blob.size; offset += 65536) {
+        let piece = blob.slice(offset, offset + 65536);
+        let buf = await new Promise((resolve, reject) => {
+            let reader = new FileReader;
+
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = e => {
+                reader.abort();
+                reject(new Error(e.target.error));
+            };
+
+            reader.readAsArrayBuffer(piece);
+        });
+
+        sha256.update(buf);
+    }
+
+    return sha256.finalize();
+};
