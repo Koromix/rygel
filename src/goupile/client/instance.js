@@ -24,6 +24,7 @@ function InstanceController() {
         menu: null
     };
 
+    let main_works = true;
     let head_length = Number.MAX_SAFE_INTEGER;
     let page_div = document.createElement('div');
 
@@ -44,7 +45,7 @@ function InstanceController() {
 
     let prev_anchor;
 
-    this.init = async function() {
+    this.init = async function(fallback) {
         if (profile.develop) {
             ENV.urls.files = `${ENV.urls.base}files/0/`;
             ENV.version = 0;
@@ -52,7 +53,7 @@ function InstanceController() {
             await openDevelopDB();
         }
 
-        await initApp();
+        await initApp(fallback);
         initUI();
 
         if (profile.develop)
@@ -71,23 +72,14 @@ function InstanceController() {
         });
     }
 
-    async function initApp() {
-        let code = await fetchCode('main.js');
-
+    async function initApp(fallback) {
         try {
-            let new_app = new ApplicationInfo;
-            let builder = new ApplicationBuilder(new_app);
-
-            await runUserCode('Application', code, {
-                app: builder
-            });
-            if (!new_app.pages.size)
-                throw new Error('Main script does not define any page');
+            let new_app = await runMainScript();
 
             new_app.homepage = new_app.pages.values().next().value;
             app = util.deepFreeze(new_app);
         } catch (err) {
-            if (app == null) {
+            if (fallback) {
                 let new_app = new ApplicationInfo;
                 let builder = new ApplicationBuilder(new_app);
 
@@ -96,6 +88,8 @@ function InstanceController() {
 
                 new_app.homepage = new_app.pages.values().next().value;
                 app = util.deepFreeze(new_app);
+            } else {
+                throw err;
             }
         }
 
@@ -111,6 +105,23 @@ function InstanceController() {
             for (let child of container.children)
                 document.head.appendChild(child);
         }
+    }
+
+    async function runMainScript() {
+        let code = await fetchCode('main.js');
+
+        let new_app = new ApplicationInfo;
+        let builder = new ApplicationBuilder(new_app);
+
+        main_works = false;
+        await runUserCode('Application', code, {
+            app: builder
+        });
+        if (!new_app.pages.size)
+            throw new Error('Main script does not define any page');
+        main_works = true;
+
+        return new_app;
     }
 
     function initUI() {
@@ -153,7 +164,7 @@ function InstanceController() {
                 ${goupile.hasPermission('build_code') ? html`
                     <button class=${'icon' + (profile.develop ? ' active' : '')}
                             style="background-position-y: calc(-230px + 1.2em);"
-                            @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>Conception</button>
+                            @click=${ui.wrapAction(e => goupile.changeDevelopMode(!profile.develop))}>Conception</button>
                 ` : ''}
                 ${profile.lock != null ? html`
                     <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
@@ -258,37 +269,6 @@ function InstanceController() {
         `;
     }
 
-    async function changeDevelopMode(enable) {
-        if (enable == profile.develop)
-            return;
-
-        await mutex.run(async () => {
-            let response = await net.fetch(`${ENV.urls.instance}api/change/mode`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    develop: enable
-                })
-            });
-
-            if (response.ok) {
-                try {
-                    if (enable) {
-                        url = util.pasteURL(route.page.url, { p: 'editor|view' });
-                        goupile.syncHistory(url, false);
-                    }
-
-                    await applyMainScript();
-                } catch (err) {
-                    // We want to reload no matter what, because the mode has changed
-                    document.location.reload();
-                }
-            } else {
-                let err = await net.readError(response);
-                throw new Error(err);
-            }
-        });
-    }
-
     async function generateExportKey(e) {
         let response = await net.fetch(`${ENV.urls.instance}api/change/export_key`, { method: 'POST' });
 
@@ -358,8 +338,8 @@ function InstanceController() {
                     <button @click=${ui.wrapAction(e => runHistoryDialog(e, editor_filename))}>Historique</button>
                     <div style="flex: 1;"></div>
                     ${editor_filename === 'main.js' ? html`
-                        <button ?disabled=${!fileHasChanged('main.js')}
-                                @click=${ui.wrapAction(applyMainScript)}>Appliquer</button>
+                        <button ?disabled=${!main_works || !fileHasChanged('main.js')}
+                                @click=${e => document.location.reload()}>Appliquer</button>
                     ` : ''}
                     <button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>
                 </div>
@@ -472,27 +452,6 @@ function InstanceController() {
         code_buffers.delete(filename);
 
         return self.go();
-    }
-
-    async function applyMainScript() {
-        let code = await fetchCode('main.js');
-
-        let new_app = new ApplicationInfo;
-        let builder = new ApplicationBuilder(new_app);
-
-        try {
-            await runUserCode('Application', code, {
-                app: builder
-            });
-        } catch (err) {
-            // Don't log, because runUserCode does it already
-            return;
-        }
-        if (!new_app.pages.size)
-            throw new Error('Main script does not define any page');
-
-        // It works! Refresh the page
-        document.location.reload();
     }
 
     async function renderPage() {
@@ -750,6 +709,8 @@ function InstanceController() {
             code_timer = setTimeout(uploadFsChanges, 3000);
         }
 
+        if (filename == 'main.js')
+            runMainScript();
         self.run();
     }
 
@@ -1062,23 +1023,10 @@ function InstanceController() {
         // Update URL and title
         {
             let url = route.page.url;
+            let panels = ui.getActivePanels().join('|');
 
-            let panels;
-            if (profile.develop) {
-                panels = ui.getActivePanels().join('|');
-            } else if (app.panels.data + app.panels.view < 2) {
+            if (!profile.develop && panels == 'view')
                 panels = null;
-            } else if (url.match(/\/[A-Z0-9]{26}(@[0-9]+)?$/)) {
-                panels = ui.getActivePanels().join('|');
-
-                if (panels === 'view')
-                    panels = null;
-            } else {
-                panels = ui.getActivePanels().join('|');
-
-                if (panels === 'data')
-                    panels = null;
-            }
 
             url = util.pasteURL(url, { p: panels });
             goupile.syncHistory(url, push_history);

@@ -22,7 +22,7 @@ function AdminController() {
     let all_users;
     let selected_permissions;
 
-    this.init = async function() {
+    this.init = async function(fallback) {
         ui.setMenu(renderMenu);
 
         ui.createPanel('instances', ['users', 'archives'], 'users', renderInstances);

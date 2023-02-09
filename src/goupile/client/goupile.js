@@ -82,23 +82,44 @@ const goupile = new function() {
                 url = new URL(instance.url, window.location.href);
         }
 
-        // Initialize controller
-        await controller.init();
-        await initTasks();
+        // Fallback mode (for developers)?
+        let fallback = profile.develop && !!url.searchParams.get('fallback');
 
-        // URL hash
-        if (url.hash)
-            current_hash = url.hash;
+        // Run controller now
+        try {
+            await controller.init(fallback);
+            await initTasks();
 
-        // Run page
-        return controller.go(null, url.href).catch(err => {
+            if (url.hash)
+                current_hash = url.hash;
+
+            await controller.go(null, url.href);
+        } catch (err) {
             log.error(err);
 
+            // Switch to dev mode for developers
+            if (self.hasPermission('build_code')) {
+                if (!profile.develop) {
+                    try {
+                        await self.changeDevelopMode(true);
+                    } catch (err) {
+                        log.error(err);
+                    }
+                }
+
+                if (!fallback) {
+                    let reload = util.pasteURL(url.pathname, { fallback: 1 });
+
+                    window.onbeforeunload = null;
+                    document.location.href = reload;
+
+                    return;
+                }
+            }
+
             // Now try home page... If that fails too, show error to user
-            return controller.go(null, ENV.urls.base).catch(async err => {
-                throw err;
-            });
-        });
+            await controller.go(null, ENV.urls.base);
+        }
     };
 
     async function registerSW() {
@@ -763,6 +784,26 @@ const goupile = new function() {
 
         window.onbeforeunload = null;
         document.location.href = reload;
+    }
+
+    this.changeDevelopMode = async function(enable) {
+        if (enable == profile.develop)
+            return;
+
+        let response = await net.fetch(`${ENV.urls.instance}api/change/mode`, {
+            method: 'POST',
+            body: JSON.stringify({
+                develop: enable
+            })
+        });
+
+        if (response.ok) {
+            // We want to reload no matter what, because the mode has changed
+            document.location.reload();
+        } else {
+            let err = await net.readError(response);
+            throw new Error(err);
+        }
     }
 
     this.runLockDialog = function(e, ctx) {

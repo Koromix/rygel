@@ -38,8 +38,12 @@ function ApplicationBuilder(app) {
         }
     ];
 
-    this.home = function(home) { app.home = home; };
-    this.panel = function(panel, enable) { app.panels[panel] = enable; };
+    this.panel = function(panel, enable) {
+        if (panel.startsWith('_') || !app.hasOwnProperty(panel))
+            throw new Error(`Invalid panel key '${panel}'`);
+
+        app.panels[panel] = enable;
+    };
 
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
