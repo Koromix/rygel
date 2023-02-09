@@ -88,7 +88,7 @@ function InstancePublisher(instance, db) {
                 </div>
             `);
 
-            d.action('Publier', { disabled: !d.isValid() }, async () => {
+            d.action('Publier', { disabled: !modifications || !d.isValid() }, async () => {
                 await deploy(actions);
                 resolve();
             });
