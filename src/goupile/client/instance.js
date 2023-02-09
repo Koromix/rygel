@@ -578,7 +578,8 @@ function InstanceController() {
             let line = util.parseEvalErrorLine(err);
             let msg = `Erreur sur ${title}\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
 
-            entry.error(msg, -1);
+            if (profile.develop)
+                entry.error(msg, -1);
             throw new Error(msg);
         }
     }
