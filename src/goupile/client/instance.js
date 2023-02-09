@@ -110,13 +110,13 @@ function InstanceController() {
     }
 
     async function runMainScript() {
-        let code = await fetchCode('main.js');
+        let buffer = await fetchCode('main.js');
 
         let new_app = new ApplicationInfo;
         let builder = new ApplicationBuilder(new_app);
 
         try {
-            let func = await buildScript('Application', code, ['app']);
+            let func = await buildScript('Application', buffer.code, ['app']);
 
             await func({
                 app: builder
@@ -452,7 +452,7 @@ function InstanceController() {
         }
 
         let code = await response.text();
-        updateCode(filename, code, version);
+        updateBuffer(filename, code, version);
 
         return self.run();
     }
@@ -485,12 +485,7 @@ function InstanceController() {
         let builder = new FormBuilder(form_state, model);
 
         try {
-            func = script_cache.get(buffer.sha256);
-
-            if (func == null) {
-                func = await buildScript('Formulaire', buffer.code, ['app', 'form', 'values']);
-                script_cache.set(buffer.sha256, func);
-            }
+            let func = script_cache.get(buffer.sha256);
 
             await func({
                 app: app,
@@ -1013,10 +1008,18 @@ function InstanceController() {
     this.go = util.serialize(this.go, mutex);
 
     this.run = async function(push_history = true) {
-        // Fetch and cache page code for page panel
-        // Again to make sure we are up to date (e.g. publication)
         let filename = route.page.filename;
-        await fetchCode(filename);
+
+        // Fetch and build page code for page panel
+        {
+            let buffer = await fetchCode(filename);
+            let func = script_cache.get(buffer.sha256);
+
+            if (func == null) {
+                func = await buildScript('Formulaire', buffer.code, ['app', 'form', 'values']);
+                script_cache.set(buffer.sha256, func);
+            }
+        }
 
         // Sync editor (if needed)
         if (ui.isPanelActive('editor')) {
@@ -1069,7 +1072,7 @@ function InstanceController() {
             let buffer = code_buffers.get(filename);
 
             if (buffer != null)
-                return buffer.code;
+                return buffer;
         }
 
         // Try locally saved files
@@ -1080,9 +1083,9 @@ function InstanceController() {
             if (file != null) {
                 if (file.blob != null) {
                     let code = await file.blob.text();
-                    return updateCode(filename, code);
+                    return updateBuffer(filename, code);
                 } else {
-                    return updateCode(filename, '');
+                    return updateBuffer(filename, '');
                 }
             }
         }
@@ -1094,15 +1097,15 @@ function InstanceController() {
 
             if (response.ok) {
                 let code = await response.text();
-                return updateCode(filename, code);
+                return updateBuffer(filename, code);
             }
         }
 
         // Got nothing
-        return updateCode(filename, '');
+        return updateBuffer(filename, '');
     }
 
-    async function updateCode(filename, code, version = null) {
+    function updateBuffer(filename, code, version = null) {
         let buffer = code_buffers.get(filename);
 
         let sha256 = Sha256(code);
@@ -1126,7 +1129,7 @@ function InstanceController() {
         buffer.sha256 = sha256;
         buffer.version = version || 0;
 
-        return code;
+        return buffer;
     }
 
     function fileHasChanged(filename) {
