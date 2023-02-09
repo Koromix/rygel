@@ -294,7 +294,7 @@ function InstanceController() {
         let active = route.menu.chain.includes(item);
 
         return html`
-            <button class=${active && ui.isPanelActive('view') ? 'active' : ''}
+            <button class=${active ? 'active' : ''}
                     @click=${ui.wrapAction(e => active ? togglePanels(null, true) : self.go(e, item.url))}>
                 <div style="flex: 1;">${item.title}</div>
            </button>
