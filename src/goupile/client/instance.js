@@ -34,7 +34,8 @@ function InstanceController() {
     let editor_ace;
     let editor_filename;
     let code_buffers = new LruMap(32);
-    let code_timer;
+    let script_cache = new LruMap(4);
+    let fs_timer;
 
     let dev_db;
     let error_entries = {};
@@ -57,7 +58,7 @@ function InstanceController() {
         initUI();
 
         if (profile.develop)
-            code_timer = setTimeout(uploadFsChanges, 1000);
+            fs_timer = setTimeout(uploadFsChanges, 1000);
     };
 
     async function openDevelopDB() {
@@ -113,13 +114,20 @@ function InstanceController() {
         let new_app = new ApplicationInfo;
         let builder = new ApplicationBuilder(new_app);
 
-        main_works = false;
-        await runUserCode('Application', code, {
-            app: builder
-        });
-        if (!new_app.pages.size)
-            throw new Error('Main script does not define any page');
-        main_works = true;
+        try {
+            let func = await buildScript('Application', code, ['app']);
+
+            await func({
+                app: builder
+            });
+            if (!new_app.pages.size)
+                throw new Error('Main script does not define any page');
+
+            main_works = true;
+        } catch (err) {
+            main_works = false;
+            throw err;
+        }
 
         return new_app;
     }
@@ -459,19 +467,24 @@ function InstanceController() {
     }
 
     async function renderPage() {
-        let filename = route.page.filename;
-        let code = code_buffers.get(filename).code;
+        let buffer = code_buffers.get(route.page.filename);
 
         let model = new FormModel;
         let builder = new FormBuilder(form_state, model);
 
         try {
-            await runUserCode('Formulaire', code, {
+            func = script_cache.get(buffer.sha256);
+
+            if (func == null) {
+                func = await buildScript('Formulaire', buffer.code, ['app', 'form', 'values']);
+                script_cache.set(buffer.sha256, func);
+            }
+
+            await func({
                 app: app,
                 form: builder,
                 values: form_state.values
             });
-
             if (model.hasErrors())
                 builder.errorList();
 
@@ -562,30 +575,6 @@ function InstanceController() {
                 })}
             </ul>
         `;
-    }
-
-    async function runUserCode(title, code, args) {
-        let entry = error_entries[title];
-        if (entry == null) {
-            entry = new log.Entry;
-            error_entries[title] = entry;
-        }
-
-        try {
-            let AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-
-            let func = new AsyncFunction(...Object.keys(args), code);
-            await func(...Object.values(args));
-
-            entry.close();
-        } catch (err) {
-            let line = util.parseEvalErrorLine(err);
-            let msg = `Erreur sur ${title}\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
-
-            if (profile.develop)
-                entry.error(msg, -1);
-            throw new Error(msg);
-        }
     }
 
     async function runTrailDialog(e, tid) {
@@ -709,9 +698,9 @@ function InstanceController() {
             buffer.code = code;
             buffer.sha256 = sha256;
 
-            if (code_timer != null)
-                clearTimeout(code_timer);
-            code_timer = setTimeout(uploadFsChanges, 3000);
+            if (fs_timer != null)
+                clearTimeout(fs_timer);
+            fs_timer = setTimeout(uploadFsChanges, 3000);
         }
 
         if (filename == 'main.js')
@@ -750,9 +739,9 @@ function InstanceController() {
                 log.error(err);
             }
 
-            if (code_timer != null)
-                clearTimeout(code_timer);
-            code_timer = null;
+            if (fs_timer != null)
+                clearTimeout(fs_timer);
+            fs_timer = null;
         });
     }
 
@@ -1048,18 +1037,18 @@ function InstanceController() {
     function updateContext(new_route) {
         if (new_route.page != route.page) {
             form_state = new FormState();
-            form_state.changeHandler = handleStateChange;
+
+            // Run after each change
+            form_state.changeHandler = async () => {
+                await self.run();
+
+                // Highlight might need to change (conditions, etc.)
+                if (ui.isPanelActive('editor'))
+                    syncFormHighlight(false);
+            };
         }
 
         route = new_route;
-    }
-
-    async function handleStateChange() {
-        await self.run();
-
-        // Highlight might need to change (conditions, etc.)
-        if (ui.isPanelActive('editor'))
-            syncFormHighlight(false);
     }
 
     async function fetchCode(filename, version = null) {
@@ -1075,7 +1064,7 @@ function InstanceController() {
             }
 
             // Try locally saved files
-            if (code == null) {
+            {
                 let key = `${profile.userid}:${filename}`;
                 let file = await dev_db.load('fs_changes', key);
 
@@ -1143,5 +1132,43 @@ function InstanceController() {
         } else {
             return false;
         }
+    }
+
+    async function buildScript(title, code, variables) {
+        if (error_entries[title] == null)
+            error_entries[title] = new log.Entry;
+
+        // JS is always classy
+        let AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+
+        try {
+            let func = new AsyncFunction(variables, "'use strict;' " + code);
+
+            return async api => {
+                try {
+                    let values = variables.map(key => api[key]);
+                    await func(...values);
+
+                    let entry = error_entries[title];
+                    entry.close();
+                } catch (err) {
+                    logScriptError(title, err);
+                }
+            };
+        } catch (err) {
+            logScriptError(title, err);
+        }
+    }
+
+    function logScriptError(title, err) {
+        let line = util.parseEvalErrorLine(err);
+        let msg = `Erreur sur ${title}\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
+
+        if (profile.develop) {
+            let entry = error_entries[title];
+            entry.error(msg, -1);
+        }
+
+        throw new Error(msg);
     }
 };
