@@ -116,7 +116,8 @@ function InstanceController() {
     function initUI() {
         ui.setMenu(renderMenu);
 
-        ui.createPanel('editor', ['view'], 'view', renderEditor);
+        if (app.panels.editor)
+            ui.createPanel('editor', ['view'], 'view', renderEditor);
         ui.createPanel('view', [], null, renderPage);
 
         if (app.panels.editor) {
@@ -149,43 +150,35 @@ function InstanceController() {
 
         return html`
             <nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'} id="ui_top" style="z-index: 999999;">
-                ${app.panels.editor ? html`
-                    <div class="drop">
-                        <button class=${'icon' + (ui.isPanelActive('editor') ? ' active' : '')}
-                                style="background-position-y: calc(-230px + 1.2em);"
-                                @click=${ui.deployMenu}>Code</button>
-                        <div>
-                            <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>
-                                <div style="flex: 1;">Mode conception</div>
-                                <div>&nbsp;✓\uFE0E</div>
-                            </button>
-                            ${profile.develop && goupile.hasPermission('build_publish') ? html`
-                                <hr/>
-                                <button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>
-                            ` : ''}
-                        </div>
-                    </div>
-                ` : ''}
-                ${!app.panels.editor && goupile.hasPermission('build_code') ? html`
-                    <div id="ins_drop" class="drop">
-                        <button class="icon" style="background-position-y: calc(-230px + 1.2em);" @click=${ui.deployMenu}>Conception</button>
-                        <div>
-                            <button @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>Mode conception</button>
-                        </div>
-                    </div>
+                ${goupile.hasPermission('build_code') ? html`
+                    <button class=${'icon' + (profile.develop ? ' active' : '')}
+                            style="background-position-y: calc(-230px + 1.2em);"
+                            @click=${ui.wrapAction(e => changeDevelopMode(!profile.develop))}>Conception</button>
                 ` : ''}
                 ${profile.lock != null ? html`
                     <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
                             @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
                 ` : ''}
-                <div style="flex: 1; min-width: 15px;"></div>
+
+                ${app.panels.editor ? html`
+                    <div style="width: 4px;"></div>
+                    <button class=${!ui.hasTwoPanels() && ui.isPanelActive('editor') ? 'icon active' : 'icon'}
+                            style="background-position-y: calc(-230px + 1.2em);"
+                            @click=${ui.wrapAction(e => togglePanels(true, false))}></button>
+                    ${ui.allowTwoPanels() ? html`
+                        <button class=${ui.hasTwoPanels() ? 'icon active' : 'icon'}
+                                style="background-position-y: calc(-626px + 1.2em);"
+                                @click=${ui.wrapAction(e => togglePanels(true, true))}></button>
+                    ` : ''}
+                    <button class=${!ui.hasTwoPanels() && ui.isPanelActive('view') ? 'icon active' : 'icon'}
+                            style="background-position-y: calc(-318px + 1.2em);"
+                            @click=${ui.wrapAction(e => togglePanels(false, true))}></button>
+                ` : ''}
+                <div style="flex: 1; min-width: 4px;"></div>
 
                 ${show_menu && !menu_is_wide ? util.map(route.menu.chain[0].children, item => {
                     if (item.children.length) {
                         let active = route.menu.chain.includes(item);
-
-                        if (!ui.isPanelActive('view'))
-                            active = false;
 
                         return html`
                             <div id="ins_drop" class="drop">
@@ -211,7 +204,7 @@ function InstanceController() {
                     }
                 }) : ''}
                 ${show_title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
-                <div style="flex: 1; min-width: 15px;"></div>
+                <div style="flex: 1; min-width: 4px;"></div>
 
                 ${!goupile.isLocked() && profile.instances == null ?
                     html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
@@ -319,28 +312,27 @@ function InstanceController() {
 
         return html`
             <button class=${active && ui.isPanelActive('view') ? 'active' : ''}
-                    @click=${ui.wrapAction(e => active ? togglePanel(e, 'view', true) : self.go(e, item.url))}>
+                    @click=${ui.wrapAction(e => active ? togglePanels(null, true) : self.go(e, item.url))}>
                 <div style="flex: 1;">${item.title}</div>
            </button>
         `;
     }
 
-    async function togglePanel(e, key, enable = null) {
-        if (enable == null) {
-            enable = !ui.isPanelActive(key);
-            ui.setPanelState(key, enable, key === 'view');
-        } else {
-            ui.setPanelState(key, enable);
-        }
+    async function togglePanels(primary, view) {
+        if (primary != null)
+            ui.setPanelState('editor', true);
+        if (view != null)
+            ui.setPanelState('view', view, primary !== false);
 
         await self.run();
 
-        if (enable && key === 'view') {
+        // Special behavior for some panels
+        if (primary) {
             syncFormScroll();
             syncFormHighlight(true);
-        } else if (key === 'editor') {
-            if (enable)
-                syncEditorScroll();
+        }
+        if (view) {
+            syncEditorScroll();
             syncFormHighlight(false);
         }
     }
@@ -358,20 +350,18 @@ function InstanceController() {
                     <div class="drop">
                         <button @click=${ui.deployMenu}>${active_tab.title}</button>
                         <div>
-                            ${tabs.map(tab => html`<button class=${tab.active ? 'active' : ''}
+                            ${tabs.map(tab => html`<button class=${ui.isPanelActive('editor') && tab.active ? 'active' : ''}
                                                            @click=${ui.wrapAction(e => toggleEditorFile(e, tab.filename))}>${tab.title}</button>`)}
                         </div>
                     </div>
                     <div style="flex: 1;"></div>
                     <button @click=${ui.wrapAction(e => runHistoryDialog(e, editor_filename))}>Historique</button>
+                    <div style="flex: 1;"></div>
                     ${editor_filename === 'main.js' ? html`
                         <button ?disabled=${!fileHasChanged('main.js')}
                                 @click=${ui.wrapAction(applyMainScript)}>Appliquer</button>
                     ` : ''}
-                    <div style="flex: 1;"></div>
-                    <button class=${ui.isPanelActive('view') ? 'icon active' : 'icon'}
-                            style="background-position-y: calc(-626px + 1.2em);"
-                            @click=${ui.wrapAction(e => togglePanel(e, 'view'))}></button>
+                    <button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>
                 </div>
 
                 ${editor_el}
@@ -729,7 +719,7 @@ function InstanceController() {
 
     function toggleEditorFile(e, filename) {
         editor_filename = filename;
-        return togglePanel(e, 'editor', true);
+        return togglePanels(true, null);
     }
 
     async function handleFileChange(filename) {
@@ -1031,7 +1021,9 @@ function InstanceController() {
                 panels = panels.split('|');
                 panels = panels.filter(key => app.panels[key]);
 
-                ui.restorePanels(panels);
+                if (panels.length)
+                    ui.restorePanels(panels);
+
                 explicit_panels = true;
             }
         }
@@ -1072,15 +1064,17 @@ function InstanceController() {
             let url = route.page.url;
 
             let panels;
-            if (app.panels.data + app.panels.view < 2) {
+            if (profile.develop) {
+                panels = ui.getActivePanels().join('|');
+            } else if (app.panels.data + app.panels.view < 2) {
                 panels = null;
             } else if (url.match(/\/[A-Z0-9]{26}(@[0-9]+)?$/)) {
-                panels = ui.savePanels().join('|');
+                panels = ui.getActivePanels().join('|');
 
                 if (panels === 'view')
                     panels = null;
             } else {
-                panels = ui.savePanels().join('|');
+                panels = ui.getActivePanels().join('|');
 
                 if (panels === 'data')
                     panels = null;

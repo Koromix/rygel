@@ -46,14 +46,14 @@ function AdminController() {
                         @click=${e => self.go(e, '/admin/')}>Admin</button>
                 <button class=${'icon' + (ui.isPanelActive('instances') ? ' active' : '')}
                         style="background-position-y: calc(-362px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Projets</button>
+                        @click=${ui.wrapAction(e => togglePanel('instances'))}>Projets</button>
                 <button class=${'icon' + (ui.isPanelActive('users') ? ' active' : '')}
                         style="background-position-y: calc(-406px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
+                        @click=${ui.wrapAction(e => togglePanel('users'))}>Utilisateurs</button>
                 ${profile.root ? html`
                     <button class=${'icon' + (ui.isPanelActive('archives') ? ' active' : '')}
                             style="background-position-y: calc(-142px + 1.2em);"
-                            @click=${ui.wrapAction(e => togglePanel(e, 'archives'))}>Archives</button>
+                            @click=${ui.wrapAction(e => togglePanel('archives'))}>Archives</button>
                 ` : ''}
                 <div style="flex: 1;"></div>
                 <div class="drop right" @click=${ui.deployMenu}>
@@ -69,7 +69,7 @@ function AdminController() {
         `;
     }
 
-    function togglePanel(e, key) {
+    function togglePanel(key) {
         ui.setPanelState(key, !ui.isPanelActive(key), key !== 'instances');
         return self.go();
     }
@@ -105,7 +105,7 @@ function AdminController() {
                                     html`<td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a></td>` : ''}
                                 ${profile.root && instance.master != null ? html`<td></td>` : ''}
                                 <td><a role="button" tabindex="0" href=${util.pasteURL('/admin/', { select: instance.key })} 
-                                       @click=${ui.wrapAction(instance != selected_instance ? (e => ui.setPanelState('users', true))
+                                       @click=${ui.wrapAction(instance != selected_instance ? (e => ui.setPanelState('users', true, true))
                                                                                             : (e => { self.go(e, '/admin/'); e.preventDefault(); }))}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
                                 ${profile.root ? html`<td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runDeleteInstanceDialog(e, instance))}>Supprimer</a></td>` : ''}
@@ -469,7 +469,7 @@ function AdminController() {
             if (selected_instance != null)
                 params.select = selected_instance.key;
             params.all = 0 + all_users;
-            params.p = ui.savePanels().join('|') || null;
+            params.p = ui.getActivePanels().join('|') || null;
 
             let url = util.pasteURL('/admin/', params);
             goupile.syncHistory(url, options.push_history);

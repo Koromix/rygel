@@ -135,9 +135,6 @@ const ui = new function() {
     this.setPanelState = function(key, active, dual = false) {
         let panel = panels.get(key);
 
-        if (active === self.isPanelActive(key))
-            return;
-
         if (active) {
             dual &= self.allowTwoPanels() && primary_panel != null &&
                                              primary_panel.secondaries.includes(key);
@@ -166,7 +163,7 @@ const ui = new function() {
         }
     };
 
-    this.savePanels = function() {
+    this.getActivePanels = function() {
         let keys = [];
 
         if (primary_panel != null)
