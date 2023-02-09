@@ -637,7 +637,7 @@ function InstanceController() {
     async function runTrailDialog(e, tid) {
         let fragments = [];
 
-        return ui.runDialog(e, 'Historique', {}, (d, resolve, reject) => {
+        return ui.runDialog(e, 'Journal des modifications', {}, (d, resolve, reject) => {
             d.output(html`
                 <table class="ui_table">
                     <colgroup>
