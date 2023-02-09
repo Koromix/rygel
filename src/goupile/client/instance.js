@@ -431,7 +431,7 @@ function InstanceController() {
             code_buffers.set(filename, copy);
             if (filename == 'main.js')
                 runMainScript();
-            self.go();
+            self.run();
 
             throw err;
         });
@@ -440,10 +440,18 @@ function InstanceController() {
     }
 
     async function loadFile(filename, version) {
-        await fetchCode(filename, version);
-        if (filename == 'main.js')
-            runMainScript();
-        return self.go();
+        let url = `${ENV.urls.base}files/${version}/${filename}`;
+        let response = await net.fetch(url);
+
+        if (!response.ok) {
+            let err = await net.readError(response);
+            throw new Error(err);
+        }
+
+        let code = await response.text();
+        updateCode(filename, code, version);
+
+        return self.run();
     }
 
     async function restoreFile(filename, sha256) {
@@ -464,7 +472,7 @@ function InstanceController() {
 
         code_buffers.delete(filename);
 
-        return self.go();
+        return self.run();
     }
 
     async function renderPage() {
@@ -1052,73 +1060,71 @@ function InstanceController() {
         route = new_route;
     }
 
-    async function fetchCode(filename, version = null) {
-        let code = null;
+    async function fetchCode(filename) {
+        // Anything in cache
+        {
+            let buffer = code_buffers.get(filename);
 
-        if (profile.develop && version == null) {
-            // Anything in cache or in the editor?
-            {
-                let buffer = code_buffers.get(filename);
+            if (buffer != null)
+                return buffer.code;
+        }
 
-                if (buffer != null)
-                    return buffer.code;
-            }
+        // Try locally saved files
+        if (profile.develop) {
+            let key = `${profile.userid}:${filename}`;
+            let file = await dev_db.load('fs_changes', key);
 
-            // Try locally saved files
-            {
-                let key = `${profile.userid}:${filename}`;
-                let file = await dev_db.load('fs_changes', key);
-
-                if (file != null) {
-                    if (file.blob != null) {
-                        code = await file.blob.text();
-                    } else {
-                        code = '';
-                    }
+            if (file != null) {
+                if (file.blob != null) {
+                    let code = await file.blob.text();
+                    return updateCode(filename, code);
+                } else {
+                    return updateCode(filename, '');
                 }
             }
         }
 
         // The server is our last hope
-        if (code == null) {
-            let url = (version != null) ? `${ENV.urls.base}files/${version}/${filename}` : `${ENV.urls.files}${filename}`;
+        {
+            let url = `${ENV.urls.files}${filename}`;
             let response = await net.fetch(url);
 
             if (response.ok) {
-                code = await response.text();
-            } else {
-                code = '';
+                let code = await response.text();
+                return updateCode(filename, code);
             }
         }
 
-        // Create or update buffer
-        {
-            let buffer = code_buffers.get(filename);
+        // Got nothing
+        return updateCode(filename, '');
+    }
 
-            if (buffer == null) {
-                let sha256 = Sha256(code);
+    async function updateCode(filename, code, version = null) {
+        let buffer = code_buffers.get(filename);
 
-                buffer = {
-                    code: code,
-                    sha256: sha256,
-                    orig_sha256: sha256,
-                    session: null,
-                    version: version || 0
-                };
-                code_buffers.set(filename, buffer);
-            } else {
-                let sha256 = Sha256(code);
+        if (buffer == null) {
+            let sha256 = Sha256(code);
 
-                if (buffer.session != null && sha256 !== buffer.sha256) {
-                    ignore_editor_change = true;
-                    buffer.session.doc.setValue(code);
-                    ignore_editor_change = false;
-                }
+            buffer = {
+                code: code,
+                sha256: sha256,
+                orig_sha256: sha256,
+                session: null,
+                version: version || 0
+            };
+            code_buffers.set(filename, buffer);
+        } else {
+            let sha256 = Sha256(code);
 
-                buffer.code = code;
-                buffer.sha256 = sha256;
-                buffer.version = version || 0;
+            if (buffer.session != null && sha256 !== buffer.sha256) {
+                ignore_editor_change = true;
+                buffer.session.doc.setValue(code);
+                ignore_editor_change = false;
             }
+
+            buffer.code = code;
+            buffer.sha256 = sha256;
+            buffer.version = version || 0;
         }
 
         return code;
