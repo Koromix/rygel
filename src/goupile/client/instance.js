@@ -38,7 +38,10 @@ function InstanceController() {
     let editor_ace;
     let editor_filename;
 
-    let error_entries = {};
+    let error_entries = {
+        app: new log.Entry,
+        page: new log.Entry
+    };
 
     let ignore_editor_change = false;
     let ignore_editor_scroll = 0;
@@ -75,6 +78,8 @@ function InstanceController() {
 
                 new_app.homepage = new_app.pages.values().next().value;
                 app = util.deepFreeze(new_app);
+
+                error_entries.app.error(err, -1);
             } else {
                 throw err;
             }
@@ -101,7 +106,7 @@ function InstanceController() {
         let builder = new ApplicationBuilder(new_app);
 
         try {
-            let func = await buildScript('Application', buffer.code, ['app']);
+            let func = await buildScript(buffer.code, ['app']);
 
             await func({
                 app: builder
@@ -109,6 +114,7 @@ function InstanceController() {
             if (!new_app.pages.size)
                 throw new Error('Main script does not define any page');
 
+            error_entries.app.close();
             main_works = true;
         } catch (err) {
             main_works = false;
@@ -415,10 +421,16 @@ function InstanceController() {
                 resolve();
             });
         });
-        p.catch(err => {
+        p.catch(async err => {
             code_buffers.set(filename, copy);
-            if (filename == 'main.js')
-                runMainScript();
+
+            if (filename == 'main.js') {
+                try {
+                    await runMainScript();
+                } catch (err) {
+                    error_entries.app.error(err, -1);
+                }
+            }
             self.run();
 
             throw err;
@@ -474,6 +486,9 @@ function InstanceController() {
         try {
             let func = script_cache.get(buffer.sha256);
 
+            if (func == null)
+                throw null;
+
             await func({
                 app: app,
                 form: builder,
@@ -484,12 +499,15 @@ function InstanceController() {
 
             render(model.renderWidgets(), page_div);
             page_div.classList.remove('disabled');
+
+            error_entries.page.close();
         } catch (err) {
             if (!page_div.children.length)
                 render('Impossible de générer la page à cause d\'une erreur', page_div);
             page_div.classList.add('disabled');
 
-            console.error(err);
+            if (err != null)
+                error_entries.page.error(err, profile.develop ? -1 : log.defaultTimeout);
         }
 
         let show_menu = (profile.lock == null && (route.menu.chain.length > 2 || route.menu.chain[0].children.length > 1));
@@ -692,12 +710,24 @@ function InstanceController() {
         buffer.code = code;
         buffer.sha256 = sha256;
 
+        try {
+            func = await buildScript(buffer.code, ['app', 'form', 'values']);
+            script_cache.set(buffer.sha256, func);
+        } catch (err) {
+            error_entries.page.error(err, profile.develop ? -1 : log.defaultTimeout);
+        }
+
         if (fs_timer != null)
             clearTimeout(fs_timer);
         fs_timer = setTimeout(uploadFsChanges, 2000);
 
-        if (filename == 'main.js')
-            runMainScript();
+        if (filename == 'main.js') {
+            try {
+                await runMainScript();
+            } catch (err) {
+                error_entries.app.error(err, -1);
+            }
+        }
         self.run();
     }
 
@@ -1005,8 +1035,15 @@ function InstanceController() {
             let func = script_cache.get(buffer.sha256);
 
             if (func == null) {
-                func = await buildScript('Formulaire', buffer.code, ['app', 'form', 'values']);
-                script_cache.set(buffer.sha256, func);
+                try {
+                    func = await buildScript(buffer.code, ['app', 'form', 'values']);
+                    script_cache.set(buffer.sha256, func);
+                } catch (err) {
+                    if (!profile.develop)
+                        throw err;
+
+                    error_entries.page.error(err, -1);
+                }
             }
         }
 
@@ -1134,40 +1171,29 @@ function InstanceController() {
         }
     }
 
-    async function buildScript(title, code, variables) {
-        if (error_entries[title] == null)
-            error_entries[title] = new log.Entry;
-
+    async function buildScript(code, variables) {
         // JS is always classy
         let AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 
         try {
-            let func = new AsyncFunction(variables, "'use strict;' " + code);
+            let func = new AsyncFunction(variables, code);
 
             return async api => {
                 try {
                     let values = variables.map(key => api[key]);
                     await func(...values);
-
-                    let entry = error_entries[title];
-                    entry.close();
                 } catch (err) {
-                    logScriptError(title, err);
+                    throwScriptError(err);
                 }
             };
         } catch (err) {
-            logScriptError(title, err);
+            throwScriptError(err);
         }
     }
 
-    function logScriptError(title, err) {
+    function throwScriptError(err) {
         let line = util.parseEvalErrorLine(err);
-        let msg = `Erreur sur ${title}\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
-
-        if (profile.develop) {
-            let entry = error_entries[title];
-            entry.error(msg, -1);
-        }
+        let msg = `Erreur de script\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
 
         throw new Error(msg);
     }
