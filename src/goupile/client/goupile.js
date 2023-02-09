@@ -218,7 +218,7 @@ const goupile = new function() {
         } while (!new_profile.authorized);
 
         // Save for offline login
-        if (ENV.cache_offline) {
+        if (ENV.cache_offline && new_profile.permissions.misc_offline) {
             let db = await openProfileDB();
 
             let salt = nacl.randomBytes(24);
