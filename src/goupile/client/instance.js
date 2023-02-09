@@ -100,15 +100,15 @@ function InstanceController() {
         }
 
         if (app.head != null) {
-            let template = document.createElement('template');
-            render(app.head, template);
+            let container = document.createElement('div');
+            render(app.head, container);
 
             // Clear previous changes
             for (let i = document.head.children.length - 1; i >= head_length; i--)
                 document.head.removeChild(document.head.children[i]);
             head_length = document.head.children.length;
 
-            for (let child of template.children)
+            for (let child of container.children)
                 document.head.appendChild(child);
         }
     }
