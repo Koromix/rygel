@@ -205,7 +205,7 @@ const ui = new function() {
     };
 
     this.allowTwoPanels = function() {
-        let allow = window.innerWidth >= mobile_threshold;
+        let allow = window.innerWidth >= small_threshold;
         return allow;
     };
 
