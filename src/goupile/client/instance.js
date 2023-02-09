@@ -443,15 +443,18 @@ function InstanceController() {
         let url = `${ENV.urls.base}files/${version}/${filename}`;
         let response = await net.fetch(url);
 
-        if (!response.ok) {
+        if (response.ok) {
+            let code = await response.text();
+            updateBuffer(filename, code, version);
+
+            return self.run();
+        } else if (response.status == 404) {
+            updateBuffer(filename, '', version);
+            return self.run();
+        } else {
             let err = await net.readError(response);
             throw new Error(err);
         }
-
-        let code = await response.text();
-        updateBuffer(filename, code, version);
-
-        return self.run();
     }
 
     async function restoreFile(filename, sha256) {
@@ -466,7 +469,7 @@ function InstanceController() {
         });
         if (!response.ok && response.status !== 409) {
             let err = await net.readError(response);
-            throw new Error(err)
+            throw new Error(err);
         }
 
         let key = `${profile.userid}/${filename}`;
@@ -1126,6 +1129,9 @@ function InstanceController() {
             if (response.ok) {
                 let code = await response.text();
                 return updateBuffer(filename, code);
+            } else if (response.status != 404) {
+                let err = await net.readError(response);
+                throw new Error(err);
             }
         }
 

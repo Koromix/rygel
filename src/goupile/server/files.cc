@@ -758,7 +758,9 @@ void HandleFileRestore(InstanceHolder *instance, const http_RequestInfo &request
             }
         }
 
-        if (!instance->db->Run("UPDATE fs_index SET sha256 = ?2 WHERE filename = ?1 AND version = 0",
+        if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                  VALUES (0, ?1, ?2)
+                                  ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
                                filename, sha256))
             return;
 
