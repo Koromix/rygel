@@ -14,7 +14,7 @@
 function InstanceController() {
     let self = this;
 
-    let app;
+    let app = null;
 
     // Explicit mutex to serialize (global) state-changing functions
     let mutex = new Mutex;
@@ -28,16 +28,17 @@ function InstanceController() {
     let head_length = Number.MAX_SAFE_INTEGER;
     let page_div = document.createElement('div');
 
-    let form_state;
+    let form_state = null;
+
+    let code_buffers = new LruMap(32);
+    let script_cache = new LruMap(4);
+    let fs_timer = null;
 
     let editor_el;
     let editor_ace;
     let editor_filename;
-    let code_buffers = new LruMap(32);
-    let script_cache = new LruMap(4);
-    let fs_timer;
 
-    let dev_db;
+    let dev_db = null;
     let error_entries = {};
 
     let ignore_editor_change = false;
