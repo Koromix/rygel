@@ -1154,9 +1154,12 @@ function InstanceController() {
             };
             code_buffers.set(filename, buffer);
         } else if (buffer.session != null && sha256 !== buffer.sha256) {
-            ignore_editor_change = true;
-            buffer.session.doc.setValue(code);
-            ignore_editor_change = false;
+            try {
+                ignore_editor_change = true;
+                buffer.session.doc.setValue(code);
+            } finally {
+                ignore_editor_change = false;
+            }
         }
 
         buffer.code = code;
