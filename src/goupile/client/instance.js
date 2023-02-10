@@ -31,23 +31,21 @@ function InstanceController() {
     let form_state = null;
 
     let code_buffers = new LruMap(32);
-    let script_cache = new LruMap(4);
+    let code_builds = new LruMap(4);
     let fs_timer = null;
 
     let editor_el;
     let editor_ace;
     let editor_filename;
 
-    let error_entries = {
-        app: new log.Entry,
-        page: new log.Entry
-    };
-
     let ignore_editor_change = false;
     let ignore_editor_scroll = 0;
     let ignore_page_scroll = 0;
 
-    let prev_anchor;
+    let error_entries = {
+        app: new log.Entry,
+        page: new log.Entry
+    };
 
     this.init = async function(fallback) {
         if (profile.develop) {
@@ -487,7 +485,7 @@ function InstanceController() {
         let builder = new FormBuilder(form_state, model);
 
         try {
-            let func = script_cache.get(buffer.sha256);
+            let func = code_builds.get(buffer.sha256);
 
             if (func == null)
                 throw null;
@@ -715,7 +713,7 @@ function InstanceController() {
 
         try {
             func = await buildScript(buffer.code, ['app', 'form', 'values']);
-            script_cache.set(buffer.sha256, func);
+            code_builds.set(buffer.sha256, func);
         } catch (err) {
             error_entries.page.error(err, profile.develop ? -1 : log.defaultTimeout);
         }
@@ -1035,12 +1033,12 @@ function InstanceController() {
         // Fetch and build page code for page panel
         {
             let buffer = await fetchCode(filename);
-            let func = script_cache.get(buffer.sha256);
+            let func = code_builds.get(buffer.sha256);
 
             if (func == null) {
                 try {
                     func = await buildScript(buffer.code, ['app', 'form', 'values']);
-                    script_cache.set(buffer.sha256, func);
+                    code_builds.set(buffer.sha256, func);
                 } catch (err) {
                     if (!profile.develop)
                         throw err;
