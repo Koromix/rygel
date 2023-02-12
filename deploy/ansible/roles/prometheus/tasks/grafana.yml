@@ -127,6 +127,15 @@
   when: 'not ansible_check_mode'
   become: yes
 
+- name: Fix SQLite3 user permission
+  file:
+    path: '{{ grafana_root_path }}/data/grafana.db'
+    state: file
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  become: yes
+
 - name: Start Grafana services
   service:
     name: grafana-server
