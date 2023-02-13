@@ -964,6 +964,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     if (sandbox) {
         LogInfo("Init sandbox");
 
+        sqlite3_temp_directory = sqlite3_mprintf("%s", gp_domain.config.tmp_directory);
+
         const char *const reveal_paths[] = {
 #ifdef FELIX_HOT_ASSETS
             // Needed for asset module
@@ -971,7 +973,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 #endif
             gp_domain.config.database_directory,
             gp_domain.config.archive_directory,
-            gp_domain.config.snapshot_directory
+            gp_domain.config.snapshot_directory,
+            gp_domain.config.tmp_directory
         };
         const char *const mask_files[] = {
             gp_domain.config.config_filename
