@@ -130,6 +130,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"lstat64", sb_FilterAction::Allow},
         {"fstatat64", sb_FilterAction::Allow},
         {"newfstatat", sb_FilterAction::Allow},
+        {"access", sb_FilterAction::Allow},
         {"ioctl/tty", sb_FilterAction::Allow},
         {"getrandom", sb_FilterAction::Allow},
         {"getpid", sb_FilterAction::Allow},
