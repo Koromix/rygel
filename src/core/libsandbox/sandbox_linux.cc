@@ -594,13 +594,6 @@ bool sb_SandboxBuilder::Apply()
                         if (ret < 0)
                             break;
                     }
-                } else if (TestStr(item.name, "clone/thread")) {
-                    int syscall = seccomp_syscall_resolve_name("clone");
-                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
-
-                    unsigned int flags = CLONE_THREAD | CLONE_SIGHAND | CLONE_VM;
-                    ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
-                                           SCMP_A0(SCMP_CMP_MASKED_EQ, flags, flags));
                 } else {
                     int syscall = seccomp_syscall_resolve_name(item.name);
 
