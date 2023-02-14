@@ -118,7 +118,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                     started_stack = true;
                 }
             } break;
-            case PrimitiveKind::Record: {
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
                 int hfa = IsHFA(param.type);
 
                 if (hfa) {

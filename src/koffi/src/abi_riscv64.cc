@@ -82,7 +82,7 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
 
     AnalyseFlat(param->type, [&](const TypeInfo *type, int offset, int count) {
 #if defined(__riscv_float_abi_double)
-        bool fp = IsFloat(type);
+        bool fp = IsFloat(type) && (param->type->primitive != PrimitiveKind::Union);
 #elif defined(__riscv_float_abi_soft)
         bool fp = false;
 #else
@@ -90,9 +90,9 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
 #endif
 
         if (fp) {
-            vec_count += count;
+            vec_count = (offset ? vec_count : 0) + count;
         } else {
-            gpr_count += count;
+            gpr_count = (offset ? gpr_count : 0) + count;
             gpr_first |= !vec_count;
         }
     });

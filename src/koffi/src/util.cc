@@ -930,6 +930,13 @@ static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionR
                 offset = AnalyseFlatRec(member.type, offset, 1, func);
             }
         }
+    } else if (type->primitive == PrimitiveKind::Union) {
+        for (int i = 0; i < count; i++) {
+            for (const RecordMember &member: type->members) {
+                AnalyseFlatRec(member.type, offset, 1, func);
+            }
+        }
+        offset += count;
     } else if (type->primitive == PrimitiveKind::Array) {
         count *= type->size / type->ref.type->size;
         offset = AnalyseFlatRec(type->ref.type, offset, count, func);

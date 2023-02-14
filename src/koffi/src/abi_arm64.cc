@@ -115,7 +115,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                     gpr_avail--;
                 }
             } break;
-            case PrimitiveKind::Record: {
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
                 int hfa = IsHFA(param.type);
 
 #ifdef _M_ARM64EC

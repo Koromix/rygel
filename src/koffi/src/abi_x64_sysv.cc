@@ -132,6 +132,20 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
 
             return (offset + 7) / 8;
         } break;
+        case PrimitiveKind::Union: {
+            if (type->size > 64) {
+                classes[0] = MergeClasses(classes[0], RegisterClass::Memory);
+                return 1;
+            }
+
+            for (const RecordMember &member: type->members) {
+                Size start = offset / 8;
+                ClassifyType(member.type, offset % 8, classes.Take(start, classes.len - start));
+            }
+            offset += type->size;
+
+            return (offset + 7) / 8;
+        } break;
         case PrimitiveKind::Array: {
             if (type->size > 64) {
                 classes[0] = MergeClasses(classes[0], RegisterClass::Memory);
