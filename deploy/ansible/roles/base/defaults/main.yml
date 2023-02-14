@@ -13,6 +13,9 @@
 
 weekly_upgrade: yes
 
+# ssh_bind:
+ssh_port: 22
+
 # Use these variables to set up IPv6 on OVH VPS
 # Documentation here: https://docs.ovh.com/fr/vps/configurer-ipv6/
 # ovh_ipv6_addr:

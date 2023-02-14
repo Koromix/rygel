@@ -11,11 +11,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-ansible_host: 146.59.146.192
+ansible_host: 192.168.196.116
 ansible_port: 22
 ansible_user: ansible
 ansible_ssh_private_key_file: ~/.ssh/pknet/prod
 ansible_python_interpreter: /usr/bin/python3
+
+ssh_bind: '{{ ansible_host }}'
 
 ovh_ipv6_addr: 2001:41d0:304:200::11e8
 ovh_ipv6_netmask: 128

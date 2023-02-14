@@ -56,20 +56,35 @@
     mode: '0644'
   become: yes
 
+- name: Bind SSH to public address
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: '^ListenAddress'
+    line: 'ListenAddress {{ ssh_bind | default("") }}'
+    state: '{{ "present" if ssh_bind is defined else "absent" }}'
+  become: yes
+
+- name: Set public SSH port
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: '^Port'
+    line: 'Port {{ ssh_port }}'
+    state: present
+  become: yes
+
 - name: Disable root login over SSH
   lineinfile:
     dest: /etc/ssh/sshd_config
     regexp: '^PermitRootLogin'
     line: 'PermitRootLogin no'
     state: present
-  register: disable_root_sshd
   become: yes
 
-- name: Restart sshd to disable root login
+- name: Reload sshd to apply new settings
   service:
     name: sshd
-    state: restarted
-  when: disable_root_sshd.changed
+    state: reloaded
+  when: 'not ansible_check_mode'
   become: yes
 
 - name: Configure IPv6 (OVH)
