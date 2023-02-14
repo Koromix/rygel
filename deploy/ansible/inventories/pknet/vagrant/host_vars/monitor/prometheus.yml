@@ -19,3 +19,6 @@ prometheus_exporters:
   - systemd_exporter
 
 grafana_url: 'https://pknet-monitor.local/grafana'
+
+grafana_dashboards: '{{ inventory_dir }}/../common/prometheus/dashboards'
+grafana_alerts: '{{ inventory_dir }}/../common/prometheus/alerting'

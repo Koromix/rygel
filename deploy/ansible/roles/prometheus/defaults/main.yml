@@ -71,3 +71,7 @@ grafana_default_password: grafana!16/default_pwd
 # Set this to public Grafana URL to enable grafana
 # grafana_url:
 grafana_port: 9200
+
+# Directory of provisioned Grafana dashboards and alerts
+# grafana_dashboards: '{{ inventory_dir }}/prometheus/dashboards'
+# grafana_alerts: '{{ inventory_dir }}/prometheus/alerting'
