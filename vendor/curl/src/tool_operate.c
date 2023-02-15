@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -971,18 +971,19 @@ static CURLcode single_transfer(struct GlobalConfig *global,
             FILE *newfile;
 
             /*
-             * this checks if the previous transfer had the same
-             * OperationConfig, which would mean, that the an output file has
-             * already been created and data can be appened to it, instead
-             * of overwriting it.
+             * Since every transfer has its own file handle for dumping
+             * the headers, we need to open it in append mode, since transfers
+             * might finish in any order.
+             * The first transfer just clears the file.
              * TODO: Consider placing the file handle inside the
              * OperationConfig, so that it does not need to be opened/closed
              * for every transfer.
              */
-            if(per->prev && per->prev->config == config)
-              newfile = fopen(config->headerfile, "ab+");
-            else
+            if(!per->prev || per->prev->config != config) {
               newfile = fopen(config->headerfile, "wb+");
+              fclose(newfile);
+            }
+            newfile = fopen(config->headerfile, "ab+");
 
             if(!newfile) {
               warnf(global, "Failed to open %s\n", config->headerfile);
@@ -1207,22 +1208,27 @@ static CURLcode single_transfer(struct GlobalConfig *global,
           char *q = httpgetfields ? httpgetfields : config->query;
           CURLU *uh = curl_url();
           if(uh) {
-            char *updated;
-            if(curl_url_set(uh, CURLUPART_URL, per->this_url,
-                            CURLU_GUESS_SCHEME)) {
-              result = CURLE_FAILED_INIT;
+            CURLUcode uerr;
+            uerr = curl_url_set(uh, CURLUPART_URL, per->this_url,
+                            CURLU_GUESS_SCHEME);
+            if(uerr) {
+              result = urlerr_cvt(uerr);
               errorf(global, "(%d) Could not parse the URL, "
                      "failed to set query\n", result);
               config->synthetic_error = TRUE;
             }
-            else if(curl_url_set(uh, CURLUPART_QUERY, q, CURLU_APPENDQUERY) ||
-                    curl_url_get(uh, CURLUPART_URL, &updated,
-                                 CURLU_GUESS_SCHEME)) {
-              result = CURLE_OUT_OF_MEMORY;
-            }
             else {
-              Curl_safefree(per->this_url); /* free previous URL */
-              per->this_url = updated; /* use our new URL instead! */
+              char *updated = NULL;
+              uerr = curl_url_set(uh, CURLUPART_QUERY, q, CURLU_APPENDQUERY);
+              if(!uerr)
+                uerr = curl_url_get(uh, CURLUPART_URL, &updated,
+                                   CURLU_GUESS_SCHEME);
+              if(uerr)
+                result = urlerr_cvt(uerr);
+              else {
+                Curl_safefree(per->this_url); /* free previous URL */
+                per->this_url = updated; /* use our new URL instead! */
+              }
             }
             curl_url_cleanup(uh);
             if(result)
@@ -1552,6 +1558,9 @@ static CURLcode single_transfer(struct GlobalConfig *global,
 
         if(config->ssl_ec_curves)
           my_setopt_str(curl, CURLOPT_SSL_EC_CURVES, config->ssl_ec_curves);
+
+        if(config->writeout)
+          my_setopt_str(curl, CURLOPT_CERTINFO, 1L);
 
         if(feature_ssl) {
           /* Check if config->cert is a PKCS#11 URI and set the
@@ -1939,8 +1948,7 @@ static CURLcode single_transfer(struct GlobalConfig *global,
 
         /* new in curl 7.19.4 */
         if(config->socks5_gssapi_nec)
-          my_setopt_str(curl, CURLOPT_SOCKS5_GSSAPI_NEC,
-                        config->socks5_gssapi_nec);
+          my_setopt_str(curl, CURLOPT_SOCKS5_GSSAPI_NEC, 1L);
 
         /* new in curl 7.55.0 */
         if(config->socks5_auth)
@@ -2418,6 +2426,7 @@ static CURLcode serial_transfers(struct GlobalConfig *global,
     bool retry;
     long delay_ms;
     bool bailout = FALSE;
+    struct timeval start;
     result = pre_transfer(global, per);
     if(result)
       break;
@@ -2427,7 +2436,7 @@ static CURLcode serial_transfers(struct GlobalConfig *global,
       if(result)
         break;
     }
-
+    start = tvnow();
 #ifdef CURLDEBUG
     if(global->test_event_based)
       result = curl_easy_perform_ev(per->curl);
@@ -2459,7 +2468,7 @@ static CURLcode serial_transfers(struct GlobalConfig *global,
     if(per && global->ms_per_transfer) {
       /* how long time did the most recent transfer take in number of
          milliseconds */
-      long milli = tvdiff(tvnow(), per->start);
+      long milli = tvdiff(tvnow(), start);
       if(milli < global->ms_per_transfer) {
         notef(global, "Transfer took %ld ms, waits %ldms as set by --rate\n",
               milli, global->ms_per_transfer - milli);
@@ -2722,6 +2731,7 @@ CURLcode operate(struct GlobalConfig *global, int argc, argv_item_t argv[])
         curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
         curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
         curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_PSL);
+        curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_HSTS);
 
         /* Get the required arguments for each operation */
         do {
