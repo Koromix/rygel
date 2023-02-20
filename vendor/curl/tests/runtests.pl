@@ -1740,7 +1740,7 @@ sub runhttpserver {
     }
 
     # where is it?
-    my $port;
+    my $port = 0;
     if(!$port_or_path) {
         $port = $port_or_path = pidfromfile($portfile);
     }
@@ -1758,7 +1758,7 @@ sub runhttpserver {
     $pid2 = $pid3;
 
     if($verbose) {
-        logmsg "RUN: $srvrname server is on PID $httppid port $port\n";
+        logmsg "RUN: $srvrname server is on PID $httppid port $port_or_path\n";
     }
 
     return ($httppid, $pid2, $port);
@@ -5382,7 +5382,7 @@ sub startservers {
         elsif($what eq "httptls") {
             if(!$httptlssrv) {
                 # for now, we can't run http TLS-EXT tests without gnutls-serv
-                return "no gnutls-serv";
+                return "no gnutls-serv (with SRP support)";
             }
             if($torture && $run{'httptls'} &&
                !responsive_httptls_server($verbose, "IPv4")) {

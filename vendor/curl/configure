@@ -26133,7 +26133,6 @@ then :
 
 fi
 
-                              CPPFLAGS="$CPPFLAGS -DOPENSSL_SUPPRESS_DEPRECATED"
 
 else $as_nop
 
@@ -26886,7 +26885,6 @@ printf "%s\n" "yes" >&6; }
 
 printf "%s\n" "#define HAVE_OPENSSL3 1" >>confdefs.h
 
-                              CPPFLAGS="$CPPFLAGS -DOPENSSL_SUPPRESS_DEPRECATED"
       ssl_msg="OpenSSL v3+"
 
 else $as_nop
