@@ -127,6 +127,7 @@ struct TypeInfo {
     } ref;
     ArrayHint hint; // Array only
 
+    mutable Napi::FunctionReference construct; // Union only
     mutable Napi::ObjectReference defn;
 
     RG_HASHTABLE_HANDLER(TypeInfo, name);

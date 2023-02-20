@@ -23,6 +23,22 @@ struct InstanceData;
 struct TypeInfo;
 struct FunctionInfo;
 
+class MagicUnion: public Napi::ObjectWrap<MagicUnion> {
+    const TypeInfo *type;
+
+    Size active_idx = -1;
+    const uint8_t *raw = nullptr;
+
+public:
+    static Napi::Function InitClass(Napi::Env env, const TypeInfo *type);
+
+    MagicUnion(const Napi::CallbackInfo &info);
+
+private:
+    Napi::Value Getter(const Napi::CallbackInfo &info);
+    void Setter(const Napi::CallbackInfo &info, const Napi::Value &value);
+};
+
 template <typename T, typename... Args>
 void ThrowError(Napi::Env env, const char *msg, Args... args)
 {
@@ -126,6 +142,9 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type,
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
 void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
 void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
+
+Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, Size len = -1);
+Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, Size len = -1);
 
 static inline Napi::Value NewBigInt(Napi::Env env, int64_t value)
 {

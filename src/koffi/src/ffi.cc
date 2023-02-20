@@ -441,7 +441,39 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     }
     err_guard.Disable();
 
+    // Union constructor
+    Napi::Function constructor = MagicUnion::InitClass(env, type);
+    type->construct.Reset(constructor, 1);
+
     return WrapType(env, instance, type);
+}
+
+Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (!info.IsConstructCall()) {
+        ThrowError<Napi::TypeError>(env, "This function is a constructor and must be called with new");
+        return env.Null();
+    }
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(info[0]);
+    if (!type)
+        return env.Null();
+    if (type->primitive != PrimitiveKind::Union) {
+        ThrowError<Napi::TypeError>(env, "Expected union type, got %1", PrimitiveKindNames[(int)type->primitive]);
+        return env.Null();
+    }
+
+    Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
+    SetValueTag(instance, wrapper, &MagicUnionMarker);
+
+    return wrapper;
 }
 
 static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
@@ -1931,7 +1963,6 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
 static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
     bool has_len = (info.Length() >= 3u + has_offset && info[2u + has_offset].IsNumber());
@@ -1947,130 +1978,10 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 
     Napi::Value value = info[0];
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
-
-    const uint8_t *ptr = nullptr;
-
-    if (value.IsExternal()) {
-        Napi::External<void> external = value.As<Napi::External<void>>();
-        ptr = (const uint8_t *)external.Data();
-    } else if (IsRawBuffer(value)) {
-        Span<uint8_t> buffer = GetRawBuffer(value);
-
-        if (RG_UNLIKELY(buffer.len - offset < type->size)) {
-            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
-                                    type->name, type->size + offset);
-            return env.Null();
-        }
-
-        ptr = (const uint8_t *)buffer.ptr;
-    } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected external or TypedArray", GetValueType(instance, info[0]));
-        return env.Null();
-    }
-
-    if (!ptr)
-        return env.Null();
-    ptr += offset;
-
-    // Used for strings and arrays, ignored otherwise
     int64_t len = has_len ? info[2u + has_offset].As<Napi::Number>().Int64Value() : -1;
 
-    if (has_len) {
-        if (RG_UNLIKELY(len < 0)) {
-            ThrowError<Napi::TypeError>(env, "Length must not be a negative value");
-            return env.Null();
-        }
-
-        if (type->primitive != PrimitiveKind::String && type->primitive != PrimitiveKind::String16) {
-            type = MakeArrayType(instance, type, len);
-        }
-    }
-
-#define RETURN_INT(Type, NewCall) \
-        do { \
-            Type v = *(Type *)ptr; \
-            return NewCall(env, v); \
-        } while (false)
-#define RETURN_INT_SWAP(Type, NewCall) \
-        do { \
-            Type v = ReverseBytes(*(Type *)ptr); \
-            return NewCall(env, v); \
-        } while (false)
-
-    switch (type->primitive) {
-        case PrimitiveKind::Void: {
-            ThrowError<Napi::TypeError>(env, "Cannot decode value of type %1", type->name);
-            return env.Null();
-        } break;
-
-        case PrimitiveKind::Bool: {
-            bool v = *(bool *)ptr;
-            return Napi::Boolean::New(env, v);
-        } break;
-        case PrimitiveKind::Int8: { RETURN_INT(int8_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt8: { RETURN_INT(uint8_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int16: { RETURN_INT(int16_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int16S: { RETURN_INT_SWAP(int16_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt16: { RETURN_INT(uint16_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt16S: { RETURN_INT_SWAP(uint16_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int32: { RETURN_INT(int32_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int32S: { RETURN_INT_SWAP(int32_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt32: { RETURN_INT(uint32_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt32S: { RETURN_INT_SWAP(uint32_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int64: { RETURN_INT(int64_t, NewBigInt); } break;
-        case PrimitiveKind::Int64S: { RETURN_INT_SWAP(int64_t, NewBigInt); } break;
-        case PrimitiveKind::UInt64: { RETURN_INT(uint64_t, NewBigInt); } break;
-        case PrimitiveKind::UInt64S: { RETURN_INT_SWAP(uint64_t, NewBigInt); } break;
-        case PrimitiveKind::String: {
-            if (len >= 0) {
-                const char *str = *(const char **)ptr;
-                return str ? Napi::String::New(env, str, len) : env.Null();
-            } else {
-                const char *str = *(const char **)ptr;
-                return str ? Napi::String::New(env, str) : env.Null();
-            }
-        } break;
-        case PrimitiveKind::String16: {
-            if (len >= 0) {
-                const char16_t *str16 = *(const char16_t **)ptr;
-                return str16 ? Napi::String::New(env, str16, len) : env.Null();
-            } else {
-                const char16_t *str16 = *(const char16_t **)ptr;
-                return str16 ? Napi::String::New(env, str16) : env.Null();
-            }
-        } break;
-        case PrimitiveKind::Pointer: 
-        case PrimitiveKind::Callback: {
-            void *ptr2 = *(void **)ptr;
-            return ptr2 ? Napi::External<void>::New(env, ptr2, [](Napi::Env, void *) {}) : env.Null();
-        } break;
-        case PrimitiveKind::Array: {
-            Napi::Value array = DecodeArray(env, ptr, type);
-            return array;
-        } break;
-        case PrimitiveKind::Record: {
-            Napi::Object obj = DecodeObject(env, ptr, type);
-            return obj;
-        } break;
-        case PrimitiveKind::Float32: {
-            float f = *(float *)ptr;
-            return Napi::Number::New(env, f);
-        } break;
-        case PrimitiveKind::Float64: {
-            double d = *(double *)ptr;
-            return Napi::Number::New(env, d);
-        } break;
-
-        case PrimitiveKind::Prototype: {
-            ThrowError<Napi::TypeError>(env, "Cannot decode value of type %1", type->name);
-            return env.Null();
-        } break;
-    }
-
-#undef RETURN_BIGINT
-#undef RETURN_INT
-
-    return env.Null();
+    Napi::Value ret = Decode(value, offset, type, len);
+    return ret;
 }
 
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
@@ -2110,6 +2021,7 @@ static void SetExports(Napi::Env env, Func func)
     func("struct", Napi::Function::New(env, CreatePaddedStructType));
     func("pack", Napi::Function::New(env, CreatePackedStructType));
     func("union", Napi::Function::New(env, CreateUnionType));
+    func("Union", Napi::Function::New(env, InstantiateUnion));
     func("opaque", Napi::Function::New(env, CreateOpaqueType));
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("array", Napi::Function::New(env, CreateArrayType));
