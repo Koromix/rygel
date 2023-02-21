@@ -40,6 +40,9 @@ public:
 
     const RecordMember *GetMember() const { return (active_idx >= 0) ? &type->members[active_idx] : nullptr; }
 
+    void SetRaw(const uint8_t *ptr);
+    const uint8_t *GetRaw() const { return raw; }
+
 private:
     Napi::Value Getter(const Napi::CallbackInfo &info);
     void Setter(const Napi::CallbackInfo &info, const Napi::Value &value);

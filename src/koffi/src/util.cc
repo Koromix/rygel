@@ -52,6 +52,14 @@ MagicUnion::MagicUnion(const Napi::CallbackInfo &info)
 {
 }
 
+void MagicUnion::SetRaw(const uint8_t *ptr)
+{
+    raw = ptr;
+
+    active_idx = -1;
+    Value().Set("__active", Env().Undefined());
+}
+
 Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
 {
     Size idx = (Size)info.Data();
@@ -473,6 +481,19 @@ int GetTypedArrayType(const TypeInfo *type)
 
 Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign)
 {
+    // We can't decode unions because we don't know which member is valid
+    if (type->primitive == PrimitiveKind::Union) {
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+        Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
+        SetValueTag(instance, wrapper, &MagicUnionMarker);
+
+        MagicUnion *u = MagicUnion::Unwrap(wrapper);
+        u->SetRaw(origin);
+
+        return wrapper;
+    }
+
     Napi::Object obj = Napi::Object::New(env);
     DecodeObject(obj, origin, type, realign);
     return obj;

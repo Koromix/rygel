@@ -984,6 +984,12 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     if (!PushObject(obj, type->ref.type, ptr))
                         return false;
                 } else {
+                    if (RG_UNLIKELY(type->ref.type->primitive == PrimitiveKind::Union &&
+                                    !CheckValueTag(instance, obj, &MagicUnionMarker))) {
+                        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
+                        return false;
+                    }
+
                     memset_safe(ptr, 0, type->size);
                 }
             } else {
@@ -1035,8 +1041,14 @@ void CallData::PopOutArguments()
             Span<uint8_t> buffer = GetRawBuffer(value);
             DecodeBuffer(buffer, out.ptr, out.type);
         } else {
-            Napi::Object obj(env, value);
-            DecodeObject(obj, out.ptr, out.type);
+            Napi::Object obj = value.As<Napi::Object>();
+
+            if (CheckValueTag(instance, value, &MagicUnionMarker)) {
+                MagicUnion *u = MagicUnion::Unwrap(obj);
+                u->SetRaw(out.ptr);
+            } else {
+                DecodeObject(obj, out.ptr, out.type);
+            }
         }
     }
 }
