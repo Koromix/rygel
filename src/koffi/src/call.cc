@@ -335,12 +335,21 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
         }
 
         MagicUnion *u = MagicUnion::Unwrap(obj);
+        const uint8_t *raw = u->GetRaw();
+
+        // Fast path: encoded value already exists, just copy!
+        if (raw) {
+            RG_ASSERT(!realign); // XXX: Probably rare, but investigate...
+
+            memcpy(origin, raw, type->size);
+            return true;
+        }
 
         members.ptr = u->GetMember();
         members.len = 1;
 
         if (RG_UNLIKELY(!members.ptr)) {
-            ThrowError<Napi::Error>(env, "Cannot use unspecified union (yet)");
+            ThrowError<Napi::Error>(env, "Cannot use ambiguous empty union");
             return false;
         }
     } else {
