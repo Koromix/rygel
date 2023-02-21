@@ -38,6 +38,8 @@ public:
 
     MagicUnion(const Napi::CallbackInfo &info);
 
+    const RecordMember *GetMember() const { return (active_idx >= 0) ? &type->members[active_idx] : nullptr; }
+
 private:
     Napi::Value Getter(const Napi::CallbackInfo &info);
     void Setter(const Napi::CallbackInfo &info, const Napi::Value &value);

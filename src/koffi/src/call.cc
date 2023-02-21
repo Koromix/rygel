@@ -321,10 +321,34 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
 bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin, int16_t realign)
 {
     RG_ASSERT(IsObject(obj));
-    RG_ASSERT(type->primitive == PrimitiveKind::Record);
+    RG_ASSERT(type->primitive == PrimitiveKind::Record ||
+              type->primitive == PrimitiveKind::Union);
 
-    for (Size i = 0; i < type->members.len; i++) {
-        const RecordMember &member = type->members[i];
+    Span<const RecordMember> members = {};
+
+    if (type->primitive == PrimitiveKind::Record) {
+        members = type->members;
+    } else if (type->primitive == PrimitiveKind::Union) {
+        if (RG_UNLIKELY(!CheckValueTag(instance, obj, &MagicUnionMarker))) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
+            return false;
+        }
+
+        MagicUnion *u = MagicUnion::Unwrap(obj);
+
+        members.ptr = u->GetMember();
+        members.len = 1;
+
+        if (RG_UNLIKELY(!members.ptr)) {
+            ThrowError<Napi::Error>(env, "Cannot use unspecified union (yet)");
+            return false;
+        }
+    } else {
+        RG_UNREACHABLE();
+    }
+
+    for (Size i = 0; i < members.len; i++) {
+        const RecordMember &member = members[i];
         Napi::Value value = obj.Get(member.name);
 
         if (RG_UNLIKELY(value.IsUndefined())) {
