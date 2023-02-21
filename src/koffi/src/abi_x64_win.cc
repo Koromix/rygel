@@ -143,7 +143,8 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
                 *(void **)(args_ptr++) = ptr;
             } break;
-            case PrimitiveKind::Record: {
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
                 if (RG_UNLIKELY(!IsObject(value))) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                     return false;
@@ -261,6 +262,7 @@ void CallData::Execute(const FunctionInfo *func)
         case PrimitiveKind::String16:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Record:
+        case PrimitiveKind::Union:
         case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(G); } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
@@ -312,7 +314,8 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
                 return env.Null();
             }
         } break;
-        case PrimitiveKind::Record: {
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
             const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
                                             : (const uint8_t *)&result.buf;
 
@@ -529,7 +532,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                     param.type->dispose(env, param.type, ptr2);
                 }
             } break;
-            case PrimitiveKind::Record: {
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
                 uint8_t *ptr;
                 if (param.regular) {
                     ptr = (uint8_t *)(j < 4 ? gpr_ptr + j : args_ptr);
@@ -641,7 +645,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
 
             if (CheckValueTag(instance, value, type->ref.marker)) {
                 ptr = value.As<Napi::External<uint8_t>>().Data();
-            } else if (IsObject(value) && type->ref.type->primitive == PrimitiveKind::Record) {
+            } else if (IsObject(value) && (type->ref.type->primitive == PrimitiveKind::Record ||
+                                           type->ref.type->primitive == PrimitiveKind::Union)) {
                 Napi::Object obj = value.As<Napi::Object>();
 
                 ptr = AllocHeap(type->ref.type->size, 16);
@@ -657,7 +662,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
 
             out_reg->rax = (uint64_t)ptr;
         } break;
-        case PrimitiveKind::Record: {
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
             if (RG_UNLIKELY(!IsObject(value))) {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                 return;

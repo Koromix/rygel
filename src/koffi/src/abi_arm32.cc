@@ -67,9 +67,11 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
     if (int hfa = IsHFA(func->ret.type); hfa) {
         func->ret.vec_count = hfa;
-    } else if (func->ret.type->primitive != PrimitiveKind::Record ||
-               func->ret.type->size <= 4) {
+    } else if (func->ret.type->primitive != PrimitiveKind::Record &&
+               func->ret.type->primitive != PrimitiveKind::Union) {
         func->ret.gpr_count = (func->ret.type->size > 4) ? 2 : 1;
+    } else if (func->ret.type->size <= 4) {
+        func->ret.gpr_count = 1;
     } else {
         func->ret.use_memory = true;
     }
@@ -320,7 +322,8 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
                 *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
             } break;
-            case PrimitiveKind::Record: {
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
                 if (RG_UNLIKELY(!IsObject(value))) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                     return false;
@@ -456,7 +459,8 @@ void CallData::Execute(const FunctionInfo *func)
         case PrimitiveKind::String16:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(GG); } break;
-        case PrimitiveKind::Record: {
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
             if (func->ret.vec_count) {
                 HfaRet ret = PERFORM_CALL(DDDD);
                 memcpy(&result.buf, &ret, RG_SIZE(ret));
@@ -514,7 +518,8 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
                 return env.Null();
             }
         } break;
-        case PrimitiveKind::Record: {
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
             const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
                                             : (const uint8_t *)&result.buf;
 
@@ -710,7 +715,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                     param.type->dispose(env, param.type, ptr2);
                 }
             } break;
-            case PrimitiveKind::Record: {
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
                 if (param.vec_count) {
                     Napi::Object obj = DecodeObject(env, (const uint8_t *)vec_ptr, param.type);
                     arguments.Append(obj);
@@ -894,7 +900,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
 
             if (CheckValueTag(instance, value, type->ref.marker)) {
                 ptr = value.As<Napi::External<uint8_t>>().Data();
-            } else if (IsObject(value) && type->ref.type->primitive == PrimitiveKind::Record) {
+            } else if (IsObject(value) && (type->ref.type->primitive == PrimitiveKind::Record ||
+                                           type->ref.type->primitive == PrimitiveKind::Union)) {
                 Napi::Object obj = value.As<Napi::Object>();
 
                 ptr = AllocHeap(type->ref.type->size, 16);
@@ -910,7 +917,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
 
             out_reg->r0 = (uint32_t)ptr;
         } break;
-        case PrimitiveKind::Record: {
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
             if (RG_UNLIKELY(!IsObject(value))) {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                 return;

@@ -32,9 +32,6 @@ static const Size MaxParameters = 32;
 static const Size MaxOutParameters = 16;
 static const Size MaxTrampolines = 1024;
 
-extern const int TypeInfoMarker;
-extern const int CastMarker;
-
 enum class PrimitiveKind {
     Void,
     Bool,

@@ -23,6 +23,10 @@ struct InstanceData;
 struct TypeInfo;
 struct FunctionInfo;
 
+extern const int TypeInfoMarker;
+extern const int CastMarker;
+extern const int MagicUnionMarker;
+
 class MagicUnion: public Napi::ObjectWrap<MagicUnion> {
     const TypeInfo *type;
 

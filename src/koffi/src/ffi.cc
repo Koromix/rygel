@@ -48,10 +48,6 @@ namespace RG {
 
 SharedData shared;
 
-// Value does not matter, the tag system uses memory addresses
-const int TypeInfoMarker = 0xDEADBEEF;
-const int CastMarker = 0xDEADBEEF;
-
 static RG_THREAD_LOCAL CallData *exec_call;
 
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)

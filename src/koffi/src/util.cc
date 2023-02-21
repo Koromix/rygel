@@ -20,6 +20,11 @@
 
 namespace RG {
 
+// Value does not matter, the tag system uses memory addresses
+const int TypeInfoMarker = 0xDEADBEEF;
+const int CastMarker = 0xDEADBEEF;
+const int MagicUnionMarker = 0xDEADBEEF;
+
 Napi::Function MagicUnion::InitClass(Napi::Env env, const TypeInfo *type)
 {
     RG_ASSERT(type->primitive == PrimitiveKind::Union);
@@ -590,7 +595,8 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type,
                     member.type->dispose(env, member.type, ptr2);
                 }
             } break;
-            case PrimitiveKind::Record: {
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
                 Napi::Object obj2 = DecodeObject(env, src, member.type, realign);
                 obj.Set(member.name, obj2);
             } break;
@@ -777,7 +783,8 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 }
             });
         } break;
-        case PrimitiveKind::Record: {
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
             POP_ARRAY({
                 Napi::Object obj = DecodeObject(env, src, type->ref.type, realign);
                 array.Set(i, obj);
@@ -923,7 +930,8 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
                 }
             });
         } break;
-        case PrimitiveKind::Record: {
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
             POP_ARRAY({
                 Napi::Object obj = DecodeObject(env, src, ref, realign);
                 array.Set(i, obj);
@@ -1081,18 +1089,19 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, Size
                 return str16 ? Napi::String::New(env, str16) : env.Null();
             }
         } break;
-        case PrimitiveKind::Pointer: 
+        case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
             void *ptr2 = *(void **)ptr;
             return ptr2 ? Napi::External<void>::New(env, ptr2, [](Napi::Env, void *) {}) : env.Null();
         } break;
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
+            Napi::Object obj = DecodeObject(env, ptr, type);
+            return obj;
+        } break;
         case PrimitiveKind::Array: {
             Napi::Value array = DecodeArray(env, ptr, type);
             return array;
-        } break;
-        case PrimitiveKind::Record: {
-            Napi::Object obj = DecodeObject(env, ptr, type);
-            return obj;
         } break;
         case PrimitiveKind::Float32: {
             float f = *(float *)ptr;

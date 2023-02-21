@@ -494,7 +494,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
                 *(void **)dest = ptr;
             } break;
-            case PrimitiveKind::Record: {
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
                 if (RG_UNLIKELY(!IsObject(value))) {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                     return false;
@@ -728,7 +729,8 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
                 *(const void **)dest = ptr;
             });
         } break;
-        case PrimitiveKind::Record: {
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
             PUSH_ARRAY(IsObject(value), "object", {
                 Napi::Object obj2 = value.As<Napi::Object>();
                 if (!PushObject(obj2, ref, dest, realign))
@@ -941,7 +943,8 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     ptr = buffer.ptr;
                     directions = 1;
                 }
-            } else if (RG_LIKELY(type->ref.type->primitive == PrimitiveKind::Record)) {
+            } else if (RG_LIKELY(type->ref.type->primitive == PrimitiveKind::Record ||
+                                 type->ref.type->primitive == PrimitiveKind::Union)) {
                 if (RG_UNLIKELY(!type->ref.type->size)) {
                     ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to void *, use koffi.as()",
                                                 type->ref.type != instance->void_type ? "opaque" : "ambiguous");
