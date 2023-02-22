@@ -64,11 +64,21 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
 
 #include "abi_trampolines.inc"
 
+static inline void ExpandPair(const uint8_t raw[16], int size1, int size2, uint64_t out_regs[2])
+{
+    memcpy(out_regs + 0, raw, size1);
+    memcpy(out_regs + 1, raw + size1, size2);
+}
+
+static inline void CompactPair(const uint64_t regs[2], int size1, int size2, uint8_t out_raw[16])
+{
+    memcpy(out_raw, regs + 0, size1);
+    memcpy(out_raw + size1, regs + 1, size2);
+}
+
 static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
 {
-    gpr_avail = std::min(2, gpr_avail);
-    vec_avail = std::min(2, vec_avail);
-
+    // Too big, pass pointer to struct
     if (param->type->size > 16) {
         param->gpr_count = gpr_avail ? 1 : 0;
         param->use_memory = true;
@@ -76,36 +86,55 @@ static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
         return;
     }
 
-    int gpr_count = 0;
-    int vec_count = 0;
-    bool gpr_first = false;
+    gpr_avail = std::min(2, gpr_avail);
+    vec_avail = std::min(2, vec_avail);
 
-    AnalyseFlat(param->type, [&](const TypeInfo *type, int offset, int count) {
 #if defined(__riscv_float_abi_double)
-        bool fp = IsFloat(type) && (param->type->primitive != PrimitiveKind::Union);
+    if (param->type->primitive != PrimitiveKind::Union) {
+        int gpr_count = 0;
+        int vec_count = 0;
+        bool gpr_first = false;
+
+        AnalyseFlat(param->type, [&](const TypeInfo *type, int offset, int count) {
+            if (IsFloat(type)) {
+                vec_count += count;
+            } else {
+                gpr_count += count;
+                gpr_first |= !vec_count;
+            }
+
+            // We'll reset reg_size if the following conditions don't match,
+            // such as having more than two values.
+            param->reg_size[offset % 2] = (int8_t)type->size;
+        });
+
+        // Pass mixed float-integer structs in one GPR and one FP register
+        if (gpr_count == 1 && vec_count == 1 && gpr_avail && vec_avail) {
+            param->gpr_count = 1;
+            param->vec_count = 1;
+            param->gpr_first = gpr_first;
+
+            return;
+        }
+
+        // HFA rules
+        if (vec_count && !gpr_count && vec_count <= vec_avail) {
+            param->vec_count = vec_count;
+            return;
+        }
+    }
 #elif defined(__riscv_float_abi_soft)
-        bool fp = false;
+    // Use integer conventions
 #else
-        #error The RISC-V single-precision float ABI (LP64F) is not supported
+    #error The RISC-V single-precision float ABI (LP64F) is not supported
 #endif
 
-        if (fp) {
-            vec_count = (offset ? vec_count : 0) + count;
-        } else {
-            gpr_count = (offset ? gpr_count : 0) + count;
-            gpr_first |= !vec_count;
-        }
-    });
+    param->reg_size[0] = 8;
+    param->reg_size[1] = 8;
 
-    if (gpr_count == 1 && vec_count == 1 && gpr_avail && vec_avail) {
-        param->gpr_count = 1;
-        param->vec_count = 1;
-        param->gpr_first = gpr_first;
-    } else if (vec_count && !gpr_count && vec_count <= vec_avail) {
-        param->vec_count = vec_count;
-    } else if (gpr_avail) {
-        param->gpr_count = (param->type->size + 7) / 8;
-        param->gpr_first = true;
+    if (gpr_avail) {
+        param->gpr_count = std::min(gpr_avail, (param->type->size + 7) / 8);
+        param->gpr_first = param->gpr_count;
     }
 }
 
@@ -234,25 +263,34 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 if (!param.use_memory) {
                     RG_ASSERT(param.type->size <= 16);
 
-                    // Split float or mixed int-float structs to registers
-                    int realign = param.vec_count ? 8 : 0;
-
-                    uint64_t buf[2] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull };
-                    if (!PushObject(obj, param.type, (uint8_t *)buf)) // XXX realign
-                        return false;
-                    uint64_t *ptr = buf;
+                    uint64_t regs[2] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull };
+                    {
+                        uint8_t buf[16] = {};
+                        if (!PushObject(obj, param.type, buf))
+                            return false;
+                        ExpandPair(buf, param.reg_size[0], param.reg_size[1], regs);
+                    }
 
                     if (param.gpr_first) {
-                        *(gpr_ptr++) = *(ptr++);
-                        *((param.vec_count ? vec_ptr : gpr_ptr)++) = *(ptr++);
-                        gpr_ptr -= (param.gpr_count == 1);
+                        *(gpr_ptr++) = regs[0];
+                        if (param.gpr_count == 2) {
+                            *(gpr_ptr++) = regs[1];
+                        } else if (param.vec_count == 1) {
+                            *(vec_ptr++) = regs[1];
+                        }
+
+                        args_ptr = std::max(gpr_ptr, args_ptr);
                     } else if (param.vec_count) {
-                        *(vec_ptr++) = *(ptr++);
-                        *((param.gpr_count ? gpr_ptr : vec_ptr)++) = *(ptr++);
+                        *(vec_ptr++) = regs[0];
+                        if (param.vec_count == 2) {
+                            *(vec_ptr++) = regs[1];
+                        } else if (param.gpr_count == 1) {
+                            *(gpr_ptr++) = regs[1];
+                        }
                     } else {
                         RG_ASSERT(param.type->align <= 8);
 
-                        memcpy_safe(args_ptr, ptr, param.type->size);
+                        memcpy_safe(args_ptr, regs, param.type->size);
                         args_ptr += (param.type->size + 7) / 8;
                     }
                 } else {
@@ -439,14 +477,14 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (func->ret.vec_count) { // HFA
-                Napi::Object obj = DecodeObject(env, (const uint8_t *)&result.buf, func->ret.type); // XXX 8
+            if (return_ptr) {
+                Napi::Object obj = DecodeObject(env, return_ptr, func->ret.type);
                 return obj;
             } else {
-                const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
-                                                : (const uint8_t *)&result.buf;
+                uint8_t buf[16] = {};
+                CompactPair(&result.u64, func->ret.reg_size[0], func->ret.reg_size[1], buf);
 
-                Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
+                Napi::Object obj = DecodeObject(env, buf, func->ret.type);
                 return obj;
             }
         } break;
@@ -630,27 +668,26 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
                 if (!param.use_memory) {
-                    uint64_t buf[2] = {};
-                    uint64_t *ptr = buf;
+                    uint64_t regs[2] = {};
 
                     if (param.gpr_first) {
-                        *(ptr++) = *(gpr_ptr++);
-                        *(ptr++) = *((param.vec_count ? vec_ptr : gpr_ptr)++);
+                        regs[0] = *(gpr_ptr++);
+                        regs[1] = *((param.vec_count ? vec_ptr : gpr_ptr)++);
                         gpr_ptr -= (param.gpr_count == 1);
                     } else if (param.vec_count) {
-                        *(ptr++) = *(vec_ptr++);
-                        *(ptr++) = *((param.gpr_count ? gpr_ptr : vec_ptr)++);
+                        regs[0] = *(vec_ptr++);
+                        regs[1] = *((param.gpr_count ? gpr_ptr : vec_ptr)++);
                     } else {
                         RG_ASSERT(param.type->align <= 8);
 
-                        memcpy_safe(ptr, args_ptr, param.type->size);
+                        memcpy_safe(regs, args_ptr, param.type->size);
                         args_ptr += (param.type->size + 7) / 8;
                     }
 
-                    // Reassemble float or mixed int-float structs from registers
-                    int realign = param.vec_count ? 8 : 0;
+                    uint8_t buf[16] = {};
+                    CompactPair(regs, param.reg_size[0], param.reg_size[1], buf);
 
-                    Napi::Object obj = DecodeObject(env, (const uint8_t *)buf, param.type); // XXX realign
+                    Napi::Object obj = DecodeObject(env, buf, param.type);
                     arguments.Append(obj);
                 } else {
                     uint8_t *ptr = *(uint8_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
@@ -802,10 +839,28 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                 if (!PushObject(obj, type, return_ptr))
                     return;
                 out_reg->a0 = (uint64_t)return_ptr;
-            } else if (proto->ret.vec_count) { // HFA
-                PushObject(obj, type, (uint8_t *)&out_reg->fa0); // XXX 8
             } else {
-                PushObject(obj, type, (uint8_t *)&out_reg->a0);
+                uint64_t regs[2] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull };
+                {
+                    uint8_t buf[16] = {};
+                    if (!PushObject(obj, type, buf))
+                        return;
+                    ExpandPair(buf, proto->ret.reg_size[0], proto->ret.reg_size[1], regs);
+                }
+
+                if (proto->ret.gpr_first && !proto->ret.vec_count) {
+                    out_reg->a0 = regs[0];
+                    out_reg->a1 = regs[1];
+                } else if (proto->ret.gpr_first) {
+                    out_reg->a0 = regs[0];
+                    out_reg->fa0 = *(double *)&regs[1];
+                } else if (proto->ret.vec_count == 2) {
+                    out_reg->fa0 = *(double *)&regs[0];
+                    out_reg->fa1 = *(double *)&regs[1];
+                } else {
+                    out_reg->fa0 = *(double *)&regs[0];
+                    out_reg->a0 = regs[1];
+                }
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
