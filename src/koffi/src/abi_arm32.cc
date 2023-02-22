@@ -54,12 +54,32 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
 
 #include "abi_trampolines.inc"
 
-static inline int IsHFA(const TypeInfo *type)
+static int IsHFA(const TypeInfo *type)
 {
 #ifdef __ARM_PCS_VFP
-    return IsHFA(type, 1, 4);
+    bool float32 = false;
+    bool float64 = false;
+    int count = 0;
+
+    count = AnalyseFlat(type, [&](const TypeInfo *type, int, int) {
+        if (type->primitive == PrimitiveKind::Float32) {
+            float32 = true;
+        } else if (type->primitive == PrimitiveKind::Float64) {
+            float64 = true;
+        } else {
+            float32 = true;
+            float64 = true;
+        }
+    });
+
+    if (count < 1 || count > 4)
+        return 0;
+    if (float32 && float64)
+        return 0;
+
+    return count;
 #else
-    return false;
+    return 0;
 #endif
 }
 

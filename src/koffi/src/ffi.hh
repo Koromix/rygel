@@ -179,6 +179,7 @@ struct ParameterInfo {
     bool use_memory; // Only used for return value on ARM32
     int8_t gpr_count;
     int8_t vec_count;
+    int8_t vec_bytes; // ARM64
 #elif defined(__i386__) || defined(_M_IX86)
     bool trivial; // Only matters for return value
     bool fast;

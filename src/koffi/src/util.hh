@@ -177,8 +177,6 @@ static inline Napi::Value NewBigInt(Napi::Env env, uint64_t value)
 
 int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
 
-int IsHFA(const TypeInfo *type, int min, int max);
-
 void DumpMemory(const char *type, Span<const uint8_t> bytes);
 
 }

@@ -25,6 +25,11 @@
 
 namespace RG {
 
+struct HfaInfo {
+    int count;
+    bool float32;
+};
+
 struct X0X1Ret {
     uint64_t x0;
     uint64_t x1;
@@ -59,15 +64,61 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
 
 #include "abi_trampolines.inc"
 
-static inline int IsHFA(const TypeInfo *type)
+static HfaInfo IsHFA(const TypeInfo *type)
 {
-    return IsHFA(type, 1, 4);
+    bool float32 = false;
+    bool float64 = false;
+    int count = 0;
+
+    count = AnalyseFlat(type, [&](const TypeInfo *type, int, int) {
+        if (type->primitive == PrimitiveKind::Float32) {
+            float32 = true;
+        } else if (type->primitive == PrimitiveKind::Float64) {
+            float64 = true;
+        } else {
+            float32 = true;
+            float64 = true;
+        }
+    });
+
+    HfaInfo info = {};
+
+    if (count < 1 || count > 4)
+        return info;
+    if (float32 && float64)
+        return info;
+
+    info.count = count;
+    info.float32 = float32;
+
+    return info;
+}
+
+static inline void ExpandFloats(uint8_t *ptr, Size len, Size bytes)
+{
+    for (Size i = len - 1; i >= 0; i--) {
+        const uint8_t *src = ptr + i * bytes;
+        uint8_t *dest = ptr + i * 8;
+
+        memmove(dest, src, bytes);
+    }
+}
+
+static inline void CompactFloats(uint8_t *ptr, Size len, Size bytes)
+{
+    for (Size i = 0; i < len; i++) {
+        const uint8_t *src = ptr + i * 8;
+        uint8_t *dest = ptr + i * bytes;
+
+        memmove(dest, src, bytes);
+    }
 }
 
 bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
-    if (int hfa = IsHFA(func->ret.type); hfa) {
-        func->ret.vec_count = (int8_t)hfa;
+    if (HfaInfo hfa = IsHFA(func->ret.type); hfa.count) {
+        func->ret.vec_count = (int8_t)hfa.count;
+        func->ret.vec_bytes = hfa.float32 ? 4 : 8;
     } else if (func->ret.type->size <= 16) {
         func->ret.gpr_count = (int8_t)((func->ret.type->size + 7) / 8);
     } else {
@@ -117,7 +168,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                int hfa = IsHFA(param.type);
+                HfaInfo hfa = IsHFA(param.type);
 
 #ifdef _M_ARM64EC
                 if (func->variadic) {
@@ -138,7 +189,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
 #if defined(_WIN32)
                 if (param.variadic) {
-                    hfa = 0;
+                    hfa.count = 0;
                 }
 #elif defined(__APPLE__)
                 if (param.variadic) {
@@ -147,10 +198,11 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                 }
 #endif
 
-                if (hfa) {
-                    if (hfa <= vec_avail) {
-                        param.vec_count = (int8_t)hfa;
-                        vec_avail -= hfa;
+                if (hfa.count) {
+                    if (hfa.count <= vec_avail) {
+                        param.vec_count = (int8_t)hfa.count;
+                        param.vec_bytes = hfa.float32 ? 4 : 8;
+                        vec_avail -= hfa.count;
                     } else {
                         vec_avail = 0;
                     }
@@ -375,8 +427,12 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 Napi::Object obj = value.As<Napi::Object>();
 
                 if (param.vec_count) { // HFA
-                    if (!PushObject(obj, param.type, (uint8_t *)vec_ptr)) // XXX 8
+                    uint8_t *ptr = (uint8_t *)vec_ptr;
+
+                    if (!PushObject(obj, param.type, ptr))
                         return false;
+                    ExpandFloats(ptr, param.vec_count, param.vec_bytes);
+
                     vec_ptr += param.vec_count;
                 } else if (!param.use_memory) {
                     if (param.gpr_count) {
@@ -611,7 +667,11 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             if (func->ret.vec_count) { // HFA
-                Napi::Object obj = DecodeObject(env, (const uint8_t *)&result.buf, func->ret.type); // XXX 8
+                uint8_t *ptr = (uint8_t *)&result.buf;
+
+                CompactFloats(ptr, func->ret.vec_count, func->ret.vec_bytes);
+
+                Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
                 return obj;
             } else {
                 const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
@@ -980,7 +1040,11 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
                 if (param.vec_count) { // HFA
-                    Napi::Object obj = DecodeObject(env, (uint8_t *)vec_ptr, param.type); // XXX 8
+                    uint8_t *ptr = (uint8_t *)vec_ptr;
+
+                    CompactFloats(ptr, param.vec_count, param.vec_bytes);
+
+                    Napi::Object obj = DecodeObject(env, ptr, param.type);
                     arguments.Append(obj);
 
                     vec_ptr += param.vec_count;
@@ -1169,7 +1233,10 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                     return;
                 out_reg->x0 = (uint64_t)return_ptr;
             } else if (proto->ret.vec_count) { // HFA
-                PushObject(obj, type, (uint8_t *)&out_reg->d0); // XXX 8
+                uint8_t *ptr = (uint8_t *)&out_reg->d0;
+
+                ExpandFloats(ptr, proto->ret.vec_count, proto->ret.vec_bytes);
+                PushObject(obj, type, ptr);
             } else {
                 PushObject(obj, type, (uint8_t *)&out_reg->x0);
             }
