@@ -318,7 +318,7 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
     return (Size)len;
 }
 
-bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin, int16_t realign)
+bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin)
 {
     RG_ASSERT(IsObject(obj));
     RG_ASSERT(type->primitive == PrimitiveKind::Record ||
@@ -339,8 +339,6 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
         // Fast path: encoded value already exists, just copy!
         if (raw) {
-            RG_ASSERT(!realign); // XXX: Probably rare, but investigate...
-
             memcpy(origin, raw, type->size);
             return true;
         }
@@ -365,8 +363,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             return false;
         }
 
-        Size offset = realign ? (i * realign) : member.offset;
-        uint8_t *dest = origin + offset;
+        uint8_t *dest = origin + member.offset;
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -535,7 +532,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 }
 
                 Napi::Object obj2 = value.As<Napi::Object>();
-                if (!PushObject(obj2, member.type, dest, realign))
+                if (!PushObject(obj2, member.type, dest))
                     return false;
             } break;
             case PrimitiveKind::Array: {
@@ -543,14 +540,14 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     Napi::Array array = value.As<Napi::Array>();
                     Size len = (Size)member.type->size / member.type->ref.type->size;
 
-                    if (!PushNormalArray(array, len, member.type, dest, realign))
+                    if (!PushNormalArray(array, len, member.type, dest))
                         return false;
                 } else if (IsRawBuffer(value)) {
                     Span<const uint8_t> buffer = GetRawBuffer(value);
 
-                    if (!PushBuffer(buffer, member.type->size, member.type, dest, realign))
+                    if (!PushBuffer(buffer, member.type->size, member.type, dest))
                         return false;
-                } else if (value.IsString() && !realign) {
+                } else if (value.IsString()) {
                     if (!PushStringArray(value, member.type, dest))
                         return false;
                 } else {
@@ -605,7 +602,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     return true;
 }
 
-bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type, uint8_t *origin, int16_t realign)
+bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type, uint8_t *origin)
 {
     RG_ASSERT(array.IsArray());
 
@@ -623,9 +620,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
             for (Size i = 0; i < len; i++) { \
                 Napi::Value value = array[(uint32_t)i]; \
                  \
-                int16_t align = std::max(ref->align, realign); \
-                 \
-                offset = AlignLen(offset, align); \
+                offset = AlignLen(offset, ref->align); \
                 uint8_t *dest = origin + offset; \
                  \
                 if (RG_UNLIKELY(!(Check))) { \
@@ -766,7 +761,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
         case PrimitiveKind::Union: {
             PUSH_ARRAY(IsObject(value), "object", {
                 Napi::Object obj2 = value.As<Napi::Object>();
-                if (!PushObject(obj2, ref, dest, realign))
+                if (!PushObject(obj2, ref, dest))
                     return false;
             });
         } break;
@@ -774,8 +769,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
             for (Size i = 0; i < len; i++) {
                 Napi::Value value = array[(uint32_t)i];
 
-                int16_t align = std::max(ref->align, realign);
-                offset = AlignLen(offset, align);
+                offset = AlignLen(offset, ref->align);
 
                 uint8_t *dest = origin + offset;
 
@@ -783,14 +777,14 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
                     Napi::Array array2 = value.As<Napi::Array>();
                     Size len2 = (Size)ref->size / ref->ref.type->size;
 
-                    if (!PushNormalArray(array2, len2, ref, dest, realign))
+                    if (!PushNormalArray(array2, len2, ref, dest))
                         return false;
                 } else if (IsRawBuffer(value)) {
                     Span<const uint8_t> buffer = GetRawBuffer(value);
 
-                    if (!PushBuffer(buffer, ref->size, ref, dest, realign))
+                    if (!PushBuffer(buffer, ref->size, ref, dest))
                         return false;
-                } else if (value.IsString() && !realign) {
+                } else if (value.IsString()) {
                     if (!PushStringArray(value, ref, dest))
                         return false;
                 } else {
@@ -817,8 +811,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
             for (Size i = 0; i < len; i++) {
                 Napi::Value value = array[(uint32_t)i];
 
-                int16_t align = std::max(ref->align, realign);
-                offset = AlignLen(offset, align);
+                offset = AlignLen(offset, ref->align);
 
                 uint8_t *dest = origin + offset;
 
@@ -854,29 +847,39 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
     return true;
 }
 
-bool CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin, int16_t realign)
+bool CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin)
 {
     if (RG_UNLIKELY(buffer.len != size)) {
         ThrowError<Napi::Error>(env, "Expected array or buffer of size %1, got %2", size, buffer.len);
         return false;
     }
 
-    if (realign) {
-        Size offset = 0;
-        Size step = type->ref.type->size;
+    // Go fast yeaaaah :)
+    memcpy_safe(origin, buffer.ptr, (size_t)buffer.len);
 
-        for (Size i = 0; i < buffer.len; i += step) {
-            offset = AlignLen(offset, realign);
+#define SWAP(CType) \
+        do { \
+            CType *data = (CType *)origin; \
+            Size len = buffer.len / RG_SIZE(CType); \
+             \
+            for (Size i = 0; i < len; i++) { \
+                data[i] = ReverseBytes(data[i]); \
+            } \
+        } while (false)
 
-            uint8_t *dest = origin + offset;
-            const uint8_t *src = buffer.ptr + i;
+    if (type->primitive == PrimitiveKind::Array || type->primitive == PrimitiveKind::Pointer) {
+        const TypeInfo *ref = type->ref.type;
 
-            memcpy(dest, src, step);
-            offset += step;
+        if (ref->primitive == PrimitiveKind::Int16S || ref->primitive == PrimitiveKind::UInt16S) {
+            SWAP(uint16_t);
+        } else if (ref->primitive == PrimitiveKind::Int32S || ref->primitive == PrimitiveKind::UInt32S) {
+            SWAP(uint32_t);
+        } else if (ref->primitive == PrimitiveKind::Int64S || ref->primitive == PrimitiveKind::UInt64S) {
+            SWAP(uint64_t);
         }
-    } else {
-        memcpy_safe(origin, buffer.ptr, (size_t)buffer.len);
     }
+
+#undef SWAP
 
     return true;
 }

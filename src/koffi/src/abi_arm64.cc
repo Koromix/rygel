@@ -375,7 +375,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 Napi::Object obj = value.As<Napi::Object>();
 
                 if (param.vec_count) { // HFA
-                    if (!PushObject(obj, param.type, (uint8_t *)vec_ptr, 8))
+                    if (!PushObject(obj, param.type, (uint8_t *)vec_ptr)) // XXX 8
                         return false;
                     vec_ptr += param.vec_count;
                 } else if (!param.use_memory) {
@@ -611,7 +611,7 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             if (func->ret.vec_count) { // HFA
-                Napi::Object obj = DecodeObject(env, (const uint8_t *)&result.buf, func->ret.type, 8);
+                Napi::Object obj = DecodeObject(env, (const uint8_t *)&result.buf, func->ret.type); // XXX 8
                 return obj;
             } else {
                 const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
@@ -980,7 +980,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
                 if (param.vec_count) { // HFA
-                    Napi::Object obj = DecodeObject(env, (uint8_t *)vec_ptr, param.type, 8);
+                    Napi::Object obj = DecodeObject(env, (uint8_t *)vec_ptr, param.type); // XXX 8
                     arguments.Append(obj);
 
                     vec_ptr += param.vec_count;
@@ -1169,7 +1169,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                     return;
                 out_reg->x0 = (uint64_t)return_ptr;
             } else if (proto->ret.vec_count) { // HFA
-                PushObject(obj, type, (uint8_t *)&out_reg->d0, 8);
+                PushObject(obj, type, (uint8_t *)&out_reg->d0); // XXX 8
             } else {
                 PushObject(obj, type, (uint8_t *)&out_reg->x0);
             }

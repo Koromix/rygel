@@ -930,8 +930,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                 if (!PushObject(obj, type, return_ptr))
                     return;
                 out_reg->r0 = (uint32_t)return_ptr;
-            } else if (proto->ret.vec_count) { // HFA
-                PushObject(obj, type, (uint8_t *)&out_reg->d0, 8);
+            } else if (proto->ret.vec_count) {
+                PushObject(obj, type, (uint8_t *)&out_reg->d0);
             } else {
                 PushObject(obj, type, (uint8_t *)&out_reg->r0);
             }

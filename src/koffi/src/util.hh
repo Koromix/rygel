@@ -146,11 +146,11 @@ T GetNumber(Napi::Value value)
     RG_UNREACHABLE();
 }
 
-Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
-void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
-Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign = 0);
-void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
-void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref, int16_t realign = 0);
+Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
+void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type);
+Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
+void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref);
+void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref);
 
 Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, Size len = -1);
 Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, Size len = -1);

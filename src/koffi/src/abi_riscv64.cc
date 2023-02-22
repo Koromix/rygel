@@ -238,7 +238,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     int realign = param.vec_count ? 8 : 0;
 
                     uint64_t buf[2] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull };
-                    if (!PushObject(obj, param.type, (uint8_t *)buf, realign))
+                    if (!PushObject(obj, param.type, (uint8_t *)buf)) // XXX realign
                         return false;
                     uint64_t *ptr = buf;
 
@@ -440,7 +440,7 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             if (func->ret.vec_count) { // HFA
-                Napi::Object obj = DecodeObject(env, (const uint8_t *)&result.buf, func->ret.type, 8);
+                Napi::Object obj = DecodeObject(env, (const uint8_t *)&result.buf, func->ret.type); // XXX 8
                 return obj;
             } else {
                 const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
@@ -650,7 +650,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                     // Reassemble float or mixed int-float structs from registers
                     int realign = param.vec_count ? 8 : 0;
 
-                    Napi::Object obj = DecodeObject(env, (const uint8_t *)buf, param.type, realign);
+                    Napi::Object obj = DecodeObject(env, (const uint8_t *)buf, param.type); // XXX realign
                     arguments.Append(obj);
                 } else {
                     uint8_t *ptr = *(uint8_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
@@ -803,7 +803,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                     return;
                 out_reg->a0 = (uint64_t)return_ptr;
             } else if (proto->ret.vec_count) { // HFA
-                PushObject(obj, type, (uint8_t *)&out_reg->fa0, 8);
+                PushObject(obj, type, (uint8_t *)&out_reg->fa0); // XXX 8
             } else {
                 PushObject(obj, type, (uint8_t *)&out_reg->a0);
             }

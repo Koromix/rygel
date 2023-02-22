@@ -479,7 +479,7 @@ int GetTypedArrayType(const TypeInfo *type)
     RG_UNREACHABLE();
 }
 
-Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign)
+Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
 {
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
@@ -495,11 +495,11 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
     }
 
     Napi::Object obj = Napi::Object::New(env);
-    DecodeObject(obj, origin, type, realign);
+    DecodeObject(obj, origin, type);
     return obj;
 }
 
-void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type, int16_t realign)
+void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
 {
     Napi::Env env = obj.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -509,8 +509,7 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type,
     for (Size i = 0; i < type->members.len; i++) {
         const RecordMember &member = type->members[i];
 
-        Size offset = realign ? (i * realign) : member.offset;
-        const uint8_t *src = origin + offset;
+        const uint8_t *src = origin + member.offset;
 
         switch (member.type->primitive) {
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
@@ -618,11 +617,11 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type,
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                Napi::Object obj2 = DecodeObject(env, src, member.type, realign);
+                Napi::Object obj2 = DecodeObject(env, src, member.type);
                 obj.Set(member.name, obj2);
             } break;
             case PrimitiveKind::Array: {
-                Napi::Value value = DecodeArray(env, src, member.type, realign);
+                Napi::Value value = DecodeArray(env, src, member.type);
                 obj.Set(member.name, value);
             } break;
             case PrimitiveKind::Float32: {
@@ -650,7 +649,7 @@ static Size WideStringLength(const char16_t *str16, Size max)
     return len;
 }
 
-Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int16_t realign)
+Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
@@ -664,8 +663,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
             Napi::Array array = Napi::Array::New(env); \
              \
             for (uint32_t i = 0; i < len; i++) { \
-                int16_t align = std::max(realign, type->ref.type->align); \
-                offset = AlignLen(offset, align); \
+                offset = AlignLen(offset, type->ref.type->align); \
                  \
                 const uint8_t *src = origin + offset; \
                  \
@@ -687,7 +685,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
                 Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
                  \
-                DecodeBuffer(buffer, origin, type->ref.type, realign); \
+                DecodeBuffer(buffer, origin, type->ref.type); \
                  \
                 return array; \
             } \
@@ -704,7 +702,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
                 Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
                  \
-                DecodeBuffer(buffer, origin, type->ref.type, realign); \
+                DecodeBuffer(buffer, origin, type->ref.type); \
                  \
                 return array; \
             } \
@@ -721,8 +719,6 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         } break;
         case PrimitiveKind::Int8: {
             if (type->hint == ArrayHint::String) {
-                RG_ASSERT(!realign);
-
                 const char *ptr = (const char *)origin;
                 size_t count = strnlen(ptr, (size_t)len);
 
@@ -735,8 +731,6 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         case PrimitiveKind::UInt8: { POP_NUMBER_ARRAY(Uint8Array, uint8_t); } break;
         case PrimitiveKind::Int16: {
             if (type->hint == ArrayHint::String) {
-                RG_ASSERT(!realign);
-
                 const char16_t *ptr = (const char16_t *)origin;
                 Size count = WideStringLength(ptr, len);
 
@@ -807,13 +801,13 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             POP_ARRAY({
-                Napi::Object obj = DecodeObject(env, src, type->ref.type, realign);
+                Napi::Object obj = DecodeObject(env, src, type->ref.type);
                 array.Set(i, obj);
             });
         } break;
         case PrimitiveKind::Array: {
             POP_ARRAY({
-                Napi::Value value = DecodeArray(env, src, type->ref.type, realign);
+                Napi::Value value = DecodeArray(env, src, type->ref.type);
                 array.Set(i, value);
             });
         } break;
@@ -830,7 +824,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
     RG_UNREACHABLE();
 }
 
-void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref, int16_t realign)
+void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref)
 {
     Napi::Env env = array.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -843,8 +837,7 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
 #define POP_ARRAY(SetCode) \
         do { \
             for (uint32_t i = 0; i < len; i++) { \
-                int16_t align = std::max(realign, ref->align); \
-                offset = AlignLen(offset, align); \
+                offset = AlignLen(offset, ref->align); \
                  \
                 const uint8_t *src = origin + offset; \
                  \
@@ -954,13 +947,13 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             POP_ARRAY({
-                Napi::Object obj = DecodeObject(env, src, ref, realign);
+                Napi::Object obj = DecodeObject(env, src, ref);
                 array.Set(i, obj);
             });
         } break;
         case PrimitiveKind::Array: {
             POP_ARRAY({
-                Napi::Value value = DecodeArray(env, src, ref, realign);
+                Napi::Value value = DecodeArray(env, src, ref);
                 array.Set(i, value);
             });
         } break;
@@ -975,24 +968,10 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
 #undef POP_ARRAY
 }
 
-void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref, int16_t realign)
+void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref)
 {
-    if (realign) {
-        Size offset = 0;
-        Size step = ref->size;
-
-        for (Size i = 0; i < buffer.len; i += step) {
-            offset = AlignLen(offset, realign);
-
-            uint8_t *dest = buffer.ptr + i;
-            const uint8_t *src = origin + offset;
-
-            memcpy(dest, src, step);
-            offset += step;
-        }
-    } else {
-        memcpy_safe(buffer.ptr, origin, (size_t)buffer.len);
-    }
+    // Go fast brrrrr!
+    memcpy_safe(buffer.ptr, origin, (size_t)buffer.len);
 
 #define SWAP(CType) \
         do { \
@@ -1174,23 +1153,6 @@ static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionR
 int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
 {
     return AnalyseFlatRec(type, 0, 1, func);
-}
-
-int IsHFA(const TypeInfo *type, int min, int max)
-{
-    uint32_t primitives = 0;
-    int count = 0;
-
-    count = AnalyseFlat(type, [&](const TypeInfo *type, int, int) {
-        if (IsFloat(type)) {
-            primitives |= 1u << (int)type->primitive;
-        } else {
-            primitives = UINT32_MAX;
-        }
-    });
-
-    bool hfa = (count >= min && count <= max && PopCount(primitives) == 1);
-    return hfa ? count : 0;
 }
 
 void DumpMemory(const char *type, Span<const uint8_t> bytes)
