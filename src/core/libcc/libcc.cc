@@ -4048,8 +4048,8 @@ static void DefaultSignalHandler(int signal)
 
 RG_INIT(SetupDefaultHandlers)
 {
-    int ret = setpgid(0, 0);
-    RG_ASSERT(!ret);
+    // Best effort
+    setpgid(0, 0);
 
     SetSignalHandler(SIGINT, DefaultSignalHandler);
     SetSignalHandler(SIGTERM, DefaultSignalHandler);
