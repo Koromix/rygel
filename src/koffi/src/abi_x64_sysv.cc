@@ -339,21 +339,20 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     uint64_t buf[2] = {};
                     if (!PushObject(obj, param.type, (uint8_t *)buf))
                         return false;
-                    uint64_t *ptr = buf;
 
                     if (param.gpr_first) {
-                        *(gpr_ptr++) = *(ptr++);
+                        *(gpr_ptr++) = buf[0];
                         if (param.gpr_count == 2) {
-                            *(gpr_ptr++) = *(ptr++);
+                            *(gpr_ptr++) = buf[1];
                         } else if (param.xmm_count == 1) {
-                            *(xmm_ptr++) = *(ptr++);
+                            *(xmm_ptr++) = buf[1];
                         }
                     } else {
-                        *(xmm_ptr++) = *(ptr++);
+                        *(xmm_ptr++) = buf[0];
                         if (param.xmm_count == 2) {
-                            *(xmm_ptr++) = *(ptr++);
+                            *(xmm_ptr++) = buf[1];
                         } else if (param.gpr_count == 1) {
-                            *(gpr_ptr++) = *(ptr++);
+                            *(gpr_ptr++) = buf[1];
                         }
                     }
                 } else if (param.use_memory) {
@@ -706,21 +705,20 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                     RG_ASSERT(param.type->size <= 16);
 
                     uint64_t buf[2] = {};
-                    uint64_t *ptr = buf;
 
                     if (param.gpr_first) {
-                        *(ptr++) = *(gpr_ptr++);
+                        buf[0] = *(gpr_ptr++);
                         if (param.gpr_count == 2) {
-                            *(ptr++) = *(gpr_ptr++);
+                            buf[1] = *(gpr_ptr++);
                         } else if (param.xmm_count == 1) {
-                            *(ptr++) = *(xmm_ptr++);
+                            buf[1] = *(xmm_ptr++);
                         }
                     } else {
-                        *(ptr++) = *(xmm_ptr++);
+                        buf[0] = *(xmm_ptr++);
                         if (param.xmm_count == 2) {
-                            *(ptr++) = *(xmm_ptr++);
+                            buf[1] = *(xmm_ptr++);
                         } else if (param.gpr_count == 1) {
-                            *(ptr++) = *(gpr_ptr++);
+                            buf[1] = *(gpr_ptr++);
                         }
                     }
 
