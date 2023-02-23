@@ -22,6 +22,7 @@ namespace RG {
 
 struct RelayContext {
     CallData *call;
+    bool dispose_call;
 
     Size idx;
     uint8_t *own_sp;
@@ -45,6 +46,14 @@ CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
 }
 
 CallData::~CallData()
+{
+    if (!instance)
+        return;
+
+    Dispose();
+}
+
+void CallData::Dispose()
 {
     for (const OutArgument &out: out_arguments) {
         napi_delete_reference(env, out.ref);
@@ -71,14 +80,18 @@ CallData::~CallData()
 
     instance->temporaries -= mem->temporary;
 
-    if (!--mem->depth && mem->temporary) {
-        delete mem;
+    if (!--mem->depth) {
+        mem->busy = false;
+
+        if (mem->temporary) {
+            delete mem;
+        }
     }
 
     instance = nullptr;
 }
 
-void CallData::RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+void CallData::RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool dispose_call, BackRegisters *out_reg)
 {
     if (std::this_thread::get_id() != instance->main_thread_id) {
         // JS/V8 is single-threaded, and runs on main_thread_id. Forward the call
@@ -87,6 +100,7 @@ void CallData::RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegi
         RelayContext ctx;
 
         ctx.call = this;
+        ctx.dispose_call = dispose_call;
         ctx.idx = idx;
         ctx.own_sp = own_sp;
         ctx.caller_sp = caller_sp;
@@ -100,6 +114,7 @@ void CallData::RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegi
             ctx.cv.wait(lock);
         }
     } else {
+        RG_ASSERT(!dispose_call);
         Relay(idx, own_sp, caller_sp, false, out_reg);
     }
 }
@@ -109,6 +124,10 @@ void CallData::RelayAsync(napi_env, napi_value, void *, void *udata)
     RelayContext *ctx = (RelayContext *)udata;
 
     ctx->call->Relay(ctx->idx, ctx->own_sp, ctx->caller_sp, true, ctx->out_reg);
+
+    if (ctx->dispose_call) {
+        ctx->call->Dispose();
+    }
 
     // We're done!
     std::lock_guard<std::mutex> lock(ctx->mutex);

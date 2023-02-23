@@ -237,8 +237,9 @@ struct InstanceMemory {
 
     uint16_t generation; // Can wrap without risk
 
-    int16_t depth;
+    std::atomic_bool busy;
     bool temporary;
+    int depth;
 };
 
 struct InstanceData {

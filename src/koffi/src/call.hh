@@ -69,6 +69,8 @@ public:
     CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem);
     ~CallData();
 
+    void Dispose();
+
 #ifdef UNITY_BUILD
     #ifdef _MSC_VER
         #define INLINE_IF_UNITY __forceinline
@@ -86,7 +88,7 @@ public:
 #undef INLINE_IF_UNITY
 
     void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, BackRegisters *out_reg);
-    void RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg);
+    void RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool dispose_call, BackRegisters *out_reg);
     static void RelayAsync(napi_env, napi_value, void *, void *udata);
 
     void DumpForward(const FunctionInfo *func) const;

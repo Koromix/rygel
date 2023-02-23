@@ -1127,11 +1127,15 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     for (Size i = 1; i < instance->memories.len; i++) {
         InstanceMemory *mem = instance->memories[i];
 
-        if (!mem->depth)
+        if (!mem->busy) {
+            mem->busy = true;
             return mem;
+        }
     }
 
-    if (RG_UNLIKELY(instance->temporaries >= instance->config.max_temporaries))
+    bool temporary = (instance->memories.len > instance->config.resident_async_pools);
+
+    if (RG_UNLIKELY(temporary && instance->temporaries >= instance->config.max_temporaries))
         return nullptr;
 
     InstanceMemory *mem = new InstanceMemory();
@@ -1187,15 +1191,15 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 #endif
     RG_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
 
-    mem->depth = 0;
-
-    if (instance->memories.len <= instance->config.resident_async_pools) {
-        instance->memories.Append(mem);
-        mem->temporary = false;
-    } else {
+    if (temporary) {
         instance->temporaries++;
         mem->temporary = true;
+    } else {
+        instance->memories.Append(mem);
+        mem->temporary = false;
     }
+
+    mem->busy = true;
 
     mem_guard.Disable();
     return mem;
@@ -1983,7 +1987,7 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
     if (RG_LIKELY(exec_call)) {
-        exec_call->RelaySafe(idx, own_sp, caller_sp, out_reg);
+        exec_call->RelaySafe(idx, own_sp, caller_sp, false, out_reg);
     } else {
         // This happens if the callback pointer is called from a different thread
         // than the one that runs the FFI call (sync or async).
@@ -2003,8 +2007,9 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
         RG_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
         trampoline->generation = -1;
 
+        // We set dispose_call to true so that the main thread will dispose of CallData itself
         CallData call(env, instance, mem);
-        call.RelaySafe(idx, own_sp, caller_sp, out_reg);
+        call.RelaySafe(idx, own_sp, caller_sp, true, out_reg);
     }
 }
 
