@@ -65,6 +65,7 @@ async function main() {
             case 'publish': { command = publish; } break;
             case 'prepare': { command = prepare; } break;
             case 'test': { command = test; } break;
+            case 'debug': { command = debug; } break;
             case 'start': { command = start; } break;
             case 'stop': { command = stop; } break;
             case 'info': { command = info; } break;
@@ -204,6 +205,7 @@ function print_usage() {
 
 Commands:
     test                         Run the machines and perform the tests (default)
+    debug                        Run the machines and perform the tests, with debug build
     pack                         Create NPM package with prebuilt Koffi binaries
     publish                      Publish NPM package with prebuilt Koffi binaries
     prepare                      Prepare distribution-ready NPM package directory
@@ -595,7 +597,12 @@ async function upload(snapshot_dir, func) {
     return success;
 }
 
-async function test() {
+async function debug() {
+    let success = await test(true);
+    return success;
+}
+
+async function test(debug = false) {
     let snapshot_dir = snapshot();
 
     let success = true;
@@ -611,7 +618,7 @@ async function test() {
         await Promise.all(Object.keys(machine.tests).map(async suite => {
             let test = machine.tests[suite];
             let commands = {
-                ...test.build,
+                'Build': test.build + (debug ? ' --debug' : ''),
                 ...test.commands
             };
 
@@ -645,7 +652,7 @@ async function test() {
 
                     success = false;
 
-                    if (name in test.build)
+                    if (name == 'Build')
                         break;
                 }
             }

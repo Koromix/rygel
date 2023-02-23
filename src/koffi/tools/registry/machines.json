@@ -30,9 +30,7 @@
         "tests": {
             "Linux ARM32": {
                 "directory": "/home/debian/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test"
-                },
+                "build": "node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
@@ -75,9 +73,7 @@
         "tests": {
             "Linux ARM64": {
                 "directory": "/home/debian/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test"
-                },
+                "build": "node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
@@ -120,9 +116,7 @@
         "tests": {
             "Linux i386": {
                 "directory": "/home/debian/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test"
-                },
+                "build": "node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
@@ -165,9 +159,7 @@
         "tests": {
             "Linux x64": {
                 "directory": "/home/debian/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test --prefer-clang"
-                },
+                "build": "node ../cnoke/cnoke.js -d test --prefer-clang",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
@@ -222,9 +214,7 @@
         "tests": {
             "Windows i386": {
                 "directory": "C:/Users/windows/Desktop/luigi_ia32",
-                "build": {
-                    "Build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -d test"
-                },
+                "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
                     "Test Async": "C:\\Node32\\node32.cmd node test/async.js",
@@ -240,9 +230,7 @@
 
             "Windows x64": {
                 "directory": "C:/Users/windows/Desktop/luigi_x64",
-                "build": {
-                    "Build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -d test"
-                },
+                "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
                     "Test Async": "C:\\Node64\\node64.cmd node test/async.js",
@@ -289,9 +277,7 @@
         "tests": {
             "FreeBSD x64": {
                 "directory": "/home/freebsd/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test"
-                },
+                "build": "node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
@@ -334,9 +320,7 @@
         "tests": {
             "FreeBSD i386": {
                 "directory": "/home/freebsd/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test"
-                },
+                "build": "node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
@@ -379,9 +363,7 @@
         "tests": {
             "FreeBSD ARM64": {
                 "directory": "/home/freebsd/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test"
-                },
+                "build": "node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
@@ -430,9 +412,7 @@
         "tests": {
             "macOS x64": {
                 "directory": "/Users/macos/luigi",
-                "build": {
-                    "Build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -d test"
-                },
+                "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js",
                     "Test Async": "PATH=/usr/local/bin:/usr/bin:/bin node test/async.js",
@@ -474,9 +454,7 @@
         "tests": {
             "OpenBSD x64": {
                 "directory": "/home/openbsd/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test"
-                },
+                "build": "node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
@@ -519,9 +497,7 @@
         "tests": {
             "OpenBSD i386": {
                 "directory": "/home/openbsd/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test"
-                },
+                "build": "node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
@@ -564,9 +540,7 @@
         "tests": {
             "Linux RISC-V 64": {
                 "directory": "/home/debian/luigi",
-                "build": {
-                    "Build": "node ../cnoke/cnoke.js -d test"
-                },
+                "build": "node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Async": "node test/async.js",
