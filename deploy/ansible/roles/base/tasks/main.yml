@@ -79,6 +79,14 @@
     state: present
   become: yes
 
+- name: Set root password for emergency console
+  user:
+    name: root
+    state: present
+    password: '{{ root_password | string | password_hash(salt = (root_salt | string)) }}'
+  when: 'root_password is defined'
+  become: yes
+
 - name: Reload sshd to apply new settings
   service:
     name: sshd
