@@ -56,12 +56,11 @@
     mode: '0644'
   become: yes
 
-- name: Bind SSH to public address
+- name: Avoid SSH IP binding (too fragile with VPN)
   lineinfile:
     dest: /etc/ssh/sshd_config
     regexp: '^ListenAddress'
-    line: 'ListenAddress {{ ssh_bind | default("") }}'
-    state: '{{ "present" if ssh_bind is defined else "absent" }}'
+    state: absent
   become: yes
 
 - name: Set public SSH port
@@ -105,21 +104,18 @@
   when: ovh_ipv6_config.changed
   become: yes
 
+- name: Disable ufw logging
+  ufw:
+    logging: off
+  become: yes
+
 - name: Configure ufw rules
   ufw:
     rule: '{{ item.rule }}'
+    to: '{{ item.to | default("any") }}'
     port: '{{ item.port }}'
     proto: '{{ item.proto }}'
-  loop:
-    - rule: limit
-      port: 22
-      proto: tcp
-    - rule: allow
-      port: 80
-      proto: tcp
-    - rule: allow
-      port: 443
-      proto: tcp
+  loop: '{{ ufw_rules }}'
   become: yes
 
 - name: Configure ufw defaults

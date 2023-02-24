@@ -13,8 +13,18 @@
 
 weekly_upgrade: yes
 
-# ssh_bind:
 ssh_port: 22
+
+ufw_rules:
+  - rule: allow
+    port: 22
+    proto: tcp
+  - rule: allow
+    port: 80
+    proto: tcp
+  - rule: allow
+    port: 443
+    proto: tcp
 
 # Use these variables to set up IPv6 on OVH VPS
 # Documentation here: https://docs.ovh.com/fr/vps/configurer-ipv6/

@@ -17,8 +17,21 @@ ansible_user: ansible
 ansible_ssh_private_key_file: ~/.ssh/pknet/prod
 ansible_python_interpreter: /usr/bin/python3
 
-ssh_bind: '{{ ansible_host }}'
-
 ovh_ipv6_addr: 2001:41d0:304:200::11e8
 ovh_ipv6_netmask: 128
 ovh_ipv6_gateway: 2001:41d0:304:200::1
+
+ufw_rules:
+  - rule: allow
+    to: '{{ ansible_host }}'
+    port: 22
+    proto: tcp
+  - rule: allow
+    port: 80
+    proto: tcp
+  - rule: allow
+    port: 443
+    proto: tcp
+  - rule: allow
+    port: 9993
+    proto: udp
