@@ -4,6 +4,22 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.5
+
+**Main fixes:**
+
+- Fix rare random crashes with async callbacks
+- Fix some bugs with RISC-V 64 ABI
+
+**Other changes:**
+
+- Expose array type hint in `koffi.introspect()`
+- Add missing `koffi.array()` export in TS definition
+- Make KoffiFunction more flexible in TS definition ([@insraq](https://github.com/insraq))
+- Add a KoffiFunc<T> helper type in TS typing ([@insraq](https://github.com/insraq))
+- Mark optional properties in TS TypeInfo class
+- Minor performance improvements
+
 #### Koffi 2.3.4
 
 **Main fixes:**
