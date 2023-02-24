@@ -18,13 +18,17 @@ declare module 'koffi' {
     interface IKoffiPointerCast { __brand: 'IKoffiPointerCast' }
     interface IKoffiRegisteredCallback { __brand: 'IKoffiRegisteredCallback' }
 
-    type ArrayHint = "Array" | "Typed" | "String";
+    type PrimitiveKind = 'Void' | 'Bool' | 'Int8' | 'UInt8' | 'Int16' | 'Int16S' | 'UInt16' | 'UInt16S' |
+                         'Int32' | 'Int32S' | 'UInt32' | 'UInt32S' | 'Int64' | 'Int64S' | 'UInt64' | 'UInt64S' |
+                         'String' | 'String16' | 'Pointer' | 'Record' | 'Union' | 'Array' | 'Float32' | 'Float64' |
+                         'Prototype' | 'Callback';
+    type ArrayHint = 'Array' | 'Typed' | 'String';
 
     type TypeSpec = string | IKoffiCType;
     type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
     type TypeInfo = {
         name: string;
-        primitive: string;
+        primitive: PrimitiveKind;
         size: number;
         alignment: number;
         disposable: boolean;
