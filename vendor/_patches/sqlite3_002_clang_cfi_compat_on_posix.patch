@@ -1,8 +1,8 @@
 diff --git a/vendor/sqlite3/sqlite3.c b/vendor/sqlite3/sqlite3.c
-index fba4945eb..e8ed83b8f 100644
+index b47891c38..af3eeb7f5 100644
 --- a/vendor/sqlite3/sqlite3.c
 +++ b/vendor/sqlite3/sqlite3.c
-@@ -34340,19 +34340,19 @@ static struct unix_syscall {
+@@ -37337,19 +37337,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {
    { "open",         (sqlite3_syscall_ptr)posixOpen,  0  },
@@ -27,7 +27,7 @@ index fba4945eb..e8ed83b8f 100644
  
  /*
  ** The DJGPP compiler environment looks mostly like Unix, but it
-@@ -34365,139 +34365,151 @@ static struct unix_syscall {
+@@ -37362,145 +37362,158 @@ static struct unix_syscall {
  #define osFstat(a,b,c)    0
  #else
    { "fstat",        (sqlite3_syscall_ptr)fstat,      0  },
@@ -58,10 +58,10 @@ index fba4945eb..e8ed83b8f 100644
  
  #if defined(USE_PREAD64)
    { "pread64",      (sqlite3_syscall_ptr)pread64,    0  },
-+#define osPread64 ((ssize_t(*)(int,void*,size_t,off64_t))0)
++#define osPread64   pread64
  #else
    { "pread64",      (sqlite3_syscall_ptr)0,          0  },
-+#define osPread64 pread64
++#define osPread64   ((ssize_t(*)(int,void*,size_t,off64_t))0)
  #endif
 -#define osPread64 ((ssize_t(*)(int,void*,size_t,off64_t))aSyscall[10].pCurrent)
  
@@ -89,9 +89,14 @@ index fba4945eb..e8ed83b8f 100644
 -#define osPwrite64  ((ssize_t(*)(int,const void*,size_t,off64_t))\
 -                    aSyscall[13].pCurrent)
  
+ #if defined(HAVE_FCHMOD)
    { "fchmod",       (sqlite3_syscall_ptr)fchmod,          0  },
--#define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
 +#define osFchmod    fchmod
+ #else
+   { "fchmod",       (sqlite3_syscall_ptr)0,               0  },
++#define osFchmod    ((int(*)(int,mode_t))0)
+ #endif
+-#define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
  
  #if defined(HAVE_POSIX_FALLOCATE) && HAVE_POSIX_FALLOCATE
    { "fallocate",    (sqlite3_syscall_ptr)posix_fallocate,  0 },
@@ -136,30 +141,32 @@ index fba4945eb..e8ed83b8f 100644
  #endif
 -#define osGeteuid   ((uid_t(*)(void))aSyscall[21].pCurrent)
  
- #if !defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0
+ #if (!defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0) \
+   && !defined(SQLITE_WASI)
    { "mmap",         (sqlite3_syscall_ptr)mmap,            0 },
-+#define osMmap mmap
++#define osMmap      mmap
  #else
    { "mmap",         (sqlite3_syscall_ptr)0,               0 },
-+#define osMmap ((void*(*)(void*,size_t,int,int,int,off_t))0)
++#define osMmap      ((void*(*)(void*,size_t,int,int,int,off_t))0)
  #endif
 -#define osMmap ((void*(*)(void*,size_t,int,int,int,off_t))aSyscall[22].pCurrent)
  
- #if !defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0
+ #if (!defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0) \
+   && !defined(SQLITE_WASI)
    { "munmap",       (sqlite3_syscall_ptr)munmap,          0 },
-+#define osMunmap munmap
++#define osMunmap    munmap
  #else
    { "munmap",       (sqlite3_syscall_ptr)0,               0 },
-+#define osMunmap ((int(*)(void*,size_t))0)
++#define osMunmap    ((int(*)(void*,size_t))0)
  #endif
 -#define osMunmap ((int(*)(void*,size_t))aSyscall[23].pCurrent)
  
  #if HAVE_MREMAP && (!defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0)
    { "mremap",       (sqlite3_syscall_ptr)mremap,          0 },
-+#define osMremap mremap
++#define osMremap    mremap
  #else
    { "mremap",       (sqlite3_syscall_ptr)0,               0 },
-+#define osMremap ((void*(*)(void*,size_t,size_t,int,...))0)
++#define osMremap    ((void*(*)(void*,size_t,size_t,int,...))0)
  #endif
 -#define osMremap ((void*(*)(void*,size_t,size_t,int,...))aSyscall[24].pCurrent)
  
@@ -174,10 +181,10 @@ index fba4945eb..e8ed83b8f 100644
  
  #if defined(HAVE_READLINK)
    { "readlink",     (sqlite3_syscall_ptr)readlink,        0 },
-+#define osReadlink readlink
++#define osReadlink  readlink
  #else
    { "readlink",     (sqlite3_syscall_ptr)0,               0 },
-+#define osReadlink ((ssize_t(*)(const char*,char*,size_t))0)
++#define osReadlink  ((ssize_t(*)(const char*,char*,size_t))0)
  #endif
 -#define osReadlink ((ssize_t(*)(const char*,char*,size_t))aSyscall[26].pCurrent)
  
@@ -194,23 +201,23 @@ index fba4945eb..e8ed83b8f 100644
  # ifdef __ANDROID__
    { "ioctl", (sqlite3_syscall_ptr)(int(*)(int, int, ...))ioctl, 0 },
 -#define osIoctl ((int(*)(int,int,...))aSyscall[28].pCurrent)
-+#define osIoctl ioctl
++#define osIoctl      ioctl
  # else
    { "ioctl",         (sqlite3_syscall_ptr)ioctl,          0 },
 -#define osIoctl ((int(*)(int,unsigned long,...))aSyscall[28].pCurrent)
-+#define osIoctl ioctl
++#define osIoctl      ioctl
  # endif
  #else
    { "ioctl",         (sqlite3_syscall_ptr)0,              0 },
-+#define osIoctl ((int(*)(int,unsigned long,...))0)
++#define osIoctl      ((int(*)(int,unsigned long,...))0)
  #endif
  
  }; /* End of the overrideable system calls */
 diff --git a/vendor/sqlite3/sqlite3mc.c b/vendor/sqlite3/sqlite3mc.c
-index fba4945eb..e8ed83b8f 100644
+index d1a5f46b4..b5d8011db 100644
 --- a/vendor/sqlite3/sqlite3mc.c
 +++ b/vendor/sqlite3/sqlite3mc.c
-@@ -34340,19 +34340,19 @@ static struct unix_syscall {
+@@ -37437,19 +37437,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {
    { "open",         (sqlite3_syscall_ptr)posixOpen,  0  },
@@ -235,7 +242,7 @@ index fba4945eb..e8ed83b8f 100644
  
  /*
  ** The DJGPP compiler environment looks mostly like Unix, but it
-@@ -34365,139 +34365,151 @@ static struct unix_syscall {
+@@ -37462,145 +37462,158 @@ static struct unix_syscall {
  #define osFstat(a,b,c)    0
  #else
    { "fstat",        (sqlite3_syscall_ptr)fstat,      0  },
@@ -266,10 +273,10 @@ index fba4945eb..e8ed83b8f 100644
  
  #if defined(USE_PREAD64)
    { "pread64",      (sqlite3_syscall_ptr)pread64,    0  },
-+#define osPread64 ((ssize_t(*)(int,void*,size_t,off64_t))0)
++#define osPread64   pread64
  #else
    { "pread64",      (sqlite3_syscall_ptr)0,          0  },
-+#define osPread64 pread64
++#define osPread64   ((ssize_t(*)(int,void*,size_t,off64_t))0)
  #endif
 -#define osPread64 ((ssize_t(*)(int,void*,size_t,off64_t))aSyscall[10].pCurrent)
  
@@ -297,9 +304,14 @@ index fba4945eb..e8ed83b8f 100644
 -#define osPwrite64  ((ssize_t(*)(int,const void*,size_t,off64_t))\
 -                    aSyscall[13].pCurrent)
  
+ #if defined(HAVE_FCHMOD)
    { "fchmod",       (sqlite3_syscall_ptr)fchmod,          0  },
--#define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
 +#define osFchmod    fchmod
+ #else
+   { "fchmod",       (sqlite3_syscall_ptr)0,               0  },
++#define osFchmod    ((int(*)(int,mode_t))0)
+ #endif
+-#define osFchmod    ((int(*)(int,mode_t))aSyscall[14].pCurrent)
  
  #if defined(HAVE_POSIX_FALLOCATE) && HAVE_POSIX_FALLOCATE
    { "fallocate",    (sqlite3_syscall_ptr)posix_fallocate,  0 },
@@ -344,30 +356,32 @@ index fba4945eb..e8ed83b8f 100644
  #endif
 -#define osGeteuid   ((uid_t(*)(void))aSyscall[21].pCurrent)
  
- #if !defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0
+ #if (!defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0) \
+   && !defined(SQLITE_WASI)
    { "mmap",         (sqlite3_syscall_ptr)mmap,            0 },
-+#define osMmap mmap
++#define osMmap      mmap
  #else
    { "mmap",         (sqlite3_syscall_ptr)0,               0 },
-+#define osMmap ((void*(*)(void*,size_t,int,int,int,off_t))0)
++#define osMmap      ((void*(*)(void*,size_t,int,int,int,off_t))0)
  #endif
 -#define osMmap ((void*(*)(void*,size_t,int,int,int,off_t))aSyscall[22].pCurrent)
  
- #if !defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0
+ #if (!defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0) \
+   && !defined(SQLITE_WASI)
    { "munmap",       (sqlite3_syscall_ptr)munmap,          0 },
-+#define osMunmap munmap
++#define osMunmap    munmap
  #else
    { "munmap",       (sqlite3_syscall_ptr)0,               0 },
-+#define osMunmap ((int(*)(void*,size_t))0)
++#define osMunmap    ((int(*)(void*,size_t))0)
  #endif
 -#define osMunmap ((int(*)(void*,size_t))aSyscall[23].pCurrent)
  
  #if HAVE_MREMAP && (!defined(SQLITE_OMIT_WAL) || SQLITE_MAX_MMAP_SIZE>0)
    { "mremap",       (sqlite3_syscall_ptr)mremap,          0 },
-+#define osMremap mremap
++#define osMremap    mremap
  #else
    { "mremap",       (sqlite3_syscall_ptr)0,               0 },
-+#define osMremap ((void*(*)(void*,size_t,size_t,int,...))0)
++#define osMremap    ((void*(*)(void*,size_t,size_t,int,...))0)
  #endif
 -#define osMremap ((void*(*)(void*,size_t,size_t,int,...))aSyscall[24].pCurrent)
  
@@ -382,10 +396,10 @@ index fba4945eb..e8ed83b8f 100644
  
  #if defined(HAVE_READLINK)
    { "readlink",     (sqlite3_syscall_ptr)readlink,        0 },
-+#define osReadlink readlink
++#define osReadlink  readlink
  #else
    { "readlink",     (sqlite3_syscall_ptr)0,               0 },
-+#define osReadlink ((ssize_t(*)(const char*,char*,size_t))0)
++#define osReadlink  ((ssize_t(*)(const char*,char*,size_t))0)
  #endif
 -#define osReadlink ((ssize_t(*)(const char*,char*,size_t))aSyscall[26].pCurrent)
  
@@ -402,15 +416,15 @@ index fba4945eb..e8ed83b8f 100644
  # ifdef __ANDROID__
    { "ioctl", (sqlite3_syscall_ptr)(int(*)(int, int, ...))ioctl, 0 },
 -#define osIoctl ((int(*)(int,int,...))aSyscall[28].pCurrent)
-+#define osIoctl ioctl
++#define osIoctl      ioctl
  # else
    { "ioctl",         (sqlite3_syscall_ptr)ioctl,          0 },
 -#define osIoctl ((int(*)(int,unsigned long,...))aSyscall[28].pCurrent)
-+#define osIoctl ioctl
++#define osIoctl      ioctl
  # endif
  #else
    { "ioctl",         (sqlite3_syscall_ptr)0,              0 },
-+#define osIoctl ((int(*)(int,unsigned long,...))0)
++#define osIoctl      ((int(*)(int,unsigned long,...))0)
  #endif
  
  }; /* End of the overrideable system calls */

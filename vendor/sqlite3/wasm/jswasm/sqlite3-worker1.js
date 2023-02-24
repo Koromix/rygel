@@ -38,12 +38,9 @@
   if(urlParams.has('sqlite3.dir')){
     theJs = urlParams.get('sqlite3.dir') + '/' + theJs;
   }
-  //console.warn("worker1 theJs =",theJs);
+  
   importScripts(theJs);
   sqlite3InitModule().then((sqlite3)=>{
-    if(sqlite3.capi.sqlite3_wasmfs_opfs_dir){
-      sqlite3.capi.sqlite3_wasmfs_opfs_dir();
-    }
     sqlite3.initWorker1API();
   });
 })();
