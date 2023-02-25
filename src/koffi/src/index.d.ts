@@ -81,7 +81,7 @@ declare module 'koffi' {
     export function union(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
     export function union(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
-    export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null);
+    export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null): any[];
 
     export function opaque(name: string): IKoffiCType;
     export function opaque(): IKoffiCType;
