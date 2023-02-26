@@ -211,8 +211,11 @@ function Builder(config = {}) {
     this.build = async function() {
         check_compatibility();
 
-        if (prebuild)
-            await check_prebuild();
+        if (prebuild) {
+            let valid = await check_prebuild();
+            if (valid)
+                return;
+        }
 
         check_cmake();
 
@@ -295,7 +298,7 @@ function Builder(config = {}) {
             if (fs.existsSync(binary_filename)) {
                 let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', binary_filename]);
                 if (proc.status === 0)
-                    return false;
+                    return true;
 
                 fs.unlinkSync(binary_filename);
             }
@@ -303,7 +306,7 @@ function Builder(config = {}) {
             console.error('Failed to load prebuilt binary, rebuilding from source');
         }
 
-        return true;
+        return false;
     }
 
     this.clean = function() {
