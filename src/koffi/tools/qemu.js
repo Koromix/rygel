@@ -498,7 +498,7 @@ async function prepare() {
             install: 'node src/cnoke/cnoke.js --prebuild -d src/koffi'
         };
         delete pkg.devDependencies;
-        pkg.cnoke.output = './build/{{version}}/koffi_{{platform}}_{{arch}}';
+        pkg.cnoke.output = 'src/koffi/build/{{version}}/koffi_{{platform}}_{{arch}}';
         pkg.cnoke.require = pkg.cnoke.require.replace('./', './src/koffi/');
 
         fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));

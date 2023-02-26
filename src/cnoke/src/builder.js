@@ -270,13 +270,11 @@ function Builder(config = {}) {
                     archive_filename = build_dir + '/' + basename;
                     await tools.download_http(url, archive_filename);
                 } else {
-                    if (tools.path_is_absolute(url)) {
-                        archive_filename = url;
-                    } else if (package_dir != null) {
-                        archive_filename = package_dir + '/' + url;
-                    } else {
-                        archive_filename = project_dir + '/' + url;
-                    }
+                    archive_filename = url;
+
+                    if (!tools.path_is_absolute(archive_filename))
+                        archive_filename = path.join(package_dir, archive_filename);
+
                     if (!fs.existsSync(archive_filename))
                         throw new Error('Cannot find local prebuilt archive');
                 }
@@ -290,6 +288,9 @@ function Builder(config = {}) {
 
         if (pkg.cnoke.require != null) {
             let binary_filename = expand_path(pkg.cnoke.require);
+
+            if (!tools.path_is_absolute(binary_filename))
+                binary_filename = path.join(package_dir, binary_filename);
 
             if (fs.existsSync(binary_filename)) {
                 let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', binary_filename]);
