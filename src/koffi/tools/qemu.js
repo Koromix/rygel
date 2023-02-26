@@ -336,9 +336,9 @@ async function prepare() {
         for (let suite in machine.builds) {
             let build = machine.builds[suite];
 
-            let archive_filename = root_dir + `/src/koffi/build/qemu/${version}/koffi_${machine.platform}_${build.arch}.tar.gz`;
+            let binary_filename = root_dir + `/src/koffi/build/qemu/${version}/koffi_${machine.platform}_${build.arch}/koffi.node`;
 
-            if (fs.existsSync(archive_filename)) {
+            if (fs.existsSync(binary_filename)) {
                 log(machine, `${suite} > Status`, chalk.bold.green(`[ok]`));
             } else if (machine.qemu == null) {
                 log(machine, `${suite} > Status`, chalk.bold.red(`[manual]`));
@@ -418,9 +418,8 @@ async function prepare() {
 
                     let src_dir = build.directory + '/src/koffi/build';
                     let dest_dir = build_dir + `/${version}/koffi_${machine.platform}_${build.arch}`;
-                    let dest_filename = dest_dir + '.tar.gz';
 
-                    artifacts.push(dest_filename);
+                    artifacts.push(dest_dir);
 
                     if (ignore.has(machine))
                         return;
@@ -434,13 +433,6 @@ async function prepare() {
                             concurrency: 4,
                             validate: filename => !path.basename(filename).match(/^v[0-9]+/)
                         });
-
-                        tar.c({
-                            gzip: true,
-                            file: dest_filename,
-                            sync: true,
-                            cwd: dest_dir + '/..'
-                        }, [path.basename(dest_dir)]);
                     } catch (err) {
                         ignore.add(machine);
                         success = false;
@@ -492,20 +484,22 @@ async function prepare() {
         fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
 
         for (let artifact of artifacts) {
-            let dest_filename = build_dir + '/' + path.basename(artifact);
-            fs.copyFileSync(artifact, dest_filename);
+            let dest_dir = build_dir + '/' + path.basename(artifact);
+
+            fs.mkdirSync(dest_dir, { mode: 0o755 });
+            copy_recursive(artifact, dest_dir);
         }
 
         let pkg = JSON.parse(json);
 
-        pkg.main = "src/koffi/" + pkg.main;
-        pkg.types = "src/koffi/" + pkg.types;
+        pkg.main = 'src/koffi/' + pkg.main;
+        pkg.types = 'src/koffi/' + pkg.types;
         pkg.scripts = {
-            install: "node src/cnoke/cnoke.js --prebuild -d src/koffi"
+            install: 'node src/cnoke/cnoke.js --prebuild -d src/koffi'
         };
         delete pkg.devDependencies;
-        pkg.cnoke.prebuild = "src/koffi/" + pkg.cnoke.prebuild;
-        pkg.cnoke.require = pkg.cnoke.require.replace("./", "./src/koffi/");
+        pkg.cnoke.output = './build/{{version}}/koffi_{{platform}}_{{arch}}';
+        pkg.cnoke.require = pkg.cnoke.require.replace('./', './src/koffi/');
 
         fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
         fs.unlinkSync(dist_dir + '/src/koffi/package.json');

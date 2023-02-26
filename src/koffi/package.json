@@ -38,8 +38,7 @@
     "tar": "^6.1.11"
   },
   "cnoke": {
-    "prebuild": "build/{{version}}/koffi_{{platform}}_{{arch}}.tar.gz",
-    "require": "./build/koffi.node",
-    "napi": 8
+    "napi": 8,
+    "require": "./build/{{version}}/koffi_{{platform}}_{{arch}}/koffi.node"
   }
 }

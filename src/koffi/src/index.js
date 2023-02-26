@@ -13,12 +13,31 @@
 
 'use strict';
 
-if (process.versions.napi == null || process.versions.napi < 8)
-    throw new Error('This platform does not support N-API 8');
-
+const package = require('../package.json');
+const cnoke = require('../../cnoke');
 const util = require('util');
 
-let filename = __dirname + '/../build/koffi.node';
+if (process.versions.napi == null || process.versions.napi < 8) {
+    let major = parseInt(process.versions.node, 10);
+    let required = cnoke.get_napi_version(8, major);
+
+    if (required != null) {
+        throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= 8)`);
+    } else {
+        throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (N-API < 8)`);
+    }
+}
+
+let arch = cnoke.determine_arch();
+let filename = __dirname + `/../build/${package.version}/koffi_${process.platform}_${arch}/koffi.node`;
+
+// Development build
+if (!fs.existsSync(filename)) {
+    let alternative = __dirname + '/../build/koffi.node';
+    if (fs.existsSync(alternative))
+        filename = alternative;
+}
+
 let native = require(filename);
 
 module.exports = {
