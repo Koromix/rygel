@@ -55,8 +55,23 @@ function Builder(config = {}) {
         throw new Error('Missing required mode setting');
 
     let cache_dir = get_cache_directory();
-    let build_dir = project_dir + '/build';
-    let work_dir = build_dir + `/v${runtime_version}_${arch}`;
+    let build_dir = config.build_dir;
+    let work_dir = null;
+
+    if (build_dir == null) {
+        let pkg = read_package_json();
+
+        if (pkg.cnoke.output != null) {
+            build_dir = expand_path(pkg.cnoke.output);
+
+            if (!tools.path_is_absolute(build_dir))
+                build_dir = path.join(project_dir, build_dir);
+        } else {
+            build_dir = project_dir + '/build';
+        }
+    }
+    work_dir = build_dir + `/v${runtime_version}_${arch}`;
+
     let cmake_bin = null;
 
     this.configure = async function(retry = true) {
