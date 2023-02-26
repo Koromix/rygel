@@ -201,27 +201,46 @@ function Builder(config = {}) {
         if (prebuild) {
             let pkg = read_package_json();
 
-            if (prebuild_url == null) {
-                if (pkg.cnoke.prebuild == null)
-                    throw new Error('Missing prebuild URL');
+            prebuild_url ??= pkg.cnoke.prebuild;
+            prebuild_req ??= pkg.cnoke.require;
 
-                prebuild_url = pkg.cnoke.prebuild;
-            }
+            await check_prebuild();
+        }
 
+        check_cmake();
+
+        if (!fs.existsSync(work_dir + '/CMakeCache.txt'))
+            await self.configure();
+
+        // In case Make gets used
+        if (process.env.MAKEFLAGS == null)
+            process.env.MAKEFLAGS = '-j' + os.cpus().length;
+
+        let args = [
+            '--build', work_dir,
+            '--config', mode
+        ];
+
+        if (verbose)
+            args.push('--verbose');
+        for (let target of targets)
+            args.push('--target', target);
+
+        console.log('>> Running build');
+
+        let proc = spawnSync(cmake_bin, args, { stdio: 'inherit' });
+        if (proc.status !== 0)
+            throw new Error('Failed to run build step');
+    };
+
+    async function check_prebuild() {
+        if (!prebuild)
+            return false;
+
+        if (prebuild_url) {
             fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
 
-            let url = prebuild_url.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
-                switch (p1) {
-                    case 'version': {
-                        let pkg = read_package_json();
-                        return pkg.version || '';
-                    } break;
-                    case 'platform': return process.platform;
-                    case 'arch': return arch;
-
-                    default: return match;
-                }
-            });
+            let url = expand_path(prebuild_url);
             let basename = path.basename(url);
 
             try {
@@ -258,58 +277,27 @@ function Builder(config = {}) {
 
                 console.log('>> Extracting prebuilt binaries...');
                 await tools.extract_targz(archive_filename, build_dir, 1);
-
-                // Make sure the binary works
-                if (prebuild_req == null)
-                    prebuild_req = pkg.cnoke.require;
-                if (prebuild_req != null) {
-                    let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', prebuild_req]);
-                    if (proc.status === 0)
-                        return;
-                } else {
-                    return;
-                }
-
-                // Clean it up if it does not, before source build. Only delete files, it is safer and it is enough!
-                let entries = fs.readdirSync(build_dir, { withFileTypes: true });
-                for (let entry of entries) {
-                    if (!entry.isDirectory()) {
-                        let filename = path.join(build_dir, entry.name);
-                        fs.unlinkSync(filename);
-                    }
-                }
-
-                console.error('Failed to load prebuilt binary, rebuilding from source');
             } catch (err) {
                 console.error('Failed to find prebuilt binary for your platform, building manually');
             }
         }
 
-        check_cmake();
+        if (prebuild_req) {
+            let binary_filename = expand_path(prebuild_req);
 
-        if (!fs.existsSync(work_dir + '/CMakeCache.txt'))
-            await self.configure();
+            if (fs.existsSync(binary_filename)) {
+                let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', binary_filename]);
+                if (proc.status === 0)
+                    return false;
 
-        // In case Make gets used
-        if (process.env.MAKEFLAGS == null)
-            process.env.MAKEFLAGS = '-j' + os.cpus().length;
+                fs.unlinkSync(binary_filename);
+            }
 
-        let args = [
-            '--build', work_dir,
-            '--config', mode
-        ];
+            console.error('Failed to load prebuilt binary, rebuilding from source');
+        }
 
-        if (verbose)
-            args.push('--verbose');
-        for (let target of targets)
-            args.push('--target', target);
-
-        console.log('>> Running build');
-
-        let proc = spawnSync(cmake_bin, args, { stdio: 'inherit' });
-        if (proc.status !== 0)
-            throw new Error('Failed to run build step');
-    };
+        return true;
+    }
 
     this.clean = function() {
         tools.unlink_recursive(build_dir);
@@ -428,6 +416,23 @@ function Builder(config = {}) {
             pkg.cnoke = {};
 
         return pkg;
+    }
+
+    function expand_path(str) {
+        let ret = str.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
+            switch (p1) {
+                case 'version': {
+                    let pkg = read_package_json();
+                    return pkg.version || '';
+                } break;
+                case 'platform': return process.platform;
+                case 'arch': return arch;
+
+                default: return match;
+            }
+        });
+
+        return ret;
     }
 }
 

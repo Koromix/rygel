@@ -111,7 +111,9 @@ async function main() {
                 config.verbose = true;
             } else if (command == 'build' && arg == '--prebuild') {
                 config.prebuild = true;
-                config.prebuild_url = value;
+
+                if (value != null)
+                    config.prebuild_url = value;
             } else if (command == 'build' && arg == '--require') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
