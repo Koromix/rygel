@@ -4,6 +4,13 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.6
+
+**Main changes:**
+
+- Fix broken TS definition file
+- Keep all prebuilt binaries and load correct one at runtime
+
 #### Koffi 2.3.5
 
 **Main fixes:**
