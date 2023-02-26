@@ -1,0 +1,436 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program. If not, see https://www.gnu.org/licenses/.
+
+'use strict';
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const tools = require('./tools.js');
+
+function Builder(config = {}) {
+    let self = this;
+
+    let app_dir = config.app_dir;
+    let project_dir = config.project_dir;
+    let package_dir = null;
+
+    if (app_dir == null)
+        app_dir = path.join(__dirname.replace(/\\/g, '/'), '..');
+    if (project_dir == null)
+        project_dir = process.cwd();
+    app_dir = app_dir.replace(/\\/g, '/');
+    project_dir = project_dir.replace(/\\/g, '/');
+    package_dir = find_parent_directory(project_dir, 'package.json');
+
+    let runtime_version = config.runtime_version;
+    let arch = config.arch;
+    let toolset = config.toolset || null;
+    let prefer_clang = config.prefer_clang || false;
+    let mode = config.mode;
+    let targets = config.targets || [];
+    let verbose = config.verbose || false;
+    let prebuild = config.prebuild || false;
+    let prebuild_url = config.prebuild_url || null;
+    let prebuild_require = config.prebuild_require || null;
+
+    if (runtime_version == null)
+        runtime_version = process.version;
+    if (runtime_version.startsWith('v'))
+        runtime_version = runtime_version.substr(1);
+    if (arch == null)
+        arch = tools.determine_arch();
+    if (mode == null)
+        throw new Error('Missing required mode setting');
+
+    let cache_dir = get_cache_directory();
+    let build_dir = project_dir + '/build';
+    let work_dir = build_dir + `/v${runtime_version}_${arch}`;
+    let cmake_bin = null;
+
+    this.configure = async function(retry = true) {
+        let args = [project_dir];
+
+        check_cmake();
+        check_compatibility();
+
+        console.log(`>> Node: ${runtime_version}`);
+        console.log(`>> Target: ${process.platform}_${arch}`);
+
+        // Prepare build directory
+        fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
+        fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
+        fs.mkdirSync(work_dir, { recursive: true, mode: 0o755 });
+
+        retry &= fs.existsSync(work_dir + '/CMakeCache.txt');
+
+        // Download Node headers
+        {
+            let basename = `node-v${runtime_version}-headers.tar.gz`;
+            let urls = [
+                `https://nodejs.org/dist/v${runtime_version}/${basename}`,
+                `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${basename}`
+            ];
+            let destname = `${cache_dir}/${basename}`;
+
+            if (!fs.existsSync(destname))
+                await tools.download_http(urls, destname);
+            await tools.extract_targz(destname, work_dir + '/headers', 1);
+        }
+
+        // Download Node import library (Windows)
+        if (process.platform === 'win32') {
+            let dirname;
+            switch (arch) {
+                case 'ia32': { dirname = 'win-x86'; } break;
+                case 'x64': { dirname = 'win-x64'; } break;
+                case 'arm64': { dirname = 'win-arm64'; } break;
+
+                default: {
+                    throw new Error(`Unsupported architecture '${arch}' for Node on Windows`);
+                } break;
+            }
+
+            let destname = `${cache_dir}/node_v${runtime_version}_${arch}.lib`;
+
+            if (!fs.existsSync(destname)) {
+                let urls = [
+                    `https://nodejs.org/dist/v${runtime_version}/${dirname}/node.lib`,
+                    `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${dirname}/node.lib`
+                ];
+                await tools.download_http(urls, destname);
+            }
+
+            fs.copyFileSync(destname, work_dir + '/node.lib');
+        }
+
+        args.push(`-DCMAKE_MODULE_PATH=${app_dir}/assets`);
+
+        args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
+
+        // Set platform flags
+        switch (process.platform) {
+            case 'win32': {
+                fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
+
+                args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
+                args.push(`-DNODE_JS_LIBRARIES=${work_dir}/node.lib`);
+
+                switch (arch) {
+                    case 'ia32': {
+                        args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
+                        args.push('-A', 'Win32');
+                    } break;
+                    case 'arm64': {
+                        args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
+                        args.push('-A', 'ARM64');
+                    } break;
+                    case 'x64': {
+                        args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
+                        args.push('-A', 'x64');
+                    } break;
+                }
+            } break;
+
+            case 'darwin': {
+                args.push('-DNODE_JS_LINK_FLAGS=-undefined;dynamic_lookup');
+
+                switch (arch) {
+                    case 'arm64': { args.push('-DCMAKE_OSX_ARCHITECTURES=arm64'); } break;
+                    case 'x64': { args.push('-DCMAKE_OSX_ARCHITECTURES=x86_64'); } break;
+                }
+            } break;
+        }
+
+        if (process.platform != 'win32') {
+            // Prefer Ninja if available
+            if (spawnSync('ninja', ['--version']).status === 0)
+                args.push('-G', 'Ninja');
+
+            // Use CCache if available
+            if (spawnSync('ccache', ['--version']).status === 0) {
+                args.push('-DCMAKE_C_COMPILER_LAUNCHER=ccache');
+                args.push('-DCMAKE_CXX_COMPILER_LAUNCHER=ccache');
+            }
+        }
+
+        if (prefer_clang) {
+            if (process.platform == 'win32') {
+                args.push('-T', 'ClangCL');
+            } else {
+                args.push('-DCMAKE_C_COMPILER=clang');
+                args.push('-DCMAKE_CXX_COMPILER=clang++');
+            }
+        }
+        if (toolset != null)
+            args.push('-T', toolset);
+
+        args.push(`-DCMAKE_BUILD_TYPE=${mode}`);
+        for (let type of ['ARCHIVE', 'RUNTIME', 'LIBRARY']) {
+            for (let suffix of ['', '_DEBUG', '_RELEASE', '_RELWITHDEBINFO'])
+                args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${build_dir}`);
+        }
+        args.push('--no-warn-unused-cli');
+
+        console.log('>> Running configuration');
+
+        let proc = spawnSync(cmake_bin, args, { cwd: work_dir, stdio: 'inherit' });
+        if (proc.status !== 0) {
+            tools.unlink_recursive(work_dir);
+            if (retry)
+                return self.configure(false);
+
+            throw new Error('Failed to run configure step');
+        }
+    };
+
+    this.build = async function() {
+        check_compatibility();
+
+        if (prebuild) {
+            let pkg = read_package_json();
+
+            if (prebuild_url == null) {
+                if (pkg.cnoke.prebuild == null)
+                    throw new Error('Missing prebuild URL');
+
+                prebuild_url = pkg.cnoke.prebuild;
+            }
+
+            fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
+
+            let url = prebuild_url.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
+                switch (p1) {
+                    case 'version': {
+                        let pkg = read_package_json();
+                        return pkg.version || '';
+                    } break;
+                    case 'platform': return process.platform;
+                    case 'arch': return arch;
+
+                    default: return match;
+                }
+            });
+            let basename = path.basename(url);
+
+            try {
+                let archive_filename = null;
+
+                if (url.startsWith('file:/')) {
+                    if (url.startsWith('file://localhost/')) {
+                        url = url.substr(16);
+                    } else {
+                        let offset = 6;
+                        while (offset < 9 && url[offset] == '/')
+                            offset++;
+                        url = url.substr(offset - 1);
+                    }
+
+                    if (process.platform == 'win32' && url.match(/^\/[a-zA-Z]+:[\\\/]/))
+                        url = url.substr(1);
+                }
+
+                if (url.match(/^[a-z]+:\/\//)) {
+                    archive_filename = build_dir + '/' + basename;
+                    await tools.download_http(url, archive_filename);
+                } else {
+                    if (tools.path_is_absolute(url)) {
+                        archive_filename = url;
+                    } else if (package_dir != null) {
+                        archive_filename = package_dir + '/' + url;
+                    } else {
+                        archive_filename = project_dir + '/' + url;
+                    }
+                    if (!fs.existsSync(archive_filename))
+                        throw new Error('Cannot find local prebuilt archive');
+                }
+
+                console.log('>> Extracting prebuilt binaries...');
+                await tools.extract_targz(archive_filename, build_dir, 1);
+
+                // Make sure the binary works
+                if (prebuild_req == null)
+                    prebuild_req = pkg.cnoke.require;
+                if (prebuild_req != null) {
+                    let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', prebuild_req]);
+                    if (proc.status === 0)
+                        return;
+                } else {
+                    return;
+                }
+
+                // Clean it up if it does not, before source build. Only delete files, it is safer and it is enough!
+                let entries = fs.readdirSync(build_dir, { withFileTypes: true });
+                for (let entry of entries) {
+                    if (!entry.isDirectory()) {
+                        let filename = path.join(build_dir, entry.name);
+                        fs.unlinkSync(filename);
+                    }
+                }
+
+                console.error('Failed to load prebuilt binary, rebuilding from source');
+            } catch (err) {
+                console.error('Failed to find prebuilt binary for your platform, building manually');
+            }
+        }
+
+        check_cmake();
+
+        if (!fs.existsSync(work_dir + '/CMakeCache.txt'))
+            await self.configure();
+
+        // In case Make gets used
+        if (process.env.MAKEFLAGS == null)
+            process.env.MAKEFLAGS = '-j' + os.cpus().length;
+
+        let args = [
+            '--build', work_dir,
+            '--config', mode
+        ];
+
+        if (verbose)
+            args.push('--verbose');
+        for (let target of targets)
+            args.push('--target', target);
+
+        console.log('>> Running build');
+
+        let proc = spawnSync(cmake_bin, args, { stdio: 'inherit' });
+        if (proc.status !== 0)
+            throw new Error('Failed to run build step');
+    };
+
+    this.clean = function() {
+        tools.unlink_recursive(build_dir);
+    };
+
+    function find_parent_directory(dirname, basename)
+    {
+        if (process.platform == 'win32')
+            dirname = dirname.replace(/\\/g, '/');
+
+        do {
+            if (fs.existsSync(dirname + '/' + basename))
+                return dirname;
+
+            dirname = path.dirname(dirname);
+        } while (!dirname.endsWith('/'));
+
+        return null;
+    }
+
+    function get_cache_directory() {
+        if (process.platform == 'win32') {
+            let cache_dir = process.env['APPDATA'];
+            if (cache_dir == null)
+                throw new Error('Missing APPDATA environment variable');
+
+            cache_dir = path.join(cache_dir, 'cnoke');
+            return cache_dir;
+        } else {
+            let cache_dir = process.env['XDG_CACHE_HOME'];
+
+            if (cache_dir == null) {
+                let home = process.env['HOME'];
+                if (home == null)
+                    throw new Error('Missing HOME environment variable');
+
+                cache_dir = path.join(home, '.cache');
+            }
+
+            cache_dir = path.join(cache_dir, 'cnoke');
+            return cache_dir;
+        }
+    }
+
+    function check_cmake() {
+        if (cmake_bin != null)
+            return;
+
+        // Check for CMakeLists.txt
+        if (!fs.existsSync(project_dir + '/CMakeLists.txt'))
+            throw new Error('This directory does not appear to have a CMakeLists.txt file');
+
+        // Check for CMake
+        {
+            let proc = spawnSync('cmake', ['--version']);
+
+            if (proc.status === 0) {
+                cmake_bin = 'cmake';
+            } else {
+                if (process.platform == 'win32') {
+                    // I really don't want to depend on anything in CNoke, and Node.js does not provide
+                    // anything to read from the registry. This is okay, REG.exe exists since Windows XP.
+                    let proc = spawnSync('reg', ['query', 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Kitware\\CMake', '/v', 'InstallDir']);
+
+                    if (proc.status === 0) {
+                        let matches = proc.stdout.toString('utf-8').match(/InstallDir[ \t]+REG_[A-Z_]+[ \t]+(.*)+/);
+
+                        if (matches != null) {
+                            let bin = path.join(matches[1].trim(), 'bin\\cmake.exe');
+
+                            if (fs.existsSync(bin))
+                                cmake_bin = bin;
+                        }
+                    }
+                }
+
+                if (cmake_bin == null)
+                    throw new Error('CMake does not seem to be available');
+            }
+        }
+
+        console.log(`>> Using CMake binary: ${cmake_bin}`);
+    }
+
+    function check_compatibility() {
+        let pkg = read_package_json();
+
+        if (pkg.cnoke.node != null && tools.cmp_version(runtime_version, pkg.cnoke.node) < 0)
+            throw new Error(`Project ${pkg.name} requires Node.js >= ${pkg.cnoke.node}`);
+
+        if (pkg.cnoke.napi != null) {
+            let major = parseInt(runtime_version, 10);
+            let required = tools.get_napi_version(pkg.cnoke.napi, major);
+
+            if (required == null)
+                throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (old or missing N-API)`);
+            if (tools.cmp_version(runtime_version, required) < 0)
+                throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${pkg.engines.napi})`);
+        }
+    }
+
+    function read_package_json() {
+        let pkg = {};
+
+        if (package_dir != null) {
+            try {
+                let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
+                pkg = JSON.parse(json);
+            } catch (err) {
+                if (err.code != 'ENOENT')
+                    throw err;
+            }
+        }
+
+        if (pkg.cnoke == null)
+            pkg.cnoke = {};
+
+        return pkg;
+    }
+}
+
+module.exports = {
+    Builder
+};
