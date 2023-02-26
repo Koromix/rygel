@@ -111,14 +111,6 @@ async function main() {
                 config.verbose = true;
             } else if (command == 'build' && arg == '--prebuild') {
                 config.prebuild = true;
-
-                if (value != null)
-                    config.prebuild_url = value;
-            } else if (command == 'build' && arg == '--require') {
-                if (value == null)
-                    throw new Error(`Missing value for ${arg}`);
-
-                config.prebuild_require = value;
             } else if (command == 'build' && (arg == '-T' || arg == '--target')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -159,8 +151,7 @@ Options:
                                          (default: ${DEFAULT_MODE})
     -D, --debug                          Shortcut for --config Debug
 
-        --prebuild [URL]                 Enable use of prebuilt binaries
-        --require <PATH>                 Require specified module, drop prebuild if it fails
+        --prebuild                       Use prebuilt binari if available
 
     -a, --arch <ARCH>                    Change architecture and ABI
                                          (default: ${cnoke.determine_arch()})

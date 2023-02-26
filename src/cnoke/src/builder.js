@@ -42,8 +42,6 @@ function Builder(config = {}) {
     let targets = config.targets || [];
     let verbose = config.verbose || false;
     let prebuild = config.prebuild || false;
-    let prebuild_url = config.prebuild_url || null;
-    let prebuild_require = config.prebuild_require || null;
 
     if (runtime_version == null)
         runtime_version = process.version;
@@ -213,14 +211,8 @@ function Builder(config = {}) {
     this.build = async function() {
         check_compatibility();
 
-        if (prebuild) {
-            let pkg = read_package_json();
-
-            prebuild_url ??= pkg.cnoke.prebuild;
-            prebuild_req ??= pkg.cnoke.require;
-
+        if (prebuild)
             await check_prebuild();
-        }
 
         check_cmake();
 
@@ -249,13 +241,12 @@ function Builder(config = {}) {
     };
 
     async function check_prebuild() {
-        if (!prebuild)
-            return false;
+        let pkg = read_package_json();
 
-        if (prebuild_url) {
+        if (pkg.cnoke.prebuild != null) {
             fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
 
-            let url = expand_path(prebuild_url);
+            let url = expand_path(pkg.cnoke.prebuild);
             let basename = path.basename(url);
 
             try {
@@ -297,8 +288,8 @@ function Builder(config = {}) {
             }
         }
 
-        if (prebuild_req) {
-            let binary_filename = expand_path(prebuild_req);
+        if (pkg.cnoke.require != null) {
+            let binary_filename = expand_path(pkg.cnoke.require);
 
             if (fs.existsSync(binary_filename)) {
                 let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', binary_filename]);
