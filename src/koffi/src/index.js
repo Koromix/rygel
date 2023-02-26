@@ -13,29 +13,37 @@
 
 'use strict';
 
-const package = require('../package.json');
-const cnoke = require('../../cnoke');
+const cnoke = require('../../cnoke/src/index.js');
 const util = require('util');
 
-if (process.versions.napi == null || process.versions.napi < 8) {
+const pkg = (() => {
+    try {
+        return require('../../../package.json');
+    } catch (err) {
+        return require('../package.json');
+    }
+})();
+
+if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
     let major = parseInt(process.versions.node, 10);
-    let required = cnoke.get_napi_version(8, major);
+    let required = cnoke.get_napi_version(pkg.cnoke.napi, major);
 
     if (required != null) {
-        throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= 8)`);
+        throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= ${pkg.cnoke.napi})`);
     } else {
-        throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (N-API < 8)`);
+        throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (N-API < ${pkg.cnoke.napi})`);
     }
 }
 
 let arch = cnoke.determine_arch();
-let filename = __dirname + `/../build/${package.version}/koffi_${process.platform}_${arch}/koffi.node`;
+let filename = __dirname + `/../build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`;
 
 // Development build
 if (!fs.existsSync(filename)) {
-    let alternative = __dirname + '/../build/koffi.node';
-    if (fs.existsSync(alternative))
-        filename = alternative;
+    let dev_filename = __dirname + '/../build/koffi.node';
+
+    if (fs.existsSync(dev_filename))
+        filename = dev_filename;
 }
 
 let native = require(filename);
