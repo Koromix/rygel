@@ -39,6 +39,6 @@
   },
   "cnoke": {
     "napi": 8,
-    "require": "./src/koffi/src/index.js"
+    "require": "./src/index.js"
   }
 }
