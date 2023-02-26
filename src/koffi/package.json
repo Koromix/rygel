@@ -39,6 +39,6 @@
   },
   "cnoke": {
     "napi": 8,
-    "require": "./build/{{version}}/koffi_{{platform}}_{{arch}}/koffi.node"
+    "require": "./src/koffi/src/index.js"
   }
 }
