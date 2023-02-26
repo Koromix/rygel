@@ -27,7 +27,7 @@ function Builder(config = {}) {
     let package_dir = null;
 
     if (app_dir == null)
-        app_dir = path.join(__dirname.replace(/\\/g, '/'), '..');
+        app_dir = __dirname.replace(/\\/g, '/') + '/..';
     if (project_dir == null)
         project_dir = process.cwd();
     app_dir = app_dir.replace(/\\/g, '/');
@@ -63,7 +63,7 @@ function Builder(config = {}) {
             build_dir = expand_path(pkg.cnoke.output);
 
             if (!tools.path_is_absolute(build_dir))
-                build_dir = path.join(package_dir, build_dir);
+                build_dir = package_dir + '/' + build_dir;
         } else {
             build_dir = project_dir + '/build';
         }
