@@ -63,7 +63,7 @@ function Builder(config = {}) {
             build_dir = expand_path(pkg.cnoke.output);
 
             if (!tools.path_is_absolute(build_dir))
-                build_dir = path.join(project_dir, build_dir);
+                build_dir = path.join(package_dir, build_dir);
         } else {
             build_dir = project_dir + '/build';
         }
