@@ -532,9 +532,7 @@ function snapshot() {
         } else if (parts[0] == 'tools') {
             return parts[1] == null || parts[1] != 'qemu';
         } else if (parts[0] == 'vendor') {
-            return parts[1] == null || parts[1] == 'brotli' ||
-                                       parts[1] == 'dragonbox' ||
-                                       parts[1] == 'miniz' ||
+            return parts[1] == null || parts[1] == 'dragonbox' ||
                                        parts[1] == 'node-addon-api' ||
                                        parts[1] == 'raylib' ||
                                        parts[1] == 'sqlite3' ||
