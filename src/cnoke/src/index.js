@@ -11,10 +11,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const { Builder } = require('./builder.js');
+const builder = require('./builder.js');
 const tools = require('./tools.js');
 
 module.exports = {
-    Builder,
+    ...builder,
     ...tools
 };

@@ -19,6 +19,10 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const tools = require('./tools.js');
 
+const DefaultOptions = {
+    mode: 'RelWithDebInfo'
+};
+
 function Builder(config = {}) {
     let self = this;
 
@@ -38,7 +42,7 @@ function Builder(config = {}) {
     let arch = config.arch;
     let toolset = config.toolset || null;
     let prefer_clang = config.prefer_clang || false;
-    let mode = config.mode;
+    let mode = config.mode || DefaultOptions.mode;
     let targets = config.targets || [];
     let verbose = config.verbose || false;
     let prebuild = config.prebuild || false;
@@ -49,8 +53,6 @@ function Builder(config = {}) {
         runtime_version = runtime_version.substr(1);
     if (arch == null)
         arch = tools.determine_arch();
-    if (mode == null)
-        throw new Error('Missing required mode setting');
 
     let cache_dir = get_cache_directory();
     let build_dir = config.build_dir;
@@ -447,5 +449,6 @@ function Builder(config = {}) {
 }
 
 module.exports = {
-    Builder
+    Builder,
+    DefaultOptions
 };

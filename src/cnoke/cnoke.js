@@ -16,19 +16,15 @@
 'use strict';
 
 const fs = require('fs');
-const { Builder } = require('./src/index.js');
+const cnoke = require('./src/index.js');
 
 const VALID_COMMANDS = ['build', 'configure', 'clean'];
-const DEFAULT_MODE = 'RelWithDebInfo';
 
 main();
 
 async function main() {
     let config = {};
     let command = 'build';
-
-    // Default options
-    config.mode = DEFAULT_MODE;
 
     // Parse options
     {
@@ -127,7 +123,7 @@ async function main() {
     }
 
     try {
-        let builder = new Builder(config);
+        let builder = new cnoke.Builder(config);
         await builder[command]();
     } catch (err) {
         console.error(err);
@@ -148,7 +144,7 @@ Options:
                                          (default: current working directory)
 
     -B, --config <CONFIG>                Change build type: RelWithDebInfo, Debug, Release
-                                         (default: ${DEFAULT_MODE})
+                                         (default: ${cnoke.DefaultOptions.mode})
     -D, --debug                          Shortcut for --config Debug
 
         --prebuild                       Use prebuilt binari if available
