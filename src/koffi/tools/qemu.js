@@ -473,8 +473,8 @@ async function prepare() {
             } else if (parts[0] == 'src') {
                 return true;
             } else if (parts[0] == 'vendor') {
-                return parts[1] != 'sqlite3' &&
-                       parts[1] != 'raylib';
+                return parts[1] == null ||
+                       parts[1] == 'node-addon-api';
             } else if (parts[0] == 'web') {
                 return true;
             } else {
@@ -532,8 +532,7 @@ function snapshot() {
         } else if (parts[0] == 'tools') {
             return parts[1] == null || parts[1] != 'qemu';
         } else if (parts[0] == 'vendor') {
-            return parts[1] == null || parts[1] == 'dragonbox' ||
-                                       parts[1] == 'node-addon-api' ||
+            return parts[1] == null || parts[1] == 'node-addon-api' ||
                                        parts[1] == 'raylib' ||
                                        parts[1] == 'sqlite3' ||
                                        parts[1] == 'sqlite3mc';
