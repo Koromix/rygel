@@ -4,6 +4,13 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.7
+
+**Main fixes:**
+
+- Fix missing require in index.js ([@gastonFrecceroNapse](https://github.com/gastonFrecceroNapse))
+- Reduce NPM package bloat (from 65 MB to 20 MB) caused by changes in 2.3.6
+
 #### Koffi 2.3.6
 
 **Main changes:**
