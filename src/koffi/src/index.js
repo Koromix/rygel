@@ -15,6 +15,7 @@
 
 const cnoke = require('../../cnoke/src/index.js');
 const util = require('util');
+const fs = require('fs');
 
 const pkg = (() => {
     try {
