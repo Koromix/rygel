@@ -4,6 +4,12 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.8
+
+**Main fixes:**
+
+- Disable non-ready union support
+
 #### Koffi 2.3.7
 
 **Main fixes:**
