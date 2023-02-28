@@ -297,7 +297,7 @@ MHD_create_post_processor (struct MHD_Connection *connection,
       return NULL; /* failed to determine boundary */
     boundary += MHD_STATICSTR_LEN_ ("boundary=");
     blen = strlen (boundary);
-    if ( (blen == 0) ||
+    if ( (blen < 2) ||
          (blen * 2 + 2 > buffer_size) )
       return NULL;              /* (will be) out of memory or invalid boundary */
     if ( (boundary[0] == '"') &&

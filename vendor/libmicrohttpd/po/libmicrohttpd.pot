@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: GNU libmicrohttpd 0.9.75\n"
+"Project-Id-Version: GNU libmicrohttpd 0.9.76\n"
 "Report-Msgid-Bugs-To: libmicrohttpd@gnu.org\n"
-"POT-Creation-Date: 2021-12-26 20:30+0300\n"
+"POT-Creation-Date: 2023-02-27 16:58+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -981,8 +981,8 @@ msgstr ""
 
 #: src/microhttpd/connection.c:5172
 msgid ""
-"Application used invalid response without \"upgrade\" token in \"Connection"
-"\" header!\n"
+"Application used invalid response without \"upgrade\" token in "
+"\"Connection\" header!\n"
 msgstr ""
 
 #: src/microhttpd/connection.c:5182
