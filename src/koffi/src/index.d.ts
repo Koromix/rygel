@@ -20,7 +20,7 @@ declare module 'koffi' {
 
     type PrimitiveKind = 'Void' | 'Bool' | 'Int8' | 'UInt8' | 'Int16' | 'Int16S' | 'UInt16' | 'UInt16S' |
                          'Int32' | 'Int32S' | 'UInt32' | 'UInt32S' | 'Int64' | 'Int64S' | 'UInt64' | 'UInt64S' |
-                         'String' | 'String16' | 'Pointer' | 'Record' | 'Union' | 'Array' | 'Float32' | 'Float64' |
+                         'String' | 'String16' | 'Pointer' | 'Record' /* | 'Union' */ | 'Array' | 'Float32' | 'Float64' |
                          'Prototype' | 'Callback';
     type ArrayHint = 'Array' | 'Typed' | 'String';
 
@@ -78,8 +78,8 @@ declare module 'koffi' {
     export function pack(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
     export function pack(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
-    export function union(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
-    export function union(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    // export function union(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    // export function union(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
     export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null): IKoffiCType;
 
