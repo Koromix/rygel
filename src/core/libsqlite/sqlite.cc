@@ -71,6 +71,7 @@ bool sq_Database::Open(const char *filename, const uint8_t key[32], unsigned int
         PRAGMA foreign_keys = ON;
         PRAGMA synchronous = NORMAL;
         PRAGMA busy_timeout = 15000;
+        PRAGMA cache_size = -16384;
     )";
 
     RG_ASSERT(!db);
@@ -135,7 +136,8 @@ bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay
     // Configure database to let us manipulate the WAL manually
     if (!RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
                     PRAGMA journal_mode = WAL;
-                    PRAGMA auto_vacuum = 0;)"))
+                    PRAGMA auto_vacuum = 0;
+                    PRAGMA cache_spill = false;)"))
         return false;
 
     // Open permanent WAL stream
