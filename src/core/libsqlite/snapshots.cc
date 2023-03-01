@@ -118,7 +118,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
                 snapshot_path_buf.RemoveFrom(len);
                 snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
             };
-            Fmt(&snapshot_path_buf, "-%1", FmtHex(0).Pad0(-16));
+            Fmt(&snapshot_path_buf, ".%1", FmtArg(0).Pad0(-16));
 
             StreamReader reader(db_filename.ptr);
             StreamWriter writer(snapshot_path_buf.ptr, (int)StreamWriterFlag::Atomic,
@@ -192,7 +192,7 @@ bool sq_Database::OpenNextFrame(int64_t now)
         snapshot_path_buf.RemoveFrom(len);
         snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
     };
-    Fmt(&snapshot_path_buf, "-%1", FmtHex(snapshot_frame).Pad0(-16));
+    Fmt(&snapshot_path_buf, ".%1", FmtArg(snapshot_frame).Pad0(-16));
 
     // Open new WAL copy for writing
     success &= snapshot_wal_writer.Close();
@@ -368,7 +368,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filena
         const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx];
 
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
-        Fmt(&path_buf, "-%1", FmtHex(0).Pad0(-16));
+        Fmt(&path_buf, ".%1", FmtArg(0).Pad0(-16));
 
         LogFrameTime("database", path_buf.ptr, frame.mtime);
 
@@ -390,7 +390,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filena
         const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx + i];
 
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
-        Fmt(&path_buf, "-%1", FmtHex(i).Pad0(-16));
+        Fmt(&path_buf, ".%1", FmtArg(i).Pad0(-16));
 
         LogFrameTime("WAL", path_buf.ptr, frame.mtime);
 
