@@ -186,7 +186,7 @@ Options:
                 const char *basename = SplitStrReverseAny(version.base_filename, RG_PATH_SEPARATORS).ptr;
 
                 if (verbosity >= 2) {
-                    PrintLn("  %!y..- Generation '%1'%!0", basename);
+                    PrintLn("  - Generation %!y..'%1'%!0", basename);
 
                     for (Size j = 0; j < version.frames; j++) {
                         const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx + j];
@@ -198,7 +198,7 @@ Options:
                         }
                     }
                 } else {
-                    PrintLn("  %!y..- Generation '%1':%!0 %2", basename, FmtTimeNice(DecomposeTime(version.mtime)));
+                    PrintLn("  - Generation %!y..'%1'%!0: %2", basename, FmtTimeNice(DecomposeTime(version.mtime)));
                 }
             }
         } else {
