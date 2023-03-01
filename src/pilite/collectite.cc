@@ -62,7 +62,7 @@ Options:
     %!..+-O, --output_dir <dir>%!0       Restore inside this directory (instead of real path)
 
     %!..+-r, --recursive%!0              Collect all snapshots recursively
-    %!..+-f, --force%!0                  Overwrite exisiting databases
+    %!..+-f, --force%!0                  Overwrite existing databases
 
 As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_dir%!0.)", FelixTarget);
     };
