@@ -123,8 +123,8 @@ class sq_Database {
     crypto_hash_sha256_state snapshot_wal_state;
     int64_t snapshot_full_delay;
     int64_t snapshot_start;
-    Size snapshot_idx;
-    bool snapshot_data = false;
+    Size snapshot_frame;
+    std::atomic_bool snapshot_data {false};
 
 public:
     sq_Database() {}
@@ -167,6 +167,7 @@ private:
     bool CheckpointDirect();
 
     bool CopyWAL();
+    bool OpenNextFrame(int64_t now);
 
     bool LockExclusive();
     void UnlockExclusive();

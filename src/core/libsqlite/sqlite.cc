@@ -131,6 +131,7 @@ bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay
     snapshot_path_buf.Clear();
     Fmt(&snapshot_path_buf, "%1%/", directory);
     snapshot_full_delay = full_delay;
+    snapshot_frame = 0;
     snapshot_data = false;
 
     // Configure database to let us manipulate the WAL manually
