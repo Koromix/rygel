@@ -16,6 +16,8 @@
 
 namespace RG {
 
+int RunTorture(Span<const char *> arguments);
+
 static bool ListSnapshotFiles(OptionParser *opt, bool recursive,
                               BlockAllocator *alloc, HeapArray<const char *> *out_filenames)
 {
@@ -221,6 +223,8 @@ Commands:
     %!..+restore%!0                      Restore databases from SQLite snapshots
     %!..+list%!0                         List available databases in snapshot files
 
+    %!..+torture%!0                      Torture snapshot code (for testing)
+
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
 
@@ -254,6 +258,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunRestore(arguments);
     } else if (TestStr(cmd, "list")) {
         return RunList(arguments);
+    } else if (TestStr(cmd, "torture")) {
+        return RunTorture(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
