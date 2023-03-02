@@ -1,0 +1,21 @@
+{% for remote in rclone_remotes %}
+[remote_{{ loop.index }}]
+{% if remote.type == 'sftp' %}
+type = sftp
+host = {{ remote.host }}
+user = {{ remote.user }}
+key_pem = {{ remote.key | replace('\n', '\\n') }}
+{% endif %}
+
+{% set outer = loop %}
+
+{% for dir in rclone_directories %}
+[crypt_{{ outer.index }}_{{ loop.index }}]
+type = crypt
+remote = remote_{{ outer.index }}:{{ dir.dest }}
+directory_name_encryption = false
+filename_encryption = standard
+password = {{ rclone_key }}
+{% endfor %}
+
+{% endfor %}

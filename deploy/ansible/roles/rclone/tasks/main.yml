@@ -11,52 +11,33 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: Enable backports for Debian 10
-  apt_repository:
-    repo: 'deb http://deb.debian.org/debian buster-backports main'
-    state: present
-    update_cache: yes
-  when: 'ansible_os_family == "Debian" and ansible_distribution_version == "10"'
-  become: yes
-
-- name: Install packages (Debian 10)
+- name: Install packages
   apt:
     update_cache: yes
-    default_release: buster-backports
     pkg:
-      - rsync
+      - rclone
     state: latest
-  when: 'ansible_os_family == "Debian" and ansible_distribution_version == "10"'
   become: yes
 
-- name: Install packages
-  package:
-    update_cache: yes
-    pkg:
-      - rsync
-    state: latest
-  when: 'ansible_os_family != "Debian" or ansible_distribution_version != "10"'
-  become: yes
-
-- name: Prepare rsync directory
+- name: Prepare rclone base directory
   file:
-    path: '{{ rsync_root_path }}'
+    path: '{{ rclone_root_path }}'
     state: directory
     owner: root
     group: root
     mode: '0755'
   become: yes
 
-- name: Write rsync key file
-  copy:
-    content: '{{ rsync_key }}'
-    dest: '{{ rsync_root_path }}/id'
-    mode: 0600
+- name: Create rclone config
+  template:
+    src: rclone.ini.j2
+    dest: '{{ rclone_root_path }}/rclone.cfg'
     owner: root
     group: root
+    mode: '0644'
   become: yes
 
-- name: Install scheduled rsync systemd units
+- name: Install scheduled backup systemd units
   template:
     src: '{{ item }}.j2'
     dest: '/etc/systemd/system/{{ item }}'
@@ -64,20 +45,19 @@
     group: root
     mode: '0644'
   loop:
-    - rsync.service
-    - rsync.timer
-  register: service_config
+    - rclone.service
+    - rclone.timer
   become: yes
 
 - name: Reload systemd units
   systemd:
     daemon_reload: yes
-  when: service_config.changed
+  when: 'not ansible_check_mode'
   become: yes
 
-- name: Enabled scheduled backups
+- name: Enabled scheduled rclone sync
   service:
-    name: rsync.timer
+    name: rclone.timer
     state: started
     enabled: yes
   become: yes

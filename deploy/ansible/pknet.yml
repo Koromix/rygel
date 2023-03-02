@@ -35,10 +35,10 @@
       when: 'static_deploys is defined'
       tags:
         - static
-    - name: rsync
-      when: 'rsync_server is defined'
+    - name: rclone
+      when: 'rclone_directories is defined'
       tags:
-        - rsync
+        - rclone
     - name: thop
       when: 'thop_tables is defined'
       tags:

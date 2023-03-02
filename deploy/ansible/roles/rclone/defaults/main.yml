@@ -11,14 +11,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-rsync_root_path: /opt/rsync
+rclone_root_path: /opt/rclone
 
-# rsync_server:
-rsync_port: 22
-# rsync_path:
+rclone_schedule: '*-*-* 5:00'
+rclone_randomize: 20m
 
-# rsync_fingerprint:
-# rsync_key:
-# rsync_backups:
-
-rsync_time: '01:00 UTC' # systemd timestamp
+# rclone_remotes:
+# rclone_directories:

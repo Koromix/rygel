@@ -12,13 +12,12 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 [Unit]
-Description = Run periodic rsync backup
-Wants = network-online.target
-After = network-online.target
+Description = Perform rclone backups
 
-[Service]
-Type = oneshot
+[Timer]
+OnCalendar = {{ rclone_schedule }}
+Persistent = true
+RandomizedDelaySec = {{ rclone_randomize }}
 
-{% for backup in rsync_backups %}
-ExecStart = rsync -az --mkpath -e "ssh -p {{ rsync_port }} -i {{ rsync_root_path }}/id" {{ backup }} {{ rsync_server }}:{{ rsync_path }}{{ backup }}
-{% endfor %}
+[Install]
+WantedBy = timers.target
