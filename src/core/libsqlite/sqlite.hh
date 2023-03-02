@@ -99,8 +99,8 @@ class sq_Database {
     struct LockWaiter {
         LockWaiter *prev;
         LockWaiter *next;
-        std::condition_variable cv;
         bool shared;
+        bool run;
     };
 
     sqlite3 *db = nullptr;
@@ -110,7 +110,8 @@ class sq_Database {
     // It is also reentrant, so that running requests inside an exclusive
     // lock (inside a transaction basically) works correctly.
     std::mutex wait_mutex;
-    LockWaiter wait_root = { &wait_root, &wait_root, {}, false };
+    std::condition_variable wait_cv;
+    LockWaiter wait_root = { &wait_root, &wait_root, false, false };
     int running_exclusive = 0;
     int running_shared = 0;
     std::thread::id running_exclusive_thread;

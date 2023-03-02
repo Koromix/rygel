@@ -134,8 +134,8 @@ bool sq_Database::CheckpointSnapshot(bool restart)
         // Flush snapshot header to disk
         success &= snapshot_main_writer.Flush();
 
-        LockExclusive();
-        locked = true;
+        locked = !LockExclusive();
+        RG_ASSERT(locked);
 
         // Restart WAL frame copies
         snapshot_start = now;
@@ -148,8 +148,8 @@ bool sq_Database::CheckpointSnapshot(bool restart)
         if (!snapshot_data)
             return success;
 
-        LockExclusive();
-        locked = true;
+        locked = !LockExclusive();
+        RG_ASSERT(locked);
     }
 
     success &= CopyWAL();
