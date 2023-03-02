@@ -31,7 +31,9 @@ sq_Statement &sq_Statement::operator=(sq_Statement &&other)
 void sq_Statement::Finalize()
 {
     if (db) {
-        db->UnlockShared();
+        if (!sqlite3_stmt_readonly(stmt)) {
+            db->UnlockShared();
+        }
         sqlite3_finalize(stmt);
     }
 
@@ -231,8 +233,10 @@ bool sq_Database::Prepare(const char *sql, sq_Statement *out_stmt)
         return false;
     }
 
-    // The destructor of sq_Statement will call UnlockShared() if needed
-    LockShared();
+    if (!sqlite3_stmt_readonly(stmt)) {
+        // The destructor of sq_Statement will call UnlockShared() if needed
+        LockShared();
+    }
 
     out_stmt->Finalize();
     out_stmt->db = this;
