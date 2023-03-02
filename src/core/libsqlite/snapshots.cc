@@ -153,19 +153,24 @@ bool sq_Database::CheckpointSnapshot(bool restart)
     }
 
     success &= CopyWAL();
-    success &= OpenNextFrame(now);
 
+retry:
     // Perform SQLite checkpoint, with truncation so that we can just copy each WAL file
     int ret = sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_TRUNCATE, nullptr, nullptr);
     if (ret != SQLITE_OK) {
         if (success && ret == SQLITE_LOCKED) {
-            LogDebug("Could not checkpoint because of connection LOCK, will try again later");
-            return true;
+            lock_reads = true;
+
+            WaitDelay(10);
+            goto retry;
         }
 
         LogError("SQLite checkpoint failed: %1", sqlite3_errmsg(db));
         success = false;
     }
+
+    lock_reads = false;
+    success &= OpenNextFrame(now);
 
     return success;
 }

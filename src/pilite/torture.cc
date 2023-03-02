@@ -98,11 +98,28 @@ static bool TortureSnapshots(const char *database_filename, const char *snapshot
         return true;
     });
 
-    for (Size i = 0; i < 512; i++) {
+    for (Size i = 0; i < 32; i++) {
         async.Run([&]() {
             while (GetMonotonicTime() - start < duration) {
-                if (!InsertRandom(&db))
+                while (GetMonotonicTime() - start < duration) {
+                    if (!InsertRandom(&db))
+                        return false;
+                }
+            }
+
+            return true;
+        });
+
+        async.Run([&]() {
+            while (GetMonotonicTime() - start < duration) {
+                sq_Statement stmt;
+                if (!db.Prepare("SELECT * FROM dummy", &stmt))
                     return false;
+
+                while (GetMonotonicTime() - start < duration) {
+                    if (!stmt.Step())
+                        break;
+                }
             }
 
             return true;

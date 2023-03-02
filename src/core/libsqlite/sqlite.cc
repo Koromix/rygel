@@ -22,8 +22,10 @@ sq_Statement &sq_Statement::operator=(sq_Statement &&other)
 
     db = other.db;
     stmt = other.stmt;
+    unlock = other.unlock;
     other.db = nullptr;
     other.stmt = nullptr;
+    other.unlock = false;
 
     return *this;
 }
@@ -31,14 +33,16 @@ sq_Statement &sq_Statement::operator=(sq_Statement &&other)
 void sq_Statement::Finalize()
 {
     if (db) {
-        if (!sqlite3_stmt_readonly(stmt)) {
+        sqlite3_finalize(stmt);
+
+        if (unlock) {
             db->UnlockShared();
         }
-        sqlite3_finalize(stmt);
     }
 
     db = nullptr;
     stmt = nullptr;
+    unlock = false;
 }
 
 bool sq_Statement::Run()
@@ -227,18 +231,20 @@ bool sq_Database::Transaction(FunctionRef<bool()> func)
 
 bool sq_Database::Prepare(const char *sql, sq_Statement *out_stmt)
 {
+    out_stmt->Finalize();
+
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         LogError("SQLite request failed: %1", sqlite3_errmsg(db));
         return false;
     }
 
-    if (!sqlite3_stmt_readonly(stmt)) {
+    if (!sqlite3_stmt_readonly(stmt) || lock_reads.load(std::memory_order_relaxed)) {
         // The destructor of sq_Statement will call UnlockShared() if needed
         LockShared();
+        out_stmt->unlock = true;
     }
 
-    out_stmt->Finalize();
     out_stmt->db = this;
     out_stmt->stmt = stmt;
 

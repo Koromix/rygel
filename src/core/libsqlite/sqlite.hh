@@ -70,6 +70,8 @@ class sq_Statement {
 
     sq_Database *db = nullptr;
     sqlite3_stmt *stmt = nullptr;
+    bool unlock = false;
+
     int rc;
 
 public:
@@ -115,6 +117,7 @@ class sq_Database {
     int running_exclusive = 0;
     int running_shared = 0;
     std::thread::id running_exclusive_thread;
+    std::atomic_bool lock_reads { false };
 
     bool snapshot = false;
     HeapArray<char> snapshot_path_buf;
@@ -125,7 +128,7 @@ class sq_Database {
     int64_t snapshot_full_delay;
     int64_t snapshot_start;
     Size snapshot_frame;
-    std::atomic_bool snapshot_data {false};
+    std::atomic_bool snapshot_data { false };
 
 public:
     sq_Database() {}
