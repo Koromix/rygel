@@ -12,7 +12,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
-#include "snapshots.hh"
+#include "snapshot.hh"
 #include "sqlite.hh"
 
 namespace RG {
@@ -35,6 +35,87 @@ struct FrameData {
 RG_STATIC_ASSERT(RG_SIZE(SnapshotHeader::signature) == RG_SIZE(SNAPSHOT_SIGNATURE));
 RG_STATIC_ASSERT(RG_SIZE(SnapshotHeader) == 20);
 RG_STATIC_ASSERT(RG_SIZE(FrameData) == 40);
+
+bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay)
+{
+    RG_ASSERT(!snapshot);
+
+    LockExclusive();
+    RG_DEFER { UnlockExclusive(); };
+
+    RG_DEFER_N(err_guard) {
+        snapshot_main_writer.Close();
+        snapshot_wal_reader.Close();
+        snapshot_wal_writer.Close();
+    };
+
+    const char *db_filename = sqlite3_db_filename(db, "main");
+    const char *wal_filename = sqlite3_filename_wal(db_filename);
+
+    // Reset snapshot information
+    snapshot_path_buf.Clear();
+    Fmt(&snapshot_path_buf, "%1%/", directory);
+    snapshot_full_delay = full_delay;
+    snapshot_frame = 0;
+    snapshot_data = false;
+
+    // Configure database to let us manipulate the WAL manually
+    if (!RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
+                    PRAGMA journal_mode = WAL;
+                    PRAGMA auto_vacuum = 0;
+                    PRAGMA cache_spill = false;)"))
+        return false;
+
+    // Open permanent WAL stream
+    if (snapshot_wal_reader.Open(wal_filename) != OpenResult::Success)
+        return false;
+
+    // Set up WAL hook to copy new pages
+    sqlite3_wal_hook(db, [](void *udata, sqlite3 *, const char *, int) {
+        sq_Database *db = (sq_Database *)udata;
+        db->snapshot_cv.notify_one();
+        return SQLITE_OK;
+    }, this);
+
+    // Start snapshot mode
+    snapshot = true;
+    snapshot_thread = std::thread(&sq_Database::RunCopyThread, this);
+
+    err_guard.Disable();
+
+    return true;
+}
+
+bool sq_Database::StopSnapshot()
+{
+    bool success = true;
+
+    if (!snapshot)
+        return true;
+
+    success &= Checkpoint();
+
+    if (snapshot_thread.joinable()) {
+        // Wake up copy thread if needed
+        {
+            std::lock_guard<std::mutex> lock(snapshot_mutex);
+
+            snapshot = false;
+            snapshot_cv.notify_one();
+        }
+
+        // And wait for it to end!
+        snapshot_thread.join();
+    }
+
+    snapshot_main_writer.Close();
+    snapshot_wal_reader.Close();
+    snapshot_wal_writer.Close();
+
+    snapshot = false;
+
+    return success;
+}
 
 static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8_t out_hash[32])
 {
@@ -81,6 +162,11 @@ bool sq_Database::CheckpointSnapshot(bool restart)
             snapshot_start = 0;
         }
     };
+
+    snapshot_checkpointing = true;
+    RG_DEFER { snapshot_checkpointing = false; };
+
+    std::lock_guard<std::mutex> lock(snapshot_mutex);
 
     // Restart snapshot stream if forced or needed
     restart |= !snapshot_wal_writer.IsValid();
@@ -152,7 +238,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
         RG_ASSERT(locked);
     }
 
-    success &= CopyWAL();
+    success &= CopyWAL(true);
 
 retry:
     // Perform SQLite checkpoint, with truncation so that we can just copy each WAL file
@@ -201,7 +287,8 @@ bool sq_Database::OpenNextFrame(int64_t now)
 
     // Open new WAL copy for writing
     success &= snapshot_wal_writer.Close();
-    success &= snapshot_wal_writer.Open(snapshot_path_buf.ptr, 0, CompressionType::Gzip, CompressionSpeed::Fast);
+    success &= snapshot_wal_writer.Open(snapshot_path_buf.ptr, 0,
+                                        CompressionType::Gzip, CompressionSpeed::Fast);
 
     // Rewind WAL reader
     success &= snapshot_wal_reader.Rewind();
@@ -210,9 +297,19 @@ bool sq_Database::OpenNextFrame(int64_t now)
     return success;
 }
 
-bool sq_Database::CopyWAL()
+void sq_Database::RunCopyThread()
 {
-    while (snapshot_wal_writer.IsValid()) {
+    std::unique_lock<std::mutex> lock(snapshot_mutex);
+
+    while (snapshot) {
+        CopyWAL(false);
+        snapshot_cv.wait(lock);
+    }
+}
+
+bool sq_Database::CopyWAL(bool full)
+{
+    while (full || !snapshot_checkpointing.load(std::memory_order_relaxed)) {
         LocalArray<uint8_t, 16384> buf;
 
         buf.len = snapshot_wal_reader.Read(buf.data);
@@ -221,7 +318,8 @@ bool sq_Database::CopyWAL()
         if (!buf.len)
             break;
 
-        snapshot_wal_writer.Write(buf);
+        if (!snapshot_wal_writer.Write(buf))
+            return false;
         crypto_hash_sha256_update(&snapshot_wal_state, buf.data, buf.len);
 
         snapshot_data = true;

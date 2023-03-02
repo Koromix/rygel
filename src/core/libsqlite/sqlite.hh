@@ -120,6 +120,10 @@ class sq_Database {
     std::atomic_bool lock_reads { false };
 
     bool snapshot = false;
+    std::thread snapshot_thread;
+    std::mutex snapshot_mutex;
+    std::condition_variable snapshot_cv;
+    std::atomic_bool snapshot_checkpointing { false };
     HeapArray<char> snapshot_path_buf;
     StreamWriter snapshot_main_writer;
     StreamReader snapshot_wal_reader;
@@ -167,10 +171,13 @@ public:
     operator sqlite3 *() { return db; }
 
 private:
+    bool StopSnapshot();
+
     bool CheckpointSnapshot(bool restart = false);
     bool CheckpointDirect();
 
-    bool CopyWAL();
+    void RunCopyThread();
+    bool CopyWAL(bool full);
     bool OpenNextFrame(int64_t now);
 
     bool LockExclusive();

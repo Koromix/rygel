@@ -115,68 +115,11 @@ bool sq_Database::SetSynchronousFull(bool enable)
     return Run(sql);
 }
 
-bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay)
-{
-    RG_ASSERT(!snapshot);
-
-    LockExclusive();
-    RG_DEFER { UnlockExclusive(); };
-
-    RG_DEFER_N(err_guard) {
-        snapshot_main_writer.Close();
-        snapshot_wal_reader.Close();
-        snapshot_wal_writer.Close();
-    };
-
-    const char *db_filename = sqlite3_db_filename(db, "main");
-    const char *wal_filename = sqlite3_filename_wal(db_filename);
-
-    // Reset snapshot information
-    snapshot_path_buf.Clear();
-    Fmt(&snapshot_path_buf, "%1%/", directory);
-    snapshot_full_delay = full_delay;
-    snapshot_frame = 0;
-    snapshot_data = false;
-
-    // Configure database to let us manipulate the WAL manually
-    if (!RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
-                    PRAGMA journal_mode = WAL;
-                    PRAGMA auto_vacuum = 0;
-                    PRAGMA cache_spill = false;)"))
-        return false;
-
-    // Open permanent WAL stream
-    if (snapshot_wal_reader.Open(wal_filename) != OpenResult::Success)
-        return false;
-
-    // Set up WAL hook to copy new pages
-    sqlite3_wal_hook(db, [](void *udata, sqlite3 *, const char *, int) {
-        sq_Database *db = (sq_Database *)udata;
-        if (RG_LIKELY(db->snapshot_wal_writer.IsValid())) {
-            db->CopyWAL();
-        }
-        return SQLITE_OK;
-    }, this);
-
-    snapshot = true;
-    err_guard.Disable();
-
-    return true;
-}
-
 bool sq_Database::Close()
 {
     bool success = true;
 
-    if (snapshot) {
-        success &= Checkpoint();
-
-        snapshot_main_writer.Close();
-        snapshot_wal_reader.Close();
-        snapshot_wal_writer.Close();
-
-        snapshot = false;
-    }
+    success &= StopSnapshot();
 
     int ret = sqlite3_close(db);
     if (ret != SQLITE_OK) {

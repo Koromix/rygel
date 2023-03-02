@@ -88,11 +88,11 @@ static bool TortureSnapshots(const char *database_filename, const char *snapshot
 
     async.Run([&]() {
         while (GetMonotonicTime() - start < duration) {
-            int wait = GetRandomIntSafe(200, 500);
-            WaitDelay(wait);
-
             if (!db.Checkpoint())
                 return false;
+
+            int wait = GetRandomIntSafe(500, 2000);
+            WaitDelay(wait);
         }
 
         return true;
