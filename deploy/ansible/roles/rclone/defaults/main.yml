@@ -13,6 +13,9 @@
 
 rclone_root_path: /opt/rclone
 
+rclone_url: 'https://downloads.rclone.org/v1.61.1/rclone-v1.61.1-linux-amd64.deb'
+rclone_checksum: 'sha256:ede5208316ef343dad39c0cc595815382526b1d47bcc1454b43cb8a1d1ff29f2'
+
 rclone_schedule: '*-*-* 5:00'
 rclone_randomize: 20m
 

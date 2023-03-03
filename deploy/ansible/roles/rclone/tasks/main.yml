@@ -15,8 +15,21 @@
   apt:
     update_cache: yes
     pkg:
-      - rclone
+      - xz-utils
     state: latest
+  become: yes
+
+- name: Fetch rclone package
+  get_url:
+    url: '{{ rclone_url }}'
+    dest: '{{ rclone_root_path }}/rclone.deb'
+    checksum: '{{ rclone_checksum }}'
+  become: yes
+
+- name: Install rclone
+  apt:
+    deb: '{{ rclone_root_path }}/rclone.deb'
+    state: present
   become: yes
 
 - name: Prepare rclone base directory
