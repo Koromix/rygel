@@ -12,10 +12,10 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 rclone_directories:
-  - src: /opt/nginx/nginx.conf
-    dest: pknet/prod/host1/opt/nginx/nginx.conf
-  - src: '{{ goupile_root_path }}/sync/sync.ini'
-    dest: 'pknet/prod/host1{{ goupile_root_path }}/sync/sync.ini'
+  - src: /opt/nginx
+    dest: pknet/prod/host1/opt/nginx
+  - src: '{{ goupile_root_path }}/sync'
+    dest: 'pknet/prod/host1{{ goupile_root_path }}/sync'
   - src: '{{ goupile_archive_path }}/'
     dest: 'pknet/prod/host1{{ goupile_archive_path }}'
   - src: '{{ goupile_snapshot_path }}/'

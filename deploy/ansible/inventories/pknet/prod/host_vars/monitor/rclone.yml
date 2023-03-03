@@ -12,8 +12,8 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 rclone_directories:
-  - src: /opt/nginx/nginx.conf
-    dest: pknet/prod/monitor/opt/nginx/nginx.conf
+  - src: /opt/nginx
+    dest: pknet/prod/monitor/opt/nginx
   - src: /opt/static/live
     dest: pknet/prod/monitor/opt/static/live
 
