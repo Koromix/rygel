@@ -95,8 +95,8 @@
     src: '{{ item }}'
     dest: '{{ grafana_root_path }}/provision/alerting/{{ item | basename }}'
     mode: '0644'
-  loop: '{{ lookup("fileglob", grafana_dashboards + "/*.json", wantlist = True) }}'
-  when: 'grafana_dashboards is defined'
+  loop: '{{ lookup("fileglob", grafana_alerts + "/*.json", wantlist = True) }}'
+  when: 'grafana_alerts is defined'
   become: yes
 
 - name: Configure Grafana dashboards
@@ -104,8 +104,8 @@
     src: '{{ item }}'
     dest: '{{ grafana_root_path }}/dashboards/{{ item | basename }}'
     mode: '0644'
-  loop: '{{ lookup("fileglob", grafana_alerts + "/*.json", wantlist = True) }}'
-  when: 'grafana_alerts is defined'
+  loop: '{{ lookup("fileglob", grafana_dashboards + "/*.json", wantlist = True) }}'
+  when: 'grafana_dashboards is defined'
   become: yes
 
 - name: Link Grafana configuration
