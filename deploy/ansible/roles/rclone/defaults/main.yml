@@ -19,5 +19,9 @@ rclone_checksum: 'sha256:ede5208316ef343dad39c0cc595815382526b1d47bcc1454b43cb8a
 rclone_schedule: '*-*-* 5:00'
 rclone_randomize: 20m
 
+rclone_secure_file_names: yes
+rclone_secure_directory_names: no
+
 # rclone_remotes:
 # rclone_directories:
+# rclone_key:
