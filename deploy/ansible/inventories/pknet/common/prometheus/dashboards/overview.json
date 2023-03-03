@@ -118,7 +118,7 @@
         "text": {},
         "textMode": "value_and_name"
       },
-      "pluginVersion": "9.3.6",
+      "pluginVersion": "9.4.3",
       "targets": [
         {
           "datasource": {
@@ -441,8 +441,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 12,
+        "h": 7,
+        "w": 8,
         "x": 0,
         "y": 8
       },
@@ -462,7 +462,7 @@
         "text": {},
         "textMode": "value_and_name"
       },
-      "pluginVersion": "9.3.6",
+      "pluginVersion": "9.4.3",
       "targets": [
         {
           "datasource": {
@@ -476,7 +476,7 @@
           "refId": "A"
         }
       ],
-      "title": "Status",
+      "title": "Host status",
       "transformations": [],
       "type": "stat"
     },
@@ -494,7 +494,10 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "color-background-solid",
+            "cellOptions": {
+              "mode": "basic",
+              "type": "color-background"
+            },
             "filterable": false,
             "inspect": false
           },
@@ -516,14 +519,15 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
+        "h": 7,
+        "w": 8,
+        "x": 8,
         "y": 8
       },
       "id": 83,
       "options": {
         "footer": {
+          "countRows": false,
           "fields": "",
           "reducer": [
             "sum"
@@ -538,7 +542,7 @@
           }
         ]
       },
-      "pluginVersion": "9.3.6",
+      "pluginVersion": "9.4.3",
       "targets": [
         {
           "datasource": {
@@ -607,6 +611,137 @@
       "type": "table"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 86400
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "id": 90,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "9.4.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "time() - systemd_timer_last_trigger_seconds { name=\"rclone.timer\" }",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "Time"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "(-2 * systemd_unit_state { name=\"rclone.service\", state=\"failed\" } + 1) * 10000000000",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "Failure"
+        }
+      ],
+      "title": "Backup status",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "instance",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Value",
+            "mode": "reduceRow",
+            "reduce": {
+              "include": [
+                "Value #Time",
+                "Value #Failure"
+              ],
+              "reducer": "min"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time 1": true,
+              "Time 2": true,
+              "Value #A": true,
+              "Value #Failure": true,
+              "Value #Time": true,
+              "job 1": true,
+              "job 2": true,
+              "name 1": true,
+              "name 2": true,
+              "state": true,
+              "type": true
+            },
+            "indexByName": {},
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
@@ -616,7 +751,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 15
       },
       "id": 52,
       "panels": [],
@@ -642,7 +777,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 16
       },
       "id": 14,
       "panels": [],
@@ -1010,7 +1145,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 15
+        "y": 17
       },
       "id": 18,
       "links": [],
@@ -1173,7 +1308,7 @@
         "h": 7,
         "w": 6,
         "x": 6,
-        "y": 15
+        "y": 17
       },
       "hiddenSeries": false,
       "id": 20,
@@ -1198,7 +1333,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.3.6",
+      "pluginVersion": "9.4.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1379,7 +1514,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 15
+        "y": 17
       },
       "hiddenSeries": false,
       "id": 22,
@@ -1406,7 +1541,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.3.6",
+      "pluginVersion": "9.4.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1503,7 +1638,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 15
+        "y": 17
       },
       "height": "",
       "hiddenSeries": false,
@@ -1530,7 +1665,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.3.6",
+      "pluginVersion": "9.4.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1588,7 +1723,8 @@
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 37,
+  "revision": 1,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [],
   "templating": {
