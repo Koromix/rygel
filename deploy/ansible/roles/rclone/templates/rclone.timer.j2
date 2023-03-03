@@ -15,6 +15,7 @@
 Description = Perform rclone backups
 
 [Timer]
+OnActiveSec = 0
 OnCalendar = {{ rclone_schedule }}
 Persistent = true
 RandomizedDelaySec = {{ rclone_randomize }}
