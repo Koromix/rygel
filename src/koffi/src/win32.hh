@@ -27,8 +27,11 @@ struct TEB {
     void *StackLimit;
     char _pad2[5216];
     void *DeallocationStack;
+    char _pad3[712];
+    uint32_t GuaranteedStackBytes;
 };
 RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, DeallocationStack) == 0x1478);
+RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x1748);
 
 #else
 
@@ -38,8 +41,11 @@ struct TEB {
     void *StackLimit;
     char _pad2[3584];
     void *DeallocationStack;
+    char _pad3[360];
+    uint32_t GuaranteedStackBytes;
 };
 RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, DeallocationStack) == 0xE0C);
+RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x0F78);
 
 #endif
 

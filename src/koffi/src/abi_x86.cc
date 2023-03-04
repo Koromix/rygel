@@ -308,16 +308,19 @@ void CallData::Execute(const FunctionInfo *func)
     // Restore previous stack limits at the end
     RG_DEFER_C(base = teb->StackBase,
                limit = teb->StackLimit,
-               dealloc = teb->DeallocationStack) {
+               dealloc = teb->DeallocationStack,
+               guaranteed = teb->GuaranteedStackBytes) {
         teb->StackBase = base;
         teb->StackLimit = limit;
         teb->DeallocationStack = dealloc;
+        teb->GuaranteedStackBytes = guaranteed;
     };
 
     // Adjust stack limits so SEH works correctly
     teb->StackBase = mem->stack0.end();
     teb->StackLimit = mem->stack0.ptr;
     teb->DeallocationStack = mem->stack0.ptr;
+    teb->GuaranteedStackBytes = 0;
 #endif
 
 #define PERFORM_CALL(Suffix) \
