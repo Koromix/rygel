@@ -1144,30 +1144,11 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     stack_size = AlignLen(stack_size, Kibibytes(64));
 
 #if defined(_WIN32)
-    static const int PageSize = ([]() {
-        SYSTEM_INFO info = {};
-
-        GetNativeSystemInfo(&info);
-        RG_ASSERT(info.dwPageSize);
-
-        return (int)info.dwPageSize;
-    })();
-
     // Allocate stack memory
-    {
-        mem->stack.len = stack_size;
-        mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len + 2 * PageSize, MEM_RESERVE, PAGE_NOACCESS);
+    mem->stack.len = stack_size;
+    mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-        RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
-
-        bool success = true;
-
-        success &= !!VirtualAlloc(mem->stack.ptr + 0 * PageSize, PageSize, MEM_COMMIT, PAGE_NOACCESS);
-        success &= !!VirtualAlloc(mem->stack.ptr + 1 * PageSize, PageSize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
-        success &= !!VirtualAlloc(mem->stack.ptr + 2 * PageSize, mem->stack.len, MEM_COMMIT, PAGE_READWRITE);
-
-        RG_CRITICAL(success, "Cannot commit stack memory: %1", GetWin32ErrorString());
-    }
+    RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 #else
     mem->stack.len = stack_size;
     mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
