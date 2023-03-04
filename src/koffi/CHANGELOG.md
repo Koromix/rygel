@@ -9,6 +9,8 @@
 **Main fixes:**
 
 - Disable non-ready union support
+- Simplify Windows stack allocation and drop NOACCESS and GUARD pages
+- Adjust Windows TEB SEH chain and GuaranteedStackBytes for Koffi calls
 
 #### Koffi 2.3.7
 
