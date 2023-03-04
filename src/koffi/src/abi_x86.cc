@@ -306,10 +306,12 @@ void CallData::Execute(const FunctionInfo *func)
     TEB *teb = GetTEB();
 
     // Restore previous stack limits at the end
-    RG_DEFER_C(base = teb->StackBase,
+    RG_DEFER_C(exception_list = teb->ExceptionList,
+               base = teb->StackBase,
                limit = teb->StackLimit,
                dealloc = teb->DeallocationStack,
                guaranteed = teb->GuaranteedStackBytes) {
+        teb->ExceptionList = exception_list;
         teb->StackBase = base;
         teb->StackLimit = limit;
         teb->DeallocationStack = dealloc;
@@ -317,6 +319,7 @@ void CallData::Execute(const FunctionInfo *func)
     };
 
     // Adjust stack limits so SEH works correctly
+    teb->ExceptionList = (void *)-1; // EXCEPTION_CHAIN_END
     teb->StackBase = mem->stack0.end();
     teb->StackLimit = mem->stack0.ptr;
     teb->DeallocationStack = mem->stack0.ptr;

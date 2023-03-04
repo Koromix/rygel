@@ -22,12 +22,12 @@ namespace RG {
 #if _WIN64
 
 struct TEB {
-    char _pad1[8];
+    void *ExceptionList;
     void *StackBase;
     void *StackLimit;
-    char _pad2[5216];
+    char _pad1[5216];
     void *DeallocationStack;
-    char _pad3[712];
+    char _pad2[712];
     uint32_t GuaranteedStackBytes;
 };
 RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, DeallocationStack) == 0x1478);
@@ -36,12 +36,12 @@ RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x1748);
 #else
 
 struct TEB {
-    char _pad1[4];
+    void *ExceptionList;
     void *StackBase;
     void *StackLimit;
-    char _pad2[3584];
+    char _pad1[3584];
     void *DeallocationStack;
-    char _pad3[360];
+    char _pad2[360];
     uint32_t GuaranteedStackBytes;
 };
 RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, DeallocationStack) == 0xE0C);
