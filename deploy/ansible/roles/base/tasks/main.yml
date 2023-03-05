@@ -121,7 +121,7 @@
 - name: Set up weekly upgrade and reboot (Debian)
   cron:
     name: weekly_upgrade
-    weekday: sun
+    weekday: mon
     hour: 5
     minute: 0
     state: '{{ "present" if weekly_upgrade else "absent" }}'
