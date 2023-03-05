@@ -11,173 +11,6 @@
 ; You should have received a copy of the GNU Lesser General Public License
 ; along with this program. If not, see https://www.gnu.org/licenses/.
 
-; Forward
-; ----------------------------
-
-public ForwardCallG
-public ForwardCallF
-public ForwardCallD
-public ForwardCallRG
-public ForwardCallRF
-public ForwardCallRD
-
-.model flat, C
-.code
-
-; Copy function pointer to EAX, in order to save it through argument forwarding.
-; Also make a copy of the SP to CallData::old_sp because the callback system might need it.
-; Save ESP in EBX (non-volatile), and use carefully assembled stack provided by caller.
-prologue macro
-    endbr32
-    push ebp
-    mov ebp, esp
-    mov eax, dword ptr [esp+16]
-    mov dword ptr [eax+0], esp
-    mov eax, dword ptr [esp+8]
-    mov esp, dword ptr [esp+12]
-endm
-
-fastcall macro
-    mov ecx, dword ptr [esp+0]
-    mov edx, dword ptr [esp+4]
-    add esp, 16
-endm
-
-; Call native function.
-; Once done, restore normal stack pointer and return.
-; The return value is passed back untouched.
-epilogue macro
-    call eax
-    mov esp, ebp
-    pop ebp
-    ret
-endm
-
-ForwardCallG proc
-    prologue
-    epilogue
-ForwardCallG endp
-
-ForwardCallF proc
-    prologue
-    epilogue
-ForwardCallF endp
-
-ForwardCallD proc
-    prologue
-    epilogue
-ForwardCallD endp
-
-ForwardCallRG proc
-    prologue
-    fastcall
-    epilogue
-ForwardCallRG endp
-
-ForwardCallRF proc
-    prologue
-    fastcall
-    epilogue
-ForwardCallRF endp
-
-ForwardCallRD proc
-    prologue
-    fastcall
-    epilogue
-ForwardCallRD endp
-
-; Callbacks
-; ----------------------------
-
-extern RelayCallback : PROC
-public CallSwitchStack
-
-; Call the C function RelayCallback with the following arguments:
-; static trampoline ID, the current stack pointer, a pointer to the stack arguments of this call,
-; and a pointer to a struct that will contain the result registers.
-; After the call, simply load these registers from the output struct.
-; Depending on ABI, call convention and return value size, we need to issue ret <something>. Since ret
-; only takes an immediate value, and I prefer not to branch, the return address is moved instead according
-; to BackRegisters::ret_pop before ret is issued.
-trampoline macro ID
-    endbr32
-    sub esp, 44
-    mov dword ptr [esp+0], ID
-    mov dword ptr [esp+4], esp
-    lea eax, dword ptr [esp+48]
-    mov dword ptr [esp+8], eax
-    lea eax, dword ptr [esp+16]
-    mov dword ptr [esp+12], eax
-    call RelayCallback
-    mov edx, dword ptr [esp+44]
-    mov ecx, dword ptr [esp+36]
-    mov dword ptr [esp+ecx+44], edx
-    mov eax, dword ptr [esp+16]
-    mov edx, dword ptr [esp+20]
-    lea esp, [esp+ecx+44]
-    ret
-endm
-
-; This version also loads the x87 stack with the result, if need be.
-; We have to branch to avoid x87 stack imbalance.
-trampoline_x87 macro ID
-    local l1, l2, l3
-
-    endbr32
-    sub esp, 44
-    mov dword ptr [esp+0], ID
-    mov dword ptr [esp+4], esp
-    lea eax, dword ptr [esp+48]
-    mov dword ptr [esp+8], eax
-    lea eax, dword ptr [esp+16]
-    mov dword ptr [esp+12], eax
-    call RelayCallback
-    mov edx, dword ptr [esp+44]
-    mov ecx, dword ptr [esp+36]
-    mov dword ptr [esp+ecx+44], edx
-    cmp byte ptr [esp+32], 0
-    jne l2
-l1:
-    fld dword ptr [esp+24]
-    lea esp, dword ptr [esp+ecx+44]
-    ret
-l2:
-    fld qword ptr [esp+24]
-    lea esp, dword ptr [esp+ecx+44]
-    ret
-endm
-
-; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
-; The problem is that we're still running on the separate Koffi stack, and V8 will
-; probably misdetect this as a "stack overflow". We have to restore the old
-; stack pointer, call Node.js/V8 and go back to ours.
-CallSwitchStack proc
-    endbr32
-    push ebp
-    mov ebp, esp
-    mov edx, dword ptr [esp+28]
-    mov ecx, dword ptr [esp+24]
-    mov eax, esp
-    sub eax, dword ptr [ecx+0]
-    and eax, -16
-    mov dword ptr [ecx+4], eax
-    mov esp, dword ptr [esp+20]
-    sub esp, 28
-    mov eax, dword ptr [ebp+8]
-    mov dword ptr [esp+0], eax
-    mov eax, dword ptr [ebp+12]
-    mov dword ptr [esp+4], eax
-    mov eax, dword ptr [ebp+16]
-    mov dword ptr [esp+8], eax
-    call edx
-    mov esp, ebp
-    pop ebp
-    ret
-CallSwitchStack endp
-
-; Trampolines
-; ----------------------------
-
 public Trampoline0
 public Trampoline1
 public Trampoline2
@@ -5302,3076 +5135,3074 @@ Trampoline1023 proc
 Trampoline1023 endp
 
 TrampolineX0 proc
-    trampoline_x87 0
+    trampoline_vec 0
 TrampolineX0 endp
 TrampolineX1 proc
-    trampoline_x87 1
+    trampoline_vec 1
 TrampolineX1 endp
 TrampolineX2 proc
-    trampoline_x87 2
+    trampoline_vec 2
 TrampolineX2 endp
 TrampolineX3 proc
-    trampoline_x87 3
+    trampoline_vec 3
 TrampolineX3 endp
 TrampolineX4 proc
-    trampoline_x87 4
+    trampoline_vec 4
 TrampolineX4 endp
 TrampolineX5 proc
-    trampoline_x87 5
+    trampoline_vec 5
 TrampolineX5 endp
 TrampolineX6 proc
-    trampoline_x87 6
+    trampoline_vec 6
 TrampolineX6 endp
 TrampolineX7 proc
-    trampoline_x87 7
+    trampoline_vec 7
 TrampolineX7 endp
 TrampolineX8 proc
-    trampoline_x87 8
+    trampoline_vec 8
 TrampolineX8 endp
 TrampolineX9 proc
-    trampoline_x87 9
+    trampoline_vec 9
 TrampolineX9 endp
 TrampolineX10 proc
-    trampoline_x87 10
+    trampoline_vec 10
 TrampolineX10 endp
 TrampolineX11 proc
-    trampoline_x87 11
+    trampoline_vec 11
 TrampolineX11 endp
 TrampolineX12 proc
-    trampoline_x87 12
+    trampoline_vec 12
 TrampolineX12 endp
 TrampolineX13 proc
-    trampoline_x87 13
+    trampoline_vec 13
 TrampolineX13 endp
 TrampolineX14 proc
-    trampoline_x87 14
+    trampoline_vec 14
 TrampolineX14 endp
 TrampolineX15 proc
-    trampoline_x87 15
+    trampoline_vec 15
 TrampolineX15 endp
 TrampolineX16 proc
-    trampoline_x87 16
+    trampoline_vec 16
 TrampolineX16 endp
 TrampolineX17 proc
-    trampoline_x87 17
+    trampoline_vec 17
 TrampolineX17 endp
 TrampolineX18 proc
-    trampoline_x87 18
+    trampoline_vec 18
 TrampolineX18 endp
 TrampolineX19 proc
-    trampoline_x87 19
+    trampoline_vec 19
 TrampolineX19 endp
 TrampolineX20 proc
-    trampoline_x87 20
+    trampoline_vec 20
 TrampolineX20 endp
 TrampolineX21 proc
-    trampoline_x87 21
+    trampoline_vec 21
 TrampolineX21 endp
 TrampolineX22 proc
-    trampoline_x87 22
+    trampoline_vec 22
 TrampolineX22 endp
 TrampolineX23 proc
-    trampoline_x87 23
+    trampoline_vec 23
 TrampolineX23 endp
 TrampolineX24 proc
-    trampoline_x87 24
+    trampoline_vec 24
 TrampolineX24 endp
 TrampolineX25 proc
-    trampoline_x87 25
+    trampoline_vec 25
 TrampolineX25 endp
 TrampolineX26 proc
-    trampoline_x87 26
+    trampoline_vec 26
 TrampolineX26 endp
 TrampolineX27 proc
-    trampoline_x87 27
+    trampoline_vec 27
 TrampolineX27 endp
 TrampolineX28 proc
-    trampoline_x87 28
+    trampoline_vec 28
 TrampolineX28 endp
 TrampolineX29 proc
-    trampoline_x87 29
+    trampoline_vec 29
 TrampolineX29 endp
 TrampolineX30 proc
-    trampoline_x87 30
+    trampoline_vec 30
 TrampolineX30 endp
 TrampolineX31 proc
-    trampoline_x87 31
+    trampoline_vec 31
 TrampolineX31 endp
 TrampolineX32 proc
-    trampoline_x87 32
+    trampoline_vec 32
 TrampolineX32 endp
 TrampolineX33 proc
-    trampoline_x87 33
+    trampoline_vec 33
 TrampolineX33 endp
 TrampolineX34 proc
-    trampoline_x87 34
+    trampoline_vec 34
 TrampolineX34 endp
 TrampolineX35 proc
-    trampoline_x87 35
+    trampoline_vec 35
 TrampolineX35 endp
 TrampolineX36 proc
-    trampoline_x87 36
+    trampoline_vec 36
 TrampolineX36 endp
 TrampolineX37 proc
-    trampoline_x87 37
+    trampoline_vec 37
 TrampolineX37 endp
 TrampolineX38 proc
-    trampoline_x87 38
+    trampoline_vec 38
 TrampolineX38 endp
 TrampolineX39 proc
-    trampoline_x87 39
+    trampoline_vec 39
 TrampolineX39 endp
 TrampolineX40 proc
-    trampoline_x87 40
+    trampoline_vec 40
 TrampolineX40 endp
 TrampolineX41 proc
-    trampoline_x87 41
+    trampoline_vec 41
 TrampolineX41 endp
 TrampolineX42 proc
-    trampoline_x87 42
+    trampoline_vec 42
 TrampolineX42 endp
 TrampolineX43 proc
-    trampoline_x87 43
+    trampoline_vec 43
 TrampolineX43 endp
 TrampolineX44 proc
-    trampoline_x87 44
+    trampoline_vec 44
 TrampolineX44 endp
 TrampolineX45 proc
-    trampoline_x87 45
+    trampoline_vec 45
 TrampolineX45 endp
 TrampolineX46 proc
-    trampoline_x87 46
+    trampoline_vec 46
 TrampolineX46 endp
 TrampolineX47 proc
-    trampoline_x87 47
+    trampoline_vec 47
 TrampolineX47 endp
 TrampolineX48 proc
-    trampoline_x87 48
+    trampoline_vec 48
 TrampolineX48 endp
 TrampolineX49 proc
-    trampoline_x87 49
+    trampoline_vec 49
 TrampolineX49 endp
 TrampolineX50 proc
-    trampoline_x87 50
+    trampoline_vec 50
 TrampolineX50 endp
 TrampolineX51 proc
-    trampoline_x87 51
+    trampoline_vec 51
 TrampolineX51 endp
 TrampolineX52 proc
-    trampoline_x87 52
+    trampoline_vec 52
 TrampolineX52 endp
 TrampolineX53 proc
-    trampoline_x87 53
+    trampoline_vec 53
 TrampolineX53 endp
 TrampolineX54 proc
-    trampoline_x87 54
+    trampoline_vec 54
 TrampolineX54 endp
 TrampolineX55 proc
-    trampoline_x87 55
+    trampoline_vec 55
 TrampolineX55 endp
 TrampolineX56 proc
-    trampoline_x87 56
+    trampoline_vec 56
 TrampolineX56 endp
 TrampolineX57 proc
-    trampoline_x87 57
+    trampoline_vec 57
 TrampolineX57 endp
 TrampolineX58 proc
-    trampoline_x87 58
+    trampoline_vec 58
 TrampolineX58 endp
 TrampolineX59 proc
-    trampoline_x87 59
+    trampoline_vec 59
 TrampolineX59 endp
 TrampolineX60 proc
-    trampoline_x87 60
+    trampoline_vec 60
 TrampolineX60 endp
 TrampolineX61 proc
-    trampoline_x87 61
+    trampoline_vec 61
 TrampolineX61 endp
 TrampolineX62 proc
-    trampoline_x87 62
+    trampoline_vec 62
 TrampolineX62 endp
 TrampolineX63 proc
-    trampoline_x87 63
+    trampoline_vec 63
 TrampolineX63 endp
 TrampolineX64 proc
-    trampoline_x87 64
+    trampoline_vec 64
 TrampolineX64 endp
 TrampolineX65 proc
-    trampoline_x87 65
+    trampoline_vec 65
 TrampolineX65 endp
 TrampolineX66 proc
-    trampoline_x87 66
+    trampoline_vec 66
 TrampolineX66 endp
 TrampolineX67 proc
-    trampoline_x87 67
+    trampoline_vec 67
 TrampolineX67 endp
 TrampolineX68 proc
-    trampoline_x87 68
+    trampoline_vec 68
 TrampolineX68 endp
 TrampolineX69 proc
-    trampoline_x87 69
+    trampoline_vec 69
 TrampolineX69 endp
 TrampolineX70 proc
-    trampoline_x87 70
+    trampoline_vec 70
 TrampolineX70 endp
 TrampolineX71 proc
-    trampoline_x87 71
+    trampoline_vec 71
 TrampolineX71 endp
 TrampolineX72 proc
-    trampoline_x87 72
+    trampoline_vec 72
 TrampolineX72 endp
 TrampolineX73 proc
-    trampoline_x87 73
+    trampoline_vec 73
 TrampolineX73 endp
 TrampolineX74 proc
-    trampoline_x87 74
+    trampoline_vec 74
 TrampolineX74 endp
 TrampolineX75 proc
-    trampoline_x87 75
+    trampoline_vec 75
 TrampolineX75 endp
 TrampolineX76 proc
-    trampoline_x87 76
+    trampoline_vec 76
 TrampolineX76 endp
 TrampolineX77 proc
-    trampoline_x87 77
+    trampoline_vec 77
 TrampolineX77 endp
 TrampolineX78 proc
-    trampoline_x87 78
+    trampoline_vec 78
 TrampolineX78 endp
 TrampolineX79 proc
-    trampoline_x87 79
+    trampoline_vec 79
 TrampolineX79 endp
 TrampolineX80 proc
-    trampoline_x87 80
+    trampoline_vec 80
 TrampolineX80 endp
 TrampolineX81 proc
-    trampoline_x87 81
+    trampoline_vec 81
 TrampolineX81 endp
 TrampolineX82 proc
-    trampoline_x87 82
+    trampoline_vec 82
 TrampolineX82 endp
 TrampolineX83 proc
-    trampoline_x87 83
+    trampoline_vec 83
 TrampolineX83 endp
 TrampolineX84 proc
-    trampoline_x87 84
+    trampoline_vec 84
 TrampolineX84 endp
 TrampolineX85 proc
-    trampoline_x87 85
+    trampoline_vec 85
 TrampolineX85 endp
 TrampolineX86 proc
-    trampoline_x87 86
+    trampoline_vec 86
 TrampolineX86 endp
 TrampolineX87 proc
-    trampoline_x87 87
+    trampoline_vec 87
 TrampolineX87 endp
 TrampolineX88 proc
-    trampoline_x87 88
+    trampoline_vec 88
 TrampolineX88 endp
 TrampolineX89 proc
-    trampoline_x87 89
+    trampoline_vec 89
 TrampolineX89 endp
 TrampolineX90 proc
-    trampoline_x87 90
+    trampoline_vec 90
 TrampolineX90 endp
 TrampolineX91 proc
-    trampoline_x87 91
+    trampoline_vec 91
 TrampolineX91 endp
 TrampolineX92 proc
-    trampoline_x87 92
+    trampoline_vec 92
 TrampolineX92 endp
 TrampolineX93 proc
-    trampoline_x87 93
+    trampoline_vec 93
 TrampolineX93 endp
 TrampolineX94 proc
-    trampoline_x87 94
+    trampoline_vec 94
 TrampolineX94 endp
 TrampolineX95 proc
-    trampoline_x87 95
+    trampoline_vec 95
 TrampolineX95 endp
 TrampolineX96 proc
-    trampoline_x87 96
+    trampoline_vec 96
 TrampolineX96 endp
 TrampolineX97 proc
-    trampoline_x87 97
+    trampoline_vec 97
 TrampolineX97 endp
 TrampolineX98 proc
-    trampoline_x87 98
+    trampoline_vec 98
 TrampolineX98 endp
 TrampolineX99 proc
-    trampoline_x87 99
+    trampoline_vec 99
 TrampolineX99 endp
 TrampolineX100 proc
-    trampoline_x87 100
+    trampoline_vec 100
 TrampolineX100 endp
 TrampolineX101 proc
-    trampoline_x87 101
+    trampoline_vec 101
 TrampolineX101 endp
 TrampolineX102 proc
-    trampoline_x87 102
+    trampoline_vec 102
 TrampolineX102 endp
 TrampolineX103 proc
-    trampoline_x87 103
+    trampoline_vec 103
 TrampolineX103 endp
 TrampolineX104 proc
-    trampoline_x87 104
+    trampoline_vec 104
 TrampolineX104 endp
 TrampolineX105 proc
-    trampoline_x87 105
+    trampoline_vec 105
 TrampolineX105 endp
 TrampolineX106 proc
-    trampoline_x87 106
+    trampoline_vec 106
 TrampolineX106 endp
 TrampolineX107 proc
-    trampoline_x87 107
+    trampoline_vec 107
 TrampolineX107 endp
 TrampolineX108 proc
-    trampoline_x87 108
+    trampoline_vec 108
 TrampolineX108 endp
 TrampolineX109 proc
-    trampoline_x87 109
+    trampoline_vec 109
 TrampolineX109 endp
 TrampolineX110 proc
-    trampoline_x87 110
+    trampoline_vec 110
 TrampolineX110 endp
 TrampolineX111 proc
-    trampoline_x87 111
+    trampoline_vec 111
 TrampolineX111 endp
 TrampolineX112 proc
-    trampoline_x87 112
+    trampoline_vec 112
 TrampolineX112 endp
 TrampolineX113 proc
-    trampoline_x87 113
+    trampoline_vec 113
 TrampolineX113 endp
 TrampolineX114 proc
-    trampoline_x87 114
+    trampoline_vec 114
 TrampolineX114 endp
 TrampolineX115 proc
-    trampoline_x87 115
+    trampoline_vec 115
 TrampolineX115 endp
 TrampolineX116 proc
-    trampoline_x87 116
+    trampoline_vec 116
 TrampolineX116 endp
 TrampolineX117 proc
-    trampoline_x87 117
+    trampoline_vec 117
 TrampolineX117 endp
 TrampolineX118 proc
-    trampoline_x87 118
+    trampoline_vec 118
 TrampolineX118 endp
 TrampolineX119 proc
-    trampoline_x87 119
+    trampoline_vec 119
 TrampolineX119 endp
 TrampolineX120 proc
-    trampoline_x87 120
+    trampoline_vec 120
 TrampolineX120 endp
 TrampolineX121 proc
-    trampoline_x87 121
+    trampoline_vec 121
 TrampolineX121 endp
 TrampolineX122 proc
-    trampoline_x87 122
+    trampoline_vec 122
 TrampolineX122 endp
 TrampolineX123 proc
-    trampoline_x87 123
+    trampoline_vec 123
 TrampolineX123 endp
 TrampolineX124 proc
-    trampoline_x87 124
+    trampoline_vec 124
 TrampolineX124 endp
 TrampolineX125 proc
-    trampoline_x87 125
+    trampoline_vec 125
 TrampolineX125 endp
 TrampolineX126 proc
-    trampoline_x87 126
+    trampoline_vec 126
 TrampolineX126 endp
 TrampolineX127 proc
-    trampoline_x87 127
+    trampoline_vec 127
 TrampolineX127 endp
 TrampolineX128 proc
-    trampoline_x87 128
+    trampoline_vec 128
 TrampolineX128 endp
 TrampolineX129 proc
-    trampoline_x87 129
+    trampoline_vec 129
 TrampolineX129 endp
 TrampolineX130 proc
-    trampoline_x87 130
+    trampoline_vec 130
 TrampolineX130 endp
 TrampolineX131 proc
-    trampoline_x87 131
+    trampoline_vec 131
 TrampolineX131 endp
 TrampolineX132 proc
-    trampoline_x87 132
+    trampoline_vec 132
 TrampolineX132 endp
 TrampolineX133 proc
-    trampoline_x87 133
+    trampoline_vec 133
 TrampolineX133 endp
 TrampolineX134 proc
-    trampoline_x87 134
+    trampoline_vec 134
 TrampolineX134 endp
 TrampolineX135 proc
-    trampoline_x87 135
+    trampoline_vec 135
 TrampolineX135 endp
 TrampolineX136 proc
-    trampoline_x87 136
+    trampoline_vec 136
 TrampolineX136 endp
 TrampolineX137 proc
-    trampoline_x87 137
+    trampoline_vec 137
 TrampolineX137 endp
 TrampolineX138 proc
-    trampoline_x87 138
+    trampoline_vec 138
 TrampolineX138 endp
 TrampolineX139 proc
-    trampoline_x87 139
+    trampoline_vec 139
 TrampolineX139 endp
 TrampolineX140 proc
-    trampoline_x87 140
+    trampoline_vec 140
 TrampolineX140 endp
 TrampolineX141 proc
-    trampoline_x87 141
+    trampoline_vec 141
 TrampolineX141 endp
 TrampolineX142 proc
-    trampoline_x87 142
+    trampoline_vec 142
 TrampolineX142 endp
 TrampolineX143 proc
-    trampoline_x87 143
+    trampoline_vec 143
 TrampolineX143 endp
 TrampolineX144 proc
-    trampoline_x87 144
+    trampoline_vec 144
 TrampolineX144 endp
 TrampolineX145 proc
-    trampoline_x87 145
+    trampoline_vec 145
 TrampolineX145 endp
 TrampolineX146 proc
-    trampoline_x87 146
+    trampoline_vec 146
 TrampolineX146 endp
 TrampolineX147 proc
-    trampoline_x87 147
+    trampoline_vec 147
 TrampolineX147 endp
 TrampolineX148 proc
-    trampoline_x87 148
+    trampoline_vec 148
 TrampolineX148 endp
 TrampolineX149 proc
-    trampoline_x87 149
+    trampoline_vec 149
 TrampolineX149 endp
 TrampolineX150 proc
-    trampoline_x87 150
+    trampoline_vec 150
 TrampolineX150 endp
 TrampolineX151 proc
-    trampoline_x87 151
+    trampoline_vec 151
 TrampolineX151 endp
 TrampolineX152 proc
-    trampoline_x87 152
+    trampoline_vec 152
 TrampolineX152 endp
 TrampolineX153 proc
-    trampoline_x87 153
+    trampoline_vec 153
 TrampolineX153 endp
 TrampolineX154 proc
-    trampoline_x87 154
+    trampoline_vec 154
 TrampolineX154 endp
 TrampolineX155 proc
-    trampoline_x87 155
+    trampoline_vec 155
 TrampolineX155 endp
 TrampolineX156 proc
-    trampoline_x87 156
+    trampoline_vec 156
 TrampolineX156 endp
 TrampolineX157 proc
-    trampoline_x87 157
+    trampoline_vec 157
 TrampolineX157 endp
 TrampolineX158 proc
-    trampoline_x87 158
+    trampoline_vec 158
 TrampolineX158 endp
 TrampolineX159 proc
-    trampoline_x87 159
+    trampoline_vec 159
 TrampolineX159 endp
 TrampolineX160 proc
-    trampoline_x87 160
+    trampoline_vec 160
 TrampolineX160 endp
 TrampolineX161 proc
-    trampoline_x87 161
+    trampoline_vec 161
 TrampolineX161 endp
 TrampolineX162 proc
-    trampoline_x87 162
+    trampoline_vec 162
 TrampolineX162 endp
 TrampolineX163 proc
-    trampoline_x87 163
+    trampoline_vec 163
 TrampolineX163 endp
 TrampolineX164 proc
-    trampoline_x87 164
+    trampoline_vec 164
 TrampolineX164 endp
 TrampolineX165 proc
-    trampoline_x87 165
+    trampoline_vec 165
 TrampolineX165 endp
 TrampolineX166 proc
-    trampoline_x87 166
+    trampoline_vec 166
 TrampolineX166 endp
 TrampolineX167 proc
-    trampoline_x87 167
+    trampoline_vec 167
 TrampolineX167 endp
 TrampolineX168 proc
-    trampoline_x87 168
+    trampoline_vec 168
 TrampolineX168 endp
 TrampolineX169 proc
-    trampoline_x87 169
+    trampoline_vec 169
 TrampolineX169 endp
 TrampolineX170 proc
-    trampoline_x87 170
+    trampoline_vec 170
 TrampolineX170 endp
 TrampolineX171 proc
-    trampoline_x87 171
+    trampoline_vec 171
 TrampolineX171 endp
 TrampolineX172 proc
-    trampoline_x87 172
+    trampoline_vec 172
 TrampolineX172 endp
 TrampolineX173 proc
-    trampoline_x87 173
+    trampoline_vec 173
 TrampolineX173 endp
 TrampolineX174 proc
-    trampoline_x87 174
+    trampoline_vec 174
 TrampolineX174 endp
 TrampolineX175 proc
-    trampoline_x87 175
+    trampoline_vec 175
 TrampolineX175 endp
 TrampolineX176 proc
-    trampoline_x87 176
+    trampoline_vec 176
 TrampolineX176 endp
 TrampolineX177 proc
-    trampoline_x87 177
+    trampoline_vec 177
 TrampolineX177 endp
 TrampolineX178 proc
-    trampoline_x87 178
+    trampoline_vec 178
 TrampolineX178 endp
 TrampolineX179 proc
-    trampoline_x87 179
+    trampoline_vec 179
 TrampolineX179 endp
 TrampolineX180 proc
-    trampoline_x87 180
+    trampoline_vec 180
 TrampolineX180 endp
 TrampolineX181 proc
-    trampoline_x87 181
+    trampoline_vec 181
 TrampolineX181 endp
 TrampolineX182 proc
-    trampoline_x87 182
+    trampoline_vec 182
 TrampolineX182 endp
 TrampolineX183 proc
-    trampoline_x87 183
+    trampoline_vec 183
 TrampolineX183 endp
 TrampolineX184 proc
-    trampoline_x87 184
+    trampoline_vec 184
 TrampolineX184 endp
 TrampolineX185 proc
-    trampoline_x87 185
+    trampoline_vec 185
 TrampolineX185 endp
 TrampolineX186 proc
-    trampoline_x87 186
+    trampoline_vec 186
 TrampolineX186 endp
 TrampolineX187 proc
-    trampoline_x87 187
+    trampoline_vec 187
 TrampolineX187 endp
 TrampolineX188 proc
-    trampoline_x87 188
+    trampoline_vec 188
 TrampolineX188 endp
 TrampolineX189 proc
-    trampoline_x87 189
+    trampoline_vec 189
 TrampolineX189 endp
 TrampolineX190 proc
-    trampoline_x87 190
+    trampoline_vec 190
 TrampolineX190 endp
 TrampolineX191 proc
-    trampoline_x87 191
+    trampoline_vec 191
 TrampolineX191 endp
 TrampolineX192 proc
-    trampoline_x87 192
+    trampoline_vec 192
 TrampolineX192 endp
 TrampolineX193 proc
-    trampoline_x87 193
+    trampoline_vec 193
 TrampolineX193 endp
 TrampolineX194 proc
-    trampoline_x87 194
+    trampoline_vec 194
 TrampolineX194 endp
 TrampolineX195 proc
-    trampoline_x87 195
+    trampoline_vec 195
 TrampolineX195 endp
 TrampolineX196 proc
-    trampoline_x87 196
+    trampoline_vec 196
 TrampolineX196 endp
 TrampolineX197 proc
-    trampoline_x87 197
+    trampoline_vec 197
 TrampolineX197 endp
 TrampolineX198 proc
-    trampoline_x87 198
+    trampoline_vec 198
 TrampolineX198 endp
 TrampolineX199 proc
-    trampoline_x87 199
+    trampoline_vec 199
 TrampolineX199 endp
 TrampolineX200 proc
-    trampoline_x87 200
+    trampoline_vec 200
 TrampolineX200 endp
 TrampolineX201 proc
-    trampoline_x87 201
+    trampoline_vec 201
 TrampolineX201 endp
 TrampolineX202 proc
-    trampoline_x87 202
+    trampoline_vec 202
 TrampolineX202 endp
 TrampolineX203 proc
-    trampoline_x87 203
+    trampoline_vec 203
 TrampolineX203 endp
 TrampolineX204 proc
-    trampoline_x87 204
+    trampoline_vec 204
 TrampolineX204 endp
 TrampolineX205 proc
-    trampoline_x87 205
+    trampoline_vec 205
 TrampolineX205 endp
 TrampolineX206 proc
-    trampoline_x87 206
+    trampoline_vec 206
 TrampolineX206 endp
 TrampolineX207 proc
-    trampoline_x87 207
+    trampoline_vec 207
 TrampolineX207 endp
 TrampolineX208 proc
-    trampoline_x87 208
+    trampoline_vec 208
 TrampolineX208 endp
 TrampolineX209 proc
-    trampoline_x87 209
+    trampoline_vec 209
 TrampolineX209 endp
 TrampolineX210 proc
-    trampoline_x87 210
+    trampoline_vec 210
 TrampolineX210 endp
 TrampolineX211 proc
-    trampoline_x87 211
+    trampoline_vec 211
 TrampolineX211 endp
 TrampolineX212 proc
-    trampoline_x87 212
+    trampoline_vec 212
 TrampolineX212 endp
 TrampolineX213 proc
-    trampoline_x87 213
+    trampoline_vec 213
 TrampolineX213 endp
 TrampolineX214 proc
-    trampoline_x87 214
+    trampoline_vec 214
 TrampolineX214 endp
 TrampolineX215 proc
-    trampoline_x87 215
+    trampoline_vec 215
 TrampolineX215 endp
 TrampolineX216 proc
-    trampoline_x87 216
+    trampoline_vec 216
 TrampolineX216 endp
 TrampolineX217 proc
-    trampoline_x87 217
+    trampoline_vec 217
 TrampolineX217 endp
 TrampolineX218 proc
-    trampoline_x87 218
+    trampoline_vec 218
 TrampolineX218 endp
 TrampolineX219 proc
-    trampoline_x87 219
+    trampoline_vec 219
 TrampolineX219 endp
 TrampolineX220 proc
-    trampoline_x87 220
+    trampoline_vec 220
 TrampolineX220 endp
 TrampolineX221 proc
-    trampoline_x87 221
+    trampoline_vec 221
 TrampolineX221 endp
 TrampolineX222 proc
-    trampoline_x87 222
+    trampoline_vec 222
 TrampolineX222 endp
 TrampolineX223 proc
-    trampoline_x87 223
+    trampoline_vec 223
 TrampolineX223 endp
 TrampolineX224 proc
-    trampoline_x87 224
+    trampoline_vec 224
 TrampolineX224 endp
 TrampolineX225 proc
-    trampoline_x87 225
+    trampoline_vec 225
 TrampolineX225 endp
 TrampolineX226 proc
-    trampoline_x87 226
+    trampoline_vec 226
 TrampolineX226 endp
 TrampolineX227 proc
-    trampoline_x87 227
+    trampoline_vec 227
 TrampolineX227 endp
 TrampolineX228 proc
-    trampoline_x87 228
+    trampoline_vec 228
 TrampolineX228 endp
 TrampolineX229 proc
-    trampoline_x87 229
+    trampoline_vec 229
 TrampolineX229 endp
 TrampolineX230 proc
-    trampoline_x87 230
+    trampoline_vec 230
 TrampolineX230 endp
 TrampolineX231 proc
-    trampoline_x87 231
+    trampoline_vec 231
 TrampolineX231 endp
 TrampolineX232 proc
-    trampoline_x87 232
+    trampoline_vec 232
 TrampolineX232 endp
 TrampolineX233 proc
-    trampoline_x87 233
+    trampoline_vec 233
 TrampolineX233 endp
 TrampolineX234 proc
-    trampoline_x87 234
+    trampoline_vec 234
 TrampolineX234 endp
 TrampolineX235 proc
-    trampoline_x87 235
+    trampoline_vec 235
 TrampolineX235 endp
 TrampolineX236 proc
-    trampoline_x87 236
+    trampoline_vec 236
 TrampolineX236 endp
 TrampolineX237 proc
-    trampoline_x87 237
+    trampoline_vec 237
 TrampolineX237 endp
 TrampolineX238 proc
-    trampoline_x87 238
+    trampoline_vec 238
 TrampolineX238 endp
 TrampolineX239 proc
-    trampoline_x87 239
+    trampoline_vec 239
 TrampolineX239 endp
 TrampolineX240 proc
-    trampoline_x87 240
+    trampoline_vec 240
 TrampolineX240 endp
 TrampolineX241 proc
-    trampoline_x87 241
+    trampoline_vec 241
 TrampolineX241 endp
 TrampolineX242 proc
-    trampoline_x87 242
+    trampoline_vec 242
 TrampolineX242 endp
 TrampolineX243 proc
-    trampoline_x87 243
+    trampoline_vec 243
 TrampolineX243 endp
 TrampolineX244 proc
-    trampoline_x87 244
+    trampoline_vec 244
 TrampolineX244 endp
 TrampolineX245 proc
-    trampoline_x87 245
+    trampoline_vec 245
 TrampolineX245 endp
 TrampolineX246 proc
-    trampoline_x87 246
+    trampoline_vec 246
 TrampolineX246 endp
 TrampolineX247 proc
-    trampoline_x87 247
+    trampoline_vec 247
 TrampolineX247 endp
 TrampolineX248 proc
-    trampoline_x87 248
+    trampoline_vec 248
 TrampolineX248 endp
 TrampolineX249 proc
-    trampoline_x87 249
+    trampoline_vec 249
 TrampolineX249 endp
 TrampolineX250 proc
-    trampoline_x87 250
+    trampoline_vec 250
 TrampolineX250 endp
 TrampolineX251 proc
-    trampoline_x87 251
+    trampoline_vec 251
 TrampolineX251 endp
 TrampolineX252 proc
-    trampoline_x87 252
+    trampoline_vec 252
 TrampolineX252 endp
 TrampolineX253 proc
-    trampoline_x87 253
+    trampoline_vec 253
 TrampolineX253 endp
 TrampolineX254 proc
-    trampoline_x87 254
+    trampoline_vec 254
 TrampolineX254 endp
 TrampolineX255 proc
-    trampoline_x87 255
+    trampoline_vec 255
 TrampolineX255 endp
 TrampolineX256 proc
-    trampoline_x87 256
+    trampoline_vec 256
 TrampolineX256 endp
 TrampolineX257 proc
-    trampoline_x87 257
+    trampoline_vec 257
 TrampolineX257 endp
 TrampolineX258 proc
-    trampoline_x87 258
+    trampoline_vec 258
 TrampolineX258 endp
 TrampolineX259 proc
-    trampoline_x87 259
+    trampoline_vec 259
 TrampolineX259 endp
 TrampolineX260 proc
-    trampoline_x87 260
+    trampoline_vec 260
 TrampolineX260 endp
 TrampolineX261 proc
-    trampoline_x87 261
+    trampoline_vec 261
 TrampolineX261 endp
 TrampolineX262 proc
-    trampoline_x87 262
+    trampoline_vec 262
 TrampolineX262 endp
 TrampolineX263 proc
-    trampoline_x87 263
+    trampoline_vec 263
 TrampolineX263 endp
 TrampolineX264 proc
-    trampoline_x87 264
+    trampoline_vec 264
 TrampolineX264 endp
 TrampolineX265 proc
-    trampoline_x87 265
+    trampoline_vec 265
 TrampolineX265 endp
 TrampolineX266 proc
-    trampoline_x87 266
+    trampoline_vec 266
 TrampolineX266 endp
 TrampolineX267 proc
-    trampoline_x87 267
+    trampoline_vec 267
 TrampolineX267 endp
 TrampolineX268 proc
-    trampoline_x87 268
+    trampoline_vec 268
 TrampolineX268 endp
 TrampolineX269 proc
-    trampoline_x87 269
+    trampoline_vec 269
 TrampolineX269 endp
 TrampolineX270 proc
-    trampoline_x87 270
+    trampoline_vec 270
 TrampolineX270 endp
 TrampolineX271 proc
-    trampoline_x87 271
+    trampoline_vec 271
 TrampolineX271 endp
 TrampolineX272 proc
-    trampoline_x87 272
+    trampoline_vec 272
 TrampolineX272 endp
 TrampolineX273 proc
-    trampoline_x87 273
+    trampoline_vec 273
 TrampolineX273 endp
 TrampolineX274 proc
-    trampoline_x87 274
+    trampoline_vec 274
 TrampolineX274 endp
 TrampolineX275 proc
-    trampoline_x87 275
+    trampoline_vec 275
 TrampolineX275 endp
 TrampolineX276 proc
-    trampoline_x87 276
+    trampoline_vec 276
 TrampolineX276 endp
 TrampolineX277 proc
-    trampoline_x87 277
+    trampoline_vec 277
 TrampolineX277 endp
 TrampolineX278 proc
-    trampoline_x87 278
+    trampoline_vec 278
 TrampolineX278 endp
 TrampolineX279 proc
-    trampoline_x87 279
+    trampoline_vec 279
 TrampolineX279 endp
 TrampolineX280 proc
-    trampoline_x87 280
+    trampoline_vec 280
 TrampolineX280 endp
 TrampolineX281 proc
-    trampoline_x87 281
+    trampoline_vec 281
 TrampolineX281 endp
 TrampolineX282 proc
-    trampoline_x87 282
+    trampoline_vec 282
 TrampolineX282 endp
 TrampolineX283 proc
-    trampoline_x87 283
+    trampoline_vec 283
 TrampolineX283 endp
 TrampolineX284 proc
-    trampoline_x87 284
+    trampoline_vec 284
 TrampolineX284 endp
 TrampolineX285 proc
-    trampoline_x87 285
+    trampoline_vec 285
 TrampolineX285 endp
 TrampolineX286 proc
-    trampoline_x87 286
+    trampoline_vec 286
 TrampolineX286 endp
 TrampolineX287 proc
-    trampoline_x87 287
+    trampoline_vec 287
 TrampolineX287 endp
 TrampolineX288 proc
-    trampoline_x87 288
+    trampoline_vec 288
 TrampolineX288 endp
 TrampolineX289 proc
-    trampoline_x87 289
+    trampoline_vec 289
 TrampolineX289 endp
 TrampolineX290 proc
-    trampoline_x87 290
+    trampoline_vec 290
 TrampolineX290 endp
 TrampolineX291 proc
-    trampoline_x87 291
+    trampoline_vec 291
 TrampolineX291 endp
 TrampolineX292 proc
-    trampoline_x87 292
+    trampoline_vec 292
 TrampolineX292 endp
 TrampolineX293 proc
-    trampoline_x87 293
+    trampoline_vec 293
 TrampolineX293 endp
 TrampolineX294 proc
-    trampoline_x87 294
+    trampoline_vec 294
 TrampolineX294 endp
 TrampolineX295 proc
-    trampoline_x87 295
+    trampoline_vec 295
 TrampolineX295 endp
 TrampolineX296 proc
-    trampoline_x87 296
+    trampoline_vec 296
 TrampolineX296 endp
 TrampolineX297 proc
-    trampoline_x87 297
+    trampoline_vec 297
 TrampolineX297 endp
 TrampolineX298 proc
-    trampoline_x87 298
+    trampoline_vec 298
 TrampolineX298 endp
 TrampolineX299 proc
-    trampoline_x87 299
+    trampoline_vec 299
 TrampolineX299 endp
 TrampolineX300 proc
-    trampoline_x87 300
+    trampoline_vec 300
 TrampolineX300 endp
 TrampolineX301 proc
-    trampoline_x87 301
+    trampoline_vec 301
 TrampolineX301 endp
 TrampolineX302 proc
-    trampoline_x87 302
+    trampoline_vec 302
 TrampolineX302 endp
 TrampolineX303 proc
-    trampoline_x87 303
+    trampoline_vec 303
 TrampolineX303 endp
 TrampolineX304 proc
-    trampoline_x87 304
+    trampoline_vec 304
 TrampolineX304 endp
 TrampolineX305 proc
-    trampoline_x87 305
+    trampoline_vec 305
 TrampolineX305 endp
 TrampolineX306 proc
-    trampoline_x87 306
+    trampoline_vec 306
 TrampolineX306 endp
 TrampolineX307 proc
-    trampoline_x87 307
+    trampoline_vec 307
 TrampolineX307 endp
 TrampolineX308 proc
-    trampoline_x87 308
+    trampoline_vec 308
 TrampolineX308 endp
 TrampolineX309 proc
-    trampoline_x87 309
+    trampoline_vec 309
 TrampolineX309 endp
 TrampolineX310 proc
-    trampoline_x87 310
+    trampoline_vec 310
 TrampolineX310 endp
 TrampolineX311 proc
-    trampoline_x87 311
+    trampoline_vec 311
 TrampolineX311 endp
 TrampolineX312 proc
-    trampoline_x87 312
+    trampoline_vec 312
 TrampolineX312 endp
 TrampolineX313 proc
-    trampoline_x87 313
+    trampoline_vec 313
 TrampolineX313 endp
 TrampolineX314 proc
-    trampoline_x87 314
+    trampoline_vec 314
 TrampolineX314 endp
 TrampolineX315 proc
-    trampoline_x87 315
+    trampoline_vec 315
 TrampolineX315 endp
 TrampolineX316 proc
-    trampoline_x87 316
+    trampoline_vec 316
 TrampolineX316 endp
 TrampolineX317 proc
-    trampoline_x87 317
+    trampoline_vec 317
 TrampolineX317 endp
 TrampolineX318 proc
-    trampoline_x87 318
+    trampoline_vec 318
 TrampolineX318 endp
 TrampolineX319 proc
-    trampoline_x87 319
+    trampoline_vec 319
 TrampolineX319 endp
 TrampolineX320 proc
-    trampoline_x87 320
+    trampoline_vec 320
 TrampolineX320 endp
 TrampolineX321 proc
-    trampoline_x87 321
+    trampoline_vec 321
 TrampolineX321 endp
 TrampolineX322 proc
-    trampoline_x87 322
+    trampoline_vec 322
 TrampolineX322 endp
 TrampolineX323 proc
-    trampoline_x87 323
+    trampoline_vec 323
 TrampolineX323 endp
 TrampolineX324 proc
-    trampoline_x87 324
+    trampoline_vec 324
 TrampolineX324 endp
 TrampolineX325 proc
-    trampoline_x87 325
+    trampoline_vec 325
 TrampolineX325 endp
 TrampolineX326 proc
-    trampoline_x87 326
+    trampoline_vec 326
 TrampolineX326 endp
 TrampolineX327 proc
-    trampoline_x87 327
+    trampoline_vec 327
 TrampolineX327 endp
 TrampolineX328 proc
-    trampoline_x87 328
+    trampoline_vec 328
 TrampolineX328 endp
 TrampolineX329 proc
-    trampoline_x87 329
+    trampoline_vec 329
 TrampolineX329 endp
 TrampolineX330 proc
-    trampoline_x87 330
+    trampoline_vec 330
 TrampolineX330 endp
 TrampolineX331 proc
-    trampoline_x87 331
+    trampoline_vec 331
 TrampolineX331 endp
 TrampolineX332 proc
-    trampoline_x87 332
+    trampoline_vec 332
 TrampolineX332 endp
 TrampolineX333 proc
-    trampoline_x87 333
+    trampoline_vec 333
 TrampolineX333 endp
 TrampolineX334 proc
-    trampoline_x87 334
+    trampoline_vec 334
 TrampolineX334 endp
 TrampolineX335 proc
-    trampoline_x87 335
+    trampoline_vec 335
 TrampolineX335 endp
 TrampolineX336 proc
-    trampoline_x87 336
+    trampoline_vec 336
 TrampolineX336 endp
 TrampolineX337 proc
-    trampoline_x87 337
+    trampoline_vec 337
 TrampolineX337 endp
 TrampolineX338 proc
-    trampoline_x87 338
+    trampoline_vec 338
 TrampolineX338 endp
 TrampolineX339 proc
-    trampoline_x87 339
+    trampoline_vec 339
 TrampolineX339 endp
 TrampolineX340 proc
-    trampoline_x87 340
+    trampoline_vec 340
 TrampolineX340 endp
 TrampolineX341 proc
-    trampoline_x87 341
+    trampoline_vec 341
 TrampolineX341 endp
 TrampolineX342 proc
-    trampoline_x87 342
+    trampoline_vec 342
 TrampolineX342 endp
 TrampolineX343 proc
-    trampoline_x87 343
+    trampoline_vec 343
 TrampolineX343 endp
 TrampolineX344 proc
-    trampoline_x87 344
+    trampoline_vec 344
 TrampolineX344 endp
 TrampolineX345 proc
-    trampoline_x87 345
+    trampoline_vec 345
 TrampolineX345 endp
 TrampolineX346 proc
-    trampoline_x87 346
+    trampoline_vec 346
 TrampolineX346 endp
 TrampolineX347 proc
-    trampoline_x87 347
+    trampoline_vec 347
 TrampolineX347 endp
 TrampolineX348 proc
-    trampoline_x87 348
+    trampoline_vec 348
 TrampolineX348 endp
 TrampolineX349 proc
-    trampoline_x87 349
+    trampoline_vec 349
 TrampolineX349 endp
 TrampolineX350 proc
-    trampoline_x87 350
+    trampoline_vec 350
 TrampolineX350 endp
 TrampolineX351 proc
-    trampoline_x87 351
+    trampoline_vec 351
 TrampolineX351 endp
 TrampolineX352 proc
-    trampoline_x87 352
+    trampoline_vec 352
 TrampolineX352 endp
 TrampolineX353 proc
-    trampoline_x87 353
+    trampoline_vec 353
 TrampolineX353 endp
 TrampolineX354 proc
-    trampoline_x87 354
+    trampoline_vec 354
 TrampolineX354 endp
 TrampolineX355 proc
-    trampoline_x87 355
+    trampoline_vec 355
 TrampolineX355 endp
 TrampolineX356 proc
-    trampoline_x87 356
+    trampoline_vec 356
 TrampolineX356 endp
 TrampolineX357 proc
-    trampoline_x87 357
+    trampoline_vec 357
 TrampolineX357 endp
 TrampolineX358 proc
-    trampoline_x87 358
+    trampoline_vec 358
 TrampolineX358 endp
 TrampolineX359 proc
-    trampoline_x87 359
+    trampoline_vec 359
 TrampolineX359 endp
 TrampolineX360 proc
-    trampoline_x87 360
+    trampoline_vec 360
 TrampolineX360 endp
 TrampolineX361 proc
-    trampoline_x87 361
+    trampoline_vec 361
 TrampolineX361 endp
 TrampolineX362 proc
-    trampoline_x87 362
+    trampoline_vec 362
 TrampolineX362 endp
 TrampolineX363 proc
-    trampoline_x87 363
+    trampoline_vec 363
 TrampolineX363 endp
 TrampolineX364 proc
-    trampoline_x87 364
+    trampoline_vec 364
 TrampolineX364 endp
 TrampolineX365 proc
-    trampoline_x87 365
+    trampoline_vec 365
 TrampolineX365 endp
 TrampolineX366 proc
-    trampoline_x87 366
+    trampoline_vec 366
 TrampolineX366 endp
 TrampolineX367 proc
-    trampoline_x87 367
+    trampoline_vec 367
 TrampolineX367 endp
 TrampolineX368 proc
-    trampoline_x87 368
+    trampoline_vec 368
 TrampolineX368 endp
 TrampolineX369 proc
-    trampoline_x87 369
+    trampoline_vec 369
 TrampolineX369 endp
 TrampolineX370 proc
-    trampoline_x87 370
+    trampoline_vec 370
 TrampolineX370 endp
 TrampolineX371 proc
-    trampoline_x87 371
+    trampoline_vec 371
 TrampolineX371 endp
 TrampolineX372 proc
-    trampoline_x87 372
+    trampoline_vec 372
 TrampolineX372 endp
 TrampolineX373 proc
-    trampoline_x87 373
+    trampoline_vec 373
 TrampolineX373 endp
 TrampolineX374 proc
-    trampoline_x87 374
+    trampoline_vec 374
 TrampolineX374 endp
 TrampolineX375 proc
-    trampoline_x87 375
+    trampoline_vec 375
 TrampolineX375 endp
 TrampolineX376 proc
-    trampoline_x87 376
+    trampoline_vec 376
 TrampolineX376 endp
 TrampolineX377 proc
-    trampoline_x87 377
+    trampoline_vec 377
 TrampolineX377 endp
 TrampolineX378 proc
-    trampoline_x87 378
+    trampoline_vec 378
 TrampolineX378 endp
 TrampolineX379 proc
-    trampoline_x87 379
+    trampoline_vec 379
 TrampolineX379 endp
 TrampolineX380 proc
-    trampoline_x87 380
+    trampoline_vec 380
 TrampolineX380 endp
 TrampolineX381 proc
-    trampoline_x87 381
+    trampoline_vec 381
 TrampolineX381 endp
 TrampolineX382 proc
-    trampoline_x87 382
+    trampoline_vec 382
 TrampolineX382 endp
 TrampolineX383 proc
-    trampoline_x87 383
+    trampoline_vec 383
 TrampolineX383 endp
 TrampolineX384 proc
-    trampoline_x87 384
+    trampoline_vec 384
 TrampolineX384 endp
 TrampolineX385 proc
-    trampoline_x87 385
+    trampoline_vec 385
 TrampolineX385 endp
 TrampolineX386 proc
-    trampoline_x87 386
+    trampoline_vec 386
 TrampolineX386 endp
 TrampolineX387 proc
-    trampoline_x87 387
+    trampoline_vec 387
 TrampolineX387 endp
 TrampolineX388 proc
-    trampoline_x87 388
+    trampoline_vec 388
 TrampolineX388 endp
 TrampolineX389 proc
-    trampoline_x87 389
+    trampoline_vec 389
 TrampolineX389 endp
 TrampolineX390 proc
-    trampoline_x87 390
+    trampoline_vec 390
 TrampolineX390 endp
 TrampolineX391 proc
-    trampoline_x87 391
+    trampoline_vec 391
 TrampolineX391 endp
 TrampolineX392 proc
-    trampoline_x87 392
+    trampoline_vec 392
 TrampolineX392 endp
 TrampolineX393 proc
-    trampoline_x87 393
+    trampoline_vec 393
 TrampolineX393 endp
 TrampolineX394 proc
-    trampoline_x87 394
+    trampoline_vec 394
 TrampolineX394 endp
 TrampolineX395 proc
-    trampoline_x87 395
+    trampoline_vec 395
 TrampolineX395 endp
 TrampolineX396 proc
-    trampoline_x87 396
+    trampoline_vec 396
 TrampolineX396 endp
 TrampolineX397 proc
-    trampoline_x87 397
+    trampoline_vec 397
 TrampolineX397 endp
 TrampolineX398 proc
-    trampoline_x87 398
+    trampoline_vec 398
 TrampolineX398 endp
 TrampolineX399 proc
-    trampoline_x87 399
+    trampoline_vec 399
 TrampolineX399 endp
 TrampolineX400 proc
-    trampoline_x87 400
+    trampoline_vec 400
 TrampolineX400 endp
 TrampolineX401 proc
-    trampoline_x87 401
+    trampoline_vec 401
 TrampolineX401 endp
 TrampolineX402 proc
-    trampoline_x87 402
+    trampoline_vec 402
 TrampolineX402 endp
 TrampolineX403 proc
-    trampoline_x87 403
+    trampoline_vec 403
 TrampolineX403 endp
 TrampolineX404 proc
-    trampoline_x87 404
+    trampoline_vec 404
 TrampolineX404 endp
 TrampolineX405 proc
-    trampoline_x87 405
+    trampoline_vec 405
 TrampolineX405 endp
 TrampolineX406 proc
-    trampoline_x87 406
+    trampoline_vec 406
 TrampolineX406 endp
 TrampolineX407 proc
-    trampoline_x87 407
+    trampoline_vec 407
 TrampolineX407 endp
 TrampolineX408 proc
-    trampoline_x87 408
+    trampoline_vec 408
 TrampolineX408 endp
 TrampolineX409 proc
-    trampoline_x87 409
+    trampoline_vec 409
 TrampolineX409 endp
 TrampolineX410 proc
-    trampoline_x87 410
+    trampoline_vec 410
 TrampolineX410 endp
 TrampolineX411 proc
-    trampoline_x87 411
+    trampoline_vec 411
 TrampolineX411 endp
 TrampolineX412 proc
-    trampoline_x87 412
+    trampoline_vec 412
 TrampolineX412 endp
 TrampolineX413 proc
-    trampoline_x87 413
+    trampoline_vec 413
 TrampolineX413 endp
 TrampolineX414 proc
-    trampoline_x87 414
+    trampoline_vec 414
 TrampolineX414 endp
 TrampolineX415 proc
-    trampoline_x87 415
+    trampoline_vec 415
 TrampolineX415 endp
 TrampolineX416 proc
-    trampoline_x87 416
+    trampoline_vec 416
 TrampolineX416 endp
 TrampolineX417 proc
-    trampoline_x87 417
+    trampoline_vec 417
 TrampolineX417 endp
 TrampolineX418 proc
-    trampoline_x87 418
+    trampoline_vec 418
 TrampolineX418 endp
 TrampolineX419 proc
-    trampoline_x87 419
+    trampoline_vec 419
 TrampolineX419 endp
 TrampolineX420 proc
-    trampoline_x87 420
+    trampoline_vec 420
 TrampolineX420 endp
 TrampolineX421 proc
-    trampoline_x87 421
+    trampoline_vec 421
 TrampolineX421 endp
 TrampolineX422 proc
-    trampoline_x87 422
+    trampoline_vec 422
 TrampolineX422 endp
 TrampolineX423 proc
-    trampoline_x87 423
+    trampoline_vec 423
 TrampolineX423 endp
 TrampolineX424 proc
-    trampoline_x87 424
+    trampoline_vec 424
 TrampolineX424 endp
 TrampolineX425 proc
-    trampoline_x87 425
+    trampoline_vec 425
 TrampolineX425 endp
 TrampolineX426 proc
-    trampoline_x87 426
+    trampoline_vec 426
 TrampolineX426 endp
 TrampolineX427 proc
-    trampoline_x87 427
+    trampoline_vec 427
 TrampolineX427 endp
 TrampolineX428 proc
-    trampoline_x87 428
+    trampoline_vec 428
 TrampolineX428 endp
 TrampolineX429 proc
-    trampoline_x87 429
+    trampoline_vec 429
 TrampolineX429 endp
 TrampolineX430 proc
-    trampoline_x87 430
+    trampoline_vec 430
 TrampolineX430 endp
 TrampolineX431 proc
-    trampoline_x87 431
+    trampoline_vec 431
 TrampolineX431 endp
 TrampolineX432 proc
-    trampoline_x87 432
+    trampoline_vec 432
 TrampolineX432 endp
 TrampolineX433 proc
-    trampoline_x87 433
+    trampoline_vec 433
 TrampolineX433 endp
 TrampolineX434 proc
-    trampoline_x87 434
+    trampoline_vec 434
 TrampolineX434 endp
 TrampolineX435 proc
-    trampoline_x87 435
+    trampoline_vec 435
 TrampolineX435 endp
 TrampolineX436 proc
-    trampoline_x87 436
+    trampoline_vec 436
 TrampolineX436 endp
 TrampolineX437 proc
-    trampoline_x87 437
+    trampoline_vec 437
 TrampolineX437 endp
 TrampolineX438 proc
-    trampoline_x87 438
+    trampoline_vec 438
 TrampolineX438 endp
 TrampolineX439 proc
-    trampoline_x87 439
+    trampoline_vec 439
 TrampolineX439 endp
 TrampolineX440 proc
-    trampoline_x87 440
+    trampoline_vec 440
 TrampolineX440 endp
 TrampolineX441 proc
-    trampoline_x87 441
+    trampoline_vec 441
 TrampolineX441 endp
 TrampolineX442 proc
-    trampoline_x87 442
+    trampoline_vec 442
 TrampolineX442 endp
 TrampolineX443 proc
-    trampoline_x87 443
+    trampoline_vec 443
 TrampolineX443 endp
 TrampolineX444 proc
-    trampoline_x87 444
+    trampoline_vec 444
 TrampolineX444 endp
 TrampolineX445 proc
-    trampoline_x87 445
+    trampoline_vec 445
 TrampolineX445 endp
 TrampolineX446 proc
-    trampoline_x87 446
+    trampoline_vec 446
 TrampolineX446 endp
 TrampolineX447 proc
-    trampoline_x87 447
+    trampoline_vec 447
 TrampolineX447 endp
 TrampolineX448 proc
-    trampoline_x87 448
+    trampoline_vec 448
 TrampolineX448 endp
 TrampolineX449 proc
-    trampoline_x87 449
+    trampoline_vec 449
 TrampolineX449 endp
 TrampolineX450 proc
-    trampoline_x87 450
+    trampoline_vec 450
 TrampolineX450 endp
 TrampolineX451 proc
-    trampoline_x87 451
+    trampoline_vec 451
 TrampolineX451 endp
 TrampolineX452 proc
-    trampoline_x87 452
+    trampoline_vec 452
 TrampolineX452 endp
 TrampolineX453 proc
-    trampoline_x87 453
+    trampoline_vec 453
 TrampolineX453 endp
 TrampolineX454 proc
-    trampoline_x87 454
+    trampoline_vec 454
 TrampolineX454 endp
 TrampolineX455 proc
-    trampoline_x87 455
+    trampoline_vec 455
 TrampolineX455 endp
 TrampolineX456 proc
-    trampoline_x87 456
+    trampoline_vec 456
 TrampolineX456 endp
 TrampolineX457 proc
-    trampoline_x87 457
+    trampoline_vec 457
 TrampolineX457 endp
 TrampolineX458 proc
-    trampoline_x87 458
+    trampoline_vec 458
 TrampolineX458 endp
 TrampolineX459 proc
-    trampoline_x87 459
+    trampoline_vec 459
 TrampolineX459 endp
 TrampolineX460 proc
-    trampoline_x87 460
+    trampoline_vec 460
 TrampolineX460 endp
 TrampolineX461 proc
-    trampoline_x87 461
+    trampoline_vec 461
 TrampolineX461 endp
 TrampolineX462 proc
-    trampoline_x87 462
+    trampoline_vec 462
 TrampolineX462 endp
 TrampolineX463 proc
-    trampoline_x87 463
+    trampoline_vec 463
 TrampolineX463 endp
 TrampolineX464 proc
-    trampoline_x87 464
+    trampoline_vec 464
 TrampolineX464 endp
 TrampolineX465 proc
-    trampoline_x87 465
+    trampoline_vec 465
 TrampolineX465 endp
 TrampolineX466 proc
-    trampoline_x87 466
+    trampoline_vec 466
 TrampolineX466 endp
 TrampolineX467 proc
-    trampoline_x87 467
+    trampoline_vec 467
 TrampolineX467 endp
 TrampolineX468 proc
-    trampoline_x87 468
+    trampoline_vec 468
 TrampolineX468 endp
 TrampolineX469 proc
-    trampoline_x87 469
+    trampoline_vec 469
 TrampolineX469 endp
 TrampolineX470 proc
-    trampoline_x87 470
+    trampoline_vec 470
 TrampolineX470 endp
 TrampolineX471 proc
-    trampoline_x87 471
+    trampoline_vec 471
 TrampolineX471 endp
 TrampolineX472 proc
-    trampoline_x87 472
+    trampoline_vec 472
 TrampolineX472 endp
 TrampolineX473 proc
-    trampoline_x87 473
+    trampoline_vec 473
 TrampolineX473 endp
 TrampolineX474 proc
-    trampoline_x87 474
+    trampoline_vec 474
 TrampolineX474 endp
 TrampolineX475 proc
-    trampoline_x87 475
+    trampoline_vec 475
 TrampolineX475 endp
 TrampolineX476 proc
-    trampoline_x87 476
+    trampoline_vec 476
 TrampolineX476 endp
 TrampolineX477 proc
-    trampoline_x87 477
+    trampoline_vec 477
 TrampolineX477 endp
 TrampolineX478 proc
-    trampoline_x87 478
+    trampoline_vec 478
 TrampolineX478 endp
 TrampolineX479 proc
-    trampoline_x87 479
+    trampoline_vec 479
 TrampolineX479 endp
 TrampolineX480 proc
-    trampoline_x87 480
+    trampoline_vec 480
 TrampolineX480 endp
 TrampolineX481 proc
-    trampoline_x87 481
+    trampoline_vec 481
 TrampolineX481 endp
 TrampolineX482 proc
-    trampoline_x87 482
+    trampoline_vec 482
 TrampolineX482 endp
 TrampolineX483 proc
-    trampoline_x87 483
+    trampoline_vec 483
 TrampolineX483 endp
 TrampolineX484 proc
-    trampoline_x87 484
+    trampoline_vec 484
 TrampolineX484 endp
 TrampolineX485 proc
-    trampoline_x87 485
+    trampoline_vec 485
 TrampolineX485 endp
 TrampolineX486 proc
-    trampoline_x87 486
+    trampoline_vec 486
 TrampolineX486 endp
 TrampolineX487 proc
-    trampoline_x87 487
+    trampoline_vec 487
 TrampolineX487 endp
 TrampolineX488 proc
-    trampoline_x87 488
+    trampoline_vec 488
 TrampolineX488 endp
 TrampolineX489 proc
-    trampoline_x87 489
+    trampoline_vec 489
 TrampolineX489 endp
 TrampolineX490 proc
-    trampoline_x87 490
+    trampoline_vec 490
 TrampolineX490 endp
 TrampolineX491 proc
-    trampoline_x87 491
+    trampoline_vec 491
 TrampolineX491 endp
 TrampolineX492 proc
-    trampoline_x87 492
+    trampoline_vec 492
 TrampolineX492 endp
 TrampolineX493 proc
-    trampoline_x87 493
+    trampoline_vec 493
 TrampolineX493 endp
 TrampolineX494 proc
-    trampoline_x87 494
+    trampoline_vec 494
 TrampolineX494 endp
 TrampolineX495 proc
-    trampoline_x87 495
+    trampoline_vec 495
 TrampolineX495 endp
 TrampolineX496 proc
-    trampoline_x87 496
+    trampoline_vec 496
 TrampolineX496 endp
 TrampolineX497 proc
-    trampoline_x87 497
+    trampoline_vec 497
 TrampolineX497 endp
 TrampolineX498 proc
-    trampoline_x87 498
+    trampoline_vec 498
 TrampolineX498 endp
 TrampolineX499 proc
-    trampoline_x87 499
+    trampoline_vec 499
 TrampolineX499 endp
 TrampolineX500 proc
-    trampoline_x87 500
+    trampoline_vec 500
 TrampolineX500 endp
 TrampolineX501 proc
-    trampoline_x87 501
+    trampoline_vec 501
 TrampolineX501 endp
 TrampolineX502 proc
-    trampoline_x87 502
+    trampoline_vec 502
 TrampolineX502 endp
 TrampolineX503 proc
-    trampoline_x87 503
+    trampoline_vec 503
 TrampolineX503 endp
 TrampolineX504 proc
-    trampoline_x87 504
+    trampoline_vec 504
 TrampolineX504 endp
 TrampolineX505 proc
-    trampoline_x87 505
+    trampoline_vec 505
 TrampolineX505 endp
 TrampolineX506 proc
-    trampoline_x87 506
+    trampoline_vec 506
 TrampolineX506 endp
 TrampolineX507 proc
-    trampoline_x87 507
+    trampoline_vec 507
 TrampolineX507 endp
 TrampolineX508 proc
-    trampoline_x87 508
+    trampoline_vec 508
 TrampolineX508 endp
 TrampolineX509 proc
-    trampoline_x87 509
+    trampoline_vec 509
 TrampolineX509 endp
 TrampolineX510 proc
-    trampoline_x87 510
+    trampoline_vec 510
 TrampolineX510 endp
 TrampolineX511 proc
-    trampoline_x87 511
+    trampoline_vec 511
 TrampolineX511 endp
 TrampolineX512 proc
-    trampoline_x87 512
+    trampoline_vec 512
 TrampolineX512 endp
 TrampolineX513 proc
-    trampoline_x87 513
+    trampoline_vec 513
 TrampolineX513 endp
 TrampolineX514 proc
-    trampoline_x87 514
+    trampoline_vec 514
 TrampolineX514 endp
 TrampolineX515 proc
-    trampoline_x87 515
+    trampoline_vec 515
 TrampolineX515 endp
 TrampolineX516 proc
-    trampoline_x87 516
+    trampoline_vec 516
 TrampolineX516 endp
 TrampolineX517 proc
-    trampoline_x87 517
+    trampoline_vec 517
 TrampolineX517 endp
 TrampolineX518 proc
-    trampoline_x87 518
+    trampoline_vec 518
 TrampolineX518 endp
 TrampolineX519 proc
-    trampoline_x87 519
+    trampoline_vec 519
 TrampolineX519 endp
 TrampolineX520 proc
-    trampoline_x87 520
+    trampoline_vec 520
 TrampolineX520 endp
 TrampolineX521 proc
-    trampoline_x87 521
+    trampoline_vec 521
 TrampolineX521 endp
 TrampolineX522 proc
-    trampoline_x87 522
+    trampoline_vec 522
 TrampolineX522 endp
 TrampolineX523 proc
-    trampoline_x87 523
+    trampoline_vec 523
 TrampolineX523 endp
 TrampolineX524 proc
-    trampoline_x87 524
+    trampoline_vec 524
 TrampolineX524 endp
 TrampolineX525 proc
-    trampoline_x87 525
+    trampoline_vec 525
 TrampolineX525 endp
 TrampolineX526 proc
-    trampoline_x87 526
+    trampoline_vec 526
 TrampolineX526 endp
 TrampolineX527 proc
-    trampoline_x87 527
+    trampoline_vec 527
 TrampolineX527 endp
 TrampolineX528 proc
-    trampoline_x87 528
+    trampoline_vec 528
 TrampolineX528 endp
 TrampolineX529 proc
-    trampoline_x87 529
+    trampoline_vec 529
 TrampolineX529 endp
 TrampolineX530 proc
-    trampoline_x87 530
+    trampoline_vec 530
 TrampolineX530 endp
 TrampolineX531 proc
-    trampoline_x87 531
+    trampoline_vec 531
 TrampolineX531 endp
 TrampolineX532 proc
-    trampoline_x87 532
+    trampoline_vec 532
 TrampolineX532 endp
 TrampolineX533 proc
-    trampoline_x87 533
+    trampoline_vec 533
 TrampolineX533 endp
 TrampolineX534 proc
-    trampoline_x87 534
+    trampoline_vec 534
 TrampolineX534 endp
 TrampolineX535 proc
-    trampoline_x87 535
+    trampoline_vec 535
 TrampolineX535 endp
 TrampolineX536 proc
-    trampoline_x87 536
+    trampoline_vec 536
 TrampolineX536 endp
 TrampolineX537 proc
-    trampoline_x87 537
+    trampoline_vec 537
 TrampolineX537 endp
 TrampolineX538 proc
-    trampoline_x87 538
+    trampoline_vec 538
 TrampolineX538 endp
 TrampolineX539 proc
-    trampoline_x87 539
+    trampoline_vec 539
 TrampolineX539 endp
 TrampolineX540 proc
-    trampoline_x87 540
+    trampoline_vec 540
 TrampolineX540 endp
 TrampolineX541 proc
-    trampoline_x87 541
+    trampoline_vec 541
 TrampolineX541 endp
 TrampolineX542 proc
-    trampoline_x87 542
+    trampoline_vec 542
 TrampolineX542 endp
 TrampolineX543 proc
-    trampoline_x87 543
+    trampoline_vec 543
 TrampolineX543 endp
 TrampolineX544 proc
-    trampoline_x87 544
+    trampoline_vec 544
 TrampolineX544 endp
 TrampolineX545 proc
-    trampoline_x87 545
+    trampoline_vec 545
 TrampolineX545 endp
 TrampolineX546 proc
-    trampoline_x87 546
+    trampoline_vec 546
 TrampolineX546 endp
 TrampolineX547 proc
-    trampoline_x87 547
+    trampoline_vec 547
 TrampolineX547 endp
 TrampolineX548 proc
-    trampoline_x87 548
+    trampoline_vec 548
 TrampolineX548 endp
 TrampolineX549 proc
-    trampoline_x87 549
+    trampoline_vec 549
 TrampolineX549 endp
 TrampolineX550 proc
-    trampoline_x87 550
+    trampoline_vec 550
 TrampolineX550 endp
 TrampolineX551 proc
-    trampoline_x87 551
+    trampoline_vec 551
 TrampolineX551 endp
 TrampolineX552 proc
-    trampoline_x87 552
+    trampoline_vec 552
 TrampolineX552 endp
 TrampolineX553 proc
-    trampoline_x87 553
+    trampoline_vec 553
 TrampolineX553 endp
 TrampolineX554 proc
-    trampoline_x87 554
+    trampoline_vec 554
 TrampolineX554 endp
 TrampolineX555 proc
-    trampoline_x87 555
+    trampoline_vec 555
 TrampolineX555 endp
 TrampolineX556 proc
-    trampoline_x87 556
+    trampoline_vec 556
 TrampolineX556 endp
 TrampolineX557 proc
-    trampoline_x87 557
+    trampoline_vec 557
 TrampolineX557 endp
 TrampolineX558 proc
-    trampoline_x87 558
+    trampoline_vec 558
 TrampolineX558 endp
 TrampolineX559 proc
-    trampoline_x87 559
+    trampoline_vec 559
 TrampolineX559 endp
 TrampolineX560 proc
-    trampoline_x87 560
+    trampoline_vec 560
 TrampolineX560 endp
 TrampolineX561 proc
-    trampoline_x87 561
+    trampoline_vec 561
 TrampolineX561 endp
 TrampolineX562 proc
-    trampoline_x87 562
+    trampoline_vec 562
 TrampolineX562 endp
 TrampolineX563 proc
-    trampoline_x87 563
+    trampoline_vec 563
 TrampolineX563 endp
 TrampolineX564 proc
-    trampoline_x87 564
+    trampoline_vec 564
 TrampolineX564 endp
 TrampolineX565 proc
-    trampoline_x87 565
+    trampoline_vec 565
 TrampolineX565 endp
 TrampolineX566 proc
-    trampoline_x87 566
+    trampoline_vec 566
 TrampolineX566 endp
 TrampolineX567 proc
-    trampoline_x87 567
+    trampoline_vec 567
 TrampolineX567 endp
 TrampolineX568 proc
-    trampoline_x87 568
+    trampoline_vec 568
 TrampolineX568 endp
 TrampolineX569 proc
-    trampoline_x87 569
+    trampoline_vec 569
 TrampolineX569 endp
 TrampolineX570 proc
-    trampoline_x87 570
+    trampoline_vec 570
 TrampolineX570 endp
 TrampolineX571 proc
-    trampoline_x87 571
+    trampoline_vec 571
 TrampolineX571 endp
 TrampolineX572 proc
-    trampoline_x87 572
+    trampoline_vec 572
 TrampolineX572 endp
 TrampolineX573 proc
-    trampoline_x87 573
+    trampoline_vec 573
 TrampolineX573 endp
 TrampolineX574 proc
-    trampoline_x87 574
+    trampoline_vec 574
 TrampolineX574 endp
 TrampolineX575 proc
-    trampoline_x87 575
+    trampoline_vec 575
 TrampolineX575 endp
 TrampolineX576 proc
-    trampoline_x87 576
+    trampoline_vec 576
 TrampolineX576 endp
 TrampolineX577 proc
-    trampoline_x87 577
+    trampoline_vec 577
 TrampolineX577 endp
 TrampolineX578 proc
-    trampoline_x87 578
+    trampoline_vec 578
 TrampolineX578 endp
 TrampolineX579 proc
-    trampoline_x87 579
+    trampoline_vec 579
 TrampolineX579 endp
 TrampolineX580 proc
-    trampoline_x87 580
+    trampoline_vec 580
 TrampolineX580 endp
 TrampolineX581 proc
-    trampoline_x87 581
+    trampoline_vec 581
 TrampolineX581 endp
 TrampolineX582 proc
-    trampoline_x87 582
+    trampoline_vec 582
 TrampolineX582 endp
 TrampolineX583 proc
-    trampoline_x87 583
+    trampoline_vec 583
 TrampolineX583 endp
 TrampolineX584 proc
-    trampoline_x87 584
+    trampoline_vec 584
 TrampolineX584 endp
 TrampolineX585 proc
-    trampoline_x87 585
+    trampoline_vec 585
 TrampolineX585 endp
 TrampolineX586 proc
-    trampoline_x87 586
+    trampoline_vec 586
 TrampolineX586 endp
 TrampolineX587 proc
-    trampoline_x87 587
+    trampoline_vec 587
 TrampolineX587 endp
 TrampolineX588 proc
-    trampoline_x87 588
+    trampoline_vec 588
 TrampolineX588 endp
 TrampolineX589 proc
-    trampoline_x87 589
+    trampoline_vec 589
 TrampolineX589 endp
 TrampolineX590 proc
-    trampoline_x87 590
+    trampoline_vec 590
 TrampolineX590 endp
 TrampolineX591 proc
-    trampoline_x87 591
+    trampoline_vec 591
 TrampolineX591 endp
 TrampolineX592 proc
-    trampoline_x87 592
+    trampoline_vec 592
 TrampolineX592 endp
 TrampolineX593 proc
-    trampoline_x87 593
+    trampoline_vec 593
 TrampolineX593 endp
 TrampolineX594 proc
-    trampoline_x87 594
+    trampoline_vec 594
 TrampolineX594 endp
 TrampolineX595 proc
-    trampoline_x87 595
+    trampoline_vec 595
 TrampolineX595 endp
 TrampolineX596 proc
-    trampoline_x87 596
+    trampoline_vec 596
 TrampolineX596 endp
 TrampolineX597 proc
-    trampoline_x87 597
+    trampoline_vec 597
 TrampolineX597 endp
 TrampolineX598 proc
-    trampoline_x87 598
+    trampoline_vec 598
 TrampolineX598 endp
 TrampolineX599 proc
-    trampoline_x87 599
+    trampoline_vec 599
 TrampolineX599 endp
 TrampolineX600 proc
-    trampoline_x87 600
+    trampoline_vec 600
 TrampolineX600 endp
 TrampolineX601 proc
-    trampoline_x87 601
+    trampoline_vec 601
 TrampolineX601 endp
 TrampolineX602 proc
-    trampoline_x87 602
+    trampoline_vec 602
 TrampolineX602 endp
 TrampolineX603 proc
-    trampoline_x87 603
+    trampoline_vec 603
 TrampolineX603 endp
 TrampolineX604 proc
-    trampoline_x87 604
+    trampoline_vec 604
 TrampolineX604 endp
 TrampolineX605 proc
-    trampoline_x87 605
+    trampoline_vec 605
 TrampolineX605 endp
 TrampolineX606 proc
-    trampoline_x87 606
+    trampoline_vec 606
 TrampolineX606 endp
 TrampolineX607 proc
-    trampoline_x87 607
+    trampoline_vec 607
 TrampolineX607 endp
 TrampolineX608 proc
-    trampoline_x87 608
+    trampoline_vec 608
 TrampolineX608 endp
 TrampolineX609 proc
-    trampoline_x87 609
+    trampoline_vec 609
 TrampolineX609 endp
 TrampolineX610 proc
-    trampoline_x87 610
+    trampoline_vec 610
 TrampolineX610 endp
 TrampolineX611 proc
-    trampoline_x87 611
+    trampoline_vec 611
 TrampolineX611 endp
 TrampolineX612 proc
-    trampoline_x87 612
+    trampoline_vec 612
 TrampolineX612 endp
 TrampolineX613 proc
-    trampoline_x87 613
+    trampoline_vec 613
 TrampolineX613 endp
 TrampolineX614 proc
-    trampoline_x87 614
+    trampoline_vec 614
 TrampolineX614 endp
 TrampolineX615 proc
-    trampoline_x87 615
+    trampoline_vec 615
 TrampolineX615 endp
 TrampolineX616 proc
-    trampoline_x87 616
+    trampoline_vec 616
 TrampolineX616 endp
 TrampolineX617 proc
-    trampoline_x87 617
+    trampoline_vec 617
 TrampolineX617 endp
 TrampolineX618 proc
-    trampoline_x87 618
+    trampoline_vec 618
 TrampolineX618 endp
 TrampolineX619 proc
-    trampoline_x87 619
+    trampoline_vec 619
 TrampolineX619 endp
 TrampolineX620 proc
-    trampoline_x87 620
+    trampoline_vec 620
 TrampolineX620 endp
 TrampolineX621 proc
-    trampoline_x87 621
+    trampoline_vec 621
 TrampolineX621 endp
 TrampolineX622 proc
-    trampoline_x87 622
+    trampoline_vec 622
 TrampolineX622 endp
 TrampolineX623 proc
-    trampoline_x87 623
+    trampoline_vec 623
 TrampolineX623 endp
 TrampolineX624 proc
-    trampoline_x87 624
+    trampoline_vec 624
 TrampolineX624 endp
 TrampolineX625 proc
-    trampoline_x87 625
+    trampoline_vec 625
 TrampolineX625 endp
 TrampolineX626 proc
-    trampoline_x87 626
+    trampoline_vec 626
 TrampolineX626 endp
 TrampolineX627 proc
-    trampoline_x87 627
+    trampoline_vec 627
 TrampolineX627 endp
 TrampolineX628 proc
-    trampoline_x87 628
+    trampoline_vec 628
 TrampolineX628 endp
 TrampolineX629 proc
-    trampoline_x87 629
+    trampoline_vec 629
 TrampolineX629 endp
 TrampolineX630 proc
-    trampoline_x87 630
+    trampoline_vec 630
 TrampolineX630 endp
 TrampolineX631 proc
-    trampoline_x87 631
+    trampoline_vec 631
 TrampolineX631 endp
 TrampolineX632 proc
-    trampoline_x87 632
+    trampoline_vec 632
 TrampolineX632 endp
 TrampolineX633 proc
-    trampoline_x87 633
+    trampoline_vec 633
 TrampolineX633 endp
 TrampolineX634 proc
-    trampoline_x87 634
+    trampoline_vec 634
 TrampolineX634 endp
 TrampolineX635 proc
-    trampoline_x87 635
+    trampoline_vec 635
 TrampolineX635 endp
 TrampolineX636 proc
-    trampoline_x87 636
+    trampoline_vec 636
 TrampolineX636 endp
 TrampolineX637 proc
-    trampoline_x87 637
+    trampoline_vec 637
 TrampolineX637 endp
 TrampolineX638 proc
-    trampoline_x87 638
+    trampoline_vec 638
 TrampolineX638 endp
 TrampolineX639 proc
-    trampoline_x87 639
+    trampoline_vec 639
 TrampolineX639 endp
 TrampolineX640 proc
-    trampoline_x87 640
+    trampoline_vec 640
 TrampolineX640 endp
 TrampolineX641 proc
-    trampoline_x87 641
+    trampoline_vec 641
 TrampolineX641 endp
 TrampolineX642 proc
-    trampoline_x87 642
+    trampoline_vec 642
 TrampolineX642 endp
 TrampolineX643 proc
-    trampoline_x87 643
+    trampoline_vec 643
 TrampolineX643 endp
 TrampolineX644 proc
-    trampoline_x87 644
+    trampoline_vec 644
 TrampolineX644 endp
 TrampolineX645 proc
-    trampoline_x87 645
+    trampoline_vec 645
 TrampolineX645 endp
 TrampolineX646 proc
-    trampoline_x87 646
+    trampoline_vec 646
 TrampolineX646 endp
 TrampolineX647 proc
-    trampoline_x87 647
+    trampoline_vec 647
 TrampolineX647 endp
 TrampolineX648 proc
-    trampoline_x87 648
+    trampoline_vec 648
 TrampolineX648 endp
 TrampolineX649 proc
-    trampoline_x87 649
+    trampoline_vec 649
 TrampolineX649 endp
 TrampolineX650 proc
-    trampoline_x87 650
+    trampoline_vec 650
 TrampolineX650 endp
 TrampolineX651 proc
-    trampoline_x87 651
+    trampoline_vec 651
 TrampolineX651 endp
 TrampolineX652 proc
-    trampoline_x87 652
+    trampoline_vec 652
 TrampolineX652 endp
 TrampolineX653 proc
-    trampoline_x87 653
+    trampoline_vec 653
 TrampolineX653 endp
 TrampolineX654 proc
-    trampoline_x87 654
+    trampoline_vec 654
 TrampolineX654 endp
 TrampolineX655 proc
-    trampoline_x87 655
+    trampoline_vec 655
 TrampolineX655 endp
 TrampolineX656 proc
-    trampoline_x87 656
+    trampoline_vec 656
 TrampolineX656 endp
 TrampolineX657 proc
-    trampoline_x87 657
+    trampoline_vec 657
 TrampolineX657 endp
 TrampolineX658 proc
-    trampoline_x87 658
+    trampoline_vec 658
 TrampolineX658 endp
 TrampolineX659 proc
-    trampoline_x87 659
+    trampoline_vec 659
 TrampolineX659 endp
 TrampolineX660 proc
-    trampoline_x87 660
+    trampoline_vec 660
 TrampolineX660 endp
 TrampolineX661 proc
-    trampoline_x87 661
+    trampoline_vec 661
 TrampolineX661 endp
 TrampolineX662 proc
-    trampoline_x87 662
+    trampoline_vec 662
 TrampolineX662 endp
 TrampolineX663 proc
-    trampoline_x87 663
+    trampoline_vec 663
 TrampolineX663 endp
 TrampolineX664 proc
-    trampoline_x87 664
+    trampoline_vec 664
 TrampolineX664 endp
 TrampolineX665 proc
-    trampoline_x87 665
+    trampoline_vec 665
 TrampolineX665 endp
 TrampolineX666 proc
-    trampoline_x87 666
+    trampoline_vec 666
 TrampolineX666 endp
 TrampolineX667 proc
-    trampoline_x87 667
+    trampoline_vec 667
 TrampolineX667 endp
 TrampolineX668 proc
-    trampoline_x87 668
+    trampoline_vec 668
 TrampolineX668 endp
 TrampolineX669 proc
-    trampoline_x87 669
+    trampoline_vec 669
 TrampolineX669 endp
 TrampolineX670 proc
-    trampoline_x87 670
+    trampoline_vec 670
 TrampolineX670 endp
 TrampolineX671 proc
-    trampoline_x87 671
+    trampoline_vec 671
 TrampolineX671 endp
 TrampolineX672 proc
-    trampoline_x87 672
+    trampoline_vec 672
 TrampolineX672 endp
 TrampolineX673 proc
-    trampoline_x87 673
+    trampoline_vec 673
 TrampolineX673 endp
 TrampolineX674 proc
-    trampoline_x87 674
+    trampoline_vec 674
 TrampolineX674 endp
 TrampolineX675 proc
-    trampoline_x87 675
+    trampoline_vec 675
 TrampolineX675 endp
 TrampolineX676 proc
-    trampoline_x87 676
+    trampoline_vec 676
 TrampolineX676 endp
 TrampolineX677 proc
-    trampoline_x87 677
+    trampoline_vec 677
 TrampolineX677 endp
 TrampolineX678 proc
-    trampoline_x87 678
+    trampoline_vec 678
 TrampolineX678 endp
 TrampolineX679 proc
-    trampoline_x87 679
+    trampoline_vec 679
 TrampolineX679 endp
 TrampolineX680 proc
-    trampoline_x87 680
+    trampoline_vec 680
 TrampolineX680 endp
 TrampolineX681 proc
-    trampoline_x87 681
+    trampoline_vec 681
 TrampolineX681 endp
 TrampolineX682 proc
-    trampoline_x87 682
+    trampoline_vec 682
 TrampolineX682 endp
 TrampolineX683 proc
-    trampoline_x87 683
+    trampoline_vec 683
 TrampolineX683 endp
 TrampolineX684 proc
-    trampoline_x87 684
+    trampoline_vec 684
 TrampolineX684 endp
 TrampolineX685 proc
-    trampoline_x87 685
+    trampoline_vec 685
 TrampolineX685 endp
 TrampolineX686 proc
-    trampoline_x87 686
+    trampoline_vec 686
 TrampolineX686 endp
 TrampolineX687 proc
-    trampoline_x87 687
+    trampoline_vec 687
 TrampolineX687 endp
 TrampolineX688 proc
-    trampoline_x87 688
+    trampoline_vec 688
 TrampolineX688 endp
 TrampolineX689 proc
-    trampoline_x87 689
+    trampoline_vec 689
 TrampolineX689 endp
 TrampolineX690 proc
-    trampoline_x87 690
+    trampoline_vec 690
 TrampolineX690 endp
 TrampolineX691 proc
-    trampoline_x87 691
+    trampoline_vec 691
 TrampolineX691 endp
 TrampolineX692 proc
-    trampoline_x87 692
+    trampoline_vec 692
 TrampolineX692 endp
 TrampolineX693 proc
-    trampoline_x87 693
+    trampoline_vec 693
 TrampolineX693 endp
 TrampolineX694 proc
-    trampoline_x87 694
+    trampoline_vec 694
 TrampolineX694 endp
 TrampolineX695 proc
-    trampoline_x87 695
+    trampoline_vec 695
 TrampolineX695 endp
 TrampolineX696 proc
-    trampoline_x87 696
+    trampoline_vec 696
 TrampolineX696 endp
 TrampolineX697 proc
-    trampoline_x87 697
+    trampoline_vec 697
 TrampolineX697 endp
 TrampolineX698 proc
-    trampoline_x87 698
+    trampoline_vec 698
 TrampolineX698 endp
 TrampolineX699 proc
-    trampoline_x87 699
+    trampoline_vec 699
 TrampolineX699 endp
 TrampolineX700 proc
-    trampoline_x87 700
+    trampoline_vec 700
 TrampolineX700 endp
 TrampolineX701 proc
-    trampoline_x87 701
+    trampoline_vec 701
 TrampolineX701 endp
 TrampolineX702 proc
-    trampoline_x87 702
+    trampoline_vec 702
 TrampolineX702 endp
 TrampolineX703 proc
-    trampoline_x87 703
+    trampoline_vec 703
 TrampolineX703 endp
 TrampolineX704 proc
-    trampoline_x87 704
+    trampoline_vec 704
 TrampolineX704 endp
 TrampolineX705 proc
-    trampoline_x87 705
+    trampoline_vec 705
 TrampolineX705 endp
 TrampolineX706 proc
-    trampoline_x87 706
+    trampoline_vec 706
 TrampolineX706 endp
 TrampolineX707 proc
-    trampoline_x87 707
+    trampoline_vec 707
 TrampolineX707 endp
 TrampolineX708 proc
-    trampoline_x87 708
+    trampoline_vec 708
 TrampolineX708 endp
 TrampolineX709 proc
-    trampoline_x87 709
+    trampoline_vec 709
 TrampolineX709 endp
 TrampolineX710 proc
-    trampoline_x87 710
+    trampoline_vec 710
 TrampolineX710 endp
 TrampolineX711 proc
-    trampoline_x87 711
+    trampoline_vec 711
 TrampolineX711 endp
 TrampolineX712 proc
-    trampoline_x87 712
+    trampoline_vec 712
 TrampolineX712 endp
 TrampolineX713 proc
-    trampoline_x87 713
+    trampoline_vec 713
 TrampolineX713 endp
 TrampolineX714 proc
-    trampoline_x87 714
+    trampoline_vec 714
 TrampolineX714 endp
 TrampolineX715 proc
-    trampoline_x87 715
+    trampoline_vec 715
 TrampolineX715 endp
 TrampolineX716 proc
-    trampoline_x87 716
+    trampoline_vec 716
 TrampolineX716 endp
 TrampolineX717 proc
-    trampoline_x87 717
+    trampoline_vec 717
 TrampolineX717 endp
 TrampolineX718 proc
-    trampoline_x87 718
+    trampoline_vec 718
 TrampolineX718 endp
 TrampolineX719 proc
-    trampoline_x87 719
+    trampoline_vec 719
 TrampolineX719 endp
 TrampolineX720 proc
-    trampoline_x87 720
+    trampoline_vec 720
 TrampolineX720 endp
 TrampolineX721 proc
-    trampoline_x87 721
+    trampoline_vec 721
 TrampolineX721 endp
 TrampolineX722 proc
-    trampoline_x87 722
+    trampoline_vec 722
 TrampolineX722 endp
 TrampolineX723 proc
-    trampoline_x87 723
+    trampoline_vec 723
 TrampolineX723 endp
 TrampolineX724 proc
-    trampoline_x87 724
+    trampoline_vec 724
 TrampolineX724 endp
 TrampolineX725 proc
-    trampoline_x87 725
+    trampoline_vec 725
 TrampolineX725 endp
 TrampolineX726 proc
-    trampoline_x87 726
+    trampoline_vec 726
 TrampolineX726 endp
 TrampolineX727 proc
-    trampoline_x87 727
+    trampoline_vec 727
 TrampolineX727 endp
 TrampolineX728 proc
-    trampoline_x87 728
+    trampoline_vec 728
 TrampolineX728 endp
 TrampolineX729 proc
-    trampoline_x87 729
+    trampoline_vec 729
 TrampolineX729 endp
 TrampolineX730 proc
-    trampoline_x87 730
+    trampoline_vec 730
 TrampolineX730 endp
 TrampolineX731 proc
-    trampoline_x87 731
+    trampoline_vec 731
 TrampolineX731 endp
 TrampolineX732 proc
-    trampoline_x87 732
+    trampoline_vec 732
 TrampolineX732 endp
 TrampolineX733 proc
-    trampoline_x87 733
+    trampoline_vec 733
 TrampolineX733 endp
 TrampolineX734 proc
-    trampoline_x87 734
+    trampoline_vec 734
 TrampolineX734 endp
 TrampolineX735 proc
-    trampoline_x87 735
+    trampoline_vec 735
 TrampolineX735 endp
 TrampolineX736 proc
-    trampoline_x87 736
+    trampoline_vec 736
 TrampolineX736 endp
 TrampolineX737 proc
-    trampoline_x87 737
+    trampoline_vec 737
 TrampolineX737 endp
 TrampolineX738 proc
-    trampoline_x87 738
+    trampoline_vec 738
 TrampolineX738 endp
 TrampolineX739 proc
-    trampoline_x87 739
+    trampoline_vec 739
 TrampolineX739 endp
 TrampolineX740 proc
-    trampoline_x87 740
+    trampoline_vec 740
 TrampolineX740 endp
 TrampolineX741 proc
-    trampoline_x87 741
+    trampoline_vec 741
 TrampolineX741 endp
 TrampolineX742 proc
-    trampoline_x87 742
+    trampoline_vec 742
 TrampolineX742 endp
 TrampolineX743 proc
-    trampoline_x87 743
+    trampoline_vec 743
 TrampolineX743 endp
 TrampolineX744 proc
-    trampoline_x87 744
+    trampoline_vec 744
 TrampolineX744 endp
 TrampolineX745 proc
-    trampoline_x87 745
+    trampoline_vec 745
 TrampolineX745 endp
 TrampolineX746 proc
-    trampoline_x87 746
+    trampoline_vec 746
 TrampolineX746 endp
 TrampolineX747 proc
-    trampoline_x87 747
+    trampoline_vec 747
 TrampolineX747 endp
 TrampolineX748 proc
-    trampoline_x87 748
+    trampoline_vec 748
 TrampolineX748 endp
 TrampolineX749 proc
-    trampoline_x87 749
+    trampoline_vec 749
 TrampolineX749 endp
 TrampolineX750 proc
-    trampoline_x87 750
+    trampoline_vec 750
 TrampolineX750 endp
 TrampolineX751 proc
-    trampoline_x87 751
+    trampoline_vec 751
 TrampolineX751 endp
 TrampolineX752 proc
-    trampoline_x87 752
+    trampoline_vec 752
 TrampolineX752 endp
 TrampolineX753 proc
-    trampoline_x87 753
+    trampoline_vec 753
 TrampolineX753 endp
 TrampolineX754 proc
-    trampoline_x87 754
+    trampoline_vec 754
 TrampolineX754 endp
 TrampolineX755 proc
-    trampoline_x87 755
+    trampoline_vec 755
 TrampolineX755 endp
 TrampolineX756 proc
-    trampoline_x87 756
+    trampoline_vec 756
 TrampolineX756 endp
 TrampolineX757 proc
-    trampoline_x87 757
+    trampoline_vec 757
 TrampolineX757 endp
 TrampolineX758 proc
-    trampoline_x87 758
+    trampoline_vec 758
 TrampolineX758 endp
 TrampolineX759 proc
-    trampoline_x87 759
+    trampoline_vec 759
 TrampolineX759 endp
 TrampolineX760 proc
-    trampoline_x87 760
+    trampoline_vec 760
 TrampolineX760 endp
 TrampolineX761 proc
-    trampoline_x87 761
+    trampoline_vec 761
 TrampolineX761 endp
 TrampolineX762 proc
-    trampoline_x87 762
+    trampoline_vec 762
 TrampolineX762 endp
 TrampolineX763 proc
-    trampoline_x87 763
+    trampoline_vec 763
 TrampolineX763 endp
 TrampolineX764 proc
-    trampoline_x87 764
+    trampoline_vec 764
 TrampolineX764 endp
 TrampolineX765 proc
-    trampoline_x87 765
+    trampoline_vec 765
 TrampolineX765 endp
 TrampolineX766 proc
-    trampoline_x87 766
+    trampoline_vec 766
 TrampolineX766 endp
 TrampolineX767 proc
-    trampoline_x87 767
+    trampoline_vec 767
 TrampolineX767 endp
 TrampolineX768 proc
-    trampoline_x87 768
+    trampoline_vec 768
 TrampolineX768 endp
 TrampolineX769 proc
-    trampoline_x87 769
+    trampoline_vec 769
 TrampolineX769 endp
 TrampolineX770 proc
-    trampoline_x87 770
+    trampoline_vec 770
 TrampolineX770 endp
 TrampolineX771 proc
-    trampoline_x87 771
+    trampoline_vec 771
 TrampolineX771 endp
 TrampolineX772 proc
-    trampoline_x87 772
+    trampoline_vec 772
 TrampolineX772 endp
 TrampolineX773 proc
-    trampoline_x87 773
+    trampoline_vec 773
 TrampolineX773 endp
 TrampolineX774 proc
-    trampoline_x87 774
+    trampoline_vec 774
 TrampolineX774 endp
 TrampolineX775 proc
-    trampoline_x87 775
+    trampoline_vec 775
 TrampolineX775 endp
 TrampolineX776 proc
-    trampoline_x87 776
+    trampoline_vec 776
 TrampolineX776 endp
 TrampolineX777 proc
-    trampoline_x87 777
+    trampoline_vec 777
 TrampolineX777 endp
 TrampolineX778 proc
-    trampoline_x87 778
+    trampoline_vec 778
 TrampolineX778 endp
 TrampolineX779 proc
-    trampoline_x87 779
+    trampoline_vec 779
 TrampolineX779 endp
 TrampolineX780 proc
-    trampoline_x87 780
+    trampoline_vec 780
 TrampolineX780 endp
 TrampolineX781 proc
-    trampoline_x87 781
+    trampoline_vec 781
 TrampolineX781 endp
 TrampolineX782 proc
-    trampoline_x87 782
+    trampoline_vec 782
 TrampolineX782 endp
 TrampolineX783 proc
-    trampoline_x87 783
+    trampoline_vec 783
 TrampolineX783 endp
 TrampolineX784 proc
-    trampoline_x87 784
+    trampoline_vec 784
 TrampolineX784 endp
 TrampolineX785 proc
-    trampoline_x87 785
+    trampoline_vec 785
 TrampolineX785 endp
 TrampolineX786 proc
-    trampoline_x87 786
+    trampoline_vec 786
 TrampolineX786 endp
 TrampolineX787 proc
-    trampoline_x87 787
+    trampoline_vec 787
 TrampolineX787 endp
 TrampolineX788 proc
-    trampoline_x87 788
+    trampoline_vec 788
 TrampolineX788 endp
 TrampolineX789 proc
-    trampoline_x87 789
+    trampoline_vec 789
 TrampolineX789 endp
 TrampolineX790 proc
-    trampoline_x87 790
+    trampoline_vec 790
 TrampolineX790 endp
 TrampolineX791 proc
-    trampoline_x87 791
+    trampoline_vec 791
 TrampolineX791 endp
 TrampolineX792 proc
-    trampoline_x87 792
+    trampoline_vec 792
 TrampolineX792 endp
 TrampolineX793 proc
-    trampoline_x87 793
+    trampoline_vec 793
 TrampolineX793 endp
 TrampolineX794 proc
-    trampoline_x87 794
+    trampoline_vec 794
 TrampolineX794 endp
 TrampolineX795 proc
-    trampoline_x87 795
+    trampoline_vec 795
 TrampolineX795 endp
 TrampolineX796 proc
-    trampoline_x87 796
+    trampoline_vec 796
 TrampolineX796 endp
 TrampolineX797 proc
-    trampoline_x87 797
+    trampoline_vec 797
 TrampolineX797 endp
 TrampolineX798 proc
-    trampoline_x87 798
+    trampoline_vec 798
 TrampolineX798 endp
 TrampolineX799 proc
-    trampoline_x87 799
+    trampoline_vec 799
 TrampolineX799 endp
 TrampolineX800 proc
-    trampoline_x87 800
+    trampoline_vec 800
 TrampolineX800 endp
 TrampolineX801 proc
-    trampoline_x87 801
+    trampoline_vec 801
 TrampolineX801 endp
 TrampolineX802 proc
-    trampoline_x87 802
+    trampoline_vec 802
 TrampolineX802 endp
 TrampolineX803 proc
-    trampoline_x87 803
+    trampoline_vec 803
 TrampolineX803 endp
 TrampolineX804 proc
-    trampoline_x87 804
+    trampoline_vec 804
 TrampolineX804 endp
 TrampolineX805 proc
-    trampoline_x87 805
+    trampoline_vec 805
 TrampolineX805 endp
 TrampolineX806 proc
-    trampoline_x87 806
+    trampoline_vec 806
 TrampolineX806 endp
 TrampolineX807 proc
-    trampoline_x87 807
+    trampoline_vec 807
 TrampolineX807 endp
 TrampolineX808 proc
-    trampoline_x87 808
+    trampoline_vec 808
 TrampolineX808 endp
 TrampolineX809 proc
-    trampoline_x87 809
+    trampoline_vec 809
 TrampolineX809 endp
 TrampolineX810 proc
-    trampoline_x87 810
+    trampoline_vec 810
 TrampolineX810 endp
 TrampolineX811 proc
-    trampoline_x87 811
+    trampoline_vec 811
 TrampolineX811 endp
 TrampolineX812 proc
-    trampoline_x87 812
+    trampoline_vec 812
 TrampolineX812 endp
 TrampolineX813 proc
-    trampoline_x87 813
+    trampoline_vec 813
 TrampolineX813 endp
 TrampolineX814 proc
-    trampoline_x87 814
+    trampoline_vec 814
 TrampolineX814 endp
 TrampolineX815 proc
-    trampoline_x87 815
+    trampoline_vec 815
 TrampolineX815 endp
 TrampolineX816 proc
-    trampoline_x87 816
+    trampoline_vec 816
 TrampolineX816 endp
 TrampolineX817 proc
-    trampoline_x87 817
+    trampoline_vec 817
 TrampolineX817 endp
 TrampolineX818 proc
-    trampoline_x87 818
+    trampoline_vec 818
 TrampolineX818 endp
 TrampolineX819 proc
-    trampoline_x87 819
+    trampoline_vec 819
 TrampolineX819 endp
 TrampolineX820 proc
-    trampoline_x87 820
+    trampoline_vec 820
 TrampolineX820 endp
 TrampolineX821 proc
-    trampoline_x87 821
+    trampoline_vec 821
 TrampolineX821 endp
 TrampolineX822 proc
-    trampoline_x87 822
+    trampoline_vec 822
 TrampolineX822 endp
 TrampolineX823 proc
-    trampoline_x87 823
+    trampoline_vec 823
 TrampolineX823 endp
 TrampolineX824 proc
-    trampoline_x87 824
+    trampoline_vec 824
 TrampolineX824 endp
 TrampolineX825 proc
-    trampoline_x87 825
+    trampoline_vec 825
 TrampolineX825 endp
 TrampolineX826 proc
-    trampoline_x87 826
+    trampoline_vec 826
 TrampolineX826 endp
 TrampolineX827 proc
-    trampoline_x87 827
+    trampoline_vec 827
 TrampolineX827 endp
 TrampolineX828 proc
-    trampoline_x87 828
+    trampoline_vec 828
 TrampolineX828 endp
 TrampolineX829 proc
-    trampoline_x87 829
+    trampoline_vec 829
 TrampolineX829 endp
 TrampolineX830 proc
-    trampoline_x87 830
+    trampoline_vec 830
 TrampolineX830 endp
 TrampolineX831 proc
-    trampoline_x87 831
+    trampoline_vec 831
 TrampolineX831 endp
 TrampolineX832 proc
-    trampoline_x87 832
+    trampoline_vec 832
 TrampolineX832 endp
 TrampolineX833 proc
-    trampoline_x87 833
+    trampoline_vec 833
 TrampolineX833 endp
 TrampolineX834 proc
-    trampoline_x87 834
+    trampoline_vec 834
 TrampolineX834 endp
 TrampolineX835 proc
-    trampoline_x87 835
+    trampoline_vec 835
 TrampolineX835 endp
 TrampolineX836 proc
-    trampoline_x87 836
+    trampoline_vec 836
 TrampolineX836 endp
 TrampolineX837 proc
-    trampoline_x87 837
+    trampoline_vec 837
 TrampolineX837 endp
 TrampolineX838 proc
-    trampoline_x87 838
+    trampoline_vec 838
 TrampolineX838 endp
 TrampolineX839 proc
-    trampoline_x87 839
+    trampoline_vec 839
 TrampolineX839 endp
 TrampolineX840 proc
-    trampoline_x87 840
+    trampoline_vec 840
 TrampolineX840 endp
 TrampolineX841 proc
-    trampoline_x87 841
+    trampoline_vec 841
 TrampolineX841 endp
 TrampolineX842 proc
-    trampoline_x87 842
+    trampoline_vec 842
 TrampolineX842 endp
 TrampolineX843 proc
-    trampoline_x87 843
+    trampoline_vec 843
 TrampolineX843 endp
 TrampolineX844 proc
-    trampoline_x87 844
+    trampoline_vec 844
 TrampolineX844 endp
 TrampolineX845 proc
-    trampoline_x87 845
+    trampoline_vec 845
 TrampolineX845 endp
 TrampolineX846 proc
-    trampoline_x87 846
+    trampoline_vec 846
 TrampolineX846 endp
 TrampolineX847 proc
-    trampoline_x87 847
+    trampoline_vec 847
 TrampolineX847 endp
 TrampolineX848 proc
-    trampoline_x87 848
+    trampoline_vec 848
 TrampolineX848 endp
 TrampolineX849 proc
-    trampoline_x87 849
+    trampoline_vec 849
 TrampolineX849 endp
 TrampolineX850 proc
-    trampoline_x87 850
+    trampoline_vec 850
 TrampolineX850 endp
 TrampolineX851 proc
-    trampoline_x87 851
+    trampoline_vec 851
 TrampolineX851 endp
 TrampolineX852 proc
-    trampoline_x87 852
+    trampoline_vec 852
 TrampolineX852 endp
 TrampolineX853 proc
-    trampoline_x87 853
+    trampoline_vec 853
 TrampolineX853 endp
 TrampolineX854 proc
-    trampoline_x87 854
+    trampoline_vec 854
 TrampolineX854 endp
 TrampolineX855 proc
-    trampoline_x87 855
+    trampoline_vec 855
 TrampolineX855 endp
 TrampolineX856 proc
-    trampoline_x87 856
+    trampoline_vec 856
 TrampolineX856 endp
 TrampolineX857 proc
-    trampoline_x87 857
+    trampoline_vec 857
 TrampolineX857 endp
 TrampolineX858 proc
-    trampoline_x87 858
+    trampoline_vec 858
 TrampolineX858 endp
 TrampolineX859 proc
-    trampoline_x87 859
+    trampoline_vec 859
 TrampolineX859 endp
 TrampolineX860 proc
-    trampoline_x87 860
+    trampoline_vec 860
 TrampolineX860 endp
 TrampolineX861 proc
-    trampoline_x87 861
+    trampoline_vec 861
 TrampolineX861 endp
 TrampolineX862 proc
-    trampoline_x87 862
+    trampoline_vec 862
 TrampolineX862 endp
 TrampolineX863 proc
-    trampoline_x87 863
+    trampoline_vec 863
 TrampolineX863 endp
 TrampolineX864 proc
-    trampoline_x87 864
+    trampoline_vec 864
 TrampolineX864 endp
 TrampolineX865 proc
-    trampoline_x87 865
+    trampoline_vec 865
 TrampolineX865 endp
 TrampolineX866 proc
-    trampoline_x87 866
+    trampoline_vec 866
 TrampolineX866 endp
 TrampolineX867 proc
-    trampoline_x87 867
+    trampoline_vec 867
 TrampolineX867 endp
 TrampolineX868 proc
-    trampoline_x87 868
+    trampoline_vec 868
 TrampolineX868 endp
 TrampolineX869 proc
-    trampoline_x87 869
+    trampoline_vec 869
 TrampolineX869 endp
 TrampolineX870 proc
-    trampoline_x87 870
+    trampoline_vec 870
 TrampolineX870 endp
 TrampolineX871 proc
-    trampoline_x87 871
+    trampoline_vec 871
 TrampolineX871 endp
 TrampolineX872 proc
-    trampoline_x87 872
+    trampoline_vec 872
 TrampolineX872 endp
 TrampolineX873 proc
-    trampoline_x87 873
+    trampoline_vec 873
 TrampolineX873 endp
 TrampolineX874 proc
-    trampoline_x87 874
+    trampoline_vec 874
 TrampolineX874 endp
 TrampolineX875 proc
-    trampoline_x87 875
+    trampoline_vec 875
 TrampolineX875 endp
 TrampolineX876 proc
-    trampoline_x87 876
+    trampoline_vec 876
 TrampolineX876 endp
 TrampolineX877 proc
-    trampoline_x87 877
+    trampoline_vec 877
 TrampolineX877 endp
 TrampolineX878 proc
-    trampoline_x87 878
+    trampoline_vec 878
 TrampolineX878 endp
 TrampolineX879 proc
-    trampoline_x87 879
+    trampoline_vec 879
 TrampolineX879 endp
 TrampolineX880 proc
-    trampoline_x87 880
+    trampoline_vec 880
 TrampolineX880 endp
 TrampolineX881 proc
-    trampoline_x87 881
+    trampoline_vec 881
 TrampolineX881 endp
 TrampolineX882 proc
-    trampoline_x87 882
+    trampoline_vec 882
 TrampolineX882 endp
 TrampolineX883 proc
-    trampoline_x87 883
+    trampoline_vec 883
 TrampolineX883 endp
 TrampolineX884 proc
-    trampoline_x87 884
+    trampoline_vec 884
 TrampolineX884 endp
 TrampolineX885 proc
-    trampoline_x87 885
+    trampoline_vec 885
 TrampolineX885 endp
 TrampolineX886 proc
-    trampoline_x87 886
+    trampoline_vec 886
 TrampolineX886 endp
 TrampolineX887 proc
-    trampoline_x87 887
+    trampoline_vec 887
 TrampolineX887 endp
 TrampolineX888 proc
-    trampoline_x87 888
+    trampoline_vec 888
 TrampolineX888 endp
 TrampolineX889 proc
-    trampoline_x87 889
+    trampoline_vec 889
 TrampolineX889 endp
 TrampolineX890 proc
-    trampoline_x87 890
+    trampoline_vec 890
 TrampolineX890 endp
 TrampolineX891 proc
-    trampoline_x87 891
+    trampoline_vec 891
 TrampolineX891 endp
 TrampolineX892 proc
-    trampoline_x87 892
+    trampoline_vec 892
 TrampolineX892 endp
 TrampolineX893 proc
-    trampoline_x87 893
+    trampoline_vec 893
 TrampolineX893 endp
 TrampolineX894 proc
-    trampoline_x87 894
+    trampoline_vec 894
 TrampolineX894 endp
 TrampolineX895 proc
-    trampoline_x87 895
+    trampoline_vec 895
 TrampolineX895 endp
 TrampolineX896 proc
-    trampoline_x87 896
+    trampoline_vec 896
 TrampolineX896 endp
 TrampolineX897 proc
-    trampoline_x87 897
+    trampoline_vec 897
 TrampolineX897 endp
 TrampolineX898 proc
-    trampoline_x87 898
+    trampoline_vec 898
 TrampolineX898 endp
 TrampolineX899 proc
-    trampoline_x87 899
+    trampoline_vec 899
 TrampolineX899 endp
 TrampolineX900 proc
-    trampoline_x87 900
+    trampoline_vec 900
 TrampolineX900 endp
 TrampolineX901 proc
-    trampoline_x87 901
+    trampoline_vec 901
 TrampolineX901 endp
 TrampolineX902 proc
-    trampoline_x87 902
+    trampoline_vec 902
 TrampolineX902 endp
 TrampolineX903 proc
-    trampoline_x87 903
+    trampoline_vec 903
 TrampolineX903 endp
 TrampolineX904 proc
-    trampoline_x87 904
+    trampoline_vec 904
 TrampolineX904 endp
 TrampolineX905 proc
-    trampoline_x87 905
+    trampoline_vec 905
 TrampolineX905 endp
 TrampolineX906 proc
-    trampoline_x87 906
+    trampoline_vec 906
 TrampolineX906 endp
 TrampolineX907 proc
-    trampoline_x87 907
+    trampoline_vec 907
 TrampolineX907 endp
 TrampolineX908 proc
-    trampoline_x87 908
+    trampoline_vec 908
 TrampolineX908 endp
 TrampolineX909 proc
-    trampoline_x87 909
+    trampoline_vec 909
 TrampolineX909 endp
 TrampolineX910 proc
-    trampoline_x87 910
+    trampoline_vec 910
 TrampolineX910 endp
 TrampolineX911 proc
-    trampoline_x87 911
+    trampoline_vec 911
 TrampolineX911 endp
 TrampolineX912 proc
-    trampoline_x87 912
+    trampoline_vec 912
 TrampolineX912 endp
 TrampolineX913 proc
-    trampoline_x87 913
+    trampoline_vec 913
 TrampolineX913 endp
 TrampolineX914 proc
-    trampoline_x87 914
+    trampoline_vec 914
 TrampolineX914 endp
 TrampolineX915 proc
-    trampoline_x87 915
+    trampoline_vec 915
 TrampolineX915 endp
 TrampolineX916 proc
-    trampoline_x87 916
+    trampoline_vec 916
 TrampolineX916 endp
 TrampolineX917 proc
-    trampoline_x87 917
+    trampoline_vec 917
 TrampolineX917 endp
 TrampolineX918 proc
-    trampoline_x87 918
+    trampoline_vec 918
 TrampolineX918 endp
 TrampolineX919 proc
-    trampoline_x87 919
+    trampoline_vec 919
 TrampolineX919 endp
 TrampolineX920 proc
-    trampoline_x87 920
+    trampoline_vec 920
 TrampolineX920 endp
 TrampolineX921 proc
-    trampoline_x87 921
+    trampoline_vec 921
 TrampolineX921 endp
 TrampolineX922 proc
-    trampoline_x87 922
+    trampoline_vec 922
 TrampolineX922 endp
 TrampolineX923 proc
-    trampoline_x87 923
+    trampoline_vec 923
 TrampolineX923 endp
 TrampolineX924 proc
-    trampoline_x87 924
+    trampoline_vec 924
 TrampolineX924 endp
 TrampolineX925 proc
-    trampoline_x87 925
+    trampoline_vec 925
 TrampolineX925 endp
 TrampolineX926 proc
-    trampoline_x87 926
+    trampoline_vec 926
 TrampolineX926 endp
 TrampolineX927 proc
-    trampoline_x87 927
+    trampoline_vec 927
 TrampolineX927 endp
 TrampolineX928 proc
-    trampoline_x87 928
+    trampoline_vec 928
 TrampolineX928 endp
 TrampolineX929 proc
-    trampoline_x87 929
+    trampoline_vec 929
 TrampolineX929 endp
 TrampolineX930 proc
-    trampoline_x87 930
+    trampoline_vec 930
 TrampolineX930 endp
 TrampolineX931 proc
-    trampoline_x87 931
+    trampoline_vec 931
 TrampolineX931 endp
 TrampolineX932 proc
-    trampoline_x87 932
+    trampoline_vec 932
 TrampolineX932 endp
 TrampolineX933 proc
-    trampoline_x87 933
+    trampoline_vec 933
 TrampolineX933 endp
 TrampolineX934 proc
-    trampoline_x87 934
+    trampoline_vec 934
 TrampolineX934 endp
 TrampolineX935 proc
-    trampoline_x87 935
+    trampoline_vec 935
 TrampolineX935 endp
 TrampolineX936 proc
-    trampoline_x87 936
+    trampoline_vec 936
 TrampolineX936 endp
 TrampolineX937 proc
-    trampoline_x87 937
+    trampoline_vec 937
 TrampolineX937 endp
 TrampolineX938 proc
-    trampoline_x87 938
+    trampoline_vec 938
 TrampolineX938 endp
 TrampolineX939 proc
-    trampoline_x87 939
+    trampoline_vec 939
 TrampolineX939 endp
 TrampolineX940 proc
-    trampoline_x87 940
+    trampoline_vec 940
 TrampolineX940 endp
 TrampolineX941 proc
-    trampoline_x87 941
+    trampoline_vec 941
 TrampolineX941 endp
 TrampolineX942 proc
-    trampoline_x87 942
+    trampoline_vec 942
 TrampolineX942 endp
 TrampolineX943 proc
-    trampoline_x87 943
+    trampoline_vec 943
 TrampolineX943 endp
 TrampolineX944 proc
-    trampoline_x87 944
+    trampoline_vec 944
 TrampolineX944 endp
 TrampolineX945 proc
-    trampoline_x87 945
+    trampoline_vec 945
 TrampolineX945 endp
 TrampolineX946 proc
-    trampoline_x87 946
+    trampoline_vec 946
 TrampolineX946 endp
 TrampolineX947 proc
-    trampoline_x87 947
+    trampoline_vec 947
 TrampolineX947 endp
 TrampolineX948 proc
-    trampoline_x87 948
+    trampoline_vec 948
 TrampolineX948 endp
 TrampolineX949 proc
-    trampoline_x87 949
+    trampoline_vec 949
 TrampolineX949 endp
 TrampolineX950 proc
-    trampoline_x87 950
+    trampoline_vec 950
 TrampolineX950 endp
 TrampolineX951 proc
-    trampoline_x87 951
+    trampoline_vec 951
 TrampolineX951 endp
 TrampolineX952 proc
-    trampoline_x87 952
+    trampoline_vec 952
 TrampolineX952 endp
 TrampolineX953 proc
-    trampoline_x87 953
+    trampoline_vec 953
 TrampolineX953 endp
 TrampolineX954 proc
-    trampoline_x87 954
+    trampoline_vec 954
 TrampolineX954 endp
 TrampolineX955 proc
-    trampoline_x87 955
+    trampoline_vec 955
 TrampolineX955 endp
 TrampolineX956 proc
-    trampoline_x87 956
+    trampoline_vec 956
 TrampolineX956 endp
 TrampolineX957 proc
-    trampoline_x87 957
+    trampoline_vec 957
 TrampolineX957 endp
 TrampolineX958 proc
-    trampoline_x87 958
+    trampoline_vec 958
 TrampolineX958 endp
 TrampolineX959 proc
-    trampoline_x87 959
+    trampoline_vec 959
 TrampolineX959 endp
 TrampolineX960 proc
-    trampoline_x87 960
+    trampoline_vec 960
 TrampolineX960 endp
 TrampolineX961 proc
-    trampoline_x87 961
+    trampoline_vec 961
 TrampolineX961 endp
 TrampolineX962 proc
-    trampoline_x87 962
+    trampoline_vec 962
 TrampolineX962 endp
 TrampolineX963 proc
-    trampoline_x87 963
+    trampoline_vec 963
 TrampolineX963 endp
 TrampolineX964 proc
-    trampoline_x87 964
+    trampoline_vec 964
 TrampolineX964 endp
 TrampolineX965 proc
-    trampoline_x87 965
+    trampoline_vec 965
 TrampolineX965 endp
 TrampolineX966 proc
-    trampoline_x87 966
+    trampoline_vec 966
 TrampolineX966 endp
 TrampolineX967 proc
-    trampoline_x87 967
+    trampoline_vec 967
 TrampolineX967 endp
 TrampolineX968 proc
-    trampoline_x87 968
+    trampoline_vec 968
 TrampolineX968 endp
 TrampolineX969 proc
-    trampoline_x87 969
+    trampoline_vec 969
 TrampolineX969 endp
 TrampolineX970 proc
-    trampoline_x87 970
+    trampoline_vec 970
 TrampolineX970 endp
 TrampolineX971 proc
-    trampoline_x87 971
+    trampoline_vec 971
 TrampolineX971 endp
 TrampolineX972 proc
-    trampoline_x87 972
+    trampoline_vec 972
 TrampolineX972 endp
 TrampolineX973 proc
-    trampoline_x87 973
+    trampoline_vec 973
 TrampolineX973 endp
 TrampolineX974 proc
-    trampoline_x87 974
+    trampoline_vec 974
 TrampolineX974 endp
 TrampolineX975 proc
-    trampoline_x87 975
+    trampoline_vec 975
 TrampolineX975 endp
 TrampolineX976 proc
-    trampoline_x87 976
+    trampoline_vec 976
 TrampolineX976 endp
 TrampolineX977 proc
-    trampoline_x87 977
+    trampoline_vec 977
 TrampolineX977 endp
 TrampolineX978 proc
-    trampoline_x87 978
+    trampoline_vec 978
 TrampolineX978 endp
 TrampolineX979 proc
-    trampoline_x87 979
+    trampoline_vec 979
 TrampolineX979 endp
 TrampolineX980 proc
-    trampoline_x87 980
+    trampoline_vec 980
 TrampolineX980 endp
 TrampolineX981 proc
-    trampoline_x87 981
+    trampoline_vec 981
 TrampolineX981 endp
 TrampolineX982 proc
-    trampoline_x87 982
+    trampoline_vec 982
 TrampolineX982 endp
 TrampolineX983 proc
-    trampoline_x87 983
+    trampoline_vec 983
 TrampolineX983 endp
 TrampolineX984 proc
-    trampoline_x87 984
+    trampoline_vec 984
 TrampolineX984 endp
 TrampolineX985 proc
-    trampoline_x87 985
+    trampoline_vec 985
 TrampolineX985 endp
 TrampolineX986 proc
-    trampoline_x87 986
+    trampoline_vec 986
 TrampolineX986 endp
 TrampolineX987 proc
-    trampoline_x87 987
+    trampoline_vec 987
 TrampolineX987 endp
 TrampolineX988 proc
-    trampoline_x87 988
+    trampoline_vec 988
 TrampolineX988 endp
 TrampolineX989 proc
-    trampoline_x87 989
+    trampoline_vec 989
 TrampolineX989 endp
 TrampolineX990 proc
-    trampoline_x87 990
+    trampoline_vec 990
 TrampolineX990 endp
 TrampolineX991 proc
-    trampoline_x87 991
+    trampoline_vec 991
 TrampolineX991 endp
 TrampolineX992 proc
-    trampoline_x87 992
+    trampoline_vec 992
 TrampolineX992 endp
 TrampolineX993 proc
-    trampoline_x87 993
+    trampoline_vec 993
 TrampolineX993 endp
 TrampolineX994 proc
-    trampoline_x87 994
+    trampoline_vec 994
 TrampolineX994 endp
 TrampolineX995 proc
-    trampoline_x87 995
+    trampoline_vec 995
 TrampolineX995 endp
 TrampolineX996 proc
-    trampoline_x87 996
+    trampoline_vec 996
 TrampolineX996 endp
 TrampolineX997 proc
-    trampoline_x87 997
+    trampoline_vec 997
 TrampolineX997 endp
 TrampolineX998 proc
-    trampoline_x87 998
+    trampoline_vec 998
 TrampolineX998 endp
 TrampolineX999 proc
-    trampoline_x87 999
+    trampoline_vec 999
 TrampolineX999 endp
 TrampolineX1000 proc
-    trampoline_x87 1000
+    trampoline_vec 1000
 TrampolineX1000 endp
 TrampolineX1001 proc
-    trampoline_x87 1001
+    trampoline_vec 1001
 TrampolineX1001 endp
 TrampolineX1002 proc
-    trampoline_x87 1002
+    trampoline_vec 1002
 TrampolineX1002 endp
 TrampolineX1003 proc
-    trampoline_x87 1003
+    trampoline_vec 1003
 TrampolineX1003 endp
 TrampolineX1004 proc
-    trampoline_x87 1004
+    trampoline_vec 1004
 TrampolineX1004 endp
 TrampolineX1005 proc
-    trampoline_x87 1005
+    trampoline_vec 1005
 TrampolineX1005 endp
 TrampolineX1006 proc
-    trampoline_x87 1006
+    trampoline_vec 1006
 TrampolineX1006 endp
 TrampolineX1007 proc
-    trampoline_x87 1007
+    trampoline_vec 1007
 TrampolineX1007 endp
 TrampolineX1008 proc
-    trampoline_x87 1008
+    trampoline_vec 1008
 TrampolineX1008 endp
 TrampolineX1009 proc
-    trampoline_x87 1009
+    trampoline_vec 1009
 TrampolineX1009 endp
 TrampolineX1010 proc
-    trampoline_x87 1010
+    trampoline_vec 1010
 TrampolineX1010 endp
 TrampolineX1011 proc
-    trampoline_x87 1011
+    trampoline_vec 1011
 TrampolineX1011 endp
 TrampolineX1012 proc
-    trampoline_x87 1012
+    trampoline_vec 1012
 TrampolineX1012 endp
 TrampolineX1013 proc
-    trampoline_x87 1013
+    trampoline_vec 1013
 TrampolineX1013 endp
 TrampolineX1014 proc
-    trampoline_x87 1014
+    trampoline_vec 1014
 TrampolineX1014 endp
 TrampolineX1015 proc
-    trampoline_x87 1015
+    trampoline_vec 1015
 TrampolineX1015 endp
 TrampolineX1016 proc
-    trampoline_x87 1016
+    trampoline_vec 1016
 TrampolineX1016 endp
 TrampolineX1017 proc
-    trampoline_x87 1017
+    trampoline_vec 1017
 TrampolineX1017 endp
 TrampolineX1018 proc
-    trampoline_x87 1018
+    trampoline_vec 1018
 TrampolineX1018 endp
 TrampolineX1019 proc
-    trampoline_x87 1019
+    trampoline_vec 1019
 TrampolineX1019 endp
 TrampolineX1020 proc
-    trampoline_x87 1020
+    trampoline_vec 1020
 TrampolineX1020 endp
 TrampolineX1021 proc
-    trampoline_x87 1021
+    trampoline_vec 1021
 TrampolineX1021 endp
 TrampolineX1022 proc
-    trampoline_x87 1022
+    trampoline_vec 1022
 TrampolineX1022 endp
 TrampolineX1023 proc
-    trampoline_x87 1023
+    trampoline_vec 1023
 TrampolineX1023 endp
-
-end

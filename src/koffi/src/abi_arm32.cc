@@ -52,7 +52,7 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
-#include "abi_trampolines.inc"
+#include "trampolines/prototypes.inc"
 
 static int IsHFA(const TypeInfo *type)
 {

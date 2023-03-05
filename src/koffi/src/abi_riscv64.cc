@@ -62,7 +62,7 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
-#include "abi_trampolines.inc"
+#include "trampolines/prototypes.inc"
 
 static inline void ExpandPair(const uint8_t raw[16], int size1, int size2, uint64_t out_regs[2])
 {

@@ -11,256 +11,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-#ifdef __APPLE__
-    #define SYMBOL(Symbol) _ ## Symbol
-#else
-    #define SYMBOL(Symbol) Symbol
-#endif
-
-# Forward
-# ----------------------------
-
-# These five are the same, but they differ (in the C side) by their return type.
-# Unlike the five next functions, these ones don't forward XMM argument registers.
-.global SYMBOL(ForwardCallGG)
-.global SYMBOL(ForwardCallF)
-.global SYMBOL(ForwardCallDG)
-.global SYMBOL(ForwardCallGD)
-.global SYMBOL(ForwardCallDD)
-
-# The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-.global SYMBOL(ForwardCallXGG)
-.global SYMBOL(ForwardCallXF)
-.global SYMBOL(ForwardCallXDG)
-.global SYMBOL(ForwardCallXGD)
-.global SYMBOL(ForwardCallXDD)
-
-#define ENDBR64 .byte 0xf3, 0x0f, 0x1e, 0xfa
-
-# Copy function pointer to R11, in order to save it through argument forwarding.
-# Also make a copy of the SP to CallData::old_sp because the callback system might need it.
-# Save RSP in RBX (non-volatile), and use carefully assembled stack provided by caller.
-.macro prologue
-    .cfi_startproc
-    .cfi_def_cfa rsp, 8
-    ENDBR64
-    movq %rdi, %r11
-    pushq %rbp
-    .cfi_def_cfa rsp, 16
-    movq %rsp, (%rdx)
-    movq %rsp, %rbp
-    .cfi_def_cfa rbp, 16
-    leaq 112(%rsi), %rsp
-.endm
-
-# Call native function.
-# Once done, restore normal stack pointer and return.
-# The return value is passed untouched through RAX or XMM0.
-.macro epilogue
-    call *%r11
-    movq %rbp, %rsp
-    popq %rbp
-    .cfi_def_cfa rsp, 8
-    ret
-    .cfi_endproc
-.endm
-
-# Prepare integer argument registers from array passed by caller.
-.macro forward_gpr
-    movq 40(%rsi), %r9
-    movq 32(%rsi), %r8
-    movq 24(%rsi), %rcx
-    movq 16(%rsi), %rdx
-    movq 0(%rsi), %rdi
-    movq 8(%rsi), %rsi
-.endm
-
-# Prepare XMM argument registers from array passed by caller.
-.macro forward_xmm
-    movsd 104(%rsi), %xmm7
-    movsd 96(%rsi), %xmm6
-    movsd 88(%rsi), %xmm5
-    movsd 80(%rsi), %xmm4
-    movsd 72(%rsi), %xmm3
-    movsd 64(%rsi), %xmm2
-    movsd 56(%rsi), %xmm1
-    movsd 48(%rsi), %xmm0
-.endm
-
-SYMBOL(ForwardCallGG):
-    prologue
-    forward_gpr
-    movb $0, %al
-    epilogue
-
-SYMBOL(ForwardCallF):
-    prologue
-    forward_gpr
-    movb $0, %al
-    epilogue
-
-SYMBOL(ForwardCallDG):
-    prologue
-    forward_gpr
-    movb $0, %al
-    epilogue
-
-SYMBOL(ForwardCallGD):
-    prologue
-    forward_gpr
-    movb $0, %al
-    epilogue
-
-SYMBOL(ForwardCallDD):
-    prologue
-    forward_gpr
-    movb $0, %al
-    epilogue
-
-SYMBOL(ForwardCallXGG):
-    prologue
-    forward_xmm
-    forward_gpr
-    movb $8, %al
-    epilogue
-
-SYMBOL(ForwardCallXF):
-    prologue
-    forward_xmm
-    forward_gpr
-    movb $8, %al
-    epilogue
-
-SYMBOL(ForwardCallXDG):
-    prologue
-    forward_xmm
-    forward_gpr
-    movb $8, %al
-    epilogue
-
-SYMBOL(ForwardCallXGD):
-    prologue
-    forward_xmm
-    forward_gpr
-    movb $8, %al
-    epilogue
-
-SYMBOL(ForwardCallXDD):
-    prologue
-    forward_xmm
-    forward_gpr
-    movb $8, %al
-    epilogue
-
-# Callbacks
-# ----------------------------
-
-.global SYMBOL(RelayCallback)
-.global SYMBOL(CallSwitchStack)
-
-# First, make a copy of the GPR argument registers (rdi, rsi, rdx, rcx, r8, r9).
-# Then call the C function RelayCallback with the following arguments:
-# static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
-# arguments of this call, and a pointer to a struct that will contain the result registers.
-# After the call, simply load these registers from the output struct.
-.macro trampoline id
-    .cfi_startproc
-    .cfi_def_cfa rsp, 8
-    ENDBR64
-    subq $152, %rsp
-    .cfi_def_cfa rsp, 160
-    movq %rdi, 0(%rsp)
-    movq %rsi, 8(%rsp)
-    movq %rdx, 16(%rsp)
-    movq %rcx, 24(%rsp)
-    movq %r8, 32(%rsp)
-    movq %r9, 40(%rsp)
-    movq $\id, %rdi
-    movq %rsp, %rsi
-    leaq 160(%rsp), %rdx
-    leaq 112(%rsp), %rcx
-#ifdef __linux__
-    call *RelayCallback@GOTPCREL(%rip)
-#else
-    call SYMBOL(RelayCallback)
-#endif
-    movq 112(%rsp), %rax
-    movq 120(%rsp), %rdx
-    addq $152, %rsp
-    .cfi_def_cfa rsp, 8
-    ret
-    .cfi_endproc
-.endm
-
-# Same thing, but also forward the XMM argument registers and load the XMM result registers.
-.macro trampoline_xmm id
-    .cfi_startproc
-    .cfi_def_cfa rsp, 8
-    ENDBR64
-    subq $152, %rsp
-    .cfi_def_cfa rsp, 160
-    movq %rdi, 0(%rsp)
-    movq %rsi, 8(%rsp)
-    movq %rdx, 16(%rsp)
-    movq %rcx, 24(%rsp)
-    movq %r8, 32(%rsp)
-    movq %r9, 40(%rsp)
-    movsd %xmm0, 48(%rsp)
-    movsd %xmm1, 56(%rsp)
-    movsd %xmm2, 64(%rsp)
-    movsd %xmm3, 72(%rsp)
-    movsd %xmm4, 80(%rsp)
-    movsd %xmm5, 88(%rsp)
-    movsd %xmm6, 96(%rsp)
-    movsd %xmm7, 104(%rsp)
-    movq $\id, %rdi
-    movq %rsp, %rsi
-    leaq 160(%rsp), %rdx
-    leaq 112(%rsp), %rcx
-#ifdef __linux__
-    call *RelayCallback@GOTPCREL(%rip)
-#else
-    call SYMBOL(RelayCallback)
-#endif
-    movq 112(%rsp), %rax
-    movq 120(%rsp), %rdx
-    movsd 128(%rsp), %xmm0
-    movsd 136(%rsp), %xmm1
-    addq $152, %rsp
-    .cfi_def_cfa rsp, 8
-    ret
-    .cfi_endproc
-.endm
-
-# When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
-# The problem is that we're still running on the separate Koffi stack, and V8 will
-# probably misdetect this as a "stack overflow". We have to restore the old
-# stack pointer, call Node.js/V8 and go back to ours.
-# The first three parameters (rdi, rsi, rdx) are passed through untouched.
-SYMBOL(CallSwitchStack):
-    .cfi_startproc
-    .cfi_def_cfa rsp, 8
-    ENDBR64
-    push %rbp
-    .cfi_def_cfa rsp, 16
-    movq %rsp, %rbp
-    movq %rsp, %r10
-    subq 0(%r8), %r10
-    andq $-16, %r10
-    movq %r10, 8(%r8)
-    movq %rcx, %rsp
-    .cfi_def_cfa rsp, 16
-    call *%r9
-    mov %rbp, %rsp
-    .cfi_def_cfa rsp, 16
-    pop %rbp
-    .cfi_def_cfa rsp, 8
-    ret
-    .cfi_endproc
-
-# Trampolines
-# ----------------------------
-
 .global SYMBOL(Trampoline0)
 .global SYMBOL(Trampoline1)
 .global SYMBOL(Trampoline2)
@@ -4361,2050 +4111,2050 @@ SYMBOL(Trampoline1023):
     trampoline 1023
 
 SYMBOL(TrampolineX0):
-    trampoline_xmm 0
+    trampoline_vec 0
 SYMBOL(TrampolineX1):
-    trampoline_xmm 1
+    trampoline_vec 1
 SYMBOL(TrampolineX2):
-    trampoline_xmm 2
+    trampoline_vec 2
 SYMBOL(TrampolineX3):
-    trampoline_xmm 3
+    trampoline_vec 3
 SYMBOL(TrampolineX4):
-    trampoline_xmm 4
+    trampoline_vec 4
 SYMBOL(TrampolineX5):
-    trampoline_xmm 5
+    trampoline_vec 5
 SYMBOL(TrampolineX6):
-    trampoline_xmm 6
+    trampoline_vec 6
 SYMBOL(TrampolineX7):
-    trampoline_xmm 7
+    trampoline_vec 7
 SYMBOL(TrampolineX8):
-    trampoline_xmm 8
+    trampoline_vec 8
 SYMBOL(TrampolineX9):
-    trampoline_xmm 9
+    trampoline_vec 9
 SYMBOL(TrampolineX10):
-    trampoline_xmm 10
+    trampoline_vec 10
 SYMBOL(TrampolineX11):
-    trampoline_xmm 11
+    trampoline_vec 11
 SYMBOL(TrampolineX12):
-    trampoline_xmm 12
+    trampoline_vec 12
 SYMBOL(TrampolineX13):
-    trampoline_xmm 13
+    trampoline_vec 13
 SYMBOL(TrampolineX14):
-    trampoline_xmm 14
+    trampoline_vec 14
 SYMBOL(TrampolineX15):
-    trampoline_xmm 15
+    trampoline_vec 15
 SYMBOL(TrampolineX16):
-    trampoline_xmm 16
+    trampoline_vec 16
 SYMBOL(TrampolineX17):
-    trampoline_xmm 17
+    trampoline_vec 17
 SYMBOL(TrampolineX18):
-    trampoline_xmm 18
+    trampoline_vec 18
 SYMBOL(TrampolineX19):
-    trampoline_xmm 19
+    trampoline_vec 19
 SYMBOL(TrampolineX20):
-    trampoline_xmm 20
+    trampoline_vec 20
 SYMBOL(TrampolineX21):
-    trampoline_xmm 21
+    trampoline_vec 21
 SYMBOL(TrampolineX22):
-    trampoline_xmm 22
+    trampoline_vec 22
 SYMBOL(TrampolineX23):
-    trampoline_xmm 23
+    trampoline_vec 23
 SYMBOL(TrampolineX24):
-    trampoline_xmm 24
+    trampoline_vec 24
 SYMBOL(TrampolineX25):
-    trampoline_xmm 25
+    trampoline_vec 25
 SYMBOL(TrampolineX26):
-    trampoline_xmm 26
+    trampoline_vec 26
 SYMBOL(TrampolineX27):
-    trampoline_xmm 27
+    trampoline_vec 27
 SYMBOL(TrampolineX28):
-    trampoline_xmm 28
+    trampoline_vec 28
 SYMBOL(TrampolineX29):
-    trampoline_xmm 29
+    trampoline_vec 29
 SYMBOL(TrampolineX30):
-    trampoline_xmm 30
+    trampoline_vec 30
 SYMBOL(TrampolineX31):
-    trampoline_xmm 31
+    trampoline_vec 31
 SYMBOL(TrampolineX32):
-    trampoline_xmm 32
+    trampoline_vec 32
 SYMBOL(TrampolineX33):
-    trampoline_xmm 33
+    trampoline_vec 33
 SYMBOL(TrampolineX34):
-    trampoline_xmm 34
+    trampoline_vec 34
 SYMBOL(TrampolineX35):
-    trampoline_xmm 35
+    trampoline_vec 35
 SYMBOL(TrampolineX36):
-    trampoline_xmm 36
+    trampoline_vec 36
 SYMBOL(TrampolineX37):
-    trampoline_xmm 37
+    trampoline_vec 37
 SYMBOL(TrampolineX38):
-    trampoline_xmm 38
+    trampoline_vec 38
 SYMBOL(TrampolineX39):
-    trampoline_xmm 39
+    trampoline_vec 39
 SYMBOL(TrampolineX40):
-    trampoline_xmm 40
+    trampoline_vec 40
 SYMBOL(TrampolineX41):
-    trampoline_xmm 41
+    trampoline_vec 41
 SYMBOL(TrampolineX42):
-    trampoline_xmm 42
+    trampoline_vec 42
 SYMBOL(TrampolineX43):
-    trampoline_xmm 43
+    trampoline_vec 43
 SYMBOL(TrampolineX44):
-    trampoline_xmm 44
+    trampoline_vec 44
 SYMBOL(TrampolineX45):
-    trampoline_xmm 45
+    trampoline_vec 45
 SYMBOL(TrampolineX46):
-    trampoline_xmm 46
+    trampoline_vec 46
 SYMBOL(TrampolineX47):
-    trampoline_xmm 47
+    trampoline_vec 47
 SYMBOL(TrampolineX48):
-    trampoline_xmm 48
+    trampoline_vec 48
 SYMBOL(TrampolineX49):
-    trampoline_xmm 49
+    trampoline_vec 49
 SYMBOL(TrampolineX50):
-    trampoline_xmm 50
+    trampoline_vec 50
 SYMBOL(TrampolineX51):
-    trampoline_xmm 51
+    trampoline_vec 51
 SYMBOL(TrampolineX52):
-    trampoline_xmm 52
+    trampoline_vec 52
 SYMBOL(TrampolineX53):
-    trampoline_xmm 53
+    trampoline_vec 53
 SYMBOL(TrampolineX54):
-    trampoline_xmm 54
+    trampoline_vec 54
 SYMBOL(TrampolineX55):
-    trampoline_xmm 55
+    trampoline_vec 55
 SYMBOL(TrampolineX56):
-    trampoline_xmm 56
+    trampoline_vec 56
 SYMBOL(TrampolineX57):
-    trampoline_xmm 57
+    trampoline_vec 57
 SYMBOL(TrampolineX58):
-    trampoline_xmm 58
+    trampoline_vec 58
 SYMBOL(TrampolineX59):
-    trampoline_xmm 59
+    trampoline_vec 59
 SYMBOL(TrampolineX60):
-    trampoline_xmm 60
+    trampoline_vec 60
 SYMBOL(TrampolineX61):
-    trampoline_xmm 61
+    trampoline_vec 61
 SYMBOL(TrampolineX62):
-    trampoline_xmm 62
+    trampoline_vec 62
 SYMBOL(TrampolineX63):
-    trampoline_xmm 63
+    trampoline_vec 63
 SYMBOL(TrampolineX64):
-    trampoline_xmm 64
+    trampoline_vec 64
 SYMBOL(TrampolineX65):
-    trampoline_xmm 65
+    trampoline_vec 65
 SYMBOL(TrampolineX66):
-    trampoline_xmm 66
+    trampoline_vec 66
 SYMBOL(TrampolineX67):
-    trampoline_xmm 67
+    trampoline_vec 67
 SYMBOL(TrampolineX68):
-    trampoline_xmm 68
+    trampoline_vec 68
 SYMBOL(TrampolineX69):
-    trampoline_xmm 69
+    trampoline_vec 69
 SYMBOL(TrampolineX70):
-    trampoline_xmm 70
+    trampoline_vec 70
 SYMBOL(TrampolineX71):
-    trampoline_xmm 71
+    trampoline_vec 71
 SYMBOL(TrampolineX72):
-    trampoline_xmm 72
+    trampoline_vec 72
 SYMBOL(TrampolineX73):
-    trampoline_xmm 73
+    trampoline_vec 73
 SYMBOL(TrampolineX74):
-    trampoline_xmm 74
+    trampoline_vec 74
 SYMBOL(TrampolineX75):
-    trampoline_xmm 75
+    trampoline_vec 75
 SYMBOL(TrampolineX76):
-    trampoline_xmm 76
+    trampoline_vec 76
 SYMBOL(TrampolineX77):
-    trampoline_xmm 77
+    trampoline_vec 77
 SYMBOL(TrampolineX78):
-    trampoline_xmm 78
+    trampoline_vec 78
 SYMBOL(TrampolineX79):
-    trampoline_xmm 79
+    trampoline_vec 79
 SYMBOL(TrampolineX80):
-    trampoline_xmm 80
+    trampoline_vec 80
 SYMBOL(TrampolineX81):
-    trampoline_xmm 81
+    trampoline_vec 81
 SYMBOL(TrampolineX82):
-    trampoline_xmm 82
+    trampoline_vec 82
 SYMBOL(TrampolineX83):
-    trampoline_xmm 83
+    trampoline_vec 83
 SYMBOL(TrampolineX84):
-    trampoline_xmm 84
+    trampoline_vec 84
 SYMBOL(TrampolineX85):
-    trampoline_xmm 85
+    trampoline_vec 85
 SYMBOL(TrampolineX86):
-    trampoline_xmm 86
+    trampoline_vec 86
 SYMBOL(TrampolineX87):
-    trampoline_xmm 87
+    trampoline_vec 87
 SYMBOL(TrampolineX88):
-    trampoline_xmm 88
+    trampoline_vec 88
 SYMBOL(TrampolineX89):
-    trampoline_xmm 89
+    trampoline_vec 89
 SYMBOL(TrampolineX90):
-    trampoline_xmm 90
+    trampoline_vec 90
 SYMBOL(TrampolineX91):
-    trampoline_xmm 91
+    trampoline_vec 91
 SYMBOL(TrampolineX92):
-    trampoline_xmm 92
+    trampoline_vec 92
 SYMBOL(TrampolineX93):
-    trampoline_xmm 93
+    trampoline_vec 93
 SYMBOL(TrampolineX94):
-    trampoline_xmm 94
+    trampoline_vec 94
 SYMBOL(TrampolineX95):
-    trampoline_xmm 95
+    trampoline_vec 95
 SYMBOL(TrampolineX96):
-    trampoline_xmm 96
+    trampoline_vec 96
 SYMBOL(TrampolineX97):
-    trampoline_xmm 97
+    trampoline_vec 97
 SYMBOL(TrampolineX98):
-    trampoline_xmm 98
+    trampoline_vec 98
 SYMBOL(TrampolineX99):
-    trampoline_xmm 99
+    trampoline_vec 99
 SYMBOL(TrampolineX100):
-    trampoline_xmm 100
+    trampoline_vec 100
 SYMBOL(TrampolineX101):
-    trampoline_xmm 101
+    trampoline_vec 101
 SYMBOL(TrampolineX102):
-    trampoline_xmm 102
+    trampoline_vec 102
 SYMBOL(TrampolineX103):
-    trampoline_xmm 103
+    trampoline_vec 103
 SYMBOL(TrampolineX104):
-    trampoline_xmm 104
+    trampoline_vec 104
 SYMBOL(TrampolineX105):
-    trampoline_xmm 105
+    trampoline_vec 105
 SYMBOL(TrampolineX106):
-    trampoline_xmm 106
+    trampoline_vec 106
 SYMBOL(TrampolineX107):
-    trampoline_xmm 107
+    trampoline_vec 107
 SYMBOL(TrampolineX108):
-    trampoline_xmm 108
+    trampoline_vec 108
 SYMBOL(TrampolineX109):
-    trampoline_xmm 109
+    trampoline_vec 109
 SYMBOL(TrampolineX110):
-    trampoline_xmm 110
+    trampoline_vec 110
 SYMBOL(TrampolineX111):
-    trampoline_xmm 111
+    trampoline_vec 111
 SYMBOL(TrampolineX112):
-    trampoline_xmm 112
+    trampoline_vec 112
 SYMBOL(TrampolineX113):
-    trampoline_xmm 113
+    trampoline_vec 113
 SYMBOL(TrampolineX114):
-    trampoline_xmm 114
+    trampoline_vec 114
 SYMBOL(TrampolineX115):
-    trampoline_xmm 115
+    trampoline_vec 115
 SYMBOL(TrampolineX116):
-    trampoline_xmm 116
+    trampoline_vec 116
 SYMBOL(TrampolineX117):
-    trampoline_xmm 117
+    trampoline_vec 117
 SYMBOL(TrampolineX118):
-    trampoline_xmm 118
+    trampoline_vec 118
 SYMBOL(TrampolineX119):
-    trampoline_xmm 119
+    trampoline_vec 119
 SYMBOL(TrampolineX120):
-    trampoline_xmm 120
+    trampoline_vec 120
 SYMBOL(TrampolineX121):
-    trampoline_xmm 121
+    trampoline_vec 121
 SYMBOL(TrampolineX122):
-    trampoline_xmm 122
+    trampoline_vec 122
 SYMBOL(TrampolineX123):
-    trampoline_xmm 123
+    trampoline_vec 123
 SYMBOL(TrampolineX124):
-    trampoline_xmm 124
+    trampoline_vec 124
 SYMBOL(TrampolineX125):
-    trampoline_xmm 125
+    trampoline_vec 125
 SYMBOL(TrampolineX126):
-    trampoline_xmm 126
+    trampoline_vec 126
 SYMBOL(TrampolineX127):
-    trampoline_xmm 127
+    trampoline_vec 127
 SYMBOL(TrampolineX128):
-    trampoline_xmm 128
+    trampoline_vec 128
 SYMBOL(TrampolineX129):
-    trampoline_xmm 129
+    trampoline_vec 129
 SYMBOL(TrampolineX130):
-    trampoline_xmm 130
+    trampoline_vec 130
 SYMBOL(TrampolineX131):
-    trampoline_xmm 131
+    trampoline_vec 131
 SYMBOL(TrampolineX132):
-    trampoline_xmm 132
+    trampoline_vec 132
 SYMBOL(TrampolineX133):
-    trampoline_xmm 133
+    trampoline_vec 133
 SYMBOL(TrampolineX134):
-    trampoline_xmm 134
+    trampoline_vec 134
 SYMBOL(TrampolineX135):
-    trampoline_xmm 135
+    trampoline_vec 135
 SYMBOL(TrampolineX136):
-    trampoline_xmm 136
+    trampoline_vec 136
 SYMBOL(TrampolineX137):
-    trampoline_xmm 137
+    trampoline_vec 137
 SYMBOL(TrampolineX138):
-    trampoline_xmm 138
+    trampoline_vec 138
 SYMBOL(TrampolineX139):
-    trampoline_xmm 139
+    trampoline_vec 139
 SYMBOL(TrampolineX140):
-    trampoline_xmm 140
+    trampoline_vec 140
 SYMBOL(TrampolineX141):
-    trampoline_xmm 141
+    trampoline_vec 141
 SYMBOL(TrampolineX142):
-    trampoline_xmm 142
+    trampoline_vec 142
 SYMBOL(TrampolineX143):
-    trampoline_xmm 143
+    trampoline_vec 143
 SYMBOL(TrampolineX144):
-    trampoline_xmm 144
+    trampoline_vec 144
 SYMBOL(TrampolineX145):
-    trampoline_xmm 145
+    trampoline_vec 145
 SYMBOL(TrampolineX146):
-    trampoline_xmm 146
+    trampoline_vec 146
 SYMBOL(TrampolineX147):
-    trampoline_xmm 147
+    trampoline_vec 147
 SYMBOL(TrampolineX148):
-    trampoline_xmm 148
+    trampoline_vec 148
 SYMBOL(TrampolineX149):
-    trampoline_xmm 149
+    trampoline_vec 149
 SYMBOL(TrampolineX150):
-    trampoline_xmm 150
+    trampoline_vec 150
 SYMBOL(TrampolineX151):
-    trampoline_xmm 151
+    trampoline_vec 151
 SYMBOL(TrampolineX152):
-    trampoline_xmm 152
+    trampoline_vec 152
 SYMBOL(TrampolineX153):
-    trampoline_xmm 153
+    trampoline_vec 153
 SYMBOL(TrampolineX154):
-    trampoline_xmm 154
+    trampoline_vec 154
 SYMBOL(TrampolineX155):
-    trampoline_xmm 155
+    trampoline_vec 155
 SYMBOL(TrampolineX156):
-    trampoline_xmm 156
+    trampoline_vec 156
 SYMBOL(TrampolineX157):
-    trampoline_xmm 157
+    trampoline_vec 157
 SYMBOL(TrampolineX158):
-    trampoline_xmm 158
+    trampoline_vec 158
 SYMBOL(TrampolineX159):
-    trampoline_xmm 159
+    trampoline_vec 159
 SYMBOL(TrampolineX160):
-    trampoline_xmm 160
+    trampoline_vec 160
 SYMBOL(TrampolineX161):
-    trampoline_xmm 161
+    trampoline_vec 161
 SYMBOL(TrampolineX162):
-    trampoline_xmm 162
+    trampoline_vec 162
 SYMBOL(TrampolineX163):
-    trampoline_xmm 163
+    trampoline_vec 163
 SYMBOL(TrampolineX164):
-    trampoline_xmm 164
+    trampoline_vec 164
 SYMBOL(TrampolineX165):
-    trampoline_xmm 165
+    trampoline_vec 165
 SYMBOL(TrampolineX166):
-    trampoline_xmm 166
+    trampoline_vec 166
 SYMBOL(TrampolineX167):
-    trampoline_xmm 167
+    trampoline_vec 167
 SYMBOL(TrampolineX168):
-    trampoline_xmm 168
+    trampoline_vec 168
 SYMBOL(TrampolineX169):
-    trampoline_xmm 169
+    trampoline_vec 169
 SYMBOL(TrampolineX170):
-    trampoline_xmm 170
+    trampoline_vec 170
 SYMBOL(TrampolineX171):
-    trampoline_xmm 171
+    trampoline_vec 171
 SYMBOL(TrampolineX172):
-    trampoline_xmm 172
+    trampoline_vec 172
 SYMBOL(TrampolineX173):
-    trampoline_xmm 173
+    trampoline_vec 173
 SYMBOL(TrampolineX174):
-    trampoline_xmm 174
+    trampoline_vec 174
 SYMBOL(TrampolineX175):
-    trampoline_xmm 175
+    trampoline_vec 175
 SYMBOL(TrampolineX176):
-    trampoline_xmm 176
+    trampoline_vec 176
 SYMBOL(TrampolineX177):
-    trampoline_xmm 177
+    trampoline_vec 177
 SYMBOL(TrampolineX178):
-    trampoline_xmm 178
+    trampoline_vec 178
 SYMBOL(TrampolineX179):
-    trampoline_xmm 179
+    trampoline_vec 179
 SYMBOL(TrampolineX180):
-    trampoline_xmm 180
+    trampoline_vec 180
 SYMBOL(TrampolineX181):
-    trampoline_xmm 181
+    trampoline_vec 181
 SYMBOL(TrampolineX182):
-    trampoline_xmm 182
+    trampoline_vec 182
 SYMBOL(TrampolineX183):
-    trampoline_xmm 183
+    trampoline_vec 183
 SYMBOL(TrampolineX184):
-    trampoline_xmm 184
+    trampoline_vec 184
 SYMBOL(TrampolineX185):
-    trampoline_xmm 185
+    trampoline_vec 185
 SYMBOL(TrampolineX186):
-    trampoline_xmm 186
+    trampoline_vec 186
 SYMBOL(TrampolineX187):
-    trampoline_xmm 187
+    trampoline_vec 187
 SYMBOL(TrampolineX188):
-    trampoline_xmm 188
+    trampoline_vec 188
 SYMBOL(TrampolineX189):
-    trampoline_xmm 189
+    trampoline_vec 189
 SYMBOL(TrampolineX190):
-    trampoline_xmm 190
+    trampoline_vec 190
 SYMBOL(TrampolineX191):
-    trampoline_xmm 191
+    trampoline_vec 191
 SYMBOL(TrampolineX192):
-    trampoline_xmm 192
+    trampoline_vec 192
 SYMBOL(TrampolineX193):
-    trampoline_xmm 193
+    trampoline_vec 193
 SYMBOL(TrampolineX194):
-    trampoline_xmm 194
+    trampoline_vec 194
 SYMBOL(TrampolineX195):
-    trampoline_xmm 195
+    trampoline_vec 195
 SYMBOL(TrampolineX196):
-    trampoline_xmm 196
+    trampoline_vec 196
 SYMBOL(TrampolineX197):
-    trampoline_xmm 197
+    trampoline_vec 197
 SYMBOL(TrampolineX198):
-    trampoline_xmm 198
+    trampoline_vec 198
 SYMBOL(TrampolineX199):
-    trampoline_xmm 199
+    trampoline_vec 199
 SYMBOL(TrampolineX200):
-    trampoline_xmm 200
+    trampoline_vec 200
 SYMBOL(TrampolineX201):
-    trampoline_xmm 201
+    trampoline_vec 201
 SYMBOL(TrampolineX202):
-    trampoline_xmm 202
+    trampoline_vec 202
 SYMBOL(TrampolineX203):
-    trampoline_xmm 203
+    trampoline_vec 203
 SYMBOL(TrampolineX204):
-    trampoline_xmm 204
+    trampoline_vec 204
 SYMBOL(TrampolineX205):
-    trampoline_xmm 205
+    trampoline_vec 205
 SYMBOL(TrampolineX206):
-    trampoline_xmm 206
+    trampoline_vec 206
 SYMBOL(TrampolineX207):
-    trampoline_xmm 207
+    trampoline_vec 207
 SYMBOL(TrampolineX208):
-    trampoline_xmm 208
+    trampoline_vec 208
 SYMBOL(TrampolineX209):
-    trampoline_xmm 209
+    trampoline_vec 209
 SYMBOL(TrampolineX210):
-    trampoline_xmm 210
+    trampoline_vec 210
 SYMBOL(TrampolineX211):
-    trampoline_xmm 211
+    trampoline_vec 211
 SYMBOL(TrampolineX212):
-    trampoline_xmm 212
+    trampoline_vec 212
 SYMBOL(TrampolineX213):
-    trampoline_xmm 213
+    trampoline_vec 213
 SYMBOL(TrampolineX214):
-    trampoline_xmm 214
+    trampoline_vec 214
 SYMBOL(TrampolineX215):
-    trampoline_xmm 215
+    trampoline_vec 215
 SYMBOL(TrampolineX216):
-    trampoline_xmm 216
+    trampoline_vec 216
 SYMBOL(TrampolineX217):
-    trampoline_xmm 217
+    trampoline_vec 217
 SYMBOL(TrampolineX218):
-    trampoline_xmm 218
+    trampoline_vec 218
 SYMBOL(TrampolineX219):
-    trampoline_xmm 219
+    trampoline_vec 219
 SYMBOL(TrampolineX220):
-    trampoline_xmm 220
+    trampoline_vec 220
 SYMBOL(TrampolineX221):
-    trampoline_xmm 221
+    trampoline_vec 221
 SYMBOL(TrampolineX222):
-    trampoline_xmm 222
+    trampoline_vec 222
 SYMBOL(TrampolineX223):
-    trampoline_xmm 223
+    trampoline_vec 223
 SYMBOL(TrampolineX224):
-    trampoline_xmm 224
+    trampoline_vec 224
 SYMBOL(TrampolineX225):
-    trampoline_xmm 225
+    trampoline_vec 225
 SYMBOL(TrampolineX226):
-    trampoline_xmm 226
+    trampoline_vec 226
 SYMBOL(TrampolineX227):
-    trampoline_xmm 227
+    trampoline_vec 227
 SYMBOL(TrampolineX228):
-    trampoline_xmm 228
+    trampoline_vec 228
 SYMBOL(TrampolineX229):
-    trampoline_xmm 229
+    trampoline_vec 229
 SYMBOL(TrampolineX230):
-    trampoline_xmm 230
+    trampoline_vec 230
 SYMBOL(TrampolineX231):
-    trampoline_xmm 231
+    trampoline_vec 231
 SYMBOL(TrampolineX232):
-    trampoline_xmm 232
+    trampoline_vec 232
 SYMBOL(TrampolineX233):
-    trampoline_xmm 233
+    trampoline_vec 233
 SYMBOL(TrampolineX234):
-    trampoline_xmm 234
+    trampoline_vec 234
 SYMBOL(TrampolineX235):
-    trampoline_xmm 235
+    trampoline_vec 235
 SYMBOL(TrampolineX236):
-    trampoline_xmm 236
+    trampoline_vec 236
 SYMBOL(TrampolineX237):
-    trampoline_xmm 237
+    trampoline_vec 237
 SYMBOL(TrampolineX238):
-    trampoline_xmm 238
+    trampoline_vec 238
 SYMBOL(TrampolineX239):
-    trampoline_xmm 239
+    trampoline_vec 239
 SYMBOL(TrampolineX240):
-    trampoline_xmm 240
+    trampoline_vec 240
 SYMBOL(TrampolineX241):
-    trampoline_xmm 241
+    trampoline_vec 241
 SYMBOL(TrampolineX242):
-    trampoline_xmm 242
+    trampoline_vec 242
 SYMBOL(TrampolineX243):
-    trampoline_xmm 243
+    trampoline_vec 243
 SYMBOL(TrampolineX244):
-    trampoline_xmm 244
+    trampoline_vec 244
 SYMBOL(TrampolineX245):
-    trampoline_xmm 245
+    trampoline_vec 245
 SYMBOL(TrampolineX246):
-    trampoline_xmm 246
+    trampoline_vec 246
 SYMBOL(TrampolineX247):
-    trampoline_xmm 247
+    trampoline_vec 247
 SYMBOL(TrampolineX248):
-    trampoline_xmm 248
+    trampoline_vec 248
 SYMBOL(TrampolineX249):
-    trampoline_xmm 249
+    trampoline_vec 249
 SYMBOL(TrampolineX250):
-    trampoline_xmm 250
+    trampoline_vec 250
 SYMBOL(TrampolineX251):
-    trampoline_xmm 251
+    trampoline_vec 251
 SYMBOL(TrampolineX252):
-    trampoline_xmm 252
+    trampoline_vec 252
 SYMBOL(TrampolineX253):
-    trampoline_xmm 253
+    trampoline_vec 253
 SYMBOL(TrampolineX254):
-    trampoline_xmm 254
+    trampoline_vec 254
 SYMBOL(TrampolineX255):
-    trampoline_xmm 255
+    trampoline_vec 255
 SYMBOL(TrampolineX256):
-    trampoline_xmm 256
+    trampoline_vec 256
 SYMBOL(TrampolineX257):
-    trampoline_xmm 257
+    trampoline_vec 257
 SYMBOL(TrampolineX258):
-    trampoline_xmm 258
+    trampoline_vec 258
 SYMBOL(TrampolineX259):
-    trampoline_xmm 259
+    trampoline_vec 259
 SYMBOL(TrampolineX260):
-    trampoline_xmm 260
+    trampoline_vec 260
 SYMBOL(TrampolineX261):
-    trampoline_xmm 261
+    trampoline_vec 261
 SYMBOL(TrampolineX262):
-    trampoline_xmm 262
+    trampoline_vec 262
 SYMBOL(TrampolineX263):
-    trampoline_xmm 263
+    trampoline_vec 263
 SYMBOL(TrampolineX264):
-    trampoline_xmm 264
+    trampoline_vec 264
 SYMBOL(TrampolineX265):
-    trampoline_xmm 265
+    trampoline_vec 265
 SYMBOL(TrampolineX266):
-    trampoline_xmm 266
+    trampoline_vec 266
 SYMBOL(TrampolineX267):
-    trampoline_xmm 267
+    trampoline_vec 267
 SYMBOL(TrampolineX268):
-    trampoline_xmm 268
+    trampoline_vec 268
 SYMBOL(TrampolineX269):
-    trampoline_xmm 269
+    trampoline_vec 269
 SYMBOL(TrampolineX270):
-    trampoline_xmm 270
+    trampoline_vec 270
 SYMBOL(TrampolineX271):
-    trampoline_xmm 271
+    trampoline_vec 271
 SYMBOL(TrampolineX272):
-    trampoline_xmm 272
+    trampoline_vec 272
 SYMBOL(TrampolineX273):
-    trampoline_xmm 273
+    trampoline_vec 273
 SYMBOL(TrampolineX274):
-    trampoline_xmm 274
+    trampoline_vec 274
 SYMBOL(TrampolineX275):
-    trampoline_xmm 275
+    trampoline_vec 275
 SYMBOL(TrampolineX276):
-    trampoline_xmm 276
+    trampoline_vec 276
 SYMBOL(TrampolineX277):
-    trampoline_xmm 277
+    trampoline_vec 277
 SYMBOL(TrampolineX278):
-    trampoline_xmm 278
+    trampoline_vec 278
 SYMBOL(TrampolineX279):
-    trampoline_xmm 279
+    trampoline_vec 279
 SYMBOL(TrampolineX280):
-    trampoline_xmm 280
+    trampoline_vec 280
 SYMBOL(TrampolineX281):
-    trampoline_xmm 281
+    trampoline_vec 281
 SYMBOL(TrampolineX282):
-    trampoline_xmm 282
+    trampoline_vec 282
 SYMBOL(TrampolineX283):
-    trampoline_xmm 283
+    trampoline_vec 283
 SYMBOL(TrampolineX284):
-    trampoline_xmm 284
+    trampoline_vec 284
 SYMBOL(TrampolineX285):
-    trampoline_xmm 285
+    trampoline_vec 285
 SYMBOL(TrampolineX286):
-    trampoline_xmm 286
+    trampoline_vec 286
 SYMBOL(TrampolineX287):
-    trampoline_xmm 287
+    trampoline_vec 287
 SYMBOL(TrampolineX288):
-    trampoline_xmm 288
+    trampoline_vec 288
 SYMBOL(TrampolineX289):
-    trampoline_xmm 289
+    trampoline_vec 289
 SYMBOL(TrampolineX290):
-    trampoline_xmm 290
+    trampoline_vec 290
 SYMBOL(TrampolineX291):
-    trampoline_xmm 291
+    trampoline_vec 291
 SYMBOL(TrampolineX292):
-    trampoline_xmm 292
+    trampoline_vec 292
 SYMBOL(TrampolineX293):
-    trampoline_xmm 293
+    trampoline_vec 293
 SYMBOL(TrampolineX294):
-    trampoline_xmm 294
+    trampoline_vec 294
 SYMBOL(TrampolineX295):
-    trampoline_xmm 295
+    trampoline_vec 295
 SYMBOL(TrampolineX296):
-    trampoline_xmm 296
+    trampoline_vec 296
 SYMBOL(TrampolineX297):
-    trampoline_xmm 297
+    trampoline_vec 297
 SYMBOL(TrampolineX298):
-    trampoline_xmm 298
+    trampoline_vec 298
 SYMBOL(TrampolineX299):
-    trampoline_xmm 299
+    trampoline_vec 299
 SYMBOL(TrampolineX300):
-    trampoline_xmm 300
+    trampoline_vec 300
 SYMBOL(TrampolineX301):
-    trampoline_xmm 301
+    trampoline_vec 301
 SYMBOL(TrampolineX302):
-    trampoline_xmm 302
+    trampoline_vec 302
 SYMBOL(TrampolineX303):
-    trampoline_xmm 303
+    trampoline_vec 303
 SYMBOL(TrampolineX304):
-    trampoline_xmm 304
+    trampoline_vec 304
 SYMBOL(TrampolineX305):
-    trampoline_xmm 305
+    trampoline_vec 305
 SYMBOL(TrampolineX306):
-    trampoline_xmm 306
+    trampoline_vec 306
 SYMBOL(TrampolineX307):
-    trampoline_xmm 307
+    trampoline_vec 307
 SYMBOL(TrampolineX308):
-    trampoline_xmm 308
+    trampoline_vec 308
 SYMBOL(TrampolineX309):
-    trampoline_xmm 309
+    trampoline_vec 309
 SYMBOL(TrampolineX310):
-    trampoline_xmm 310
+    trampoline_vec 310
 SYMBOL(TrampolineX311):
-    trampoline_xmm 311
+    trampoline_vec 311
 SYMBOL(TrampolineX312):
-    trampoline_xmm 312
+    trampoline_vec 312
 SYMBOL(TrampolineX313):
-    trampoline_xmm 313
+    trampoline_vec 313
 SYMBOL(TrampolineX314):
-    trampoline_xmm 314
+    trampoline_vec 314
 SYMBOL(TrampolineX315):
-    trampoline_xmm 315
+    trampoline_vec 315
 SYMBOL(TrampolineX316):
-    trampoline_xmm 316
+    trampoline_vec 316
 SYMBOL(TrampolineX317):
-    trampoline_xmm 317
+    trampoline_vec 317
 SYMBOL(TrampolineX318):
-    trampoline_xmm 318
+    trampoline_vec 318
 SYMBOL(TrampolineX319):
-    trampoline_xmm 319
+    trampoline_vec 319
 SYMBOL(TrampolineX320):
-    trampoline_xmm 320
+    trampoline_vec 320
 SYMBOL(TrampolineX321):
-    trampoline_xmm 321
+    trampoline_vec 321
 SYMBOL(TrampolineX322):
-    trampoline_xmm 322
+    trampoline_vec 322
 SYMBOL(TrampolineX323):
-    trampoline_xmm 323
+    trampoline_vec 323
 SYMBOL(TrampolineX324):
-    trampoline_xmm 324
+    trampoline_vec 324
 SYMBOL(TrampolineX325):
-    trampoline_xmm 325
+    trampoline_vec 325
 SYMBOL(TrampolineX326):
-    trampoline_xmm 326
+    trampoline_vec 326
 SYMBOL(TrampolineX327):
-    trampoline_xmm 327
+    trampoline_vec 327
 SYMBOL(TrampolineX328):
-    trampoline_xmm 328
+    trampoline_vec 328
 SYMBOL(TrampolineX329):
-    trampoline_xmm 329
+    trampoline_vec 329
 SYMBOL(TrampolineX330):
-    trampoline_xmm 330
+    trampoline_vec 330
 SYMBOL(TrampolineX331):
-    trampoline_xmm 331
+    trampoline_vec 331
 SYMBOL(TrampolineX332):
-    trampoline_xmm 332
+    trampoline_vec 332
 SYMBOL(TrampolineX333):
-    trampoline_xmm 333
+    trampoline_vec 333
 SYMBOL(TrampolineX334):
-    trampoline_xmm 334
+    trampoline_vec 334
 SYMBOL(TrampolineX335):
-    trampoline_xmm 335
+    trampoline_vec 335
 SYMBOL(TrampolineX336):
-    trampoline_xmm 336
+    trampoline_vec 336
 SYMBOL(TrampolineX337):
-    trampoline_xmm 337
+    trampoline_vec 337
 SYMBOL(TrampolineX338):
-    trampoline_xmm 338
+    trampoline_vec 338
 SYMBOL(TrampolineX339):
-    trampoline_xmm 339
+    trampoline_vec 339
 SYMBOL(TrampolineX340):
-    trampoline_xmm 340
+    trampoline_vec 340
 SYMBOL(TrampolineX341):
-    trampoline_xmm 341
+    trampoline_vec 341
 SYMBOL(TrampolineX342):
-    trampoline_xmm 342
+    trampoline_vec 342
 SYMBOL(TrampolineX343):
-    trampoline_xmm 343
+    trampoline_vec 343
 SYMBOL(TrampolineX344):
-    trampoline_xmm 344
+    trampoline_vec 344
 SYMBOL(TrampolineX345):
-    trampoline_xmm 345
+    trampoline_vec 345
 SYMBOL(TrampolineX346):
-    trampoline_xmm 346
+    trampoline_vec 346
 SYMBOL(TrampolineX347):
-    trampoline_xmm 347
+    trampoline_vec 347
 SYMBOL(TrampolineX348):
-    trampoline_xmm 348
+    trampoline_vec 348
 SYMBOL(TrampolineX349):
-    trampoline_xmm 349
+    trampoline_vec 349
 SYMBOL(TrampolineX350):
-    trampoline_xmm 350
+    trampoline_vec 350
 SYMBOL(TrampolineX351):
-    trampoline_xmm 351
+    trampoline_vec 351
 SYMBOL(TrampolineX352):
-    trampoline_xmm 352
+    trampoline_vec 352
 SYMBOL(TrampolineX353):
-    trampoline_xmm 353
+    trampoline_vec 353
 SYMBOL(TrampolineX354):
-    trampoline_xmm 354
+    trampoline_vec 354
 SYMBOL(TrampolineX355):
-    trampoline_xmm 355
+    trampoline_vec 355
 SYMBOL(TrampolineX356):
-    trampoline_xmm 356
+    trampoline_vec 356
 SYMBOL(TrampolineX357):
-    trampoline_xmm 357
+    trampoline_vec 357
 SYMBOL(TrampolineX358):
-    trampoline_xmm 358
+    trampoline_vec 358
 SYMBOL(TrampolineX359):
-    trampoline_xmm 359
+    trampoline_vec 359
 SYMBOL(TrampolineX360):
-    trampoline_xmm 360
+    trampoline_vec 360
 SYMBOL(TrampolineX361):
-    trampoline_xmm 361
+    trampoline_vec 361
 SYMBOL(TrampolineX362):
-    trampoline_xmm 362
+    trampoline_vec 362
 SYMBOL(TrampolineX363):
-    trampoline_xmm 363
+    trampoline_vec 363
 SYMBOL(TrampolineX364):
-    trampoline_xmm 364
+    trampoline_vec 364
 SYMBOL(TrampolineX365):
-    trampoline_xmm 365
+    trampoline_vec 365
 SYMBOL(TrampolineX366):
-    trampoline_xmm 366
+    trampoline_vec 366
 SYMBOL(TrampolineX367):
-    trampoline_xmm 367
+    trampoline_vec 367
 SYMBOL(TrampolineX368):
-    trampoline_xmm 368
+    trampoline_vec 368
 SYMBOL(TrampolineX369):
-    trampoline_xmm 369
+    trampoline_vec 369
 SYMBOL(TrampolineX370):
-    trampoline_xmm 370
+    trampoline_vec 370
 SYMBOL(TrampolineX371):
-    trampoline_xmm 371
+    trampoline_vec 371
 SYMBOL(TrampolineX372):
-    trampoline_xmm 372
+    trampoline_vec 372
 SYMBOL(TrampolineX373):
-    trampoline_xmm 373
+    trampoline_vec 373
 SYMBOL(TrampolineX374):
-    trampoline_xmm 374
+    trampoline_vec 374
 SYMBOL(TrampolineX375):
-    trampoline_xmm 375
+    trampoline_vec 375
 SYMBOL(TrampolineX376):
-    trampoline_xmm 376
+    trampoline_vec 376
 SYMBOL(TrampolineX377):
-    trampoline_xmm 377
+    trampoline_vec 377
 SYMBOL(TrampolineX378):
-    trampoline_xmm 378
+    trampoline_vec 378
 SYMBOL(TrampolineX379):
-    trampoline_xmm 379
+    trampoline_vec 379
 SYMBOL(TrampolineX380):
-    trampoline_xmm 380
+    trampoline_vec 380
 SYMBOL(TrampolineX381):
-    trampoline_xmm 381
+    trampoline_vec 381
 SYMBOL(TrampolineX382):
-    trampoline_xmm 382
+    trampoline_vec 382
 SYMBOL(TrampolineX383):
-    trampoline_xmm 383
+    trampoline_vec 383
 SYMBOL(TrampolineX384):
-    trampoline_xmm 384
+    trampoline_vec 384
 SYMBOL(TrampolineX385):
-    trampoline_xmm 385
+    trampoline_vec 385
 SYMBOL(TrampolineX386):
-    trampoline_xmm 386
+    trampoline_vec 386
 SYMBOL(TrampolineX387):
-    trampoline_xmm 387
+    trampoline_vec 387
 SYMBOL(TrampolineX388):
-    trampoline_xmm 388
+    trampoline_vec 388
 SYMBOL(TrampolineX389):
-    trampoline_xmm 389
+    trampoline_vec 389
 SYMBOL(TrampolineX390):
-    trampoline_xmm 390
+    trampoline_vec 390
 SYMBOL(TrampolineX391):
-    trampoline_xmm 391
+    trampoline_vec 391
 SYMBOL(TrampolineX392):
-    trampoline_xmm 392
+    trampoline_vec 392
 SYMBOL(TrampolineX393):
-    trampoline_xmm 393
+    trampoline_vec 393
 SYMBOL(TrampolineX394):
-    trampoline_xmm 394
+    trampoline_vec 394
 SYMBOL(TrampolineX395):
-    trampoline_xmm 395
+    trampoline_vec 395
 SYMBOL(TrampolineX396):
-    trampoline_xmm 396
+    trampoline_vec 396
 SYMBOL(TrampolineX397):
-    trampoline_xmm 397
+    trampoline_vec 397
 SYMBOL(TrampolineX398):
-    trampoline_xmm 398
+    trampoline_vec 398
 SYMBOL(TrampolineX399):
-    trampoline_xmm 399
+    trampoline_vec 399
 SYMBOL(TrampolineX400):
-    trampoline_xmm 400
+    trampoline_vec 400
 SYMBOL(TrampolineX401):
-    trampoline_xmm 401
+    trampoline_vec 401
 SYMBOL(TrampolineX402):
-    trampoline_xmm 402
+    trampoline_vec 402
 SYMBOL(TrampolineX403):
-    trampoline_xmm 403
+    trampoline_vec 403
 SYMBOL(TrampolineX404):
-    trampoline_xmm 404
+    trampoline_vec 404
 SYMBOL(TrampolineX405):
-    trampoline_xmm 405
+    trampoline_vec 405
 SYMBOL(TrampolineX406):
-    trampoline_xmm 406
+    trampoline_vec 406
 SYMBOL(TrampolineX407):
-    trampoline_xmm 407
+    trampoline_vec 407
 SYMBOL(TrampolineX408):
-    trampoline_xmm 408
+    trampoline_vec 408
 SYMBOL(TrampolineX409):
-    trampoline_xmm 409
+    trampoline_vec 409
 SYMBOL(TrampolineX410):
-    trampoline_xmm 410
+    trampoline_vec 410
 SYMBOL(TrampolineX411):
-    trampoline_xmm 411
+    trampoline_vec 411
 SYMBOL(TrampolineX412):
-    trampoline_xmm 412
+    trampoline_vec 412
 SYMBOL(TrampolineX413):
-    trampoline_xmm 413
+    trampoline_vec 413
 SYMBOL(TrampolineX414):
-    trampoline_xmm 414
+    trampoline_vec 414
 SYMBOL(TrampolineX415):
-    trampoline_xmm 415
+    trampoline_vec 415
 SYMBOL(TrampolineX416):
-    trampoline_xmm 416
+    trampoline_vec 416
 SYMBOL(TrampolineX417):
-    trampoline_xmm 417
+    trampoline_vec 417
 SYMBOL(TrampolineX418):
-    trampoline_xmm 418
+    trampoline_vec 418
 SYMBOL(TrampolineX419):
-    trampoline_xmm 419
+    trampoline_vec 419
 SYMBOL(TrampolineX420):
-    trampoline_xmm 420
+    trampoline_vec 420
 SYMBOL(TrampolineX421):
-    trampoline_xmm 421
+    trampoline_vec 421
 SYMBOL(TrampolineX422):
-    trampoline_xmm 422
+    trampoline_vec 422
 SYMBOL(TrampolineX423):
-    trampoline_xmm 423
+    trampoline_vec 423
 SYMBOL(TrampolineX424):
-    trampoline_xmm 424
+    trampoline_vec 424
 SYMBOL(TrampolineX425):
-    trampoline_xmm 425
+    trampoline_vec 425
 SYMBOL(TrampolineX426):
-    trampoline_xmm 426
+    trampoline_vec 426
 SYMBOL(TrampolineX427):
-    trampoline_xmm 427
+    trampoline_vec 427
 SYMBOL(TrampolineX428):
-    trampoline_xmm 428
+    trampoline_vec 428
 SYMBOL(TrampolineX429):
-    trampoline_xmm 429
+    trampoline_vec 429
 SYMBOL(TrampolineX430):
-    trampoline_xmm 430
+    trampoline_vec 430
 SYMBOL(TrampolineX431):
-    trampoline_xmm 431
+    trampoline_vec 431
 SYMBOL(TrampolineX432):
-    trampoline_xmm 432
+    trampoline_vec 432
 SYMBOL(TrampolineX433):
-    trampoline_xmm 433
+    trampoline_vec 433
 SYMBOL(TrampolineX434):
-    trampoline_xmm 434
+    trampoline_vec 434
 SYMBOL(TrampolineX435):
-    trampoline_xmm 435
+    trampoline_vec 435
 SYMBOL(TrampolineX436):
-    trampoline_xmm 436
+    trampoline_vec 436
 SYMBOL(TrampolineX437):
-    trampoline_xmm 437
+    trampoline_vec 437
 SYMBOL(TrampolineX438):
-    trampoline_xmm 438
+    trampoline_vec 438
 SYMBOL(TrampolineX439):
-    trampoline_xmm 439
+    trampoline_vec 439
 SYMBOL(TrampolineX440):
-    trampoline_xmm 440
+    trampoline_vec 440
 SYMBOL(TrampolineX441):
-    trampoline_xmm 441
+    trampoline_vec 441
 SYMBOL(TrampolineX442):
-    trampoline_xmm 442
+    trampoline_vec 442
 SYMBOL(TrampolineX443):
-    trampoline_xmm 443
+    trampoline_vec 443
 SYMBOL(TrampolineX444):
-    trampoline_xmm 444
+    trampoline_vec 444
 SYMBOL(TrampolineX445):
-    trampoline_xmm 445
+    trampoline_vec 445
 SYMBOL(TrampolineX446):
-    trampoline_xmm 446
+    trampoline_vec 446
 SYMBOL(TrampolineX447):
-    trampoline_xmm 447
+    trampoline_vec 447
 SYMBOL(TrampolineX448):
-    trampoline_xmm 448
+    trampoline_vec 448
 SYMBOL(TrampolineX449):
-    trampoline_xmm 449
+    trampoline_vec 449
 SYMBOL(TrampolineX450):
-    trampoline_xmm 450
+    trampoline_vec 450
 SYMBOL(TrampolineX451):
-    trampoline_xmm 451
+    trampoline_vec 451
 SYMBOL(TrampolineX452):
-    trampoline_xmm 452
+    trampoline_vec 452
 SYMBOL(TrampolineX453):
-    trampoline_xmm 453
+    trampoline_vec 453
 SYMBOL(TrampolineX454):
-    trampoline_xmm 454
+    trampoline_vec 454
 SYMBOL(TrampolineX455):
-    trampoline_xmm 455
+    trampoline_vec 455
 SYMBOL(TrampolineX456):
-    trampoline_xmm 456
+    trampoline_vec 456
 SYMBOL(TrampolineX457):
-    trampoline_xmm 457
+    trampoline_vec 457
 SYMBOL(TrampolineX458):
-    trampoline_xmm 458
+    trampoline_vec 458
 SYMBOL(TrampolineX459):
-    trampoline_xmm 459
+    trampoline_vec 459
 SYMBOL(TrampolineX460):
-    trampoline_xmm 460
+    trampoline_vec 460
 SYMBOL(TrampolineX461):
-    trampoline_xmm 461
+    trampoline_vec 461
 SYMBOL(TrampolineX462):
-    trampoline_xmm 462
+    trampoline_vec 462
 SYMBOL(TrampolineX463):
-    trampoline_xmm 463
+    trampoline_vec 463
 SYMBOL(TrampolineX464):
-    trampoline_xmm 464
+    trampoline_vec 464
 SYMBOL(TrampolineX465):
-    trampoline_xmm 465
+    trampoline_vec 465
 SYMBOL(TrampolineX466):
-    trampoline_xmm 466
+    trampoline_vec 466
 SYMBOL(TrampolineX467):
-    trampoline_xmm 467
+    trampoline_vec 467
 SYMBOL(TrampolineX468):
-    trampoline_xmm 468
+    trampoline_vec 468
 SYMBOL(TrampolineX469):
-    trampoline_xmm 469
+    trampoline_vec 469
 SYMBOL(TrampolineX470):
-    trampoline_xmm 470
+    trampoline_vec 470
 SYMBOL(TrampolineX471):
-    trampoline_xmm 471
+    trampoline_vec 471
 SYMBOL(TrampolineX472):
-    trampoline_xmm 472
+    trampoline_vec 472
 SYMBOL(TrampolineX473):
-    trampoline_xmm 473
+    trampoline_vec 473
 SYMBOL(TrampolineX474):
-    trampoline_xmm 474
+    trampoline_vec 474
 SYMBOL(TrampolineX475):
-    trampoline_xmm 475
+    trampoline_vec 475
 SYMBOL(TrampolineX476):
-    trampoline_xmm 476
+    trampoline_vec 476
 SYMBOL(TrampolineX477):
-    trampoline_xmm 477
+    trampoline_vec 477
 SYMBOL(TrampolineX478):
-    trampoline_xmm 478
+    trampoline_vec 478
 SYMBOL(TrampolineX479):
-    trampoline_xmm 479
+    trampoline_vec 479
 SYMBOL(TrampolineX480):
-    trampoline_xmm 480
+    trampoline_vec 480
 SYMBOL(TrampolineX481):
-    trampoline_xmm 481
+    trampoline_vec 481
 SYMBOL(TrampolineX482):
-    trampoline_xmm 482
+    trampoline_vec 482
 SYMBOL(TrampolineX483):
-    trampoline_xmm 483
+    trampoline_vec 483
 SYMBOL(TrampolineX484):
-    trampoline_xmm 484
+    trampoline_vec 484
 SYMBOL(TrampolineX485):
-    trampoline_xmm 485
+    trampoline_vec 485
 SYMBOL(TrampolineX486):
-    trampoline_xmm 486
+    trampoline_vec 486
 SYMBOL(TrampolineX487):
-    trampoline_xmm 487
+    trampoline_vec 487
 SYMBOL(TrampolineX488):
-    trampoline_xmm 488
+    trampoline_vec 488
 SYMBOL(TrampolineX489):
-    trampoline_xmm 489
+    trampoline_vec 489
 SYMBOL(TrampolineX490):
-    trampoline_xmm 490
+    trampoline_vec 490
 SYMBOL(TrampolineX491):
-    trampoline_xmm 491
+    trampoline_vec 491
 SYMBOL(TrampolineX492):
-    trampoline_xmm 492
+    trampoline_vec 492
 SYMBOL(TrampolineX493):
-    trampoline_xmm 493
+    trampoline_vec 493
 SYMBOL(TrampolineX494):
-    trampoline_xmm 494
+    trampoline_vec 494
 SYMBOL(TrampolineX495):
-    trampoline_xmm 495
+    trampoline_vec 495
 SYMBOL(TrampolineX496):
-    trampoline_xmm 496
+    trampoline_vec 496
 SYMBOL(TrampolineX497):
-    trampoline_xmm 497
+    trampoline_vec 497
 SYMBOL(TrampolineX498):
-    trampoline_xmm 498
+    trampoline_vec 498
 SYMBOL(TrampolineX499):
-    trampoline_xmm 499
+    trampoline_vec 499
 SYMBOL(TrampolineX500):
-    trampoline_xmm 500
+    trampoline_vec 500
 SYMBOL(TrampolineX501):
-    trampoline_xmm 501
+    trampoline_vec 501
 SYMBOL(TrampolineX502):
-    trampoline_xmm 502
+    trampoline_vec 502
 SYMBOL(TrampolineX503):
-    trampoline_xmm 503
+    trampoline_vec 503
 SYMBOL(TrampolineX504):
-    trampoline_xmm 504
+    trampoline_vec 504
 SYMBOL(TrampolineX505):
-    trampoline_xmm 505
+    trampoline_vec 505
 SYMBOL(TrampolineX506):
-    trampoline_xmm 506
+    trampoline_vec 506
 SYMBOL(TrampolineX507):
-    trampoline_xmm 507
+    trampoline_vec 507
 SYMBOL(TrampolineX508):
-    trampoline_xmm 508
+    trampoline_vec 508
 SYMBOL(TrampolineX509):
-    trampoline_xmm 509
+    trampoline_vec 509
 SYMBOL(TrampolineX510):
-    trampoline_xmm 510
+    trampoline_vec 510
 SYMBOL(TrampolineX511):
-    trampoline_xmm 511
+    trampoline_vec 511
 SYMBOL(TrampolineX512):
-    trampoline_xmm 512
+    trampoline_vec 512
 SYMBOL(TrampolineX513):
-    trampoline_xmm 513
+    trampoline_vec 513
 SYMBOL(TrampolineX514):
-    trampoline_xmm 514
+    trampoline_vec 514
 SYMBOL(TrampolineX515):
-    trampoline_xmm 515
+    trampoline_vec 515
 SYMBOL(TrampolineX516):
-    trampoline_xmm 516
+    trampoline_vec 516
 SYMBOL(TrampolineX517):
-    trampoline_xmm 517
+    trampoline_vec 517
 SYMBOL(TrampolineX518):
-    trampoline_xmm 518
+    trampoline_vec 518
 SYMBOL(TrampolineX519):
-    trampoline_xmm 519
+    trampoline_vec 519
 SYMBOL(TrampolineX520):
-    trampoline_xmm 520
+    trampoline_vec 520
 SYMBOL(TrampolineX521):
-    trampoline_xmm 521
+    trampoline_vec 521
 SYMBOL(TrampolineX522):
-    trampoline_xmm 522
+    trampoline_vec 522
 SYMBOL(TrampolineX523):
-    trampoline_xmm 523
+    trampoline_vec 523
 SYMBOL(TrampolineX524):
-    trampoline_xmm 524
+    trampoline_vec 524
 SYMBOL(TrampolineX525):
-    trampoline_xmm 525
+    trampoline_vec 525
 SYMBOL(TrampolineX526):
-    trampoline_xmm 526
+    trampoline_vec 526
 SYMBOL(TrampolineX527):
-    trampoline_xmm 527
+    trampoline_vec 527
 SYMBOL(TrampolineX528):
-    trampoline_xmm 528
+    trampoline_vec 528
 SYMBOL(TrampolineX529):
-    trampoline_xmm 529
+    trampoline_vec 529
 SYMBOL(TrampolineX530):
-    trampoline_xmm 530
+    trampoline_vec 530
 SYMBOL(TrampolineX531):
-    trampoline_xmm 531
+    trampoline_vec 531
 SYMBOL(TrampolineX532):
-    trampoline_xmm 532
+    trampoline_vec 532
 SYMBOL(TrampolineX533):
-    trampoline_xmm 533
+    trampoline_vec 533
 SYMBOL(TrampolineX534):
-    trampoline_xmm 534
+    trampoline_vec 534
 SYMBOL(TrampolineX535):
-    trampoline_xmm 535
+    trampoline_vec 535
 SYMBOL(TrampolineX536):
-    trampoline_xmm 536
+    trampoline_vec 536
 SYMBOL(TrampolineX537):
-    trampoline_xmm 537
+    trampoline_vec 537
 SYMBOL(TrampolineX538):
-    trampoline_xmm 538
+    trampoline_vec 538
 SYMBOL(TrampolineX539):
-    trampoline_xmm 539
+    trampoline_vec 539
 SYMBOL(TrampolineX540):
-    trampoline_xmm 540
+    trampoline_vec 540
 SYMBOL(TrampolineX541):
-    trampoline_xmm 541
+    trampoline_vec 541
 SYMBOL(TrampolineX542):
-    trampoline_xmm 542
+    trampoline_vec 542
 SYMBOL(TrampolineX543):
-    trampoline_xmm 543
+    trampoline_vec 543
 SYMBOL(TrampolineX544):
-    trampoline_xmm 544
+    trampoline_vec 544
 SYMBOL(TrampolineX545):
-    trampoline_xmm 545
+    trampoline_vec 545
 SYMBOL(TrampolineX546):
-    trampoline_xmm 546
+    trampoline_vec 546
 SYMBOL(TrampolineX547):
-    trampoline_xmm 547
+    trampoline_vec 547
 SYMBOL(TrampolineX548):
-    trampoline_xmm 548
+    trampoline_vec 548
 SYMBOL(TrampolineX549):
-    trampoline_xmm 549
+    trampoline_vec 549
 SYMBOL(TrampolineX550):
-    trampoline_xmm 550
+    trampoline_vec 550
 SYMBOL(TrampolineX551):
-    trampoline_xmm 551
+    trampoline_vec 551
 SYMBOL(TrampolineX552):
-    trampoline_xmm 552
+    trampoline_vec 552
 SYMBOL(TrampolineX553):
-    trampoline_xmm 553
+    trampoline_vec 553
 SYMBOL(TrampolineX554):
-    trampoline_xmm 554
+    trampoline_vec 554
 SYMBOL(TrampolineX555):
-    trampoline_xmm 555
+    trampoline_vec 555
 SYMBOL(TrampolineX556):
-    trampoline_xmm 556
+    trampoline_vec 556
 SYMBOL(TrampolineX557):
-    trampoline_xmm 557
+    trampoline_vec 557
 SYMBOL(TrampolineX558):
-    trampoline_xmm 558
+    trampoline_vec 558
 SYMBOL(TrampolineX559):
-    trampoline_xmm 559
+    trampoline_vec 559
 SYMBOL(TrampolineX560):
-    trampoline_xmm 560
+    trampoline_vec 560
 SYMBOL(TrampolineX561):
-    trampoline_xmm 561
+    trampoline_vec 561
 SYMBOL(TrampolineX562):
-    trampoline_xmm 562
+    trampoline_vec 562
 SYMBOL(TrampolineX563):
-    trampoline_xmm 563
+    trampoline_vec 563
 SYMBOL(TrampolineX564):
-    trampoline_xmm 564
+    trampoline_vec 564
 SYMBOL(TrampolineX565):
-    trampoline_xmm 565
+    trampoline_vec 565
 SYMBOL(TrampolineX566):
-    trampoline_xmm 566
+    trampoline_vec 566
 SYMBOL(TrampolineX567):
-    trampoline_xmm 567
+    trampoline_vec 567
 SYMBOL(TrampolineX568):
-    trampoline_xmm 568
+    trampoline_vec 568
 SYMBOL(TrampolineX569):
-    trampoline_xmm 569
+    trampoline_vec 569
 SYMBOL(TrampolineX570):
-    trampoline_xmm 570
+    trampoline_vec 570
 SYMBOL(TrampolineX571):
-    trampoline_xmm 571
+    trampoline_vec 571
 SYMBOL(TrampolineX572):
-    trampoline_xmm 572
+    trampoline_vec 572
 SYMBOL(TrampolineX573):
-    trampoline_xmm 573
+    trampoline_vec 573
 SYMBOL(TrampolineX574):
-    trampoline_xmm 574
+    trampoline_vec 574
 SYMBOL(TrampolineX575):
-    trampoline_xmm 575
+    trampoline_vec 575
 SYMBOL(TrampolineX576):
-    trampoline_xmm 576
+    trampoline_vec 576
 SYMBOL(TrampolineX577):
-    trampoline_xmm 577
+    trampoline_vec 577
 SYMBOL(TrampolineX578):
-    trampoline_xmm 578
+    trampoline_vec 578
 SYMBOL(TrampolineX579):
-    trampoline_xmm 579
+    trampoline_vec 579
 SYMBOL(TrampolineX580):
-    trampoline_xmm 580
+    trampoline_vec 580
 SYMBOL(TrampolineX581):
-    trampoline_xmm 581
+    trampoline_vec 581
 SYMBOL(TrampolineX582):
-    trampoline_xmm 582
+    trampoline_vec 582
 SYMBOL(TrampolineX583):
-    trampoline_xmm 583
+    trampoline_vec 583
 SYMBOL(TrampolineX584):
-    trampoline_xmm 584
+    trampoline_vec 584
 SYMBOL(TrampolineX585):
-    trampoline_xmm 585
+    trampoline_vec 585
 SYMBOL(TrampolineX586):
-    trampoline_xmm 586
+    trampoline_vec 586
 SYMBOL(TrampolineX587):
-    trampoline_xmm 587
+    trampoline_vec 587
 SYMBOL(TrampolineX588):
-    trampoline_xmm 588
+    trampoline_vec 588
 SYMBOL(TrampolineX589):
-    trampoline_xmm 589
+    trampoline_vec 589
 SYMBOL(TrampolineX590):
-    trampoline_xmm 590
+    trampoline_vec 590
 SYMBOL(TrampolineX591):
-    trampoline_xmm 591
+    trampoline_vec 591
 SYMBOL(TrampolineX592):
-    trampoline_xmm 592
+    trampoline_vec 592
 SYMBOL(TrampolineX593):
-    trampoline_xmm 593
+    trampoline_vec 593
 SYMBOL(TrampolineX594):
-    trampoline_xmm 594
+    trampoline_vec 594
 SYMBOL(TrampolineX595):
-    trampoline_xmm 595
+    trampoline_vec 595
 SYMBOL(TrampolineX596):
-    trampoline_xmm 596
+    trampoline_vec 596
 SYMBOL(TrampolineX597):
-    trampoline_xmm 597
+    trampoline_vec 597
 SYMBOL(TrampolineX598):
-    trampoline_xmm 598
+    trampoline_vec 598
 SYMBOL(TrampolineX599):
-    trampoline_xmm 599
+    trampoline_vec 599
 SYMBOL(TrampolineX600):
-    trampoline_xmm 600
+    trampoline_vec 600
 SYMBOL(TrampolineX601):
-    trampoline_xmm 601
+    trampoline_vec 601
 SYMBOL(TrampolineX602):
-    trampoline_xmm 602
+    trampoline_vec 602
 SYMBOL(TrampolineX603):
-    trampoline_xmm 603
+    trampoline_vec 603
 SYMBOL(TrampolineX604):
-    trampoline_xmm 604
+    trampoline_vec 604
 SYMBOL(TrampolineX605):
-    trampoline_xmm 605
+    trampoline_vec 605
 SYMBOL(TrampolineX606):
-    trampoline_xmm 606
+    trampoline_vec 606
 SYMBOL(TrampolineX607):
-    trampoline_xmm 607
+    trampoline_vec 607
 SYMBOL(TrampolineX608):
-    trampoline_xmm 608
+    trampoline_vec 608
 SYMBOL(TrampolineX609):
-    trampoline_xmm 609
+    trampoline_vec 609
 SYMBOL(TrampolineX610):
-    trampoline_xmm 610
+    trampoline_vec 610
 SYMBOL(TrampolineX611):
-    trampoline_xmm 611
+    trampoline_vec 611
 SYMBOL(TrampolineX612):
-    trampoline_xmm 612
+    trampoline_vec 612
 SYMBOL(TrampolineX613):
-    trampoline_xmm 613
+    trampoline_vec 613
 SYMBOL(TrampolineX614):
-    trampoline_xmm 614
+    trampoline_vec 614
 SYMBOL(TrampolineX615):
-    trampoline_xmm 615
+    trampoline_vec 615
 SYMBOL(TrampolineX616):
-    trampoline_xmm 616
+    trampoline_vec 616
 SYMBOL(TrampolineX617):
-    trampoline_xmm 617
+    trampoline_vec 617
 SYMBOL(TrampolineX618):
-    trampoline_xmm 618
+    trampoline_vec 618
 SYMBOL(TrampolineX619):
-    trampoline_xmm 619
+    trampoline_vec 619
 SYMBOL(TrampolineX620):
-    trampoline_xmm 620
+    trampoline_vec 620
 SYMBOL(TrampolineX621):
-    trampoline_xmm 621
+    trampoline_vec 621
 SYMBOL(TrampolineX622):
-    trampoline_xmm 622
+    trampoline_vec 622
 SYMBOL(TrampolineX623):
-    trampoline_xmm 623
+    trampoline_vec 623
 SYMBOL(TrampolineX624):
-    trampoline_xmm 624
+    trampoline_vec 624
 SYMBOL(TrampolineX625):
-    trampoline_xmm 625
+    trampoline_vec 625
 SYMBOL(TrampolineX626):
-    trampoline_xmm 626
+    trampoline_vec 626
 SYMBOL(TrampolineX627):
-    trampoline_xmm 627
+    trampoline_vec 627
 SYMBOL(TrampolineX628):
-    trampoline_xmm 628
+    trampoline_vec 628
 SYMBOL(TrampolineX629):
-    trampoline_xmm 629
+    trampoline_vec 629
 SYMBOL(TrampolineX630):
-    trampoline_xmm 630
+    trampoline_vec 630
 SYMBOL(TrampolineX631):
-    trampoline_xmm 631
+    trampoline_vec 631
 SYMBOL(TrampolineX632):
-    trampoline_xmm 632
+    trampoline_vec 632
 SYMBOL(TrampolineX633):
-    trampoline_xmm 633
+    trampoline_vec 633
 SYMBOL(TrampolineX634):
-    trampoline_xmm 634
+    trampoline_vec 634
 SYMBOL(TrampolineX635):
-    trampoline_xmm 635
+    trampoline_vec 635
 SYMBOL(TrampolineX636):
-    trampoline_xmm 636
+    trampoline_vec 636
 SYMBOL(TrampolineX637):
-    trampoline_xmm 637
+    trampoline_vec 637
 SYMBOL(TrampolineX638):
-    trampoline_xmm 638
+    trampoline_vec 638
 SYMBOL(TrampolineX639):
-    trampoline_xmm 639
+    trampoline_vec 639
 SYMBOL(TrampolineX640):
-    trampoline_xmm 640
+    trampoline_vec 640
 SYMBOL(TrampolineX641):
-    trampoline_xmm 641
+    trampoline_vec 641
 SYMBOL(TrampolineX642):
-    trampoline_xmm 642
+    trampoline_vec 642
 SYMBOL(TrampolineX643):
-    trampoline_xmm 643
+    trampoline_vec 643
 SYMBOL(TrampolineX644):
-    trampoline_xmm 644
+    trampoline_vec 644
 SYMBOL(TrampolineX645):
-    trampoline_xmm 645
+    trampoline_vec 645
 SYMBOL(TrampolineX646):
-    trampoline_xmm 646
+    trampoline_vec 646
 SYMBOL(TrampolineX647):
-    trampoline_xmm 647
+    trampoline_vec 647
 SYMBOL(TrampolineX648):
-    trampoline_xmm 648
+    trampoline_vec 648
 SYMBOL(TrampolineX649):
-    trampoline_xmm 649
+    trampoline_vec 649
 SYMBOL(TrampolineX650):
-    trampoline_xmm 650
+    trampoline_vec 650
 SYMBOL(TrampolineX651):
-    trampoline_xmm 651
+    trampoline_vec 651
 SYMBOL(TrampolineX652):
-    trampoline_xmm 652
+    trampoline_vec 652
 SYMBOL(TrampolineX653):
-    trampoline_xmm 653
+    trampoline_vec 653
 SYMBOL(TrampolineX654):
-    trampoline_xmm 654
+    trampoline_vec 654
 SYMBOL(TrampolineX655):
-    trampoline_xmm 655
+    trampoline_vec 655
 SYMBOL(TrampolineX656):
-    trampoline_xmm 656
+    trampoline_vec 656
 SYMBOL(TrampolineX657):
-    trampoline_xmm 657
+    trampoline_vec 657
 SYMBOL(TrampolineX658):
-    trampoline_xmm 658
+    trampoline_vec 658
 SYMBOL(TrampolineX659):
-    trampoline_xmm 659
+    trampoline_vec 659
 SYMBOL(TrampolineX660):
-    trampoline_xmm 660
+    trampoline_vec 660
 SYMBOL(TrampolineX661):
-    trampoline_xmm 661
+    trampoline_vec 661
 SYMBOL(TrampolineX662):
-    trampoline_xmm 662
+    trampoline_vec 662
 SYMBOL(TrampolineX663):
-    trampoline_xmm 663
+    trampoline_vec 663
 SYMBOL(TrampolineX664):
-    trampoline_xmm 664
+    trampoline_vec 664
 SYMBOL(TrampolineX665):
-    trampoline_xmm 665
+    trampoline_vec 665
 SYMBOL(TrampolineX666):
-    trampoline_xmm 666
+    trampoline_vec 666
 SYMBOL(TrampolineX667):
-    trampoline_xmm 667
+    trampoline_vec 667
 SYMBOL(TrampolineX668):
-    trampoline_xmm 668
+    trampoline_vec 668
 SYMBOL(TrampolineX669):
-    trampoline_xmm 669
+    trampoline_vec 669
 SYMBOL(TrampolineX670):
-    trampoline_xmm 670
+    trampoline_vec 670
 SYMBOL(TrampolineX671):
-    trampoline_xmm 671
+    trampoline_vec 671
 SYMBOL(TrampolineX672):
-    trampoline_xmm 672
+    trampoline_vec 672
 SYMBOL(TrampolineX673):
-    trampoline_xmm 673
+    trampoline_vec 673
 SYMBOL(TrampolineX674):
-    trampoline_xmm 674
+    trampoline_vec 674
 SYMBOL(TrampolineX675):
-    trampoline_xmm 675
+    trampoline_vec 675
 SYMBOL(TrampolineX676):
-    trampoline_xmm 676
+    trampoline_vec 676
 SYMBOL(TrampolineX677):
-    trampoline_xmm 677
+    trampoline_vec 677
 SYMBOL(TrampolineX678):
-    trampoline_xmm 678
+    trampoline_vec 678
 SYMBOL(TrampolineX679):
-    trampoline_xmm 679
+    trampoline_vec 679
 SYMBOL(TrampolineX680):
-    trampoline_xmm 680
+    trampoline_vec 680
 SYMBOL(TrampolineX681):
-    trampoline_xmm 681
+    trampoline_vec 681
 SYMBOL(TrampolineX682):
-    trampoline_xmm 682
+    trampoline_vec 682
 SYMBOL(TrampolineX683):
-    trampoline_xmm 683
+    trampoline_vec 683
 SYMBOL(TrampolineX684):
-    trampoline_xmm 684
+    trampoline_vec 684
 SYMBOL(TrampolineX685):
-    trampoline_xmm 685
+    trampoline_vec 685
 SYMBOL(TrampolineX686):
-    trampoline_xmm 686
+    trampoline_vec 686
 SYMBOL(TrampolineX687):
-    trampoline_xmm 687
+    trampoline_vec 687
 SYMBOL(TrampolineX688):
-    trampoline_xmm 688
+    trampoline_vec 688
 SYMBOL(TrampolineX689):
-    trampoline_xmm 689
+    trampoline_vec 689
 SYMBOL(TrampolineX690):
-    trampoline_xmm 690
+    trampoline_vec 690
 SYMBOL(TrampolineX691):
-    trampoline_xmm 691
+    trampoline_vec 691
 SYMBOL(TrampolineX692):
-    trampoline_xmm 692
+    trampoline_vec 692
 SYMBOL(TrampolineX693):
-    trampoline_xmm 693
+    trampoline_vec 693
 SYMBOL(TrampolineX694):
-    trampoline_xmm 694
+    trampoline_vec 694
 SYMBOL(TrampolineX695):
-    trampoline_xmm 695
+    trampoline_vec 695
 SYMBOL(TrampolineX696):
-    trampoline_xmm 696
+    trampoline_vec 696
 SYMBOL(TrampolineX697):
-    trampoline_xmm 697
+    trampoline_vec 697
 SYMBOL(TrampolineX698):
-    trampoline_xmm 698
+    trampoline_vec 698
 SYMBOL(TrampolineX699):
-    trampoline_xmm 699
+    trampoline_vec 699
 SYMBOL(TrampolineX700):
-    trampoline_xmm 700
+    trampoline_vec 700
 SYMBOL(TrampolineX701):
-    trampoline_xmm 701
+    trampoline_vec 701
 SYMBOL(TrampolineX702):
-    trampoline_xmm 702
+    trampoline_vec 702
 SYMBOL(TrampolineX703):
-    trampoline_xmm 703
+    trampoline_vec 703
 SYMBOL(TrampolineX704):
-    trampoline_xmm 704
+    trampoline_vec 704
 SYMBOL(TrampolineX705):
-    trampoline_xmm 705
+    trampoline_vec 705
 SYMBOL(TrampolineX706):
-    trampoline_xmm 706
+    trampoline_vec 706
 SYMBOL(TrampolineX707):
-    trampoline_xmm 707
+    trampoline_vec 707
 SYMBOL(TrampolineX708):
-    trampoline_xmm 708
+    trampoline_vec 708
 SYMBOL(TrampolineX709):
-    trampoline_xmm 709
+    trampoline_vec 709
 SYMBOL(TrampolineX710):
-    trampoline_xmm 710
+    trampoline_vec 710
 SYMBOL(TrampolineX711):
-    trampoline_xmm 711
+    trampoline_vec 711
 SYMBOL(TrampolineX712):
-    trampoline_xmm 712
+    trampoline_vec 712
 SYMBOL(TrampolineX713):
-    trampoline_xmm 713
+    trampoline_vec 713
 SYMBOL(TrampolineX714):
-    trampoline_xmm 714
+    trampoline_vec 714
 SYMBOL(TrampolineX715):
-    trampoline_xmm 715
+    trampoline_vec 715
 SYMBOL(TrampolineX716):
-    trampoline_xmm 716
+    trampoline_vec 716
 SYMBOL(TrampolineX717):
-    trampoline_xmm 717
+    trampoline_vec 717
 SYMBOL(TrampolineX718):
-    trampoline_xmm 718
+    trampoline_vec 718
 SYMBOL(TrampolineX719):
-    trampoline_xmm 719
+    trampoline_vec 719
 SYMBOL(TrampolineX720):
-    trampoline_xmm 720
+    trampoline_vec 720
 SYMBOL(TrampolineX721):
-    trampoline_xmm 721
+    trampoline_vec 721
 SYMBOL(TrampolineX722):
-    trampoline_xmm 722
+    trampoline_vec 722
 SYMBOL(TrampolineX723):
-    trampoline_xmm 723
+    trampoline_vec 723
 SYMBOL(TrampolineX724):
-    trampoline_xmm 724
+    trampoline_vec 724
 SYMBOL(TrampolineX725):
-    trampoline_xmm 725
+    trampoline_vec 725
 SYMBOL(TrampolineX726):
-    trampoline_xmm 726
+    trampoline_vec 726
 SYMBOL(TrampolineX727):
-    trampoline_xmm 727
+    trampoline_vec 727
 SYMBOL(TrampolineX728):
-    trampoline_xmm 728
+    trampoline_vec 728
 SYMBOL(TrampolineX729):
-    trampoline_xmm 729
+    trampoline_vec 729
 SYMBOL(TrampolineX730):
-    trampoline_xmm 730
+    trampoline_vec 730
 SYMBOL(TrampolineX731):
-    trampoline_xmm 731
+    trampoline_vec 731
 SYMBOL(TrampolineX732):
-    trampoline_xmm 732
+    trampoline_vec 732
 SYMBOL(TrampolineX733):
-    trampoline_xmm 733
+    trampoline_vec 733
 SYMBOL(TrampolineX734):
-    trampoline_xmm 734
+    trampoline_vec 734
 SYMBOL(TrampolineX735):
-    trampoline_xmm 735
+    trampoline_vec 735
 SYMBOL(TrampolineX736):
-    trampoline_xmm 736
+    trampoline_vec 736
 SYMBOL(TrampolineX737):
-    trampoline_xmm 737
+    trampoline_vec 737
 SYMBOL(TrampolineX738):
-    trampoline_xmm 738
+    trampoline_vec 738
 SYMBOL(TrampolineX739):
-    trampoline_xmm 739
+    trampoline_vec 739
 SYMBOL(TrampolineX740):
-    trampoline_xmm 740
+    trampoline_vec 740
 SYMBOL(TrampolineX741):
-    trampoline_xmm 741
+    trampoline_vec 741
 SYMBOL(TrampolineX742):
-    trampoline_xmm 742
+    trampoline_vec 742
 SYMBOL(TrampolineX743):
-    trampoline_xmm 743
+    trampoline_vec 743
 SYMBOL(TrampolineX744):
-    trampoline_xmm 744
+    trampoline_vec 744
 SYMBOL(TrampolineX745):
-    trampoline_xmm 745
+    trampoline_vec 745
 SYMBOL(TrampolineX746):
-    trampoline_xmm 746
+    trampoline_vec 746
 SYMBOL(TrampolineX747):
-    trampoline_xmm 747
+    trampoline_vec 747
 SYMBOL(TrampolineX748):
-    trampoline_xmm 748
+    trampoline_vec 748
 SYMBOL(TrampolineX749):
-    trampoline_xmm 749
+    trampoline_vec 749
 SYMBOL(TrampolineX750):
-    trampoline_xmm 750
+    trampoline_vec 750
 SYMBOL(TrampolineX751):
-    trampoline_xmm 751
+    trampoline_vec 751
 SYMBOL(TrampolineX752):
-    trampoline_xmm 752
+    trampoline_vec 752
 SYMBOL(TrampolineX753):
-    trampoline_xmm 753
+    trampoline_vec 753
 SYMBOL(TrampolineX754):
-    trampoline_xmm 754
+    trampoline_vec 754
 SYMBOL(TrampolineX755):
-    trampoline_xmm 755
+    trampoline_vec 755
 SYMBOL(TrampolineX756):
-    trampoline_xmm 756
+    trampoline_vec 756
 SYMBOL(TrampolineX757):
-    trampoline_xmm 757
+    trampoline_vec 757
 SYMBOL(TrampolineX758):
-    trampoline_xmm 758
+    trampoline_vec 758
 SYMBOL(TrampolineX759):
-    trampoline_xmm 759
+    trampoline_vec 759
 SYMBOL(TrampolineX760):
-    trampoline_xmm 760
+    trampoline_vec 760
 SYMBOL(TrampolineX761):
-    trampoline_xmm 761
+    trampoline_vec 761
 SYMBOL(TrampolineX762):
-    trampoline_xmm 762
+    trampoline_vec 762
 SYMBOL(TrampolineX763):
-    trampoline_xmm 763
+    trampoline_vec 763
 SYMBOL(TrampolineX764):
-    trampoline_xmm 764
+    trampoline_vec 764
 SYMBOL(TrampolineX765):
-    trampoline_xmm 765
+    trampoline_vec 765
 SYMBOL(TrampolineX766):
-    trampoline_xmm 766
+    trampoline_vec 766
 SYMBOL(TrampolineX767):
-    trampoline_xmm 767
+    trampoline_vec 767
 SYMBOL(TrampolineX768):
-    trampoline_xmm 768
+    trampoline_vec 768
 SYMBOL(TrampolineX769):
-    trampoline_xmm 769
+    trampoline_vec 769
 SYMBOL(TrampolineX770):
-    trampoline_xmm 770
+    trampoline_vec 770
 SYMBOL(TrampolineX771):
-    trampoline_xmm 771
+    trampoline_vec 771
 SYMBOL(TrampolineX772):
-    trampoline_xmm 772
+    trampoline_vec 772
 SYMBOL(TrampolineX773):
-    trampoline_xmm 773
+    trampoline_vec 773
 SYMBOL(TrampolineX774):
-    trampoline_xmm 774
+    trampoline_vec 774
 SYMBOL(TrampolineX775):
-    trampoline_xmm 775
+    trampoline_vec 775
 SYMBOL(TrampolineX776):
-    trampoline_xmm 776
+    trampoline_vec 776
 SYMBOL(TrampolineX777):
-    trampoline_xmm 777
+    trampoline_vec 777
 SYMBOL(TrampolineX778):
-    trampoline_xmm 778
+    trampoline_vec 778
 SYMBOL(TrampolineX779):
-    trampoline_xmm 779
+    trampoline_vec 779
 SYMBOL(TrampolineX780):
-    trampoline_xmm 780
+    trampoline_vec 780
 SYMBOL(TrampolineX781):
-    trampoline_xmm 781
+    trampoline_vec 781
 SYMBOL(TrampolineX782):
-    trampoline_xmm 782
+    trampoline_vec 782
 SYMBOL(TrampolineX783):
-    trampoline_xmm 783
+    trampoline_vec 783
 SYMBOL(TrampolineX784):
-    trampoline_xmm 784
+    trampoline_vec 784
 SYMBOL(TrampolineX785):
-    trampoline_xmm 785
+    trampoline_vec 785
 SYMBOL(TrampolineX786):
-    trampoline_xmm 786
+    trampoline_vec 786
 SYMBOL(TrampolineX787):
-    trampoline_xmm 787
+    trampoline_vec 787
 SYMBOL(TrampolineX788):
-    trampoline_xmm 788
+    trampoline_vec 788
 SYMBOL(TrampolineX789):
-    trampoline_xmm 789
+    trampoline_vec 789
 SYMBOL(TrampolineX790):
-    trampoline_xmm 790
+    trampoline_vec 790
 SYMBOL(TrampolineX791):
-    trampoline_xmm 791
+    trampoline_vec 791
 SYMBOL(TrampolineX792):
-    trampoline_xmm 792
+    trampoline_vec 792
 SYMBOL(TrampolineX793):
-    trampoline_xmm 793
+    trampoline_vec 793
 SYMBOL(TrampolineX794):
-    trampoline_xmm 794
+    trampoline_vec 794
 SYMBOL(TrampolineX795):
-    trampoline_xmm 795
+    trampoline_vec 795
 SYMBOL(TrampolineX796):
-    trampoline_xmm 796
+    trampoline_vec 796
 SYMBOL(TrampolineX797):
-    trampoline_xmm 797
+    trampoline_vec 797
 SYMBOL(TrampolineX798):
-    trampoline_xmm 798
+    trampoline_vec 798
 SYMBOL(TrampolineX799):
-    trampoline_xmm 799
+    trampoline_vec 799
 SYMBOL(TrampolineX800):
-    trampoline_xmm 800
+    trampoline_vec 800
 SYMBOL(TrampolineX801):
-    trampoline_xmm 801
+    trampoline_vec 801
 SYMBOL(TrampolineX802):
-    trampoline_xmm 802
+    trampoline_vec 802
 SYMBOL(TrampolineX803):
-    trampoline_xmm 803
+    trampoline_vec 803
 SYMBOL(TrampolineX804):
-    trampoline_xmm 804
+    trampoline_vec 804
 SYMBOL(TrampolineX805):
-    trampoline_xmm 805
+    trampoline_vec 805
 SYMBOL(TrampolineX806):
-    trampoline_xmm 806
+    trampoline_vec 806
 SYMBOL(TrampolineX807):
-    trampoline_xmm 807
+    trampoline_vec 807
 SYMBOL(TrampolineX808):
-    trampoline_xmm 808
+    trampoline_vec 808
 SYMBOL(TrampolineX809):
-    trampoline_xmm 809
+    trampoline_vec 809
 SYMBOL(TrampolineX810):
-    trampoline_xmm 810
+    trampoline_vec 810
 SYMBOL(TrampolineX811):
-    trampoline_xmm 811
+    trampoline_vec 811
 SYMBOL(TrampolineX812):
-    trampoline_xmm 812
+    trampoline_vec 812
 SYMBOL(TrampolineX813):
-    trampoline_xmm 813
+    trampoline_vec 813
 SYMBOL(TrampolineX814):
-    trampoline_xmm 814
+    trampoline_vec 814
 SYMBOL(TrampolineX815):
-    trampoline_xmm 815
+    trampoline_vec 815
 SYMBOL(TrampolineX816):
-    trampoline_xmm 816
+    trampoline_vec 816
 SYMBOL(TrampolineX817):
-    trampoline_xmm 817
+    trampoline_vec 817
 SYMBOL(TrampolineX818):
-    trampoline_xmm 818
+    trampoline_vec 818
 SYMBOL(TrampolineX819):
-    trampoline_xmm 819
+    trampoline_vec 819
 SYMBOL(TrampolineX820):
-    trampoline_xmm 820
+    trampoline_vec 820
 SYMBOL(TrampolineX821):
-    trampoline_xmm 821
+    trampoline_vec 821
 SYMBOL(TrampolineX822):
-    trampoline_xmm 822
+    trampoline_vec 822
 SYMBOL(TrampolineX823):
-    trampoline_xmm 823
+    trampoline_vec 823
 SYMBOL(TrampolineX824):
-    trampoline_xmm 824
+    trampoline_vec 824
 SYMBOL(TrampolineX825):
-    trampoline_xmm 825
+    trampoline_vec 825
 SYMBOL(TrampolineX826):
-    trampoline_xmm 826
+    trampoline_vec 826
 SYMBOL(TrampolineX827):
-    trampoline_xmm 827
+    trampoline_vec 827
 SYMBOL(TrampolineX828):
-    trampoline_xmm 828
+    trampoline_vec 828
 SYMBOL(TrampolineX829):
-    trampoline_xmm 829
+    trampoline_vec 829
 SYMBOL(TrampolineX830):
-    trampoline_xmm 830
+    trampoline_vec 830
 SYMBOL(TrampolineX831):
-    trampoline_xmm 831
+    trampoline_vec 831
 SYMBOL(TrampolineX832):
-    trampoline_xmm 832
+    trampoline_vec 832
 SYMBOL(TrampolineX833):
-    trampoline_xmm 833
+    trampoline_vec 833
 SYMBOL(TrampolineX834):
-    trampoline_xmm 834
+    trampoline_vec 834
 SYMBOL(TrampolineX835):
-    trampoline_xmm 835
+    trampoline_vec 835
 SYMBOL(TrampolineX836):
-    trampoline_xmm 836
+    trampoline_vec 836
 SYMBOL(TrampolineX837):
-    trampoline_xmm 837
+    trampoline_vec 837
 SYMBOL(TrampolineX838):
-    trampoline_xmm 838
+    trampoline_vec 838
 SYMBOL(TrampolineX839):
-    trampoline_xmm 839
+    trampoline_vec 839
 SYMBOL(TrampolineX840):
-    trampoline_xmm 840
+    trampoline_vec 840
 SYMBOL(TrampolineX841):
-    trampoline_xmm 841
+    trampoline_vec 841
 SYMBOL(TrampolineX842):
-    trampoline_xmm 842
+    trampoline_vec 842
 SYMBOL(TrampolineX843):
-    trampoline_xmm 843
+    trampoline_vec 843
 SYMBOL(TrampolineX844):
-    trampoline_xmm 844
+    trampoline_vec 844
 SYMBOL(TrampolineX845):
-    trampoline_xmm 845
+    trampoline_vec 845
 SYMBOL(TrampolineX846):
-    trampoline_xmm 846
+    trampoline_vec 846
 SYMBOL(TrampolineX847):
-    trampoline_xmm 847
+    trampoline_vec 847
 SYMBOL(TrampolineX848):
-    trampoline_xmm 848
+    trampoline_vec 848
 SYMBOL(TrampolineX849):
-    trampoline_xmm 849
+    trampoline_vec 849
 SYMBOL(TrampolineX850):
-    trampoline_xmm 850
+    trampoline_vec 850
 SYMBOL(TrampolineX851):
-    trampoline_xmm 851
+    trampoline_vec 851
 SYMBOL(TrampolineX852):
-    trampoline_xmm 852
+    trampoline_vec 852
 SYMBOL(TrampolineX853):
-    trampoline_xmm 853
+    trampoline_vec 853
 SYMBOL(TrampolineX854):
-    trampoline_xmm 854
+    trampoline_vec 854
 SYMBOL(TrampolineX855):
-    trampoline_xmm 855
+    trampoline_vec 855
 SYMBOL(TrampolineX856):
-    trampoline_xmm 856
+    trampoline_vec 856
 SYMBOL(TrampolineX857):
-    trampoline_xmm 857
+    trampoline_vec 857
 SYMBOL(TrampolineX858):
-    trampoline_xmm 858
+    trampoline_vec 858
 SYMBOL(TrampolineX859):
-    trampoline_xmm 859
+    trampoline_vec 859
 SYMBOL(TrampolineX860):
-    trampoline_xmm 860
+    trampoline_vec 860
 SYMBOL(TrampolineX861):
-    trampoline_xmm 861
+    trampoline_vec 861
 SYMBOL(TrampolineX862):
-    trampoline_xmm 862
+    trampoline_vec 862
 SYMBOL(TrampolineX863):
-    trampoline_xmm 863
+    trampoline_vec 863
 SYMBOL(TrampolineX864):
-    trampoline_xmm 864
+    trampoline_vec 864
 SYMBOL(TrampolineX865):
-    trampoline_xmm 865
+    trampoline_vec 865
 SYMBOL(TrampolineX866):
-    trampoline_xmm 866
+    trampoline_vec 866
 SYMBOL(TrampolineX867):
-    trampoline_xmm 867
+    trampoline_vec 867
 SYMBOL(TrampolineX868):
-    trampoline_xmm 868
+    trampoline_vec 868
 SYMBOL(TrampolineX869):
-    trampoline_xmm 869
+    trampoline_vec 869
 SYMBOL(TrampolineX870):
-    trampoline_xmm 870
+    trampoline_vec 870
 SYMBOL(TrampolineX871):
-    trampoline_xmm 871
+    trampoline_vec 871
 SYMBOL(TrampolineX872):
-    trampoline_xmm 872
+    trampoline_vec 872
 SYMBOL(TrampolineX873):
-    trampoline_xmm 873
+    trampoline_vec 873
 SYMBOL(TrampolineX874):
-    trampoline_xmm 874
+    trampoline_vec 874
 SYMBOL(TrampolineX875):
-    trampoline_xmm 875
+    trampoline_vec 875
 SYMBOL(TrampolineX876):
-    trampoline_xmm 876
+    trampoline_vec 876
 SYMBOL(TrampolineX877):
-    trampoline_xmm 877
+    trampoline_vec 877
 SYMBOL(TrampolineX878):
-    trampoline_xmm 878
+    trampoline_vec 878
 SYMBOL(TrampolineX879):
-    trampoline_xmm 879
+    trampoline_vec 879
 SYMBOL(TrampolineX880):
-    trampoline_xmm 880
+    trampoline_vec 880
 SYMBOL(TrampolineX881):
-    trampoline_xmm 881
+    trampoline_vec 881
 SYMBOL(TrampolineX882):
-    trampoline_xmm 882
+    trampoline_vec 882
 SYMBOL(TrampolineX883):
-    trampoline_xmm 883
+    trampoline_vec 883
 SYMBOL(TrampolineX884):
-    trampoline_xmm 884
+    trampoline_vec 884
 SYMBOL(TrampolineX885):
-    trampoline_xmm 885
+    trampoline_vec 885
 SYMBOL(TrampolineX886):
-    trampoline_xmm 886
+    trampoline_vec 886
 SYMBOL(TrampolineX887):
-    trampoline_xmm 887
+    trampoline_vec 887
 SYMBOL(TrampolineX888):
-    trampoline_xmm 888
+    trampoline_vec 888
 SYMBOL(TrampolineX889):
-    trampoline_xmm 889
+    trampoline_vec 889
 SYMBOL(TrampolineX890):
-    trampoline_xmm 890
+    trampoline_vec 890
 SYMBOL(TrampolineX891):
-    trampoline_xmm 891
+    trampoline_vec 891
 SYMBOL(TrampolineX892):
-    trampoline_xmm 892
+    trampoline_vec 892
 SYMBOL(TrampolineX893):
-    trampoline_xmm 893
+    trampoline_vec 893
 SYMBOL(TrampolineX894):
-    trampoline_xmm 894
+    trampoline_vec 894
 SYMBOL(TrampolineX895):
-    trampoline_xmm 895
+    trampoline_vec 895
 SYMBOL(TrampolineX896):
-    trampoline_xmm 896
+    trampoline_vec 896
 SYMBOL(TrampolineX897):
-    trampoline_xmm 897
+    trampoline_vec 897
 SYMBOL(TrampolineX898):
-    trampoline_xmm 898
+    trampoline_vec 898
 SYMBOL(TrampolineX899):
-    trampoline_xmm 899
+    trampoline_vec 899
 SYMBOL(TrampolineX900):
-    trampoline_xmm 900
+    trampoline_vec 900
 SYMBOL(TrampolineX901):
-    trampoline_xmm 901
+    trampoline_vec 901
 SYMBOL(TrampolineX902):
-    trampoline_xmm 902
+    trampoline_vec 902
 SYMBOL(TrampolineX903):
-    trampoline_xmm 903
+    trampoline_vec 903
 SYMBOL(TrampolineX904):
-    trampoline_xmm 904
+    trampoline_vec 904
 SYMBOL(TrampolineX905):
-    trampoline_xmm 905
+    trampoline_vec 905
 SYMBOL(TrampolineX906):
-    trampoline_xmm 906
+    trampoline_vec 906
 SYMBOL(TrampolineX907):
-    trampoline_xmm 907
+    trampoline_vec 907
 SYMBOL(TrampolineX908):
-    trampoline_xmm 908
+    trampoline_vec 908
 SYMBOL(TrampolineX909):
-    trampoline_xmm 909
+    trampoline_vec 909
 SYMBOL(TrampolineX910):
-    trampoline_xmm 910
+    trampoline_vec 910
 SYMBOL(TrampolineX911):
-    trampoline_xmm 911
+    trampoline_vec 911
 SYMBOL(TrampolineX912):
-    trampoline_xmm 912
+    trampoline_vec 912
 SYMBOL(TrampolineX913):
-    trampoline_xmm 913
+    trampoline_vec 913
 SYMBOL(TrampolineX914):
-    trampoline_xmm 914
+    trampoline_vec 914
 SYMBOL(TrampolineX915):
-    trampoline_xmm 915
+    trampoline_vec 915
 SYMBOL(TrampolineX916):
-    trampoline_xmm 916
+    trampoline_vec 916
 SYMBOL(TrampolineX917):
-    trampoline_xmm 917
+    trampoline_vec 917
 SYMBOL(TrampolineX918):
-    trampoline_xmm 918
+    trampoline_vec 918
 SYMBOL(TrampolineX919):
-    trampoline_xmm 919
+    trampoline_vec 919
 SYMBOL(TrampolineX920):
-    trampoline_xmm 920
+    trampoline_vec 920
 SYMBOL(TrampolineX921):
-    trampoline_xmm 921
+    trampoline_vec 921
 SYMBOL(TrampolineX922):
-    trampoline_xmm 922
+    trampoline_vec 922
 SYMBOL(TrampolineX923):
-    trampoline_xmm 923
+    trampoline_vec 923
 SYMBOL(TrampolineX924):
-    trampoline_xmm 924
+    trampoline_vec 924
 SYMBOL(TrampolineX925):
-    trampoline_xmm 925
+    trampoline_vec 925
 SYMBOL(TrampolineX926):
-    trampoline_xmm 926
+    trampoline_vec 926
 SYMBOL(TrampolineX927):
-    trampoline_xmm 927
+    trampoline_vec 927
 SYMBOL(TrampolineX928):
-    trampoline_xmm 928
+    trampoline_vec 928
 SYMBOL(TrampolineX929):
-    trampoline_xmm 929
+    trampoline_vec 929
 SYMBOL(TrampolineX930):
-    trampoline_xmm 930
+    trampoline_vec 930
 SYMBOL(TrampolineX931):
-    trampoline_xmm 931
+    trampoline_vec 931
 SYMBOL(TrampolineX932):
-    trampoline_xmm 932
+    trampoline_vec 932
 SYMBOL(TrampolineX933):
-    trampoline_xmm 933
+    trampoline_vec 933
 SYMBOL(TrampolineX934):
-    trampoline_xmm 934
+    trampoline_vec 934
 SYMBOL(TrampolineX935):
-    trampoline_xmm 935
+    trampoline_vec 935
 SYMBOL(TrampolineX936):
-    trampoline_xmm 936
+    trampoline_vec 936
 SYMBOL(TrampolineX937):
-    trampoline_xmm 937
+    trampoline_vec 937
 SYMBOL(TrampolineX938):
-    trampoline_xmm 938
+    trampoline_vec 938
 SYMBOL(TrampolineX939):
-    trampoline_xmm 939
+    trampoline_vec 939
 SYMBOL(TrampolineX940):
-    trampoline_xmm 940
+    trampoline_vec 940
 SYMBOL(TrampolineX941):
-    trampoline_xmm 941
+    trampoline_vec 941
 SYMBOL(TrampolineX942):
-    trampoline_xmm 942
+    trampoline_vec 942
 SYMBOL(TrampolineX943):
-    trampoline_xmm 943
+    trampoline_vec 943
 SYMBOL(TrampolineX944):
-    trampoline_xmm 944
+    trampoline_vec 944
 SYMBOL(TrampolineX945):
-    trampoline_xmm 945
+    trampoline_vec 945
 SYMBOL(TrampolineX946):
-    trampoline_xmm 946
+    trampoline_vec 946
 SYMBOL(TrampolineX947):
-    trampoline_xmm 947
+    trampoline_vec 947
 SYMBOL(TrampolineX948):
-    trampoline_xmm 948
+    trampoline_vec 948
 SYMBOL(TrampolineX949):
-    trampoline_xmm 949
+    trampoline_vec 949
 SYMBOL(TrampolineX950):
-    trampoline_xmm 950
+    trampoline_vec 950
 SYMBOL(TrampolineX951):
-    trampoline_xmm 951
+    trampoline_vec 951
 SYMBOL(TrampolineX952):
-    trampoline_xmm 952
+    trampoline_vec 952
 SYMBOL(TrampolineX953):
-    trampoline_xmm 953
+    trampoline_vec 953
 SYMBOL(TrampolineX954):
-    trampoline_xmm 954
+    trampoline_vec 954
 SYMBOL(TrampolineX955):
-    trampoline_xmm 955
+    trampoline_vec 955
 SYMBOL(TrampolineX956):
-    trampoline_xmm 956
+    trampoline_vec 956
 SYMBOL(TrampolineX957):
-    trampoline_xmm 957
+    trampoline_vec 957
 SYMBOL(TrampolineX958):
-    trampoline_xmm 958
+    trampoline_vec 958
 SYMBOL(TrampolineX959):
-    trampoline_xmm 959
+    trampoline_vec 959
 SYMBOL(TrampolineX960):
-    trampoline_xmm 960
+    trampoline_vec 960
 SYMBOL(TrampolineX961):
-    trampoline_xmm 961
+    trampoline_vec 961
 SYMBOL(TrampolineX962):
-    trampoline_xmm 962
+    trampoline_vec 962
 SYMBOL(TrampolineX963):
-    trampoline_xmm 963
+    trampoline_vec 963
 SYMBOL(TrampolineX964):
-    trampoline_xmm 964
+    trampoline_vec 964
 SYMBOL(TrampolineX965):
-    trampoline_xmm 965
+    trampoline_vec 965
 SYMBOL(TrampolineX966):
-    trampoline_xmm 966
+    trampoline_vec 966
 SYMBOL(TrampolineX967):
-    trampoline_xmm 967
+    trampoline_vec 967
 SYMBOL(TrampolineX968):
-    trampoline_xmm 968
+    trampoline_vec 968
 SYMBOL(TrampolineX969):
-    trampoline_xmm 969
+    trampoline_vec 969
 SYMBOL(TrampolineX970):
-    trampoline_xmm 970
+    trampoline_vec 970
 SYMBOL(TrampolineX971):
-    trampoline_xmm 971
+    trampoline_vec 971
 SYMBOL(TrampolineX972):
-    trampoline_xmm 972
+    trampoline_vec 972
 SYMBOL(TrampolineX973):
-    trampoline_xmm 973
+    trampoline_vec 973
 SYMBOL(TrampolineX974):
-    trampoline_xmm 974
+    trampoline_vec 974
 SYMBOL(TrampolineX975):
-    trampoline_xmm 975
+    trampoline_vec 975
 SYMBOL(TrampolineX976):
-    trampoline_xmm 976
+    trampoline_vec 976
 SYMBOL(TrampolineX977):
-    trampoline_xmm 977
+    trampoline_vec 977
 SYMBOL(TrampolineX978):
-    trampoline_xmm 978
+    trampoline_vec 978
 SYMBOL(TrampolineX979):
-    trampoline_xmm 979
+    trampoline_vec 979
 SYMBOL(TrampolineX980):
-    trampoline_xmm 980
+    trampoline_vec 980
 SYMBOL(TrampolineX981):
-    trampoline_xmm 981
+    trampoline_vec 981
 SYMBOL(TrampolineX982):
-    trampoline_xmm 982
+    trampoline_vec 982
 SYMBOL(TrampolineX983):
-    trampoline_xmm 983
+    trampoline_vec 983
 SYMBOL(TrampolineX984):
-    trampoline_xmm 984
+    trampoline_vec 984
 SYMBOL(TrampolineX985):
-    trampoline_xmm 985
+    trampoline_vec 985
 SYMBOL(TrampolineX986):
-    trampoline_xmm 986
+    trampoline_vec 986
 SYMBOL(TrampolineX987):
-    trampoline_xmm 987
+    trampoline_vec 987
 SYMBOL(TrampolineX988):
-    trampoline_xmm 988
+    trampoline_vec 988
 SYMBOL(TrampolineX989):
-    trampoline_xmm 989
+    trampoline_vec 989
 SYMBOL(TrampolineX990):
-    trampoline_xmm 990
+    trampoline_vec 990
 SYMBOL(TrampolineX991):
-    trampoline_xmm 991
+    trampoline_vec 991
 SYMBOL(TrampolineX992):
-    trampoline_xmm 992
+    trampoline_vec 992
 SYMBOL(TrampolineX993):
-    trampoline_xmm 993
+    trampoline_vec 993
 SYMBOL(TrampolineX994):
-    trampoline_xmm 994
+    trampoline_vec 994
 SYMBOL(TrampolineX995):
-    trampoline_xmm 995
+    trampoline_vec 995
 SYMBOL(TrampolineX996):
-    trampoline_xmm 996
+    trampoline_vec 996
 SYMBOL(TrampolineX997):
-    trampoline_xmm 997
+    trampoline_vec 997
 SYMBOL(TrampolineX998):
-    trampoline_xmm 998
+    trampoline_vec 998
 SYMBOL(TrampolineX999):
-    trampoline_xmm 999
+    trampoline_vec 999
 SYMBOL(TrampolineX1000):
-    trampoline_xmm 1000
+    trampoline_vec 1000
 SYMBOL(TrampolineX1001):
-    trampoline_xmm 1001
+    trampoline_vec 1001
 SYMBOL(TrampolineX1002):
-    trampoline_xmm 1002
+    trampoline_vec 1002
 SYMBOL(TrampolineX1003):
-    trampoline_xmm 1003
+    trampoline_vec 1003
 SYMBOL(TrampolineX1004):
-    trampoline_xmm 1004
+    trampoline_vec 1004
 SYMBOL(TrampolineX1005):
-    trampoline_xmm 1005
+    trampoline_vec 1005
 SYMBOL(TrampolineX1006):
-    trampoline_xmm 1006
+    trampoline_vec 1006
 SYMBOL(TrampolineX1007):
-    trampoline_xmm 1007
+    trampoline_vec 1007
 SYMBOL(TrampolineX1008):
-    trampoline_xmm 1008
+    trampoline_vec 1008
 SYMBOL(TrampolineX1009):
-    trampoline_xmm 1009
+    trampoline_vec 1009
 SYMBOL(TrampolineX1010):
-    trampoline_xmm 1010
+    trampoline_vec 1010
 SYMBOL(TrampolineX1011):
-    trampoline_xmm 1011
+    trampoline_vec 1011
 SYMBOL(TrampolineX1012):
-    trampoline_xmm 1012
+    trampoline_vec 1012
 SYMBOL(TrampolineX1013):
-    trampoline_xmm 1013
+    trampoline_vec 1013
 SYMBOL(TrampolineX1014):
-    trampoline_xmm 1014
+    trampoline_vec 1014
 SYMBOL(TrampolineX1015):
-    trampoline_xmm 1015
+    trampoline_vec 1015
 SYMBOL(TrampolineX1016):
-    trampoline_xmm 1016
+    trampoline_vec 1016
 SYMBOL(TrampolineX1017):
-    trampoline_xmm 1017
+    trampoline_vec 1017
 SYMBOL(TrampolineX1018):
-    trampoline_xmm 1018
+    trampoline_vec 1018
 SYMBOL(TrampolineX1019):
-    trampoline_xmm 1019
+    trampoline_vec 1019
 SYMBOL(TrampolineX1020):
-    trampoline_xmm 1020
+    trampoline_vec 1020
 SYMBOL(TrampolineX1021):
-    trampoline_xmm 1021
+    trampoline_vec 1021
 SYMBOL(TrampolineX1022):
-    trampoline_xmm 1022
+    trampoline_vec 1022
 SYMBOL(TrampolineX1023):
-    trampoline_xmm 1023
+    trampoline_vec 1023

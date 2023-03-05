@@ -17,36 +17,29 @@ import argparse
 import os
 
 def write_asm_trampolines(filename, comment_char, n,
-                          fmt_export, fmt_export_x, fmt_proc, fmt_proc_x, end = None):
+                          fmt_export, fmt_export_x, fmt_proc, fmt_proc_x):
     with open(filename) as f:
         lines = f.readlines()
 
     with open(filename, 'w') as f:
         for line in lines:
-            if line.rstrip() == comment_char + ' Trampolines':
+            if not line.startswith(comment_char):
                 break
             f.write(line)
 
-        print(comment_char + ' Trampolines', file = f)
-        print(comment_char + ' ----------------------------', file = f)
         print('', file = f)
-
         for i in range(0, n):
             print(fmt_export.format(i), file = f)
         print('', file = f)
         for i in range(0, n):
             print(fmt_export_x.format(i), file = f)
-        print('', file = f)
 
+        print('', file = f)
         for i in range(0, n):
             print(fmt_proc.format(i), file = f)
         print('', file = f)
         for i in range(0, n):
             print(fmt_proc_x.format(i), file = f)
-
-        if end is not None:
-            print('', file = f)
-            print(end, file = f)
 
 def write_cxx_trampolines(filename, n):
     with open(filename) as f:
@@ -79,60 +72,29 @@ if __name__ == "__main__":
 
     src_dir = os.path.dirname(__file__) + '/../src'
 
-    write_asm_trampolines(src_dir + '/abi_arm32_fwd.S', '#', args.n,
-        '.global Trampoline{0}',
-        '.global TrampolineX{0}',
-        'Trampoline{0}:\n    trampoline {0}',
-        'TrampolineX{0}:\n    trampoline_vec {0}'
-    )
-
-    write_asm_trampolines(src_dir + '/abi_arm64_fwd.asm', ';', args.n,
-        '    EXPORT Trampoline{0}',
-        '    EXPORT TrampolineX{0}',
-        'Trampoline{0} PROC\n    trampoline {0}\n    ENDP',
-        'TrampolineX{0} PROC\n    trampoline_vec {0}\n    ENDP',
-        '    END'
-    )
-    write_asm_trampolines(src_dir + '/abi_arm64_fwd.S', '#', args.n,
+    write_asm_trampolines(src_dir + '/trampolines/gnu.inc', '#', args.n,
         '.global SYMBOL(Trampoline{0})',
         '.global SYMBOL(TrampolineX{0})',
         'SYMBOL(Trampoline{0}):\n    trampoline {0}',
         'SYMBOL(TrampolineX{0}):\n    trampoline_vec {0}'
     )
-
-    write_asm_trampolines(src_dir + '/abi_riscv64_fwd.S', '#', args.n,
-        '.global Trampoline{0}',
-        '.global TrampolineX{0}',
-        'Trampoline{0}:\n    trampoline {0}',
-        'TrampolineX{0}:\n    trampoline_vec {0}'
+    write_asm_trampolines(src_dir + '/trampolines/armasm.inc', ';', args.n,
+        '    EXPORT Trampoline{0}',
+        '    EXPORT TrampolineX{0}',
+        'Trampoline{0} PROC\n    trampoline {0}\n    ENDP',
+        'TrampolineX{0} PROC\n    trampoline_vec {0}\n    ENDP'
     )
-
-    write_asm_trampolines(src_dir + '/abi_x64_sysv_fwd.S', '#', args.n,
-        '.global SYMBOL(Trampoline{0})',
-        '.global SYMBOL(TrampolineX{0})',
-        'SYMBOL(Trampoline{0}):\n    trampoline {0}',
-        'SYMBOL(TrampolineX{0}):\n    trampoline_xmm {0}'
-    )
-    write_asm_trampolines(src_dir + '/abi_x64_win_fwd.asm', ';', args.n,
+    write_asm_trampolines(src_dir + '/trampolines/masm64.inc', ';', args.n,
         'public Trampoline{0}',
         'public TrampolineX{0}',
         'Trampoline{0} proc frame\n    trampoline {0}\nTrampoline{0} endp',
-        'TrampolineX{0} proc frame\n    trampoline_xmm {0}\nTrampolineX{0} endp',
-        'end'
+        'TrampolineX{0} proc frame\n    trampoline_vec {0}\nTrampolineX{0} endp'
     )
-
-    write_asm_trampolines(src_dir + '/abi_x86_fwd.asm', ';', args.n,
+    write_asm_trampolines(src_dir + '/trampolines/masm32.inc', ';', args.n,
         'public Trampoline{0}',
         'public TrampolineX{0}',
         'Trampoline{0} proc\n    trampoline {0}\nTrampoline{0} endp',
-        'TrampolineX{0} proc\n    trampoline_x87 {0}\nTrampolineX{0} endp',
-        'end'
-    )
-    write_asm_trampolines(src_dir + '/abi_x86_fwd.S', '#', args.n,
-        '.global Trampoline{0}',
-        '.global TrampolineX{0}',
-        'Trampoline{0}:\n    trampoline {0}',
-        'TrampolineX{0}:\n    trampoline_x87 {0}'
+        'TrampolineX{0} proc\n    trampoline_vec {0}\nTrampolineX{0} endp'
     )
 
-    write_cxx_trampolines(src_dir + '/abi_trampolines.inc', args.n)
+    write_cxx_trampolines(src_dir + '/trampolines/prototypes.inc', args.n)
