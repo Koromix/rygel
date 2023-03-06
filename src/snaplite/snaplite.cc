@@ -129,6 +129,10 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
             dest_filename = snapshot.orig_filename;
         }
 
+        TimeSpec spec = DecomposeTime(snapshot.mtime);
+        LogInfo("Restoring database '%1' at %2 (%3 %4)", SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS), FmtTimeNice(spec),
+                                                         snapshot.frames.len, snapshot.frames.len == 1 ? "frame" : "frames");
+
         if (!EnsureDirectoryExists(dest_filename)) {
             complete = false;
             continue;
@@ -155,6 +159,7 @@ R"(Usage: %!..+%1 list [options] <snapshot...>%!0
 
 Options:
     %!..+-r, --recursive%!0              Collect all snapshots recursively
+
     %!..+-v, --verbose%!0                List all available logs per snapshot)", FelixTarget);
     };
 
@@ -194,14 +199,14 @@ Options:
         PrintLn("%1Database: %!..+%2%!0", verbosity && i ? "\n" : "", snapshot.orig_filename);
 
         if (verbosity) {
-            for (const sq_SnapshotInfo::Version &version: snapshot.versions) {
-                const char *basename = SplitStrReverseAny(version.base_filename, RG_PATH_SEPARATORS).ptr;
+            for (const sq_SnapshotGeneration &generation: snapshot.generations) {
+                const char *basename = SplitStrReverseAny(generation.base_filename, RG_PATH_SEPARATORS).ptr;
 
                 if (verbosity >= 2) {
                     PrintLn("  - Generation %!y..'%1'%!0", basename);
 
-                    for (Size j = 0; j < version.frames; j++) {
-                        const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx + j];
+                    for (Size j = 0; j < generation.frames; j++) {
+                        const sq_SnapshotFrame &frame = snapshot.frames[generation.frame_idx + j];
 
                         if (verbosity >= 3) {
                             PrintLn("    %!D..+ Log:%!0 %1 (%2)", FmtTimeNice(DecomposeTime(frame.mtime)), FormatSha256(frame.sha256));
@@ -210,7 +215,7 @@ Options:
                         }
                     }
                 } else {
-                    PrintLn("  - Generation %!y..'%1'%!0: %2", basename, FmtTimeNice(DecomposeTime(version.mtime)));
+                    PrintLn("  - Generation %!y..'%1'%!0: %2", basename, FmtTimeNice(DecomposeTime(generation.mtime)));
                 }
             }
         } else {

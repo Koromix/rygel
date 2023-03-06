@@ -17,24 +17,25 @@
 
 namespace RG {
 
-struct sq_SnapshotInfo {
-    struct Version {
-        const char *base_filename;
-        Size frame_idx;
-        Size frames;
-        int64_t ctime;
-        int64_t mtime;
-    };
-    struct Frame {
-        int64_t mtime;
-        uint8_t sha256[32];
-    };
+struct sq_SnapshotGeneration {
+    const char *base_filename;
+    Size frame_idx;
+    Size frames;
+    int64_t ctime;
+    int64_t mtime;
+};
 
+struct sq_SnapshotFrame {
+    int64_t mtime;
+    uint8_t sha256[32];
+};
+
+struct sq_SnapshotInfo {
     const char *orig_filename;
     int64_t mtime;
 
-    HeapArray<Version> versions;
-    HeapArray<Frame> frames;
+    HeapArray<sq_SnapshotGeneration> generations;
+    HeapArray<sq_SnapshotFrame> frames;
 };
 
 struct sq_SnapshotSet {

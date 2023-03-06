@@ -380,20 +380,20 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
             }
         }
         RG_DEFER {
-            if (!snapshot->versions.len) {
+            if (!snapshot->generations.len) {
                 out_set->snapshots.RemoveLast(1);
                 snapshots_map.Remove(orig_filename);
             }
         };
 
-        sq_SnapshotInfo::Version version = {};
+        sq_SnapshotGeneration generation = {};
 
-        version.base_filename = DuplicateString(filename, &out_set->str_alloc).ptr;
-        version.frame_idx = snapshot->frames.len;
+        generation.base_filename = DuplicateString(filename, &out_set->str_alloc).ptr;
+        generation.frame_idx = snapshot->frames.len;
 
         // Read snapshot frames
         do {
-            sq_SnapshotInfo::Frame frame = {};
+            sq_SnapshotFrame frame = {};
 
             FrameData raw_frame;
             if (Size read_len = st.Read(RG_SIZE(raw_frame), &raw_frame); read_len != RG_SIZE(raw_frame)) {
@@ -412,44 +412,36 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
         if (!st.IsValid())
             continue;
 
-        version.frames = snapshot->frames.len - version.frame_idx;
-        if (!version.frames) {
+        generation.frames = snapshot->frames.len - generation.frame_idx;
+        if (!generation.frames) {
             LogError("Empty snapshot file '%1' (skipping)", filename);
             continue;
         }
-        version.ctime = snapshot->frames[version.frame_idx].mtime;
-        version.mtime = snapshot->frames[version.frame_idx + version.frames - 1].mtime;
+        generation.ctime = snapshot->frames[generation.frame_idx].mtime;
+        generation.mtime = snapshot->frames[generation.frame_idx + generation.frames - 1].mtime;
 
-        // Commit version (and snapshot)
-        snapshot->versions.Append(version);
+        // Commit generation (and snapshot)
+        snapshot->generations.Append(generation);
     }
 
     for (sq_SnapshotInfo &snapshot: out_set->snapshots) {
-        std::sort(snapshot.versions.begin(), snapshot.versions.end(),
-                  [](sq_SnapshotInfo::Version &version1, sq_SnapshotInfo::Version &version2) {
+        std::sort(snapshot.generations.begin(), snapshot.generations.end(),
+                  [](sq_SnapshotGeneration &version1, sq_SnapshotGeneration &version2) {
             return version1.mtime < version2.mtime;
         });
 
-        snapshot.mtime = snapshot.versions[snapshot.versions.len - 1].mtime;
+        snapshot.mtime = snapshot.generations[snapshot.generations.len - 1].mtime;
     }
 
     out_guard.Disable();
     return true;
 }
 
-static void LogFrameTime(const char *type, const char *filename, int64_t mtime)
-{
-    const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
-    TimeSpec spec = DecomposeTime(mtime);
-
-    LogInfo("Restoring %1 '%2' (%3)", type, basename, FmtTimeNice(spec));
-}
-
 bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filename, bool overwrite)
 {
     BlockAllocator temp_alloc;
 
-    const sq_SnapshotInfo::Version &version = snapshot.versions[snapshot.versions.len - 1];
+    const sq_SnapshotGeneration &generation = snapshot.generations[snapshot.generations.len - 1];
 
     const char *wal_filename = Fmt(&temp_alloc, "%1-wal", dest_filename).ptr;
     RG_DEFER { UnlinkFile(wal_filename); };
@@ -464,16 +456,14 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filena
     UnlinkFile(wal_filename);
 
     HeapArray<char> path_buf(&temp_alloc);
-    Fmt(&path_buf, "%1", version.base_filename);
+    Fmt(&path_buf, "%1", generation.base_filename);
 
     // Copy initial database
     {
-        const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx];
+        const sq_SnapshotFrame &frame = snapshot.frames[generation.frame_idx];
 
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(0).Pad0(-16));
-
-        LogFrameTime("database", path_buf.ptr, frame.mtime);
 
         StreamReader reader(path_buf.ptr, CompressionType::Gzip);
         StreamWriter writer(dest_filename);
@@ -489,13 +479,11 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filena
     }
 
     // Apply WAL copies
-    for (Size i = 1; i < version.frames; i++) {
-        const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx + i];
+    for (Size i = 1; i < generation.frames; i++) {
+        const sq_SnapshotFrame &frame = snapshot.frames[generation.frame_idx + i];
 
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(i).Pad0(-16));
-
-        LogFrameTime("WAL", path_buf.ptr, frame.mtime);
 
         StreamReader reader(path_buf.ptr, CompressionType::Gzip);
         StreamWriter writer(wal_filename);
@@ -523,7 +511,6 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filena
         }
     }
 
-    LogInfo("Database '%1' restored", dest_filename);
     return true;
 }
 
