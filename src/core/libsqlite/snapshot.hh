@@ -33,8 +33,9 @@ struct sq_SnapshotFrame {
 
 struct sq_SnapshotInfo {
     const char *orig_filename;
-    int64_t mtime;
 
+    int64_t ctime;
+    int64_t mtime;
     HeapArray<sq_SnapshotGeneration> generations;
     HeapArray<sq_SnapshotFrame> frames;
 

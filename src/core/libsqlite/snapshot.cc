@@ -441,6 +441,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
             return version1.mtime < version2.mtime;
         });
 
+        snapshot.ctime = snapshot.generations[0].ctime;
         snapshot.mtime = snapshot.generations[snapshot.generations.len - 1].mtime;
     }
 

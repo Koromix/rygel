@@ -210,29 +210,30 @@ Options:
         const sq_SnapshotInfo &snapshot = snapshot_set.snapshots[i];
 
         PrintLn("%1Database: %!..+%2%!0", verbosity && i ? "\n" : "", snapshot.orig_filename);
+        PrintLn("  - Creation time: %!y..%1%!0", FmtTimeNice(DecomposeTime(snapshot.ctime)));
+        PrintLn("  - Last time:     %!y..%1%!0", FmtTimeNice(DecomposeTime(snapshot.mtime)));
 
         if (verbosity) {
             for (const sq_SnapshotGeneration &generation: snapshot.generations) {
                 const char *basename = SplitStrReverseAny(generation.base_filename, RG_PATH_SEPARATORS).ptr;
 
+                PrintLn("  - Generation '%1' (%2 %3)", basename, generation.frames, generation.frames == 1 ? "frame" : "frames");
+                PrintLn("    + From:%!0 %1", FmtTimeNice(DecomposeTime(generation.ctime)));
+                PrintLn("    + To: %1", FmtTimeNice(DecomposeTime(generation.mtime)));
+
                 if (verbosity >= 2) {
-                    PrintLn("  - Generation %!y..'%1'%!0", basename);
 
                     for (Size j = 0; j < generation.frames; j++) {
                         const sq_SnapshotFrame &frame = snapshot.frames[generation.frame_idx + j];
 
                         if (verbosity >= 3) {
-                            PrintLn("    %!D..+ Log:%!0 %1 (%2)", FmtTimeNice(DecomposeTime(frame.mtime)), FormatSha256(frame.sha256));
+                            PrintLn("    + Frame %1: %2 %!D..(%3)%!0", j, FmtTimeNice(DecomposeTime(frame.mtime)), FormatSha256(frame.sha256));
                         } else {
-                            PrintLn("    %!D..+ Log:%!0 %1", FmtTimeNice(DecomposeTime(frame.mtime)));
+                            PrintLn("    + Frame %1: %2", j, FmtTimeNice(DecomposeTime(frame.mtime)));
                         }
                     }
-                } else {
-                    PrintLn("  - Generation %!y..'%1'%!0: %2", basename, FmtTimeNice(DecomposeTime(generation.mtime)));
                 }
             }
-        } else {
-            PrintLn("  - Time: %!y..%1%!0", FmtTimeNice(DecomposeTime(snapshot.mtime)));
         }
     }
 
