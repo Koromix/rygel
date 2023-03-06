@@ -100,7 +100,7 @@ async function main() {
             if (arg == '--help') {
                 print_usage();
                 return;
-            } else if ((command == test || command == start) && arg == '--no-accel') {
+            } else if ((command == test || command == start) && arg == '--no_accel') {
                 accelerate = false;
             } else if (arg[0] == '-') {
                 throw new Error(`Unexpected argument '${arg}'`);
