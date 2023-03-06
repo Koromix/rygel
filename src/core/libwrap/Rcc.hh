@@ -290,7 +290,7 @@ class rcc_Vector<LocalDate> {
     };
 
     rcc_AutoSexp xp;
-    Type type = Type::LocalDate;
+    Type type = Type::Date;
     union {
         Span<SEXP> chr;
         Span<double> num;
