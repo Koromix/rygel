@@ -32,6 +32,7 @@ let script_dir = null;
 let root_dir = null;
 
 let machines = null;
+let keyboard_layout = null;
 let accelerate = true;
 let ignore = new Set;
 
@@ -100,6 +101,11 @@ async function main() {
             if (arg == '--help') {
                 print_usage();
                 return;
+            } else if ((command == test || command == start) && (arg == '-k' || arg == '--keyboard')) {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                keyboard_layout = value;
             } else if ((command == test || command == start) && arg == '--no_accel') {
                 accelerate = false;
             } else if (arg[0] == '-') {
@@ -218,6 +224,8 @@ Commands:
     reset                        Reset initial disk snapshot
 
 Options:
+    -k, --keyboard <LAYOUT>      Set VNC keyboard layout
+
         --no_accel               Disable QEMU acceleration
 `;
 
@@ -855,6 +863,8 @@ function unlink_recursive(path) {
 async function boot(machine, dirname, detach) {
     let args = machine.qemu.arguments.slice();
 
+    if (keyboard_layout != null)
+        args.push('-k', keyboard_layout);
     if (machine.qemu.accelerate)
         args.push('-accel', machine.qemu.accelerate);
     // args.push('-display', 'none');
