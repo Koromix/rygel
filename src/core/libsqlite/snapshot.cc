@@ -328,6 +328,16 @@ bool sq_Database::CopyWAL(bool full)
     return true;
 }
 
+Size sq_SnapshotInfo::FindFrame(int64_t mtime) const
+{
+    Size frame_idx = 0;
+
+    while (++frame_idx < frames.len && frames[frame_idx].mtime <= mtime);
+    frame_idx--;
+
+    return frame_idx;
+}
+
 bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
 {
     RG_ASSERT(!out_set->snapshots.len);
@@ -404,6 +414,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
             }
             raw_frame.mtime = LittleEndian(raw_frame.mtime);
 
+            frame.generation_idx = snapshot->generations.len;
             frame.mtime = raw_frame.mtime;
             memcpy_safe(frame.sha256, raw_frame.sha256, RG_SIZE(frame.sha256));
 
@@ -437,11 +448,23 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
     return true;
 }
 
-bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filename, bool overwrite)
+bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const char *dest_filename, bool overwrite)
 {
     BlockAllocator temp_alloc;
 
-    const sq_SnapshotGeneration &generation = snapshot.generations[snapshot.generations.len - 1];
+    const sq_SnapshotGeneration *generation;
+    if (frame_idx >= 0) {
+        const sq_SnapshotFrame &frame = snapshot.frames[frame_idx];
+        generation = &snapshot.generations[frame.generation_idx];
+    } else {
+        if (!snapshot.frames.len) {
+            LogError("This snapshot does not contain any frame");
+            return false;
+        }
+
+        generation = &snapshot.generations[snapshot.generations.len - 1];
+        frame_idx = snapshot.frames.len - 1;
+    }
 
     const char *wal_filename = Fmt(&temp_alloc, "%1-wal", dest_filename).ptr;
     RG_DEFER { UnlinkFile(wal_filename); };
@@ -456,11 +479,11 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filena
     UnlinkFile(wal_filename);
 
     HeapArray<char> path_buf(&temp_alloc);
-    Fmt(&path_buf, "%1", generation.base_filename);
+    Fmt(&path_buf, "%1", generation->base_filename);
 
     // Copy initial database
     {
-        const sq_SnapshotFrame &frame = snapshot.frames[generation.frame_idx];
+        const sq_SnapshotFrame &frame = snapshot.frames[generation->frame_idx];
 
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(0).Pad0(-16));
@@ -479,8 +502,8 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filena
     }
 
     // Apply WAL copies
-    for (Size i = 1; i < generation.frames; i++) {
-        const sq_SnapshotFrame &frame = snapshot.frames[generation.frame_idx + i];
+    for (Size i = 1, j = generation->frame_idx + 1; j <= frame_idx; i++, j++) {
+        const sq_SnapshotFrame &frame = snapshot.frames[j];
 
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(i).Pad0(-16));

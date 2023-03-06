@@ -27,6 +27,7 @@ struct sq_SnapshotGeneration {
 
 struct sq_SnapshotFrame {
     int64_t mtime;
+    Size generation_idx;
     uint8_t sha256[32];
 };
 
@@ -36,6 +37,8 @@ struct sq_SnapshotInfo {
 
     HeapArray<sq_SnapshotGeneration> generations;
     HeapArray<sq_SnapshotFrame> frames;
+
+    Size FindFrame(int64_t mtime) const;
 };
 
 struct sq_SnapshotSet {
@@ -45,6 +48,6 @@ struct sq_SnapshotSet {
 };
 
 bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set);
-bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filename, bool overwrite);
+bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const char *dest_filename, bool overwrite);
 
 }

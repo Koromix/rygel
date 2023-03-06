@@ -55,6 +55,7 @@ static int RunRestore(Span<const char *> arguments)
     const char *dest_directory = nullptr;
     bool recursive = false;
     bool force = false;
+    int64_t at = -1;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
@@ -65,6 +66,8 @@ Options:
 
     %!..+-r, --recursive%!0              Collect all snapshots recursively
     %!..+-f, --force%!0                  Overwrite existing databases
+
+        %!..+--at <UNIX TIME>%!0         Restore database as it was at specified time
 
 As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_dir%!0.)", FelixTarget);
     };
@@ -83,6 +86,14 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
                 recursive = true;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
+            } else if (opt.Test("--at", OptionType::Value)) {
+                if (TestStr(opt.current_value, "latest")) {
+                    at = -1;
+                } else if (ParseInt(opt.current_value, &at)) {
+                    at = at * 1000 + 999;
+                } else {
+                    return 1;
+                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -129,16 +140,18 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
             dest_filename = snapshot.orig_filename;
         }
 
-        TimeSpec spec = DecomposeTime(snapshot.mtime);
-        LogInfo("Restoring database '%1' at %2 (%3 %4)", SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS), FmtTimeNice(spec),
-                                                         snapshot.frames.len, snapshot.frames.len == 1 ? "frame" : "frames");
+        Size frame_idx = (at >= 0) ? snapshot.FindFrame(at) : -1;
+        int64_t mtime = (frame_idx >= 0) ? snapshot.frames[frame_idx].mtime : snapshot.mtime;
+
+        TimeSpec spec = DecomposeTime(mtime);
+        LogInfo("Restoring database '%1' at %2", SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS), FmtTimeNice(spec));
 
         if (!EnsureDirectoryExists(dest_filename)) {
             complete = false;
             continue;
         }
 
-        complete &= sq_RestoreSnapshot(snapshot, dest_filename, force);
+        complete &= sq_RestoreSnapshot(snapshot, frame_idx, dest_filename, force);
     }
 
     return !complete;
