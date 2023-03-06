@@ -110,11 +110,17 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
         const char *dest_filename;
         if (dest_directory) {
             HeapArray<char> buf(&temp_alloc);
+            Span<const char> remain = snapshot.orig_filename;
 
-            Fmt(&buf, "%1%/", dest_directory);
-            for (Size i = 0; snapshot.orig_filename[i]; i++) {
-                char c = snapshot.orig_filename[i];
-                buf.Append(IsAsciiAlphaOrDigit(c) || c == '.' ? c : '_');
+            buf.Append(dest_directory);
+            while (remain.len) {
+                Span<const char> part = SplitStrAny(remain, "/\\", &remain);
+
+                if (part == "..") {
+                    Fmt(&buf, "%/__");
+                } else if (part.len && part != ".") {
+                    Fmt(&buf, "%/%1", part);
+                }
             }
             buf.Append(0);
 
@@ -123,8 +129,14 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
             dest_filename = snapshot.orig_filename;
         }
 
+        if (!EnsureDirectoryExists(dest_filename)) {
+            complete = false;
+            continue;
+        }
+
         complete &= sq_RestoreSnapshot(snapshot, dest_filename, force);
     }
+
     return !complete;
 }
 
