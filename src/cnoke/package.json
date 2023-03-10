@@ -16,7 +16,7 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "index": "src/index.js",
   "bin": "cnoke.js",
-  "license": "LGPL-3.0",
+  "license": "MIT",
   "files": [
     "cnoke.js",
     "LICENSE.txt",

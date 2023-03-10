@@ -26,7 +26,7 @@
     "prepublishOnly": "echo 'Use \"npm run release\" instead' && false",
     "release": "node tools/qemu.js publish"
   },
-  "license": "LGPL-3.0",
+  "license": "MIT",
   "devDependencies": {
     "chalk": "^4.1.2",
     "ffi-napi": "^4.0.3",
