@@ -202,6 +202,6 @@ CallSwitchStack PROC
 ; Trampolines
 ; ----------------------------
 
-    INCLUDE "trampolines/armasm.inc"
+    INCLUDE trampolines/armasm.inc
 
     END

@@ -25,7 +25,7 @@ import argparse
 import os
 
 def write_asm_trampolines(filename, comment_char, n,
-                          fmt_export, fmt_export_x, fmt_proc, fmt_proc_x):
+                          fmt_export, fmt_export_x, fmt_proc, fmt_proc_x, end = None):
     with open(filename) as f:
         lines = f.readlines()
 
@@ -48,6 +48,10 @@ def write_asm_trampolines(filename, comment_char, n,
         print('', file = f)
         for i in range(0, n):
             print(fmt_proc_x.format(i), file = f)
+
+        if end is not None:
+            print('', file = f)
+            print(end, file = f)
 
 def write_cxx_trampolines(filename, n):
     with open(filename) as f:
@@ -90,7 +94,8 @@ if __name__ == "__main__":
         '    EXPORT Trampoline{0}',
         '    EXPORT TrampolineX{0}',
         'Trampoline{0} PROC\n    trampoline {0}\n    ENDP',
-        'TrampolineX{0} PROC\n    trampoline_vec {0}\n    ENDP'
+        'TrampolineX{0} PROC\n    trampoline_vec {0}\n    ENDP',
+        '    END'
     )
     write_asm_trampolines(src_dir + '/trampolines/masm64.inc', ';', args.n,
         'public Trampoline{0}',
