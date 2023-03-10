@@ -4,6 +4,12 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.9
+
+**Main changes:**
+
+- Relicense under MIT license
+
 #### Koffi 2.3.8
 
 **Main fixes:**
