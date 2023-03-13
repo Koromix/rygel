@@ -10,12 +10,12 @@ Most projects are licensed under the [AGPL 3.0 license](https://www.gnu.org/lice
 | *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR        | Felix/R    | **Good** | AGPL 3   |
 | *felix*    | Small build system made specifically for this repository                   | Felix      | **Good** | AGPL 3   |
 | *goupile*  | Programmable electronic data capture application                           | Felix      | **WIP**  | AGPL 3   |
+| *hodler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Felix      | **Good** | AGPL 3   |
 | *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js             | Node.js    | **Good** | *MIT*    |
 | *rekord*   | Public-key backup tool with deduplication                                  | Felix      | **WIP**  | AGPL 3   |
 | *snaplite* | Support tool for SQLite snapshots made from core/libsqlite                 | Felix      | **Good** | AGPL 3   |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Felix      | **Good** | AGPL 3   |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Felix      | **Good** | AGPL 3   |
-| *webler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Felix      | **Good** | AGPL 3   |
 
 # How to build
 

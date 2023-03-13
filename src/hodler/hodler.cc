@@ -234,10 +234,10 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
 
         <title>%1</title>
 
-        <link rel="stylesheet" href="static/webler.css">
+        <link rel="stylesheet" href="static/hodler.css">
         <link rel="stylesheet" href="static/OpenSans.css">
 
-        <script type="text/javascript" src="static/webler.js" async></script>
+        <script type="text/javascript" src="static/hodler.js" async></script>
     </head>
     <body>
         <div id="top">
@@ -295,7 +295,7 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
     return st.Close();
 }
 
-int RunWebler(int argc, char *argv[])
+int RunHodler(int argc, char *argv[])
 {
     BlockAllocator temp_alloc;
 
@@ -306,13 +306,13 @@ int RunWebler(int argc, char *argv[])
     bool pretty_urls = false;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+webler <input_dir> -O <output_dir>%!0
+        PrintLn(fp, R"(Usage: %!..+%1 <input_dir> -O <output_dir>%!0
 
 Options:
     %!..+-O, --output <directory>%!0     Set output directory
 
     %!..+-p, --pretty_urls%!0            Omit the '.html' extension from page URLs
-        %!..+--subdirs%!0                Output HTML pages in subdirectories)");
+        %!..+--subdirs%!0                Output HTML pages in subdirectories)", FelixTarget);
     };
 
     // Handle version
@@ -457,4 +457,4 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunWebler(argc, argv); }
+int main(int argc, char **argv) { return RG::RunHodler(argc, argv); }
