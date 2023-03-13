@@ -2,13 +2,13 @@
      Menu: Home
      Created: 2017-01-15 -->
 
-#goupile# Goupile
+# Goupile
 
 Goupile is an **open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
 
 Find out more on the [page dedicated to Goupile](goupile).
 
-#koffi# Koffi
+# Koffi
 
 Koffi is a fast and easy-to-use C FFI module for [Node.js](https://nodejs.org/), featuring:
 
@@ -29,7 +29,7 @@ RISC-V 64          | ⬜️ *N/A*    | ✅ Yes   | ⬜️ *N/A*    | 🟨 Probab
 
 Find out more on the [page dedicated to Koffi](koffi).
 
-#tytools# TyTools
+# TyTools
 
 TyTools is a collection of **independent tools** and you only need one executable to use any of them. The Qt-based GUI tools are statically compiled to make that possible.
 
@@ -41,7 +41,7 @@ tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boa
 
 Find out more on the [page dedicated to TyTools](tytools).
 
-#libhs# libhs
+# libhs
 
 libhs is a cross-platform C library to enumerate **HID and serial devices** and interact with them.
 
@@ -49,7 +49,7 @@ It is distributed as a **single-file header**. Drop the file in your project, ad
 
 Find out more on the [page dedicated to libhs](libhs).
 
-#misc# Other projects
+# Other projects
 
 The projects on this page are provided as-is, and are in **various states of completion**.
 

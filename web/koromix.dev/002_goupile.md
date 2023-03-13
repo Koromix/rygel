@@ -2,7 +2,7 @@
      Menu: Goupile
      Created: 2022-05-16 -->
 
-#overview# Overview
+# Overview
 
 Goupile is an **open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
 
@@ -10,7 +10,7 @@ It is currently in development and there are no public builds yet.
 
 Find out more on the official website: [https://goupile.fr/](https://goupile.fr/)
 
-#screenshots# Screenshots
+# Screenshots
 
 <p style="text-align: center;">
     <a href="https://goupile.fr/static/screenshots/editor.webp"><img src="https://goupile.fr/static/screenshots/editor.webp"
@@ -23,7 +23,7 @@ Find out more on the official website: [https://goupile.fr/](https://goupile.fr/
                                                                      width="180" height="90" style="border: 1px solid #eee;"/></a>
 </p>
 
-#license# License
+# License
 
 This program is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License** as published by the Free Software Foundation, either **version 3 of the License**, or (at your option) any later version.
 

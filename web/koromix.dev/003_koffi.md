@@ -2,7 +2,7 @@
      Menu: Koffi
      Created: 2022-05-16 -->
 
-#overview# Overview
+# Overview
 
 Koffi is a fast and easy-to-use C FFI module for [Node.js](https://nodejs.org/), featuring:
 
@@ -23,7 +23,7 @@ RISC-V 64          | ⬜️ *N/A*    | ✅ Yes   | ⬜️ *N/A*    | 🟨 Probab
 
 You can find more information about Koffi on the official web site: [https://koffi.dev/](https://koffi.dev)
 
-#license# License
+# License
 
 This program is free software: you can redistribute it and/or modify it under the terms of the **MIT License**.
 

@@ -2,13 +2,13 @@
      Menu: Other
      Created: 2022-05-16 -->
 
-#blikk# blikk
+# blikk
 
 blikk is an **embeddable beginner-friendly programming language** with static types, fast compilation.
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/blikk).
 
-#cnoke# CNoke
+# CNoke
 
 CNoke is a **Javascript NPM package designed to build native Node addons based on CMake**, without any dependency. It can be used as an alternative to CMake.js.
 
@@ -32,7 +32,7 @@ Once everything is in place, get started with your addon with the CMakeLists.txt
 
 You can find out more [in the NPM repository](https://www.npmjs.com/package/cnoke).
 
-#seatsh# SeatSH
+# SeatSH
 
 SeatSH is a Windows service that enables you to **launch graphical applications from an SSH connection on Windows 10**. As an example, try to start `notepad` from an SSH connection: it won't work, because this session does not have access to the active console (desktop) session.
 
@@ -44,7 +44,7 @@ It is mainly useful for automated test systems, do not install it on production 
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/seatsh).
 
-#drd# drd
+# drd
 
 The drd project strives to provide a **fully-featured and up-to-date alternative french PMSI MCO classifier**.
 
@@ -60,7 +60,7 @@ The classifier was carefully assembled from the documentation and through retro-
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/drd).
 
-#sanebb# SaneBB
+# SaneBB
 
 SaneBB is a **small and fast BBCode parser in Java**, which I made as an alternative to the horribly overengineered and [inner-platform effect](https://en.wikipedia.org/wiki/Inner-platform_effect) victim [KefirBB library](https://github.com/kefirfromperm/kefirbb).
 
@@ -68,7 +68,7 @@ It's a single Java file, the documentation is included at the top of the file.
 
 You can find it here [on GitHub](https://github.com/Koromix/libraries/blob/master/SaneBB.java).
 
-#meestic# Meestic
+# Meestic
 
 Meestic is a small command-line tool to **control the keyboard lighting on MSI Delta 15 laptops**, which may or may not support any other device.
 

@@ -2,7 +2,7 @@
      Menu: TyTools
      Created: 2017-01-13 -->
 
-#overview# Overview
+# Overview
 
 TyTools is a collection of **independent tools** and you only need one executable to use
 any of them. The Qt-based GUI tools are statically compiled to make that possible.
@@ -19,7 +19,7 @@ Download the [latest release from GitHub](https://github.com/Koromix/tytools/rel
 All the code related to these programs is under **public domain**, you can do whatever you want
 with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) more more information.
 
-#tycmd# Using tycmd
+# Using tycmd
 
 You can manage multiple devices connected simultaneously, tycmd (and the other TyTools) uniquely
 identifies each device by its position in the host USB topology. Meaning if it stays on the same USB
@@ -42,7 +42,7 @@ _714230@usb-1-2-2_ | Select board plugged in 'usb-1-2-2' and with serial number 
 You can learn about the various commands using `tycmd help`. Get specific help for them using
 `tycmd help <command>`.
 
-##tycmd_list# List devices
+## List devices
 
 `tycmd list` lists plugged Teensy devices. Here is how it looks:
 
@@ -74,7 +74,7 @@ _change_ | Something changed, maybe the board rebooted
 _miss_   | This board is missing, either it was unplugged (remove) or it is changing mode
 _remove_ | This board has been missing for some time, consider it removed
 
-##tycmd_upload# Upload firmware
+## Upload firmware
 
 Use `tycmd upload <filename.hex>` to upload a specific firmware to your device. It is checked for
 compatibility with your model before being uploaded.
@@ -82,7 +82,7 @@ compatibility with your model before being uploaded.
 By default, a reboot is triggered but you can use `--wait` to wait for the bootloader to show up,
 meaning tycmd will wait for you to press the button on your board.
 
-##tycmd_serial# Serial monitor
+## Serial monitor
 
 `tycmd monitor` opens a text connection with your Teensy. It is either done through the serial device
 (/dev/ttyACM*) or through the HID serial emulation (SEREMU) in other USB modes. tycmd uses the
@@ -97,7 +97,7 @@ the terminal.
 See `tycmd help monitor` for other options. Note that Teensy being a USB device, serial settings are
 ignored. They are provided in case your application uses them for specific purposes.
 
-##tycmd_reset# Reset and reboot
+## Reset and reboot
 
 `tycmd reset` will restart your device. Since Teensy devices (at least the ARM ones) do not provide
 a way to trigger a reset, tycmd will instead start the bootloader first and then issue a reset
@@ -106,9 +106,9 @@ without programming anything.
 You can also use `tycmd reset -b` to start the bootloader. This is the same as pushing the button on
 your Teensy.
 
-#hack# Hacking TyTools
+# Hacking TyTools
 
-##build_windows# Build on Windows
+## Build on Windows
 
 You can use MSVC (≥ 2015) or MinGW-w64. I have not tested Clang on Windows yet. The historical
 MinGW toolchain is not supported.
@@ -138,7 +138,7 @@ the _solution TyTools.sln_.
 
 To build 64-bit binaries, you should use _VS2015 x64 Native Tools Command Prompt_ instead.
 
-##build_darwin# Build on Mac OS X
+## Build on Mac OS X
 
 Install Xcode, the developer command-line tools and [CMake](http://www.cmake.org/). The native
 Clang compiler can build TyTools.
@@ -163,7 +163,7 @@ If you want to build debug binaries instead, you should specify the build type:
 
     cmake -DCMAKE_BUILD_TYPE=Debug ../..
 
-##build_linux# Build on Linux
+## Build on Linux
 
 TyTools can be built with GCC or Clang.
 

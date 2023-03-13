@@ -57,6 +57,28 @@ static const char *FileNameToPageName(const char *filename, Allocator *alloc)
     return name2;
 }
 
+static Span<const char> TextToID(Span<const char> text, Allocator *alloc)
+{
+    Span<char> id = AllocateSpan<char>(alloc, text.len + 1);
+
+    Size j = 0;
+    for (Size i = 0; i < text.len; i++) {
+        if (IsAsciiAlphaOrDigit(text[i])) {
+            id[j++] = LowerAscii(text[i]);
+        } else {
+            id[j++] = '_';
+
+            while (++i < text.len && !IsAsciiAlphaOrDigit(text[i]));
+            i--;
+        }
+    }
+
+    id.len = j;
+    id.ptr[j] = 0;
+
+    return id;
+}
+
 // XXX: Resolve page links in content
 static bool RenderPageContent(PageData *page, Allocator *alloc)
 {
@@ -93,26 +115,12 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
     renderer.header = [](buf *ob, buf *text, int level, void *udata) {
         RenderContext *ctx = (RenderContext *)udata;
 
-        // Page sections, defined by special headers such as '###intro# Introduction'
-        // where intro is the section ID
-        size_t i = 0;
-        while (i < text->size && (text->data[i] == '-' || text->data[i] == '_' ||
-                                  text->data[i] == '.' || text->data[i] == ':' ||
-                                  (text->data[i] >= 'a' && text->data[i] <= 'z') ||
-                                  (text->data[i] >= 'A' && text->data[i] <= 'Z') ||
-                                  (text->data[i] >= '0' && text->data[i] <= '9'))) {
-            i++;
-        }
-
-        if (i < text->size && text->data[i] == '#') {
+        if (level < 3) {
             PageSection sec = {};
 
-            sec.id = DuplicateString(MakeSpan(text->data, i), ctx->alloc).ptr;
-            do {
-                i++;
-            } while (i < text->size && text->data[i] == ' ');
-            sec.title = DuplicateString(MakeSpan(text->data + i, text->size - i), ctx->alloc).ptr;
             sec.level = level;
+            sec.title = DuplicateString(MakeSpan(text->data, text->size), ctx->alloc).ptr;
+            sec.id = TextToID(sec.title, ctx->alloc).ptr;
 
             // XXX: Detect duplicate sections
             ctx->page->sections.Append(sec);
@@ -122,6 +130,7 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
             bufprintf(ob, "<h%d>%.*s</h%d>", level, (int)text->size, text->data, level);
         }
     };
+
     // We use HTML comments for metadata (creation date, etc.),
     // for example '<!-- Title: foobar -->' or '<!-- Created: 2016-01-12 -->'.
     renderer.blockhtml = [](buf *ob, buf *text, void *udata) {
@@ -169,6 +178,7 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
             discount_html.blockhtml(ob, text, udata);
         }
     };
+
     // We need <span> tags around code lines for CSS line numbering
     renderer.blockcode = [](buf *ob, buf *text, void *) {
         if (ob->size) {

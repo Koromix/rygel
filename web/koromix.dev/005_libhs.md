@@ -2,7 +2,7 @@
      Menu: libhs
      Created: 2017-01-13 -->
 
-#overview# Overview
+# Overview
 
 libhs is a C library to enumerate HID and serial devices and interact with them.
 
@@ -12,7 +12,7 @@ libhs is a C library to enumerate HID and serial devices and interact with them.
 - **multiple compilers**: MSV (≥ 2015), GCC and Clang.
 - **driverless**: uses native OS-provided interfaces and does not require custom drivers.
 
-#build# Build
+# Build
 
 Just [download libhs.h from the GitHub repository](https://github.com/Koromix/libraries). This file
 provides both the interface and the implementation. To instantiate the implementation, `#define
@@ -34,18 +34,18 @@ amalgamated header file is automatically produced by CMake scripts.
 Look at [Sean Barrett's excellent stb libraries](https://github.com/nothings/stb) for the
 reasoning behind this mode of distribution.
 
-#license# License
+# License
 
 libhs is in the public domain, or the equivalent where that is not possible. You can and should
 do anything you want with it. You have no legal obligation to do anything else, although I
 appreciate attribution.
 
-#contribute# Contribute
+# Contribute
 
 You can clone the code and report bugs on the [TyTools GitHub
 repository](https://github.com/Koromix/tytools).
 
-#examples# Examples
+# Examples
 
 You can find a few complete [working examples in the GitHub
 repository](https://github.com/Koromix/tytools/tree/master/src/libhs/examples).
