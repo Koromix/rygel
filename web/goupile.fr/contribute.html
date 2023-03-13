@@ -57,7 +57,7 @@
             <p>Chaque service Goupile dispose d'un domaine (ou sous-domaine). Par exemple, <i><a href="https://demo.goupile.fr" target="_blank">demo.goupile.fr</a></i> et <i><a href="https://psy-lille.goupile.fr" target="_blank">psy-lille.goupile.fr</a></i> sont des services distincts avec des bases de données séparées et des utilisateurs différents (même si possiblement hébergés sur un même serveur).</p>
             <p>Lors de la création d'un domaine, un (ou plusieurs) administrateurs de confiance sont désignés pour en gérer les projets et les utilisateurs. Une paire de clé de chiffrement est générée pour réaliser les backups des bases de données du domaine. La clé publique est stockée sur le serveur pour créer les backups. La clé privée est confiée aux administrateurs désignés et n'est pas stockée; sa perte <b>entraîne la perte de tous les backups</b> de ce domaine.</p>
             <p><i>Les détails sur le chiffrement utilisé sont détaillés dans la section sur les <a href="#architecture">choix architecturaux</a>.</i></p>
-            <p>Ce sont les administrateurs qui peuvent créér les projets et leur affecter des utilisateurs, soit pour qu'ils conçoivent les formulaires, soit pour qu'ils y saisissent les données.</p>
+            <p>Ce sont les administrateurs qui peuvent créer les projets et leur affecter des utilisateurs, soit pour qu'ils conçoivent les formulaires, soit pour qu'ils y saisissent les données.</p>
             <h2 id="intro_users">Gestion des utilisateurs</h2>
             <div class="mini right">
                 <img src="static/screenshots/admin.webp"/>
@@ -65,7 +65,7 @@
             </div>
             <p>Chaque domaine Goupile contient une liste d'utilisateurs.</p>
             <p>Ces comptes utilisateurs sont gérés par le ou les administrateurs désignés pour ce domaine, qui peuvent les créer, les modifier et les supprimer.</p>
-            <p>Chaque utilisateur peut être affecté à un ou plusieurs projets, avec un ensemble de droits en fonction de ses préprogatives. Il existe deux ensembles de droits :</p>
+            <p>Chaque utilisateur peut être affecté à un ou plusieurs projets, avec un ensemble de droits en fonction de ses prérogatives. Il existe deux ensembles de droits :</p>
             <ul>
                 <li>Droits de développement, qui permettent de configurer un projet et ses formulaires</li>
                 <li>Droits d'accès, qui permettent d'accéder aux données</li>
@@ -267,7 +267,7 @@ bin/Paranoid/goupile -C tmp/domaine_test/goupile.ini
             <p>Les scripts Ansible fournis sont adaptés à un déploiement sécurisé sur Debian 10+. Ils peuvent théoriquement être utilisés et/ou adaptés pour d'autres systèmes mais ceci n'est pas testé régulièrement.</p><p>Ce playbook PKnet est configuré pour installer les services suivants :</p>
             <ul>
                 <li><i>Goupile</i></li>
-                <li><i>Nginx</i> : reverse proxy HTTP (avec auto-configuration Let's Encrypt optionelle)</li>
+                <li><i>Nginx</i> : reverse proxy HTTP (avec auto-configuration Let's Encrypt optionnelle)</li>
                 <li><i>Borg</i> : backups quotidiens des bases de données SQLite utilisées par Goupile</li>
                 <li><i>Prometheus et Grafana</i> : surveillance des machines</li>
             </ul>
