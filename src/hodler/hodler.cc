@@ -283,7 +283,7 @@ int RunHodler(int argc, char *argv[])
     const char *template_dir = {};
     const char *output_dir = nullptr;
     bool subdirs = false;
-    bool pretty_urls = false;
+    bool ugly_urls = false;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 <input_dir> -O <output_dir>%!0
@@ -292,7 +292,7 @@ Options:
     %!..+-T, --template_dir <dir>%!0     Set template directory
     %!..+-O, --output_dir <dir>%!0       Set output directory
 
-    %!..+-p, --pretty_urls%!0            Omit the '.html' extension from page URLs
+    %!..+-u, --ugly_urls%!0              Add '.html' extension to page URLs
         %!..+--subdirs%!0                Output HTML pages in subdirectories)", FelixTarget);
     };
 
@@ -315,8 +315,8 @@ Options:
                 template_dir = opt.current_value;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
-            } else if (opt.Test("-p", "--pretty_urls")) {
-                pretty_urls = true;
+            } else if (opt.Test("-u", "--ugly_urls")) {
+                ugly_urls = true;
             } else if (opt.Test("--subdirs")) {
                 subdirs = true;
             } else {
@@ -374,10 +374,10 @@ Options:
                 } else {
                     page.url = Fmt(&temp_alloc, "/%1", page.name).ptr;
                 }
-            } else if (pretty_urls) {
-                page.url = page.name;
-            } else {
+            } else if (ugly_urls) {
                 page.url = Fmt(&temp_alloc, "%1.html", page.name).ptr;
+            } else {
+                page.url = page.name;
             }
 
             bool valid = true;
