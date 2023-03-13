@@ -287,14 +287,14 @@ static void InitRoutes()
     RG_ASSERT(html.name);
 
     // Patch HTML
-    html.data = PatchAsset(html, &routes_alloc, [](const char *key, StreamWriter *writer) {
-        if (TestStr(key, "VERSION")) {
+    html.data = PatchAsset(html, &routes_alloc, [](Span<const char> key, StreamWriter *writer) {
+        if (key == "VERSION") {
             writer->Write(FelixVersion);
-        } else if (TestStr(key, "COMPILER")) {
+        } else if (key == "COMPILER") {
             writer->Write(FelixCompiler);
-        } else if (TestStr(key, "BASE_URL")) {
+        } else if (key == "BASE_URL") {
             writer->Write(thop_config.base_url);
-        } else if (TestStr(key, "HAS_USERS")) {
+        } else if (key == "HAS_USERS") {
             writer->Write(thop_has_casemix ? "true" : "false");
         } else {
             Print(writer, "{%1}", key);

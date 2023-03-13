@@ -7415,17 +7415,10 @@ void InitPackedMap(Span<const AssetInfo> assets)
 
 #endif
 
-// This won't win any beauty or speed contest (especially when writing
-// a compressed stream) but whatever.
-Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
-                               FunctionRef<void(const char *, StreamWriter *)> func)
+bool PatchAsset(const AssetInfo &asset, StreamWriter *writer,
+                FunctionRef<void(Span<const char>, StreamWriter *)> func)
 {
-    RG_ASSERT(alloc);
-
-    HeapArray<uint8_t> buf(alloc);
-
     StreamReader reader(asset.data, nullptr, asset.compression_type);
-    StreamWriter writer(&buf, nullptr, asset.compression_type);
 
     char c;
     while (reader.Read(1, &c) == 1) {
@@ -7441,25 +7434,41 @@ Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
 
                     if (name[name_len] == '}') {
                         name[name_len] = 0;
-                        func(name, &writer);
+
+                        Span<const char> key = MakeSpan(name, name_len);
+                        func(key, writer);
 
                         break;
                     } else if (!IsAsciiAlphaOrDigit(name[name_len]) && name[name_len] != '_') {
-                        writer.Write('{');
-                        writer.Write(name, name_len + 1);
+                        writer->Write('{');
+                        writer->Write(name, name_len + 1);
 
                         break;
                     }
                 } while (++name_len < RG_SIZE(name));
             } else {
-                writer.Write('{');
-                writer.Write(name[0]);
+                writer->Write('{');
+                writer->Write(name[0]);
             }
         } else {
-            writer.Write(c);
+            writer->Write(c);
         }
     }
     RG_ASSERT(reader.IsValid());
+
+    return writer->IsValid();
+}
+
+// This won't win any beauty or speed contest (especially when writing a compressed stream) but whatever
+Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
+                               FunctionRef<void(Span<const char>, StreamWriter *)> func)
+{
+    RG_ASSERT(alloc);
+
+    HeapArray<uint8_t> buf(alloc);
+    StreamWriter writer(&buf, nullptr, asset.compression_type);
+
+    PatchAsset(asset, &writer, func);
 
     bool success = writer.Close();
     RG_ASSERT(success);

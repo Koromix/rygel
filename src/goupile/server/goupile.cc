@@ -308,7 +308,7 @@ static void HandleFileStatic(const http_RequestInfo &, http_IO *io)
 }
 
 static const AssetInfo *RenderTemplate(const char *url, const AssetInfo &asset,
-                                       FunctionRef<void(const char *, StreamWriter *)> func)
+                                       FunctionRef<void(Span<const char>, StreamWriter *)> func)
 {
     RenderInfo *render;
     {
@@ -378,18 +378,19 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
             RG_ASSERT(asset);
 
-            const AssetInfo *render = RenderTemplate(request.url, *asset, [&](const char *key, StreamWriter *writer) {
-                if (TestStr(key, "VERSION")) {
+            const AssetInfo *render = RenderTemplate(request.url, *asset,
+                                                     [&](Span<const char> key, StreamWriter *writer) {
+                if (key == "VERSION") {
                     writer->Write(FelixVersion);
-                } else if (TestStr(key, "COMPILER")) {
+                } else if (key == "COMPILER") {
                     writer->Write(FelixCompiler);
-                } else if (TestStr(key, "TITLE")) {
+                } else if (key == "TITLE") {
                     writer->Write("Goupile Admin");
-                } else if (TestStr(key, "BASE_URL")) {
+                } else if (key == "BASE_URL") {
                     writer->Write("/admin/");
-                } else if (TestStr(key, "STATIC_URL")) {
+                } else if (key == "STATIC_URL") {
                     Print(writer, "/admin/static/%1/", shared_etag);
-                } else if (TestStr(key, "ENV_JSON")) {
+                } else if (key == "ENV_JSON") {
                     json_Writer json(writer);
                     char buf[128];
 
@@ -408,7 +409,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
                     json.EndArray();
                     json.Key("retention"); json.Int(gp_domain.config.archive_retention);
                     json.EndObject();
-                } else if (TestStr(key, "HEAD_TAGS")) {
+                } else if (key == "HEAD_TAGS") {
                     // Nothing to add
                 } else {
                     Print(writer, "{%1}", key);
@@ -589,18 +590,19 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
             char master_etag[64];
             Fmt(master_etag, "%1_%2_%3_%4", shared_etag, (const void *)asset, master->unique, fs_version);
 
-            const AssetInfo *render = RenderTemplate(master_etag, *asset, [&](const char *key, StreamWriter *writer) {
-                if (TestStr(key, "VERSION")) {
+            const AssetInfo *render = RenderTemplate(master_etag, *asset,
+                                                     [&](Span<const char> key, StreamWriter *writer) {
+                if (key == "VERSION") {
                     writer->Write(FelixVersion);
-                } else if (TestStr(key, "COMPILER")) {
+                } else if (key == "COMPILER") {
                     writer->Write(FelixCompiler);
-                } else if (TestStr(key, "TITLE")) {
+                } else if (key == "TITLE") {
                     writer->Write(master->title);
-                } else if (TestStr(key, "BASE_URL")) {
+                } else if (key == "BASE_URL") {
                     Print(writer, "/%1/", master->key);
-                } else if (TestStr(key, "STATIC_URL")) {
+                } else if (key == "STATIC_URL") {
                     Print(writer, "/%1/static/%2/", master->key, shared_etag);
-                } else if (TestStr(key, "ENV_JSON")) {
+                } else if (key == "ENV_JSON") {
                     json_Writer json(writer);
                     char buf[512];
 
@@ -620,7 +622,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                         json.Key("backup_key"); json.String(master->config.backup_key);
                     }
                     json.EndObject();
-                } else if (TestStr(key, "HEAD_TAGS")) {
+                } else if (key == "HEAD_TAGS") {
                     if (master->config.use_offline) {
                         Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", master->key);
                     }
@@ -747,12 +749,13 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
     if (TestStr(request.url, "/")) {
-        const AssetInfo *render = RenderTemplate("/", *assets_root, [&](const char *key, StreamWriter *writer) {
-            if (TestStr(key, "STATIC_URL")) {
+        const AssetInfo *render = RenderTemplate("/", *assets_root,
+                                                 [&](Span<const char> key, StreamWriter *writer) {
+            if (key == "STATIC_URL") {
                 Print(writer, "/admin/static/%1/", shared_etag);
-            } else if (TestStr(key, "VERSION")) {
+            } else if (key == "VERSION") {
                 writer->Write(FelixVersion);
-            } else if (TestStr(key, "COMPILER")) {
+            } else if (key == "COMPILER") {
                 writer->Write(FelixCompiler);
             } else {
                 Print(writer, "{%1}", key);

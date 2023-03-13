@@ -9,8 +9,6 @@ extern "C" {
 
 namespace RG {
 
-extern "C" const Span<const AssetInfo> PackedAssets;
-
 struct PageSection {
     const char *id;
     const char *title;
@@ -219,80 +217,61 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
     return true;
 }
 
-static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char *dest_filename)
+static bool RenderFullPage(const AssetInfo html, Span<const PageData> pages,
+                           Size page_idx, const char *dest_filename)
 {
     StreamWriter st(dest_filename);
 
     const PageData &page = pages[page_idx];
 
-    Print(&st, R"(<!DOCTYPE html>
-<html lang="en" class="nojs">
-    <head>
-        <base href="/%2"/>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+    bool success = PatchAsset(html, &st, [&](Span<const char> key, StreamWriter *writer) {
+        if (key == "BASE_URL") {
+            Print(writer, "<base href=\"/%1\"/>", page.url);
+        } else if (key == "TITLE") {
+            writer->Write(page.title);
+        } else if (key == "LINKS") {
+            for (Size i = 0; i < pages.len; i++) {
+                const PageData &menu_page = pages[i];
 
-        <title>%1</title>
-
-        <link rel="stylesheet" href="static/hodler.css">
-        <link rel="stylesheet" href="static/OpenSans.css">
-
-        <script type="text/javascript" src="static/hodler.js" async></script>
-    </head>
-    <body>
-        <div id="top">
-            <a id="top_deploy" href="#" onclick="toggleMenu('#top_menu'); return false;"></a>
-            <nav id="top_menu">
-                <ul>)", page.title, page.url);
-
-    for (Size i = 0; i < pages.len; i++) {
-        const PageData &menu_page = pages[i];
-
-        if (menu_page.menu) {
-            if (i == page_idx) {
-                Print(&st, "\n                    <li><a href=\"%1\" class=\"active\">%2</a></li>",
-                      menu_page.url, menu_page.menu);
-            } else {
-                Print(&st, "\n                    <li><a href=\"%1\">%2</a></li>",
-                      menu_page.url, menu_page.menu);
+                if (menu_page.menu) {
+                    if (i == page_idx) {
+                        PrintLn(writer, "<li><a href=\"%1\" class=\"active\">%2</a></li>",
+                                        menu_page.url, menu_page.menu);
+                    } else {
+                        PrintLn(writer, "<li><a href=\"%1\">%2</a></li>",
+                                        menu_page.url, menu_page.menu);
+                    }
+                }
             }
+        } else if (key == "TOC") {
+            if (page.sections.len) {
+                PrintLn(writer,
+R"(<a id="side_deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
+<nav id="side_menu">
+    <ul>)");
+
+                for (const PageSection &sec: page.sections) {
+                    PrintLn(writer, "        <li><a href=\"#%1\" class=\"lv%2\">%3</a></li>",
+                                    sec.id, sec.level, sec.title);
+                }
+
+                Print(writer,
+R"(    </ul>
+</nav>)");
+            }
+        } else if (key == "CONTENT") {
+            writer->Write(page.html);
+        } else {
+            Print(writer, "{%1}", key);
         }
-    }
+    });
 
-    Print(&st, R"(
-                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
-                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub</a></li>
-                </ul>
-            </nav>
-        </div>
-        <div id="content">)");
+    if (!success)
+        return false;
+    if (!st.Close())
+        return false;
 
-    if (page.sections.len) {
-        Print(&st, R"(
-            <a id="side_deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
-            <nav id="side_menu">
-                <ul>)");
-
-        for (const PageSection &sec: page.sections) {
-            Print(&st, "\n                    <li><a href=\"#%1\" class=\"lv%2\">%3</a></li>",
-                  sec.id, sec.level, sec.title);
-        }
-
-        Print(&st, R"(
-                </ul>
-            </nav>)");
-    }
-
-    Print(&st, R"(
-            <main>
-%1
-            </main>
-        </div>
-        <footer>Niels Martignène&nbsp;&nbsp;&nbsp;<span style="opacity: 0.6;">Koromix<span></footer>
-    </body>
-</html>)", page.html);
-
-    return st.Close();
+    return true;
 }
 
 int RunHodler(int argc, char *argv[])
@@ -418,6 +397,11 @@ Options:
         return 1;
     LogInfo("Output directory: %!..+%1%!0", output_dir);
 
+    Span<const AssetInfo> assets = GetPackedAssets();
+    const AssetInfo *template_html = std::find_if(assets.begin(), assets.end(),
+                                                  [](const AssetInfo &asset) { return TestStr(asset.name, "template.html"); });
+    RG_ASSERT(template_html != assets.end());
+
     // Output fully-formed pages
     for (Size i = 0; i < pages.len; i++) {
         const PageData &page = pages[i];
@@ -431,12 +415,15 @@ Options:
             dest_filename = Fmt(&temp_alloc, "%1%/%2.html", output_dir, page.name).ptr;
         }
 
-        if (!RenderFullPage(pages, i, dest_filename))
+        if (!RenderFullPage(*template_html, pages, i, dest_filename))
             return 1;
     }
 
     // Extract static assets
     for (const AssetInfo &asset: GetPackedAssets()) {
+        if (TestStr(asset.name, "template.html"))
+            continue;
+
         const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, asset.name).ptr;
 
         if (!EnsureDirectoryExists(dest_filename))

@@ -4610,8 +4610,10 @@ static inline const AssetInfo *FindPackedAsset(const char *name)
 
 #endif
 
+bool PatchAsset(const AssetInfo &asset, StreamWriter *writer,
+                FunctionRef<void(Span<const char>, StreamWriter *)> func);
 Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
-                               FunctionRef<void(const char *, StreamWriter *)> func);
+                               FunctionRef<void(Span<const char> key, StreamWriter *)> func);
 
 // ------------------------------------------------------------------------
 // Options
