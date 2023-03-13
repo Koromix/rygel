@@ -411,6 +411,7 @@ Options:
     LogInfo("Output directory: %!..+%1%!0", output_dir);
 
     const char *template_filename = Fmt(&temp_alloc, "%1%/page.html", template_dir).ptr;
+    const char *static_directory = Fmt(&temp_alloc, "%1%/static", template_dir).ptr;
 
     HeapArray<uint8_t> template_html;
     if (!ReadFile(template_filename, Mebibytes(1), &template_html))
@@ -433,14 +434,13 @@ Options:
             return 1;
     }
 
-    // List static assets
-    HeapArray<const char *> template_files;
-    if (!EnumerateFiles(template_dir, nullptr, 3, 1024, &temp_alloc, &template_files))
-        return 1;
-
     // Copy template assets
-    {
-        Size prefix_len = strlen(template_dir);
+    if (TestFile(static_directory, FileType::Directory)) {
+        HeapArray<const char *> template_files;
+        if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &template_files))
+            return 1;
+
+        Size prefix_len = strlen(static_directory);
 
         for (const char *src_filename: template_files) {
             const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
