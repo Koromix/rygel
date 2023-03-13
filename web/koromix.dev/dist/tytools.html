@@ -7,10 +7,10 @@
 
         <title>koromix.dev — TyTools</title>
 
-        <link rel="stylesheet" href="static/webler.css">
+        <link rel="stylesheet" href="static/hodler.css">
         <link rel="stylesheet" href="static/OpenSans.css">
 
-        <script type="text/javascript" src="static/webler.js" async></script>
+        <script type="text/javascript" src="static/hodler.js" async></script>
     </head>
     <body>
         <div id="top">
@@ -33,15 +33,15 @@
             <nav id="side_menu">
                 <ul>
                     <li><a href="#overview" class="lv1">Overview</a></li>
-                    <li><a href="#tycmd" class="lv1">Using tycmd</a></li>
-                    <li><a href="#tycmd_list" class="lv2">List devices</a></li>
-                    <li><a href="#tycmd_upload" class="lv2">Upload firmware</a></li>
-                    <li><a href="#tycmd_serial" class="lv2">Serial monitor</a></li>
-                    <li><a href="#tycmd_reset" class="lv2">Reset and reboot</a></li>
-                    <li><a href="#hack" class="lv1">Hacking TyTools</a></li>
-                    <li><a href="#build_windows" class="lv2">Build on Windows</a></li>
-                    <li><a href="#build_darwin" class="lv2">Build on Mac OS X</a></li>
-                    <li><a href="#build_linux" class="lv2">Build on Linux</a></li>
+                    <li><a href="#using_tycmd" class="lv1">Using tycmd</a></li>
+                    <li><a href="#list_devices" class="lv2">List devices</a></li>
+                    <li><a href="#upload_firmware" class="lv2">Upload firmware</a></li>
+                    <li><a href="#serial_monitor" class="lv2">Serial monitor</a></li>
+                    <li><a href="#reset_and_reboot" class="lv2">Reset and reboot</a></li>
+                    <li><a href="#hacking_tytools" class="lv1">Hacking TyTools</a></li>
+                    <li><a href="#build_on_windows" class="lv2">Build on Windows</a></li>
+                    <li><a href="#build_on_mac_os_x" class="lv2">Build on Mac OS X</a></li>
+                    <li><a href="#build_on_linux" class="lv2">Build on Linux</a></li>
                 </ul>
             </nav>
             <main>
@@ -81,7 +81,7 @@ any of them. The Qt-based GUI tools are statically compiled to make that possibl
 
 <p>All the code related to these programs is under <strong>public domain</strong>, you can do whatever you want
 with it. See the LICENSE file or <a href="https://unlicense.org/">unlicense.org</a> more more information.</p>
-<h1 id="tycmd">Using tycmd</h1>
+<h1 id="using_tycmd">Using tycmd</h1>
 <p>You can manage multiple devices connected simultaneously, tycmd (and the other TyTools) uniquely
 identifies each device by its position in the host USB topology. Meaning if it stays on the same USB
 port, it is handled as the same device. That's necessary because across reboots and resets, Teensies
@@ -125,7 +125,7 @@ Any of them can be omitted. See the examples in the table below.</p>
 
 <p>You can learn about the various commands using <code>tycmd help</code>. Get specific help for them using
 <code>tycmd help &lt;command&gt;</code>.</p>
-<h2 id="tycmd_list">List devices</h2>
+<h2 id="list_devices">List devices</h2>
 <p><code>tycmd list</code> lists plugged Teensy devices. Here is how it looks:</p>
 
 <pre><span class="line">add 34130@usb-1-2 Teensy 3.1</span>
@@ -177,13 +177,13 @@ Any of them can be omitted. See the examples in the table below.</p>
   </tr>
 </tbody>
 </table>
-<h2 id="tycmd_upload">Upload firmware</h2>
+<h2 id="upload_firmware">Upload firmware</h2>
 <p>Use <code>tycmd upload &lt;filename.hex&gt;</code> to upload a specific firmware to your device. It is checked for
 compatibility with your model before being uploaded.</p>
 
 <p>By default, a reboot is triggered but you can use <code>--wait</code> to wait for the bootloader to show up,
 meaning tycmd will wait for you to press the button on your board.</p>
-<h2 id="tycmd_serial">Serial monitor</h2>
+<h2 id="serial_monitor">Serial monitor</h2>
 <p><code>tycmd monitor</code> opens a text connection with your Teensy. It is either done through the serial device
 (/dev/ttyACM*) or through the HID serial emulation (SEREMU) in other USB modes. tycmd uses the
 correct mode automatically.</p>
@@ -196,14 +196,14 @@ the terminal.</p>
 
 <p>See <code>tycmd help monitor</code> for other options. Note that Teensy being a USB device, serial settings are
 ignored. They are provided in case your application uses them for specific purposes.</p>
-<h2 id="tycmd_reset">Reset and reboot</h2>
+<h2 id="reset_and_reboot">Reset and reboot</h2>
 <p><code>tycmd reset</code> will restart your device. Since Teensy devices (at least the ARM ones) do not provide
 a way to trigger a reset, tycmd will instead start the bootloader first and then issue a reset
 without programming anything.</p>
 
 <p>You can also use <code>tycmd reset -b</code> to start the bootloader. This is the same as pushing the button on
 your Teensy.</p>
-<h1 id="hack">Hacking TyTools</h1><h2 id="build_windows">Build on Windows</h2>
+<h1 id="hacking_tytools">Hacking TyTools</h1><h2 id="build_on_windows">Build on Windows</h2>
 <p>You can use MSVC (≥ 2015) or MinGW-w64. I have not tested Clang on Windows yet. The historical
 MinGW toolchain is not supported.</p>
 
@@ -234,7 +234,7 @@ navigate to the project directory and execute CMake:</p>
 the <em>solution TyTools.sln</em>.</p>
 
 <p>To build 64-bit binaries, you should use <em>VS2015 x64 Native Tools Command Prompt</em> instead.</p>
-<h2 id="build_darwin">Build on Mac OS X</h2>
+<h2 id="build_on_mac_os_x">Build on Mac OS X</h2>
 <p>Install Xcode, the developer command-line tools and <a href="http://www.cmake.org/">CMake</a>. The native
 Clang compiler can build TyTools.</p>
 
@@ -261,7 +261,7 @@ project directory:</p>
 
 <pre><span class="line">cmake -DCMAKE_BUILD_TYPE=Debug ../..</span>
 </pre>
-<h2 id="build_linux">Build on Linux</h2>
+<h2 id="build_on_linux">Build on Linux</h2>
 <p>TyTools can be built with GCC or Clang.</p>
 <h3>Prerequisites</h3>
 <p>To install the dependencies on Debian or Ubuntu execute:</p>
