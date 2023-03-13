@@ -217,14 +217,14 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
     return true;
 }
 
-static bool RenderFullPage(const AssetInfo html, Span<const PageData> pages,
+static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
                            Size page_idx, const char *dest_filename)
 {
     StreamWriter st(dest_filename);
 
     const PageData &page = pages[page_idx];
 
-    bool success = PatchAsset(html, &st, [&](Span<const char> key, StreamWriter *writer) {
+    bool success = PatchFile(html, &st, [&](Span<const char> key, StreamWriter *writer) {
         if (key == "BASE_URL") {
             Print(writer, "<base href=\"/%1\"/>", page.url);
         } else if (key == "TITLE") {
@@ -280,6 +280,7 @@ int RunHodler(int argc, char *argv[])
 
     // Options
     const char *input_dir = nullptr;
+    const char *template_dir = {};
     const char *output_dir = nullptr;
     bool subdirs = false;
     bool pretty_urls = false;
@@ -288,7 +289,8 @@ int RunHodler(int argc, char *argv[])
         PrintLn(fp, R"(Usage: %!..+%1 <input_dir> -O <output_dir>%!0
 
 Options:
-    %!..+-O, --output <directory>%!0     Set output directory
+    %!..+-T, --template_dir <dir>%!0     Set template directory
+    %!..+-O, --output_dir <dir>%!0       Set output directory
 
     %!..+-p, --pretty_urls%!0            Omit the '.html' extension from page URLs
         %!..+--subdirs%!0                Output HTML pages in subdirectories)", FelixTarget);
@@ -309,7 +311,9 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-O", "--output", OptionType::Value)) {
+            } else if (opt.Test("-T", "--template_dir", OptionType::Value)) {
+                template_dir = opt.current_value;
+            } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
             } else if (opt.Test("-p", "--pretty_urls")) {
                 pretty_urls = true;
@@ -322,16 +326,25 @@ Options:
         }
 
         input_dir = opt.ConsumeNonOption();
+    }
 
+    // Check arguments
+    {
         bool valid = true;
+
         if (!input_dir) {
             LogError("Missing input directory");
+            valid = false;
+        }
+        if (!template_dir) {
+            LogError("Missing template directory");
             valid = false;
         }
         if (!output_dir) {
             LogError("Missing output directory");
             valid = false;
         }
+
         if (!valid)
             return 1;
     }
@@ -397,10 +410,11 @@ Options:
         return 1;
     LogInfo("Output directory: %!..+%1%!0", output_dir);
 
-    Span<const AssetInfo> assets = GetPackedAssets();
-    const AssetInfo *template_html = std::find_if(assets.begin(), assets.end(),
-                                                  [](const AssetInfo &asset) { return TestStr(asset.name, "template.html"); });
-    RG_ASSERT(template_html != assets.end());
+    const char *template_filename = Fmt(&temp_alloc, "%1%/page.html", template_dir).ptr;
+
+    HeapArray<uint8_t> template_html;
+    if (!ReadFile(template_filename, Mebibytes(1), &template_html))
+        return 1;
 
     // Output fully-formed pages
     for (Size i = 0; i < pages.len; i++) {
@@ -415,26 +429,37 @@ Options:
             dest_filename = Fmt(&temp_alloc, "%1%/%2.html", output_dir, page.name).ptr;
         }
 
-        if (!RenderFullPage(*template_html, pages, i, dest_filename))
+        if (!RenderFullPage(template_html, pages, i, dest_filename))
             return 1;
     }
 
-    // Extract static assets
-    for (const AssetInfo &asset: GetPackedAssets()) {
-        if (TestStr(asset.name, "template.html"))
-            continue;
+    // List static assets
+    HeapArray<const char *> template_files;
+    if (!EnumerateFiles(template_dir, nullptr, 3, 1024, &temp_alloc, &template_files))
+        return 1;
 
-        const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, asset.name).ptr;
+    // Copy template assets
+    {
+        Size prefix_len = strlen(template_dir);
 
-        if (!EnsureDirectoryExists(dest_filename))
-            return 1;
+        for (const char *src_filename: template_files) {
+            const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
 
-        StreamReader reader(asset.data, nullptr, asset.compression_type);
-        StreamWriter writer(dest_filename);
-        if (!SpliceStream(&reader, Megabytes(4), &writer))
-            return 1;
-        if (!writer.Close())
-            return 1;
+            if (TestStr(basename, "page.html"))
+                continue;
+
+            const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
+
+            if (!EnsureDirectoryExists(dest_filename))
+                return 1;
+
+            StreamReader reader(src_filename);
+            StreamWriter writer(dest_filename);
+            if (!SpliceStream(&reader, Megabytes(4), &writer))
+                return 1;
+            if (!writer.Close())
+                return 1;
+        }
     }
 
     LogInfo("Done!");

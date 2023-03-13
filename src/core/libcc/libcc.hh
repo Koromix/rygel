@@ -4610,10 +4610,17 @@ static inline const AssetInfo *FindPackedAsset(const char *name)
 
 #endif
 
-bool PatchAsset(const AssetInfo &asset, StreamWriter *writer,
-                FunctionRef<void(Span<const char>, StreamWriter *)> func);
-Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
-                               FunctionRef<void(Span<const char> key, StreamWriter *)> func);
+// These functions won't win any beauty or speed contest but whatever
+bool PatchFile(StreamReader *reader, StreamWriter *writer,
+               FunctionRef<void(Span<const char>, StreamWriter *)> func);
+bool PatchFile(Span<const uint8_t> data, StreamWriter *writer,
+               FunctionRef<void(Span<const char>, StreamWriter *)> func);
+bool PatchFile(const AssetInfo &asset, StreamWriter *writer,
+               FunctionRef<void(Span<const char>, StreamWriter *)> func);
+Span<const uint8_t> PatchFile(Span<const uint8_t> data, Allocator *alloc,
+                              FunctionRef<void(Span<const char> key, StreamWriter *)> func);
+Span<const uint8_t> PatchFile(const AssetInfo &asset, Allocator *alloc,
+                              FunctionRef<void(Span<const char> key, StreamWriter *)> func);
 
 // ------------------------------------------------------------------------
 // Options

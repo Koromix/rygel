@@ -326,7 +326,7 @@ static const AssetInfo *RenderTemplate(const char *url, const AssetInfo &asset,
 
             render->url = DuplicateString(url, alloc).ptr;
             render->asset = asset;
-            render->asset.data = PatchAsset(asset, alloc, func);
+            render->asset.data = PatchFile(asset, alloc, func);
             render->time = GetMonotonicTime();
 
             render_map.Set(render);

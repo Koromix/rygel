@@ -287,7 +287,7 @@ static void InitRoutes()
     RG_ASSERT(html.name);
 
     // Patch HTML
-    html.data = PatchAsset(html, &routes_alloc, [](Span<const char> key, StreamWriter *writer) {
+    html.data = PatchFile(html, &routes_alloc, [](Span<const char> key, StreamWriter *writer) {
         if (key == "VERSION") {
             writer->Write(FelixVersion);
         } else if (key == "COMPILER") {
