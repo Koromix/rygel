@@ -290,6 +290,7 @@ int RunHodler(int argc, char *argv[])
 
 Options:
     %!..+-T, --template_dir <dir>%!0     Set template directory
+
     %!..+-O, --output_dir <dir>%!0       Set output directory
 
     %!..+-u, --ugly_urls%!0              Add '.html' extension to page URLs
@@ -336,10 +337,6 @@ Options:
             LogError("Missing input directory");
             valid = false;
         }
-        if (!template_dir) {
-            LogError("Missing template directory");
-            valid = false;
-        }
         if (!output_dir) {
             LogError("Missing output directory");
             valid = false;
@@ -347,6 +344,17 @@ Options:
 
         if (!valid)
             return 1;
+    }
+
+    if (!template_dir) {
+        const char *directory = Fmt(&temp_alloc, "%1%/template", input_dir).ptr;
+
+        if (!TestFile(directory, FileType::Directory)) {
+            LogError("Missing template directory");
+            return 1;
+        }
+
+        template_dir = directory;
     }
 
     // List input files
@@ -408,6 +416,7 @@ Options:
     // Output directory
     if (!MakeDirectory(output_dir, false))
         return 1;
+    LogInfo("Template: %!..+%1%!0", template_dir);
     LogInfo("Output directory: %!..+%1%!0", output_dir);
 
     const char *template_filename = Fmt(&temp_alloc, "%1%/page.html", template_dir).ptr;
