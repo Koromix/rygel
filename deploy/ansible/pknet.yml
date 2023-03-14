@@ -43,3 +43,8 @@
       when: 'thop_tables is defined'
       tags:
         - thop
+    - name: napka
+      when: 'napka_name is defined'
+      tags:
+        - napka
+

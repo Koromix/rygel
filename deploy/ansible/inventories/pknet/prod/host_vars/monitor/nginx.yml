@@ -192,3 +192,32 @@ nginx_domains:
               expires 1d;
           }
       }
+
+  - name: carto.cn2r.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          proxy_pass http://127.0.0.1:9977/cn2r/;
+      }
+
+      # Some stuff still lives on the old server
+      location /R/ {
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+          proxy_pass https://51.210.176.2;
+      }
+
+  - name: carto.demheter.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          proxy_pass http://127.0.0.1:9977/demheter/;
+      }
+
+  - name: carto.koromix.dev
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          proxy_pass http://127.0.0.1:9977/;
+      }

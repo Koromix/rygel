@@ -127,9 +127,7 @@ nginx_domains:
           rewrite ^([^.]*[^/])$ $1/ permanent;
       }
       location /annuaire/ {
-          proxy_http_version 1.1;
-          proxy_set_header Host koromix.dev;
-          proxy_pass https://51.210.176.2/carto_2nps/;
+          proxy_pass https://carto.koromix.dev/3114/;
       }
     ssl_certbot_email: niels.martignene@protonmail.com
 
