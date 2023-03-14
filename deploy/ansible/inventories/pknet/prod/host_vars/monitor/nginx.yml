@@ -48,7 +48,12 @@ nginx_domains:
           try_files $uri $uri/ =404;
 
           root /opt/static/live/goupile.fr/www;
+
+          location /demo/ {
+              error_page 404 /demo/index.html;
+          }
       }
+
       location /files/ {
           alias /opt/static/live/goupile.fr/files/;
 
@@ -65,38 +70,6 @@ nginx_domains:
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
           proxy_pass http://127.0.0.1:9200;
-      }
-
-      # Some stuff still lives on the old server
-      location /demo/ {
-          proxy_set_header Host $host;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-          proxy_pass https://51.210.176.2;
-      }
-      location /acuteflow/ {
-          proxy_pass https://anesth-lille.goupile.fr;
-      }
-
-      location = /r/dreval/video {
-          return 302 https://attendee.gotowebinar.com/register/725153627620328206;
-      }
-      location = /r/dreval/interv {
-          return 302 https://inter.goupile.fr/dreval/main/intro?id=5${request_id};
-      }
-      location = /r/dreval/temoin {
-          return 302 https://inter.goupile.fr/dreval/main/intro?id=7${request_id};
-      }
-      location = /r/dreval/t2 {
-          types {}
-          default_type text/html;
-          alias /srv/dreval_t2.html;
-      }
-      location = /r/dreval/t2plus {
-          return 302 https://inter.goupile.fr/dreval/main/intro2?id=x${request_id};
-      }
-      location = /r/dreval/participation {
-          return 302 https://inter.goupile.fr/dreva1/files/participation.html;
       }
   - name: www.goupile.fr
     ssl_certbot_email: niels.martignene@protonmail.com
@@ -131,6 +104,7 @@ nginx_domains:
 
           root /opt/static/live/koromix.dev/www;
       }
+
       location /files/ {
           alias /opt/static/live/koromix.dev/files/;
 
@@ -143,14 +117,12 @@ nginx_domains:
           alias /opt/static/live/koromix.dev/test/;
       }
 
-      location /thop/ {
-          rewrite ^/thop/(.*)$ https://thop.koromix.dev/$1 permanent;
+      # Some stuff still lives on the old server
+      location /R/ {
+          proxy_pass http://192.168.196.250;
       }
       location /procemot/ {
-          proxy_set_header Host $host;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-          proxy_pass https://51.210.176.2;
+          proxy_pass http://192.168.196.250;
       }
   - name: www.koromix.dev
     ssl_certbot_email: niels.martignene@protonmail.com
@@ -202,10 +174,7 @@ nginx_domains:
 
       # Some stuff still lives on the old server
       location /R/ {
-          proxy_set_header Host $host;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-          proxy_pass https://51.210.176.2;
+          proxy_pass http://192.168.196.250;
       }
 
   - name: carto.demheter.fr
