@@ -122,6 +122,7 @@ nginx_domains:
           proxy_pass http://192.168.196.250;
       }
       location /procemot/ {
+          client_max_body_size 256M;
           proxy_pass http://192.168.196.250;
       }
   - name: www.koromix.dev
