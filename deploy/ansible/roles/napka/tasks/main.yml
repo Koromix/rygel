@@ -112,8 +112,10 @@
 
 - name: Install Napka dependencies
   command:
-    cmd: 'npm install'
+    cmd: 'npm install --no-audit'
     chdir: '{{ napka_root_path }}/builds/{{ napka_name }}'
+  register: npm_install
+  changed_when: '"up to date" not in npm_install.stdout'
   become: yes
   become_user: napka
 
