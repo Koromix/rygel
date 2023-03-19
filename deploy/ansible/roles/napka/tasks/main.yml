@@ -24,9 +24,9 @@
     state: present
   become: yes
 
-- name: Configure Node 14.x repository
+- name: Configure Node 16.x repository
   apt_repository:
-    repo: 'deb https://deb.nodesource.com/node_14.x {{ ansible_distribution_release }} main'
+    repo: 'deb https://deb.nodesource.com/node_16.x {{ ansible_distribution_release }} main'
     state: present
   become: yes
 
