@@ -12,13 +12,15 @@
 *              raylib can load .iqm animations.
 *     - VOX  > Binary file format. MagikaVoxel mesh format:
 *              https://github.com/ephtracy/voxel-model/blob/master/MagicaVoxel-file-format-vox.txt
+*     - M3D  > Binary file format. Model 3D format:
+*              https://bztsrc.gitlab.io/model3d
 *
 *   Example originally created with raylib 2.0, last time updated with raylib 4.2
 *
 *   Example licensed under an unmodified zlib/libpng license, which is an OSI-certified,
 *   BSD-like license that allows static linking with closed source software
 *
-*   Copyright (c) 2014-2022 Ramon Santamaria (@raysan5)
+*   Copyright (c) 2014-2023 Ramon Santamaria (@raysan5)
 *
 ********************************************************************************************/
 
@@ -55,9 +57,9 @@ int main(void)
     // NOTE: bounds are calculated from the original size of the model,
     // if model is scaled on drawing, bounds must be also scaled
 
-    SetCameraMode(camera, CAMERA_FREE);     // Set a free camera mode
-
     bool selected = false;          // Selected object flag
+
+    DisableCursor();                // Limit cursor to relative movement inside the window
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -67,7 +69,7 @@ int main(void)
     {
         // Update
         //----------------------------------------------------------------------------------
-        UpdateCamera(&camera);
+        UpdateCamera(&camera, CAMERA_FIRST_PERSON);
 
         // Load new models/textures on drag&drop
         if (IsFileDropped())
@@ -80,7 +82,8 @@ int main(void)
                     IsFileExtension(droppedFiles.paths[0], ".gltf") ||
                     IsFileExtension(droppedFiles.paths[0], ".glb") ||
                     IsFileExtension(droppedFiles.paths[0], ".vox") ||
-                    IsFileExtension(droppedFiles.paths[0], ".iqm"))       // Model file formats supported
+                    IsFileExtension(droppedFiles.paths[0], ".iqm") ||
+                    IsFileExtension(droppedFiles.paths[0], ".m3d"))       // Model file formats supported
                 {
                     UnloadModel(model);                         // Unload previous model
                     model = LoadModel(droppedFiles.paths[0]);   // Load new model

@@ -1,0 +1,12 @@
+diff --git a/vendor/raylib/src/rglfw.c b/vendor/raylib/src/rglfw.c
+index 794e0d2e4..59f5ad2f8 100644
+--- a/vendor/raylib/src/rglfw.c
++++ b/vendor/raylib/src/rglfw.c
+@@ -108,6 +108,7 @@
+     #include "external/glfw/src/posix_module.c"
+     #include "external/glfw/src/posix_thread.c"
+     #include "external/glfw/src/posix_time.c"
++    #include "external/glfw/src/posix_poll.c"
+     #include "external/glfw/src/null_joystick.c"
+     #include "external/glfw/src/xkb_unicode.c"
+ 
