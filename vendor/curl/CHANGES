@@ -6,6 +6,25 @@
 
                                   Changelog
 
+Version 8.0.1 (20 Mar 2023)
+
+Daniel Stenberg (20 Mar 2023)
+
+- RELEASE-NOTES: synced
+
+  curl 8.0.1
+
+- Revert "multi: remove PENDING + MSGSENT handles from the main linked list"
+
+  This reverts commit f6d6f3ce01e377932f1ce7c24ee34d45a36950b8.
+
+  The commits caused issues in the 8.0.0 release. Needs a retake.
+
+  Reported-by: Kamil Dudka
+  Closes #10795
+
+- include/curl/curlver.h: bump to 8.0.1
+
 Version 8.0.0 (20 Mar 2023)
 
 Daniel Stenberg (20 Mar 2023)
@@ -9866,56 +9885,3 @@ Daniel Stenberg (8 Sep 2022)
 - RELEASE-NOTES: synced
 
   And bump to 7.86.0 for the pending next release
-
-Michael Heimpold (7 Sep 2022)
-
-- ftp: ignore a 550 response to MDTM
-
-  The 550 is overused as a return code for multiple error case, e.g.
-  file not found and/or insufficient permissions to access the file.
-
-  So we cannot fail hard in this case.
-
-  Adjust test 511 since we now fail later.
-  Add new test 3027 which check that when MDTM failed, but the file could
-  actually be retrieved, that in this case no filetime is provided.
-
-  Reported-by: Michael Heimpold
-  Fixes #9357
-  Closes #9387
-
-Daniel Stenberg (7 Sep 2022)
-
-- urlapi: leaner with fewer allocs
-
-  Slightly faster with more robust code. Uses fewer and smaller mallocs.
-
-  - remove two fields from the URL handle struct
-  - reduce copies and allocs
-  - use dynbuf buffers more instead of custom malloc + copies
-  - uses dynbuf to build the host name in reduces serial alloc+free within
-    the same function.
-  - move dedotdotify into urlapi.c and make it static, not strdup the input
-    and optimize it by checking for . and / before using strncmp
-  - remove a few strlen() calls
-  - add Curl_dyn_setlen() that can "trim" an existing dynbuf
-
-  Closes #9408
-
-Jay Satiro (7 Sep 2022)
-
-- setup-win32: no longer define UNICODE/_UNICODE implicitly
-
-  - If UNICODE or _UNICODE is defined but the other isn't then error
-    instead of implicitly defining it.
-
-  As Marcel pointed out it is too late at this point to make such a define
-  because Windows headers may already be included, so likely it never
-  worked. We never noticed because build systems that can make Windows
-  Unicode builds always define both. If one is defined but not the other
-  then something went wrong during the build configuration.
-
-  Bug: https://github.com/curl/curl/pull/9375#discussion_r956545272
-  Reported-by: Marcel Raad
-
-  Closes https://github.com/curl/curl/pull/9384
