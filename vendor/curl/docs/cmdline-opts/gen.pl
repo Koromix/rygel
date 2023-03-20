@@ -51,6 +51,7 @@ use POSIX qw(strftime);
 my $date = strftime "%B %d %Y", localtime;
 my $year = strftime "%Y", localtime;
 my $version = "unknown";
+my $globals;
 
 open(INC, "<../../include/curl/curlver.h");
 while(<INC>) {
@@ -211,6 +212,7 @@ sub single {
     my $magic; # cmdline special option
     my $line;
     my $multi;
+    my $scope;
     my $experimental;
     while(<F>) {
         $line++;
@@ -252,6 +254,9 @@ sub single {
         }
         elsif(/^Multi: *(.*)/i) {
             $multi=$1;
+        }
+        elsif(/^Scope: *(.*)/i) {
+            $scope=$1;
         }
         elsif(/^Experimental: yes/i) {
             $experimental=1;
@@ -347,6 +352,16 @@ sub single {
     printdesc(@desc);
     undef @desc;
 
+    if($scope) {
+        if($scope eq "global") {
+            print "\nThis option is global and does not need to be specified for each use of --next.\n";
+        }
+        else {
+            print STDERR "$f:$line:1:ERROR: unrecognized scope: '$scope'\n";
+            return 2;
+        }
+    }
+
     my @extra;
     if($multi eq "single") {
         push @extra, "\nIf --$long is provided several times, the last set ".
@@ -406,6 +421,7 @@ sub single {
         }
         push @foot, seealso($standalone, $mstr);
     }
+
     if($requires) {
         my $l = manpageify($long);
         push @foot, "$l requires that the underlying libcurl".
@@ -505,6 +521,7 @@ sub header {
     while(<F>) {
         s/%DATE/$date/g;
         s/%VERSION/$version/g;
+        s/%GLOBALS/$globals/g;
         push @d, $_;
     }
     close(F);
@@ -520,7 +537,7 @@ sub listhelp {
  *                            | (__| |_| |  _ <| |___
  *                             \\___|\\___/|_| \\_\\_____|
  *
- * Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) Daniel Stenberg, <daniel\@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -614,6 +631,36 @@ sub listcats {
     }
 }
 
+sub listglobals {
+    my (@files) = @_;
+    my @globalopts;
+
+    # Find all global options and output them
+    foreach my $f (sort @files) {
+        open(F, "<:crlf", "$f") ||
+            next;
+        my $long;
+        while(<F>) {
+            if(/^Long: *(.*)/i) {
+                $long=$1;
+            }
+            elsif(/^Scope: global/i) {
+                push @globalopts, $long;
+                last;
+            }
+            elsif(/^---/) {
+                last;
+            }
+        }
+        close(F);
+    }
+    return $ret if($ret);
+    for my $e (0 .. $#globalopts) {
+        $globals .= sprintf "%s--%s",  $e?($globalopts[$e+1] ? ", " : " and "):"",
+            $globalopts[$e],;
+    }
+}
+
 sub mainpage {
     my (@files) = @_;
     my $ret;
@@ -654,6 +701,7 @@ sub showprotocols {
 sub getargs {
     my ($f, @s) = @_;
     if($f eq "mainpage") {
+        listglobals(@s);
         mainpage(@s);
         return;
     }

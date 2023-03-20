@@ -1,9 +1,9 @@
 diff --git b/vendor/curl/lib/config-freebsd.h a/vendor/curl/lib/config-freebsd.h
 new file mode 100644
-index 000000000..29a2e3495
+index 000000000..21b5e1184
 --- /dev/null
 +++ a/vendor/curl/lib/config-freebsd.h
-@@ -0,0 +1,1071 @@
+@@ -0,0 +1,1074 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -144,6 +144,9 @@ index 000000000..29a2e3495
 +
 +/* Define to 1 if you have the alarm function. */
 +#define HAVE_ALARM 1
++
++/* Define to 1 if you have the `arc4random' function. */
++#define HAVE_ARC4RANDOM 1
 +
 +/* Define to 1 if you have the <alloca.h> header file. */
 +/* #undef HAVE_ALLOCA_H */
@@ -1077,10 +1080,10 @@ index 000000000..29a2e3495
 +/* #undef ssize_t */
 diff --git b/vendor/curl/lib/config-linux.h a/vendor/curl/lib/config-linux.h
 new file mode 100644
-index 000000000..5f5cf907a
+index 000000000..d412d9d6c
 --- /dev/null
 +++ a/vendor/curl/lib/config-linux.h
-@@ -0,0 +1,1035 @@
+@@ -0,0 +1,1038 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -1211,6 +1214,9 @@ index 000000000..5f5cf907a
 +
 +/* Define to 1 if you have the alarm function. */
 +#define HAVE_ALARM 1
++
++/* Define to 1 if you have the `arc4random' function. */
++/* #undef HAVE_ARC4RANDOM */
 +
 +/* Define to 1 if you have the <alloca.h> header file. */
 +#define HAVE_ALLOCA_H 1
@@ -2118,10 +2124,10 @@ index 000000000..5f5cf907a
 +/* #undef ssize_t */
 diff --git b/vendor/curl/lib/config-macos.h a/vendor/curl/lib/config-macos.h
 new file mode 100644
-index 000000000..f2967040b
+index 000000000..07765a704
 --- /dev/null
 +++ a/vendor/curl/lib/config-macos.h
-@@ -0,0 +1,1035 @@
+@@ -0,0 +1,1038 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -2252,6 +2258,9 @@ index 000000000..f2967040b
 +
 +/* Define to 1 if you have the alarm function. */
 +#define HAVE_ALARM 1
++
++/* Define to 1 if you have the `arc4random' function. */
++#define HAVE_ARC4RANDOM 1
 +
 +/* Define to 1 if you have the <alloca.h> header file. */
 +#define HAVE_ALLOCA_H 1
@@ -3159,10 +3168,10 @@ index 000000000..f2967040b
 +/* #undef ssize_t */
 diff --git b/vendor/curl/lib/config-openbsd.h a/vendor/curl/lib/config-openbsd.h
 new file mode 100644
-index 000000000..2af645927
+index 000000000..6e87eb53a
 --- /dev/null
 +++ a/vendor/curl/lib/config-openbsd.h
-@@ -0,0 +1,1077 @@
+@@ -0,0 +1,1080 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -3303,6 +3312,9 @@ index 000000000..2af645927
 +
 +/* Define to 1 if you have the alarm function. */
 +#define HAVE_ALARM 1
++
++/* Define to 1 if you have the `arc4random' function. */
++#define HAVE_ARC4RANDOM 1
 +
 +/* Define to 1 if you have the <alloca.h> header file. */
 +/* #undef HAVE_ALLOCA_H */
@@ -4241,7 +4253,7 @@ index 000000000..2af645927
 +/* the signed version of size_t */
 +/* #undef ssize_t */
 diff --git b/vendor/curl/lib/curl_setup.h a/vendor/curl/lib/curl_setup.h
-index 434b86c34..728bd5e3f 100644
+index 76fccb81d..54d7551c0 100644
 --- b/vendor/curl/lib/curl_setup.h
 +++ a/vendor/curl/lib/curl_setup.h
 @@ -92,6 +92,22 @@

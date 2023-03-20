@@ -368,12 +368,12 @@ AC_SUBST(APACHECTL)
 AC_SUBST(APXS)
 
 dnl the nghttpx we might use in httpd testing
-if test "x$TEST_NGHTTPX" != "x"; then
+if test "x$TEST_NGHTTPX" != "x" -a "x$TEST_NGHTTPX" != "xnghttpx"; then
   HTTPD_NGHTTPX="$TEST_NGHTTPX"
 else
-  AC_PATH_PROG([HTTPD_NGHTTPX], [nghttpx])
+  AC_PATH_PROG([HTTPD_NGHTTPX], [nghttpx], [],
+    [$PATH:/usr/bin:/usr/local/bin])
 fi
-    AC_PATH_PROG([APXS], [apxs])
 AC_SUBST(HTTPD_NGHTTPX)
 
 dnl the Caddy server we might use in testing
@@ -612,12 +612,25 @@ case $host in
       ]])
     ],[
       curl_mingw_original=yes
+      curl_mingw_die=yes
       AC_MSG_RESULT([yes])
     ],[
       AC_MSG_RESULT([no])
     ])
     ;;
 esac
+
+
+AC_ARG_WITH(mingw1-deprecated,dnl
+AS_HELP_STRING([--with-mingw1-deprecated],[confirm you realize support for mingw v1 is dying]),
+  if test X"$withval" != Xno; then
+    curl_mingw_die=
+  fi
+)
+
+if test -n "$curl_mingw_die"; then
+  AC_MSG_ERROR([support for mingw v1 is going away, enable temporarily with --with-mingw1-deprecated])
+fi
 
 dnl **********************************************************************
 dnl Compilation based checks should not be done before this point.
@@ -3472,17 +3485,8 @@ AC_CHECK_TYPE(long long,
    longlong="yes"
 )
 
-
 if test ${ac_cv_sizeof_curl_off_t} -lt 8; then
-  AC_ARG_WITH(n64-deprecated,dnl
-AS_HELP_STRING([--with-n64-deprecated],[confirm you realize support for systems without 64 bit data types is going away]),
-  if test X"$withval" != Xno; then
-    OPT_N64_AWARE=$withval
-  fi
-)
-  if test -z "$OPT_N64_AWARE"; then
-    AC_MSG_ERROR([support for systems without 64 bit curl_off_t is deprecated, use --with-n64-deprecated until then])
-  fi
+  AC_MSG_ERROR([64 bit curl_off_t is required])
 fi
 
 # check for ssize_t
@@ -3635,7 +3639,8 @@ AC_CHECK_FUNCS([fnmatch \
   setrlimit \
   snprintf \
   utime \
-  utimes
+  utimes \
+  arc4random
 ],[
 ],[
   func="$ac_func"
@@ -4663,8 +4668,8 @@ AC_CONFIG_FILES([Makefile \
            tests/server/Makefile \
            tests/libtest/Makefile \
            tests/unit/Makefile \
-           tests/tests-httpd/config.ini \
-           tests/tests-httpd/Makefile \
+           tests/http/config.ini \
+           tests/http/Makefile \
            packages/Makefile \
            packages/vms/Makefile \
            curl-config \
@@ -4673,8 +4678,6 @@ AC_CONFIG_FILES([Makefile \
 AC_OUTPUT
 
 CURL_GENERATE_CONFIGUREHELP_PM
-
-XC_AMEND_DISTCLEAN([lib src tests/unit tests/server tests/libtest docs/examples])
 
 AC_MSG_NOTICE([Configured to build curl/libcurl:
 

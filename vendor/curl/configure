@@ -1201,6 +1201,7 @@ with_aix_soname
 with_gnu_ld
 with_sysroot
 enable_libtool_lock
+with_mingw1_deprecated
 enable_http
 enable_ftp
 enable_file
@@ -1254,7 +1255,6 @@ with_quiche
 with_msh3
 with_zsh_functions_dir
 with_fish_functions_dir
-with_n64_deprecated
 enable_threaded_resolver
 enable_pthreads
 enable_verbose
@@ -2090,6 +2090,8 @@ Optional Packages:
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-sysroot[=DIR]    Search for dependent libraries within DIR (or the
                           compiler's sysroot if not specified).
+  --with-mingw1-deprecated
+                          confirm you realize support for mingw v1 is dying
   --with-hyper=PATH       Enable hyper usage
   --without-hyper         Disable hyper usage
   --with-zlib=PATH        search for zlib in PATH
@@ -2170,8 +2172,6 @@ Optional Packages:
                           Install fish completions to PATH
   --without-fish-functions-dir
                           Do not install fish completions
-  --with-n64-deprecated   confirm you realize support for systems without 64
-                          bit data types is going away
 
 Some influential environment variables:
   CC          C compiler command
@@ -7146,7 +7146,7 @@ fi
 
 
 
-if test "x$TEST_NGHTTPX" != "x"; then
+if test "x$TEST_NGHTTPX" != "x" -a "x$TEST_NGHTTPX" != "xnghttpx"; then
   HTTPD_NGHTTPX="$TEST_NGHTTPX"
 else
   # Extract the first word of "nghttpx", so it can be a program name with args.
@@ -7163,7 +7163,8 @@ else $as_nop
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
 do
   IFS=$as_save_IFS
   case $as_dir in #(((
@@ -7195,51 +7196,6 @@ fi
 
 
 fi
-    # Extract the first word of "apxs", so it can be a program name with args.
-set dummy apxs; ac_word=$2
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-printf %s "checking for $ac_word... " >&6; }
-if test ${ac_cv_path_APXS+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  case $APXS in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_APXS="$APXS" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  case $as_dir in #(((
-    '') as_dir=./ ;;
-    */) ;;
-    *) as_dir=$as_dir/ ;;
-  esac
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
-    ac_cv_path_APXS="$as_dir$ac_word$ac_exec_ext"
-    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-APXS=$ac_cv_path_APXS
-if test -n "$APXS"; then
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $APXS" >&5
-printf "%s\n" "$APXS" >&6; }
-else
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-fi
-
-
 
 
 if test "x$TEST_CADDY" != "x"; then
@@ -21034,6 +20990,7 @@ if ac_fn_c_try_compile "$LINENO"
 then :
 
       curl_mingw_original=yes
+      curl_mingw_die=yes
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 
@@ -21046,6 +21003,22 @@ fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     ;;
 esac
+
+
+
+# Check whether --with-mingw1-deprecated was given.
+if test ${with_mingw1_deprecated+y}
+then :
+  withval=$with_mingw1_deprecated; if test X"$withval" != Xno; then
+    curl_mingw_die=
+  fi
+
+fi
+
+
+if test -n "$curl_mingw_die"; then
+  as_fn_error $? "support for mingw v1 is going away, enable temporarily with --with-mingw1-deprecated" "$LINENO" 5
+fi
 
 
 
@@ -34842,21 +34815,8 @@ printf "%s\n" "#define HAVE_LONGLONG 1" >>confdefs.h
 fi
 
 
-
 if test ${ac_cv_sizeof_curl_off_t} -lt 8; then
-
-# Check whether --with-n64-deprecated was given.
-if test ${with_n64_deprecated+y}
-then :
-  withval=$with_n64_deprecated; if test X"$withval" != Xno; then
-    OPT_N64_AWARE=$withval
-  fi
-
-fi
-
-  if test -z "$OPT_N64_AWARE"; then
-    as_fn_error $? "support for systems without 64 bit curl_off_t is deprecated, use --with-n64-deprecated until then" "$LINENO" 5
-  fi
+  as_fn_error $? "64 bit curl_off_t is required" "$LINENO" 5
 fi
 
 # check for ssize_t
@@ -43770,7 +43730,7 @@ fi
 
 
 
-  for ac_func in fnmatch fchmod fork geteuid getpass_r getppid getpwuid getpwuid_r getrlimit gettimeofday if_nametoindex mach_absolute_time pipe sched_yield sendmsg setlocale setmode setrlimit snprintf utime utimes
+  for ac_func in fnmatch fchmod fork geteuid getpass_r getppid getpwuid getpwuid_r getrlimit gettimeofday if_nametoindex mach_absolute_time pipe sched_yield sendmsg setlocale setmode setrlimit snprintf utime utimes arc4random
 do :
   as_ac_var=`printf "%s\n" "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -45815,7 +45775,7 @@ if test "x$want_curldebug_assumed" = "xyes" &&
   ac_configure_args="$ac_configure_args --enable-curldebug"
 fi
 
-ac_config_files="$ac_config_files Makefile docs/Makefile docs/examples/Makefile docs/libcurl/Makefile docs/libcurl/opts/Makefile docs/cmdline-opts/Makefile include/Makefile include/curl/Makefile src/Makefile lib/Makefile scripts/Makefile lib/libcurl.vers lib/libcurl.plist tests/Makefile tests/config tests/certs/Makefile tests/certs/scripts/Makefile tests/data/Makefile tests/server/Makefile tests/libtest/Makefile tests/unit/Makefile tests/tests-httpd/config.ini tests/tests-httpd/Makefile packages/Makefile packages/vms/Makefile curl-config libcurl.pc"
+ac_config_files="$ac_config_files Makefile docs/Makefile docs/examples/Makefile docs/libcurl/Makefile docs/libcurl/opts/Makefile docs/cmdline-opts/Makefile include/Makefile include/curl/Makefile src/Makefile lib/Makefile scripts/Makefile lib/libcurl.vers lib/libcurl.plist tests/Makefile tests/config tests/certs/Makefile tests/certs/scripts/Makefile tests/data/Makefile tests/server/Makefile tests/libtest/Makefile tests/unit/Makefile tests/http/config.ini tests/http/Makefile packages/Makefile packages/vms/Makefile curl-config libcurl.pc"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -46990,8 +46950,8 @@ do
     "tests/server/Makefile") CONFIG_FILES="$CONFIG_FILES tests/server/Makefile" ;;
     "tests/libtest/Makefile") CONFIG_FILES="$CONFIG_FILES tests/libtest/Makefile" ;;
     "tests/unit/Makefile") CONFIG_FILES="$CONFIG_FILES tests/unit/Makefile" ;;
-    "tests/tests-httpd/config.ini") CONFIG_FILES="$CONFIG_FILES tests/tests-httpd/config.ini" ;;
-    "tests/tests-httpd/Makefile") CONFIG_FILES="$CONFIG_FILES tests/tests-httpd/Makefile" ;;
+    "tests/http/config.ini") CONFIG_FILES="$CONFIG_FILES tests/http/config.ini" ;;
+    "tests/http/Makefile") CONFIG_FILES="$CONFIG_FILES tests/http/Makefile" ;;
     "packages/Makefile") CONFIG_FILES="$CONFIG_FILES packages/Makefile" ;;
     "packages/vms/Makefile") CONFIG_FILES="$CONFIG_FILES packages/vms/Makefile" ;;
     "curl-config") CONFIG_FILES="$CONFIG_FILES curl-config" ;;
@@ -48447,111 +48407,6 @@ use vars qw(
 
 1;
 _EOF
-
-
-
-## ---------------------------------- ##
-##  Start of distclean amending code  ##
-## ---------------------------------- ##
-
-for xc_subdir in lib src tests/unit tests/server tests/libtest docs/examples
-do
-
-if test ! -f "$xc_subdir/Makefile"; then
-  echo "$xc_msg_err $xc_subdir/Makefile file not found. $xc_msg_abrt" >&2
-  exit 1
-fi
-
-# Fetch dependency tracking file list from Makefile include lines.
-
-xc_inc_lines=`grep '^include .*(DEPDIR)' "$xc_subdir/Makefile" 2>/dev/null`
-xc_cnt_words=`echo "$xc_inc_lines" | wc -w | tr -d "$xc_space$xc_tab"`
-
-# --disable-dependency-tracking might have been used, consequently
-# there is nothing to amend without a dependency tracking file list.
-
-if test $xc_cnt_words -gt 0; then
-
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: amending $xc_subdir/Makefile" >&5
-printf "%s\n" "$as_me: amending $xc_subdir/Makefile" >&6;}
-
-# Build Makefile specific patch hunk.
-
-xc_p="$xc_subdir/xc_patch.tmp"
-
-xc_rm_depfiles=`echo "$xc_inc_lines" \
-  | $SED 's%include%	-rm -f%' 2>/dev/null`
-
-xc_dep_subdirs=`echo "$xc_inc_lines" \
-  | $SED 's%include[ ][ ]*%%' 2>/dev/null \
-  | $SED 's%(DEPDIR)/.*%(DEPDIR)%' 2>/dev/null \
-  | sort | uniq`
-
-echo "$xc_rm_depfiles" >$xc_p
-
-for xc_dep_dir in $xc_dep_subdirs; do
-  echo "${xc_tab}@xm_dep_cnt=\`ls $xc_dep_dir | wc -l 2>/dev/null\`; \\"            >>$xc_p
-  echo "${xc_tab}if test \$\$xm_dep_cnt -eq 0 && test -d $xc_dep_dir; then \\"      >>$xc_p
-  echo "${xc_tab}  rm -rf $xc_dep_dir; \\"                                          >>$xc_p
-  echo "${xc_tab}fi"                                                                >>$xc_p
-done
-
-# Build Makefile patching sed scripts.
-
-xc_s1="$xc_subdir/xc_script_1.tmp"
-xc_s2="$xc_subdir/xc_script_2.tmp"
-xc_s3="$xc_subdir/xc_script_3.tmp"
-
-cat >$xc_s1 <<\_EOT
-/^distclean[ ]*:/,/^[^	][^	]*:/{
-  s/^.*(DEPDIR)/___xc_depdir_line___/
-}
-/^maintainer-clean[ ]*:/,/^[^	][^	]*:/{
-  s/^.*(DEPDIR)/___xc_depdir_line___/
-}
-_EOT
-
-cat >$xc_s2 <<\_EOT
-/___xc_depdir_line___$/{
-  N
-  /___xc_depdir_line___$/D
-}
-_EOT
-
-cat >$xc_s3 <<_EOT
-/^___xc_depdir_line___/{
-  r $xc_p
-  d
-}
-_EOT
-
-# Apply patch to Makefile and cleanup.
-
-$SED -f "$xc_s1" "$xc_subdir/Makefile"      >"$xc_subdir/Makefile.tmp1"
-$SED -f "$xc_s2" "$xc_subdir/Makefile.tmp1" >"$xc_subdir/Makefile.tmp2"
-$SED -f "$xc_s3" "$xc_subdir/Makefile.tmp2" >"$xc_subdir/Makefile.tmp3"
-
-if test -f "$xc_subdir/Makefile.tmp3"; then
-  mv -f "$xc_subdir/Makefile.tmp3" "$xc_subdir/Makefile"
-fi
-
-test -f "$xc_subdir/Makefile.tmp1" && rm -f "$xc_subdir/Makefile.tmp1"
-test -f "$xc_subdir/Makefile.tmp2" && rm -f "$xc_subdir/Makefile.tmp2"
-test -f "$xc_subdir/Makefile.tmp3" && rm -f "$xc_subdir/Makefile.tmp3"
-
-test -f "$xc_p"  && rm -f "$xc_p"
-test -f "$xc_s1" && rm -f "$xc_s1"
-test -f "$xc_s2" && rm -f "$xc_s2"
-test -f "$xc_s3" && rm -f "$xc_s3"
-
-fi
-
-done
-
-## -------------------------------- ##
-##  End of distclean amending code  ##
-## -------------------------------- ##
-
 
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Configured to build curl/libcurl:

@@ -107,10 +107,8 @@ problems may have been fixed or changed somewhat since this was written.
  15.6 uses -lpthread instead of Threads::Threads
  15.7 generated .pc file contains strange entries
  15.8 libcurl.pc uses absolute library paths
- 15.9 cert paths autodetected when cross-compiling
  15.10 libpsl is not supported
  15.11 ExternalProject_Add does not set CURL_CA_PATH
- 15.12 cannot enable LDAPS on Windows
  15.13 CMake build with MIT Kerberos does not work
 
  16. Applications
@@ -684,13 +682,6 @@ problems may have been fixed or changed somewhat since this was written.
 
  See https://github.com/curl/curl/issues/6169
 
-15.9 cert paths autodetected when cross-compiling
-
- The autotools build disables the ca_path/ca_bundle detection when
- cross-compiling. The cmake build keeps doing the detection.
-
- See https://github.com/curl/curl/issues/6178
-
 15.10 libpsl is not supported
 
  See https://github.com/curl/curl/issues/6214
@@ -701,10 +692,6 @@ problems may have been fixed or changed somewhat since this was written.
  ExternalProject_Add is used to build curl as a dependency.
 
  See https://github.com/curl/curl/issues/6313
-
-15.12 cannot enable LDAPS on Windows
-
- See https://github.com/curl/curl/issues/6284
 
 15.13 CMake build with MIT Kerberos does not work
 

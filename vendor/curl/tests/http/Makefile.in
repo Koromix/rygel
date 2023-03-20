@@ -111,7 +111,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-subdir = tests/tests-httpd
+subdir = tests/http
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/curl-amissl.m4 \
 	$(top_srcdir)/m4/curl-bearssl.m4 \
@@ -403,9 +403,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign tests/tests-httpd/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign tests/http/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign tests/tests-httpd/Makefile
+	  $(AUTOMAKE) --foreign tests/http/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \

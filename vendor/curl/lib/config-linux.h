@@ -129,6 +129,9 @@
 /* Define to 1 if you have the alarm function. */
 #define HAVE_ALARM 1
 
+/* Define to 1 if you have the `arc4random' function. */
+/* #undef HAVE_ARC4RANDOM */
+
 /* Define to 1 if you have the <alloca.h> header file. */
 #define HAVE_ALLOCA_H 1
 
