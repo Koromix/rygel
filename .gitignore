@@ -20,3 +20,6 @@ node_modules
 package-lock.json
 
 /web/koffi.dev/dist/
+
+/src/napka/data/*
+!/src/napka/data/.gitkeep

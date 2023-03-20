@@ -11,8 +11,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-napka_repo: git@github.com:Koromix/helium.git
-# napka_repo_key:
+napka_repo: https://github.com/Koromix/rygel.git
 napka_commit: master
 
 napka_root_path: /opt/napka

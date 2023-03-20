@@ -81,13 +81,6 @@
     - '{{ napka_root_path }}/builds/{{ napka_name }}'
   become: yes
 
-- name: Write Git SSH key
-  copy:
-    content: '{{ napka_repo_key }}'
-    dest: '{{ napka_root_path }}/id_ed25519'
-  when: 'napka_repo_key is defined'
-  become: yes
-
 - name: Fetch Napka repository
   git:
     repo: '{{ napka_repo }}'
@@ -100,7 +93,7 @@
 
 - name: Install Napka code
   synchronize:
-    src: '{{ napka_root_path }}/repo/napka/'
+    src: '{{ napka_root_path }}/repo/src/napka/'
     dest: '{{ napka_root_path }}/builds/{{ napka_name }}/'
     delete: yes
     recursive: yes

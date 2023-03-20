@@ -1,0 +1,30 @@
+{
+    "name": "napka",
+    "version": "1.0.0",
+    "description": "List and map of mental healthcare resources in France",
+    "scripts": {
+        "start": "node src/server/server.js",
+        "dev": "node src/server/server.js --live"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Koromix/rygel.git"
+    },
+    "author": "Niels Martignène <niels.martignene@protonmail.com>",
+    "license": "AGPL-3.0",
+    "dependencies": {
+        "better-sqlite3": "^8.0.0",
+        "better-sqlite3-session-store": "^0.1.0",
+        "compression": "^1.7.4",
+        "esbuild": "^0.15.13",
+        "express": "^4.17.1",
+        "express-session": "^1.17.3",
+        "lit": "^2.4.1",
+        "markdown-it": "^13.0.1",
+        "mime": "^3.0.0",
+        "node-fetch": "^2.6.9",
+        "node-xlsx": "^0.21.0",
+        "nunjucks": "^3.2.3",
+        "whatwg-fetch": "^3.2.0"
+    }
+}
