@@ -13,6 +13,8 @@
 
 napka_name: mentalist
 
+napka_import_schedule: "*-*-* 0,6,12,18:0:0"
+
 napka_repo_key: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   65386439323962336135613532313434396433323861333639366535373337366630366366653133
