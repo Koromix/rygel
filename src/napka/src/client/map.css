@@ -515,11 +515,12 @@ form > .footer {
     #filters > fieldset { justify-content: center; }
     #count { display: none; }
 
-    .dialog > form > div.info {
+    .dialog > form div.info {
         flex-direction: column;
         max-width: 100%;
         box-sizing: border-box;
     }
+    .dialog > form div.info > div { width: auto; }
 }
 
 @media (max-width: 581px) {
