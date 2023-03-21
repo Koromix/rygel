@@ -319,7 +319,7 @@ export function makeField(etab, key, type, view = null) {
                                        @change=${e => editMulti(etab, key, idx, opt, e.target.checked)}> ${opt}</label>`)}
             </span>
         `;
-    } else if (type == 'markdown') {
+    } else if (type == 'markdown' || type == 'bigtext' || type == 'address') {
         return html`<textarea rows="3" style="width: 100%;"
                               @change=${e => editText(etab, key, type, e.target.value)}
                               @keypress=${e => handleTextShortcuts(e, etab, key, type)}>${value || ''}</textarea>`;

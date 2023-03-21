@@ -186,7 +186,7 @@ function Cn2rProvider() {
                             </table>
                         ` : ''}
                     ` : ''}
-                    ${edit_key == 'rdv_horaires' ? html`${field(etab, 'rdv_horaires')}<br/>` : ''}<br/>
+                    ${edit_key == 'rdv_horaires' ? html`${makeField(etab, 'rdv_horaires', 'bigtext')}<br/>` : ''}<br/>
 
                     Accès personnes à mobilité réduite : ${field(etab, 'etab_acces_pmr')}<br/>
 
