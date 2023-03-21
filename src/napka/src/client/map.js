@@ -414,8 +414,8 @@ export async function updateEntry(etab) {
         payload[key] = etab[key];
 
     await net.post('api/admin/edit', payload);
-    await provider.loadMap();
 
+    await provider.loadMap();
     refreshMap();
 }
 
@@ -424,8 +424,7 @@ export async function deleteEntry(id) {
         id: id
     });
 
-    etablissements = etablissements.filter(etab => etab.id != id);
-
+    await provider.loadMap();
     refreshMap();
 }
 
