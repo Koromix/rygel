@@ -39,7 +39,7 @@ function parseSchedule(str) {
     str = str.replaceAll(/([0-9])a/g, '$1 a');
     str = str.replaceAll(/a([0-9])/g, 'a $1');
 
-    let tokens = str.split(/[, \-:/;]+/);
+    let tokens = str.split(/[\r\n\t, \-:/;]+/);
     let offset = 0;
 
     function consume(...expected) {
