@@ -38,7 +38,18 @@ if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
 }
 
 let arch = cnoke.determine_arch();
-let filename = __dirname + `/../build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`;
+let filenames = [__dirname + `/../build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`];
+
+if (process.resourcesPath != null) {
+    filenames.push(
+        process.resourcesPath + `/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
+        process.resourcesPath + `/build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`
+    );
+}
+
+let filename = filenames.find(filename => fs.existsSync(filename));
+if (filename == null)
+    throw new Error('Cannot find the native Koffi module; did you bundle it correctly?');
 
 let native = require(filename);
 
