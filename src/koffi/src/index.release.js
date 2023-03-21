@@ -21,17 +21,10 @@
 
 'use strict';
 
-const cnoke = require('../../cnoke/src/index.js');
+const cnoke = require('./cnoke/src/index.js');
 const util = require('util');
 const fs = require('fs');
-
-const pkg = (() => {
-    try {
-        return require('../../../package.json');
-    } catch (err) {
-        return require('../package.json');
-    }
-})();
+const pkg = require('../package.json');
 
 if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
     let major = parseInt(process.versions.node, 10);
@@ -46,14 +39,6 @@ if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
 
 let arch = cnoke.determine_arch();
 let filename = __dirname + `/../build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`;
-
-// Development build
-if (!fs.existsSync(filename)) {
-    let dev_filename = __dirname + '/../build/koffi.node';
-
-    if (fs.existsSync(dev_filename))
-        filename = dev_filename;
-}
 
 let native = require(filename);
 

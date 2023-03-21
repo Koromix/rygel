@@ -474,7 +474,7 @@ async function prepare() {
 
     console.log('>> Prepare NPM package');
     {
-        let build_dir = dist_dir + '/src/koffi/build/' + version;
+        let build_dir = dist_dir + '/build/' + version;
 
         unlink_recursive(dist_dir);
         fs.mkdirSync(dist_dir, { mode: 0o755, recursive: true });
@@ -508,17 +508,19 @@ async function prepare() {
 
         let pkg = JSON.parse(json);
 
-        pkg.main = 'src/koffi/' + pkg.main;
-        pkg.types = 'src/koffi/' + pkg.types;
+        pkg.main = pkg.main.replace('.dev.js', '.js');
         pkg.scripts = {
             install: 'node src/cnoke/cnoke.js --prebuild -d src/koffi'
         };
         delete pkg.devDependencies;
-        pkg.cnoke.output = 'src/koffi/build/{{version}}/koffi_{{platform}}_{{arch}}';
-        pkg.cnoke.require = pkg.cnoke.require.replace('./', './src/koffi/');
+        pkg.cnoke.output = 'build/{{version}}/koffi_{{platform}}_{{arch}}';
+        pkg.cnoke.require = pkg.cnoke.require.replace('.dev.js', '.js');
 
         fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
         fs.unlinkSync(dist_dir + '/src/koffi/package.json');
+        fs.unlinkSync(dist_dir + '/src/koffi/src/index.dev.js');
+        fs.renameSync(dist_dir + '/src/koffi/src/index.release.js', dist_dir + '/src/index.js');
+        fs.renameSync(dist_dir + '/src/koffi/src/index.d.ts', dist_dir + '/src/index.d.ts');
         fs.unlinkSync(dist_dir + '/src/koffi/.gitignore');
         fs.renameSync(dist_dir + '/src/koffi/README.md', dist_dir + '/README.md');
         fs.renameSync(dist_dir + '/src/koffi/LICENSE.txt', dist_dir + '/LICENSE.txt');

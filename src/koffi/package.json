@@ -18,7 +18,7 @@
   },
   "homepage": "https://koffi.dev/",
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
-  "main": "src/index.js",
+  "main": "src/index.dev.js",
   "types": "src/index.d.ts",
   "scripts": {
     "test": "node tools/qemu.js test",
@@ -39,6 +39,6 @@
   },
   "cnoke": {
     "napi": 8,
-    "require": "./src/index.js"
+    "require": "./src/index.dev.js"
   }
 }
