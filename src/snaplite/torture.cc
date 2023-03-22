@@ -151,9 +151,9 @@ Options:
     %!..+-S, --snapshot_dir <dir>%!0     Create snapshots inside this directory
 
     %!..+-d, --duration <sec>%!0         Set torture duration in seconds
-                                         (default: %2 sec)
+                                 %!D..(default: %2 sec)%!0
         %!..+--full_delay <sec>%!0       Set delay between full snapshots
-                                         (default: %3 sec)
+                                 %!D..(default: %3 sec)%!0
 
     %!..+-f, --force%!0                  Overwrite existing database file)",
                 FelixTarget, duration / 1000, full_delay / 1000);
