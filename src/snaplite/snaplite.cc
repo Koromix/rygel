@@ -18,21 +18,30 @@ namespace RG {
 
 int RunTorture(Span<const char *> arguments);
 
-static bool ListSnapshotFiles(OptionParser *opt, bool recursive,
-                              BlockAllocator *alloc, HeapArray<const char *> *out_filenames)
+static bool ListSnapshotFiles(const char *filename, BlockAllocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    if (recursive) {
-        for (const char *filename; (filename = opt->ConsumeNonOption()); ) {
-            FileInfo file_info;
-            if (StatFile(filename, &file_info) != StatResult::Success)
-                return false;
+    RG_ASSERT(!out_filenames->len);
 
-            if (file_info.type == FileType::Directory &&
-                    !EnumerateFiles(filename, "*.dbsnap", -1, -1, alloc, out_filenames))
-                return false;
+    if (!filename) {
+        LogError("Missing snapshot directory or filename");
+        return false;
+    }
+
+    FileInfo file_info;
+    if (StatFile(filename, &file_info) != StatResult::Success)
+        return false;
+
+    if (file_info.type == FileType::Directory) {
+        if (!EnumerateFiles(filename, "*.dbsnap", -1, -1, alloc, out_filenames))
+            return false;
+
+        if (!out_filenames->len) {
+            LogError("Could not find any snapshot file");
+            return false;
         }
     } else {
-        opt->ConsumeNonOptions(out_filenames);
+        const char *copy = DuplicateString(filename, alloc).ptr;
+        out_filenames->Append(copy);
     }
 
     return true;
@@ -51,20 +60,18 @@ static int RunRestore(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    HeapArray<const char *> src_filenames;
+    const char *src_filename = nullptr;
     const char *dest_directory = nullptr;
-    bool recursive = false;
     bool force = false;
     int64_t at = -1;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 restore [options] <snapshot...>%!0
+R"(Usage: %!..+%1 restore [options] <directory>%!0
 
 Options:
     %!..+-O, --output_dir <dir>%!0       Restore inside this directory (instead of real path)
 
-    %!..+-r, --recursive%!0              Collect all snapshots recursively
     %!..+-f, --force%!0                  Overwrite existing databases
 
         %!..+--at <UNIX TIME>%!0         Restore database as it was at specified time
@@ -82,8 +89,6 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
                 return 0;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 dest_directory = opt.current_value;
-            } else if (opt.Test("-r", "--recursive")) {
-                recursive = true;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
             } else if (opt.Test("--at", OptionType::Value)) {
@@ -100,20 +105,24 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
             }
         }
 
-        ListSnapshotFiles(&opt, recursive, &temp_alloc, &src_filenames);
+        src_filename = opt.ConsumeNonOption();
     }
 
-    if (!src_filenames.len) {
-        LogError("No snapshot filename provided");
+    HeapArray<const char *> snapshot_filenames;
+    if (!ListSnapshotFiles(src_filename, &temp_alloc, &snapshot_filenames))
+        return 1;
+    if (!snapshot_filenames.len) {
+        LogError("Could not find any snapshot file");
         return 1;
     }
+
     if (!dest_directory && !force) {
         LogError("No destination filename provided (and -f was not specified)");
         return 1;
     }
 
     sq_SnapshotSet snapshot_set;
-    if (!sq_CollectSnapshots(src_filenames, &snapshot_set))
+    if (!sq_CollectSnapshots(snapshot_filenames, &snapshot_set))
         return 1;
 
     bool complete = true;
@@ -162,17 +171,14 @@ static int RunList(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    HeapArray<const char *> src_filenames;
+    const char *src_filename = nullptr;
     int verbosity = 0;
-    bool recursive = false;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 list [options] <snapshot...>%!0
+R"(Usage: %!..+%1 list [options] <directory>%!0
 
 Options:
-    %!..+-r, --recursive%!0              Collect all snapshots recursively
-
     %!..+-v, --verbose%!0                List all available logs per snapshot)", FelixTarget);
     };
 
@@ -184,8 +190,6 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-r", "--recursive")) {
-                recursive = true;
             } else if (opt.Test("-v", "--verbose")) {
                 verbosity++;
             } else {
@@ -194,16 +198,19 @@ Options:
             }
         }
 
-        ListSnapshotFiles(&opt, recursive, &temp_alloc, &src_filenames);
+        src_filename = opt.ConsumeNonOption();
     }
 
-    if (!src_filenames.len) {
-        LogError("No snapshot filename provided");
+    HeapArray<const char *> snapshot_filenames;
+    if (!ListSnapshotFiles(src_filename, &temp_alloc, &snapshot_filenames))
+        return 1;
+    if (!snapshot_filenames.len) {
+        LogError("Could not find any snapshot file");
         return 1;
     }
 
     sq_SnapshotSet snapshot_set;
-    if (!sq_CollectSnapshots(src_filenames, &snapshot_set))
+    if (!sq_CollectSnapshots(snapshot_filenames, &snapshot_set))
         return 1;
 
     for (Size i = 0; i < snapshot_set.snapshots.len; i++) {
@@ -243,9 +250,6 @@ Options:
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
-
-    // Options
-    HeapArray<const char *> src_filenames;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
