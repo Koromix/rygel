@@ -16,11 +16,5 @@
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "index": "src/index.js",
   "bin": "cnoke.js",
-  "license": "MIT",
-  "files": [
-    "cnoke.js",
-    "LICENSE.txt",
-    "README.md",
-    "assets"
-  ]
+  "license": "MIT"
 }
