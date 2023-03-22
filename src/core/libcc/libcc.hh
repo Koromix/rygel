@@ -136,7 +136,7 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
 #define RG_STRINGIFY(a) RG_STRINGIFY_(a)
 #define RG_CONCAT_(a, b) a ## b
 #define RG_CONCAT(a, b) RG_CONCAT_(a, b)
-#define RG_UNIQUE_NAME(prefix) RG_CONCAT(prefix, __COUNTER__)
+#define RG_UNIQUE_NAME(prefix) RG_CONCAT(prefix, __LINE__)
 #define RG_FORCE_EXPAND(x) x
 #define RG_IGNORE (void)!
 
@@ -4204,6 +4204,8 @@ enum class CompressionSpeed {
     Fast
 };
 
+class StreamDecompressor;
+
 class StreamReader {
     RG_DELETE_COPY(StreamReader)
 
@@ -4237,14 +4239,8 @@ class StreamReader {
         bool eof = false;
     } source;
 
-    struct {
-        CompressionType type = CompressionType::None;
-        union {
-            struct MinizInflateContext *miniz;
-            struct BrotliDecompressContext *brotli;
-            struct LZ4DecompressContext *lz4;
-        } u;
-    } compression;
+    CompressionType compression_type = CompressionType::None;
+    StreamDecompressor *decompressor = nullptr;
 
     int64_t raw_len = -1;
     Size raw_read = 0;
@@ -4281,7 +4277,7 @@ public:
     bool Rewind();
 
     const char *GetFileName() const { return filename; }
-    CompressionType GetCompressionType() const { return compression.type; }
+    CompressionType GetCompressionType() const { return compression_type; }
     bool IsValid() const { return filename && !error; }
     bool IsEOF() const { return eof; }
 
@@ -4304,11 +4300,9 @@ private:
 
     bool InitDecompressor(CompressionType type);
 
-    Size ReadInflate(Size max_len, void *out_buf);
-    Size ReadBrotli(Size max_len, void *out_buf);
-    Size ReadLZ4(Size max_len, void *out_buf);
-
     Size ReadRaw(Size max_len, void *out_buf);
+
+    friend class StreamDecompressor;
 };
 
 static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<uint8_t> out_buf)
@@ -4354,6 +4348,44 @@ static inline Size ReadFile(const char *filename, Size max_len, HeapArray<char> 
     StreamReader st(filename);
     return st.ReadAll(max_len, out_buf);
 }
+
+class StreamDecompressor {
+protected:
+    StreamReader *reader;
+
+public:
+    StreamDecompressor(StreamReader *reader) : reader(reader) {}
+    virtual ~StreamDecompressor() {}
+
+    virtual bool Init() = 0;
+    virtual void Reset() = 0;
+    virtual Size Read(Size max_len, void *out_buf) = 0;
+
+protected:
+    const char *GetFileName() const { return reader->filename; }
+    CompressionType GetCompressionType() const { return reader->compression_type; }
+    bool IsValid() const { return reader->IsValid(); }
+    bool IsSourceEOF() const { return reader->source.eof; }
+
+    Size ReadRaw(Size max_len, void *out_buf) { return reader->ReadRaw(max_len, out_buf); }
+
+    void SetEOF(bool eof) { reader->eof = eof; }
+};
+
+typedef StreamDecompressor *CreateDecompressorFunc(StreamReader *reader);
+
+class StreamDecompressorHelper {
+public:
+    StreamDecompressorHelper(CompressionType type, CreateDecompressorFunc *func);
+};
+
+#define RG_DEFINE_DECOMPRESSOR(Type, Cls) \
+    static StreamDecompressor *RG_UNIQUE_NAME(CreateDecompressor)(StreamReader *reader) \
+    { \
+        StreamDecompressor *decompressor = new Cls(reader); \
+        return decompressor; \
+    } \
+    static StreamDecompressorHelper RG_UNIQUE_NAME(CreateDecompressorHelper)((Type), RG_UNIQUE_NAME(CreateDecompressor))
 
 class LineReader {
     RG_DELETE_COPY(LineReader)

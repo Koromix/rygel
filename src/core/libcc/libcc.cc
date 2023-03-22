@@ -5877,52 +5877,7 @@ StreamReader stdin_st(stdin, "<stdin>");
 StreamWriter stdout_st(stdout, "<stdout>");
 StreamWriter stderr_st(stderr, "<stderr>");
 
-#ifdef MZ_VERSION
-struct MinizInflateContext {
-    tinfl_decompressor inflator;
-    bool done;
-
-    uint8_t in[256 * 1024];
-    uint8_t *in_ptr;
-    Size in_len;
-
-    uint8_t out[256 * 1024];
-    uint8_t *out_ptr;
-    Size out_len;
-
-    // Gzip support
-    bool header_done;
-    uint32_t crc32;
-    Size uncompressed_size;
-};
-RG_STATIC_ASSERT(RG_SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
-#endif
-
-#ifdef BROTLI_DEFAULT_MODE
-struct BrotliDecompressContext {
-    BrotliDecoderState *state;
-    bool done;
-
-    uint8_t in[256 * 1024];
-    Size in_len;
-
-    uint8_t out[256 * 1024];
-    Size out_len;
-};
-#endif
-
-#ifdef LZ4_VERSION_MAJOR
-struct LZ4DecompressContext {
-    LZ4F_dctx *decoder;
-    bool done;
-
-    uint8_t in[256 * 1024];
-    Size in_len;
-
-    uint8_t out[256 * 1024];
-    Size out_len;
-};
-#endif
+static CreateDecompressorFunc *DecompressorFunctions[RG_LEN(CompressionTypeNames)];
 
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
@@ -6020,52 +5975,9 @@ bool StreamReader::Close(bool implicit)
 {
     RG_ASSERT(implicit || this != &stdin_st);
 
-    switch (compression.type) {
-        case CompressionType::None: {} break;
-
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            ReleaseOne(nullptr, compression.u.miniz);
-            compression.u.miniz = nullptr;
-#else
-            RG_UNREACHABLE();
-#endif
-        } break;
-
-        case CompressionType::Brotli: {
-#ifdef BROTLI_DEFAULT_MODE
-            BrotliDecompressContext *ctx = compression.u.brotli;
-
-            if (ctx) {
-                if (ctx->state) {
-                    BrotliDecoderDestroyInstance(ctx->state);
-                }
-
-                ReleaseOne(nullptr, ctx);
-                compression.u.brotli = nullptr;
-            }
-#else
-            RG_UNREACHABLE();
-#endif
-        } break;
-
-        case CompressionType::LZ4: {
-#ifdef LZ4_VERSION_MAJOR
-            LZ4DecompressContext *ctx = compression.u.lz4;
-
-            if (ctx) {
-                if (ctx->decoder) {
-                    LZ4F_freeDecompressionContext(ctx->decoder);
-                }
-
-                ReleaseOne(nullptr, ctx);
-                compression.u.lz4 = nullptr;
-            }
-#else
-            RG_UNREACHABLE();
-#endif
-        } break;
+    if (decompressor) {
+        RG_ASSERT(compression_type != CompressionType::None);
+        delete decompressor;
     }
 
     switch (source.type) {
@@ -6085,7 +5997,7 @@ bool StreamReader::Close(bool implicit)
 
     filename = nullptr;
     error = true;
-    compression.type = CompressionType::None;
+    compression_type = CompressionType::None;
     source.type = SourceType::Memory;
     source.eof = false;
     eof = false;
@@ -6116,39 +6028,9 @@ bool StreamReader::Rewind()
         } break;
     }
 
-    switch (compression.type) {
-        case CompressionType::None: {} break;
-
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            memset(compression.u.miniz, 0, sizeof(*compression.u.miniz));
-            tinfl_init(&compression.u.miniz->inflator);
-            compression.u.miniz->crc32 = MZ_CRC32_INIT;
-#else
-            RG_UNREACHABLE();
-#endif
-        } break;
-
-        case CompressionType::Brotli: {
-#ifdef BROTLI_DEFAULT_MODE
-            if (compression.u.brotli->state) {
-                BrotliDecoderDestroyInstance(compression.u.brotli->state);
-                compression.u.brotli->state = nullptr;
-            }
-            compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
-#else
-            RG_UNREACHABLE();
-#endif
-        } break;
-
-        case CompressionType::LZ4: {
-#ifdef LZ4_VERSION_MAJOR
-            LZ4F_resetDecompressionContext(compression.u.lz4->decoder);
-#else
-            RG_UNREACHABLE();
-#endif
-        } break;
+    if (decompressor) {
+        RG_ASSERT(compression_type != CompressionType::None);
+        decompressor->Reset();
     }
 
     source.eof = false;
@@ -6180,36 +6062,16 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
         return -1;
 
     Size read_len = 0;
-    switch (compression.type) {
-        case CompressionType::None: {
-            read_len = ReadRaw(out_buf.len, out_buf.ptr);
-            eof = source.eof;
-        } break;
+    if (decompressor) {
+        RG_ASSERT(compression_type != CompressionType::None);
 
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            read_len = ReadInflate(out_buf.len, out_buf.ptr);
-#else
-            RG_UNREACHABLE();
-#endif
-        } break;
+        read_len = decompressor->Read(out_buf.len, out_buf.ptr);
+        error |= (read_len < 0);
+    } else {
+        RG_ASSERT(compression_type == CompressionType::None);
 
-        case CompressionType::Brotli: {
-#ifdef BROTLI_DEFAULT_MODE
-            read_len = ReadBrotli(out_buf.len, out_buf.ptr);
-#else
-            RG_UNREACHABLE();
-#endif
-        } break;
-
-        case CompressionType::LZ4: {
-#ifdef LZ4_VERSION_MAJOR
-            read_len = ReadLZ4(out_buf.len, out_buf.ptr);
-#else
-            RG_UNREACHABLE();
-#endif
-        } break;
+        read_len = ReadRaw(out_buf.len, out_buf.ptr);
+        eof = source.eof;
     }
 
     return read_len;
@@ -6238,7 +6100,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     // For some files (such as in /proc), the file size is reported as 0 even though there
     // is content inside, because these files are generated on demand. So we need to take
     // the slow path for apparently empty files.
-    if (compression.type == CompressionType::None && ComputeRawLen() > 0) {
+    if (compression_type == CompressionType::None && ComputeRawLen() > 0) {
         if (raw_len > max_len) {
             LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
             return -1;
@@ -6318,319 +6180,30 @@ int64_t StreamReader::ComputeRawLen()
 
 bool StreamReader::InitDecompressor(CompressionType type)
 {
-    switch (type) {
-        case CompressionType::None: {} break;
+    if (type != CompressionType::None) {
+        CreateDecompressorFunc *func = DecompressorFunctions[(int)type];
 
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            compression.u.miniz = AllocateOne<MinizInflateContext>(nullptr, (int)AllocFlag::Zero);
-            tinfl_init(&compression.u.miniz->inflator);
-            compression.u.miniz->crc32 = MZ_CRC32_INIT;
-#else
-            LogError("Deflate decompression not available for '%1'", filename);
+        if (!func) {
+            LogError("%1 decompression is not available for '%2'", CompressionTypeNames[(int)type], filename);
             error = true;
             return false;
-#endif
-        } break;
+        }
 
-        case CompressionType::Brotli: {
-#ifdef BROTLI_DEFAULT_MODE
-            compression.u.brotli = AllocateOne<BrotliDecompressContext>(nullptr, (int)AllocFlag::Zero);
-            compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
-#else
-            LogError("Brotli decompression not available for '%1'", filename);
+        decompressor = func(this);
+
+        if (!decompressor) {
             error = true;
             return false;
-#endif
-        } break;
-
-        case CompressionType::LZ4: {
-#ifdef LZ4_VERSION_MAJOR
-            compression.u.lz4 = AllocateOne<LZ4DecompressContext>(nullptr, (int)AllocFlag::Zero);
-
-            if (LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&compression.u.lz4->decoder, LZ4F_VERSION); LZ4F_isError(err)) {
-                LogError("Failed to initialize LZ4 decompression: %1", LZ4F_getErrorName(err));
-                error = true;
-                return false;
-            }
-#else
-            LogError("LZ4 decompression not available for '%1'", filename);
+        }
+        if (!decompressor->Init()) {
             error = true;
             return false;
-#endif
-        } break;
+        }
     }
-    compression.type = type;
 
+    compression_type = type;
     return true;
 }
-
-#ifdef MZ_VERSION
-Size StreamReader::ReadInflate(Size max_len, void *out_buf)
-{
-    MinizInflateContext *ctx = compression.u.miniz;
-
-    // Gzip header is not directly supported by miniz. Currently this
-    // will fail if the header is longer than 4096 bytes, which is
-    // probably quite rare.
-    if (compression.type == CompressionType::Gzip && !ctx->header_done) {
-        uint8_t header[4096];
-        Size header_len;
-
-        header_len = ReadRaw(RG_SIZE(header), header);
-        if (header_len < 0) {
-            return -1;
-        } else if (header_len < 10 || header[0] != 0x1F || header[1] != 0x8B) {
-            LogError("File '%1' does not look like a Gzip stream", filename);
-            error = true;
-            return -1;
-        }
-
-        Size header_offset = 10;
-        if (header[3] & 0x4) { // FEXTRA
-            if (header_len - header_offset < 2)
-                goto truncated_error;
-            uint16_t extra_len = (uint16_t)((header[11] << 8) | header[10]);
-            if (extra_len > header_len - header_offset)
-                goto truncated_error;
-            header_offset += extra_len;
-        }
-        if (header[3] & 0x8) { // FNAME
-            uint8_t *end_ptr = (uint8_t *)memchr(header + header_offset, '\0',
-                                                 (size_t)(header_len - header_offset));
-            if (!end_ptr)
-                goto truncated_error;
-            header_offset = end_ptr - header + 1;
-        }
-        if (header[3] & 0x10) { // FCOMMENT
-            uint8_t *end_ptr = (uint8_t *)memchr(header + header_offset, '\0',
-                                                 (size_t)(header_len - header_offset));
-            if (!end_ptr)
-                goto truncated_error;
-            header_offset = end_ptr - header + 1;
-        }
-        if (header[3] & 0x2) { // FHCRC
-            if (header_len - header_offset < 2)
-                goto truncated_error;
-            uint16_t crc16 = (uint16_t)(header[1] << 8 | header[0]);
-            if ((mz_crc32(MZ_CRC32_INIT, header, (size_t)header_offset) & 0xFFFF) == crc16) {
-                LogError("Failed header CRC16 check in '%s'", filename);
-                error = true;
-                return -1;
-            }
-            header_offset += 2;
-        }
-
-        // Put back remaining data in the buffer
-        memcpy_safe(ctx->in, header + header_offset, (size_t)(header_len - header_offset));
-        ctx->in_ptr = ctx->in;
-        ctx->in_len = header_len - header_offset;
-
-        ctx->header_done = true;
-    }
-
-    // Inflate (with miniz)
-    {
-        Size read_len = 0;
-        for (;;) {
-            if (max_len < ctx->out_len) {
-                memcpy_safe(out_buf, ctx->out_ptr, (size_t)max_len);
-                read_len += max_len;
-                ctx->out_ptr += max_len;
-                ctx->out_len -= max_len;
-
-                return read_len;
-            } else {
-                memcpy_safe(out_buf, ctx->out_ptr, (size_t)ctx->out_len);
-                read_len += ctx->out_len;
-                out_buf = (uint8_t *)out_buf + ctx->out_len;
-                max_len -= ctx->out_len;
-                ctx->out_ptr = ctx->out;
-                ctx->out_len = 0;
-
-                if (ctx->done) {
-                    eof = true;
-                    return read_len;
-                }
-            }
-
-            while (ctx->out_len < RG_SIZE(ctx->out)) {
-                if (!ctx->in_len) {
-                    ctx->in_ptr = ctx->in;
-                    ctx->in_len = ReadRaw(RG_SIZE(ctx->in), ctx->in);
-                    if (ctx->in_len < 0)
-                        return read_len ? read_len : ctx->in_len;
-                }
-
-                size_t in_arg = (size_t)ctx->in_len;
-                size_t out_arg = (size_t)(RG_SIZE(ctx->out) - ctx->out_len);
-                uint32_t flags = (uint32_t)
-                    ((compression.type == CompressionType::Zlib ? TINFL_FLAG_PARSE_ZLIB_HEADER : 0) |
-                     (source.eof ? 0 : TINFL_FLAG_HAS_MORE_INPUT));
-
-                tinfl_status status = tinfl_decompress(&ctx->inflator, ctx->in_ptr, &in_arg,
-                                                       ctx->out, ctx->out + ctx->out_len,
-                                                       &out_arg, flags);
-
-                if (compression.type == CompressionType::Gzip) {
-                    ctx->crc32 = (uint32_t)mz_crc32(ctx->crc32, ctx->out + ctx->out_len, out_arg);
-                    ctx->uncompressed_size += (Size)out_arg;
-                }
-
-                ctx->in_ptr += (Size)in_arg;
-                ctx->in_len -= (Size)in_arg;
-                ctx->out_len += (Size)out_arg;
-
-                if (status == TINFL_STATUS_DONE) {
-                    // Gzip footer (CRC and size check)
-                    if (compression.type == CompressionType::Gzip) {
-                        uint32_t footer[2];
-                        RG_STATIC_ASSERT(RG_SIZE(footer) == 8);
-
-                        if (ctx->in_len < RG_SIZE(footer)) {
-                            memcpy_safe(footer, ctx->in_ptr, (size_t)ctx->in_len);
-
-                            Size missing_len = RG_SIZE(footer) - ctx->in_len;
-                            if (ReadRaw(missing_len, footer + ctx->in_len) < missing_len) {
-                                if (error) {
-                                    return -1;
-                                } else {
-                                    goto truncated_error;
-                                }
-                            }
-                        } else {
-                            memcpy_safe(footer, ctx->in_ptr, RG_SIZE(footer));
-                        }
-                        footer[0] = LittleEndian(footer[0]);
-                        footer[1] = LittleEndian(footer[1]);
-
-                        if (ctx->crc32 != footer[0] ||
-                                (uint32_t)ctx->uncompressed_size != footer[1]) {
-                            LogError("Failed CRC32 or size check in GZip stream '%1'", filename);
-                            error = true;
-                            return -1;
-                        }
-                    }
-
-                    ctx->done = true;
-                    break;
-                } else if (status < TINFL_STATUS_DONE) {
-                    LogError("Failed to decompress '%1' (Deflate)", filename);
-                    error = true;
-                    return -1;
-                }
-            }
-        }
-    }
-
-truncated_error:
-    LogError("Truncated Gzip header in '%1'", filename);
-    error = true;
-    return -1;
-}
-#endif
-
-#ifdef BROTLI_DEFAULT_MODE
-Size StreamReader::ReadBrotli(Size max_len, void *out_buf)
-{
-    BrotliDecompressContext *ctx = compression.u.brotli;
-
-    for (;;) {
-        if (ctx->out_len || ctx->done) {
-            Size copy_len = std::min(max_len, ctx->out_len);
-
-            ctx->out_len -= copy_len;
-            memcpy(out_buf, ctx->out, copy_len);
-            memmove(ctx->out, ctx->out + copy_len, ctx->out_len);
-
-            eof = !ctx->out_len && ctx->done;
-            return copy_len;
-        }
-
-        if (ctx->in_len < RG_SIZE(ctx->in)) {
-            Size raw_len = ReadRaw(RG_SIZE(ctx->in) - ctx->in_len, ctx->in + ctx->in_len);
-            if (raw_len < 0)
-                return -1;
-            ctx->in_len += raw_len;
-        }
-
-        const uint8_t *next_in = ctx->in;
-        uint8_t *next_out = ctx->out + ctx->out_len;
-        size_t avail_in = (size_t)ctx->in_len;
-        size_t avail_out = (size_t)(RG_SIZE(ctx->out) - ctx->out_len);
-
-        BrotliDecoderResult ret = BrotliDecoderDecompressStream(ctx->state, &avail_in, &next_in,
-                                                                &avail_out, &next_out, nullptr);
-
-        if (ret == BROTLI_DECODER_RESULT_SUCCESS) {
-            ctx->done = true;
-        } else if (ret == BROTLI_DECODER_RESULT_ERROR) {
-            LogError("Malformed Brotli stream in '%1'", filename);
-            error = true;
-            return -1;
-        } else if (ret == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) {
-            LogError("Truncated Brotli stream in '%1'", filename);
-            error = true;
-            return -1;
-        }
-
-        ctx->out_len = next_out - ctx->out - ctx->out_len;
-    }
-
-    RG_UNREACHABLE();
-}
-#endif
-
-#ifdef LZ4_VERSION_MAJOR
-Size StreamReader::ReadLZ4(Size max_len, void *out_buf)
-{
-    LZ4DecompressContext *ctx = compression.u.lz4;
-
-    for (;;) {
-        if (ctx->out_len || ctx->done) {
-            Size copy_len = std::min(max_len, ctx->out_len);
-
-            ctx->out_len -= copy_len;
-            memcpy(out_buf, ctx->out, copy_len);
-            memmove(ctx->out, ctx->out + copy_len, ctx->out_len);
-
-            eof = !ctx->out_len && ctx->done;
-            return copy_len;
-        }
-
-        if (ctx->in_len < RG_SIZE(ctx->in)) {
-            Size raw_len = ReadRaw(RG_SIZE(ctx->in) - ctx->in_len, ctx->in + ctx->in_len);
-            if (raw_len < 0)
-                return -1;
-            ctx->in_len += raw_len;
-        }
-
-        const uint8_t *next_in = ctx->in;
-        uint8_t *next_out = ctx->out + ctx->out_len;
-        size_t avail_in = (size_t)ctx->in_len;
-        size_t avail_out = (size_t)(RG_SIZE(ctx->out) - ctx->out_len);
-
-        LZ4F_decompressOptions_t opt = {};
-        size_t ret = LZ4F_decompress(ctx->decoder, next_out, &avail_out, next_in, &avail_in, &opt);
-
-        if (!ret) {
-            ctx->done = true;
-        } else if (LZ4F_isError(ret)) {
-            LogError("Malformed LZ4 stream in '%1': %2", filename, LZ4F_getErrorName(ret));
-            error = true;
-            return -1;
-        }
-
-        memmove_safe(ctx->in, ctx->in + avail_in, (size_t)ctx->in_len - avail_in);
-        ctx->in_len -= avail_in;
-
-        ctx->out_len += (Size)avail_out;
-    }
-
-    RG_UNREACHABLE();
-}
-#endif
 
 Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 {
@@ -6676,6 +6249,11 @@ restart:
 
     raw_read += read_len;
     return read_len;
+}
+
+StreamDecompressorHelper::StreamDecompressorHelper(CompressionType compression_type, CreateDecompressorFunc *func)
+{
+    DecompressorFunctions[(int)compression_type] = func;
 }
 
 // XXX: Maximum line length
