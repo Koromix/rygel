@@ -212,7 +212,7 @@ bool LZ4Compressor::Finalize()
     return true;
 }
 
-RG_DEFINE_DECOMPRESSOR(CompressionType::LZ4, LZ4Decompressor);
-RG_DEFINE_COMPRESSOR(CompressionType::LZ4, LZ4Compressor);
+RG_REGISTER_DECOMPRESSOR(CompressionType::LZ4, LZ4Decompressor);
+RG_REGISTER_COMPRESSOR(CompressionType::LZ4, LZ4Compressor);
 
 }

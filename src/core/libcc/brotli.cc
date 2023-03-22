@@ -193,7 +193,7 @@ bool BrotliCompressor::Finalize()
     return true;
 }
 
-RG_DEFINE_DECOMPRESSOR(CompressionType::Brotli, BrotliDecompressor);
-RG_DEFINE_COMPRESSOR(CompressionType::Brotli, BrotliCompressor);
+RG_REGISTER_DECOMPRESSOR(CompressionType::Brotli, BrotliDecompressor);
+RG_REGISTER_COMPRESSOR(CompressionType::Brotli, BrotliCompressor);
 
 }

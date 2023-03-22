@@ -4380,7 +4380,7 @@ public:
     StreamDecompressorHelper(CompressionType type, CreateDecompressorFunc *func);
 };
 
-#define RG_DEFINE_DECOMPRESSOR(Type, Cls) \
+#define RG_REGISTER_DECOMPRESSOR(Type, Cls) \
     static StreamDecompressor *RG_UNIQUE_NAME(CreateDecompressor)(StreamReader *reader) \
     { \
         StreamDecompressor *decompressor = new Cls(reader); \
@@ -4570,7 +4570,7 @@ public:
     StreamCompressorHelper(CompressionType type, CreateCompressorFunc *func);
 };
 
-#define RG_DEFINE_COMPRESSOR(Type, Cls) \
+#define RG_REGISTER_COMPRESSOR(Type, Cls) \
     static StreamCompressor *RG_UNIQUE_NAME(CreateCompressor)(StreamWriter *writer) \
     { \
         StreamCompressor *compressor = new Cls(writer); \

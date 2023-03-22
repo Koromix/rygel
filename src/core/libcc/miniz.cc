@@ -359,9 +359,9 @@ bool MinizCompressor::Finalize()
     return true;
 }
 
-RG_DEFINE_DECOMPRESSOR(CompressionType::Zlib, MinizDecompressor);
-RG_DEFINE_DECOMPRESSOR(CompressionType::Gzip, MinizDecompressor);
-RG_DEFINE_COMPRESSOR(CompressionType::Zlib, MinizCompressor);
-RG_DEFINE_COMPRESSOR(CompressionType::Gzip, MinizCompressor);
+RG_REGISTER_DECOMPRESSOR(CompressionType::Zlib, MinizDecompressor);
+RG_REGISTER_DECOMPRESSOR(CompressionType::Gzip, MinizDecompressor);
+RG_REGISTER_COMPRESSOR(CompressionType::Zlib, MinizCompressor);
+RG_REGISTER_COMPRESSOR(CompressionType::Gzip, MinizCompressor);
 
 }
