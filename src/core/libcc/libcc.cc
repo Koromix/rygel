@@ -20,6 +20,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include "libcc.hh"
+
 #if !defined(LIBCC_NO_MINIZ) && __has_include("vendor/miniz/miniz.h")
     #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
     #include "vendor/miniz/miniz.h"
@@ -28,6 +29,11 @@
     #include "vendor/brotli/c/include/brotli/decode.h"
     #include "vendor/brotli/c/include/brotli/encode.h"
 #endif
+#if !defined(LIBCC_NO_LZ4) && __has_include("vendor/lz4/lib/lz4.h")
+    #include "vendor/lz4/lib/lz4.h"
+    #include "vendor/lz4/lib/lz4frame.h"
+#endif
+
 #if __has_include("vendor/dragonbox/include/dragonbox/dragonbox.h") && __cplusplus >= 201703L
     #include "vendor/dragonbox/include/dragonbox/dragonbox.h"
 #endif
@@ -5904,6 +5910,19 @@ struct BrotliDecompressContext {
 };
 #endif
 
+#ifdef LZ4_VERSION_MAJOR
+struct LZ4DecompressContext {
+    LZ4F_dctx *decoder;
+    bool done;
+
+    uint8_t in[256 * 1024];
+    Size in_len;
+
+    uint8_t out[256 * 1024];
+    Size out_len;
+};
+#endif
+
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
 {
@@ -6029,6 +6048,23 @@ bool StreamReader::Close(bool implicit)
             RG_UNREACHABLE();
 #endif
         } break;
+
+        case CompressionType::LZ4: {
+#ifdef LZ4_VERSION_MAJOR
+            LZ4DecompressContext *ctx = compression.u.lz4;
+
+            if (ctx) {
+                if (ctx->decoder) {
+                    LZ4F_freeDecompressionContext(ctx->decoder);
+                }
+
+                ReleaseOne(nullptr, ctx);
+                compression.u.lz4 = nullptr;
+            }
+#else
+            RG_UNREACHABLE();
+#endif
+        } break;
     }
 
     switch (source.type) {
@@ -6104,6 +6140,14 @@ bool StreamReader::Rewind()
             RG_UNREACHABLE();
 #endif
         } break;
+
+        case CompressionType::LZ4: {
+#ifdef LZ4_VERSION_MAJOR
+            LZ4F_resetDecompressionContext(compression.u.lz4->decoder);
+#else
+            RG_UNREACHABLE();
+#endif
+        } break;
     }
 
     source.eof = false;
@@ -6153,6 +6197,14 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
         case CompressionType::Brotli: {
 #ifdef BROTLI_DEFAULT_MODE
             read_len = ReadBrotli(out_buf.len, out_buf.ptr);
+#else
+            RG_UNREACHABLE();
+#endif
+        } break;
+
+        case CompressionType::LZ4: {
+#ifdef LZ4_VERSION_MAJOR
+            read_len = ReadLZ4(out_buf.len, out_buf.ptr);
 #else
             RG_UNREACHABLE();
 #endif
@@ -6287,6 +6339,22 @@ bool StreamReader::InitDecompressor(CompressionType type)
             compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
 #else
             LogError("Brotli decompression not available for '%1'", filename);
+            error = true;
+            return false;
+#endif
+        } break;
+
+        case CompressionType::LZ4: {
+#ifdef LZ4_VERSION_MAJOR
+            compression.u.lz4 = AllocateOne<LZ4DecompressContext>(nullptr, (int)AllocFlag::Zero);
+
+            if (LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&compression.u.lz4->decoder, LZ4F_VERSION); LZ4F_isError(err)) {
+                LogError("Failed to initialize LZ4 decompression: %1", LZ4F_getErrorName(err));
+                error = true;
+                return false;
+            }
+#else
+            LogError("LZ4 decompression not available for '%1'", filename);
             error = true;
             return false;
 #endif
@@ -6507,6 +6575,56 @@ Size StreamReader::ReadBrotli(Size max_len, void *out_buf)
         }
 
         ctx->out_len = next_out - ctx->out - ctx->out_len;
+    }
+
+    RG_UNREACHABLE();
+}
+#endif
+
+#ifdef LZ4_VERSION_MAJOR
+Size StreamReader::ReadLZ4(Size max_len, void *out_buf)
+{
+    LZ4DecompressContext *ctx = compression.u.lz4;
+
+    for (;;) {
+        if (ctx->out_len || ctx->done) {
+            Size copy_len = std::min(max_len, ctx->out_len);
+
+            ctx->out_len -= copy_len;
+            memcpy(out_buf, ctx->out, copy_len);
+            memmove(ctx->out, ctx->out + copy_len, ctx->out_len);
+
+            eof = !ctx->out_len && ctx->done;
+            return copy_len;
+        }
+
+        if (ctx->in_len < RG_SIZE(ctx->in)) {
+            Size raw_len = ReadRaw(RG_SIZE(ctx->in) - ctx->in_len, ctx->in + ctx->in_len);
+            if (raw_len < 0)
+                return -1;
+            ctx->in_len += raw_len;
+        }
+
+        const uint8_t *next_in = ctx->in;
+        uint8_t *next_out = ctx->out + ctx->out_len;
+        size_t avail_in = (size_t)ctx->in_len;
+        size_t avail_out = (size_t)(RG_SIZE(ctx->out) - ctx->out_len);
+
+        LZ4F_decompressOptions_t opt = {};
+        size_t ret = LZ4F_decompress(ctx->decoder, next_out, &avail_out, next_in, &avail_in, &opt);
+
+        if (!ret) {
+            ctx->done = true;
+        } else if (LZ4F_isError(ret)) {
+            LogError("Malformed LZ4 stream in '%1': %2", filename, LZ4F_getErrorName(ret));
+            error = true;
+            return -1;
+        }
+
+        memmove_safe(ctx->in, ctx->in + avail_in, (size_t)ctx->in_len - avail_in);
+        ctx->in_len -= avail_in;
+
+        ctx->out_len += (Size)avail_out;
     }
 
     RG_UNREACHABLE();

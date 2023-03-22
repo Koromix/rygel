@@ -3791,13 +3791,15 @@ enum class CompressionType {
     None,
     Zlib,
     Gzip,
-    Brotli
+    Brotli,
+    LZ4
 };
 static const char *const CompressionTypeNames[] = {
     "None",
     "Zlib",
     "Gzip",
-    "Brotli"
+    "Brotli",
+    "LZ4"
 };
 
 Span<const char> GetPathDirectory(Span<const char> filename);
@@ -4240,6 +4242,7 @@ class StreamReader {
         union {
             struct MinizInflateContext *miniz;
             struct BrotliDecompressContext *brotli;
+            struct LZ4DecompressContext *lz4;
         } u;
     } compression;
 
@@ -4303,6 +4306,7 @@ private:
 
     Size ReadInflate(Size max_len, void *out_buf);
     Size ReadBrotli(Size max_len, void *out_buf);
+    Size ReadLZ4(Size max_len, void *out_buf);
 
     Size ReadRaw(Size max_len, void *out_buf);
 };

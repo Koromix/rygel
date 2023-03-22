@@ -50,6 +50,11 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
 {
     encodings = TrimStr(encodings);
 
+    const uint32_t AllEncodings = (1u << (int)CompressionType::None) |
+                                  (1u << (int)CompressionType::Zlib) |
+                                  (1u << (int)CompressionType::Gzip) |
+                                  (1u << (int)CompressionType::Brotli);
+
     uint32_t acceptable_encodings;
     if (encodings.len) {
         uint32_t low_priority = 1 << (int)CompressionType::None;
@@ -73,13 +78,13 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
                 high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Brotli, quality != "q=0");
                 low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Brotli, quality != "q=0");
             } else if (encoding == "*") {
-                low_priority = ApplyMask(low_priority, UINT32_MAX, quality != "q=0");
+                low_priority = ApplyMask(low_priority, AllEncodings, quality != "q=0");
             }
         }
 
         acceptable_encodings = high_priority | low_priority;
     } else {
-        acceptable_encodings = UINT32_MAX;
+        acceptable_encodings = AllEncodings;
     }
 
     return acceptable_encodings;
