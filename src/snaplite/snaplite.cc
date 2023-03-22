@@ -62,6 +62,7 @@ static int RunRestore(Span<const char *> arguments)
     // Options
     const char *src_filename = nullptr;
     const char *dest_directory = nullptr;
+    bool dry_run = false;
     bool force = false;
     int64_t at = -1;
 
@@ -72,6 +73,7 @@ R"(Usage: %!..+%1 restore [options] <directory>%!0
 Options:
     %!..+-O, --output_dir <dir>%!0       Restore inside this directory (instead of real path)
 
+    %!..+-n, --dry_run%!0                Pretend to restore without doing anything
     %!..+-f, --force%!0                  Overwrite existing databases
 
         %!..+--at <UNIX TIME>%!0         Restore database as it was at specified time
@@ -89,6 +91,8 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
                 return 0;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 dest_directory = opt.current_value;
+            } else if (opt.Test("-n", "--dry_run")) {
+                dry_run = true;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
             } else if (opt.Test("--at", OptionType::Value)) {
@@ -153,14 +157,16 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
         int64_t mtime = (frame_idx >= 0) ? snapshot.frames[frame_idx].mtime : snapshot.mtime;
 
         TimeSpec spec = DecomposeTime(mtime);
-        LogInfo("Restoring database '%1' at %2", SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS), FmtTimeNice(spec));
+        LogInfo("Restoring '%1' at %2%3", dest_filename, FmtTimeNice(spec), dry_run ? " [dry]" : "");
 
-        if (!EnsureDirectoryExists(dest_filename)) {
-            complete = false;
-            continue;
+        if (!dry_run) {
+            if (!EnsureDirectoryExists(dest_filename)) {
+                complete = false;
+                continue;
+            }
+
+            complete &= sq_RestoreSnapshot(snapshot, frame_idx, dest_filename, force);
         }
-
-        complete &= sq_RestoreSnapshot(snapshot, frame_idx, dest_filename, force);
     }
 
     return !complete;
