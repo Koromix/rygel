@@ -12,7 +12,7 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 PKG_CPPFLAGS += -D_FILE_OFFSET_BITS=64 -D__STDC_FORMAT_MACROS -DLIBDRD_NO_WREN\
-				-DLIBCC_NO_BROTLI -DLIBCC_NO_LZ4 -Wstrict-overflow=0 -fno-strict-aliasing -I../../../..
+				-Wstrict-overflow=0 -fno-strict-aliasing -I../../../..
 PKG_CFLAGS += -std=gnu99
 PKG_CXXFLAGS += -std=gnu++17
 
