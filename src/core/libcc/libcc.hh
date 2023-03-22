@@ -597,7 +597,7 @@ public:
     }; \
     static ClassName RG_UNIQUE_NAME(init); \
     ClassName::ClassName()
-#define RG_INIT(Name) RG_INIT_(RG_UNIQUE_NAME(InitHelper))
+#define RG_INIT(Name) RG_INIT_(RG_CONCAT(RG_UNIQUE_NAME(InitHelper), Name))
 
 #define RG_EXIT_(ClassName) \
     class ClassName { \
@@ -606,7 +606,7 @@ public:
     }; \
     static ClassName RG_UNIQUE_NAME(exit); \
     ClassName::~ClassName()
-#define RG_EXIT(Name) RG_EXIT_(RG_UNIQUE_NAME(ExitHelper))
+#define RG_EXIT(Name) RG_EXIT_(RG_CONCAT(RG_UNIQUE_NAME(ExitHelper), Name))
 
 template <typename T>
 T MultiCmp()
