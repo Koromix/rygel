@@ -21,20 +21,6 @@
 
 #include "libcc.hh"
 
-#if !defined(LIBCC_NO_MINIZ) && __has_include("vendor/miniz/miniz.h")
-    #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-    #include "vendor/miniz/miniz.h"
-#endif
-#if !defined(LIBCC_NO_BROTLI) && __has_include("vendor/brotli/c/include/brotli/decode.h")
-    #include "vendor/brotli/c/include/brotli/decode.h"
-    #include "vendor/brotli/c/include/brotli/encode.h"
-#endif
-#if !defined(LIBCC_NO_LZ4) && __has_include("vendor/lz4/lib/lz4.h")
-    #include "vendor/lz4/lib/lz4.h"
-    #include "vendor/lz4/lib/lz4hc.h"
-    #include "vendor/lz4/lib/lz4frame.h"
-#endif
-
 #if __has_include("vendor/dragonbox/include/dragonbox/dragonbox.h") && __cplusplus >= 201703L
     #include "vendor/dragonbox/include/dragonbox/dragonbox.h"
 #endif
@@ -5878,6 +5864,7 @@ StreamWriter stdout_st(stdout, "<stdout>");
 StreamWriter stderr_st(stderr, "<stderr>");
 
 static CreateDecompressorFunc *DecompressorFunctions[RG_LEN(CompressionTypeNames)];
+static CreateCompressorFunc *CompressorFunctions[RG_LEN(CompressionTypeNames)];
 
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
@@ -6309,19 +6296,6 @@ void LineReader::PushLogFilter()
     });
 }
 
-#ifdef MZ_VERSION
-struct MinizDeflateContext {
-    tdefl_compressor deflator;
-
-    // Gzip support
-    uint32_t crc32;
-    Size uncompressed_size;
-
-    // Used to buffer small writes
-    LocalArray<uint8_t, 1024> buf;
-};
-#endif
-
 #ifdef LZ4_VERSION_MAJOR
 struct LZ4CompressContext {
     LZ4F_cctx *encoder;
@@ -6494,81 +6468,14 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
     if (RG_UNLIKELY(error))
         return false;
 
-    switch (compression.type) {
-        case CompressionType::None: {
-            return WriteRaw(buf);
-        } break;
+    if (compressor) {
+        RG_ASSERT(compression_type != CompressionType::None);
 
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            MinizDeflateContext *ctx = compression.u.miniz;
-
-            if (ctx->buf.len) {
-                Size copy_len = std::min(buf.len, ctx->buf.Available());
-
-                memcpy_safe(ctx->buf.end(), buf.ptr, copy_len);
-                ctx->buf.len += copy_len;
-                buf.ptr += copy_len;
-                buf.len -= copy_len;
-            }
-
-            if (buf.len) {
-                if (ctx->buf.len && !WriteDeflate(ctx->buf))
-                    return false;
-                ctx->buf.Clear();
-
-                if (buf.len >= RG_SIZE(ctx->buf.data) / 2) {
-                    if (!WriteDeflate(buf))
-                        return false;
-                } else {
-                    memcpy_safe(ctx->buf.data, buf.ptr, buf.len);
-                    ctx->buf.len = buf.len;
-                }
-            }
-
-            return true;
-#endif
-        } break;
-
-        case CompressionType::Brotli: {
-#ifdef BROTLI_DEFAULT_MODE
-            return WriteBrotli(buf);
-#endif
-        } break;
-
-        case CompressionType::LZ4: {
-#ifdef LZ4_VERSION_MAJOR
-            LZ4CompressContext *ctx = compression.u.lz4;
-
-            size_t needed = LZ4F_compressBound((size_t)buf.len, &ctx->prefs);
-            ctx->buf.Grow((Size)needed);
-
-            size_t ret = LZ4F_compressUpdate(ctx->encoder, ctx->buf.end(), (size_t)(ctx->buf.capacity - ctx->buf.len),
-                                             buf.ptr, (size_t)buf.len, nullptr);
-
-            if (LZ4F_isError(ret)) {
-                LogError("Failed to write LZ4 stream for '%1': %2", filename, LZ4F_getErrorName(ret));
-                error = true;
-                return false;
-            }
-
-            ctx->buf.len += (Size)ret;
-
-            if (ctx->buf.len >= 512) {
-                if (!WriteRaw(ctx->buf)) {
-                    error = true;
-                    return false;
-                }
-                ctx->buf.len = 0;
-            }
-
-            return true;
-#endif
-        } break;
+        error |= !compressor->Write(buf);
+        return !error;
+    } else {
+        return WriteRaw(buf);
     }
-
-    RG_UNREACHABLE();
 }
 
 bool StreamWriter::Close(bool implicit)
@@ -6576,115 +6483,11 @@ bool StreamWriter::Close(bool implicit)
     RG_ASSERT(implicit || this != &stdout_st);
     RG_ASSERT(implicit || this != &stderr_st);
 
-    switch (compression.type) {
-        case CompressionType::None: {} break;
+    if (compressor && !error) {
+        RG_ASSERT(compression_type != CompressionType::None);
+        error |= !compressor->Finalize();
 
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            MinizDeflateContext *ctx = compression.u.miniz;
-
-            RG_DEFER { 
-                ReleaseOne(nullptr, ctx);
-                compression.u.miniz = nullptr;
-            };
-
-            if (IsValid() && ctx) {
-                if (ctx->buf.len && !WriteDeflate(ctx->buf)) {
-                    error = true;
-                    break;
-                }
-
-                uint8_t dummy; // Avoid UB in miniz
-                tdefl_status status = tdefl_compress_buffer(&ctx->deflator, &dummy, 0, TDEFL_FINISH);
-                if (status != TDEFL_STATUS_DONE) {
-                    if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
-                        LogError("Failed to end Deflate stream for '%1", filename);
-                    }
-
-                    error = true;
-                    break;
-                }
-
-                if (compression.type == CompressionType::Gzip) {
-                    uint32_t gzip_footer[] = {
-                        LittleEndian(ctx->crc32),
-                        LittleEndian((uint32_t)ctx->uncompressed_size)
-                    };
-
-                    if (!WriteRaw(MakeSpan((uint8_t *)gzip_footer, RG_SIZE(gzip_footer)))) {
-                        error = true;
-                        break;
-                    }
-                }
-            }
-#endif
-        } break;
-
-        case CompressionType::Brotli: {
-#ifdef BROTLI_DEFAULT_MODE
-            BrotliEncoderState *state = compression.u.brotli;
-            uint8_t output_buf[2048];
-
-            if (state) {
-                RG_DEFER {
-                    BrotliEncoderDestroyInstance(state);
-                    compression.u.brotli = nullptr;
-                };
-
-                do {
-                    const uint8_t *next_in = nullptr;
-                    uint8_t *next_out = output_buf;
-                    size_t avail_in = 0;
-                    size_t avail_out = RG_SIZE(output_buf);
-
-                    if (!BrotliEncoderCompressStream(state, BROTLI_OPERATION_FINISH,
-                                                     &avail_in, &next_in, &avail_out, &next_out, nullptr)) {
-                        LogError("Failed to compress '%1' with Brotli", filename);
-                        error = true;
-                        break;
-                    }
-                    if (!WriteRaw(MakeSpan(output_buf, next_out - output_buf))) {
-                        error = true;
-                        break;
-                    }
-                } while (BrotliEncoderHasMoreOutput(state));
-            }
-#endif
-        } break;
-
-        case CompressionType::LZ4: {
-#ifdef LZ4_VERSION_MAJOR
-            LZ4CompressContext *ctx = compression.u.lz4;
-
-            RG_DEFER {
-                delete ctx;
-                compression.u.lz4 = nullptr;
-            };
-
-            if (IsValid() && ctx) {
-                size_t needed = LZ4F_compressBound(0, &ctx->prefs);
-                ctx->buf.Grow((Size)needed);
-
-                size_t ret = LZ4F_compressEnd(ctx->encoder, ctx->buf.end(),
-                                              (size_t)(ctx->buf.capacity - ctx->buf.len), nullptr);
-
-                if (LZ4F_isError(ret)) {
-                    LogError("Failed to finalize LZ4 stream for '%1': %2", filename, LZ4F_getErrorName(ret));
-                    error = true;
-                    break;
-                }
-
-                ctx->buf.len += (Size)ret;
-
-                if (!WriteRaw(ctx->buf)) {
-                    error = true;
-                    break;
-                }
-                ctx->buf.len = 0;
-            }
-#endif
-        } break;
+        delete compressor;
     }
 
     switch (dest.type) {
@@ -6743,7 +6546,7 @@ bool StreamWriter::Close(bool implicit)
 
     filename = nullptr;
     error = true;
-    compression.type = CompressionType::None;
+    compression_type = CompressionType::None;
     dest.type = DestinationType::Memory;
     str_alloc.ReleaseAll();
 
@@ -6752,168 +6555,32 @@ bool StreamWriter::Close(bool implicit)
 
 bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
 {
-    switch (type) {
-        case CompressionType::None: {} break;
+    if (type != CompressionType::None) {
+        CreateCompressorFunc *func = CompressorFunctions[(int)type];
 
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            compression.u.miniz = AllocateOne<MinizDeflateContext>(nullptr, (int)AllocFlag::Zero);
-            compression.u.miniz->crc32 = MZ_CRC32_INIT;
-
-            int flags = 0;
-            switch (speed) {
-                case CompressionSpeed::Default: { flags = 32 | TDEFL_GREEDY_PARSING_FLAG; } break;
-                case CompressionSpeed::Slow: { flags = 512; } break;
-                case CompressionSpeed::Fast: { flags = 1 | TDEFL_GREEDY_PARSING_FLAG; } break;
-            }
-            flags |= (type == CompressionType::Zlib ? TDEFL_WRITE_ZLIB_HEADER : 0);
-
-            tdefl_status status = tdefl_init(&compression.u.miniz->deflator,
-                                             [](const void *buf, int len, void *udata) {
-                StreamWriter *st = (StreamWriter *)udata;
-                return (int)st->WriteRaw(MakeSpan((uint8_t *)buf, len));
-            }, this, flags);
-            if (status != TDEFL_STATUS_OKAY) {
-                LogError("Failed to initialize Deflate compression for '%1'", filename);
-                error = true;
-                return false;
-            }
-
-            if (type == CompressionType::Gzip) {
-                static uint8_t gzip_header[] = {
-                    0x1F, 0x8B, // Fixed bytes
-                    8,          // Deflate
-                    0,          // FLG
-                    0, 0, 0, 0, // MTIME
-                    0,          // XFL
-                    0           // OS
-                };
-
-                if (!WriteRaw(gzip_header))
-                    return false;
-            }
-#else
-            LogError("Deflate compression not available for '%1'", filename);
-            error = true;
-            return false;
-#endif
-        } break;
-
-        case CompressionType::Brotli: {
-#ifdef BROTLI_DEFAULT_MODE
-            BrotliEncoderState *state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
-            compression.u.brotli = state;
-
-            RG_STATIC_ASSERT(BROTLI_MIN_QUALITY == 0 && BROTLI_MAX_QUALITY == 11);
-
-            switch (speed) {
-                case CompressionSpeed::Default: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 6); } break;
-                case CompressionSpeed::Slow: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 11); } break;
-                case CompressionSpeed::Fast: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 0); } break;
-            }
-#else
-            LogError("Brotli compression not available for '%1'", filename);
-            error = true;
-            return false;
-#endif
-        } break;
-
-        case CompressionType::LZ4: {
-#ifdef LZ4_VERSION_MAJOR
-            LZ4CompressContext *ctx = new LZ4CompressContext();
-            compression.u.lz4 = ctx;
-
-            if (LZ4F_errorCode_t err = LZ4F_createCompressionContext(&ctx->encoder, LZ4F_VERSION); LZ4F_isError(err)) {
-                LogError("Failed to initialize LZ4 compression: %1", LZ4F_getErrorName(err));
-                error = true;
-                return false;
-            }
-
-            switch (speed) {
-                case CompressionSpeed::Default: { ctx->prefs.compressionLevel = LZ4HC_CLEVEL_DEFAULT; } break;
-                case CompressionSpeed::Slow: { ctx->prefs.compressionLevel = LZ4HC_CLEVEL_MAX; } break;
-                case CompressionSpeed::Fast: { ctx->prefs.compressionLevel = 0; } break;
-            }
-
-            ctx->buf.Grow(LZ4F_HEADER_SIZE_MAX);
-
-            size_t ret = LZ4F_compressBegin(ctx->encoder, ctx->buf.end(), ctx->buf.capacity - ctx->buf.len, &ctx->prefs);
-
-            if (LZ4F_isError(ret)) {
-                LogError("Failed to start LZ4 stream for '%1': %2", filename, LZ4F_getErrorName(ret));
-                error = true;
-                return false;
-            }
-
-            ctx->buf.len += ret;
-#else
-            LogError("LZ4 compression not available for '%1'", filename);
-            error = true;
-            return false;
-#endif
-        } break;
-    }
-
-    compression.type = type;
-    compression.speed = speed;
-
-    return true;
-}
-
-#ifdef MZ_VERSION
-bool StreamWriter::WriteDeflate(Span<const uint8_t> buf)
-{
-    MinizDeflateContext *ctx = compression.u.miniz;
-
-    if (compression.type == CompressionType::Gzip) {
-        ctx->crc32 = (uint32_t)mz_crc32(ctx->crc32, buf.ptr, (size_t)buf.len);
-        ctx->uncompressed_size += buf.len;
-    }
-
-    tdefl_status status = tdefl_compress_buffer(&ctx->deflator, buf.ptr, (size_t)buf.len, TDEFL_NO_FLUSH);
-    if (status < TDEFL_STATUS_OKAY) {
-        if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
-            LogError("Failed to deflate stream to '%1'", filename);
-        }
-
-        error = true;
-        return false;
-    }
-
-    return true;
-}
-#endif
-
-#ifdef BROTLI_DEFAULT_MODE
-bool StreamWriter::WriteBrotli(Span<const uint8_t> buf)
-{
-    BrotliEncoderState *state = compression.u.brotli;
-    uint8_t output_buf[2048];
-
-    while (buf.len || BrotliEncoderHasMoreOutput(state)) {
-        const uint8_t *next_in = buf.ptr;
-        uint8_t *next_out = output_buf;
-        size_t avail_in = (size_t)buf.len;
-        size_t avail_out = RG_SIZE(output_buf);
-
-        if (!BrotliEncoderCompressStream(state, BROTLI_OPERATION_PROCESS,
-                                         &avail_in, &next_in, &avail_out, &next_out, nullptr)) {
-            error = true;
-            return false;
-        }
-        if (!WriteRaw(MakeSpan(output_buf, next_out - output_buf))) {
+        if (!func) {
+            LogError("%1 compression is not available for '%2'", CompressionTypeNames[(int)type], filename);
             error = true;
             return false;
         }
 
-        buf.len -= next_in - buf.ptr;
-        buf.ptr = next_in;
+        compressor = func(this);
+
+        if (!compressor) {
+            error = true;
+            return false;
+        }
+        if (!compressor->Init(speed)) {
+            error = true;
+            return false;
+        }
     }
+
+    compression_type = type;
+    compression_speed = speed;
 
     return true;
 }
-#endif
 
 bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 {
@@ -6963,6 +6630,11 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
     }
 
     return true;
+}
+
+StreamCompressorHelper::StreamCompressorHelper(CompressionType compression_type, CreateCompressorFunc *func)
+{
+    CompressorFunctions[(int)compression_type] = func;
 }
 
 bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)

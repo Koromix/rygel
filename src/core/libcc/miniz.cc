@@ -223,7 +223,145 @@ truncated_error:
     return -1;
 }
 
+class MinizCompressor: public StreamCompressor {
+    tdefl_compressor deflator;
+
+    // Gzip support
+    bool is_gzip = false;
+    uint32_t crc32 = MZ_CRC32_INIT;
+    Size uncompressed_size = 0;
+
+    // Used to buffer small writes
+    LocalArray<uint8_t, 1024> small_buf;
+
+public:
+    MinizCompressor(StreamWriter *writer) : StreamCompressor(writer) {}
+    ~MinizCompressor() {}
+
+    bool Init(CompressionSpeed speed) override;
+    bool Write(Span<const uint8_t> buf) override;
+    bool Finalize() override;
+
+private:
+    bool WriteDeflate(Span<const uint8_t> buf);
+};
+
+bool MinizCompressor::Init(CompressionSpeed speed)
+{
+    is_gzip = (GetCompressionType() == CompressionType::Gzip);
+
+    int flags = 0;
+    switch (speed) {
+        case CompressionSpeed::Default: { flags = 32 | TDEFL_GREEDY_PARSING_FLAG; } break;
+        case CompressionSpeed::Slow: { flags = 512; } break;
+        case CompressionSpeed::Fast: { flags = 1 | TDEFL_GREEDY_PARSING_FLAG; } break;
+    }
+    flags |= (is_gzip ? 0 : TDEFL_WRITE_ZLIB_HEADER);
+
+    tdefl_status status = tdefl_init(&deflator, [](const void *buf, int len, void *udata) {
+        MinizCompressor *compressor = (MinizCompressor *)udata;
+        return (int)compressor->WriteRaw(MakeSpan((uint8_t *)buf, len));
+    }, this, flags);
+    if (status != TDEFL_STATUS_OKAY) {
+        LogError("Failed to initialize Deflate compression for '%1'", GetFileName());
+        return false;
+    }
+
+    if (is_gzip) {
+        static uint8_t gzip_header[] = {
+            0x1F, 0x8B, // Fixed bytes
+            8,          // Deflate
+            0,          // FLG
+            0, 0, 0, 0, // MTIME
+            0,          // XFL
+            0           // OS
+        };
+
+        if (!WriteRaw(gzip_header))
+            return false;
+    }
+
+    return true;
+}
+
+bool MinizCompressor::Write(Span<const uint8_t> buf)
+{
+    if (small_buf.len) {
+        Size copy_len = std::min(buf.len, small_buf.Available());
+
+        memcpy_safe(small_buf.end(), buf.ptr, copy_len);
+        small_buf.len += copy_len;
+        buf.ptr += copy_len;
+        buf.len -= copy_len;
+    }
+
+    if (buf.len) {
+        if (small_buf.len && !WriteDeflate(small_buf))
+            return false;
+        small_buf.Clear();
+
+        if (buf.len >= RG_SIZE(small_buf.data) / 2) {
+            if (!WriteDeflate(buf))
+                return false;
+        } else {
+            memcpy_safe(small_buf.data, buf.ptr, buf.len);
+            small_buf.len = buf.len;
+        }
+    }
+
+    return true;
+}
+
+bool MinizCompressor::WriteDeflate(Span<const uint8_t> buf)
+{
+    if (is_gzip) {
+        crc32 = (uint32_t)mz_crc32(crc32, buf.ptr, (size_t)buf.len);
+        uncompressed_size += buf.len;
+    }
+
+    tdefl_status status = tdefl_compress_buffer(&deflator, buf.ptr, (size_t)buf.len, TDEFL_NO_FLUSH);
+    if (status < TDEFL_STATUS_OKAY) {
+        if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
+            LogError("Failed to deflate stream to '%1'", GetFileName());
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
+bool MinizCompressor::Finalize()
+{
+    if (small_buf.len && !WriteDeflate(small_buf))
+        return false;
+
+    uint8_t dummy; // Avoid UB in miniz
+    tdefl_status status = tdefl_compress_buffer(&deflator, &dummy, 0, TDEFL_FINISH);
+    if (status != TDEFL_STATUS_DONE) {
+        if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
+            LogError("Failed to end Deflate stream for '%1", GetFileName());
+        }
+
+        return false;
+    }
+
+    if (is_gzip) {
+        uint32_t gzip_footer[] = {
+            LittleEndian(crc32),
+            LittleEndian((uint32_t)uncompressed_size)
+        };
+
+        if (!WriteRaw(MakeSpan((uint8_t *)gzip_footer, RG_SIZE(gzip_footer))))
+            return false;
+    }
+
+    return true;
+}
+
 RG_DEFINE_DECOMPRESSOR(CompressionType::Zlib, MinizDecompressor);
 RG_DEFINE_DECOMPRESSOR(CompressionType::Gzip, MinizDecompressor);
+RG_DEFINE_COMPRESSOR(CompressionType::Zlib, MinizCompressor);
+RG_DEFINE_COMPRESSOR(CompressionType::Gzip, MinizCompressor);
 
 }

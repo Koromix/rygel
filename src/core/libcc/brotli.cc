@@ -112,6 +112,88 @@ Size BrotliDecompressor::Read(Size max_len, void *user_buf)
     RG_UNREACHABLE();
 }
 
+class BrotliCompressor: public StreamCompressor {
+    BrotliEncoderStateStruct *state = nullptr;
+
+public:
+    BrotliCompressor(StreamWriter *writer) : StreamCompressor(writer) {}
+    ~BrotliCompressor();
+
+    bool Init(CompressionSpeed speed) override;
+    bool Write(Span<const uint8_t> buf) override;
+    bool Finalize() override;
+};
+
+BrotliCompressor::~BrotliCompressor()
+{
+    if (state) {
+        BrotliEncoderDestroyInstance(state);
+    }
+}
+
+bool BrotliCompressor::Init(CompressionSpeed speed)
+{
+    state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
+
+    RG_STATIC_ASSERT(BROTLI_MIN_QUALITY == 0 && BROTLI_MAX_QUALITY == 11);
+
+    switch (speed) {
+        case CompressionSpeed::Default: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 6); } break;
+        case CompressionSpeed::Slow: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 11); } break;
+        case CompressionSpeed::Fast: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 0); } break;
+    }
+
+    return true;
+}
+
+bool BrotliCompressor::Write(Span<const uint8_t> buf)
+{
+    uint8_t output_buf[2048];
+
+    while (buf.len || BrotliEncoderHasMoreOutput(state)) {
+        const uint8_t *next_in = buf.ptr;
+        uint8_t *next_out = output_buf;
+        size_t avail_in = (size_t)buf.len;
+        size_t avail_out = RG_SIZE(output_buf);
+
+        if (!BrotliEncoderCompressStream(state, BROTLI_OPERATION_PROCESS,
+                                         &avail_in, &next_in, &avail_out, &next_out, nullptr)) {
+            LogError("Failed to compress '%1' with Brotli", GetFileName());
+            return false;
+        }
+        if (!WriteRaw(MakeSpan(output_buf, next_out - output_buf)))
+            return false;
+
+        buf.len -= next_in - buf.ptr;
+        buf.ptr = next_in;
+    }
+
+    return true;
+}
+
+bool BrotliCompressor::Finalize()
+{
+    uint8_t output_buf[2048];
+
+    do {
+        const uint8_t *next_in = nullptr;
+        uint8_t *next_out = output_buf;
+        size_t avail_in = 0;
+        size_t avail_out = RG_SIZE(output_buf);
+
+        if (!BrotliEncoderCompressStream(state, BROTLI_OPERATION_FINISH,
+                                         &avail_in, &next_in, &avail_out, &next_out, nullptr)) {
+            LogError("Failed to compress '%1' with Brotli", GetFileName());
+            return false;
+        }
+        if (!WriteRaw(MakeSpan(output_buf, next_out - output_buf)))
+            return false;
+    } while (BrotliEncoderHasMoreOutput(state));
+
+    return true;
+}
+
 RG_DEFINE_DECOMPRESSOR(CompressionType::Brotli, BrotliDecompressor);
+RG_DEFINE_COMPRESSOR(CompressionType::Brotli, BrotliCompressor);
 
 }

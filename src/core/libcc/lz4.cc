@@ -115,6 +115,104 @@ Size LZ4Decompressor::Read(Size max_len, void *user_buf)
     RG_UNREACHABLE();
 }
 
+class LZ4Compressor: public StreamCompressor {
+    LZ4F_cctx *encoder = nullptr;
+    LZ4F_preferences_t prefs = {};
+
+    HeapArray<uint8_t> dynamic_buf;
+
+public:
+    LZ4Compressor(StreamWriter *writer) : StreamCompressor(writer) {}
+    ~LZ4Compressor();
+
+    bool Init(CompressionSpeed speed) override;
+    bool Write(Span<const uint8_t> buf) override;
+    bool Finalize() override;
+};
+
+LZ4Compressor::~LZ4Compressor()
+{
+    if (encoder) {
+        LZ4F_freeCompressionContext(encoder);
+    }
+}
+
+bool LZ4Compressor::Init(CompressionSpeed speed)
+{
+    LZ4F_errorCode_t err = LZ4F_createCompressionContext(&encoder, LZ4F_VERSION);
+
+    if (LZ4F_isError(err)) {
+        LogError("Failed to initialize LZ4 compression: %1", LZ4F_getErrorName(err));
+        return false;
+    }
+
+    switch (speed) {
+        case CompressionSpeed::Default: { prefs.compressionLevel = LZ4HC_CLEVEL_DEFAULT; } break;
+        case CompressionSpeed::Slow: { prefs.compressionLevel = LZ4HC_CLEVEL_MAX; } break;
+        case CompressionSpeed::Fast: { prefs.compressionLevel = 0; } break;
+    }
+
+    dynamic_buf.Grow(LZ4F_HEADER_SIZE_MAX);
+
+    size_t ret = LZ4F_compressBegin(encoder, dynamic_buf.end(), dynamic_buf.capacity - dynamic_buf.len, &prefs);
+
+    if (LZ4F_isError(ret)) {
+        LogError("Failed to start LZ4 stream for '%1': %2", GetFileName(), LZ4F_getErrorName(ret));
+        return false;
+    }
+
+    dynamic_buf.len += ret;
+
+    return true;
+}
+
+bool LZ4Compressor::Write(Span<const uint8_t> buf)
+{
+    size_t needed = LZ4F_compressBound((size_t)buf.len, &prefs);
+    dynamic_buf.Grow((Size)needed);
+
+    size_t ret = LZ4F_compressUpdate(encoder, dynamic_buf.end(), (size_t)(dynamic_buf.capacity - dynamic_buf.len),
+                                     buf.ptr, (size_t)buf.len, nullptr);
+
+    if (LZ4F_isError(ret)) {
+        LogError("Failed to write LZ4 stream for '%1': %2", GetFileName(), LZ4F_getErrorName(ret));
+        return false;
+    }
+
+    dynamic_buf.len += (Size)ret;
+
+    if (dynamic_buf.len >= 512) {
+        if (!WriteRaw(dynamic_buf))
+            return false;
+        dynamic_buf.len = 0;
+    }
+
+    return true;
+}
+
+bool LZ4Compressor::Finalize()
+{
+    size_t needed = LZ4F_compressBound(0, &prefs);
+    dynamic_buf.Grow((Size)needed);
+
+    size_t ret = LZ4F_compressEnd(encoder, dynamic_buf.end(),
+                                  (size_t)(dynamic_buf.capacity - dynamic_buf.len), nullptr);
+
+    if (LZ4F_isError(ret)) {
+        LogError("Failed to finalize LZ4 stream for '%1': %2", GetFileName(), LZ4F_getErrorName(ret));
+        return false;
+    }
+
+    dynamic_buf.len += (Size)ret;
+
+    if (!WriteRaw(dynamic_buf))
+        return false;
+    dynamic_buf.len = 0;
+
+    return true;
+}
+
 RG_DEFINE_DECOMPRESSOR(CompressionType::LZ4, LZ4Decompressor);
+RG_DEFINE_COMPRESSOR(CompressionType::LZ4, LZ4Compressor);
 
 }
