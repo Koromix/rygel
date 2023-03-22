@@ -300,17 +300,15 @@ function Builder(config = {}) {
         }
 
         if (pkg.cnoke.require != null) {
-            let binary_filename = expand_path(pkg.cnoke.require);
+            let require_filename = expand_path(pkg.cnoke.require);
 
-            if (!tools.path_is_absolute(binary_filename))
-                binary_filename = path.join(package_dir, binary_filename);
+            if (!tools.path_is_absolute(require_filename))
+                require_filename = path.join(package_dir, require_filename);
 
-            if (fs.existsSync(binary_filename)) {
-                let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', binary_filename]);
+            if (fs.existsSync(require_filename)) {
+                let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
                 if (proc.status === 0)
                     return true;
-
-                fs.unlinkSync(binary_filename);
             }
 
             console.error('Failed to load prebuilt binary, rebuilding from source');
