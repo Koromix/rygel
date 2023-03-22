@@ -4430,6 +4430,7 @@ class StreamWriter {
         union {
             struct MinizDeflateContext *miniz;
             struct BrotliEncoderStateStruct *brotli;
+            struct LZ4CompressContext *lz4;
         } u;
     } compression;
 

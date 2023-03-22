@@ -31,6 +31,7 @@
 #endif
 #if !defined(LIBCC_NO_LZ4) && __has_include("vendor/lz4/lib/lz4.h")
     #include "vendor/lz4/lib/lz4.h"
+    #include "vendor/lz4/lib/lz4hc.h"
     #include "vendor/lz4/lib/lz4frame.h"
 #endif
 
@@ -6743,6 +6744,15 @@ struct MinizDeflateContext {
 };
 #endif
 
+#ifdef LZ4_VERSION_MAJOR
+struct LZ4CompressContext {
+    LZ4F_cctx *encoder;
+    LZ4F_preferences_t prefs = {};
+
+    HeapArray<uint8_t> buf;
+};
+#endif
+
 bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
@@ -6948,6 +6958,36 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
             return WriteBrotli(buf);
 #endif
         } break;
+
+        case CompressionType::LZ4: {
+#ifdef LZ4_VERSION_MAJOR
+            LZ4CompressContext *ctx = compression.u.lz4;
+
+            size_t needed = LZ4F_compressBound((size_t)buf.len, &ctx->prefs);
+            ctx->buf.Grow((Size)needed);
+
+            size_t ret = LZ4F_compressUpdate(ctx->encoder, ctx->buf.end(), (size_t)(ctx->buf.capacity - ctx->buf.len),
+                                             buf.ptr, (size_t)buf.len, nullptr);
+
+            if (LZ4F_isError(ret)) {
+                LogError("Failed to write LZ4 stream for '%1': %2", filename, LZ4F_getErrorName(ret));
+                error = true;
+                return false;
+            }
+
+            ctx->buf.len += (Size)ret;
+
+            if (ctx->buf.len >= 512) {
+                if (!WriteRaw(ctx->buf)) {
+                    error = true;
+                    return false;
+                }
+                ctx->buf.len = 0;
+            }
+
+            return true;
+#endif
+        } break;
     }
 
     RG_UNREACHABLE();
@@ -7031,6 +7071,39 @@ bool StreamWriter::Close(bool implicit)
                         break;
                     }
                 } while (BrotliEncoderHasMoreOutput(state));
+            }
+#endif
+        } break;
+
+        case CompressionType::LZ4: {
+#ifdef LZ4_VERSION_MAJOR
+            LZ4CompressContext *ctx = compression.u.lz4;
+
+            RG_DEFER {
+                delete ctx;
+                compression.u.lz4 = nullptr;
+            };
+
+            if (IsValid() && ctx) {
+                size_t needed = LZ4F_compressBound(0, &ctx->prefs);
+                ctx->buf.Grow((Size)needed);
+
+                size_t ret = LZ4F_compressEnd(ctx->encoder, ctx->buf.end(),
+                                              (size_t)(ctx->buf.capacity - ctx->buf.len), nullptr);
+
+                if (LZ4F_isError(ret)) {
+                    LogError("Failed to finalize LZ4 stream for '%1': %2", filename, LZ4F_getErrorName(ret));
+                    error = true;
+                    break;
+                }
+
+                ctx->buf.len += (Size)ret;
+
+                if (!WriteRaw(ctx->buf)) {
+                    error = true;
+                    break;
+                }
+                ctx->buf.len = 0;
             }
 #endif
         } break;
@@ -7163,6 +7236,41 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
             }
 #else
             LogError("Brotli compression not available for '%1'", filename);
+            error = true;
+            return false;
+#endif
+        } break;
+
+        case CompressionType::LZ4: {
+#ifdef LZ4_VERSION_MAJOR
+            LZ4CompressContext *ctx = new LZ4CompressContext();
+            compression.u.lz4 = ctx;
+
+            if (LZ4F_errorCode_t err = LZ4F_createCompressionContext(&ctx->encoder, LZ4F_VERSION); LZ4F_isError(err)) {
+                LogError("Failed to initialize LZ4 compression: %1", LZ4F_getErrorName(err));
+                error = true;
+                return false;
+            }
+
+            switch (speed) {
+                case CompressionSpeed::Default: { ctx->prefs.compressionLevel = LZ4HC_CLEVEL_DEFAULT; } break;
+                case CompressionSpeed::Slow: { ctx->prefs.compressionLevel = LZ4HC_CLEVEL_MAX; } break;
+                case CompressionSpeed::Fast: { ctx->prefs.compressionLevel = 0; } break;
+            }
+
+            ctx->buf.Grow(LZ4F_HEADER_SIZE_MAX);
+
+            size_t ret = LZ4F_compressBegin(ctx->encoder, ctx->buf.end(), ctx->buf.capacity - ctx->buf.len, &ctx->prefs);
+
+            if (LZ4F_isError(ret)) {
+                LogError("Failed to start LZ4 stream for '%1': %2", filename, LZ4F_getErrorName(ret));
+                error = true;
+                return false;
+            }
+
+            ctx->buf.len += ret;
+#else
+            LogError("LZ4 compression not available for '%1'", filename);
             error = true;
             return false;
 #endif
