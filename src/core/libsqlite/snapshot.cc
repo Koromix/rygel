@@ -36,7 +36,7 @@ struct FrameData {
     uint8_t sha256[32];
 };
 #pragma pack(pop)
-#define SNAPSHOT_VERSION 1
+#define SNAPSHOT_VERSION 2
 #define SNAPSHOT_SIGNATURE "SQLITESNAPSHOT"
 
 // This should warn us in most cases when we break the file format
@@ -216,7 +216,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
 
             StreamReader reader(db_filename.ptr);
             StreamWriter writer(snapshot_path_buf.ptr, (int)StreamWriterFlag::Atomic,
-                                CompressionType::Gzip, CompressionSpeed::Fast);
+                                CompressionType::LZ4, CompressionSpeed::Fast);
 
             FrameData frame;
             frame.mtime = LittleEndian(now);
@@ -296,7 +296,7 @@ bool sq_Database::OpenNextFrame(int64_t now)
     // Open new WAL copy for writing
     success &= snapshot_wal_writer.Close();
     success &= snapshot_wal_writer.Open(snapshot_path_buf.ptr, 0,
-                                        CompressionType::Gzip, CompressionSpeed::Fast);
+                                        CompressionType::LZ4, CompressionSpeed::Fast);
 
     // Rewind WAL reader
     success &= snapshot_wal_reader.Rewind();
@@ -497,7 +497,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(0).Pad0(-16));
 
-        StreamReader reader(path_buf.ptr, CompressionType::Gzip);
+        StreamReader reader(path_buf.ptr, CompressionType::LZ4);
         StreamWriter writer(dest_filename);
         uint8_t sha256[32];
 
@@ -517,7 +517,7 @@ bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, Size frame_idx, const c
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, ".%1", FmtArg(i).Pad0(-16));
 
-        StreamReader reader(path_buf.ptr, CompressionType::Gzip);
+        StreamReader reader(path_buf.ptr, CompressionType::LZ4);
         StreamWriter writer(wal_filename);
         uint8_t sha256[32];
 
