@@ -54,11 +54,8 @@ LZ4Decompressor::~LZ4Decompressor()
 bool LZ4Decompressor::Init(CompressionType)
 {
     LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&decoder, LZ4F_VERSION);
-
-    if (LZ4F_isError(err)) {
-        LogError("Failed to initialize LZ4 decompression: %1", LZ4F_getErrorName(err));
-        return false;
-    }
+    if (LZ4F_isError(err))
+        throw std::bad_alloc();
 
     return true;
 }
@@ -132,11 +129,8 @@ LZ4Compressor::~LZ4Compressor()
 bool LZ4Compressor::Init(CompressionType, CompressionSpeed speed)
 {
     LZ4F_errorCode_t err = LZ4F_createCompressionContext(&encoder, LZ4F_VERSION);
-
-    if (LZ4F_isError(err)) {
-        LogError("Failed to initialize LZ4 compression: %1", LZ4F_getErrorName(err));
-        return false;
-    }
+    if (LZ4F_isError(err))
+        throw std::bad_alloc();
 
     switch (speed) {
         case CompressionSpeed::Default: { prefs.compressionLevel = LZ4HC_CLEVEL_MIN; } break;

@@ -54,6 +54,9 @@ BrotliDecompressor::~BrotliDecompressor()
 bool BrotliDecompressor::Init(CompressionType)
 {
     state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
+    if (!state)
+        throw std::bad_alloc();
+
     return true;
 }
 
@@ -124,6 +127,8 @@ BrotliCompressor::~BrotliCompressor()
 bool BrotliCompressor::Init(CompressionType, CompressionSpeed speed)
 {
     state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
+    if (!state)
+        throw std::bad_alloc();
 
     RG_STATIC_ASSERT(BROTLI_MIN_QUALITY == 0 && BROTLI_MAX_QUALITY == 11);
 
