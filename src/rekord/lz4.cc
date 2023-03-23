@@ -39,9 +39,9 @@ Span<uint8_t> DecodeLZ4::PrepareAppend(Size needed)
     return buf;
 }
 
-bool DecodeLZ4::Flush(bool eof, FunctionRef<bool(Span<const uint8_t>)> func)
+bool DecodeLZ4::Flush(bool complete, FunctionRef<bool(Span<const uint8_t>)> func)
 {
-    Size treshold = eof ? 1 : in_hint;
+    Size treshold = complete ? 1 : in_hint;
 
     while (in_buf.len >= treshold) {
         if (RG_UNLIKELY(done)) {
@@ -126,11 +126,11 @@ bool EncodeLZ4::Append(Span<const uint8_t> buf)
     return true;
 }
 
-bool EncodeLZ4::Flush(bool eof, FunctionRef<bool(Span<const uint8_t>)> func)
+bool EncodeLZ4::Flush(bool complete, FunctionRef<Size(Span<const uint8_t>)> func)
 {
     RG_ASSERT(started);
 
-    if (eof) {
+    if (complete) {
         size_t needed = LZ4F_compressBound(0, nullptr);
         dynamic_buf.Grow((Size)needed);
 
@@ -145,10 +145,17 @@ bool EncodeLZ4::Flush(bool eof, FunctionRef<bool(Span<const uint8_t>)> func)
         dynamic_buf.len += (Size)ret;
     }
 
-    if (!func(dynamic_buf))
-        return false;
+    for (;;) {
+        Size processed = func(dynamic_buf);
+        if (processed < 0)
+            return false;
+        if (!processed)
+            break;
 
-    dynamic_buf.len = 0;
+        memmove_safe(dynamic_buf.ptr, dynamic_buf.ptr + processed, dynamic_buf.len - processed);
+        dynamic_buf.len -= processed;
+    }
+
     return true;
 }
 

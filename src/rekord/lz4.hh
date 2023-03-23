@@ -32,7 +32,7 @@ public:
     ~DecodeLZ4();
 
     Span<uint8_t> PrepareAppend(Size needed);
-    bool Flush(bool eof, FunctionRef<bool(Span<const uint8_t>)> func);
+    bool Flush(bool complete, FunctionRef<bool(Span<const uint8_t>)> func);
 };
 
 class EncodeLZ4 {
@@ -48,7 +48,7 @@ public:
     bool Start();
 
     bool Append(Span<const uint8_t> buf);
-    bool Flush(bool eof, FunctionRef<bool(Span<const uint8_t>)> func);
+    bool Flush(bool complete, FunctionRef<Size(Span<const uint8_t>)> func);
 };
 
 }

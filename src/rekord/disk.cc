@@ -330,12 +330,16 @@ Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_
                     // This should rarely loop because data should compress to less
                     // than ObjectSplit but we ought to be safe ;)
 
-                    while (buf.len) {
+                    Size treshold = complete ? 1 : ObjectSplit;
+                    Size processed = 0;
+
+                    while (buf.len >= treshold) {
                         Size piece_len = std::min(ObjectSplit, buf.len);
                         Span<const uint8_t> piece = buf.Take(0, piece_len);
 
                         buf.ptr += piece.len;
                         buf.len -= piece.len;
+                        processed += piece.len;
 
                         uint8_t cypher[ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
                         unsigned char tag = (complete && !buf.len) ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
@@ -345,10 +349,10 @@ Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_
                         Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
 
                         if (!func(final))
-                            return false;
+                            return (Size)-1;
                     }
 
-                    return true;
+                    return processed;
                 });
                 if (!success)
                     return false;
