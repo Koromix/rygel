@@ -34,7 +34,7 @@ public:
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
 
-    Size WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
@@ -73,7 +73,7 @@ bool S3Disk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
     return s3.GetObject(path, Mebibytes(256), out_obj);
 }
 
-Size S3Disk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
+Size S3Disk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
     // Fast detection of known objects
     if (cache_db.IsValid()) {
@@ -125,10 +125,8 @@ Size S3Disk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Functio
     }
 
     HeapArray<uint8_t> obj;
-    obj.Reserve(total_len);
     if (!func([&](Span<const uint8_t> buf) { obj.Append(buf); return true; }))
         return -1;
-    RG_ASSERT(obj.len == total_len);
 
     if (!s3.PutObject(path, obj))
         return -1;
@@ -136,7 +134,7 @@ Size S3Disk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Functio
                                                ON CONFLICT (key) DO NOTHING)", path))
         return -1;
 
-    return total_len;
+    return obj.len;
 }
 
 bool S3Disk::DeleteRaw(const char *path)

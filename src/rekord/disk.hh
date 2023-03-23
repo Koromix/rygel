@@ -103,7 +103,7 @@ protected:
     virtual bool ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
     virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;
 
-    virtual Size WriteRaw(const char *path, Size total_len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
+    virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
     virtual bool DeleteRaw(const char *path) = 0;
 
     virtual bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) = 0;

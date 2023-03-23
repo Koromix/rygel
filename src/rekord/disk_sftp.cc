@@ -30,7 +30,7 @@ public:
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
 
-    Size WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
@@ -78,7 +78,7 @@ bool SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
     RG_UNREACHABLE();
 }
 
-Size SftpDisk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
+Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
     RG_UNREACHABLE();
 }

@@ -13,6 +13,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "disk.hh"
+#include "lz4.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -49,7 +50,7 @@ struct ObjectIntro {
 
 static const int SecretVersion = 1;
 static const int CacheVersion = 2;
-static const int ObjectVersion = 2;
+static const int ObjectVersion = 3;
 static const Size ObjectSplit = Kibibytes(32);
 
 bool rk_Disk::Open(const char *pwd)
@@ -176,29 +177,22 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
-    // Read the object, we use the same buffer for the cypher and the decrypted data,
-    // just 512 bytes apart which is more than enough for ChaCha20 (64-byte blocks).
-    Span<const uint8_t> obj;
-    {
-        out_obj->Grow(512);
-        out_obj->len += 512;
-
-        Size offset = out_obj->len;
-        if (!ReadRaw(path.data, out_obj))
-            return false;
-        obj = MakeSpan(out_obj->ptr + offset, out_obj->len - offset);
-    }
+    HeapArray<uint8_t> raw;
+    if (!ReadRaw(path.data, &raw))
+        return false;
+    Span<const uint8_t> remain = raw;
 
     // Init object decryption
     crypto_secretstream_xchacha20poly1305_state state;
+    int version;
     rk_ObjectType type;
     {
         ObjectIntro intro;
-        if (obj.len < RG_SIZE(intro)) {
+        if (remain.len < RG_SIZE(intro)) {
             LogError("Truncated object");
             return false;
         }
-        memcpy(&intro, obj.ptr, RG_SIZE(intro));
+        memcpy(&intro, remain.ptr, RG_SIZE(intro));
 
         if (intro.version > ObjectVersion) {
             LogError("Unexpected object version %1 (expected %2)", intro.version, ObjectVersion);
@@ -208,6 +202,8 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
             LogError("Invalid object type 0x%1", FmtHex(intro.type));
             return false;
         }
+
+        version = intro.version;
         type = (rk_ObjectType)intro.type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
@@ -221,40 +217,54 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
             return false;
         }
 
-        obj.ptr += RG_SIZE(ObjectIntro);
-        obj.len -= RG_SIZE(ObjectIntro);
+        remain.ptr += RG_SIZE(ObjectIntro);
+        remain.len -= RG_SIZE(ObjectIntro);
+    }
+
+    if (version < 3) {
+        LogError("Unsupported old object format version %1", version);
+        return false;
     }
 
     // Read and decrypt object
-    Size new_len = prev_len;
-    while (obj.len) {
-        Size in_len = std::min(obj.len, ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES);
-        Size out_len = in_len - crypto_secretstream_xchacha20poly1305_ABYTES;
+    {
+        DecodeLZ4 lz4;
 
-        Span<const uint8_t> cypher = MakeSpan(obj.ptr, in_len);
-        uint8_t *buf = out_obj->ptr + new_len;
+        while (remain.len) {
+            Size in_len = std::min(remain.len, ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES);
+            Size out_len = in_len - crypto_secretstream_xchacha20poly1305_ABYTES;
 
-        unsigned long long buf_len = 0;
-        uint8_t tag;
-        if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
-                                                       cypher.ptr, cypher.len, nullptr, 0) != 0) {
-            LogError("Failed during symmetric decryption (corrupt object?)");
-            return false;
-        }
+            Span<const uint8_t> cypher = MakeSpan(remain.ptr, in_len);
+            Span<uint8_t> buf = lz4.PrepareAppend(out_len);
 
-        obj.ptr += cypher.len;
-        obj.len -= cypher.len;
-        new_len += out_len;
-
-        if (!obj.len) {
-            if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
-                LogError("Truncated object");
+            unsigned long long buf_len = 0;
+            uint8_t tag;
+            if (crypto_secretstream_xchacha20poly1305_pull(&state, buf.ptr, &buf_len, &tag,
+                                                           cypher.ptr, cypher.len, nullptr, 0) != 0) {
+                LogError("Failed during symmetric decryption (corrupt object?)");
                 return false;
             }
-            break;
+
+            remain.ptr += cypher.len;
+            remain.len -= cypher.len;
+
+            bool eof = !remain.len;
+            bool success = lz4.Flush(eof, [&](Span<const uint8_t> buf) {
+                out_obj->Append(buf);
+                return true;
+            });
+            if (!success)
+                return false;
+
+            if (eof) {
+                if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
+                    LogError("Truncated object");
+                    return false;
+                }
+                break;
+            }
         }
     }
-    out_obj->len = new_len;
 
     *out_type = type;
     err_guard.Disable();
@@ -269,16 +279,7 @@ Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
-    Size len;
-    {
-        Size parts = obj.len / ObjectSplit;
-        Size remain = obj.len % ObjectSplit;
-
-        len = RG_SIZE(ObjectIntro) + parts * (ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES) +
-                                     remain + crypto_secretstream_xchacha20poly1305_ABYTES;
-    }
-
-    Size written = WriteRaw(path.data, len, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
+    Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
         // Write object intro
         crypto_secretstream_xchacha20poly1305_state state;
         {
@@ -299,31 +300,58 @@ Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_
             }
 
             Span<const uint8_t> buf = MakeSpan((const uint8_t *)&intro, RG_SIZE(intro));
+
             if (!func(buf))
                 return false;
         }
+
+        // Initialize compression
+        EncodeLZ4 lz4;
+        if (!lz4.Start())
+            return false;
 
         // Encrypt object data
         {
             bool complete = false;
 
             do {
-                Span<const uint8_t> frag;
-                frag.len = std::min(ObjectSplit, obj.len);
-                frag.ptr = obj.ptr;
-
-                complete |= (frag.len < ObjectSplit);
-
-                uint8_t cypher[ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
-                unsigned char tag = complete ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
-                unsigned long long cypher_len;
-                crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, frag.ptr, frag.len, nullptr, 0, tag);
-
-                if (!func(MakeSpan(cypher, (Size)cypher_len)))
-                    return false;
+                Size frag_len = std::min(ObjectSplit, obj.len);
+                Span<const uint8_t> frag = obj.Take(0, frag_len);
 
                 obj.ptr += frag.len;
                 obj.len -= frag.len;
+
+                complete |= (frag.len < ObjectSplit);
+
+                if (!lz4.Append(frag))
+                    return false;
+
+                bool success = lz4.Flush(complete, [&](Span<const uint8_t> buf) {
+                    // This should rarely loop because data should compress to less
+                    // than ObjectSplit but we ought to be safe ;)
+
+                    while (buf.len) {
+                        Size piece_len = std::min(ObjectSplit, buf.len);
+                        Span<const uint8_t> piece = buf.Take(0, piece_len);
+
+                        buf.ptr += piece.len;
+                        buf.len -= piece.len;
+
+                        uint8_t cypher[ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                        unsigned char tag = (complete && !buf.len) ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
+                        unsigned long long cypher_len;
+                        crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, piece.ptr, piece.len, nullptr, 0, tag);
+
+                        Span<const uint8_t> final = MakeSpan(cypher, (Size)cypher_len);
+
+                        if (!func(final))
+                            return false;
+                    }
+
+                    return true;
+                });
+                if (!success)
+                    return false;
             } while (!complete);
         }
 
@@ -601,7 +629,7 @@ Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf)
     if (TestSlow(path))
         return 0;
 
-    Size written = WriteRaw(path, buf.len, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });
+    Size written = WriteRaw(path, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });
     return written;
 }
 

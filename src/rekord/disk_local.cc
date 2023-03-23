@@ -29,7 +29,7 @@ public:
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
 
-    Size WriteRaw(const char *path, Size len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
+    Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
@@ -136,7 +136,7 @@ bool LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
     return ReadFile(filename.data, Mebibytes(256), out_obj) >= 0;
 }
 
-Size LocalDisk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
+Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
@@ -182,7 +182,6 @@ Size LocalDisk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Func
         return -1;
     if (!writer.Close())
         return -1;
-    RG_ASSERT(writer.GetRawWritten() == total_len);
 
     // File is complete
     fclose(fp);
@@ -193,7 +192,7 @@ Size LocalDisk::WriteRaw(const char *path, Size total_len, FunctionRef<bool(Func
         return -1;
     tmp_guard.Disable();
 
-    return total_len;
+    return writer.GetRawWritten();
 }
 
 bool LocalDisk::DeleteRaw(const char *path)
