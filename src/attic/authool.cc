@@ -17,6 +17,130 @@
 
 namespace RG {
 
+static int RunGeneratePassword(Span<const char *> arguments)
+{
+    const int MaxPasswordLength = 256;
+
+    // Options
+    int length = 24;
+    const char *pattern = nullptr;
+    bool check = true;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 generate_password [options]%!0
+
+Options:
+    %!..+-l, --length <length>%!0        Set desired password length
+                                 %!D..(default: %2)%!0
+    %!..+-p, --pattern <chars>%!0        Set allowed/required characters, see below
+
+        %!..+--no_check%!0               Don't check password strength
+
+Use a pattern to set which characters classes are present in the password:
+
+    %!..+l%!0       Use lowercase characters
+    %!..+l-%!0      Use non-ambiguous lowercase characters (exclude l)
+    %!..+u%!0       Use uppercase characters
+    %!..+u-%!0      Use non-ambiguous lowercase characters (exclude I and O)
+    %!..+d%!0       Use digits
+    %!..+d-%!0      Use non-ambiguous digits (exclude 1 and 0)
+    %!..+s%!0       Use basic special symbols
+    %!..+!%!0       Use dangerous special symbols
+            %!D..(annoying to type or to use in terminals)%!0
+
+Here are a few example patterns:
+
+    %!..+lud%!0     Use all characters (lower and uppercase) and digits
+    %!..+l-u-s%!0   Use non-ambiguous characters (lower and uppercase) and basic special symbols
+    %!..+d!%!0      Use all digits and dangerous special symbols)", FelixTarget, length);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-l", "--length", OptionType::Value)) {
+                if (!ParseInt(opt.current_value, &length))
+                    return 1;
+                if (length <= 0 || length > MaxPasswordLength) {
+                    LogError("Password length must be between 0 and %1", MaxPasswordLength);
+                    return 1;
+                }
+            } else if (opt.Test("-p", "--pattern", OptionType::Value)) {
+                pattern = opt.current_value;
+            } else if (opt.Test("--no_check")) {
+                check = false;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+    }
+
+    LocalArray<char, MaxPasswordLength + 1> password_buf;
+    password_buf.len = length + 1;
+
+    unsigned int flags = 0;
+    if (pattern) {
+        for (Size i = 0; pattern[i]; i++) {
+            char c = pattern[i];
+
+            switch (c) {
+                case 'l': {
+                    if (pattern[i + 1] == '-') {
+                        flags |= (int)pwd_GenerateFlag::LowersNoAmbi;
+                        i++;
+                    } else {
+                        flags |= (int)pwd_GenerateFlag::Lowers;
+                    }
+                } break;
+                case 'u': {
+                    if (pattern[i + 1] == '-') {
+                        flags |= (int)pwd_GenerateFlag::UppersNoAmbi;
+                        i++;
+                    } else {
+                        flags |= (int)pwd_GenerateFlag::Uppers;
+                    }
+                } break;
+                case 'd': {
+                    if (pattern[i + 1] == '-') {
+                        flags |= (int)pwd_GenerateFlag::DigitsNoAmbi;
+                        i++;
+                    } else {
+                        flags |= (int)pwd_GenerateFlag::Digits;
+                    }
+                } break;
+                case 's': { flags |= (int)pwd_GenerateFlag::Specials; } break;
+                case '!': { flags |= (int)pwd_GenerateFlag::Dangerous; } break;
+
+                default: {
+                    if ((uint8_t)c < 32 || (uint8_t)c >= 128) {
+                        LogError("Illegal pattern byte 0x%1", FmtHex((uint8_t)c).Pad0(-2));
+                    } else {
+                        LogError("Unsupported pattern character '%1'", c);
+                    }
+
+                    return 1;
+                } break;
+            }
+        }
+    } else {
+        flags = UINT_MAX;
+    }
+    flags = ApplyMask(flags, (int)pwd_GenerateFlag::Check, check);
+
+    if (!pwd_GeneratePassword(flags, password_buf))
+        return 1;
+
+    LogInfo("Password: %!..+%1%!0", password_buf.data);
+    return 0;
+}
+
 static int RunHashPassword(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -441,6 +565,7 @@ int Main(int argc, char **argv)
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 
 Commands:
+    %!..+generate_password%!0            Generate random password
     %!..+hash_password%!0                Hash a password (using libsodium)
 
     %!..+generate_totp%!0                Generate a TOTP QR code
@@ -476,7 +601,9 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     }
 
     // Execute relevant command
-    if (TestStr(cmd, "hash_password")) {
+    if (TestStr(cmd, "generate_password")) {
+        return RunGeneratePassword(arguments);
+    } else if (TestStr(cmd, "hash_password")) {
         return RunHashPassword(arguments);
     } else if (TestStr(cmd, "generate_totp")) {
         return RunGenerateTOTP(arguments);
