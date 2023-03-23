@@ -141,7 +141,7 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
             } else {
                 memcpy_safe(user_buf, out_ptr, (size_t)out_len);
                 read_len += out_len;
-                user_buf = (uint8_t *)out_buf + out_len;
+                user_buf = (uint8_t *)user_buf + out_len;
                 max_len -= out_len;
                 out_ptr = out_buf;
                 out_len = 0;
