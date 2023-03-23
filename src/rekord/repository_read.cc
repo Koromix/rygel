@@ -170,9 +170,20 @@ static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uin
     return true;
 }
 
-static bool CreateSymbolicLink(const char *filename, const char *target)
+static bool CreateSymbolicLink(const char *filename, const char *target, bool overwrite)
 {
+retry:
     if (symlink(target, filename) < 0) {
+        if (errno == EEXIST && overwrite) {
+            struct stat sb;
+            if (!lstat(filename, &sb) && S_ISLNK(sb.st_mode)) {
+                unlink(filename);
+            }
+
+            overwrite = false;
+            goto retry;
+        }
+
         LogError("Failed to create symbolic link '%1': %2", filename, strerror(errno));
         return false;
     }
@@ -359,7 +370,7 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
                     // NUL terminate the path
                     entry_obj.Append(0);
 
-                    if (!CreateSymbolicLink(entry_filename, (const char *)entry_obj.ptr))
+                    if (!CreateSymbolicLink(entry_filename, (const char *)entry_obj.ptr, true))
                         return false;
                 } break;
 
@@ -489,9 +500,11 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
     switch (type) {
         case rk_ObjectType::Chunk:
         case rk_ObjectType::File: {
-            if (TestFile(dest_path) && !IsDirectoryEmpty(dest_path)) {
-                LogError("File '%1' already exists", dest_path);
-                return false;
+            if (!settings.force) {
+                if (TestFile(dest_path) && !IsDirectoryEmpty(dest_path)) {
+                    LogError("File '%1' already exists", dest_path);
+                    return false;
+                }
             }
 
             int fd = get.GetFile(id, type, obj, dest_path);
@@ -503,13 +516,13 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
         case rk_ObjectType::Directory1:
         case rk_ObjectType::Directory2:
         case rk_ObjectType::Directory3: {
-            if (TestFile(dest_path, FileType::Directory)) {
+            if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
                     return false;
                 }
             } else {
-                if (!MakeDirectory(dest_path))
+                if (!MakeDirectory(dest_path, !settings.force))
                     return false;
             }
 
@@ -520,13 +533,13 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
         case rk_ObjectType::Snapshot1:
         case rk_ObjectType::Snapshot2:
         case rk_ObjectType::Snapshot3: {
-            if (TestFile(dest_path, FileType::Directory)) {
+            if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
                     return false;
                 }
             } else {
-                if (!MakeDirectory(dest_path))
+                if (!MakeDirectory(dest_path, !settings.force))
                     return false;
             }
 
@@ -546,7 +559,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
         case rk_ObjectType::Link: {
             obj.Append(0);
 
-            if (!CreateSymbolicLink(dest_path, (const char *)obj.ptr))
+            if (!CreateSymbolicLink(dest_path, (const char *)obj.ptr, settings.force))
                 return false;
         } break;
     }

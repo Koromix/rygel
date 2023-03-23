@@ -165,6 +165,7 @@ Options:
     %!..+-n, --name <name>%!0            Set user friendly name (optional)
 
         %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is)
+
         %!..+--raw%!0                    Skip snapshot object and report data ID
 
     %!..+-j, --threads <threads>%!0      Change number of threads
@@ -267,7 +268,9 @@ Options:
         %!..+--password <pwd>%!0         Set repository password
 
     %!..+-O, --output <path>%!0          Restore file or directory to path
+
         %!..+--flat%!0                   Use flat names for snapshot files
+    %!..+-f, --force%!0                  Overwrite destination if not empty
 
     %!..+-j, --threads <threads>%!0      Change number of threads
                                  %!D..(default: %2)%!0)", FelixTarget, rk_ComputeDefaultThreads());
@@ -295,6 +298,8 @@ Options:
                 dest_filename = opt.current_value;
             } else if (opt.Test("--flat")) {
                 settings.flat = true;
+            } else if (opt.Test("-f", "--force")) {
+                settings.force = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
