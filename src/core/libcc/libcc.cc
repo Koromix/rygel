@@ -2143,24 +2143,30 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
 {
     DWORD move_flags = (flags & (int)RenameFlag::Overwrite) ? MOVEFILE_REPLACE_EXISTING : 0;
 
-    if (win32_utf8) {
-        if (!MoveFileExA(src_filename, dest_filename, move_flags))
-            goto error;
-    } else {
-        wchar_t src_filename_w[4096];
-        wchar_t dest_filename_w[4096];
-        if (ConvertUtf8ToWin32Wide(src_filename, src_filename_w) < 0)
-            return false;
-        if (ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w) < 0)
-            return false;
+    for (int i = 0; i < 10; i++) {
+        if (win32_utf8) {
+            if (MoveFileExA(src_filename, dest_filename, move_flags))
+                return true;
+        } else {
+            wchar_t src_filename_w[4096];
+            wchar_t dest_filename_w[4096];
+            if (ConvertUtf8ToWin32Wide(src_filename, src_filename_w) < 0)
+                return false;
+            if (ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w) < 0)
+                return false;
 
-        if (!MoveFileExW(src_filename_w, dest_filename_w, move_flags))
-            goto error;
+            if (MoveFileExW(src_filename_w, dest_filename_w, move_flags))
+                return true;
+        }
+
+        if (GetLastError() != ERROR_ACCESS_DENIED)
+            break;
+
+        // If two threads are trying to rename to the same destination or the FS is
+        // very busy, we get spurious ERROR_ACCESS_DENIED errors. Wait a bit and retry :)
+        Sleep(1);
     }
 
-    return true;
-
-error:
     LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString());
     return false;
 }

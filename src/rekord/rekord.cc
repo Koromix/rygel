@@ -468,7 +468,9 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return 1;
     }
 
-#ifndef _WIN32
+#ifdef _WIN32
+    _setmaxstdio(4096);
+#else
     {
         const rlim_t max_nofile = 4096;
         struct rlimit lim;
