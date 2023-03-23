@@ -219,6 +219,9 @@ static Size PackAsset(const PackAssetInfo &asset, FunctionRef<void(Span<const ui
         return true;
     }, nullptr, asset.compression_type);
 
+    if (!compressor.IsValid())
+        return -1;
+
     if (asset.transform_cmd) {
         Span<const uint8_t> bridge = {};
 
