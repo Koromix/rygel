@@ -15,6 +15,9 @@
 
 namespace RG {
 
+// Skip None
+static const Span<const char *const> AvailableAlgorithms = MakeSpan(CompressionTypeNames + 1, RG_LEN(CompressionTypeNames) - 1);
+
 static int RunCompress(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -39,7 +42,7 @@ Options:
 
     %!..+-f, --force%!0                  Overwrite destination file
 
-Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(CompressionTypeNames));
+Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAlgorithms));
     };
 
     // Parse arguments
@@ -53,7 +56,8 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Compression
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 dest_filename = opt.current_value;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(CompressionTypeNames, opt.current_value, &compression_type)) {
+                if (!OptionToEnum(CompressionTypeNames, opt.current_value, &compression_type) ||
+                        compression_type == CompressionType::None) {
                     LogError("Unknown compression algorithm '%1'", opt.current_value);
                     return 1;
                 }
@@ -141,7 +145,7 @@ Options:
 
     %!..+-f, --force%!0                  Overwrite destination file
 
-Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(CompressionTypeNames));
+Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAlgorithms));
     };
 
     // Parse arguments
@@ -155,7 +159,8 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Compressi
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 dest_filename = opt.current_value;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(CompressionTypeNames, opt.current_value, &compression_type)) {
+                if (!OptionToEnum(CompressionTypeNames, opt.current_value, &compression_type) ||
+                        compression_type == CompressionType::None) {
                     LogError("Unknown compression algorithm '%1'", opt.current_value);
                     return 1;
                 }
