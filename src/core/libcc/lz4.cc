@@ -49,9 +49,7 @@ public:
 
 LZ4Decompressor::~LZ4Decompressor()
 {
-    if (decoder) {
-        LZ4F_freeDecompressionContext(decoder);
-    }
+    LZ4F_freeDecompressionContext(decoder);
 }
 
 bool LZ4Decompressor::Init(CompressionType)
@@ -135,9 +133,7 @@ public:
 
 LZ4Compressor::~LZ4Compressor()
 {
-    if (encoder) {
-        LZ4F_freeCompressionContext(encoder);
-    }
+    LZ4F_freeCompressionContext(encoder);
 }
 
 bool LZ4Compressor::Init(CompressionType, CompressionSpeed speed)
