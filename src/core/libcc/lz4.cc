@@ -150,7 +150,7 @@ bool LZ4Compressor::Init(CompressionType, CompressionSpeed speed)
     }
 
     switch (speed) {
-        case CompressionSpeed::Default: { prefs.compressionLevel = LZ4HC_CLEVEL_DEFAULT; } break;
+        case CompressionSpeed::Default: { prefs.compressionLevel = LZ4HC_CLEVEL_MIN; } break;
         case CompressionSpeed::Slow: { prefs.compressionLevel = LZ4HC_CLEVEL_MAX; } break;
         case CompressionSpeed::Fast: { prefs.compressionLevel = 0; } break;
     }
