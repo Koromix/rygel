@@ -33,6 +33,7 @@ class LZ4Decompressor: public StreamDecompressor {
 
     uint8_t in_buf[256 * 1024];
     Size in_len = 0;
+    Size in_hint = RG_SIZE(in_buf);
 
     uint8_t out_buf[256 * 1024];
     Size out_len = 0;
@@ -68,6 +69,7 @@ bool LZ4Decompressor::Init(CompressionType)
 void LZ4Decompressor::Reset()
 {
     LZ4F_resetDecompressionContext(decoder);
+    in_hint = RG_SIZE(in_buf);
 }
 
 Size LZ4Decompressor::Read(Size max_len, void *user_buf)
@@ -84,8 +86,8 @@ Size LZ4Decompressor::Read(Size max_len, void *user_buf)
             return copy_len;
         }
 
-        if (in_len < RG_SIZE(in_buf)) {
-            Size raw_len = ReadRaw(RG_SIZE(in_buf) - in_len, in_buf + in_len);
+        if (in_len < in_hint) {
+            Size raw_len = ReadRaw(in_hint - in_len, in_buf + in_len);
             if (raw_len < 0)
                 return -1;
             in_len += raw_len;
@@ -108,6 +110,7 @@ Size LZ4Decompressor::Read(Size max_len, void *user_buf)
 
         memmove_safe(in_buf, in_buf + avail_in, (size_t)in_len - avail_in);
         in_len -= avail_in;
+        in_hint = std::min(RG_SIZE(in_buf), (Size)ret);
 
         out_len += (Size)avail_out;
     }
