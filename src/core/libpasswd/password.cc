@@ -386,6 +386,11 @@ bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
     TAKE_CHARS(dangerous, pwd_GenerateFlag::Dangerous, DangerousChars);
     all_chars.Append(0);
 
+    if (all_chars.len < 2) {
+        LogError("No character class is allowed");
+        return false;
+    }
+
     // One try should be enough but let's make sure!
     {
         PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
