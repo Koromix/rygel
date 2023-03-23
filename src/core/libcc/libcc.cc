@@ -2994,6 +2994,12 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
         if (TestStr(extension, ".gz")) {
             *out_compression_type = CompressionType::Gzip;
             consume_next_extension();
+        } else if (TestStr(extension, ".br")) {
+            *out_compression_type = CompressionType::Brotli;
+            consume_next_extension();
+        } else if (TestStr(extension, ".lz4")) {
+            *out_compression_type = CompressionType::LZ4;
+            consume_next_extension();
         } else {
             *out_compression_type = CompressionType::None;
         }
