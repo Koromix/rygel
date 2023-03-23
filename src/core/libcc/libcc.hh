@@ -4366,7 +4366,6 @@ public:
     virtual ~StreamDecompressor() {}
 
     virtual bool Init(CompressionType type) = 0;
-    virtual void Reset() = 0;
     virtual Size Read(Size max_len, void *out_buf) = 0;
 
 protected:

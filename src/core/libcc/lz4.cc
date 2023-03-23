@@ -43,7 +43,6 @@ public:
     ~LZ4Decompressor();
 
     bool Init(CompressionType type) override;
-    void Reset() override;
     Size Read(Size max_len, void *out_buf) override;
 };
 
@@ -62,12 +61,6 @@ bool LZ4Decompressor::Init(CompressionType)
     }
 
     return true;
-}
-
-void LZ4Decompressor::Reset()
-{
-    LZ4F_resetDecompressionContext(decoder);
-    in_hint = RG_SIZE(in_buf);
 }
 
 Size LZ4Decompressor::Read(Size max_len, void *user_buf)

@@ -41,7 +41,6 @@ public:
     ~BrotliDecompressor();
 
     bool Init(CompressionType type) override;
-    void Reset() override;
     Size Read(Size max_len, void *out_buf) override;
 };
 
@@ -56,15 +55,6 @@ bool BrotliDecompressor::Init(CompressionType)
 {
     state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
     return true;
-}
-
-void BrotliDecompressor::Reset()
-{
-    if (state) {
-        BrotliDecoderDestroyInstance(state);
-        state = nullptr;
-    }
-    state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
 }
 
 Size BrotliDecompressor::Read(Size max_len, void *user_buf)

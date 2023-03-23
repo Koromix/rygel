@@ -6021,7 +6021,10 @@ bool StreamReader::Rewind()
 
     if (decompressor) {
         RG_ASSERT(compression_type != CompressionType::None);
-        decompressor->Reset();
+        delete decompressor;
+
+        if (!InitDecompressor(compression_type))
+            return false;
     }
 
     source.eof = false;

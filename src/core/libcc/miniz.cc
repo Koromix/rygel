@@ -49,7 +49,6 @@ public:
     ~MinizDecompressor() {}
 
     bool Init(CompressionType type) override;
-    void Reset() override;
     Size Read(Size max_len, void *out_buf) override;
 };
 
@@ -61,11 +60,6 @@ bool MinizDecompressor::Init(CompressionType type)
     is_gzip = (type == CompressionType::Gzip);
 
     return true;
-}
-
-void MinizDecompressor::Reset()
-{
-    tinfl_init(&inflator);
 }
 
 Size MinizDecompressor::Read(Size max_len, void *user_buf)
