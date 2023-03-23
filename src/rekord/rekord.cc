@@ -98,10 +98,18 @@ Options:
     // Generate repository passwords
     char full_pwd[33] = {};
     char write_pwd[33] = {};
-    if (!pwd_GeneratePassword(full_pwd))
-        return 1;
-    if (!pwd_GeneratePassword(write_pwd))
-        return 1;
+    {
+        // Avoid characters that are annoying in consoles
+        unsigned int flags = (int)pwd_GenerateFlag::LowersNoAmbi |
+                             (int)pwd_GenerateFlag::UppersNoAmbi |
+                             (int)pwd_GenerateFlag::DigitsNoAmbi |
+                             (int)pwd_GenerateFlag::Specials;
+
+        if (!pwd_GeneratePassword(flags, full_pwd))
+            return 1;
+        if (!pwd_GeneratePassword(flags, write_pwd))
+            return 1;
+    }
 
     if (!config.Complete(false))
         return 1;
