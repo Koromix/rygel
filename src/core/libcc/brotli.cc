@@ -101,10 +101,10 @@ Size BrotliDecompressor::Read(Size max_len, void *user_buf)
         } else if (ret == BROTLI_DECODER_RESULT_ERROR) {
             LogError("Malformed Brotli stream in '%1'", GetFileName());
             return -1;
-        } else if (ret == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) {
-            LogError("Truncated Brotli stream in '%1'", GetFileName());
-            return -1;
         }
+
+        memmove_safe(in_buf, next_in, (size_t)avail_in);
+        in_len = avail_in;
 
         out_len = next_out - out_buf - out_len;
     }
