@@ -584,7 +584,9 @@ bool rk_List(rk_Disk *disk, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *ou
                 if (!disk->ReadObject(id, &type, &obj))
                     return false;
 
-                if (type != rk_ObjectType::Snapshot1 && type != rk_ObjectType::Snapshot2) {
+                if (type != rk_ObjectType::Snapshot1 &&
+                        type != rk_ObjectType::Snapshot2 &&
+                        type != rk_ObjectType::Snapshot3) {
                     LogError("Object '%1' is not a snapshot (ignoring)", id);
                     return true;
                 }
