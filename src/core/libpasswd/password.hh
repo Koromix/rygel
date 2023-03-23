@@ -27,11 +27,15 @@ namespace RG {
 
 enum class pwd_GenerateFlag {
     Uppers = 1 << 0,
-    Lowers = 1 << 1,
-    Numbers = 1 << 2,
-    Specials = 1 << 3,
-    Ambiguous = 1 << 4,
-    Check = 1 << 5
+    UppersNoAmbi = 1 << 1,
+    Lowers = 1 << 2,
+    LowersNoAmbi = 1 << 3,
+    Digits = 1 << 4,
+    DigitsNoAmbi = 1 << 5,
+    Specials = 1 << 6,
+    Dangerous = 1 << 7,
+
+    Check = 1 << 8
 };
 
 bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blacklist = {});

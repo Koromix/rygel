@@ -340,41 +340,77 @@ bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blackl
 
 bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
 {
-    static const char *const AllChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
     static const char *const UpperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     static const char *const UpperCharsNoAmbi = "ABCDEFGHJKLMNPQRSTUVWXYZ";
     static const char *const LowerChars = "abcdefghijklmnopqrstuvwxyz";
     static const char *const LowerCharsNoAmbi = "abcdefghijkmnopqrstuvwxyz";
-    static const char *const NumberChars = "0123456789";
-    static const char *const NumberCharsNoAmbi = "23456789";
-    static const char *const SpecialChars = "!@#$%^&*";
+    static const char *const DigitChars = "0123456789";
+    static const char *const DigitCharsNoAmbi = "23456789";
+    static const char *const SpecialChars = "_-.[]";
+    static const char *const DangerousChars = "!@#$%^&*";
 
     if (out_password.len < 9) {
         LogError("Refusing to generate password less than 8 characters");
         return false;
     }
 
-    int uppers = (flags & (int)pwd_GenerateFlag::Uppers) ? 1 : 0;
-    int lowers = (flags & (int)pwd_GenerateFlag::Lowers) ? 1 : 0;
-    int numbers = (flags & (int)pwd_GenerateFlag::Numbers) ? 1 : 0;
-    int specials = (flags & (int)pwd_GenerateFlag::Specials) ? 1 : 0;
-    Size all = out_password.len - uppers - lowers - numbers - specials;
-    bool ambiguous = flags & (int)pwd_GenerateFlag::Ambiguous;
+    // Drop non-sensical combinations
+    if (flags & (int)pwd_GenerateFlag::Uppers) {
+        flags &= ~(int)pwd_GenerateFlag::UppersNoAmbi;
+    }
+    if (flags & (int)pwd_GenerateFlag::Lowers) {
+        flags &= ~(int)pwd_GenerateFlag::LowersNoAmbi;
+    }
+    if (flags & (int)pwd_GenerateFlag::Digits) {
+        flags &= ~(int)pwd_GenerateFlag::DigitsNoAmbi;
+    }
 
-    for (int i = 0; i < 1000; i++) {
-        Fmt(out_password, "%1%2%3%4%5", FmtRandom(uppers, ambiguous ? UpperChars : UpperCharsNoAmbi),
-                                        FmtRandom(lowers, ambiguous ? LowerChars : LowerCharsNoAmbi),
-                                        FmtRandom(numbers, ambiguous ? NumberChars : NumberCharsNoAmbi),
-                                        FmtRandom(specials, SpecialChars),
-                                        FmtRandom(all, AllChars));
+    LocalArray<char, 256> all_chars;
 
-        FastRandomInt rng;
-        std::shuffle(out_password.begin(), out_password.end() - 1, rng);
+#define TAKE_CHARS(VarName, FlagName, Chars) \
+        int VarName = (flags & (int)FlagName) ? 1 : 0; \
+        if (VarName) { \
+            all_chars.Append(Chars); \
+            all--; \
+        }
 
-        if ((flags & (int)pwd_GenerateFlag::Check) && !pwd_CheckPassword(out_password.ptr))
-            continue;
+    Size all = out_password.len - 1;
 
-        return true;
+    TAKE_CHARS(uppers, pwd_GenerateFlag::Uppers, UpperChars);
+    TAKE_CHARS(uppers_noambi, pwd_GenerateFlag::UppersNoAmbi, UpperCharsNoAmbi);
+    TAKE_CHARS(lowers, pwd_GenerateFlag::Lowers, LowerChars);
+    TAKE_CHARS(lowers_noambi, pwd_GenerateFlag::LowersNoAmbi, LowerCharsNoAmbi);
+    TAKE_CHARS(digits, pwd_GenerateFlag::Digits, DigitChars);
+    TAKE_CHARS(digits_noambi, pwd_GenerateFlag::DigitsNoAmbi, DigitCharsNoAmbi);
+    TAKE_CHARS(specials, pwd_GenerateFlag::Specials, SpecialChars);
+    TAKE_CHARS(dangerous, pwd_GenerateFlag::Dangerous, DangerousChars);
+    all_chars.Append(0);
+
+    // One try should be enough but let's make sure!
+    {
+        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+        RG_DEFER_N(log_guard) { PopLogFilter(); };
+
+        for (int i = 0; i < 1000; i++) {
+            Fmt(out_password, "%1%2%3%4%5%6%7%8%9",
+                    FmtRandom(uppers, UpperChars),
+                    FmtRandom(uppers_noambi, UpperCharsNoAmbi),
+                    FmtRandom(lowers, LowerChars),
+                    FmtRandom(lowers_noambi, LowerCharsNoAmbi),
+                    FmtRandom(digits, DigitChars),
+                    FmtRandom(digits_noambi, DigitCharsNoAmbi),
+                    FmtRandom(specials, SpecialChars),
+                    FmtRandom(dangerous, DangerousChars),
+                    FmtRandom(all, all_chars.data));
+
+            FastRandomInt rng;
+            std::shuffle(out_password.begin(), out_password.end() - 1, rng);
+
+            if ((flags & (int)pwd_GenerateFlag::Check) && !pwd_CheckPassword(out_password.ptr))
+                continue;
+
+            return true;
+        }
     }
 
     LogError("Failed to generate secure password");
