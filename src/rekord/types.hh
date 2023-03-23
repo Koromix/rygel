@@ -45,28 +45,14 @@ struct rk_FileEntry {
     int8_t kind; // Kind
     int64_t mtime; // Little Endian
     int64_t btime; // Little Endian
+    uint32_t uid; // Little Endian
+    uint32_t gid; // Little Endian
     uint32_t mode; // Little Endian
     int64_t size; // Little Endian
     char name[];
-
-    struct V1 {
-        rk_ID id;
-        int8_t kind; // Kind
-        int64_t mtime; // Little Endian
-        uint32_t mode; // Little Endian
-        char name[];
-    };
-    struct V2 {
-        rk_ID id;
-        int8_t kind; // Kind
-        int64_t mtime; // Little Endian
-        uint32_t mode; // Little Endian
-        int64_t size; // Little Endian
-        char name[];
-    };
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(rk_FileEntry) == 61);
+RG_STATIC_ASSERT(RG_SIZE(rk_FileEntry) == 69);
 
 #pragma pack(push, 1)
 struct rk_ChunkEntry {

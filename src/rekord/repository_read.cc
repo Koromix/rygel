@@ -47,7 +47,7 @@ class GetContext {
 public:
     GetContext(rk_Disk *disk);
 
-    bool ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
+    bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
     int GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
 
     bool Sync() { return tasks.Sync(); }
@@ -210,8 +210,7 @@ static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t
 
 #endif
 
-bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
-                                unsigned int flags, const char *dest_dirname)
+bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname)
 {
     // XXX: Make sure each path does not clobber a previous one
 
@@ -224,52 +223,24 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
         // Avoid MSVC error C2466
         memset(&entry, 0, RG_SIZE(entry));
 
-        if (type == rk_ObjectType::Directory1 || type == rk_ObjectType::Snapshot1) {
-            rk_FileEntry::V1 *v1 = (rk_FileEntry::V1 *)(entries.ptr + offset);
+        // Get entry information
+        {
+            rk_FileEntry *ptr = (rk_FileEntry *)(entries.ptr + offset);
 
-            if (entries.len - offset < RG_SIZE(*v1)) {
+            if (entries.len - offset < RG_SIZE(*ptr)) {
                 LogError("Malformed entry in directory object");
                 return false;
             }
 
-            entry.id = v1->id;
-            entry.kind = v1->kind;
-            entry.mtime = LittleEndian(v1->mtime);
-            entry.btime = entry.mtime;
-            entry.mode = LittleEndian(v1->mode);
-            name = v1->name;
-        } else if (type == rk_ObjectType::Directory2 || type == rk_ObjectType::Snapshot2) {
-            rk_FileEntry::V2 *v2 = (rk_FileEntry::V2 *)(entries.ptr + offset);
-
-            if (entries.len - offset < RG_SIZE(*v2)) {
-                LogError("Malformed entry in directory object");
-                return false;
-            }
-
-            entry.id = v2->id;
-            entry.kind = v2->kind;
-            entry.mtime = LittleEndian(v2->mtime);
-            entry.btime = entry.mtime;
-            entry.mode = LittleEndian(v2->mode);
-            entry.size = LittleEndian(v2->size);
-            name = v2->name;
-        } else if (type == rk_ObjectType::Directory3 || type == rk_ObjectType::Snapshot3) {
-            rk_FileEntry *v3 = (rk_FileEntry *)(entries.ptr + offset);
-
-            if (entries.len - offset < RG_SIZE(*v3)) {
-                LogError("Malformed entry in directory object");
-                return false;
-            }
-
-            entry.id = v3->id;
-            entry.kind = v3->kind;
-            entry.mtime = LittleEndian(v3->mtime);
-            entry.btime = LittleEndian(v3->btime);
-            entry.mode = LittleEndian(v3->mode);
-            entry.size = LittleEndian(v3->size);
-            name = v3->name;
-        } else {
-            RG_UNREACHABLE();
+            entry.id = ptr->id;
+            entry.kind = ptr->kind;
+            entry.mtime = LittleEndian(ptr->mtime);
+            entry.btime = LittleEndian(ptr->btime);
+            entry.mode = LittleEndian(ptr->mode);
+            entry.uid = LittleEndian(ptr->uid);
+            entry.gid = LittleEndian(ptr->gid);
+            entry.size = LittleEndian(ptr->size);
+            name = ptr->name;
         }
 
         // Skip entry for next iteration
@@ -328,17 +299,14 @@ bool GetContext::ExtractEntries(rk_ObjectType type, Span<const uint8_t> entries,
 
             switch (entry_kind) {
                 case (int8_t)rk_FileEntry::Kind::Directory: {
-                    if (entry_type != rk_ObjectType::Directory1 &&
-                            entry_type != rk_ObjectType::Directory2 &&
-                            entry_type != rk_ObjectType::Directory3) {
+                    if (entry_type != rk_ObjectType::Directory) {
                         LogError("Object '%1' is not a directory", entry_id);
                         return false;
                     }
 
                     if (!MakeDirectory(entry_filename, false))
                         return false;
-
-                    if (!ExtractEntries(entry_type, entry_obj, 0, entry_filename))
+                    if (!ExtractEntries(entry_obj, 0, entry_filename))
                         return false;
 
                     // Set directory metadata
@@ -470,12 +438,8 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
             }
         } break;
 
-        case rk_ObjectType::Directory1:
-        case rk_ObjectType::Directory2:
-        case rk_ObjectType::Directory3:
-        case rk_ObjectType::Snapshot1:
-        case rk_ObjectType::Snapshot2:
-        case rk_ObjectType::Snapshot3:
+        case rk_ObjectType::Directory:
+        case rk_ObjectType::Snapshot:
         case rk_ObjectType::Link: { RG_UNREACHABLE(); } break;
     }
 
@@ -513,9 +477,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
             close(fd);
         } break;
 
-        case rk_ObjectType::Directory1:
-        case rk_ObjectType::Directory2:
-        case rk_ObjectType::Directory3: {
+        case rk_ObjectType::Directory: {
             if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
@@ -526,13 +488,11 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
                     return false;
             }
 
-            if (!get.ExtractEntries(type, obj, 0, dest_path))
+            if (!get.ExtractEntries(obj, 0, dest_path))
                 return false;
         } break;
 
-        case rk_ObjectType::Snapshot1:
-        case rk_ObjectType::Snapshot2:
-        case rk_ObjectType::Snapshot3: {
+        case rk_ObjectType::Snapshot: {
             if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
@@ -552,7 +512,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
             Span<uint8_t> entries = obj.Take(RG_SIZE(rk_SnapshotHeader), obj.len - RG_SIZE(rk_SnapshotHeader));
             unsigned int flags = (int)ExtractFlag::AllowSeparators | (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
-            if (!get.ExtractEntries(type, entries, flags, dest_path))
+            if (!get.ExtractEntries(entries, flags, dest_path))
                 return false;
         } break;
 
@@ -597,9 +557,7 @@ bool rk_List(rk_Disk *disk, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *ou
                 if (!disk->ReadObject(id, &type, &obj))
                     return false;
 
-                if (type != rk_ObjectType::Snapshot1 &&
-                        type != rk_ObjectType::Snapshot2 &&
-                        type != rk_ObjectType::Snapshot3) {
+                if (type != rk_ObjectType::Snapshot) {
                     LogError("Object '%1' is not a snapshot (ignoring)", id);
                     return true;
                 }

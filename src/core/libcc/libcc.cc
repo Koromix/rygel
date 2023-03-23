@@ -2135,6 +2135,8 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
     out_info->mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
     out_info->btime = FileTimeToUnixTime(attr.ftCreationTime);
     out_info->mode = (out_info->type == FileType::Directory) ? 0755 : 0644;
+    out_info->uid = 0;
+    out_info->gid = 0;
 
     return StatResult::Success;
 }
@@ -2325,6 +2327,8 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
         out_info->btime = out_info->mtime;
     }
     out_info->mode = (unsigned int)sxb.stx_mode & ~S_IFMT;
+    out_info->uid = sxb.stx_uid;
+    out_info->gid = sxb.stx_gid;
 #else
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
 
@@ -2367,6 +2371,8 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
                       (int64_t)sb.st_birthtim.tv_nsec / 1000000;
 #endif
     out_info->mode = (unsigned int)sb.st_mode;
+    out_info->uid = (uint32_t)sb.st_uid;
+    out_info->gid = (uint32_t)sb.st_gid;
 #endif
 
     return StatResult::Success;

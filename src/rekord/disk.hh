@@ -36,24 +36,16 @@ static const char *const rk_DiskModeNames[] = {
 enum class rk_ObjectType: int8_t {
     Chunk = 0,
     File = 1,
-    Directory1 = 2,
-    Directory2 = 5,
-    Directory3 = 7,
-    Snapshot1 = 3,
-    Snapshot2 = 6,
-    Snapshot3 = 8,
+    Directory = 2,
+    Snapshot = 3,
     Link = 4
 };
 static const char *const rk_ObjectTypeNames[] = {
     "Chunk",
     "File",
-    "Directory1",
-    "Snapshot1",
-    "Link",
-    "Directory2",
-    "Snapshot2",
-    "Directory3",
-    "Snapshot3"
+    "Directory",
+    "Snapshot",
+    "Link"
 };
 
 class rk_Disk {

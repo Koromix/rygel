@@ -3851,6 +3851,9 @@ struct FileInfo {
     int64_t mtime;
     int64_t btime;
     unsigned int mode;
+
+    uint32_t uid;
+    uint32_t gid;
 };
 
 enum class StatResult {
