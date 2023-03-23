@@ -296,7 +296,7 @@ static bool CheckComplexity(Span<const char> password)
 bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blacklist)
 {
     // Simplify it (casing, accents)
-    LocalArray<char, 129> buf;
+    LocalArray<char, 513> buf;
     buf.len = SimplifyText(password, buf.data);
     if (buf.len < 0)
         return false;
@@ -313,7 +313,7 @@ bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blackl
 
     // Check for blacklisted words
     for (const char *needle: blacklist) {
-        LocalArray<char, 129> buf2;
+        LocalArray<char, 513> buf2;
         buf2.len = SimplifyText(needle, buf2.data);
         if (buf2.len < 0)
             continue;
