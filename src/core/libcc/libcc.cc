@@ -2990,15 +2990,13 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
     };
 
     consume_next_extension();
+
     if (out_compression_type) {
-        if (TestStr(extension, ".gz")) {
-            *out_compression_type = CompressionType::Gzip;
-            consume_next_extension();
-        } else if (TestStr(extension, ".br")) {
-            *out_compression_type = CompressionType::Brotli;
-            consume_next_extension();
-        } else if (TestStr(extension, ".lz4")) {
-            *out_compression_type = CompressionType::LZ4;
+        const char *const *it = std::find_if(std::begin(CompressionTypeExtensions), std::end(CompressionTypeExtensions),
+                                             [&](const char *it) { return it && TestStr(it, extension); });
+
+        if (it != std::end(CompressionTypeExtensions)) {
+            *out_compression_type = (CompressionType)(it - CompressionTypeExtensions);
             consume_next_extension();
         } else {
             *out_compression_type = CompressionType::None;

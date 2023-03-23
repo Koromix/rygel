@@ -3801,6 +3801,13 @@ static const char *const CompressionTypeNames[] = {
     "Brotli",
     "LZ4"
 };
+static const char *const CompressionTypeExtensions[] = {
+    nullptr,
+    nullptr,
+    ".gz",
+    ".br",
+    ".lz4"
+};
 
 Span<const char> GetPathDirectory(Span<const char> filename);
 Span<const char> GetPathExtension(Span<const char> filename,
