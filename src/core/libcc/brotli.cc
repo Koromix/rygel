@@ -40,7 +40,7 @@ public:
     BrotliDecompressor(StreamReader *reader) : StreamDecompressor(reader) {}
     ~BrotliDecompressor();
 
-    bool Init() override;
+    bool Init(CompressionType type) override;
     void Reset() override;
     Size Read(Size max_len, void *out_buf) override;
 };
@@ -52,7 +52,7 @@ BrotliDecompressor::~BrotliDecompressor()
     }
 }
 
-bool BrotliDecompressor::Init()
+bool BrotliDecompressor::Init(CompressionType)
 {
     state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
     return true;
@@ -119,7 +119,7 @@ public:
     BrotliCompressor(StreamWriter *writer) : StreamCompressor(writer) {}
     ~BrotliCompressor();
 
-    bool Init(CompressionSpeed speed) override;
+    bool Init(CompressionType type, CompressionSpeed speed) override;
     bool Write(Span<const uint8_t> buf) override;
     bool Finalize() override;
 };
@@ -131,7 +131,7 @@ BrotliCompressor::~BrotliCompressor()
     }
 }
 
-bool BrotliCompressor::Init(CompressionSpeed speed)
+bool BrotliCompressor::Init(CompressionType, CompressionSpeed speed)
 {
     state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
 

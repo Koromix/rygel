@@ -6188,7 +6188,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
             error = true;
             return false;
         }
-        if (!decompressor->Init()) {
+        if (!decompressor->Init(type)) {
             error = true;
             return false;
         }
@@ -6576,7 +6576,7 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
             error = true;
             return false;
         }
-        if (!compressor->Init(speed)) {
+        if (!compressor->Init(type, speed)) {
             error = true;
             return false;
         }

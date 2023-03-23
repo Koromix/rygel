@@ -48,24 +48,24 @@ public:
     MinizDecompressor(StreamReader *reader) : StreamDecompressor(reader) {}
     ~MinizDecompressor() {}
 
-    bool Init() override;
+    bool Init(CompressionType type) override;
     void Reset() override;
     Size Read(Size max_len, void *out_buf) override;
 };
 
-bool MinizDecompressor::Init()
+bool MinizDecompressor::Init(CompressionType type)
 {
     RG_STATIC_ASSERT(RG_SIZE(out_buf) >= TINFL_LZ_DICT_SIZE);
 
     tinfl_init(&inflator);
-    is_gzip = (GetCompressionType() == CompressionType::Gzip);
+    is_gzip = (type == CompressionType::Gzip);
 
     return true;
 }
 
 void MinizDecompressor::Reset()
 {
-    Init();
+    tinfl_init(&inflator);
 }
 
 Size MinizDecompressor::Read(Size max_len, void *user_buf)
@@ -238,7 +238,7 @@ public:
     MinizCompressor(StreamWriter *writer) : StreamCompressor(writer) {}
     ~MinizCompressor() {}
 
-    bool Init(CompressionSpeed speed) override;
+    bool Init(CompressionType type, CompressionSpeed speed) override;
     bool Write(Span<const uint8_t> buf) override;
     bool Finalize() override;
 
@@ -246,9 +246,9 @@ private:
     bool WriteDeflate(Span<const uint8_t> buf);
 };
 
-bool MinizCompressor::Init(CompressionSpeed speed)
+bool MinizCompressor::Init(CompressionType type, CompressionSpeed speed)
 {
-    is_gzip = (GetCompressionType() == CompressionType::Gzip);
+    is_gzip = (type == CompressionType::Gzip);
 
     int flags = 0;
     switch (speed) {

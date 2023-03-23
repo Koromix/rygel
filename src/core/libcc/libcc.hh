@@ -4358,13 +4358,12 @@ public:
     StreamDecompressor(StreamReader *reader) : reader(reader) {}
     virtual ~StreamDecompressor() {}
 
-    virtual bool Init() = 0;
+    virtual bool Init(CompressionType type) = 0;
     virtual void Reset() = 0;
     virtual Size Read(Size max_len, void *out_buf) = 0;
 
 protected:
     const char *GetFileName() const { return reader->filename; }
-    CompressionType GetCompressionType() const { return reader->compression_type; }
     bool IsValid() const { return reader->IsValid(); }
     bool IsSourceEOF() const { return reader->source.eof; }
 
@@ -4551,13 +4550,12 @@ public:
     StreamCompressor(StreamWriter *writer) : writer(writer) {}
     virtual ~StreamCompressor() {}
 
-    virtual bool Init(CompressionSpeed speed) = 0;
+    virtual bool Init(CompressionType type, CompressionSpeed speed) = 0;
     virtual bool Write(Span<const uint8_t> buf) = 0;
     virtual bool Finalize() = 0;
 
 protected:
     const char *GetFileName() const { return writer->filename; }
-    CompressionType GetCompressionType() const { return writer->compression_type; }
     bool IsValid() const { return writer->IsValid(); }
 
     bool WriteRaw(Span<const uint8_t> buf) { return writer->WriteRaw(buf); }

@@ -41,7 +41,7 @@ public:
     LZ4Decompressor(StreamReader *reader) : StreamDecompressor(reader) {}
     ~LZ4Decompressor();
 
-    bool Init() override;
+    bool Init(CompressionType type) override;
     void Reset() override;
     Size Read(Size max_len, void *out_buf) override;
 };
@@ -53,7 +53,7 @@ LZ4Decompressor::~LZ4Decompressor()
     }
 }
 
-bool LZ4Decompressor::Init()
+bool LZ4Decompressor::Init(CompressionType)
 {
     LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&decoder, LZ4F_VERSION);
 
@@ -125,7 +125,7 @@ public:
     LZ4Compressor(StreamWriter *writer) : StreamCompressor(writer) {}
     ~LZ4Compressor();
 
-    bool Init(CompressionSpeed speed) override;
+    bool Init(CompressionType type, CompressionSpeed speed) override;
     bool Write(Span<const uint8_t> buf) override;
     bool Finalize() override;
 };
@@ -137,7 +137,7 @@ LZ4Compressor::~LZ4Compressor()
     }
 }
 
-bool LZ4Compressor::Init(CompressionSpeed speed)
+bool LZ4Compressor::Init(CompressionType, CompressionSpeed speed)
 {
     LZ4F_errorCode_t err = LZ4F_createCompressionContext(&encoder, LZ4F_VERSION);
 
