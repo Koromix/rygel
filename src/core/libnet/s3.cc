@@ -298,40 +298,38 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
         Fmt(&query, "list-type=2&prefix="); http_EncodeUrlSafe(prefix, &query);
         Fmt(&query, "&start-after="); http_EncodeUrlSafe(after, &query);
 
-        LocalArray<curl_slist, 32> headers;
-        headers.len = PrepareHeaders("GET", path.ptr, query.ptr, nullptr, {}, &temp_alloc, headers.data);
+        bool success = RunSafe("list S3 objects", [&]() {
+            LocalArray<curl_slist, 32> headers;
+            headers.len = PrepareHeaders("GET", path.ptr, query.ptr, nullptr, {}, &temp_alloc, headers.data);
 
-        // Set CURL options
-        {
-            bool success = true;
+            // Set CURL options
+            {
+                bool success = true;
 
-            success &= !curl_easy_setopt(curl, CURLOPT_URL, Fmt(&temp_alloc, "%1?%2", url, query).ptr);
-            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+                success &= !curl_easy_setopt(curl, CURLOPT_URL, Fmt(&temp_alloc, "%1?%2", url, query).ptr);
+                success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
 
-            success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                         +[](char *ptr, size_t, size_t nmemb, void *udata) {
-                HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+                success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                             +[](char *ptr, size_t, size_t nmemb, void *udata) {
+                    HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
 
-                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-                xml->Append(buf);
+                    Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                    xml->Append(buf);
 
-                return nmemb;
-            });
-            success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
+                    return nmemb;
+                });
+                success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
 
-            if (!success) {
-                LogError("Failed to set libcurl options");
-                return false;
+                if (!success) {
+                    LogError("Failed to set libcurl options");
+                    return -1;
+                }
             }
-        }
 
-        int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
-        if (status < 0)
+            return curl_Perform(curl, nullptr);
+        });
+        if (!success)
             return false;
-        if (status != 200) {
-            LogError("Failed to list S3 objects with status %1", status);
-            return false;
-        }
 
         pugi::xml_document doc;
         {
@@ -378,9 +376,6 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
-
     struct GetContext {
         Span<const char> key;
         Span<uint8_t> out;
@@ -390,38 +385,41 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
     ctx.key = key;
     ctx.out = out_buf;
 
-    // Set CURL options
-    {
-        bool success = true;
+    bool success = RunSafe("get S3 object", [&]() {
+        ctx.len = 0;
 
-        success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+        LocalArray<curl_slist, 32> headers;
+        headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
-        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                     +[](char *ptr, size_t, size_t nmemb, void *udata) {
-            GetContext *ctx = (GetContext *)udata;
+        // Set CURL options
+        {
+            bool success = true;
 
-            Size copy_len = std::min((Size)nmemb, ctx->out.len - ctx->len);
-            memcpy_safe(ctx->out.ptr + ctx->len, ptr, (size_t)copy_len);
-            ctx->len += copy_len;
+            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
 
-            return nmemb;
-        });
-        success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
+            success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                         +[](char *ptr, size_t, size_t nmemb, void *udata) {
+                GetContext *ctx = (GetContext *)udata;
 
-        if (!success) {
-            LogError("Failed to set libcurl options");
-            return -1;
+                Size copy_len = std::min((Size)nmemb, ctx->out.len - ctx->len);
+                memcpy_safe(ctx->out.ptr + ctx->len, ptr, (size_t)copy_len);
+                ctx->len += copy_len;
+
+                return nmemb;
+            });
+            success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
+
+            if (!success) {
+                LogError("Failed to set libcurl options");
+                return -1;
+            }
         }
-    }
 
-    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
-    if (status < 0)
+        return curl_Perform(curl, nullptr);
+    });
+    if (!success)
         return -1;
-    if (status != 200) {
-        LogError("Failed to get S3 object with status %1", status);
-        return -1;
-    }
 
     return ctx.len;
 }
@@ -441,9 +439,6 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
-
     struct GetContext {
         Span<const char> key;
         HeapArray<uint8_t> *out;
@@ -455,43 +450,47 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     ctx.out = out_obj;
     ctx.max_len = max_len;
 
-    // Set CURL options
-    {
-        bool success = true;
+    bool success = RunSafe("get S3 object", [&]() {
+        LocalArray<curl_slist, 32> headers;
+        headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
-        success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+        ctx.out->RemoveFrom(prev_len);
+        ctx.total_len = 0;
 
-        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                                     +[](char *ptr, size_t, size_t nmemb, void *udata) {
-            GetContext *ctx = (GetContext *)udata;
+        // Set CURL options
+        {
+            bool success = true;
 
-            if (ctx->max_len >= 0 && ctx->total_len > ctx->max_len - (Size)nmemb) {
-                LogError("S3 object '%1' is too big (max = %2)", ctx->key, FmtDiskSize(ctx->max_len));
-                return (size_t)0;
+            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+
+            success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                         +[](char *ptr, size_t, size_t nmemb, void *udata) {
+                GetContext *ctx = (GetContext *)udata;
+
+                if (ctx->max_len >= 0 && ctx->total_len > ctx->max_len - (Size)nmemb) {
+                    LogError("S3 object '%1' is too big (max = %2)", ctx->key, FmtDiskSize(ctx->max_len));
+                    return (size_t)0;
+                }
+                ctx->total_len += (Size)nmemb;
+
+                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                ctx->out->Append(buf);
+
+                return nmemb;
+            });
+            success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
+
+            if (!success) {
+                LogError("Failed to set libcurl options");
+                return -1;
             }
-            ctx->total_len += (Size)nmemb;
-
-            Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-            ctx->out->Append(buf);
-
-            return nmemb;
-        });
-        success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
-
-        if (!success) {
-            LogError("Failed to set libcurl options");
-            return -1;
         }
-    }
 
-    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
-    if (status < 0)
-        return false;
-    if (status != 200) {
-        LogError("Failed to get S3 object with status %1", status);
-        return false;
-    }
+        return curl_Perform(curl, nullptr);
+    });
+    if (!success)
+        return -1;
 
     out_guard.Disable();
     return out_obj->len - prev_len;
@@ -509,32 +508,36 @@ bool s3_Session::HasObject(Span<const char> key)
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
+    bool exists = false;
 
-    // Set CURL options
-    {
-        bool success = true;
+    RunSafe("test S3 object", [&]() {
+        LocalArray<curl_slist, 32> headers;
+        headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
-        success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
-        success &= !curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+        // Set CURL options
+        {
+            bool success = true;
 
-        if (!success) {
-            LogError("Failed to set libcurl options");
-            return false;
+            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+            success &= !curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+
+            if (!success) {
+                LogError("Failed to set libcurl options");
+                return -1;
+            }
         }
-    }
 
-    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
-    if (status < 0)
-        return false;
-    if (status != 200 && status != 404) {
-        LogError("Failed to test S3 object with status %1", status);
-        return false;
-    }
+        int status = curl_Perform(curl, nullptr);
 
-    bool exists = (status == 200);
+        if (status == 200 || status == 404) {
+            exists = (status == 200);
+            return 200;
+        }
+
+        return status;
+    });
+
     return exists;
 }
 
@@ -550,45 +553,52 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("PUT", path.ptr, nullptr, mimetype, data, &temp_alloc, headers.data);
+    bool success = RunSafe("upload S3 object", [&]() {
+        LocalArray<curl_slist, 32> headers;
+        headers.len = PrepareHeaders("PUT", path.ptr, nullptr, mimetype, data, &temp_alloc, headers.data);
 
-    // Set CURL options
-    {
-        bool success = true;
+        Span<const uint8_t> remain = data;
 
-        success &= !curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
-        success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+        // Set CURL options
+        {
+            bool success = true;
 
-        success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
-            Span<const uint8_t> *remain = (Span<const uint8_t> *)udata;
-            size_t give = std::min(size * nmemb, (size_t)remain->len);
+            success &= !curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L); // PUT
+            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
 
-            memcpy_safe(ptr, remain->ptr, give);
-            remain->ptr += (Size)give;
-            remain->len -= (Size)give;
+            success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
+                Span<const uint8_t> *remain = (Span<const uint8_t> *)udata;
+                size_t give = std::min(size * nmemb, (size_t)remain->len);
 
-            return give;
-        });
-        success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &data);
-        success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.len);
+                memcpy_safe(ptr, remain->ptr, give);
+                remain->ptr += (Size)give;
+                remain->len -= (Size)give;
 
-        if (!success) {
-            LogError("Failed to set libcurl options");
-            return false;
+                return give;
+            });
+            success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
+            success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)remain.len);
+
+            if (!success) {
+                LogError("Failed to set libcurl options");
+                return -1;
+            }
         }
-    }
 
-    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
-    if (status < 0)
-        return false;
-    if (status != 200) {
-        LogError("Failed to upload S3 object with status %1", status);
-        return false;
-    }
+        int status = curl_Perform(curl, nullptr);
 
-    return true;
+        if (status == 200 && remain.len) {
+            DeleteObject(key);
+            status = 206;
+        }
+
+        return status;
+    });
+    if (!success)
+        return false;
+
+    return success;
 }
 
 bool s3_Session::DeleteObject(Span<const char> key)
@@ -603,32 +613,33 @@ bool s3_Session::DeleteObject(Span<const char> key)
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    LocalArray<curl_slist, 32> headers;
-    headers.len = PrepareHeaders("DELETE", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
+    bool success = RunSafe("delete S3 object", [&]() {
+        LocalArray<curl_slist, 32> headers;
+        headers.len = PrepareHeaders("DELETE", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
-    // Set CURL options
-    {
-        bool success = true;
+        // Set CURL options
+        {
+            bool success = true;
 
-        success &= !curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-        success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
-        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
+            success &= !curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+            success &= !curl_easy_setopt(curl, CURLOPT_URL, url.ptr);
+            success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.data);
 
-        if (!success) {
-            LogError("Failed to set libcurl options");
-            return false;
+            if (!success) {
+                LogError("Failed to set libcurl options");
+                return -1;
+            }
         }
-    }
 
-    int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
-    if (status < 0)
-        return false;
-    if (status != 204) {
-        LogError("Failed to delete S3 object with status %1", status);
-        return false;
-    }
+        int status = curl_Perform(curl, nullptr);
 
-    return true;
+        if (status == 200 || status == 204)
+            return 200;
+
+        return status;
+    });
+
+    return success;
 }
 
 bool s3_Session::OpenAccess()
@@ -644,13 +655,13 @@ bool s3_Session::OpenAccess()
     if (!region && !DetermineRegion(url.ptr))
         return false;
 
-    // Test access
-    {
-        CURL *curl = curl_Init();
-        if (!curl)
-            return false;
-        RG_DEFER { curl_easy_cleanup(curl); };
+    CURL *curl = curl_Init();
+    if (!curl)
+        return false;
+    RG_DEFER { curl_easy_cleanup(curl); };
 
+    // Test access
+    bool success = RunSafe("authenticate to S3 bucket", [&]() {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
@@ -679,21 +690,20 @@ bool s3_Session::OpenAccess()
 
             if (!success) {
                 LogError("Failed to set libcurl options");
-                return false;
+                return -1;
             }
         }
 
-        int status = curl_Perform(curl, "S3", [](int i, int status) { return i < 5 && (status < 0 || status >= 500); });
-        if (status < 0)
-            return false;
-        if (status != 200 && status != 201) {
-            LogError("Failed to authenticate to S3 bucket with status %1", status);
-            return false;
-        }
-    }
+        int status = curl_Perform(curl, nullptr);
 
-    open = true;
-    return true;
+        if (status == 200 || status == 201)
+            return 200;
+
+        return status;
+    });
+
+    open = success;
+    return success;
 }
 
 bool s3_Session::DetermineRegion(const char *url)
@@ -733,8 +743,7 @@ bool s3_Session::DetermineRegion(const char *url)
         }
     }
 
-    int status = curl_Perform(curl, "S3", [&](int i, int) { return i < 5 && !region; });
-    if (status < 0)
+    if (!RunSafe("connect to S3", [&]() { return curl_Perform(curl, nullptr); }))
         return false;
 
     if (!region) {
@@ -743,6 +752,31 @@ bool s3_Session::DetermineRegion(const char *url)
     }
 
     return true;
+}
+
+bool s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func)
+{
+    int status = 0;
+
+    for (int i = 0; i < 10; i++) {
+        status = func();
+
+        if (status == 200)
+            return true;
+
+        int delay = 200 + 200 * (std::min(i, 5) << 3);
+        delay += !!i * GetRandomIntSafe(0, delay);
+
+        WaitDelay(delay);
+    }
+
+    if (status < 0) {
+        LogError("Failed to perform S3 call: %1", curl_easy_strerror((CURLcode)-status));
+    } else {
+        LogError("Failed to %1 with status %2", action, status);
+    }
+
+    return false;
 }
 
 Size s3_Session::PrepareHeaders(const char *method, const char *path, const char *query, const char *mimetype,

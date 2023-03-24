@@ -68,7 +68,7 @@ CURL *curl_Init()
     return curl;
 }
 
-int curl_Perform(CURL *curl, const char *reason, FunctionRef<bool(int, int)> retry)
+int curl_Perform(CURL *curl, const char *reason)
 {
     CURLcode res = curl_easy_perform(curl);
 
@@ -81,27 +81,17 @@ int curl_Perform(CURL *curl, const char *reason, FunctionRef<bool(int, int)> ret
     LogDebug("Curl: %1 %2", method, url);
 #endif
 
-    for (int i = 0;; i++) {
-        if (res != CURLE_OK) {
-            if (res != CURLE_WRITE_ERROR) {
-                LogError("Failed to perform %1 call: %2", reason, curl_easy_strerror(res));
-            }
-            return -1;
+    if (res != CURLE_OK) {
+        if (reason && res != CURLE_WRITE_ERROR) {
+            LogError("Failed to perform %1 call: %2", reason, curl_easy_strerror(res));
         }
-
-        long status = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
-
-        if (!retry.IsValid() || !retry(i, (int)status))
-            return (int)status;
-
-        int delay = 200 + 200 * (std::min(i, 5) << 3);
-        delay += GetRandomIntSafe(0, delay);
-
-        WaitDelay(delay);
+        return -res;
     }
 
-    RG_UNREACHABLE();
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+
+    return (int)status;
 }
 
 Span<const char> curl_GetUrlPartStr(CURLU *h, CURLUPart part, Allocator *alloc)

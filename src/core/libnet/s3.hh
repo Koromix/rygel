@@ -85,6 +85,8 @@ private:
     bool OpenAccess();
     bool DetermineRegion(const char *url);
 
+    bool RunSafe(const char *action, FunctionRef<int(void)> func);
+
     Size PrepareHeaders(const char *method, const char *path, const char *query, const char *mimetype,
                         Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers);
     void MakeSignature(const char *method, const char *path, const char *query,
