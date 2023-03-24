@@ -477,7 +477,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     _setmaxstdio(4096);
 #else
     {
-        const rlim_t max_nofile = 4096;
+        const rlim_t max_nofile = 16384;
         struct rlimit lim;
 
         // Increase maximum number of open file descriptors
