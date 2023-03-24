@@ -23,9 +23,9 @@
 
 namespace RG {
 
-static const Size ChunkAverage = Kibibytes(1024);
-static const Size ChunkMin = Kibibytes(512);
-static const Size ChunkMax = Kibibytes(2048);
+static const Size ChunkAverage = Kibibytes(2048);
+static const Size ChunkMin = Kibibytes(1024);
+static const Size ChunkMax = Kibibytes(8192);
 
 enum class PutResult {
     Success,
@@ -336,7 +336,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id)
         HeapArray<uint8_t> buf;
         {
             Size needed = (st.ComputeRawLen() >= 0) ? st.ComputeRawLen() : Mebibytes(16);
-            needed = std::clamp(needed, Mebibytes(2), Mebibytes(128));
+            needed = std::clamp(needed, ChunkMax, Mebibytes(128));
 
             buf.SetCapacity(needed);
         }

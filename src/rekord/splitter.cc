@@ -131,7 +131,7 @@ rk_Splitter::rk_Splitter(Size avg, Size min, Size max, uint64_t salt64)
 }
 
 Size rk_Splitter::Process(Span<const uint8_t> buf, bool last,
-                             FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func)
+                          FunctionRef<bool(Size idx, int64_t total, Span<const uint8_t> chunk)> func)
 {
     Size processed = 0;
 
