@@ -32,10 +32,10 @@ int rk_ComputeDefaultThreads()
                 threads = (int)value;
             } else {
                 LogError("REKORD_THREADS must be positive number (ignored)");
-                threads = (int)std::thread::hardware_concurrency() + 1;
+                threads = (int)std::thread::hardware_concurrency() * 6;
             }
         } else {
-            threads = (int)std::thread::hardware_concurrency() + 1;
+            threads = (int)std::thread::hardware_concurrency() * 6;
         }
 
         RG_ASSERT(threads > 0);
@@ -50,6 +50,9 @@ bool rk_Config::Complete(bool require_password)
         const char *str = getenv("REKORD_REPOSITORY");
         repository = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
     }
+
+    if (!rk_DecodeURL(repository, this))
+        return false;
 
     if (require_password && !password) {
         const char *str = getenv("REKORD_PASSWORD");

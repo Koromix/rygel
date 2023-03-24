@@ -424,7 +424,7 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
     out_ids->AppendDefault(filenames.len);
     ready.AppendDefault(filenames.len);
 
-    Async async(threads);
+    Async async(GetThreads());
 
     // List snapshots
     for (Size i = 0; i < filenames.len; i++) {

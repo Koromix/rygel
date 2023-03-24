@@ -60,11 +60,7 @@ protected:
 
     sq_Database cache_db;
 
-    int threads = -1;
-
     BlockAllocator str_alloc;
-
-    rk_Disk(int threads) : threads(threads) {}
 
 public:
     virtual ~rk_Disk() = default;
@@ -80,7 +76,7 @@ public:
     rk_DiskMode GetMode() const { return mode; }
 
     sq_Database *GetCache() { return &cache_db; }
-    int GetThreads() const { return threads; }
+    virtual int GetThreads() const = 0;
 
     bool ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
     Size WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj);

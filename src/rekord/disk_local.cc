@@ -20,11 +20,15 @@ namespace RG {
 static const int MaxPathSize = 4096 - 128;
 
 class LocalDisk: public rk_Disk {
+    int threads;
+
 public:
     LocalDisk(const char *path, int threads);
     ~LocalDisk() override;
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
+
+    int GetThreads() const override;
 
     bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
@@ -39,8 +43,13 @@ public:
 };
 
 LocalDisk::LocalDisk(const char *path, int threads)
-    : rk_Disk(threads)
 {
+    if (threads > 0) {
+        this->threads = threads;
+    } else {
+        this->threads = (GetCoreCount() + 1);
+    }
+
     Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &str_alloc);
 
     // Sanity checks
@@ -118,6 +127,11 @@ bool LocalDisk::Init(const char *full_pwd, const char *write_pwd)
 
     err_guard.Disable();
     return true;
+}
+
+int LocalDisk::GetThreads() const
+{
+    return threads;
 }
 
 Size LocalDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
