@@ -61,13 +61,18 @@ static int RunInit(Span<const char *> arguments)
 {
     // Options
     rk_Config config;
+    char full_pwd[129] = {};
+    char write_pwd[129] = {};
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: %!..+%1 init [-C <config>] [dir]
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file)", FelixTarget);
+    %!..+-C, --config_file <file>%!0     Set configuration file
+
+        %!..+--full_password <pwd>%!0    Set full password manually
+        %!..+--write_password <pwd>%!0   Set write-only password manually)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -83,6 +88,16 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
+            } else if (opt.Test("--full_password", OptionType::Value)) {
+                if (!CopyString(opt.current_value, full_pwd)) {
+                    LogError("Password is too long");
+                    return 1;
+                }
+            } else if (opt.Test("--write_password", OptionType::Value)) {
+                if (!CopyString(opt.current_value, write_pwd)) {
+                    LogError("Password is too long");
+                    return 1;
+                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -96,8 +111,6 @@ Options:
     }
 
     // Generate repository passwords
-    char full_pwd[33] = {};
-    char write_pwd[33] = {};
     {
         // Avoid characters that are annoying in consoles
         unsigned int flags = (int)pwd_GenerateFlag::LowersNoAmbi |
@@ -105,9 +118,9 @@ Options:
                              (int)pwd_GenerateFlag::DigitsNoAmbi |
                              (int)pwd_GenerateFlag::Specials;
 
-        if (!pwd_GeneratePassword(flags, full_pwd))
+        if (!full_pwd[0] && !pwd_GeneratePassword(flags, MakeSpan(full_pwd, 33)))
             return 1;
-        if (!pwd_GeneratePassword(flags, write_pwd))
+        if (!write_pwd[0] && !pwd_GeneratePassword(flags, MakeSpan(write_pwd, 33)))
             return 1;
     }
 
