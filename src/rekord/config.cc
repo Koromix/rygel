@@ -32,10 +32,10 @@ int rk_ComputeDefaultThreads()
                 threads = (int)value;
             } else {
                 LogError("REKORD_THREADS must be positive number (ignored)");
-                threads = (int)std::thread::hardware_concurrency() * 4;
+                threads = (int)std::thread::hardware_concurrency() + 1;
             }
         } else {
-            threads = (int)std::thread::hardware_concurrency() * 4;
+            threads = (int)std::thread::hardware_concurrency() + 1;
         }
 
         RG_ASSERT(threads > 0);
