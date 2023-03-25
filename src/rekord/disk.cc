@@ -79,14 +79,8 @@ bool rk_Disk::Open(const char *pwd)
     }
 
     // Read repository ID
-    if (!ReadSecret("rekord", id)) {
-        LogInfo("Generating new repository ID");
-
-        randombytes_buf(id, RG_SIZE(id));
-
-        if (!WriteSecret("rekord", id))
-            return false;
-    }
+    if (!ReadSecret("rekord", id))
+        return false;
 
     // Open cache
     {
