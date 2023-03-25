@@ -32,7 +32,7 @@ public:
     int GetThreads() const override;
 
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
-    bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
+    Size ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
 
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
@@ -81,7 +81,7 @@ Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
     RG_UNREACHABLE();
 }
 
-bool SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
+Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
 {
     RG_UNREACHABLE();
 }

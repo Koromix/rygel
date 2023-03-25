@@ -172,7 +172,7 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
     path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
 
     HeapArray<uint8_t> raw;
-    if (!ReadRaw(path.data, &raw))
+    if (ReadRaw(path.data, &raw) < 0)
         return false;
     Span<const uint8_t> remain = raw;
 

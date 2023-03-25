@@ -30,8 +30,8 @@ public:
 
     int GetThreads() const override;
 
-    bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
+    Size ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
 
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
@@ -142,12 +142,12 @@ Size LocalDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
     return ReadFile(filename.data, out_buf);
 }
 
-bool LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
+Size LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-    return ReadFile(filename.data, Mebibytes(256), out_obj) >= 0;
+    return ReadFile(filename.data, Mebibytes(256), out_obj);
 }
 
 Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)

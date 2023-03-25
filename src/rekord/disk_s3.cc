@@ -36,7 +36,7 @@ public:
     int GetThreads() const override;
 
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
-    bool ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
+    Size ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
 
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
@@ -83,7 +83,7 @@ Size S3Disk::ReadRaw(const char *path, Span<uint8_t> out_buf)
     return s3.GetObject(path, out_buf);
 }
 
-bool S3Disk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
+Size S3Disk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
 {
     return s3.GetObject(path, Mebibytes(256), out_obj);
 }
