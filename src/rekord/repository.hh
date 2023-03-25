@@ -29,6 +29,7 @@ struct rk_PutSettings {
 struct rk_GetSettings {
     bool flat = false;
     bool force = false;
+    bool chown = false;
 };
 
 struct rk_SnapshotInfo {

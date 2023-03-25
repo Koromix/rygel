@@ -269,8 +269,10 @@ Options:
 
     %!..+-O, --output <path>%!0          Restore file or directory to path
 
-        %!..+--flat%!0                   Use flat names for snapshot files
     %!..+-f, --force%!0                  Overwrite destination if not empty
+
+        %!..+--flat%!0                   Use flat names for snapshot files
+        %!..+--chown%!0                  Restore original file UID and GID
 
     %!..+-j, --threads <threads>%!0      Change number of threads
                                  %!D..(default: %2)%!0)", FelixTarget, rk_ComputeDefaultThreads());
@@ -296,10 +298,12 @@ Options:
                 config.password = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 dest_filename = opt.current_value;
-            } else if (opt.Test("--flat")) {
-                settings.flat = true;
             } else if (opt.Test("-f", "--force")) {
                 settings.force = true;
+            } else if (opt.Test("--flat")) {
+                settings.flat = true;
+            } else if (opt.Test("--chown")) {
+                settings.chown = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
