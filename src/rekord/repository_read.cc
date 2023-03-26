@@ -33,8 +33,9 @@
 namespace RG {
 
 enum class ExtractFlag {
-    AllowSeparators = 1 << 0,
-    FlattenName = 1 << 1
+    SkipMeta = 1 << 0,
+    AllowSeparators = 1 << 1,
+    FlattenName = 1 << 2
 };
 
 class GetContext {
@@ -58,19 +59,17 @@ class GetContext {
 
     Async tasks;
 
-    std::mutex fix_mutex;
-    HeapArray<EntryInfo> fix_directories;
-    BlockAllocator fix_alloc;
-
     std::atomic<int64_t> stat_len { 0 };
 
 public:
     GetContext(rk_Disk *disk, bool chown);
 
     bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
+    bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest);
+
     int GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
 
-    bool Finish();
+    bool Sync() { return tasks.Sync(); }
 
     int64_t GetLen() const { return stat_len; }
 };
@@ -243,9 +242,47 @@ static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t
 
 bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname)
 {
+    flags |= (int)ExtractFlag::SkipMeta;
+
+    EntryInfo dest = {};
+    dest.filename = dest_dirname;
+
+    return ExtractEntries(entries, flags, dest);
+}
+
+bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest)
+{
     // XXX: Make sure each path does not clobber a previous one
 
-    std::shared_ptr<BlockAllocator> temp_alloc = std::make_shared<BlockAllocator>();
+    struct SharedContext {
+        BlockAllocator temp_alloc;
+
+        EntryInfo meta = {};
+        bool chown = false;
+
+        ~SharedContext() {
+            if (meta.filename) {
+                int fd = OpenDescriptor(meta.filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
+                RG_DEFER { close(fd); };
+
+                // Set directory metadata
+                if (chown) {
+                    SetFileOwner(fd, meta.filename, meta.uid, meta.gid);
+                }
+                SetFileMetaData(fd, meta.filename, meta.mtime, meta.btime, meta.mode);
+            }
+        }
+    };
+
+    std::shared_ptr<SharedContext> shared = std::make_shared<SharedContext>();
+
+    if (!(flags & (int)ExtractFlag::SkipMeta)) {
+        RG_ASSERT(dest.basename);
+
+        shared->meta = dest;
+        shared->meta.filename = DuplicateString(dest.filename, &shared->temp_alloc).ptr;
+        shared->chown = chown;
+    }
 
     for (Size offset = 0; offset < entries.len;) {
         EntryInfo entry = {};
@@ -304,15 +341,15 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         }
 
         if (flags & (int)ExtractFlag::FlattenName) {
-            entry.filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, SplitStrReverse(entry.basename, '/')).ptr;
+            entry.filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, SplitStrReverse(entry.basename, '/')).ptr;
         } else {
-            entry.filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, entry.basename).ptr;
+            entry.filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
 
             if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry.filename))
                 return false;
         }
 
-        tasks.Run([=, temp_alloc = temp_alloc, this] () {
+        tasks.Run([=, shared = shared, this] () {
             rk_ObjectType entry_type;
             HeapArray<uint8_t> entry_obj;
             if (!disk->ReadObject(entry.id, &entry_type, &entry_obj))
@@ -327,16 +364,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
                     if (!MakeDirectory(entry.filename, false))
                         return false;
-                    if (!ExtractEntries(entry_obj, 0, entry.filename))
+                    if (!ExtractEntries(entry_obj, 0, entry))
                         return false;
-
-                    // Add temporary hack for directory metadata
-                    {
-                        std::lock_guard<std::mutex> lock(fix_mutex);
-
-                        EntryInfo *ptr = fix_directories.Append(entry);
-                        ptr->filename = DuplicateString(ptr->filename, &fix_alloc).ptr;
-                    }
                 } break;
 
                 case (int8_t)rk_FileEntry::Kind::File: {
@@ -481,35 +510,6 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
     return fd;
 }
 
-bool GetContext::Finish()
-{
-    if (!tasks.Sync())
-        return false;
-
-    for (const EntryInfo &fix: fix_directories) {
-        tasks.Run([=]() {
-            int fd = OpenDescriptor(fix.filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
-            RG_DEFER { close(fd); };
-
-            // Set directory metadata
-            if (chown) {
-                SetFileOwner(fd, fix.filename, fix.uid, fix.gid);
-            }
-            SetFileMetaData(fd, fix.filename, fix.mtime, fix.btime, fix.mode);
-
-            return true;
-        });
-    }
-
-    if (!tasks.Sync())
-        return false;
-
-    fix_directories.Clear();
-    fix_alloc.ReleaseAll();
-
-    return true;
-}
-
 bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len)
 {
     rk_ObjectType type;
@@ -582,7 +582,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
         } break;
     }
 
-    if (!get.Finish())
+    if (!get.Sync())
         return false;
 
     if (out_len) {
