@@ -758,14 +758,14 @@ bool s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func)
 {
     int status = 0;
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 8; i++) {
         status = func();
 
         if (status == 200)
             return true;
 
-        int delay = 200 + 200 * (std::min(i, 5) << 3);
-        delay += !!i * GetRandomIntSafe(0, delay);
+        int delay = 200 + 200 * (1 << i);
+        delay += !!i * GetRandomIntSafe(0, delay / 2);
 
         WaitDelay(delay);
     }
