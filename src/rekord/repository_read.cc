@@ -38,10 +38,25 @@ enum class ExtractFlag {
 };
 
 class GetContext {
+    struct EntryInfo {
+        const char *filename;
+
+        int64_t mtime;
+        int64_t btime;
+        uint32_t mode;
+
+        uint32_t uid;
+        uint32_t gid;
+    };
+
     rk_Disk *disk;
     bool chown;
 
     Async tasks;
+
+    std::mutex fix_mutex;
+    HeapArray<EntryInfo> fix_directories;
+    BlockAllocator fix_alloc;
 
     std::atomic<int64_t> stat_len { 0 };
 
@@ -51,7 +66,7 @@ public:
     bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
     int GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> file_obj, const char *dest_filename);
 
-    bool Sync() { return tasks.Sync(); }
+    bool Finish();
 
     int64_t GetLen() const { return stat_len; }
 };
@@ -129,6 +144,10 @@ static FILETIME UnixTimeToFileTime(int64_t time)
     return ft;
 }
 
+static void SetFileOwner(int, const char *, uint32_t, uint32_t)
+{
+}
+
 static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t btime, uint32_t)
 {
     HANDLE h = (HANDLE)_get_osfhandle(fd);
@@ -192,9 +211,9 @@ retry:
     return true;
 }
 
-static void SetFileOwner(int, const char *filename, uint32_t uid, uint32_t gid)
+static void SetFileOwner(int fd, const char *filename, uint32_t uid, uint32_t gid)
 {
-    if (chown(filename, (uid_t)uid, (gid_t)gid) < 0) {
+    if (fchown(fd, (uid_t)uid, (gid_t)gid) < 0) {
         LogError("Failed to change owner of '%1' (ignoring)", filename);
     }
 }
@@ -285,19 +304,20 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
         rk_ID entry_id = entry.id;
         int8_t entry_kind = entry.kind;
-        int64_t entry_mtime = entry.mtime;
-        int64_t entry_btime = entry.btime;
-        uint32_t entry_mode = entry.mode;
-        uint32_t entry_uid = entry.uid;
-        uint32_t entry_gid = entry.gid;
 
-        const char *entry_filename;
+        EntryInfo info = {};
+
+        info.mtime = entry.mtime;
+        info.btime = entry.btime;
+        info.mode = entry.mode;
+        info.uid = entry.uid;
+        info.gid = entry.gid;
         if (flags & (int)ExtractFlag::FlattenName) {
-            entry_filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, SplitStrReverse(name, '/')).ptr;
+            info.filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, SplitStrReverse(name, '/')).ptr;
         } else {
-            entry_filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, name).ptr;
+            info.filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, name).ptr;
 
-            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry_filename))
+            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(info.filename))
                 return false;
         }
 
@@ -314,22 +334,17 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                     }
 
-                    if (!MakeDirectory(entry_filename, false))
+                    if (!MakeDirectory(info.filename, false))
                         return false;
-                    if (!ExtractEntries(entry_obj, 0, entry_filename))
+                    if (!ExtractEntries(entry_obj, 0, info.filename))
                         return false;
 
-                    // Set directory metadata
+                    // Add temporary hack for directory metadata
                     {
-                        int fd = OpenDescriptor(entry_filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
-                        RG_DEFER { close(fd); };
+                        std::lock_guard<std::mutex> lock(fix_mutex);
 
-#ifndef _WIN32
-                        if (chown) {
-                            SetFileOwner(fd, entry_filename, entry_uid, entry_gid);
-                        }
-#endif
-                        SetFileMetaData(fd, entry_filename, entry_mtime, entry_btime, entry_mode);
+                        EntryInfo *ptr = fix_directories.Append(info);
+                        ptr->filename = DuplicateString(ptr->filename, &fix_alloc).ptr;
                     }
                 } break;
                 case (int8_t)rk_FileEntry::Kind::File: {
@@ -338,17 +353,16 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                     }
 
-                    int fd = GetFile(entry_id, entry_type, entry_obj, entry_filename);
+                    int fd = GetFile(entry_id, entry_type, entry_obj, info.filename);
                     if (fd < 0)
                         return false;
                     RG_DEFER { close(fd); };
 
-#ifndef _WIN32
+                    // Set file metadata
                     if (chown) {
-                        SetFileOwner(fd, entry_filename, entry_uid, entry_gid);
+                        SetFileOwner(fd, info.filename, info.uid, info.gid);
                     }
-#endif
-                    SetFileMetaData(fd, entry_filename, entry_mtime, entry_btime, entry_mode);
+                    SetFileMetaData(fd, info.filename, info.mtime, info.btime, info.mode);
                 } break;
                 case (int8_t)rk_FileEntry::Kind::Link: {
                     if (entry_type != rk_ObjectType::Link) {
@@ -359,7 +373,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     // NUL terminate the path
                     entry_obj.Append(0);
 
-                    if (!CreateSymbolicLink(entry_filename, (const char *)entry_obj.ptr, true))
+                    if (!CreateSymbolicLink(info.filename, (const char *)entry_obj.ptr, true))
                         return false;
                 } break;
 
@@ -474,6 +488,35 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
     return fd;
 }
 
+bool GetContext::Finish()
+{
+    if (!tasks.Sync())
+        return false;
+
+    for (const EntryInfo &fix: fix_directories) {
+        tasks.Run([=]() {
+            int fd = OpenDescriptor(fix.filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
+            RG_DEFER { close(fd); };
+
+            // Set directory metadata
+            if (chown) {
+                SetFileOwner(fd, fix.filename, fix.uid, fix.gid);
+            }
+            SetFileMetaData(fd, fix.filename, fix.mtime, fix.btime, fix.mode);
+
+            return true;
+        });
+    }
+
+    if (!tasks.Sync())
+        return false;
+
+    fix_directories.Clear();
+    fix_alloc.ReleaseAll();
+
+    return true;
+}
+
 bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len)
 {
     rk_ObjectType type;
@@ -546,7 +589,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
         } break;
     }
 
-    if (!get.Sync())
+    if (!get.Finish())
         return false;
 
     if (out_len) {
