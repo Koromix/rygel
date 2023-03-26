@@ -391,10 +391,11 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
                 return -1;
             }
 
-            file_obj.len -= RG_SIZE(int64_t);
+            // Get file length from end of stream
+            file_obj.len -= RG_SIZE(file_len);
+            memcpy(&file_len, file_obj.end(), RG_SIZE(file_len));
+            file_len = LittleEndian(file_len);
 
-            // Prepare destination file
-            file_len = LittleEndian(*(const int64_t *)file_obj.end());
             if (file_len < 0) {
                 LogError("Malformed file object '%1'", id);
                 return -1;
