@@ -169,7 +169,7 @@ Options:
         %!..+--raw%!0                    Skip snapshot object and report data ID
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: %2)%!0)", FelixTarget, rk_ComputeDefaultThreads());
+                                 %!D..(default: automatic)%!0)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -199,6 +199,10 @@ Options:
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
+                if (config.threads < 1) {
+                    LogError("Threads count cannot be < 1");
+                    return 1;
+                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -275,7 +279,7 @@ Options:
         %!..+--chown%!0                  Restore original file UID and GID
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: %2)%!0)", FelixTarget, rk_ComputeDefaultThreads());
+                                 %!D..(default: automatic)%!0)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -307,6 +311,10 @@ Options:
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
+                if (config.threads < 1) {
+                    LogError("Threads count cannot be < 1");
+                    return 1;
+                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -379,7 +387,7 @@ Options:
         %!..+--password <pwd>%!0         Set repository password
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: %2)%!0)", FelixTarget, rk_ComputeDefaultThreads());
+                                 %!D..(default: automatic)%!0)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))

@@ -17,33 +17,6 @@
 
 namespace RG {
 
-int rk_ComputeDefaultThreads()
-{
-    static int threads;
-
-    if (!threads) {
-        const char *env = getenv("REKORD_THREADS");
-
-        if (env) {
-            char *end_ptr;
-            long value = strtol(env, &end_ptr, 10);
-
-            if (end_ptr > env && !end_ptr[0] && value > 0) {
-                threads = (int)value;
-            } else {
-                LogError("REKORD_THREADS must be positive number (ignored)");
-                threads = (int)std::thread::hardware_concurrency() * 6;
-            }
-        } else {
-            threads = (int)std::thread::hardware_concurrency() * 6;
-        }
-
-        RG_ASSERT(threads > 0);
-    }
-
-    return threads;
-}
-
 bool rk_Config::Complete(bool require_password)
 {
     if (!repository) {
@@ -99,11 +72,6 @@ bool rk_Config::Validate(bool require_password) const
                 valid = false;
             }
         } break;
-    }
-
-    if (threads < 1) {
-        LogError("Threads count cannot be < 1");
-        valid = false;
     }
 
     return valid;

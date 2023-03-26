@@ -25,8 +25,6 @@ enum class rk_DiskType {
     SFTP
 };
 
-int rk_ComputeDefaultThreads();
-
 struct rk_Config {
     const char *repository = nullptr;
     const char *password = nullptr;
@@ -35,7 +33,7 @@ struct rk_Config {
     s3_Config s3;
     ssh_Config ssh;
 
-    int threads = rk_ComputeDefaultThreads();
+    int threads = -1;
 
     BlockAllocator str_alloc;
 
