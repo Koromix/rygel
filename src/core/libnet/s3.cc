@@ -220,6 +220,33 @@ static FmtArg FormatYYYYMMDD(const TimeSpec &date)
     return arg;
 }
 
+s3_Session::s3_Session()
+{
+    RG_STATIC_ASSERT(CURL_LOCK_DATA_LAST <= RG_LEN(share_mutexes));
+
+    share = curl_share_init();
+
+    curl_share_setopt(share, CURLSHOPT_LOCKFUNC, +[](CURL *, curl_lock_data data, curl_lock_access, void *udata) {
+        s3_Session *s3 = (s3_Session *)udata;
+        s3->share_mutexes[data].lock();
+    });
+    curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, +[](CURL *, curl_lock_data data, void *udata) {
+        s3_Session *s3 = (s3_Session *)udata;
+        s3->share_mutexes[data].unlock();
+    });
+    curl_share_setopt(share, CURLSHOPT_USERDATA, this);
+
+    curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
+    curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+}
+
+s3_Session::~s3_Session()
+{
+    Close();
+
+    curl_share_cleanup(share);
+}
+
 bool s3_Session::Open(const s3_Config &config)
 {
     RG_ASSERT(!open);
@@ -276,7 +303,7 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
 
     RG_DEFER_NC(out_guard, len = out_keys->len) { out_keys->RemoveFrom(len); };
 
-    CURL *curl = curl_Init();
+    CURL *curl = InitConnection();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -368,7 +395,7 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = curl_Init();
+    CURL *curl = InitConnection();
     if (!curl)
         return -1;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -431,7 +458,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     Size prev_len = out_obj->len;
     RG_DEFER_N(out_guard) { out_obj->RemoveFrom(prev_len); };
 
-    CURL *curl = curl_Init();
+    CURL *curl = InitConnection();
     if (!curl)
         return -1;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -500,7 +527,7 @@ bool s3_Session::HasObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = curl_Init();
+    CURL *curl = InitConnection();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -545,7 +572,7 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = curl_Init();
+    CURL *curl = InitConnection();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -605,7 +632,7 @@ bool s3_Session::DeleteObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
-    CURL *curl = curl_Init();
+    CURL *curl = InitConnection();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -655,7 +682,7 @@ bool s3_Session::OpenAccess()
     if (!region && !DetermineRegion(url.ptr))
         return false;
 
-    CURL *curl = curl_Init();
+    CURL *curl = InitConnection();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -710,7 +737,7 @@ bool s3_Session::DetermineRegion(const char *url)
 {
     RG_ASSERT(!open);
 
-    CURL *curl = curl_Init();
+    CURL *curl = InitConnection();
     if (!curl)
         return false;
     RG_DEFER { curl_easy_cleanup(curl); };
@@ -752,6 +779,15 @@ bool s3_Session::DetermineRegion(const char *url)
     }
 
     return true;
+}
+
+CURL *s3_Session::InitConnection()
+{
+    CURL *curl = curl_Init();
+
+    curl_easy_setopt(curl, CURLOPT_SHARE, share);
+
+    return curl;
 }
 
 bool s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func)

@@ -63,10 +63,14 @@ class s3_Session {
 
     bool open = false;
 
+    void *share = nullptr; // CURLSH
+    std::mutex share_mutexes[8];
+
     BlockAllocator str_alloc;
 
 public:
-    ~s3_Session() { Close(); }
+    s3_Session();
+    ~s3_Session();
 
     bool Open(const s3_Config &config);
     void Close();
@@ -84,6 +88,8 @@ public:
 private:
     bool OpenAccess();
     bool DetermineRegion(const char *url);
+
+    void *InitConnection(); // CURL
 
     bool RunSafe(const char *action, FunctionRef<int(void)> func);
 
