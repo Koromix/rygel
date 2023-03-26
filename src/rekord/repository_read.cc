@@ -39,14 +39,18 @@ enum class ExtractFlag {
 
 class GetContext {
     struct EntryInfo {
-        const char *filename;
+        rk_ID id;
+        int kind;
+        const char *basename;
 
         int64_t mtime;
         int64_t btime;
         uint32_t mode;
-
         uint32_t uid;
         uint32_t gid;
+        int64_t size;
+
+        const char *filename;
     };
 
     rk_Disk *disk;
@@ -244,13 +248,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     std::shared_ptr<BlockAllocator> temp_alloc = std::make_shared<BlockAllocator>();
 
     for (Size offset = 0; offset < entries.len;) {
-        rk_FileEntry entry;
-        const char *name = nullptr;
+        EntryInfo entry = {};
 
-        // Avoid MSVC error C2466
-        memset(&entry, 0, RG_SIZE(entry));
-
-        // Get entry information
+        // Extract entry information
         {
             rk_FileEntry *ptr = (rk_FileEntry *)(entries.ptr + offset);
 
@@ -261,18 +261,19 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
             entry.id = ptr->id;
             entry.kind = ptr->kind;
+            entry.basename = ptr->name;
+
             entry.mtime = LittleEndian(ptr->mtime);
             entry.btime = LittleEndian(ptr->btime);
             entry.mode = LittleEndian(ptr->mode);
             entry.uid = LittleEndian(ptr->uid);
             entry.gid = LittleEndian(ptr->gid);
             entry.size = LittleEndian(ptr->size);
-            name = ptr->name;
         }
 
         // Skip entry for next iteration
         {
-            const uint8_t *end = (const uint8_t *)memchr(name, 0, entries.end() - (const uint8_t *)name);
+            const uint8_t *end = (const uint8_t *)memchr(entry.basename, 0, entries.end() - (const uint8_t *)entry.basename);
 
             if (!end) {
                 LogError("Malformed entry in directory object");
@@ -289,91 +290,83 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry.kind));
             return false;
         }
-        if (!name[0] || PathContainsDotDot(name)) {
-            LogError("Unsafe file name '%1'", name);
+        if (!entry.basename[0] || PathContainsDotDot(entry.basename)) {
+            LogError("Unsafe file name '%1'", entry.basename);
             return false;
         }
-        if (PathIsAbsolute(name)) {
-            LogError("Unsafe file name '%1'", name);
+        if (PathIsAbsolute(entry.basename)) {
+            LogError("Unsafe file name '%1'", entry.basename);
             return false;
         }
-        if (!(flags & (int)ExtractFlag::AllowSeparators) && strpbrk(name, RG_PATH_SEPARATORS)) {
-            LogError("Unsafe file name '%1'", name);
+        if (!(flags & (int)ExtractFlag::AllowSeparators) && strpbrk(entry.basename, RG_PATH_SEPARATORS)) {
+            LogError("Unsafe file name '%1'", entry.basename);
             return false;
         }
 
-        rk_ID entry_id = entry.id;
-        int8_t entry_kind = entry.kind;
-
-        EntryInfo info = {};
-
-        info.mtime = entry.mtime;
-        info.btime = entry.btime;
-        info.mode = entry.mode;
-        info.uid = entry.uid;
-        info.gid = entry.gid;
         if (flags & (int)ExtractFlag::FlattenName) {
-            info.filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, SplitStrReverse(name, '/')).ptr;
+            entry.filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, SplitStrReverse(entry.basename, '/')).ptr;
         } else {
-            info.filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, name).ptr;
+            entry.filename = Fmt(temp_alloc.get(), "%1%/%2", dest_dirname, entry.basename).ptr;
 
-            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(info.filename))
+            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry.filename))
                 return false;
         }
 
         tasks.Run([=, temp_alloc = temp_alloc, this] () {
             rk_ObjectType entry_type;
             HeapArray<uint8_t> entry_obj;
-            if (!disk->ReadObject(entry_id, &entry_type, &entry_obj))
+            if (!disk->ReadObject(entry.id, &entry_type, &entry_obj))
                 return false;
 
-            switch (entry_kind) {
+            switch (entry.kind) {
                 case (int8_t)rk_FileEntry::Kind::Directory: {
                     if (entry_type != rk_ObjectType::Directory) {
-                        LogError("Object '%1' is not a directory", entry_id);
+                        LogError("Object '%1' is not a directory", entry.id);
                         return false;
                     }
 
-                    if (!MakeDirectory(info.filename, false))
+                    if (!MakeDirectory(entry.filename, false))
                         return false;
-                    if (!ExtractEntries(entry_obj, 0, info.filename))
+                    if (!ExtractEntries(entry_obj, 0, entry.filename))
                         return false;
 
                     // Add temporary hack for directory metadata
                     {
                         std::lock_guard<std::mutex> lock(fix_mutex);
 
-                        EntryInfo *ptr = fix_directories.Append(info);
+                        EntryInfo *ptr = fix_directories.Append(entry);
                         ptr->filename = DuplicateString(ptr->filename, &fix_alloc).ptr;
                     }
                 } break;
+
                 case (int8_t)rk_FileEntry::Kind::File: {
                     if (entry_type != rk_ObjectType::File && entry_type != rk_ObjectType::Chunk) {
-                        LogError("Object '%1' is not a file", entry_id);
+                        LogError("Object '%1' is not a file", entry.id);
                         return false;
                     }
 
-                    int fd = GetFile(entry_id, entry_type, entry_obj, info.filename);
+                    int fd = GetFile(entry.id, entry_type, entry_obj, entry.filename);
                     if (fd < 0)
                         return false;
                     RG_DEFER { close(fd); };
 
                     // Set file metadata
                     if (chown) {
-                        SetFileOwner(fd, info.filename, info.uid, info.gid);
+                        SetFileOwner(fd, entry.filename, entry.uid, entry.gid);
                     }
-                    SetFileMetaData(fd, info.filename, info.mtime, info.btime, info.mode);
+                    SetFileMetaData(fd, entry.filename, entry.mtime, entry.btime, entry.mode);
                 } break;
+
                 case (int8_t)rk_FileEntry::Kind::Link: {
                     if (entry_type != rk_ObjectType::Link) {
-                        LogError("Object '%1' is not a link", entry_id);
+                        LogError("Object '%1' is not a link", entry.id);
                         return false;
                     }
 
                     // NUL terminate the path
                     entry_obj.Append(0);
 
-                    if (!CreateSymbolicLink(info.filename, (const char *)entry_obj.ptr, true))
+                    if (!CreateSymbolicLink(entry.filename, (const char *)entry_obj.ptr, true))
                         return false;
                 } break;
 
