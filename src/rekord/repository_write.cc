@@ -49,7 +49,7 @@ public:
     PutContext(rk_Disk *disk);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_ID *out_id);
-    PutResult PutFile(const char *src_filename, rk_ID *out_id);
+    PutResult PutFile(const char *src_filename, rk_ID *out_id, int64_t *out_len = nullptr);
 
     int64_t GetLen() const { return stat_len; }
     int64_t GetWritten() const { return stat_written; }
@@ -85,6 +85,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         const char *dirname = nullptr;
         HeapArray<uint8_t> obj;
 
+        std::atomic_int64_t total_len { 0 };
+
         rk_ID id = {};
     };
 
@@ -93,9 +95,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     // Enumerate directory hierarchy and process files
     BucketArray<PendingDirectory> pending_directories;
     {
-        pending_directories.Append({
-            .dirname = src_dirname
-        });
+        PendingDirectory *pending0 = pending_directories.AppendDefault();
+        pending0->dirname = src_dirname;
 
         for (Size i = 0 ; i < pending_directories.len; i++) {
             PendingDirectory *pending = &pending_directories[i];
@@ -123,11 +124,11 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     case FileType::Directory: {
                         entry->kind = (int8_t)rk_FileEntry::Kind::Directory;
 
-                        pending_directories.Append({
-                            .parent_idx = i,
-                            .parent_entry = (const uint8_t *)entry - pending->obj.ptr,
-                            .dirname = filename
-                        });
+                        PendingDirectory *ptr = pending_directories.AppendDefault();
+
+                        ptr->parent_idx = i;
+                        ptr->parent_entry = (const uint8_t *)entry - pending->obj.ptr;
+                        ptr->dirname = filename;
                     } break;
 
                     case FileType::File: {
@@ -192,6 +193,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                                                 mode == LittleEndian(entry->mode) &&
                                                                 size == LittleEndian(entry->size)) {
                                     memcpy(&entry->id, id.ptr, RG_SIZE(rk_ID));
+                                    pending->total_len += size;
                                     break;
                                 }
                             } else if (!stmt.IsValid()) {
@@ -200,10 +202,16 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                         }
 
                         async.Run([=, this]() {
-                            PutResult ret = PutFile(filename, &entry->id);
+                            Size file_len = 0;
+                            PutResult ret = PutFile(filename, &entry->id, &file_len);
 
-                            bool persist = (ret != PutResult::Error);
-                            return persist;
+                            if (ret == PutResult::Success) {
+                                pending->total_len += file_len;
+                                return true;
+                            } else {
+                                bool persist = (ret != PutResult::Error);
+                                return persist;
+                            }
                         });
                     } break;
 
@@ -251,15 +259,21 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     if (!async.Sync())
         return PutResult::Error;
 
-    // Process missing directory IDs
+    // Finalize and upload directory objects
     async.Run([&]() {
         for (Size i = pending_directories.len - 1; i >= 0; i--) {
             PendingDirectory *pending = &pending_directories[i];
 
+            int64_t len_64le = LittleEndian(pending->total_len.load());
+            pending->obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
+
             HashBlake3(pending->obj, salt.ptr, &pending->id);
 
             if (pending->parent_idx >= 0) {
-                rk_FileEntry *entry = (rk_FileEntry *)(pending_directories[pending->parent_idx].obj.ptr + pending->parent_entry);
+                PendingDirectory *parent = &pending_directories[pending->parent_idx];
+                rk_FileEntry *entry = (rk_FileEntry *)(parent->obj.ptr + pending->parent_entry);
+
+                parent->total_len += pending->total_len;
                 entry->id = pending->id;
             }
 
@@ -280,7 +294,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     async.Run([&]() {
         bool success = db->Transaction([&]() {
             for (const PendingDirectory &pending: pending_directories) {
-                for (Size offset = 0; offset < pending.obj.len;) {
+                Size limit = pending.obj.len - RG_SIZE(int64_t);
+
+                for (Size offset = 0; offset < limit;) {
                     rk_FileEntry *entry = (rk_FileEntry *)(pending.obj.ptr + offset);
                     const char *filename = Fmt(&temp_alloc, "%1%/%2", pending.dirname, entry->name).ptr;
 
@@ -316,7 +332,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     return PutResult::Success;
 }
 
-PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id)
+PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id, int64_t *out_len)
 {
     StreamReader st;
     {
@@ -328,6 +344,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id)
     }
 
     HeapArray<uint8_t> file_obj;
+    Size file_len = 0;
 
     // Split the file
     {
@@ -349,7 +366,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id)
             if (read < 0)
                 return PutResult::Error;
             buf.len += read;
-            stat_len += read;
+            file_len += read;
 
             Span<const uint8_t> remain = buf;
 
@@ -417,7 +434,12 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id)
         file_id = entry0->id;
     }
 
+    stat_len += file_len;
+
     *out_id = file_id;
+    if (out_len) {
+        *out_len = file_len;
+    }
     return PutResult::Success;
 }
 
@@ -541,6 +563,9 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     if (!settings.raw) {
         header->len = LittleEndian(total_len);
         header->stored = LittleEndian(total_written);
+
+        int64_t len_64le = LittleEndian(total_len);
+        snapshot_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
         HashBlake3(snapshot_obj, salt.ptr, &id);
 

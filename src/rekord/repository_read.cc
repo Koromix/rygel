@@ -254,6 +254,17 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 {
     // XXX: Make sure each path does not clobber a previous one
 
+    if (RG_UNLIKELY(entries.len < RG_SIZE(int64_t))) {
+        LogError("Malformed directory object");
+        return false;
+    }
+    entries.len -= RG_SIZE(int64_t);
+
+    // Get total length from end of stream
+    int64_t dir_len = 0;
+    memcpy(&dir_len, entries.end(), RG_SIZE(dir_len));
+    dir_len = LittleEndian(dir_len);
+
     struct SharedContext {
         BlockAllocator temp_alloc;
 
@@ -426,9 +437,9 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
                 LogError("Malformed file object '%1'", id);
                 return -1;
             }
+            file_obj.len -= RG_SIZE(int64_t);
 
             // Get file length from end of stream
-            file_obj.len -= RG_SIZE(file_len);
             memcpy(&file_len, file_obj.end(), RG_SIZE(file_len));
             file_len = LittleEndian(file_len);
 
