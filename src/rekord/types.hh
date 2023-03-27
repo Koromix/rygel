@@ -38,10 +38,13 @@ struct rk_FileEntry {
     enum class Kind {
         Directory = 0,
         File = 1,
-        Link = 2
+        Link = 2,
+        Unknown = -1
     };
 
     rk_ID id;
+    int8_t stated;
+    int8_t readable;
     int8_t kind; // Kind
     int64_t mtime; // Little Endian
     int64_t btime; // Little Endian
@@ -52,7 +55,7 @@ struct rk_FileEntry {
     char name[];
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(rk_FileEntry) == 69);
+RG_STATIC_ASSERT(RG_SIZE(rk_FileEntry) == 71);
 
 #pragma pack(push, 1)
 struct rk_ChunkEntry {

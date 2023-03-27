@@ -299,6 +299,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         EntryInfo entry = {};
 
         // Extract entry information
+        bool valid = true;
         {
             rk_FileEntry *ptr = (rk_FileEntry *)(entries.ptr + offset);
 
@@ -306,6 +307,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                 LogError("Malformed entry in directory object");
                 return false;
             }
+            if (!ptr->readable)
+                valid = false;
 
             entry.id = ptr->id;
             entry.kind = ptr->kind;
@@ -330,6 +333,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
             offset = end - entries.ptr + 1;
         }
+
+        if (!valid)
+            continue;
 
         // Sanity checks
         if (entry.kind != (int8_t)rk_FileEntry::Kind::Directory &&

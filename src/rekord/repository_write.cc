@@ -55,11 +55,15 @@ public:
     int64_t GetWritten() const { return stat_written; }
 };
 
-static void HashBlake3(Span<const uint8_t> buf, const uint8_t *salt, rk_ID *out_id)
+static void HashBlake3(rk_ObjectType type, Span<const uint8_t> buf, const uint8_t salt[32], rk_ID *out_id)
 {
     blake3_hasher hasher;
 
-    blake3_hasher_init_keyed(&hasher, salt);
+    uint8_t salt2[32];
+    memcpy(salt2, salt, RG_SIZE(salt2));
+    salt2[31] ^= (uint8_t)type;
+
+    blake3_hasher_init_keyed(&hasher, salt2);
     blake3_hasher_update(&hasher, buf.ptr, buf.len);
     blake3_hasher_finalize(&hasher, out_id->hash, RG_SIZE(out_id->hash));
 }
@@ -84,6 +88,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
         const char *dirname = nullptr;
         HeapArray<uint8_t> obj;
+        bool failed = false;
 
         std::atomic_int64_t total_len { 0 };
 
@@ -91,6 +96,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     };
 
     Async async(&dir_async);
+    bool success = true;
 
     // Enumerate directory hierarchy and process files
     BucketArray<PendingDirectory> pending_directories;
@@ -107,63 +113,70 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                 Size entry_len = RG_SIZE(rk_FileEntry) + strlen(basename) + 1;
                 rk_FileEntry *entry = (rk_FileEntry *)pending->obj.AppendDefault(entry_len);
-                RG_DEFER_N(entry_guard) { pending->obj.RemoveLast(entry_len); };
 
-                FileInfo file_info;
+                // Stat file
                 {
                     unsigned int flags = follow_symlinks ? (int)StatFlag::FollowSymlink : 0;
+
+                    FileInfo file_info = {};
                     StatResult ret = StatFile(filename, flags, &file_info);
 
-                    if (ret != StatResult::Success) {
-                        bool ignore = (ret == StatResult::AccessDenied || ret == StatResult::MissingPath);
-                        return ignore;
-                    }
-                }
+                    if (ret == StatResult::Success) {
+                        entry->stated = true;
 
-                switch (file_info.type) {
-                    case FileType::Directory: {
-                        entry->kind = (int8_t)rk_FileEntry::Kind::Directory;
+                        switch (file_info.type) {
+                            case FileType::Directory: {
+                                entry->kind = (int8_t)rk_FileEntry::Kind::Directory;
 
-                        PendingDirectory *ptr = pending_directories.AppendDefault();
+                                PendingDirectory *ptr = pending_directories.AppendDefault();
 
-                        ptr->parent_idx = i;
-                        ptr->parent_entry = (const uint8_t *)entry - pending->obj.ptr;
-                        ptr->dirname = filename;
-                    } break;
+                                ptr->parent_idx = i;
+                                ptr->parent_entry = (const uint8_t *)entry - pending->obj.ptr;
+                                ptr->dirname = filename;
+                            } break;
 
-                    case FileType::File: {
-                        entry->kind = (int8_t)rk_FileEntry::Kind::File;
-                        entry->size = LittleEndian(file_info.size);
-                    } break;
+                            case FileType::File: {
+                                entry->kind = (int8_t)rk_FileEntry::Kind::File;
+                                entry->size = LittleEndian(file_info.size);
+                            } break;
 #ifndef _WIN32
-                    case FileType::Link: { entry->kind = (int8_t)rk_FileEntry::Kind::Link; } break;
+                            case FileType::Link: { entry->kind = (int8_t)rk_FileEntry::Kind::Link; } break;
 #endif
 
 #ifdef _WIN32
-                    case FileType::Link:
+                            case FileType::Link:
 #endif
-                    case FileType::Device:
-                    case FileType::Pipe:
-                    case FileType::Socket: {
-                        LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
-                        return true;
-                    } break;
+                            case FileType::Device:
+                            case FileType::Pipe:
+                            case FileType::Socket: {
+                                entry->kind = (int8_t)rk_FileEntry::Kind::Unknown;
+                                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
+                            } break;
+                        }
+
+                        entry->mtime = LittleEndian(file_info.mtime);
+                        entry->btime = LittleEndian(file_info.btime);
+                        entry->mode = LittleEndian((uint32_t)file_info.mode);
+                        entry->uid = LittleEndian(file_info.uid);
+                        entry->gid = LittleEndian(file_info.gid);
+                    }
                 }
 
-                entry->mtime = LittleEndian(file_info.mtime);
-                entry->btime = LittleEndian(file_info.btime);
-                entry->mode = LittleEndian((uint32_t)file_info.mode);
-                entry->uid = LittleEndian(file_info.uid);
-                entry->gid = LittleEndian(file_info.gid);
                 CopyString(basename, MakeSpan(entry->name, entry_len - RG_SIZE(rk_FileEntry)));
 
-                entry_guard.Disable();
                 return true;
             });
 
             if (ret != EnumResult::Success) {
-                bool ignore = (ret == EnumResult::AccessDenied || ret == EnumResult::MissingPath);
-                return ignore ? PutResult::Ignore : PutResult::Error;
+                pending->failed = true;
+                pending->obj.RemoveFrom(0);
+
+                if (ret == EnumResult::AccessDenied || ret == EnumResult::MissingPath) {
+                    continue;
+                } else {
+                    success = false;
+                    break;
+                }
             }
 
             // Process data entries (file, links)
@@ -178,8 +191,10 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                         // Skip file analysis if metadata is unchanged
                         {
                             sq_Statement stmt;
-                            if (!db->Prepare("SELECT mtime, mode, size, id FROM stats WHERE path = ?1", &stmt))
-                                return PutResult::Error;
+                            if (!db->Prepare("SELECT mtime, mode, size, id FROM stats WHERE path = ?1", &stmt)) {
+                                success = false;
+                                break;
+                            }
                             sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
                             if (stmt.Step()) {
@@ -193,11 +208,15 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                                                 mode == LittleEndian(entry->mode) &&
                                                                 size == LittleEndian(entry->size)) {
                                     memcpy(&entry->id, id.ptr, RG_SIZE(rk_ID));
+
+                                    entry->readable = true;
                                     pending->total_len += size;
+
                                     break;
                                 }
                             } else if (!stmt.IsValid()) {
-                                return PutResult::Error;
+                                success = false;
+                                break;
                             }
                         }
 
@@ -206,7 +225,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                             PutResult ret = PutFile(filename, &entry->id, &file_len);
 
                             if (ret == PutResult::Success) {
+                                entry->readable = true;
                                 pending->total_len += file_len;
+
                                 return true;
                             } else {
                                 bool persist = (ret != PutResult::Error);
@@ -231,23 +252,27 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                     return ignore;
                                 } else if (ret >= RG_SIZE(target)) {
                                     LogError("Failed to read symbolic link '%1': target too long", filename);
-                                    return false;
+                                    return true;
                                 }
 
                                 target.len = (Size)ret;
                             }
 
-                            HashBlake3(target, salt.ptr, &entry->id);
+                            HashBlake3(rk_ObjectType::Link, target, salt.ptr, &entry->id);
 
                             Size ret = disk->WriteObject(entry->id, rk_ObjectType::Link, target);
                             if (ret < 0)
                                 return false;
                             stat_written += ret;
 
+                            entry->readable = true;
+
                             return true;
                         });
 #endif
                     } break;
+
+                    case rk_FileEntry::Kind::Unknown: {} break;
                 }
 
                 Size entry_len = RG_SIZE(rk_FileEntry) + strlen(entry->name) + 1;
@@ -258,6 +283,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
     if (!async.Sync())
         return PutResult::Error;
+    if (!success)
+        return PutResult::Error;
 
     // Finalize and upload directory objects
     async.Run([&]() {
@@ -267,21 +294,24 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             int64_t len_64le = LittleEndian(pending->total_len.load());
             pending->obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-            HashBlake3(pending->obj, salt.ptr, &pending->id);
+            HashBlake3(rk_ObjectType::Directory, pending->obj, salt.ptr, &pending->id);
 
-            if (pending->parent_idx >= 0) {
-                PendingDirectory *parent = &pending_directories[pending->parent_idx];
-                rk_FileEntry *entry = (rk_FileEntry *)(parent->obj.ptr + pending->parent_entry);
+            PendingDirectory *parent = (pending->parent_idx >= 0) ? &pending_directories[pending->parent_idx] : nullptr;
 
-                parent->total_len += pending->total_len;
-                entry->id = pending->id;
-            }
-
-            async.Run([pending, this]() {
+            async.Run([pending, parent, this]() mutable {
                 Size written = disk->WriteObject(pending->id, rk_ObjectType::Directory, pending->obj);
                 if (written < 0)
                     return false;
                 stat_written += written;
+
+                if (parent) {
+                    rk_FileEntry *entry = (rk_FileEntry *)(parent->obj.ptr + pending->parent_entry);
+
+                    entry->id = pending->id;
+                    entry->readable = !pending->failed;
+
+                    parent->total_len += pending->total_len;
+                }
 
                 return true;
             });
@@ -294,13 +324,16 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     async.Run([&]() {
         bool success = db->Transaction([&]() {
             for (const PendingDirectory &pending: pending_directories) {
+                if (pending.failed)
+                    continue;
+
                 Size limit = pending.obj.len - RG_SIZE(int64_t);
 
                 for (Size offset = 0; offset < limit;) {
                     rk_FileEntry *entry = (rk_FileEntry *)(pending.obj.ptr + offset);
                     const char *filename = Fmt(&temp_alloc, "%1%/%2", pending.dirname, entry->name).ptr;
 
-                    if (entry->kind == (int8_t)rk_FileEntry::Kind::File) {
+                    if (entry->readable && entry->kind == (int8_t)rk_FileEntry::Kind::File) {
                         if (!db->Run(R"(INSERT INTO stats (path, mtime, mode, size, id)
                                             VALUES (?1, ?2, ?3, ?4, ?5)
                                             ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
@@ -386,7 +419,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id, int64_t *
                         entry.offset = LittleEndian(total);
                         entry.len = LittleEndian((int32_t)chunk.len);
 
-                        HashBlake3(chunk, salt.ptr, &entry.id);
+                        HashBlake3(rk_ObjectType::Chunk, chunk, salt.ptr, &entry.id);
 
                         Size ret = disk->WriteObject(entry.id, rk_ObjectType::Chunk, chunk);
                         if (ret < 0)
@@ -423,7 +456,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id, int64_t *
         int64_t len_64le = LittleEndian(st.GetRawRead());
         file_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-        HashBlake3(file_obj, salt.ptr, &file_id);
+        HashBlake3(rk_ObjectType::File, file_obj, salt.ptr, &file_id);
 
         Size ret = disk->WriteObject(file_id, rk_ObjectType::File, file_obj);
         if (ret < 0)
@@ -523,6 +556,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         FileInfo file_info;
         if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
             return false;
+        entry->stated = true;
 
         switch (file_info.type) {
             case FileType::Directory: {
@@ -530,6 +564,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
                 if (put.PutDirectory(filename, settings.follow_symlinks, &entry->id) != PutResult::Success)
                     return false;
+
+                entry->readable = true;
             } break;
             case FileType::File: {
                 entry->kind = (int8_t)rk_FileEntry::Kind::File;
@@ -537,6 +573,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
                 if (put.PutFile(filename, &entry->id) != PutResult::Success)
                     return false;
+
+                entry->readable = true;
             } break;
 
             case FileType::Link: { RG_UNREACHABLE(); } break;
@@ -567,7 +605,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         int64_t len_64le = LittleEndian(total_len);
         snapshot_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-        HashBlake3(snapshot_obj, salt.ptr, &id);
+        HashBlake3(rk_ObjectType::Snapshot, snapshot_obj, salt.ptr, &id);
 
         // Write snapshot object
         {

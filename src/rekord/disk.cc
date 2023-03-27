@@ -50,7 +50,7 @@ struct ObjectIntro {
 
 static const int SecretVersion = 1;
 static const int CacheVersion = 2;
-static const int ObjectVersion = 5;
+static const int ObjectVersion = 6;
 static const Size ObjectSplit = Kibibytes(32);
 
 bool rk_Disk::Open(const char *username, const char *pwd)
