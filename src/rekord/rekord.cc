@@ -150,6 +150,7 @@ static int RunPut(Span<const char *> arguments)
     // Options
     rk_Config config;
     rk_PutSettings settings;
+    bool allow_anonymous = false;
     HeapArray<const char *> filenames;
 
     const auto print_usage = [=](FILE *fp) {
@@ -162,11 +163,11 @@ Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
         %!..+--password <pwd>%!0         Set repository password
 
-    %!..+-n, --name <name>%!0            Set user friendly name (optional)
-
-        %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is)
-
+    %!..+-n, --name <name>%!0            Set user friendly name
+        %!..+--anonymous%!0              Allow snapshot without name
         %!..+--raw%!0                    Skip snapshot object and report data ID
+
+        %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is
 
     %!..+-j, --threads <threads>%!0      Change number of threads
                                  %!D..(default: automatic)%!0)", FelixTarget);
@@ -194,6 +195,8 @@ Options:
                 settings.name = opt.current_value;
             } else if (opt.Test("--follow_symlinks")) {
                 settings.follow_symlinks = true;
+            } else if (opt.Test("--anonymous")) {
+                allow_anonymous = true;
             } else if (opt.Test("--raw")) {
                 settings.raw = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
@@ -214,6 +217,11 @@ Options:
 
     if (!filenames.len) {
         LogError("No filename provided");
+        return 1;
+    }
+
+    if (!settings.name && !allow_anonymous && !settings.raw) {
+        LogError("Use --anonymous to create unnamed snapshot object");
         return 1;
     }
 
