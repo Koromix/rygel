@@ -237,8 +237,6 @@ s3_Session::s3_Session()
     curl_share_setopt(share, CURLSHOPT_USERDATA, this);
 
     curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
-    curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
-    curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
 }
 
 s3_Session::~s3_Session()
