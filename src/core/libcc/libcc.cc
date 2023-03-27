@@ -5333,7 +5333,6 @@ class AsyncPool {
     HeapArray<bool> workers_state;
 
     HeapArray<TaskQueue> queues;
-    int next_queue_idx = 0;
     std::atomic_int pending_tasks { 0 };
 
 public:
@@ -5475,11 +5474,8 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 {
     if (async_running_pool != async->pool) {
         for (;;) {
-            TaskQueue *queue = &queues[next_queue_idx];
-
-            if (--next_queue_idx < 0) {
-                next_queue_idx = (int)workers_state.len - 1;
-            }
+            int idx = GetRandomIntSafe(0, queues.len);
+            TaskQueue *queue = &queues[idx];
 
             std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
             if (lock_queue.owns_lock()) {
