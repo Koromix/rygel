@@ -75,6 +75,17 @@ public:
     Span<const uint8_t> GetSalt() const { return pkey; }
     rk_DiskMode GetMode() const { return mode; }
 
+    Span<const uint8_t> GetFullKey() const
+    {
+        RG_ASSERT(mode == rk_DiskMode::ReadWrite);
+        return skey;
+    }
+    Span<const uint8_t> GetWriteKey() const
+    {
+        RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
+        return pkey;
+    }
+
     sq_Database *GetCache() { return &cache_db; }
     virtual int GetThreads() const = 0;
 

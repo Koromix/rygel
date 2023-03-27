@@ -145,6 +145,74 @@ Options:
     return 0;
 }
 
+static int RunExportMasterKey(Span<const char *> arguments)
+{
+    // Options
+    rk_Config config;
+    const char *output_filename = "full.key";
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 export_key [-C <config>]
+
+Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+
+    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-u, --user <user>%!0            Set repository username
+        %!..+--password <pwd>%!0         Set repository password
+
+    %!..+-O, --output_file <file>%!0     Output key to specific file
+                                 %!D..(default: %2)%!0)", FelixTarget, output_filename);
+    };
+
+    if (!FindAndLoadConfig(arguments, &config))
+        return 1;
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
+                if (!rk_DecodeURL(opt.current_value, &config))
+                    return 1;
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
+                config.username = opt.current_value;
+            } else if (opt.Test("--password", OptionType::Value)) {
+                config.password = opt.current_value;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+    }
+
+    if (!config.Complete(true))
+        return 1;
+
+    std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
+    if (!disk)
+        return 1;
+
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
+        LogError("You must use the read-write password with this command");
+        return 1;
+    }
+
+    if (!WriteFile(disk->GetFullKey(), output_filename))
+        return 1;
+
+    LogInfo("Unprotected full-access key written to: %!..+%1%!0", output_filename);
+    return 0;
+}
+
 static int RunPut(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -486,12 +554,13 @@ int Main(int argc, char **argv)
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 
-Commands:
+Management commands:
     %!..+init%!0                         Init new backup repository
+    %!..+export_key%!0                   Export master repository key
 
+Snapshot commands:
     %!..+put%!0                          Store encrypted directory or file
     %!..+get%!0                          Get and decrypt directory or file
-
     %!..+list%!0                         List snapshots
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
@@ -564,6 +633,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
 
     if (TestStr(cmd, "init")) {
         return RunInit(arguments);
+    } else if (TestStr(cmd, "export_key")) {
+        return RunExportMasterKey(arguments);
     } else if (TestStr(cmd, "put")) {
         return RunPut(arguments);
     } else if (TestStr(cmd, "get")) {
