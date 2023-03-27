@@ -640,7 +640,7 @@ bool rk_List(rk_Disk *disk, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *ou
         }
     }
 
-    if (!async.Sync())
+    if (!async.Sync() && out_snapshots->len == prev_len)
         return false;
 
     std::sort(out_snapshots->ptr + prev_len, out_snapshots->end(),
