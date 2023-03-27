@@ -56,7 +56,7 @@ S3Disk::S3Disk(const s3_Config &config, int threads)
         this->threads = threads;
     } else {
         // S3 is slow unless you use parallelism
-        this->threads = GetCoreCount() * 10;
+        this->threads = 64;
     }
 
     // We're good!
