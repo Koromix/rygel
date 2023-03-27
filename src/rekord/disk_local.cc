@@ -39,7 +39,6 @@ public:
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
 
     bool TestSlow(const char *path) override;
-    bool TestFast(const char *path) override;
 };
 
 LocalDisk::LocalDisk(const char *path, int threads)
@@ -154,11 +153,14 @@ Size LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
 
 Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
+    switch (TestFast(path)) {
+        case TestResult::Exists: return 0;
+        case TestResult::Missing: {} break;
+        case TestResult::FatalError: return -1;
+    }
+
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
-
-    if (TestFile(filename.data, FileType::File))
-        return 0;
 
     // Create temporary file
     FILE *fp;
@@ -208,6 +210,9 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
         return -1;
     tmp_guard.Disable();
 
+    if (!PutCache(path))
+        return -1;
+
     return writer.GetRawWritten();
 }
 
@@ -239,13 +244,10 @@ bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char
 
 bool LocalDisk::TestSlow(const char *path)
 {
-    bool exists = TestFile(path, FileType::File);
-    return exists;
-}
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-bool LocalDisk::TestFast(const char *path)
-{
-    bool exists = TestFile(path, FileType::File);
+    bool exists = TestFile(filename.data, FileType::File);
     return exists;
 }
 

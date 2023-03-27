@@ -85,68 +85,8 @@ bool rk_Disk::Open(const char *username, const char *pwd)
     if (!ReadSecret("rekord", id))
         return false;
 
-    // Open cache
-    {
-        const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
-        if (!MakeDirectory(cache_dir, false))
-            return false;
-
-        const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(id, FmtType::SmallHex, "").Pad0(-2)).ptr;
-        LogDebug("Cache file: %1", cache_filename);
-
-        if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-            return false;
-        if (!cache_db.SetWAL(true))
-            return false;
-
-        int version;
-        if (!cache_db.GetUserVersion(&version))
-            return false;
-
-        if (version > CacheVersion) {
-            LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
-            return false;
-        } else if (version < CacheVersion) {
-            bool success = cache_db.Transaction([&]() {
-                switch (version) {
-                    case 0: {
-                        bool success = cache_db.RunMany(R"(
-                            CREATE TABLE objects (
-                                key TEXT NOT NULL
-                            );
-                            CREATE UNIQUE INDEX objects_k ON objects (key);
-                        )");
-                        if (!success)
-                            return false;
-                    } [[fallthrough]];
-
-                    case 1: {
-                        bool success = cache_db.RunMany(R"(
-                            CREATE TABLE stats (
-                                path TEXT NOT NULL,
-                                mtime INTEGER NOT NULL,
-                                mode INTEGER NOT NULL,
-                                size INTEGER NOT NULL,
-                                id BLOB NOT NULL
-                            );
-                            CREATE UNIQUE INDEX stats_p ON stats (path);
-                        )");
-                        if (!success)
-                            return false;
-                    } // [[fallthrough]];
-
-                    RG_STATIC_ASSERT(CacheVersion == 2);
-                }
-
-                if (!cache_db.SetUserVersion(CacheVersion))
-                    return false;
-
-                return true;
-            });
-            if (!success)
-                return false;
-        }
-    }
+    if (!OpenCache())
+        return false;
 
     err_guard.Disable();
     return true;
@@ -224,7 +164,7 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
         remain.len -= RG_SIZE(ObjectIntro);
     }
 
-    if (version < 5) {
+    if (version < 6) {
         LogError("Unsupported old object format version %1", version);
         return false;
     }
@@ -368,17 +308,6 @@ Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_
     return written;
 }
 
-bool rk_Disk::HasObject(const rk_ID &id)
-{
-    RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
-
-    LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
-
-    return TestFast(path.data);
-}
-
 Size rk_Disk::WriteTag(const rk_ID &id)
 {
     RG_ASSERT(url);
@@ -514,6 +443,58 @@ bool rk_Disk::InitKeys(const char *full_pwd, const char *write_pwd)
     return true;
 }
 
+rk_Disk::TestResult rk_Disk::TestFast(const char *path)
+{
+    if (!cache_db.IsValid())
+        return TestSlow(path) ? TestResult::Exists : TestResult::Missing;
+
+    bool should_exist;
+    {
+        sq_Statement stmt;
+        if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
+            return TestResult::FatalError;
+        sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
+
+        should_exist = stmt.Step();
+    }
+
+    // Probabilistic check
+    if (GetRandomIntSafe(0, 100) <= 4) {
+        bool really_exists = TestSlow(path);
+
+        if (really_exists && !should_exist) {
+            std::lock_guard<std::mutex> lock(cache_mutex);
+
+            if (++cache_misses >= 20) {
+                RebuildCache();
+            }
+            cache_misses = 0;
+
+            return really_exists ? TestResult::Exists : TestResult::Missing;
+        } else if (should_exist && !really_exists) {
+            cache_db.Run("DELETE FROM objects");
+            cache_db.Run("DELETE FROM stats");
+
+            LogError("The local cache database was mismatched and could have resulted in missing data in the backup");
+            LogError("You must start over to fix this situation.");
+
+            return TestResult::FatalError;
+        }
+    }
+
+    return should_exist ? TestResult::Exists : TestResult::Missing;
+}
+
+bool rk_Disk::PutCache(const char *key)
+{
+    if (!cache_db.IsValid())
+        return true;
+
+    bool success = cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                                   ON CONFLICT DO NOTHING)", key);
+    return success;
+}
+
 static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
 {
     RG_STATIC_ASSERT(crypto_pwhash_SALTBYTES == 16);
@@ -639,6 +620,114 @@ Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf)
 
     Size written = WriteRaw(path, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });
     return written;
+}
+
+bool rk_Disk::OpenCache()
+{
+    const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
+    if (!MakeDirectory(cache_dir, false))
+        return false;
+
+    const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(id, FmtType::SmallHex, "").Pad0(-2)).ptr;
+    LogDebug("Cache file: %1", cache_filename);
+
+    if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+    if (!cache_db.SetWAL(true))
+        return false;
+
+    int version;
+    if (!cache_db.GetUserVersion(&version))
+        return false;
+
+    if (version > CacheVersion) {
+        LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
+        return false;
+    } else if (version < CacheVersion) {
+        bool success = cache_db.Transaction([&]() {
+            switch (version) {
+                case 0: {
+                    bool success = cache_db.RunMany(R"(
+                        CREATE TABLE objects (
+                            key TEXT NOT NULL
+                        );
+                        CREATE UNIQUE INDEX objects_k ON objects (key);
+                    )");
+                    if (!success)
+                        return false;
+                } [[fallthrough]];
+
+                case 1: {
+                    bool success = cache_db.RunMany(R"(
+                        CREATE TABLE stats (
+                            path TEXT NOT NULL,
+                            mtime INTEGER NOT NULL,
+                            mode INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            id BLOB NOT NULL
+                        );
+                        CREATE UNIQUE INDEX stats_p ON stats (path);
+                    )");
+                    if (!success)
+                        return false;
+                } // [[fallthrough]];
+
+                RG_STATIC_ASSERT(CacheVersion == 2);
+            }
+
+            if (!cache_db.SetUserVersion(CacheVersion))
+                return false;
+
+            return true;
+        });
+        if (!success)
+            return false;
+    }
+
+    return true;
+}
+
+void rk_Disk::ClearCache()
+{
+    if (!cache_db.IsValid())
+        return;
+
+    cache_db.Transaction([&]() {
+        if (!cache_db.Run("DELETE FROM objects"))
+            return false;
+        if (!cache_db.Run("DELETE FROM stats"))
+            return false;
+
+        return true;
+    });
+}
+
+bool rk_Disk::RebuildCache()
+{
+    if (!cache_db.IsValid())
+        return true;
+
+    BlockAllocator temp_alloc;
+
+    HeapArray<const char *> paths;
+    if (!ListRaw(nullptr, &temp_alloc, &paths))
+        return -1;
+
+    bool success = cache_db.Transaction([&]() {
+        if (!cache_db.Run("DELETE FROM objects"))
+            return false;
+        if (!cache_db.Run("DELETE FROM stats"))
+            return false;
+
+        for (const char *path: paths) {
+            if (!cache_db.Run("INSERT INTO objects (key) VALUES (?1)", path))
+                return false;
+        }
+
+        return true;
+    });
+
+    return success;
 }
 
 }

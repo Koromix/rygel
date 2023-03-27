@@ -40,7 +40,6 @@ public:
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
 
     bool TestSlow(const char *path) override;
-    bool TestFast(const char *path) override;
 };
 
 SftpDisk::SftpDisk(const ssh_Config &config, int threads)
@@ -109,11 +108,6 @@ bool SftpDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char 
 }
 
 bool SftpDisk::TestSlow(const char *path)
-{
-    RG_UNREACHABLE();
-}
-
-bool SftpDisk::TestFast(const char *path)
 {
     RG_UNREACHABLE();
 }

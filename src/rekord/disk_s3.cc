@@ -23,10 +23,6 @@ class S3Disk: public rk_Disk {
 
     int threads;
 
-    std::atomic_int cache_hits { 0 };
-    int cache_misses { 0 };
-    std::mutex cache_mutex;
-
 public:
     S3Disk(const s3_Config &config, int threads);
     ~S3Disk() override;
@@ -44,7 +40,6 @@ public:
     bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
 
     bool TestSlow(const char *path) override;
-    bool TestFast(const char *path) override;
 };
 
 S3Disk::S3Disk(const s3_Config &config, int threads)
@@ -90,53 +85,10 @@ Size S3Disk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
 
 Size S3Disk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
-    // Fast detection of known objects
-    if (cache_db.IsValid()) {
-        sq_Statement stmt;
-        if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
-            return -1;
-        sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
-
-        if (stmt.Step()) {
-            return 0;
-        } else if (!stmt.IsValid()) {
-            return -1;
-        }
-    }
-
-    // Probabilistic detection and rebuild of outdated cache
-    if (GetRandomIntSafe(0, 20) <= 1) {
-        int hits = ++cache_hits;
-        bool miss = s3.HasObject(path);
-
-        if (miss) {
-            std::lock_guard<std::mutex> lock(cache_mutex);
-
-            cache_misses++;
-
-            if (hits >= 20 && cache_misses >= hits / 5) {
-                BlockAllocator temp_alloc;
-
-                HeapArray<const char *> keys;
-                if (!s3.ListObjects(nullptr, &temp_alloc, &keys))
-                    return -1;
-
-                for (const char *key: keys) {
-                    if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                                         ON CONFLICT (key) DO NOTHING)", key))
-                        return -1;
-                }
-
-                cache_hits = 0;
-                cache_misses = 0;
-            }
-
-            if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                                 ON CONFLICT (key) DO NOTHING)", path))
-                return -1;
-
-            return 0;
-        }
+    switch (TestFast(path)) {
+        case TestResult::Exists: return 0;
+        case TestResult::Missing: {} break;
+        case TestResult::FatalError: return -1;
     }
 
     HeapArray<uint8_t> obj;
@@ -145,8 +97,7 @@ Size S3Disk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<c
 
     if (!s3.PutObject(path, obj))
         return -1;
-    if (cache_db.IsValid() && !cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                                               ON CONFLICT (key) DO NOTHING)", path))
+    if (!PutCache(path))
         return -1;
 
     return obj.len;
@@ -169,16 +120,6 @@ bool S3Disk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *>
 bool S3Disk::TestSlow(const char *path)
 {
     return s3.HasObject(path);
-}
-
-bool S3Disk::TestFast(const char *path)
-{
-    sq_Statement stmt;
-    if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
-        return false;
-    sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
-
-    return stmt.Step();
 }
 
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, int threads)

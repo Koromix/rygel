@@ -59,10 +59,18 @@ protected:
     uint8_t skey[32] = {};
 
     sq_Database cache_db;
+    std::mutex cache_mutex;
+    std::atomic_int cache_misses { 0 };
 
     BlockAllocator str_alloc;
 
 public:
+    enum class TestResult {
+        Exists = 1,
+        Missing = 0,
+        FatalError = -1
+    };
+
     virtual ~rk_Disk() = default;
 
     virtual bool Init(const char *full_pwd, const char *write_pwd) = 0;
@@ -91,7 +99,6 @@ public:
 
     bool ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
     Size WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj);
-    bool HasObject(const rk_ID &id);
 
     Size WriteTag(const rk_ID &id);
     bool ListTags(HeapArray<rk_ID> *out_ids);
@@ -99,16 +106,19 @@ public:
 protected:
     bool InitKeys(const char *full_pwd, const char *write_pwd);
 
+    TestResult TestFast(const char *path);
+
     virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;
     virtual Size ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
 
     virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
     virtual bool DeleteRaw(const char *path) = 0;
 
+    bool PutCache(const char *key);
+
     virtual bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) = 0;
 
     virtual bool TestSlow(const char *path) = 0;
-    virtual bool TestFast(const char *path) = 0; // False negatives
 
 private:
     bool WriteKey(const char *path, const char *pwd, const uint8_t payload[32]);
@@ -118,6 +128,10 @@ private:
     bool ReadSecret(const char *path, Span<uint8_t> out_buf);
 
     Size WriteDirect(const char *path, Span<const uint8_t> buf);
+
+    bool OpenCache();
+    void ClearCache();
+    bool RebuildCache();
 };
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads = -1);
