@@ -326,7 +326,7 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
         Fmt(&query, "list-type=2&prefix="); http_EncodeUrlSafe(prefix, &query);
         Fmt(&query, "&start-after="); http_EncodeUrlSafe(after, &query);
 
-        bool success = RunSafe("list S3 objects", [&]() {
+        int status = RunSafe("list S3 objects", [&]() {
             LocalArray<curl_slist, 32> headers;
             headers.len = PrepareHeaders("GET", path.ptr, query.ptr, nullptr, {}, &temp_alloc, headers.data);
 
@@ -356,7 +356,7 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
 
             return curl_Perform(curl, nullptr);
         });
-        if (!success)
+        if (status != 200)
             return false;
 
         pugi::xml_document doc;
@@ -413,7 +413,7 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
     ctx.key = key;
     ctx.out = out_buf;
 
-    bool success = RunSafe("get S3 object", [&]() {
+    int status = RunSafe("get S3 object", [&]() {
         ctx.len = 0;
 
         LocalArray<curl_slist, 32> headers;
@@ -446,8 +446,13 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
 
         return curl_Perform(curl, nullptr);
     });
-    if (!success)
+
+    if (status != 200) {
+        if (status == 404) {
+            LogError("Cannot find S3 object '%1'", key);
+        }
         return -1;
+    }
 
     return ctx.len;
 }
@@ -478,7 +483,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     ctx.out = out_obj;
     ctx.max_len = max_len;
 
-    bool success = RunSafe("get S3 object", [&]() {
+    int status = RunSafe("get S3 object", [&]() {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
@@ -517,8 +522,13 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
 
         return curl_Perform(curl, nullptr);
     });
-    if (!success)
+
+    if (status != 200) {
+        if (status == 404) {
+            LogError("Cannot find S3 object '%1'", key);
+        }
         return -1;
+    }
 
     out_guard.Disable();
     return out_obj->len - prev_len;
@@ -536,9 +546,7 @@ bool s3_Session::HasObject(Span<const char> key)
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    bool exists = false;
-
-    RunSafe("test S3 object", [&]() {
+    int status = RunSafe("test S3 object", [&]() {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("HEAD", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
@@ -556,16 +564,10 @@ bool s3_Session::HasObject(Span<const char> key)
             }
         }
 
-        int status = curl_Perform(curl, nullptr);
-
-        if (status == 200 || status == 404) {
-            exists = (status == 200);
-            return 200;
-        }
-
-        return status;
+        return curl_Perform(curl, nullptr);
     });
 
+    bool exists = (status == 200);
     return exists;
 }
 
@@ -581,7 +583,7 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    bool success = RunSafe("upload S3 object", [&]() {
+    int status = RunSafe("upload S3 object", [&]() {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("PUT", path.ptr, nullptr, mimetype, data, &temp_alloc, headers.data);
 
@@ -623,10 +625,10 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
 
         return status;
     });
-    if (!success)
+    if (status != 200)
         return false;
 
-    return success;
+    return true;
 }
 
 bool s3_Session::DeleteObject(Span<const char> key)
@@ -641,7 +643,7 @@ bool s3_Session::DeleteObject(Span<const char> key)
     Span<const char> path;
     Span<const char> url = MakeURL(key, &temp_alloc, &path);
 
-    bool success = RunSafe("delete S3 object", [&]() {
+    int status = RunSafe("delete S3 object", [&]() {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("DELETE", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
@@ -666,8 +668,10 @@ bool s3_Session::DeleteObject(Span<const char> key)
 
         return status;
     });
+    if (status != 200)
+        return false;
 
-    return success;
+    return true;
 }
 
 bool s3_Session::OpenAccess()
@@ -689,7 +693,7 @@ bool s3_Session::OpenAccess()
     RG_DEFER { curl_easy_cleanup(curl); };
 
     // Test access
-    bool success = RunSafe("authenticate to S3 bucket", [&]() {
+    int status = RunSafe("authenticate to S3 bucket", [&]() {
         LocalArray<curl_slist, 32> headers;
         headers.len = PrepareHeaders("GET", path.ptr, nullptr, nullptr, {}, &temp_alloc, headers.data);
 
@@ -729,9 +733,11 @@ bool s3_Session::OpenAccess()
 
         return status;
     });
+    if (status != 200)
+        return false;
 
-    open = success;
-    return success;
+    open = true;
+    return true;
 }
 
 bool s3_Session::DetermineRegion(const char *url)
@@ -771,7 +777,7 @@ bool s3_Session::DetermineRegion(const char *url)
         }
     }
 
-    if (!RunSafe("connect to S3", [&]() { return curl_Perform(curl, nullptr); }))
+    if (RunSafe("connect to S3", [&]() { return curl_Perform(curl, nullptr); }) != 200)
         return false;
 
     if (!region) {
@@ -791,15 +797,15 @@ CURL *s3_Session::InitConnection()
     return curl;
 }
 
-bool s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func)
+int s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func)
 {
     int status = 0;
 
     for (int i = 0; i < 8; i++) {
         status = func();
 
-        if (status == 200)
-            return true;
+        if (status == 200 || status == 404)
+            return status;
 
         int delay = 200 + 200 * (1 << i);
         delay += !!i * GetRandomIntSafe(0, delay / 2);
@@ -813,7 +819,7 @@ bool s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func)
         LogError("Failed to %1 with status %2", action, status);
     }
 
-    return false;
+    return -1;
 }
 
 Size s3_Session::PrepareHeaders(const char *method, const char *path, const char *query, const char *mimetype,
