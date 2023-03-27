@@ -113,9 +113,9 @@ bool LocalDisk::Init(const char *full_pwd, const char *write_pwd)
         if (!make_directory("blobs"))
             return false;
 
-        for (int i = 0; i < 256; i++) {
+        for (int i = 0; i < 4096; i++) {
             char name[128];
-            Fmt(name, "blobs/%1", FmtHex(i).Pad0(-2));
+            Fmt(name, "blobs/%1", FmtHex(i).Pad0(-3));
 
             if (!make_directory(name))
                 return false;

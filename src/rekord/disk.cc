@@ -160,6 +160,12 @@ void rk_Disk::Close()
     cache_db.Close();
 }
 
+static inline FmtArg GetPrefix3(const rk_ID &id)
+{
+    uint64_t prefix = ((uint64_t)id.hash[0] << 4) | ((uint64_t)id.hash[1] >> 4);
+    return FmtHex(prefix).Pad0(-3);
+}
+
 bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj)
 {
     RG_ASSERT(url);
@@ -169,7 +175,7 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
     RG_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
+    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
 
     HeapArray<uint8_t> raw;
     if (ReadRaw(path.data, &raw) < 0)
@@ -271,7 +277,7 @@ Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_
     RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
+    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
 
     Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
         // Write object intro
@@ -365,7 +371,7 @@ bool rk_Disk::HasObject(const rk_ID &id)
     RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", FmtHex(id.hash[0]).Pad0(-2), id).len;
+    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
 
     return TestFast(path.data);
 }
