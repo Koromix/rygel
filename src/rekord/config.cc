@@ -17,7 +17,7 @@
 
 namespace RG {
 
-bool rk_Config::Complete(bool require_password)
+bool rk_Config::Complete(bool require_auth)
 {
     if (!repository) {
         const char *str = getenv("REKORD_REPOSITORY");
@@ -27,7 +27,12 @@ bool rk_Config::Complete(bool require_password)
     if (!rk_DecodeURL(repository, this))
         return false;
 
-    if (require_password && !password) {
+    if (require_auth && !username) {
+        const char *str = getenv("REKORD_USERNAME");
+        username = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
+    if (require_auth && !password) {
         const char *str = getenv("REKORD_PASSWORD");
 
         if (str) {
@@ -48,7 +53,7 @@ bool rk_Config::Complete(bool require_password)
     RG_UNREACHABLE();
 }
 
-bool rk_Config::Validate(bool require_password) const
+bool rk_Config::Validate(bool require_auth) const
 {
     bool valid = true;
 
@@ -56,7 +61,11 @@ bool rk_Config::Validate(bool require_password) const
         LogError("Missing repository location");
         valid = false;
     }
-    if (require_password && !password) {
+    if (require_auth && !username) {
+        LogError("Missing repository username");
+        valid = false;
+    }
+    if (require_auth && !password) {
         LogError("Missing repository password");
         valid = false;
     }
@@ -146,6 +155,8 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                 do {
                     if (prop.key == "Repository") {
                         valid &= rk_DecodeURL(prop.value, &config);
+                    } else if (prop.key == "Username") {
+                        config.username = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "Password") {
                         config.password = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {

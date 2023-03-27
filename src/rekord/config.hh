@@ -27,6 +27,8 @@ enum class rk_DiskType {
 
 struct rk_Config {
     const char *repository = nullptr;
+
+    const char *username = nullptr;
     const char *password = nullptr;
 
     rk_DiskType type = rk_DiskType::Local;
@@ -37,8 +39,8 @@ struct rk_Config {
 
     BlockAllocator str_alloc;
 
-    bool Complete(bool require_password);
-    bool Validate(bool require_password) const;
+    bool Complete(bool require_auth);
+    bool Validate(bool require_auth) const;
 };
 
 bool rk_DecodeURL(Span<const char> url, rk_Config *out_config);

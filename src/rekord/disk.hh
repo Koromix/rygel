@@ -67,7 +67,7 @@ public:
 
     virtual bool Init(const char *full_pwd, const char *write_pwd) = 0;
 
-    bool Open(const char *pwd);
+    bool Open(const char *username, const char *pwd);
     void Close();
 
     const char *GetURL() const { return url; }
@@ -109,8 +109,8 @@ private:
     Size WriteDirect(const char *path, Span<const uint8_t> buf);
 };
 
-std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd, int threads);
-std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *pwd, int threads);
-std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd, int threads);
+std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads = -1);
+std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, int threads = -1);
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, int threads = -1);
 
 }

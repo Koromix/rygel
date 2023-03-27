@@ -21,7 +21,7 @@ class SftpDisk: public rk_Disk {
     ssh_session ssh = nullptr;
     sftp_session sftp = nullptr;
 
-    int threads = 1;
+    int threads;
 
 public:
     SftpDisk(const ssh_Config &config, int threads);
@@ -50,6 +50,13 @@ SftpDisk::SftpDisk(const ssh_Config &config, int threads)
     sftp = sftp_new(ssh);
     if (!sftp)
         throw std::bad_alloc();
+
+    if (threads > 0) {
+        this->threads = threads;
+    } else {
+        // S3 is slow unless you use parallelism
+        this->threads = 64;
+    }
 
     // We're good!
     url = Fmt(&str_alloc, "sftp://%1@%2:%3", config.username, config.host, config.path).ptr;
@@ -111,13 +118,13 @@ bool SftpDisk::TestFast(const char *path)
     RG_UNREACHABLE();
 }
 
-std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *pwd, int threads)
+std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, int threads)
 {
     std::unique_ptr<rk_Disk> disk = std::make_unique<SftpDisk>(config, threads);
 
     if (!disk->GetURL())
         return nullptr;
-    if (pwd && !disk->Open(pwd))
+    if (pwd && !disk->Open(username, pwd))
         return nullptr;
 
     return disk;

@@ -53,21 +53,24 @@ static const int CacheVersion = 2;
 static const int ObjectVersion = 5;
 static const Size ObjectSplit = Kibibytes(32);
 
-bool rk_Disk::Open(const char *pwd)
+bool rk_Disk::Open(const char *username, const char *pwd)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
 
     RG_DEFER_N(err_guard) { Close(); };
 
+    const char *full_filename = Fmt(&str_alloc, "keys/%1/full", username).ptr;
+    const char *write_filename = Fmt(&str_alloc, "keys/%1/write", username).ptr;
+
     // Open disk and determine mode
     {
         bool error = false;
 
-        if (ReadKey("keys/write", pwd, pkey, &error)) {
+        if (ReadKey(write_filename, pwd, pkey, &error)) {
             mode = rk_DiskMode::WriteOnly;
             memset(skey, 0, RG_SIZE(skey));
-        } else if (ReadKey("keys/full", pwd, skey, &error)) {
+        } else if (ReadKey(full_filename, pwd, skey, &error)) {
             mode = rk_DiskMode::ReadWrite;
             crypto_scalarmult_base(pkey, skey);
         } else {
@@ -478,11 +481,12 @@ bool rk_Disk::InitKeys(const char *full_pwd, const char *write_pwd)
     RG_DEFER_N(err_guard) {
         Close();
 
-        DeleteRaw("keys/full");
-        DeleteRaw("keys/write");
+        DeleteRaw("rekord");
+        DeleteRaw("keys/default/full");
+        DeleteRaw("keys/default/write");
     };
 
-    if (TestSlow("keys/full")) {
+    if (TestSlow("rekord")) {
         LogError("Repository '%1' looks already initialized", url);
         return false;
     }
@@ -496,12 +500,12 @@ bool rk_Disk::InitKeys(const char *full_pwd, const char *write_pwd)
     names.Append("rekord");
 
     // Write key files
-    if (!WriteKey("keys/full", full_pwd, skey))
+    if (!WriteKey("keys/default/full", full_pwd, skey))
         return false;
-    names.Append("keys/full");
-    if (!WriteKey("keys/write", write_pwd, pkey))
+    names.Append("keys/default/full");
+    if (!WriteKey("keys/default/write", write_pwd, pkey))
         return false;
-    names.Append("keys/write");
+    names.Append("keys/default/write");
 
     // Success!
     mode = rk_DiskMode::ReadWrite;

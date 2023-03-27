@@ -181,13 +181,13 @@ bool S3Disk::TestFast(const char *path)
     return stmt.Step();
 }
 
-std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *pwd, int threads)
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, int threads)
 {
     std::unique_ptr<rk_Disk> disk = std::make_unique<S3Disk>(config, threads);
 
     if (!disk->GetURL())
         return nullptr;
-    if (pwd && !disk->Open(pwd))
+    if (username && !disk->Open(username, pwd))
         return nullptr;
 
     return disk;

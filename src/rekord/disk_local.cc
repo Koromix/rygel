@@ -108,6 +108,8 @@ bool LocalDisk::Init(const char *full_pwd, const char *write_pwd)
 
         if (!make_directory("keys"))
             return false;
+        if (!make_directory("keys/default"))
+            return false;
         if (!make_directory("tags"))
             return false;
         if (!make_directory("blobs"))
@@ -247,13 +249,13 @@ bool LocalDisk::TestFast(const char *path)
     return exists;
 }
 
-std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *pwd, int threads)
+std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads)
 {
     std::unique_ptr<rk_Disk> disk = std::make_unique<LocalDisk>(path, threads);
 
     if (!disk->GetURL())
         return nullptr;
-    if (pwd && !disk->Open(pwd))
+    if (username && !disk->Open(username, pwd))
         return nullptr;
 
     return disk;

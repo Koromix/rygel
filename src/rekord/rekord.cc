@@ -49,9 +49,9 @@ static std::unique_ptr<rk_Disk> OpenRepository(rk_Config &config, bool require_p
         return nullptr;
 
     switch (config.type) {
-        case rk_DiskType::Local: return rk_OpenLocalDisk(config.repository, config.password, config.threads);
-        case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, config.password, config.threads);
-        case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, config.password, config.threads);
+        case rk_DiskType::Local: return rk_OpenLocalDisk(config.repository, config.username, config.password, config.threads);
+        case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, config.username, config.password, config.threads);
+        case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, config.username, config.password, config.threads);
     }
 
     RG_UNREACHABLE();
@@ -135,6 +135,8 @@ Options:
 
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
+    LogInfo("Default account name: %!..+default%!0");
+    LogInfo();
     LogInfo("Default full password: %!..+%1%!0", full_pwd);
     LogInfo("  write-only password: %!..+%1%!0", write_pwd);
     LogInfo();
@@ -161,6 +163,7 @@ Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
     %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
 
     %!..+-n, --name <name>%!0            Set user friendly name
@@ -189,6 +192,8 @@ Options:
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
+                config.username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 config.password = opt.current_value;
             } else if (opt.Test("-n", "--name", OptionType::Value)) {
@@ -277,6 +282,7 @@ Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
     %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
 
     %!..+-O, --output <path>%!0          Restore file or directory to path
@@ -306,6 +312,8 @@ Options:
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
+                config.username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 config.password = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
@@ -392,6 +400,7 @@ Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
     %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
 
     %!..+-j, --threads <threads>%!0      Change number of threads
@@ -414,6 +423,8 @@ Options:
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
+                config.username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 config.password = opt.current_value;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
