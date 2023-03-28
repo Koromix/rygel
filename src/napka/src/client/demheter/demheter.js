@@ -1,15 +1,14 @@
 import { render, html } from '../../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
-import { util, log, net } from '../../lib/util.js';
+import { util, log, net } from '../../../../web/libjs/util.js';
 import { ui } from '../../lib/ui.js';
-import { FastMap } from '../../lib/fastmap.js';
 import { start, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
 function DemheterProvider() {
     let etablissements;
 
     this.loadMap = async function() {
-        let json = await fetch('api/entries').then(response => response.json());
+        let json = await net.get('api/entries');
 
         etablissements = [
             ...json.psychologues.rows.map(psy => ({ type: 'Psychologue', ...psy })),

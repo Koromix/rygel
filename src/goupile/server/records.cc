@@ -661,7 +661,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         if (!success)
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 

@@ -131,7 +131,7 @@ void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, h
         if (!SendMail(to, content))
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 
@@ -219,7 +219,7 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
         if (!SendSMS(to, message))
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 

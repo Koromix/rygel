@@ -271,7 +271,7 @@ function InstanceController() {
     }
 
     async function generateExportKey(e) {
-        let response = await net.fetch(`${ENV.urls.instance}api/change/export_key`, { method: 'POST' });
+        let export_key = await net.post(`${ENV.urls.instance}api/change/export_key`);
 
         if (!response.ok) {
             let err = await net.readError(response);
@@ -375,7 +375,7 @@ function InstanceController() {
         await fetchCode(filename);
 
         let url = util.pasteURL(`${ENV.urls.base}api/files/history`, { filename: filename });
-        let versions = await net.fetchJson(url);
+        let versions = await net.get(url);
 
         let buffer = code_buffers.get(filename);
         let copy = Object.assign({}, code_buffers.get(filename));
@@ -458,17 +458,10 @@ function InstanceController() {
     async function restoreFile(filename, sha256) {
         let db = await goupile.openIndexedDB();
 
-        let response = await net.fetch(`${ENV.urls.base}api/files/restore`, {
-            method: 'POST',
-            body: JSON.stringify({
-                filename: filename,
-                sha256: sha256
-            })
+        await net.post(`${ENV.urls.base}api/files/restore`, {
+            filename: filename,
+            sha256: sha256
         });
-        if (!response.ok && response.status !== 409) {
-            let err = await net.readError(response);
-            throw new Error(err);
-        }
 
         let key = `${profile.userid}/${filename}`;
         await db.delete('changes', key);

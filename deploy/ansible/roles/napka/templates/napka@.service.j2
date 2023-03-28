@@ -6,8 +6,8 @@ After = syslog.target network.target
 User = napka
 Group = napka
 EnvironmentFile = {{ napka_root_path }}/secrets/%i.env
-WorkingDirectory = {{ napka_root_path }}/builds/%i
-ExecStart = /usr/bin/node {{ napka_root_path }}/builds/%i/src/server/server.js
+WorkingDirectory = {{ napka_root_path }}/builds/%i/src/napka
+ExecStart = /usr/bin/node {{ napka_root_path }}/builds/%i/src/napka/src/server/server.js
 Restart = on-failure
 SuccessExitStatus = 143
 

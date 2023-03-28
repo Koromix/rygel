@@ -203,7 +203,7 @@ const thop = new function() {
         {
             // We'll parse it manually to revive dates. It's relatively small anyway.
             let url = util.pasteURL(`${ENV.base_url}api/user/settings`, { rnd: user.getSessionRnd() });
-            let json = await net.fetch(url).then(response => response.text());
+            let json = await net.get(url);
 
             settings = JSON.parse(json, (key, value) => {
                 if (typeof value === 'string' && value.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) {

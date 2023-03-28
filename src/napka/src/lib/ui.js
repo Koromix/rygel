@@ -1,5 +1,5 @@
 import { render, html } from '../../node_modules/lit/html.js';
-import { util, log } from './util.js';
+import { util, log } from '../../../web/libjs/util.js';
 
 const ui = new (function() {
     let self = this;

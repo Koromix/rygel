@@ -262,21 +262,12 @@ function AdminController() {
         let progress = log.progress('Archivage en cours');
 
         try {
-            let response = await net.fetch('/admin/api/archives/create', {
-                method: 'POST',
-                timeout: 180000
-            });
+            await net.post('/admin/api/archives/create', { timeout: 180000 });
 
-            if (response.ok) {
-                progress.success('Archivage complété');
+            progress.success('Archivage complété');
+            archives = null;
 
-                archives = null;
-
-                self.go();
-            } else {
-                let err = await net.readError(response);
-                throw new Error(err);
-            }
+            self.go();
         } catch (err) {
             progress.close();
             throw err;
@@ -292,6 +283,7 @@ function AdminController() {
 
                 try {
                     let url = '/admin/api/archives/files/' + d.values.archive.name;
+
                     let response = await net.fetch(url, {
                         method: 'PUT',
                         body: d.values.archive,
@@ -328,28 +320,20 @@ function AdminController() {
                 let progress = log.progress('Restauration en cours');
 
                 try {
-                    let response = await net.fetch('/admin/api/archives/restore', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            filename: filename,
-                            key: d.values.key,
-                            users: d.values.restore_users
-                        })
+                    await net.post('/admin/api/archives/restore', {
+                        filename: filename,
+                        key: d.values.key,
+                        users: d.values.restore_users
                     });
 
-                    if (response.ok) {
-                        resolve();
-                        progress.success(`Archive '${filename}' restaurée`);
+                    resolve();
+                    progress.success(`Archive '${filename}' restaurée`);
 
-                        instances = null;
-                        users = null;
-                        archives = null;
+                    instances = null;
+                    users = null;
+                    archives = null;
 
-                        self.go();
-                    } else {
-                        let err = await net.readError(response);
-                        throw new Error(err);
-                    }
+                    self.go();
                 } catch (err) {
                     progress.close();
 
@@ -363,23 +347,12 @@ function AdminController() {
     function runDeleteBackupDialog(e, filename) {
         return ui.runConfirm(e, `Voulez-vous vraiment supprimer l'archive '${filename}' ?`,
                                 'Supprimer', async () => {
-            let response = await net.fetch('/admin/api/archives/delete', {
-                method: 'POST',
-                body: JSON.stringify({
-                    filename: filename
-                })
-            });
+            await net.post('/admin/api/archives/delete', { filename: filename });
 
-            if (response.ok) {
-                log.success(`Archive '${filename}' supprimée`);
+            log.success(`Archive '${filename}' supprimée`);
+            archives = null;
 
-                archives = null;
-
-                self.go();
-            } else {
-                let err = await net.readError(response);
-                throw new Error(err);
-            }
+            self.go();
         });
     }
 
@@ -395,9 +368,9 @@ function AdminController() {
         let explicit_panels = false;
 
         if (new_instances == null)
-            new_instances = await net.fetchJson('/admin/api/instances/list');
+            new_instances = await net.get('/admin/api/instances/list');
         if (new_users == null)
-            new_users = await net.fetchJson('/admin/api/users/list');
+            new_users = await net.get('/admin/api/users/list');
 
         if (url != null) {
             if (!(url instanceof URL))
@@ -430,7 +403,7 @@ function AdminController() {
         }
 
         if (ui.isPanelActive('archives') && new_archives == null) {
-            new_archives = await net.fetchJson('/admin/api/archives/list');
+            new_archives = await net.get('/admin/api/archives/list');
             new_archives.sort(util.makeComparator(archive => archive.filename));
         }
 
@@ -439,7 +412,7 @@ function AdminController() {
         if (new_selected != null) {
             if (new_permissions == null || new_permissions.key != new_selected.key) {
                 let url = util.pasteURL('/admin/api/instances/permissions', { instance: new_selected.key });
-                let permissions = await net.fetchJson(url);
+                let permissions = await net.get(url);
 
                 new_permissions = {
                     key: new_selected.key,
@@ -491,16 +464,13 @@ function AdminController() {
             d.boolean('demo', 'Paramétrer les pages de démonstration', { value: true, untoggle: false });
 
             d.action('Créer', { disabled: !d.isValid() }, async () => {
-                let response = await net.fetch('/admin/api/instances/create', {
-                    method: 'POST',
-                    body: JSON.stringify({
+                try {
+                    await net.post('/admin/api/instances/create', {
                         key: d.values.key,
                         name: d.values.name,
                         demo: d.values.demo
-                    })
-                });
+                    });
 
-                if (response.ok) {
                     resolve();
                     log.success(`Projet '${d.values.key}' créé`);
 
@@ -509,9 +479,7 @@ function AdminController() {
 
                     let url = util.pasteURL('/admin/', { select: d.values.key });
                     self.go(null, url);
-                } else {
-                    let err = await net.readError(response);
-
+                } catch (err) {
                     log.error(err);
                     d.refresh();
                 }
@@ -555,9 +523,8 @@ function AdminController() {
                 });
 
                 d.action('Configurer', { disabled: !d.isValid() }, async () => {
-                    let response = await net.fetch('/admin/api/instances/configure', {
-                        method: 'POST',
-                        body: JSON.stringify({
+                    try {
+                        await net.post('/admin/api/instances/configure', {
                             instance: instance.key,
                             name: d.values.name,
                             use_offline: d.values.use_offline,
@@ -567,19 +534,15 @@ function AdminController() {
                             auto_key: d.values.auto_key,
                             allow_guests: d.values.allow_guests,
                             fs_version: d.values.fs_version
-                        })
-                    });
+                        });
 
-                    if (response.ok) {
                         resolve();
                         log.success(`Projet '${instance.key}' modifié`);
 
                         instances = null;
 
                         self.go();
-                    } else {
-                        let err = await net.readError(response);
-
+                    } catch (err) {
                         log.error(err);
                         d.refresh();
                     }
@@ -588,24 +551,19 @@ function AdminController() {
                 d.text('*name', 'Nom', { value: instance.config.name });
 
                 d.action('Configurer', { disabled: !d.isValid() }, async () => {
-                    let response = await net.fetch('/admin/api/instances/configure', {
-                        method: 'POST',
-                        body: JSON.stringify({
+                    try {
+                        await net.post('/admin/api/instances/configure', {
                             instance: instance.key,
                             name: d.values.name
-                        })
-                    });
+                        });
 
-                    if (response.ok) {
                         resolve();
                         log.success(`Projet '${instance.key}' modifié`);
 
                         instances = null;
 
                         self.go();
-                    } else {
-                        let err = await net.readError(response);
-
+                    } catch (err) {
                         log.error(err);
                         d.refresh();
                     }
@@ -628,13 +586,11 @@ function AdminController() {
             d.output(`Voulez-vous vraiment supprimer le projet '${instance.key}' ?`);
 
             d.action('Supprimer', {}, async () => {
-                let response = await net.fetch('/admin/api/instances/delete', {
-                    method: 'POST',
-                    body: JSON.stringify({ instance: instance.key }),
-                    timeout: 180000
-                });
+                try {
+                    await net.post('/admin/api/instances/delete', {
+                        instance: instance.key
+                    }, { timeout: 180000 });
 
-                if (response.ok) {
                     resolve();
                     log.success(`Projet '${instance.key}' supprimé`);
 
@@ -642,9 +598,7 @@ function AdminController() {
                     archives = null;
 
                     self.go();
-                } else {
-                    let err = await net.readError(response);
-
+                } catch (err) {
                     log.error(err);
                     d.refresh();
                 }
@@ -661,15 +615,12 @@ function AdminController() {
             d.action('Créer', { disabled: !d.isValid() }, async () => {
                 let full_key = master + '/' + d.values.key;
 
-                let response = await net.fetch('/admin/api/instances/create', {
-                    method: 'POST',
-                    body: JSON.stringify({
+                try {
+                    await net.post('/admin/api/instances/create', {
                         key: full_key,
                         name: d.values.name
-                    })
-                });
+                    });
 
-                if (response.ok) {
                     resolve();
                     log.success(`Sous-projet '${full_key}' créé`);
 
@@ -678,9 +629,7 @@ function AdminController() {
 
                     let url = util.pasteURL('/admin/', { select: full_key });
                     self.go(null, url);
-                } else {
-                    let err = await net.readError(response);
-
+                } catch (err) {
                     log.error(err);
                     d.refresh();
                 }
@@ -719,9 +668,8 @@ function AdminController() {
                 d.boolean('*root', 'Super-administrateur', { value: false, untoggle: false });
 
             d.action('Créer', { disabled: !d.isValid() }, async () => {
-                let response = await net.fetch('/admin/api/users/create', {
-                    method: 'POST',
-                    body: JSON.stringify({
+                try {
+                    await net.post('/admin/api/users/create', {
                         username: d.values.username,
                         password: d.values.password,
                         change_password: d.values.change_password,
@@ -729,10 +677,8 @@ function AdminController() {
                         email: d.values.email,
                         phone: d.values.phone,
                         root: d.values.root
-                    })
-                });
+                    });
 
-                if (response.ok) {
                     resolve();
                     log.success(`Utilisateur '${d.values.username}' créé`);
 
@@ -740,9 +686,7 @@ function AdminController() {
                     selected_permissions = null;
 
                     self.go();
-                } else {
-                    let err = await net.readError(response);
-
+                } catch (err) {
                     log.error(err);
                     d.refresh();
                 }
@@ -788,25 +732,20 @@ function AdminController() {
             ];
 
             d.action('Modifier', { disabled: !d.isValid() }, async () => {
-                let response = await net.fetch('/admin/api/instances/assign', {
-                    method: 'POST',
-                    body: JSON.stringify({
+                try {
+                    await net.post('/admin/api/instances/assign', {
                         instance: instance.key,
                         userid: user.userid,
                         permissions: permissions
-                    })
-                });
+                    });
 
-                if (response.ok) {
                     resolve();
                     log.success(`Droits de '${user.username}' sur le projet '${instance.key}' ${permissions.length ? 'modifiés' : 'supprimés'}`);
 
                     selected_permissions = null;
 
                     self.go();
-                } else {
-                    let err = await net.readError(response);
-
+                } catch (err) {
                     log.error(err);
                     d.refresh();
                 }
@@ -868,9 +807,8 @@ function AdminController() {
             });
 
             d.action('Modifier', { disabled: !d.isValid() }, async () => {
-                let response = await net.fetch('/admin/api/users/edit', {
-                    method: 'POST',
-                    body: JSON.stringify({
+                try {
+                    await net.post('/admin/api/users/edit', {
                         userid: user.userid,
                         username: d.values.username,
                         password: d.values.password,
@@ -880,19 +818,15 @@ function AdminController() {
                         email: d.values.email,
                         phone: d.values.phone,
                         root: d.values.root
-                    })
-                });
+                    });
 
-                if (response.ok) {
                     resolve();
                     log.success(`Utilisateur '${d.values.username}' modifié`);
 
                     users = null;
 
                     self.go();
-                } else {
-                    let err = await net.readError(response);
-
+                } catch (err) {
                     log.error(err);
                     d.refresh();
                 }
@@ -905,24 +839,14 @@ function AdminController() {
             d.output(`Voulez-vous vraiment supprimer l'utilisateur '${user.username}' ?`);
 
             d.action('Supprimer', {}, async () => {
-                let response = await net.fetch('/admin/api/users/delete', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        userid: user.userid
-                    })
-                });
+                await net.post('/admin/api/users/delete', { userid: user.userid });
 
-                if (response.ok) {
-                    resolve();
-                    log.success(`Utilisateur '${user.username}' supprimé`);
+                resolve();
+                log.success(`Utilisateur '${user.username}' supprimé`);
 
-                    users = null;
+                users = null;
 
-                    self.go();
-                } else {
-                    let err = await net.readError(response);
-                    throw new Error(err);
-                }
+                self.go();
             });
         });
     }

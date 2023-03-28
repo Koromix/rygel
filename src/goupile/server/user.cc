@@ -938,7 +938,7 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
             sessions.Open(request, io, session);
         });
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
         return true;
     } else {
         const char *session_key = request.GetQueryValue(instance->config.auto_key);
@@ -1098,7 +1098,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 void HandleSessionLogout(const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
-    io->AttachText(200, "Done!");
+    io->AttachText(200, "{}", "application/json");
 }
 
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -1257,7 +1257,7 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
             session->change_password = false;
             WriteProfileJson(session.GetRaw(), instance, request, io);
         } else {
-            io->AttachText(200, "Done!");
+            io->AttachText(200, "{}", "application/json");
         }
     });
 }
@@ -1431,7 +1431,7 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
         if (!success)
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 
@@ -1489,7 +1489,7 @@ void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request,
 
         stamp->develop = develop;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 

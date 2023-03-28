@@ -82,6 +82,18 @@ if (typeof Blob !== 'undefined' && !Blob.prototype.text) {
     };
 }
 
+if (String.prototype.format == null) {
+    String.prototype.format = function(...args) {
+        let str = this.replace(/{(\d+)}/g, (match, idx) => {
+            idx = parseInt(idx, 10) - 1;
+
+            let arg = args[idx];
+            return (arg !== undefined) ? arg : match;
+        });
+        return str;
+    }
+}
+
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
@@ -468,6 +480,38 @@ const util = new function() {
         }
     };
 
+    this.formatDay = function(day) {
+        switch (day) {
+            case 1: { return 'Lundi'; } break;
+            case 2: { return 'Mardi'; } break;
+            case 3: { return 'Mercredi'; } break;
+            case 4: { return 'Jeudi'; } break;
+            case 5: { return 'Vendredi'; } break;
+            case 6: { return 'Samedi'; } break;
+            case 7: { return 'Dimanche'; } break;
+        }
+    };
+
+    this.formatTime = function(time) {
+        let hour = Math.floor(time / 100);
+        let min = time % 100;
+
+        return `${hour}h${min ? ('' + min).padStart(2, '0') : ''}`
+    };
+
+    this.formatDuration = function(min) {
+        let hours = Math.floor(min / 60);
+        min %= 60;
+
+        if (hours >= 1 && !min) {
+            return `${hours} heure${hours > 1 ? 's' : ''}`;
+        } else if (hours >= 1) {
+            return `${hours}h${min}`;
+        } else {
+            return `${min} minute${min > 1 ? 's' : ''}`;
+        }
+    };
+
     this.getRandomInt = function(min, max) {
         min = Math.ceil(min);
         max = Math.floor(max);
@@ -675,15 +719,14 @@ const net = new function() {
     this.changeHandler = online => {};
     this.retryHandler = code => false;
 
-    this.fetch = async function(request, options) {
+    this.fetch = async function(url, options = {}) {
         try {
-            if (options == null)
-                options = {};
+            options = Object.assign({}, options);
+
             if (options.credentials == null)
                 options.credentials = 'same-origin';
             if (options.headers == null)
                 options.headers = {};
-
             if (!options.hasOwnProperty('timeout') && options.signal == null)
                 options.timeout = 6000;
             if (!options.headers.hasOwnProperty('X-Requested-With'))
@@ -698,18 +741,21 @@ const net = new function() {
                     timer = setTimeout(() => controller.abort(), options.timeout);
                 }
 
-                let response = await fetch(request, options);
+                let response = await fetch(url, options);
 
                 if (timer != null)
                     clearTimeout(timer);
 
                 if (!response.ok) {
-                    let retry = await self.retryHandler(response);
+                    let text = (await response.text()).trim();
 
+                    let retry = await self.retryHandler(response.status);
                     if (retry) {
                         net.setOnline(true);
                         continue;
                     }
+
+                    throw new Error(text);
                 }
 
                 return response;
@@ -720,15 +766,52 @@ const net = new function() {
         }
     };
 
-    this.fetchJson = async function(request, options) {
-        let response = await self.fetch(request, options);
+    this.get = async function(url) {
+        let response = await self.fetch(url);
 
-        if (!response.ok) {
-            let err = await net.readError(response);
-            throw new Error(err);
+        let json = await response.json();
+        return json;
+    };
+
+    this.post = async function(url, obj = null) {
+        let response = await self.fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHTTPRequest'
+            },
+            body: JSON.stringify(obj)
+        });
+
+        let json = await response.json();
+        return json;
+    };
+
+    this.cache = async function(key, url) {
+        let entry = caches[key];
+        let now = performance.now();
+
+        if (entry == null) {
+            entry = {
+                url: null,
+                time: -self.cache_duration,
+                data: null
+            };
+            caches[key] = entry;
         }
 
-        return response.json();
+        if (entry.url != url || entry.time < now - self.cache_duration) {
+            entry.data = await self.get(url);
+
+            if (entry.data == null) {
+                delete(caches[key]);
+                return null;
+            }
+
+            entry.time = performance.now();
+            entry.url = url;
+        }
+
+        return entry.data;
     };
 
     this.loadScript = function(url) {
@@ -1549,3 +1632,14 @@ const times = new function() {
         return times.create(hours, minutes, seconds);
     };
 };
+
+if (typeof module.exports != 'undefined') {
+    module.exports = {
+        util,
+        log,
+        net,
+        LruMap,
+        dates,
+        times
+    };
+}

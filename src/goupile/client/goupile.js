@@ -173,9 +173,7 @@ const goupile = new function() {
     async function syncProfile() {
         // Ask server (if needed)
         try {
-            let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
-
-            let new_profile = await response.json();
+            let new_profile = await net.get(`${ENV.urls.instance}api/session/profile`);
             await updateProfile(new_profile, true);
         } catch (err) {
             if (ENV.cache_offline) {
@@ -226,8 +224,7 @@ const goupile = new function() {
                 if (new_profile.confirm == 'password') {
                     await runChangePassword(e, true);
 
-                    let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
-                    new_profile = await response.json();
+                    new_profile = await net.get(`${ENV.urls.instance}api/session/profile`);
                 }
                 if (new_profile.confirm != null)
                     new_profile = await runConfirmScreen(e, initial, new_profile.confirm);
@@ -333,21 +330,13 @@ const goupile = new function() {
             }
 
             d.action('Continuer', { disabled: !d.isValid() }, async () => {
-                let response = await net.fetch(`${ENV.urls.instance}api/session/confirm`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        code: d.values.code
-                    })
-                });
-
-                if (response.ok) {
-                    let new_profile = await response.json();
+                try {
+                    let new_profile = await net.post(`${ENV.urls.instance}api/session/confirm`, { code: d.values.code });
                     resolve(new_profile);
-                } else {
+                } catch (err) {
                     errors++;
                     d.refresh();
 
-                    let err = await net.readError(response);
                     throw new Error(err);
                 }
             });
@@ -361,17 +350,7 @@ const goupile = new function() {
         }
 
         if (profile.type === 'key') {
-            let response = await net.fetch(`${ENV.urls.instance}api/session/key`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    key: profile.username
-                })
-            });
-
-            if (!response.ok) {
-                let err = await net.readError(response);
-                throw new Error(err);
-            }
+            await net.post(`${ENV.urls.instance}api/session/key`, { key: profile.username });
         } else if (profile.userid > 0) {
             confirm_promise = runLoginScreen(e, false);
             confirm_promise.finally(() => confirm_promise = null);
@@ -414,21 +393,13 @@ const goupile = new function() {
                 let progress = log.progress('Modification du mot de passe');
 
                 try {
-                    let response = await net.fetch(`${ENV.urls.instance}api/change/password`, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            old_password: d.values.old_password,
-                            new_password: d.values.new_password
-                        })
+                    await net.post(`${ENV.urls.instance}api/change/password`, {
+                        old_password: d.values.old_password,
+                        new_password: d.values.new_password
                     });
 
-                    if (response.ok) {
-                        resolve();
-                        progress.success('Mot de passe modifié');
-                    } else {
-                        let err = await net.readError(response);
-                        throw new Error(err);
-                    }
+                    resolve();
+                    progress.success('Mot de passe modifié');
                 } catch (err) {
                     progress.close();
 
@@ -472,21 +443,13 @@ const goupile = new function() {
                 let progress = log.progress('Modification des codes TOTP');
 
                 try {
-                    let response = await net.fetch(`${ENV.urls.instance}api/change/totp`, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            password: d.values.password,
-                            code: d.values.code
-                        })
+                    await net.post(`${ENV.urls.instance}api/change/totp`, {
+                        password: d.values.password,
+                        code: d.values.code
                     });
 
-                    if (response.ok) {
-                        resolve();
-                        progress.success('Codes TOTP modifiés');
-                    } else {
-                        let err = await net.readError(response);
-                        throw new Error(err);
-                    }
+                    resolve();
+                    progress.success('Codes TOTP modifiés');
                 } catch (err) {
                     progress.close();
 
@@ -762,22 +725,17 @@ const goupile = new function() {
         let progress = log.progress('Déconnexion en cours');
 
         try {
-            let response = await net.fetch(`${ENV.urls.instance}api/session/logout`, { method: 'POST' })
+            await net.post(`${ENV.urls.instance}api/session/logout`);
 
-            if (response.ok) {
-                await updateProfile({});
-                await deleteSessionValue('lock');
+            await updateProfile({});
+            await deleteSessionValue('lock');
 
-                // Clear state and start from fresh as a precaution
-                let url = new URL(window.location.href);
-                let reload = util.pasteURL(url.pathname, { login: 1 });
+            // Clear state and start from fresh as a precaution
+            let url = new URL(window.location.href);
+            let reload = util.pasteURL(url.pathname, { login: 1 });
 
-                window.onbeforeunload = null;
-                document.location.href = reload;
-            } else {
-                let err = await net.readError(response);
-                throw new Error(err);
-            }
+            window.onbeforeunload = null;
+            document.location.href = reload;
         } catch (err) {
             progress.close();
             throw err;
@@ -798,20 +756,10 @@ const goupile = new function() {
         if (enable == profile.develop)
             return;
 
-        let response = await net.fetch(`${ENV.urls.instance}api/change/mode`, {
-            method: 'POST',
-            body: JSON.stringify({
-                develop: enable
-            })
-        });
+        await net.post(`${ENV.urls.instance}api/change/mode`, { develop: enable });
 
-        if (response.ok) {
-            // We want to reload no matter what, because the mode has changed
-            document.location.reload();
-        } else {
-            let err = await net.readError(response);
-            throw new Error(err);
-        }
+        // We want to reload no matter what, because the mode has changed
+        document.location.reload();
     }
 
     this.runLockDialog = function(e, ctx) {

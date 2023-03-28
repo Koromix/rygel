@@ -1012,7 +1012,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
         if (!gp_domain.SyncInstance(instance_key))
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 
@@ -1366,11 +1366,7 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
             complete &= UnlinkFile(filename);
         }
 
-        if (complete) {
-            io->AttachText(200, "Done!");
-        } else {
-            io->AttachText(202, "Done, but with leftover files");
-        }
+        io->AttachText(complete ? 200 : 202, "{}", "application/json");
     });
 }
 
@@ -1560,7 +1556,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         if (!gp_domain.SyncInstance(instance_key))
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 
@@ -1813,7 +1809,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
 
             InvalidateUserStamps(userid);
 
-            io->AttachText(200, "Done!");
+            io->AttachText(200, "{}", "application/json");
             return true;
         });
     });
@@ -1941,7 +1937,7 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 
@@ -2015,7 +2011,7 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
         if (!UnlinkFile(filename))
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 
@@ -2187,7 +2183,7 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
         if (!writer.Close())
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 
@@ -2542,7 +2538,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         if (!gp_domain.SyncAll(true))
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 
@@ -2689,7 +2685,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                                   confirm ? "TOTP" : nullptr))
                 return false;
 
-            io->AttachText(200, "Done!");
+            io->AttachText(200, "{}", "application/json");
             return true;
         });
     });
@@ -2865,7 +2861,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (set_root && !gp_domain.db.Run("UPDATE dom_users SET root = ?2 WHERE userid = ?1", userid, 0 + root))
                 return false;
 
-            io->AttachText(200, "Done!");
+            io->AttachText(200, "{}", "application/json");
             return true;
         });
     });
@@ -2970,7 +2966,7 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
             if (!gp_domain.db.Run("DELETE FROM dom_users WHERE userid = ?1", userid))
                 return false;
 
-            io->AttachError(200, "Done!");
+            io->AttachText(200, "{}", "application/json");
             return true;
         });
     });

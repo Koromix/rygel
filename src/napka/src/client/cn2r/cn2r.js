@@ -1,6 +1,6 @@
 import { render, html } from '../../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
-import { util, log, net } from '../../lib/util.js';
+import { util, log, net } from '../../../../web/libjs/util.js';
 import { ui } from '../../lib/ui.js';
 import parse from '../../lib/parse.js';
 import { start, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';

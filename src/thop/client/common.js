@@ -34,13 +34,9 @@ const data = new function() {
         let resource = cache.get(key);
 
         if (!resource) {
-            let response = await net.fetch(url);
-            if (!response.ok) {
-                let err = await net.readError(response);
-                throw new Error(err);
-            }
+            let json = await net.get(url);
 
-            resource = func(await response.json());
+            resource = func(json);
             cache.set(key, resource);
         }
 

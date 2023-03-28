@@ -1,10 +1,10 @@
 import { render, html } from '../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../node_modules/lit/directives/unsafe-html.js';
 import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
-import { util, log, net } from '../lib/util.js';
+import { util, log, net } from '../../../web/libjs/util.js';
 import { ui } from '../lib/ui.js';
 import parse from '../lib/parse.js';
-import { FastMap } from '../lib/fastmap.js';
+import { FastMap } from '../../../web/libcanvas/fastmap.js';
 
 let provider = null;
 
@@ -22,7 +22,7 @@ let edit_changes = new Set;
 let edit_key = null;
 
 export async function start(prov, options = {}) {
-    log.push_handler(ui.notify_handler);
+    log.pushHandler(ui.notify_handler);
 
     provider = prov;
     await provider.loadMap();
@@ -35,7 +35,7 @@ export async function start(prov, options = {}) {
     map.setMarkers('Etablissements', map_markers);
     map.move(options.latitude, options.longitude, options.zoom);
 
-    profile = await net.fetch('api/admin/profile') || {};
+    profile = await net.get('api/admin/profile') || {};
 
     // Init MarkDown converter
     {

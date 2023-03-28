@@ -1,6 +1,6 @@
 import { render, html } from '../../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
-import { util, log, net } from '../../lib/util.js';
+import { util, log, net } from '../../../../web/libjs/util.js';
 import { ui } from '../../lib/ui.js';
 import parse from '../../lib/parse.js';
 import { start, refreshMap, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
@@ -26,7 +26,7 @@ function PpnpsProvider() {
     let ignore_refresh = false;
 
     this.loadMap = async function() {
-        etablissements = await fetch('api/entries/commun').then(response => response.json());
+        etablissements = await net.get('api/entries/commun');
         etablissements = etablissements.rows;
 
         etablissements.sort((etab1, etab2) => {

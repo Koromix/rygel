@@ -1,5 +1,5 @@
 import { AppRunner } from './runner.js';
-import { LruMap } from './util.js';
+import { LruMap } from '../libjs/util.js';
 
 function FastMap(canvas) {
     let self = this;

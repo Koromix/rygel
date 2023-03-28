@@ -84,29 +84,43 @@
 - name: Fetch Napka repository
   git:
     repo: '{{ napka_repo }}'
-    key_file: '{{ napka_root_path + "/id_ed25519" if napka_repo_key is defined else "" }}'
     version: '{{ napka_commit }}'
     dest: '{{ napka_root_path }}/repo'
-    ssh_opts: '-o StrictHostKeyChecking=accept-new'
     force: yes
   become: no
 
 - name: Install Napka code
   synchronize:
     src: '{{ napka_root_path }}/repo/src/napka/'
-    dest: '{{ napka_root_path }}/builds/{{ napka_name }}/'
+    dest: '{{ napka_root_path }}/builds/{{ napka_name }}/src/napka'
     delete: yes
     recursive: yes
     owner: false
     group: false
+    rsync_opts:
+      - "--mkpath"
   delegate_to: '{{ inventory_hostname }}'
   become: yes
   become_user: napka
 
 - name: Install Napka dependencies
+  synchronize:
+    src: '{{ napka_root_path }}/repo/src/web/'
+    dest: '{{ napka_root_path }}/builds/{{ napka_name }}/src/web/'
+    delete: yes
+    recursive: yes
+    owner: false
+    group: false
+    rsync_opts:
+      - "--mkpath"
+  delegate_to: '{{ inventory_hostname }}'
+  become: yes
+  become_user: napka
+
+- name: Run NPM install
   command:
     cmd: 'npm install --no-audit'
-    chdir: '{{ napka_root_path }}/builds/{{ napka_name }}'
+    chdir: '{{ napka_root_path }}/builds/{{ napka_name }}/src/napka'
   register: npm_install
   changed_when: '"up to date" not in npm_install.stdout'
   become: yes

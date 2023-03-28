@@ -1,3 +1,5 @@
+import { net } from '../libjs/util.js';
+
 function AppRunner(canvas, update, draw) {
     let self = this;
 
@@ -96,7 +98,7 @@ function AppRunner(canvas, update, draw) {
     };
 
     this.loadSound = async function(url) {
-        let response = await fetch(url);
+        let response = await net.fetch(url);
 
         let buf = await response.arrayBuffer();
         let sound = await audio.decodeAudioData(buf);

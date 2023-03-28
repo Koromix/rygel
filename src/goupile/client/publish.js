@@ -102,7 +102,7 @@ function InstancePublisher(instance) {
 
      // XXX: What about conflicts?
     async function computeActions() {
-        actions = await net.fetchJson(`${ENV.urls.base}api/files/delta`);
+        actions = await net.get(`${ENV.urls.base}api/files/delta`);
 
         for (let action of actions) {
             if (action.to_sha256 === action.from_sha256) {
@@ -161,8 +161,8 @@ function InstancePublisher(instance) {
         return ui.runConfirm(e, `Voulez-vous vraiment supprimer le fichier '${action.filename}' ?`,
                                 'Supprimer', async () => {
             let url = util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.to_sha256 });
-
             let response = await net.fetch(url, { method: 'DELETE' });
+
             if (!response.ok && response.status !== 404) {
                 let err = await net.readError(response);
                 throw new Error(err)
@@ -199,10 +199,7 @@ function InstancePublisher(instance) {
             }
 
             // Publish!
-            await net.fetchJson(`${ENV.urls.base}api/files/publish`, {
-                method: 'POST',
-                body: JSON.stringify(files)
-            });
+            await net.post(`${ENV.urls.base}api/files/publish`, files);
 
             progress.success('Publication effectuée');
         } catch (err) {

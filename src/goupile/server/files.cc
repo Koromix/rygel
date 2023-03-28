@@ -451,7 +451,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                                    filename, client_sha256))
                 return;
 
-            io->AttachText(200, "Done!");
+            io->AttachText(200, "{}", "application/json");
             return;
         } else if (!stmt.IsValid()) {
             return;
@@ -568,7 +568,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                                    filename, sha256))
                 return false;
 
-            io->AttachText(200, "Done!");
+            io->AttachText(200, "{}", "application/json");
             return true;
         });
     });
@@ -627,7 +627,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
                 }
             }
 
-            io->AttachText(200, "Done!");
+            io->AttachText(200, "{}", "application/json");
             return true;
         } else if (stmt.IsValid()) {
             io->AttachError(404);
@@ -764,7 +764,7 @@ void HandleFileRestore(InstanceHolder *instance, const http_RequestInfo &request
                                filename, sha256))
             return;
 
-        io->AttachText(200, "Done!");
+        io->AttachText(200, "{}", "application/json");
     });
 }
 

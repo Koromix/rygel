@@ -96,36 +96,36 @@ const user = new function() {
     }
 
     this.login = async function(username, password) {
-        let response = await net.fetch(`${ENV.base_url}api/user/login`, {
-            method: 'POST',
-            body: JSON.stringify({
+        try {
+            await net.post(`${ENV.base_url}api/user/login`, {
                 username: username.toLowerCase(),
                 password: password
-            })
-        });
+            });
 
-        if (response.ok) {
             log.success('Vous êtes connecté(e)');
             self.readSessionCookies(false);
-        } else {
-            log.error('Connexion refusée : utilisateur ou mot de passe incorrect');
-        }
 
-        return response.ok;
+            return true;
+        } catch (err) {
+            log.error('Connexion refusée : utilisateur ou mot de passe incorrect');
+            return false;
+        }
     };
 
     this.logout = async function() {
-        let response = await net.fetch(`${ENV.base_url}api/user/logout`, { method: 'POST' });
+        try {
+            await net.post(`${ENV.base_url}api/user/logout`);
 
-        if (response.ok) {
             log.info('Vous êtes déconnecté(e)');
             self.readSessionCookies(false);
-        } else {
+
+            return true;
+        } catch (err) {
             // Should never happen, but just in case...
             log.error('Déconnexion refusée');
-        }
 
-        return response.ok;
+            return false;
+        }
     };
 
     // ------------------------------------------------------------------------
