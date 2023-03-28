@@ -273,13 +273,6 @@ function InstanceController() {
     async function generateExportKey(e) {
         let export_key = await net.post(`${ENV.urls.instance}api/change/export_key`);
 
-        if (!response.ok) {
-            let err = await net.readError(response);
-            throw new Error(err);
-        }
-
-        let export_key = (await response.text()).trim();
-
         await ui.runDialog(e, 'Clé d\'export', {}, (d, resolve, reject) => {
             d.text('export_key', 'Clé d\'export', {
                 value: export_key,

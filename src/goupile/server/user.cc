@@ -1522,7 +1522,13 @@ void HandleChangeExportKey(InstanceHolder *instance, const http_RequestInfo &req
                           session->userid, instance->key, key_buf.ptr))
         return;
 
-    io->AttachText(200, key_buf.ptr);
+    // Export data
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.String(key_buf.ptr);
+    json.Finish();
 }
 
 RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, InstanceHolder *instance,

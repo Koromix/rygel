@@ -766,21 +766,23 @@ const net = new function() {
         }
     };
 
-    this.get = async function(url) {
-        let response = await self.fetch(url);
+    this.get = async function(url, options = {}) {
+        let response = await self.fetch(url, options);
 
         let json = await response.json();
         return json;
     };
 
-    this.post = async function(url, obj = null) {
-        let response = await self.fetch(url, {
+    this.post = async function(url, obj = null, options = {}) {
+        options = Object.assign({}, options, {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHTTPRequest'
             },
-            body: JSON.stringify(obj)
+            body: (obj != null) ? JSON.stringify(obj) : null
         });
+
+        let response = await self.fetch(url, options);
 
         let json = await response.json();
         return json;
@@ -1633,7 +1635,7 @@ const times = new function() {
     };
 };
 
-if (typeof module.exports != 'undefined') {
+if (typeof module != 'undefined') {
     module.exports = {
         util,
         log,

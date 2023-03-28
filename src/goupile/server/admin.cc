@@ -2727,10 +2727,12 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 Span<const char> key = {};
                 parser.ParseKey(&key);
 
-                if (key == "username") {
-                    parser.SkipNull() ||parser.ParseString(&username);
+                if (key == "userid") {
+                    parser.ParseInt(&userid);
+                } else if (key == "username") {
+                    parser.SkipNull() || parser.ParseString(&username);
                 } else if (key == "password") {
-                    parser.SkipNull() ||parser.ParseString(&password);
+                    parser.SkipNull() || parser.ParseString(&password);
                 } else if (key == "change_password") {
                     parser.SkipNull() || parser.ParseBool(&change_password);
                 } else if (key == "confirm") {
