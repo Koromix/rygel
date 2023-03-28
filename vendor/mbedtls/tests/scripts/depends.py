@@ -23,7 +23,7 @@ Test Mbed TLS with a subset of algorithms.
 This script can be divided into several steps:
 
 First, include/mbedtls/mbedtls_config.h or a different config file passed
-in the arguments is parsed to extract any configuration options (collect_config_symbols).
+in the arguments is parsed to extract any configuration options (using config.py).
 
 Then, test domains (groups of jobs, tests) are built based on predefined data
 collected in the DomainData class. Here, each domain has five major traits:
@@ -44,12 +44,6 @@ The configuration building method can be one of the three following:
   direct dependencies, but rather non-trivial results of other configs missing. Then
   look for any unset symbols and handle their reverse dependencies.
   Examples of EXCLUSIVE_GROUPS usage:
-  - MBEDTLS_SHA256 job turns off all hashes except SHA256, however, when investigating
-    reverse dependencies, SHA224 is found to depend on SHA256, so it is disabled,
-    and then SHA256 is found to depend on SHA224, so it is also disabled. To handle
-    this, there's a field in EXCLUSIVE_GROUPS that states that in a SHA256 test SHA224
-    should also be enabled before processing reverse dependencies:
-    'MBEDTLS_SHA256_C': ['+MBEDTLS_SHA224_C']
   - MBEDTLS_SHA512_C job turns off all hashes except SHA512. MBEDTLS_SSL_COOKIE_C
     requires either SHA256 or SHA384 to work, so it also has to be disabled.
     This is not a dependency on SHA512_C, but a result of an exclusive domain
@@ -71,6 +65,11 @@ import shutil
 import subprocess
 import sys
 import traceback
+from typing import Union
+
+# Add the Mbed TLS Python library directory to the module search path
+import scripts_path # pylint: disable=unused-import
+import config
 
 class Colors: # pylint: disable=too-few-public-methods
     """Minimalistic support for colored output.
@@ -80,6 +79,7 @@ that outputting start switches the text color to the desired color and
 stop switches the text color back to the default."""
     red = None
     green = None
+    cyan = None
     bold_red = None
     bold_green = None
     def __init__(self, options=None):
@@ -95,6 +95,7 @@ stop switches the text color back to the default."""
             normal = '\033[0m'
             self.red = ('\033[31m', normal)
             self.green = ('\033[32m', normal)
+            self.cyan = ('\033[36m', normal)
             self.bold_red = ('\033[1;31m', normal)
             self.bold_green = ('\033[1;32m', normal)
 NO_COLORS = Colors(None)
@@ -130,34 +131,38 @@ Remove the backup file if it was saved earlier."""
     else:
         shutil.copy(options.config_backup, options.config)
 
-def run_config_py(options, args):
-    """Run scripts/config.py with the specified arguments."""
-    cmd = ['scripts/config.py']
-    if options.config != 'include/mbedtls/mbedtls_config.h':
-        cmd += ['--file', options.config]
-    cmd += args
-    log_command(cmd)
-    subprocess.check_call(cmd)
+def option_exists(conf, option):
+    return option in conf.settings
 
-def set_reference_config(options):
+def set_config_option_value(conf, option, colors, value: Union[bool, str]):
+    """Set/unset a configuration option, optionally specifying a value.
+value can be either True/False (set/unset config option), or a string,
+which will make a symbol defined with a certain value."""
+    if not option_exists(conf, option):
+        log_line('Symbol {} was not found in {}'.format(option, conf.filename), color=colors.red)
+        return False
+
+    if value is False:
+        log_command(['config.py', 'unset', option])
+        conf.unset(option)
+    elif value is True:
+        log_command(['config.py', 'set', option])
+        conf.set(option)
+    else:
+        log_command(['config.py', 'set', option, value])
+        conf.set(option, value)
+    return True
+
+def set_reference_config(conf, options, colors):
     """Change the library configuration file (mbedtls_config.h) to the reference state.
 The reference state is the one from which the tested configurations are
 derived."""
     # Turn off options that are not relevant to the tests and slow them down.
-    run_config_py(options, ['full'])
-    run_config_py(options, ['unset', 'MBEDTLS_TEST_HOOKS'])
+    log_command(['config.py', 'full'])
+    conf.adapt(config.full_adapter)
+    set_config_option_value(conf, 'MBEDTLS_TEST_HOOKS', colors, False)
     if options.unset_use_psa:
-        run_config_py(options, ['unset', 'MBEDTLS_USE_PSA_CRYPTO'])
-
-def collect_config_symbols(options):
-    """Read the list of settings from mbedtls_config.h.
-Return them in a generator."""
-    with open(options.config, encoding="utf-8") as config_file:
-        rx = re.compile(r'\s*(?://\s*)?#define\s+(\w+)\s*(?:$|/[/*])')
-        for line in config_file:
-            m = re.match(rx, line)
-            if m:
-                yield m.group(1)
+        set_config_option_value(conf, 'MBEDTLS_USE_PSA_CRYPTO', colors, False)
 
 class Job:
     """A job builds the library in a specific configuration and runs some tests."""
@@ -185,19 +190,16 @@ If what is False, announce that the job has failed.'''
         elif what is False:
             log_line(self.name + ' FAILED', color=colors.red)
         else:
-            log_line('starting ' + self.name)
+            log_line('starting ' + self.name, color=colors.cyan)
 
-    def configure(self, options):
+    def configure(self, conf, options, colors):
         '''Set library configuration options as required for the job.'''
-        set_reference_config(options)
+        set_reference_config(conf, options, colors)
         for key, value in sorted(self.config_settings.items()):
-            if value is True:
-                args = ['set', key]
-            elif value is False:
-                args = ['unset', key]
-            else:
-                args = ['set', key, value]
-            run_config_py(options, args)
+            ret = set_config_option_value(conf, key, colors, value)
+            if ret is False:
+                return False
+        return True
 
     def test(self, options):
         '''Run the job's build and test commands.
@@ -234,6 +236,7 @@ REVERSE_DEPENDENCIES = {
     'MBEDTLS_ECP_C': ['MBEDTLS_ECDSA_C',
                       'MBEDTLS_ECDH_C',
                       'MBEDTLS_ECJPAKE_C',
+                      'MBEDTLS_ECP_RESTARTABLE',
                       'MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED',
                       'MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED',
                       'MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED',
@@ -256,17 +259,14 @@ REVERSE_DEPENDENCIES = {
                       'MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED'],
     'MBEDTLS_SHA256_C': ['MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED',
                          'MBEDTLS_ENTROPY_FORCE_SHA256',
-                         'MBEDTLS_SHA224_C',
                          'MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT',
                          'MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY',
                          'MBEDTLS_LMS_C',
                          'MBEDTLS_LMS_PRIVATE'],
-    'MBEDTLS_SHA512_C': ['MBEDTLS_SHA384_C',
-                         'MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT',
+    'MBEDTLS_SHA512_C': ['MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT',
                          'MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY'],
     'MBEDTLS_SHA224_C': ['MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED',
                          'MBEDTLS_ENTROPY_FORCE_SHA256',
-                         'MBEDTLS_SHA256_C',
                          'MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT',
                          'MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY'],
     'MBEDTLS_X509_RSASSA_PSS_SUPPORT': []
@@ -276,8 +276,6 @@ REVERSE_DEPENDENCIES = {
 # These are not necessarily dependencies, but just minimal required changes
 # if a given define is the only one enabled from an exclusive group.
 EXCLUSIVE_GROUPS = {
-    'MBEDTLS_SHA256_C': ['+MBEDTLS_SHA224_C'],
-    'MBEDTLS_SHA384_C': ['+MBEDTLS_SHA512_C'],
     'MBEDTLS_SHA512_C': ['-MBEDTLS_SSL_COOKIE_C',
                          '-MBEDTLS_SSL_PROTO_TLS1_3'],
     'MBEDTLS_ECP_DP_CURVE448_ENABLED': ['-MBEDTLS_ECDSA_C',
@@ -392,11 +390,11 @@ class DomainData:
         return [symbol for symbol in self.all_config_symbols
                 if re.match(regexp, symbol)]
 
-    def __init__(self, options):
+    def __init__(self, options, conf):
         """Gather data about the library and establish a list of domains to test."""
         build_command = [options.make_command, 'CFLAGS=-Werror']
         build_and_test = [build_command, [options.make_command, 'test']]
-        self.all_config_symbols = set(collect_config_symbols(options))
+        self.all_config_symbols = set(conf.settings.keys())
         # Find hash modules by name.
         hash_symbols = self.config_symbols_matching(r'MBEDTLS_(MD|RIPEMD|SHA)[0-9]+_C\Z')
         # Find elliptic curve enabling macros by name.
@@ -420,20 +418,17 @@ class DomainData:
                                               build_and_test),
             # Elliptic curves. Run the test suites.
             'curves': ExclusiveDomain(curve_symbols, build_and_test),
-            # Hash algorithms. Exclude three groups:
-            # - Exclusive domain of MD, RIPEMD, SHA1 (obsolete);
-            # - Exclusive domain of SHA224 (tested with and depends on SHA256);
-            # - Complementary domain of SHA224 and SHA384 - tested with and depend
-            #       on SHA256 and SHA512, respectively.
+            # Hash algorithms. Excluding exclusive domains of MD, RIPEMD, SHA1,
+            # SHA224 and SHA384 because MBEDTLS_ENTROPY_C is extensively used
+            # across various modules, but it depends on either SHA256 or SHA512.
+            # As a consequence an "exclusive" test of anything other than SHA256
+            # or SHA512 with MBEDTLS_ENTROPY_C enabled is not possible.
             'hashes': DualDomain(hash_symbols, build_and_test,
                                  exclude=r'MBEDTLS_(MD|RIPEMD|SHA1_)' \
-                                          '|MBEDTLS_SHA224_'\
-                                          '|!MBEDTLS_(SHA224_|SHA384_)'),
-            # Key exchange types. Only build the library and the sample
-            # programs.
-            'kex': ExclusiveDomain(key_exchange_symbols,
-                                   [build_command + ['lib'],
-                                    build_command + ['-C', 'programs']]),
+                                          '|MBEDTLS_SHA224_' \
+                                          '|MBEDTLS_SHA384_'),
+            # Key exchange types.
+            'kex': ExclusiveDomain(key_exchange_symbols, build_and_test),
             'pkalgs': ComplementaryDomain(['MBEDTLS_ECDSA_C',
                                            'MBEDTLS_ECP_C',
                                            'MBEDTLS_PKCS1_V21',
@@ -455,16 +450,19 @@ A name can either be the name of a domain or the name of one specific job."""
         else:
             return [self.jobs[name]]
 
-def run(options, job, colors=NO_COLORS):
+def run(options, job, conf, colors=NO_COLORS):
     """Run the specified job (a Job instance)."""
     subprocess.check_call([options.make_command, 'clean'])
     job.announce(colors, None)
-    job.configure(options)
+    if not job.configure(conf, options, colors):
+        job.announce(colors, False)
+        return False
+    conf.write()
     success = job.test(options)
     job.announce(colors, success)
     return success
 
-def run_tests(options, domain_data):
+def run_tests(options, domain_data, conf):
     """Run the desired jobs.
 domain_data should be a DomainData instance that describes the available
 domains and jobs.
@@ -480,7 +478,7 @@ Run the jobs listed in options.tasks."""
     backup_config(options)
     try:
         for job in jobs:
-            success = run(options, job, colors=colors)
+            success = run(options, job, conf, colors=colors)
             if not success:
                 if options.keep_going:
                     failures.append(job.name)
@@ -546,7 +544,9 @@ def main():
                             default=True)
         options = parser.parse_args()
         os.chdir(options.directory)
-        domain_data = DomainData(options)
+        conf = config.ConfigFile(options.config)
+        domain_data = DomainData(options, conf)
+
         if options.tasks is True:
             options.tasks = sorted(domain_data.domains.keys())
         if options.list:
@@ -555,7 +555,7 @@ def main():
                     print(domain_name)
             sys.exit(0)
         else:
-            sys.exit(0 if run_tests(options, domain_data) else 1)
+            sys.exit(0 if run_tests(options, domain_data, conf) else 1)
     except Exception: # pylint: disable=broad-except
         traceback.print_exc()
         sys.exit(3)

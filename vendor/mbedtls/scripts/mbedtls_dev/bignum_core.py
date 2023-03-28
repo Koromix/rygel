@@ -130,24 +130,20 @@ class BignumCoreAddAndAddIf(BignumCoreTarget, bignum_common.OperationCommon):
 class BignumCoreSub(BignumCoreTarget, bignum_common.OperationCommon):
     """Test cases for bignum core sub."""
     count = 0
+    input_style = "arch_split"
     symbol = "-"
     test_function = "mpi_core_sub"
     test_name = "mbedtls_mpi_core_sub"
 
     def result(self) -> List[str]:
         if self.int_a >= self.int_b:
-            result_4 = result_8 = self.int_a - self.int_b
+            result = self.int_a - self.int_b
             carry = 0
         else:
-            bound_val = max(self.int_a, self.int_b)
-            bound_4 = bignum_common.bound_mpi(bound_val, 32)
-            result_4 = bound_4 + self.int_a - self.int_b
-            bound_8 = bignum_common.bound_mpi(bound_val, 64)
-            result_8 = bound_8 + self.int_a - self.int_b
+            result = self.limb_boundary + self.int_a - self.int_b
             carry = 1
         return [
-            "\"{:x}\"".format(result_4),
-            "\"{:x}\"".format(result_8),
+            self.format_result(result),
             str(carry)
         ]
 
@@ -761,15 +757,7 @@ class BignumCoreExpMod(BignumCoreTarget, bignum_common.ModOperationCommon):
     test_function = "mpi_core_exp_mod"
     test_name = "Core modular exponentiation (Mongtomery form only)"
     input_style = "fixed"
-
-    def arguments(self) -> List[str]:
-        # Input 'a' has to be given in Montgomery form
-        mont_a = self.to_montgomery(self.int_a)
-        arg_mont_a = self.format_arg('{:x}'.format(mont_a))
-        return [bignum_common.quote_str(n) for n in [self.arg_n,
-                                                     arg_mont_a,
-                                                     self.arg_b]
-               ] + self.result()
+    montgomery_form_a = True
 
     def result(self) -> List[str]:
         # Result has to be given in Montgomery form too
@@ -821,6 +809,20 @@ class BignumCoreSubInt(BignumCoreTarget, bignum_common.OperationCommon):
             self.format_result(result),
             str(-borrow)
         ]
+
+class BignumCoreZeroCheckCT(BignumCoreTarget, bignum_common.OperationCommon):
+    """Test cases for bignum core zero check (constant flow)."""
+    count = 0
+    symbol = "== 0"
+    test_function = "mpi_core_check_zero_ct"
+    test_name = "mpi_core_check_zero_ct"
+    input_style = "variable"
+    arity = 1
+    suffix = True
+
+    def result(self) -> List[str]:
+        result = 1 if self.int_a == 0 else 0
+        return [str(result)]
 
 # END MERGE SLOT 3
 

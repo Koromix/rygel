@@ -27,7 +27,7 @@
 
 static const char * const features[] = {
 #if defined(MBEDTLS_VERSION_FEATURES)
-#if defined(MBEDTLS_HAVE_ASM)
+    #if defined(MBEDTLS_HAVE_ASM)
     "MBEDTLS_HAVE_ASM",
 #endif /* MBEDTLS_HAVE_ASM */
 #if defined(MBEDTLS_NO_UDBL_DIVISION)
@@ -462,6 +462,9 @@ static const char * const features[] = {
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     "MBEDTLS_SSL_MAX_FRAGMENT_LENGTH",
 #endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
+#if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT)
+    "MBEDTLS_SSL_RECORD_SIZE_LIMIT",
+#endif /* MBEDTLS_SSL_RECORD_SIZE_LIMIT */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     "MBEDTLS_SSL_PROTO_TLS1_2",
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
@@ -480,15 +483,6 @@ static const char * const features[] = {
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED)
     "MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED",
 #endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED */
-#if defined(MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE)
-    "MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE",
-#endif /* MBEDTLS_SSL_TLS1_3_TICKET_AGE_TOLERANCE */
-#if defined(MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH)
-    "MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH",
-#endif /* MBEDTLS_SSL_TLS1_3_TICKET_NONCE_LENGTH */
-#if defined(MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS)
-    "MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS",
-#endif /* MBEDTLS_SSL_TLS1_3_DEFAULT_NEW_SESSION_TICKETS */
 #if defined(MBEDTLS_SSL_EARLY_DATA)
     "MBEDTLS_SSL_EARLY_DATA",
 #endif /* MBEDTLS_SSL_EARLY_DATA */
@@ -558,6 +552,9 @@ static const char * const features[] = {
 #if defined(MBEDTLS_AESNI_C)
     "MBEDTLS_AESNI_C",
 #endif /* MBEDTLS_AESNI_C */
+#if defined(MBEDTLS_AESCE_C)
+    "MBEDTLS_AESCE_C",
+#endif /* MBEDTLS_AESCE_C */
 #if defined(MBEDTLS_AES_C)
     "MBEDTLS_AES_C",
 #endif /* MBEDTLS_AES_C */
@@ -787,23 +784,25 @@ static const char * const features[] = {
     NULL
 };
 
-int mbedtls_version_check_feature( const char *feature )
+int mbedtls_version_check_feature(const char *feature)
 {
     const char * const *idx = features;
 
-    if( *idx == NULL )
-        return( -2 );
+    if (*idx == NULL) {
+        return -2;
+    }
 
-    if( feature == NULL )
-        return( -1 );
+    if (feature == NULL) {
+        return -1;
+    }
 
-    while( *idx != NULL )
-    {
-        if( !strcmp( *idx, feature ) )
-            return( 0 );
+    while (*idx != NULL) {
+        if (!strcmp(*idx, feature)) {
+            return 0;
+        }
         idx++;
     }
-    return( -1 );
+    return -1;
 }
 
 #endif /* MBEDTLS_VERSION_C */
