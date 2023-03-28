@@ -177,6 +177,16 @@ a:hover { color: var(--color, #0d114a); }
     height: 100%;
     width: 100%;
 }
+#map_attribution {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    z-index: 1;
+    margin: 0;
+    padding: 3px 6px;
+    font-size: 0.9em;
+    background: #00000022;
+}
 
 .planning_tip {
     text-align: center;
