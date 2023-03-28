@@ -14,9 +14,9 @@ body {
 a {
     cursor: pointer;
     color: var(--color, #05082e);
-    text-decoration: none;
+    text-decoration: underline;
 }
-a:hover { color: var(--color, #8ec7c0); }
+a:hover { color: var(--color, #0d114a); }
 
 .tag {
     display: inline-block;
