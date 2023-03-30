@@ -2292,7 +2292,7 @@ static FileType FileModeToType(mode_t mode)
 
 StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
-#ifdef __linux__
+#if defined(__linux__) && !defined(LIBCC_NO_STATX)
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
     int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
 
@@ -2354,7 +2354,12 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
 
     out_info->type = FileModeToType(sb.st_mode);
     out_info->size = (int64_t)sb.st_size;
-#if defined(__APPLE__)
+#if defined(__linux__)
+    out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
+                      (int64_t)sb.st_mtim.tv_nsec / 1000000;
+    out_info->btime = (int64_t)sb.st_ctim.tv_sec * 1000 +
+                      (int64_t)sb.st_ctim.tv_nsec / 1000000;
+#elif defined(__APPLE__)
     out_info->mtime = (int64_t)sb.st_mtimespec.tv_sec * 1000 +
                       (int64_t)sb.st_mtimespec.tv_nsec / 1000000;
     out_info->btime = (int64_t)sb.st_birthtimespec.tv_sec * 1000 +
