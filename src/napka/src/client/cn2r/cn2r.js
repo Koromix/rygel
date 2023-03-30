@@ -111,7 +111,7 @@ function Cn2rProvider() {
                             latitude: etab.address.latitude,
                             longitude: etab.address.longitude,
                             icon: 'static/icons/misc.png',
-                            size: 32
+                            size: 40
                         };
                     }
 

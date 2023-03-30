@@ -248,7 +248,7 @@ function PpnpsProvider() {
                         latitude: etab.address.latitude,
                         longitude: etab.address.longitude,
                         icon: icon,
-                        size: wide ? 48 : 32,
+                        size: wide ? 48 : 40,
                         filter: wide ? 'hue-rotate(180deg)' : null
                     };
 
