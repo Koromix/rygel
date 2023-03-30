@@ -76,17 +76,14 @@ async function test() {
         let ptr = [null];
 
         // Open database
-        if (sqlite3_open_v2(filename, ptr, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, null) != 0)
-            throw new Error('Failed to open database');
+        assert.equal(sqlite3_open_v2(filename, ptr, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, null), 0);
         db = ptr[0];
 
-        if (sqlite3_exec(db, 'CREATE TABLE foo (id INTEGER PRIMARY KEY, bar TEXT, value INT, bar2 TEXT);', null, null, null) != 0)
-            throw new Error('Failed to create table');
+        assert.equal(sqlite3_exec(db, 'CREATE TABLE foo (id INTEGER PRIMARY KEY, bar TEXT, value INT, bar2 TEXT);', null, null, null), 0);
 
         let stmt = null;
 
-        if (sqlite3_prepare_v2(db, "INSERT INTO foo (bar, value, bar2) VALUES (?1, ?2, ?3)", -1, ptr, null) != 0)
-            throw new Error('Failed to prepare insert statement for table foo');
+        assert.equal(sqlite3_prepare_v2(db, "INSERT INTO foo (bar, value, bar2) VALUES (?1, ?2, ?3)", -1, ptr, null), 0);
         stmt = ptr[0];
 
         for (let it of expected) {
@@ -96,31 +93,26 @@ async function test() {
             sqlite3_bind_int(stmt, 2, it[1]);
             sqlite3_bind_text(stmt, 3, it[2], -1, SQLITE_TRANSIENT);
 
-            if (sqlite3_step(stmt) != SQLITE_DONE)
-                throw new Erorr('Failed to insert new test row');
+            assert.equal(sqlite3_step(stmt), SQLITE_DONE);
         }
+
         sqlite3_finalize(stmt);
 
-        if (sqlite3_prepare_v2(db, "SELECT id, bar, value, bar2 FROM foo ORDER BY id", -1, ptr, null) != 0)
-            throw new Error('Failed to prepare select statement for table foo');
+        assert.equal(sqlite3_prepare_v2(db, "SELECT id, bar, value, bar2 FROM foo ORDER BY id", -1, ptr, null), 0);
         stmt = ptr[0];
+
         for (let i = 0; i < expected.length; i++) {
             let it = expected[i];
 
-            if (sqlite3_step(stmt) != SQLITE_ROW)
-                throw new Error('Missing row');
+            assert.equal(sqlite3_step(stmt), SQLITE_ROW);
 
-            if (sqlite3_column_int(stmt, 0) != i + 1)
-                throw new Error('Invalid data');
-            if (sqlite3_column_text(stmt, 1) != it[0])
-                throw new Error('Invalid data');
-            if (sqlite3_column_int(stmt, 2) != it[1])
-                throw new Error('Invalid data');
-            if (sqlite3_column_text(stmt, 3) != it[2])
-                throw new Error('Invalid data');
+            assert.equal(sqlite3_column_int(stmt, 0), i + 1);
+            assert.equal(sqlite3_column_text(stmt, 1), it[0]);
+            assert.equal(sqlite3_column_int(stmt, 2), it[1]);
+            assert.equal(sqlite3_column_text(stmt, 3), it[2]);
         }
-        if (sqlite3_step(stmt) != SQLITE_DONE)
-            throw new Error('Unexpected end of statement');
+        assert.equal(sqlite3_step(stmt), SQLITE_DONE);
+
         sqlite3_finalize(stmt);
     } finally {
         sqlite3_close_v2(db);
