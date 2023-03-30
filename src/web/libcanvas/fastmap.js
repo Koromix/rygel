@@ -240,10 +240,10 @@ function FastMap(canvas) {
     };
 
     function adaptMarkerSize(size, zoom) {
-        if (zoom >= 7) {
+        if (zoom >= 15) {
             return size;
         } else {
-            return size * ((zoom + 3) / 10);
+            return Math.max(size / 1.6, size * (1 + (zoom - 14) / 10));
         }
     }
 
