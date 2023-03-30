@@ -4,6 +4,12 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.13
+
+**Main changes:**
+
+- Add `koffi.address()` to get the raw value of a wrapper pointer
+
 #### Koffi 2.3.12
 
 **Main fixes:**
