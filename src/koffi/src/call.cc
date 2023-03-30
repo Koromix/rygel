@@ -1049,6 +1049,24 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             return true;
         } break;
 
+        case napi_number: {
+            Napi::Number number = value.As<Napi::Number>();
+            intptr_t ptr = (intptr_t)number.Int32Value();
+
+            *out_ptr = (void *)ptr;
+            return true;
+        } break;
+
+        case napi_bigint: {
+            Napi::BigInt bigint = value.As<Napi::BigInt>();
+
+            bool lossless;
+            intptr_t ptr = (intptr_t)bigint.Int64Value(&lossless);
+
+            *out_ptr = (void *)ptr;
+            return true;
+        } break;
+
         default: {} break;
     }
 
