@@ -64,10 +64,13 @@ async function test() {
     const SQLITE_ROW = 100;
     const SQLITE_DONE = 101;
 
+    const SQLITE_STATIC = 0;
+    const SQLITE_TRANSIENT = -1;
+
     let filename = await create_temporary_file(path.join(os.tmpdir(), 'test_sqlite'));
     let db = null;
 
-    let expected = Array.from(Array(200).keys()).map(i => [`TXT ${i}`, i % 7]);
+    let expected = Array.from(Array(200).keys()).map(i => [`TXT ${i}`, i % 7, `abc ${i % 7}`]);
 
     try {
         let ptr = [null];
@@ -77,27 +80,28 @@ async function test() {
             throw new Error('Failed to open database');
         db = ptr[0];
 
-        if (sqlite3_exec(db, 'CREATE TABLE foo (id INTEGER PRIMARY KEY, bar TEXT, value INT);', null, null, null) != 0)
+        if (sqlite3_exec(db, 'CREATE TABLE foo (id INTEGER PRIMARY KEY, bar TEXT, value INT, bar2 TEXT);', null, null, null) != 0)
             throw new Error('Failed to create table');
 
         let stmt = null;
 
-        if (sqlite3_prepare_v2(db, "INSERT INTO foo (bar, value) VALUES (?1, ?2)", -1, ptr, null) != 0)
+        if (sqlite3_prepare_v2(db, "INSERT INTO foo (bar, value, bar2) VALUES (?1, ?2, ?3)", -1, ptr, null) != 0)
             throw new Error('Failed to prepare insert statement for table foo');
         stmt = ptr[0];
 
         for (let it of expected) {
             sqlite3_reset(stmt);
 
-            sqlite3_bind_text(stmt, 1, it[0], -1, null);
+            sqlite3_bind_text(stmt, 1, it[0], -1, SQLITE_TRANSIENT);
             sqlite3_bind_int(stmt, 2, it[1]);
+            sqlite3_bind_text(stmt, 3, it[2], -1, SQLITE_TRANSIENT);
 
             if (sqlite3_step(stmt) != SQLITE_DONE)
                 throw new Erorr('Failed to insert new test row');
         }
         sqlite3_finalize(stmt);
 
-        if (sqlite3_prepare_v2(db, "SELECT id, bar, value FROM foo ORDER BY id", -1, ptr, null) != 0)
+        if (sqlite3_prepare_v2(db, "SELECT id, bar, value, bar2 FROM foo ORDER BY id", -1, ptr, null) != 0)
             throw new Error('Failed to prepare select statement for table foo');
         stmt = ptr[0];
         for (let i = 0; i < expected.length; i++) {
@@ -111,6 +115,8 @@ async function test() {
             if (sqlite3_column_text(stmt, 1) != it[0])
                 throw new Error('Invalid data');
             if (sqlite3_column_int(stmt, 2) != it[1])
+                throw new Error('Invalid data');
+            if (sqlite3_column_text(stmt, 3) != it[2])
                 throw new Error('Invalid data');
         }
         if (sqlite3_step(stmt) != SQLITE_DONE)
