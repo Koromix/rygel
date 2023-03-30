@@ -4,6 +4,18 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.10
+
+**Main changes:**
+
+- Allow numbers and BigInts to be used for pointer arguments
+
+**Other changes:**
+
+- Use SQLITE_TRANSIENT in SQLite test code
+- Avoid using `statx()` to allow compilation with glibc < 2.28
+- Reorganize NPM package files to be less convoluted
+
 #### Koffi 2.3.9
 
 **Main changes:**
