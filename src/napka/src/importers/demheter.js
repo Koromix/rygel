@@ -25,6 +25,11 @@ const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
 
 const LIST_KEYS = ["Identites", "Mails"];
 
+const CENTER_MAPPINGS = {};
+const PSY_MAPPINGS = {
+    orientation: 'markdown'
+};
+
 main();
 
 async function main() {
@@ -65,8 +70,8 @@ async function run() {
                                    ON CONFLICT DO UPDATE SET title = excluded.title,
                                                              fields = excluded.fields`);
 
-        stmt.run(map_id, 'centres', 'Centres', '{}');
-        stmt.run(map_id, 'psychologues', 'Psychologues', '{}');
+        stmt.run(map_id, 'centres', 'Centres', JSON.stringify(CENTER_MAPPINGS));
+        stmt.run(map_id, 'psychologues', 'Psychologues', JSON.stringify(PSY_MAPPINGS));
     })();
 
     // Load online spreadsheet file
@@ -142,6 +147,7 @@ function transformCenter(row) {
     let entry = {
         import: '' + row.ID,
         version: null,
+        hide: 0,
 
         name: row.Structure,
         address: row.Adresse,
@@ -163,6 +169,7 @@ function transformPsychologist(row) {
     let entry = {
         import: '' + row.ID,
         version: null,
+        hide: row.Adresse ? 0 : 1,
 
         name: row.Structure,
         address: row.Adresse,
@@ -172,7 +179,7 @@ function transformPsychologist(row) {
             mail: parse.cleanMail(row.Mails[i])
         })),
         telephone: parse.cleanPhoneNumber(row.Telephone),
-        orientation: row.Orientation
+        orientation: row.Orientation,
     };
 
     entry.version = crypto.createHash('sha256').update(JSON.stringify(entry)).digest('hex');

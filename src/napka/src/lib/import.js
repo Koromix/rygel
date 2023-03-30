@@ -96,7 +96,7 @@ function updateEntries(db, map_name, layer_name, rows, links = {}) {
 
             import: row.import,
             version: row.version,
-            hide: 0,
+            hide: row.hide || 0,
 
             name: row.name,
             address: row.address,
