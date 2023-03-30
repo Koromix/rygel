@@ -97,6 +97,11 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
         return 1;
     }
 
+    if (output_directory && !TestFile(output_directory, FileType::Directory)) {
+        LogError("Output directory '%1' does not exist", output_directory);
+        return 1;
+    }
+
     HeapArray<const char *> dest_filenames;
     if (src_filenames.len == 1) {
         if (output_filename) {
@@ -257,6 +262,11 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
     }
     if (output_filename && src_filenames.len > 1) {
         LogError("Option --output_file can only be used with one input");
+        return 1;
+    }
+
+    if (output_directory && !TestFile(output_directory, FileType::Directory)) {
+        LogError("Output directory '%1' does not exist", output_directory);
         return 1;
     }
 
