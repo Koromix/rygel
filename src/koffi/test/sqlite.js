@@ -96,7 +96,7 @@ async function test() {
             assert.equal(sqlite3_step(stmt), SQLITE_DONE);
         }
 
-        sqlite3_finalize(stmt);
+        assert.equal(sqlite3_finalize(stmt), 0);
 
         assert.equal(sqlite3_prepare_v2(db, "SELECT id, bar, value, bar2 FROM foo ORDER BY id", -1, ptr, null), 0);
         stmt = ptr[0];
@@ -113,7 +113,10 @@ async function test() {
         }
         assert.equal(sqlite3_step(stmt), SQLITE_DONE);
 
-        sqlite3_finalize(stmt);
+        let stmt_raw = koffi.address(stmt);
+
+        assert.equal(typeof stmt_raw, 'bigint');
+        assert.equal(sqlite3_finalize(stmt_raw), 0);
     } finally {
         sqlite3_close_v2(db);
         fs.unlinkSync(filename);

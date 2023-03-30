@@ -722,19 +722,30 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     return WrapType(env, instance, type);
 }
 
+static inline bool CheckExternalPointer(Napi::Env env, Napi::Value value)
+{
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (!value.IsExternal() || CheckValueTag(instance, value, &TypeInfoMarker) ||
+                               CheckValueTag(instance, value, &CastMarker) ||
+                               CheckValueTag(instance, value, &MagicUnionMarker)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected external pointer", GetValueType(instance, value));
+        return false;
+    }
+
+    return true;
+}
+
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsExternal() || CheckValueTag(instance, info[0], &TypeInfoMarker)) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected external", GetValueType(instance, info[0]));
+    if (!CheckExternalPointer(env, info[0]))
         return env.Null();
-    }
 
     Napi::External<void> external = info[0].As<Napi::External<void>>();
     void *ptr = external.Data();
@@ -1973,6 +1984,26 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     return ret;
 }
 
+static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+    if (!CheckExternalPointer(env, info[0]))
+        return env.Null();
+
+    Napi::External<void> external = info[0].As<Napi::External<void>>();
+    void *ptr = external.Data();
+
+    uint64_t ptr64 = (uint64_t)(uintptr_t)ptr;
+    Napi::BigInt bigint = Napi::BigInt::New(env, ptr64);
+
+    return bigint;
+}
+
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
     if (RG_LIKELY(exec_call)) {
@@ -2038,6 +2069,7 @@ static void SetExports(Napi::Env env, Func func)
 
     func("as", Napi::Function::New(env, CastValue));
     func("decode", Napi::Function::New(env, DecodeValue));
+    func("address", Napi::Function::New(env, GetPointerAddress));
 
 #if defined(_WIN32)
     func("extension", Napi::String::New(env, ".dll"));
