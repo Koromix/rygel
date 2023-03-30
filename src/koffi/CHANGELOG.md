@@ -4,6 +4,13 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.12
+
+**Main fixes:**
+
+- Fix broken syntax in TS definition file
+- Add missing exported properties in TS file
+
 #### Koffi 2.3.11
 
 **Main changes:**
