@@ -27,7 +27,6 @@ async function geomapMissing(db, map_name, access_token) {
                                WHERE m.name = ? AND e.latitude IS NULL`).all(map_name);
 
     for (let row of rows) {
-        console.log(row.address);
         let results = await geomapAddress(row.address, access_token);
 
         if (results.length) {
