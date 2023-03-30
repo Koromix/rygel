@@ -15,7 +15,7 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const sqlite3 = require('better-sqlite3');
 const database = require('../lib/database.js');
-const { util } = require('../lib/util.js');
+const { util } = require('../../../web/libjs/util.js');
 const imp = require('../lib/import.js');
 
 const F2RSM_EXPORT_KEY = process.env.F2RSM_EXPORT_KEY || '';
@@ -217,7 +217,7 @@ async function run() {
 }
 
 function transformRow(row) {
-    let copy = util.deepAssign({
+    let copy = util.assignDeep({
         import: row.__ROOT,
         version: row.__MTIME,
 

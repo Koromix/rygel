@@ -16,7 +16,7 @@ const fetch = require('node-fetch');
 const xlsx = require('node-xlsx');
 const sqlite3 = require('better-sqlite3');
 const database = require('../lib/database.js');
-const { util } = require('../lib/util.js');
+const { util } = require('../../../web/libjs/util.js');
 const parse = require('../lib/parse.js');
 const imp = require('../lib/import.js');
 

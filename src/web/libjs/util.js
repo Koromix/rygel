@@ -169,6 +169,10 @@ const util = new function() {
         return !!value && value.constructor === Object;
     };
 
+    this.isNumeric = function(n) {
+        return !isNaN(parseFloat(n)) && isFinite(n);
+    };
+
     this.deepFreeze = function(obj) {
         Object.freeze(obj);
 
