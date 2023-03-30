@@ -22,9 +22,9 @@
 declare module 'koffi' {
     export function load(path: string): IKoffiLib;
 
-    interface IKoffiCType { __brand: 'IKoffiCType' };
-    interface IKoffiPointerCast { __brand: 'IKoffiPointerCast' };
-    interface IKoffiRegisteredCallback { __brand: 'IKoffiRegisteredCallback' };
+    interface IKoffiCType { __brand: 'IKoffiCType' }
+    interface IKoffiPointerCast { __brand: 'IKoffiPointerCast' }
+    interface IKoffiRegisteredCallback { __brand: 'IKoffiRegisteredCallback' }
 
     type PrimitiveKind = 'Void' | 'Bool' | 'Int8' | 'UInt8' | 'Int16' | 'Int16S' | 'UInt16' | 'UInt16S' |
                          'Int32' | 'Int32S' | 'UInt32' | 'UInt32S' | 'Int64' | 'Int64S' | 'UInt64' | 'UInt64S' |
@@ -79,7 +79,7 @@ declare module 'koffi' {
 
         thiscall(definition: string): KoffiFunction;
         thiscall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
-    };
+    }
 
     export function struct(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
     export function struct(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
