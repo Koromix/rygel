@@ -4,7 +4,7 @@
 
 ### Koffi 2.3
 
-#### Koffi 2.3.10
+#### Koffi 2.3.11
 
 **Main changes:**
 
