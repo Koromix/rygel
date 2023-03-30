@@ -29,7 +29,6 @@
   shell:
     cmd: 'curl -sSL https://install.python-poetry.org | python3 -'
     creates: '{{ lookup("env", "HOME") }}/.local/share/pypoetry/venv/bin/poetry'
-    warn: no
   become: yes
 
 - name: Prepare static directories
