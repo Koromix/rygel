@@ -221,7 +221,7 @@ function Cn2rProvider() {
                     ${!etab.rdv_fixe && !etab.rdv_mail && !etab.rdv_web ? html`Présentez-vous directement au centre<br/>` : ''}
                     ${etab.rdv_courrier_mt && !isConnected() ? html`<br/>⚠\uFE0E Vous devez disposer d'un courrier de votre médecin traitant<br/>` : ''}
                     ${isConnected() ? html`<br/>⚠\uFE0E Nécessité d'un médecin traitant : ${field(etab, 'rdv_courrier_mt')}<br/>` : ''}
-                    ${!isConnected() && etab.rdv_complement ? html`<br/>${unsafeHTML(renderMarkdown(etab.rdv_complement))}` : ''}
+                    ${!isConnected() && etab.rdv_complement ? html`<br/>${unsafeHTML(renderMarkdown(etab.rdv_complement.trim()))}` : ''}
                     ${isConnected() ? html`<br/>${field(etab, 'rdv_complement')}` : ''}
                 </div>
             </div>

@@ -131,12 +131,12 @@ function DemheterProvider() {
 
                 Adresse : <b>${field(etab, 'address')}</b><br/><br/>
 
-                <u>Pour prendre un rendez-vous :</u><br/><br/>
-                ${etab.type == 'Psychologue' ? unsafeHTML(renderMarkdown(etab.orientation)) : ''}
+                <u>Pour prendre un rendez-vous :</u><br/>
+                ${etab.type == 'Psychologue' ? unsafeHTML(renderMarkdown(etab.orientation.trim())) : ''}
                 ${etab.type == 'Centre' && etab.mail ?
-                    html`Adressez un courriel électronique à l'adresse <a href=${'mailto:' + etab.mail}>${etab.mail}</a>` : ''}
-                ${etab.type == 'Centre' && !etab.mail ? 'Prenez rendez-vous par téléphone' : ''}
-                <br/><br/>
+                    html`Adressez un courriel électronique à l'adresse <a href=${'mailto:' + etab.mail}>${etab.mail}</a><br/>` : ''}
+                ${etab.type == 'Centre' && !etab.mail ? html`Prenez rendez-vous par téléphone<br/>` : ''}
+                <br/>
                 ${etab.mail ? html`Courriel : <a href=${'mailto:' + etab.mail}>${etab.mail}</a><br/>` : ''}
                 ${etab.telephone ? html`Téléphone : <a href=${'tel:+33' + etab.telephone.substr(1)}>${etab.telephone}</a><br/>` : ''}
             </div>
