@@ -162,7 +162,7 @@ void usb_midi_write_packed(uint32_t n)
 		if (!usb_configuration) return;
 		yield();
 	}
-	uint32_t *txdata = (uint32_t *)(txbuffer + (tx_head * TX_SIZE) + (TX_SIZE - tx_available));
+	uint32_t *txdata = (uint32_t *)(txbuffer + (tx_head * TX_SIZE) + (tx_packet_size - tx_available));
 	*txdata = n;
 	tx_available -= 4;
 	if (tx_available == 0) {
@@ -244,7 +244,7 @@ void usb_midi_send_sysex_add_term_bytes(const uint8_t *data, uint32_t length, ui
 	}
 }
 
-void static sysex_byte(uint8_t b)
+static void sysex_byte(uint8_t b)
 {
 	if (usb_midi_handleSysExPartial && usb_midi_msg_sysex_len >= USB_MIDI_SYSEX_MAX) {
 		// when buffer is full, send another chunk to partial handler.

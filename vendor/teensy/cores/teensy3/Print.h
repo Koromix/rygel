@@ -56,7 +56,8 @@ class Print
   public:
 	constexpr Print() : write_error(0) {}
 	virtual size_t write(uint8_t b) = 0;
-	size_t write(const char *str)			{ return write((const uint8_t *)str, strlen(str)); }
+	size_t write(const char *str)			{ if (str == nullptr) return 0;
+							  return write((const uint8_t *)str, strlen(str)); }
 	virtual size_t write(const uint8_t *buffer, size_t size);
 	virtual int availableForWrite(void)		{ return 0; }
 	virtual void flush()				{ }
@@ -117,7 +118,7 @@ class Print
   protected:
 	void setWriteError(int err = 1) { write_error = err; }
   private:
-	char write_error;
+	int write_error;
 	size_t printFloat(double n, uint8_t digits);
 #ifdef __MKL26Z64__
 	size_t printNumberDec(unsigned long n, uint8_t sign);

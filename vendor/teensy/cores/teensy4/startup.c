@@ -54,19 +54,28 @@ FLASHMEM void startup_default_middle_hook(void) {}
 void startup_middle_hook(void)	__attribute__ ((weak, alias("startup_default_middle_hook")));
 FLASHMEM void startup_default_late_hook(void) {}
 void startup_late_hook(void)	__attribute__ ((weak, alias("startup_default_late_hook")));
-__attribute__((section(".startup"), optimize("no-tree-loop-distribute-patterns")))
+extern void startup_debug_reset(void) __attribute__((noinline));
+FLASHMEM void startup_debug_reset(void) { __asm__ volatile("nop"); }
+
+static void ResetHandler2(void);
+
+__attribute__((section(".startup"), naked))
 void ResetHandler(void)
 {
-	unsigned int i;
-
-#if defined(__IMXRT1062__)
 	IOMUXC_GPR_GPR17 = (uint32_t)&_flexram_bank_config;
 	IOMUXC_GPR_GPR16 = 0x00200007;
 	IOMUXC_GPR_GPR14 = 0x00AA0000;
 	__asm__ volatile("mov sp, %0" : : "r" ((uint32_t)&_estack) : );
 	__asm__ volatile("dsb":::"memory");
 	__asm__ volatile("isb":::"memory");
-#endif
+	ResetHandler2();
+	__builtin_unreachable();
+}
+
+__attribute__((section(".startup"), noinline, noreturn))
+static void ResetHandler2(void)
+{
+	unsigned int i;
 	startup_early_hook(); // must be in FLASHMEM, as ITCM is not yet initialized!
 	PMU_MISC0_SET = 1<<3; //Use bandgap-based bias currents for best performance (Page 1175)
 	// pin 13 - if startup crashes, use this to turn on the LED early for troubleshooting
@@ -146,11 +155,22 @@ void ResetHandler(void)
 	pwm_init();
 	tempmon_init();
 	startup_middle_hook();
-	while (millis() < 20) ; // wait at least 20ms before starting USB
-	usb_init();
 
-	while (millis() < 300) ; // wait at least 300ms before calling user code
+#if !defined(TEENSY_INIT_USB_DELAY_BEFORE)
+        #define TEENSY_INIT_USB_DELAY_BEFORE 20
+#endif
+#if !defined(TEENSY_INIT_USB_DELAY_AFTER)
+        #define TEENSY_INIT_USB_DELAY_AFTER 280
+#endif
+	// for background about this startup delay, please see these conversations
+	// https://forum.pjrc.com/threads/36606?p=113980&viewfull=1#post113980
+	// https://forum.pjrc.com/threads/31290?p=87273&viewfull=1#post87273
+
+	while (millis() < TEENSY_INIT_USB_DELAY_BEFORE) ; // wait
+	usb_init();
+	while (millis() < TEENSY_INIT_USB_DELAY_AFTER + TEENSY_INIT_USB_DELAY_BEFORE) ; // wait
 	//printf("before C++ constructors\n");
+	startup_debug_reset();
 	startup_late_hook();
 	__libc_init_array();
 	//printf("after C++ constructors\n");
@@ -635,6 +655,7 @@ extern unsigned long _heap_end;
 
 char *__brkval = (char *)&_heap_start;
 
+__attribute__((weak))
 void * _sbrk(int incr)
 {
         char *prev = __brkval;
@@ -649,13 +670,13 @@ void * _sbrk(int incr)
 }
 
 __attribute__((weak))
-int _read(int file, char *ptr, int len)
+int _read(int file __attribute__((unused)), char *ptr __attribute__((unused)), int len __attribute__((unused)))
 {
 	return 0;
 }
 
 __attribute__((weak))
-int _close(int fd)
+int _close(int fd __attribute__((unused)))
 {
 	return -1;
 }
@@ -663,26 +684,26 @@ int _close(int fd)
 #include <sys/stat.h>
 
 __attribute__((weak))
-int _fstat(int fd, struct stat *st)
+int _fstat(int fd __attribute__((unused)), struct stat *st)
 {
 	st->st_mode = S_IFCHR;
 	return 0;
 }
 
 __attribute__((weak))
-int _isatty(int fd)
+int _isatty(int fd __attribute__((unused)))
 {
 	return 1;
 }
 
 __attribute__((weak))
-int _lseek(int fd, long long offset, int whence)
+int _lseek(int fd __attribute__((unused)), long long offset __attribute__((unused)), int whence __attribute__((unused)))
 {
 	return -1;
 }
 
 __attribute__((weak))
-void _exit(int status)
+void _exit(int status __attribute__((unused)))
 {
 	while (1) asm ("WFI");
 }

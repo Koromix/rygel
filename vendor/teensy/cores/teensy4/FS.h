@@ -92,18 +92,18 @@ private:
 
 
 
-// TODO: does this help in any way, or just extra useless code?
+// File move semantics require rvalue references, introduced in C++11.
 #define FILE_USE_MOVE
 
 
 // Programs and libraries using files do so with instances of File.
+//
+class File final : public Stream {
 // File is merely a pointer to a FileImpl instance.  More than one
 // instance of File may reference the same FileImpl.  File may also
 // reference nothing (the pointer is NULL), as a result of having
 // closed the file or the File instance created without referencing
 // anything.
-//
-class File final : public Stream {
 public:
 	// Empty constructor, used when a program creates a File variable
 	// but does not immediately assign or initialize it.
@@ -130,11 +130,14 @@ public:
 		//Serial.printf("File copy ctor %x, refcount=%d\n", (int)f, get_refcount());
 	}
 #ifdef FILE_USE_MOVE
-	// Move constructor.
-	File(const File&& file) {
+	// Move constructor. Typically used when a File is passed by rvalue
+	// reference into a function, such as when using std::move(). The
+	// original file is closed, and the refcount of the underlying
+	// FileImpl is unchanged.
+	File(File&& file) {
 		f = file.f;
-		if (f) f->refcount++;
-		//Serial.printf("File copy ctor %x, refcount=%d\n", (int)f, get_refcount());
+		file.f = nullptr;
+		//Serial.printf("File move ctor %x, refcount=%d\n", (int)f, get_refcount());
 	}
 #endif
 	// Copy assignment.
@@ -147,11 +150,11 @@ public:
 	}
 #ifdef FILE_USE_MOVE
 	// Move assignment.
-	File& operator = (const File&& file) {
+	File& operator = (File&& file) {
 		//Serial.println("File move assignment");
-		if (file.f) file.f->refcount++;
 		if (f) { dec_refcount(); /*Serial.println("File move assignment autoclose");*/ }
 		f = file.f;
+		file.f = nullptr;
 		return *this;
 	}
 #endif
@@ -159,18 +162,20 @@ public:
 		//Serial.printf("File dtor %x, refcount=%d\n", (int)f, get_refcount());
 		if (f) dec_refcount();
 	}
+	// Read bytes from a file.  Returns the number of bytes actually read.
 	size_t read(void *buf, size_t nbyte) {
 		return (f) ? f->read(buf, nbyte) : 0;
 	}
-
-	// override print version
+	// Write bytes to a file
 	virtual size_t write(const uint8_t *buf, size_t size) {
+		// override print version
 		return (f) ? f->write((void*)buf, size) : 0;
 	}
-
+	// Write bytes to a file
 	size_t write(const void *buf, size_t size) {
 		return (f) ? f->write(buf, size) : 0;
 	}
+	// Returns the number of bytes which may be read from a file
 	int available() {
 		return (f) ? f->available() : 0;
 	}
@@ -282,8 +287,8 @@ public:
 	virtual bool mediaPresent() {
 		return true;
 	}
-	// for compatibility with String input
 	File open(const String &filepath, uint8_t mode = FILE_READ) {
+		// for compatibility with String input
 		return open(filepath.c_str(), mode);
 	}
 	bool exists(const String &filepath) {

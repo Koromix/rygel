@@ -27,12 +27,16 @@
 #include "HardwareSerial.h"
 #include "wiring_private.h" 
 
+#ifndef RX_BUFFER_SIZE
 #define RX_BUFFER_SIZE 64
+#endif
 static volatile uint8_t rx_buffer[RX_BUFFER_SIZE];
 static volatile uint8_t rx_buffer_head = 0;
 static volatile uint8_t rx_buffer_tail = 0;
 
+#ifndef TX_BUFFER_SIZE
 #define TX_BUFFER_SIZE 40
+#endif
 static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
 static volatile uint8_t tx_buffer_head = 0;
 static volatile uint8_t tx_buffer_tail = 0;
@@ -96,8 +100,8 @@ int HardwareSerial::availableForWrite(void)
 {
 	uint8_t head, tail;
 
-	head = rx_buffer_head;
-	tail = rx_buffer_tail;
+	head = tx_buffer_head;
+	tail = tx_buffer_tail;
 	if (head >= tail) return TX_BUFFER_SIZE - 1 - head + tail;
 	return tail - head - 1;
 }
