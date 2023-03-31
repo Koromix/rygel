@@ -446,6 +446,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
+    if (!TestFile(config_filename, FileType::File)) {
+        LogError("Cannot find FelixBuild.ini");
+        return 1;
+    }
+
     // Load customized presets
     HeapArray<BuildPreset> presets;
     if (load_presets) {
