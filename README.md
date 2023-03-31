@@ -18,6 +18,8 @@ Most projects are licensed under the [AGPL 3.0 license](https://www.gnu.org/lice
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Felix      | **Good** | AGPL 3   |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Felix      | **Good** | AGPL 3   |
 
+You can also visit the [attic](src/attic/) for a few more single-file tools.
+
 # How to build
 
 ## C++ projects

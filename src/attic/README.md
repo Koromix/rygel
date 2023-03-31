@@ -1,6 +1,16 @@
-# SeatSH
+# Authool
 
-## Overview
+Authtool can generate and check passwords, and can also create and check TOTP secrets and codes. It can also generate a valid QR code PNG file with a TOTP secret.
+
+# Empress
+
+Empress uses the compression algorithms implemented in libcc to provide simple single-file compression and decompression, and so far supports Zlib, Gzip, Brotli and LZ4.
+
+# Hodler
+
+Hodler is a simple and limited static-site builder that I use to generate the pages on [koromix.dev](https://koromix.dev/) and [goupile.fr](https://goupile.fr/) from Markdown files.
+
+# SeatSH
 
 SeatSH is a Windows service that enables you to launch graphical applications from an SSH connection on Windows 10. As an example, try to start `notepad` from an SSH connection: it won't work, because this session does not have access to the active console (desktop) session.
 
