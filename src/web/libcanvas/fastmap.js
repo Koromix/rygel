@@ -76,8 +76,9 @@ function FastMap(runner) {
     this.move = function(lat, lng, zoom = null) {
         if (zoom != null)
             state.zoom = zoom;
-
         state.pos = latLongToXY(lat, lng, state.zoom);
+
+        runner.wakeUp();
     };
 
     this.setMarkers = function(key, markers) {
