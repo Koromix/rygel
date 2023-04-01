@@ -68,7 +68,7 @@
   when: 'not ansible_check_mode'
   become: yes
 
-- name: Enabled scheduled rclone sync
+- name: Enable scheduled rclone sync
   service:
     name: rclone.timer
     state: started

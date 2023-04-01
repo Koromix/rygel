@@ -191,14 +191,14 @@
   when: 'not ansible_check_mode'
   become: yes
 
-- name: Enabled scheduled imports
+- name: Enable scheduled imports
   service:
     name: 'napka_import@{{ napka_name }}.timer'
     state: started
     enabled: yes
   become: yes
 
-- name: Enabled scheduled backups
+- name: Enable scheduled backups
   service:
     name: napka_backup.timer
     state: started
