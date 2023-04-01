@@ -1,11 +1,23 @@
-import { AppRunner } from './runner.js';
-import { LruMap } from '../libjs/util.js';
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see https://www.gnu.org/licenses/.
 
-function FastMap(canvas) {
+import { util, LruMap } from '../libjs/util.js';
+
+function FastMap(runner) {
     let self = this;
 
-    let runner = new AppRunner(canvas, update, draw);
-
+    // Shortcuts
+    let canvas = runner.canvas;
     let ctx = runner.ctx;
     let mouse_state = runner.mouse_state;
     let pressed_keys = runner.pressed_keys;
@@ -26,32 +38,46 @@ function FastMap(canvas) {
     let known_tiles = new LruMap(1024);
     let marker_textures = new LruMap(64);
 
-    this.start = async function(config) {
-        runner.init();
+    Object.defineProperties(this, {
+        width: { get: () => canvas.width, enumerable: true },
+        height: { get: () => canvas.height, enumerable: true },
+
+        coordinates: { get: () => {
+            let center = { x: canvas.width / 2, y: canvas.height / 2 };
+            return self.screenToCoord(center);
+        }, enumerable: true },
+
+        zoom: { get: () => state.zoom, enumerable: true }
+    });
+
+    this.init = async function(config) {
+        if (runner.update == null)
+            runner.update = self.update;
+        if (runner.draw == null)
+            runner.draw = self.draw;
 
         tiles = Object.assign({
             min_zoom: 1
         }, config);
-
-        canvas.style.cursor = 'grab';
 
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
         state = {
             zoom: DEFAULT_ZOOM,
-            pos: latLongToPixelXY(48.866667, 2.333333, DEFAULT_ZOOM), // Paris
+            pos: latLongToXY(48.866667, 2.333333, DEFAULT_ZOOM),
             grab: null
         };
 
-        known_tiles = new LruMap(1024);
+        known_tiles.clear();
+        marker_textures.clear();
     };
 
     this.move = function(lat, lng, zoom = null) {
         if (zoom != null)
             state.zoom = zoom;
 
-        state.pos = latLongToPixelXY(lat, lng, state.zoom);
+        state.pos = latLongToXY(lat, lng, state.zoom);
     };
 
     this.setMarkers = function(key, markers) {
@@ -65,7 +91,10 @@ function FastMap(canvas) {
         delete marker_groups[key];
     };
 
-    function update() {
+    this.update = function() {
+        if (ctx == null)
+            return;
+
         // Detect what we're pointing at (if anything)
         let target = null;
         {
@@ -80,9 +109,7 @@ function FastMap(canvas) {
                     if (marker.click == null)
                         continue;
 
-                    let pos = latLongToPixelXY(marker.latitude, marker.longitude, state.zoom);
-                    pos.x -= state.pos.x - canvas.width / 2;
-                    pos.y -= state.pos.y - canvas.height / 2;
+                    let pos = self.coordToScreen(marker.latitude, marker.longitude);
 
                     if (distance(pos, mouse_state) < adaptMarkerSize(marker.size, state.zoom) / 2) {
                         target = marker;
@@ -111,11 +138,11 @@ function FastMap(canvas) {
 
         // Adjust cursor style
         if (state.grab != null) {
-            canvas.style.cursor = 'grabbing';
+            runner.cursor = 'grabbing';
         } else if (target != null) {
-            canvas.style.cursor = 'pointer';
+            runner.cursor = 'pointer';
         } else {
-            canvas.style.cursor = 'grab';
+            runner.cursor = 'grab';
         }
 
         // Handle zooming
@@ -130,9 +157,9 @@ function FastMap(canvas) {
             let size = mapSize(state.zoom);
 
             if (size >= canvas.width)
-                state.pos.x = clamp(state.pos.x, canvas.width / 2, size - canvas.width / 2);
+                state.pos.x = util.clamp(state.pos.x, canvas.width / 2, size - canvas.width / 2);
             if (size >= canvas.height)
-                state.pos.y = clamp(state.pos.y, canvas.height / 2, size - canvas.height / 2);
+                state.pos.y = util.clamp(state.pos.y, canvas.height / 2, size - canvas.height / 2);
         }
     };
 
@@ -140,19 +167,35 @@ function FastMap(canvas) {
         if (state.zoom + delta < tiles.min_zoom || state.zoom + delta > tiles.max_zoom)
             return;
 
-        state.pos.x *= Math.pow(2, delta);
-        state.pos.y *= Math.pow(2, delta);
-        state.pos.x += delta * (at.x - canvas.width / 2);
-        state.pos.y += delta * (at.y - canvas.height / 2);
+        if (delta > 0) {
+            for (let i = 0; i < delta; i++) {
+                state.pos.x = (state.pos.x * 2) + (at.x - canvas.width / 2);
+                state.pos.y = (state.pos.y * 2) + (at.y - canvas.height / 2);
+            }
+        } else {
+            for (let i = 0; i < -delta; i++) {
+                state.pos.x = (state.pos.x * 0.5) - 0.5 * (at.x - canvas.width / 2);
+                state.pos.y = (state.pos.y * 0.5) - 0.5 * (at.y - canvas.height / 2);
+            }
+        }
 
         state.zoom += delta;
     }
 
-    function draw() {
+    function getOrigin() {
         let origin = {
             x: Math.floor(state.pos.x - canvas.width / 2),
             y: Math.floor(state.pos.y - canvas.height / 2)
         };
+
+        return origin;
+    }
+
+    this.draw = function() {
+        if (ctx == null)
+            return;
+
+        let origin = getOrigin();
 
         fetch_queue.length = 0;
         missing_assets = 0;
@@ -193,10 +236,7 @@ function FastMap(canvas) {
 
             for (let markers of Object.values(marker_groups)) {
                 for (let marker of markers) {
-                    let pos = latLongToPixelXY(marker.latitude, marker.longitude, state.zoom);
-
-                    pos.x -= origin.x;
-                    pos.y -= origin.y;
+                    let pos = self.coordToScreen(marker.latitude, marker.longitude);
 
                     if (pos.x < -marker.size || pos.x > canvas.width + marker.size)
                         continue;
@@ -240,10 +280,10 @@ function FastMap(canvas) {
     };
 
     function adaptMarkerSize(size, zoom) {
-        if (zoom >= 15) {
+        if (zoom >= 7) {
             return size;
         } else {
-            return Math.max(size / 1.6, size * (1 + (zoom - 14) / 10));
+            return size * ((zoom + 3) / 10);
         }
     }
 
@@ -335,7 +375,9 @@ function FastMap(canvas) {
 
                         try {
                             let img = await runner.loadTexture(url);
+
                             map.set(url, img);
+                            runner.wakeUp();
                         } catch (err) {
                             console.error(err);
                         }
@@ -366,40 +408,54 @@ function FastMap(canvas) {
         return ret;
     }
 
-    function latLongToPixelXY(latitude, longitude, zoom) {
-        const EarthRadius = 6378137;
+    function latLongToXY(latitude, longitude, zoom) {
         const MinLatitude = -85.05112878;
         const MaxLatitude = 85.05112878;
         const MinLongitude = -180;
         const MaxLongitude = 180;
 
-        latitude = clamp(latitude, MinLatitude, MaxLatitude);
-        longitude = clamp(longitude, MinLongitude, MaxLongitude);
+        latitude = util.clamp(latitude, MinLatitude, MaxLatitude);
+        longitude = util.clamp(longitude, MinLongitude, MaxLongitude);
 
         let x = (longitude + 180) / 360;
         let sinLatitude = Math.sin(latitude * Math.PI / 180);
         let y = 0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI);
 
         let size = mapSize(zoom);
-        let px = clamp(x * size + 0.5, 0, ((size - 1) >>> 0));
-        let py = clamp(y * size + 0.5, 0, ((size - 1) >>> 0));
+        let px = util.clamp(x * size + 0.5, 0, ((size - 1) >>> 0));
+        let py = util.clamp(y * size + 0.5, 0, ((size - 1) >>> 0));
 
         return { x: px, y: py };
     }
 
+    this.coordToScreen = function(latitude, longitude) {
+        let origin = getOrigin();
+        let pos = latLongToXY(latitude, longitude, state.zoom);
+
+        pos.x -= origin.x;
+        pos.y -= origin.y;
+
+        return pos;
+    };
+
+    this.screenToCoord = function(pos) {
+        let origin = getOrigin();
+
+        let size = mapSize(state.zoom);
+        let px = util.clamp(pos.x + state.pos.x - canvas.width / 2, 0, size);
+        let py = size - util.clamp(pos.y + state.pos.y - canvas.height / 2, 0, size);
+
+        let x = (util.clamp(px, 0, ((size - 1) >>> 0)) - 0.5) / size;
+        let y = (util.clamp(py, 0, ((size - 1) >>> 0)) - 0.5) / size;
+
+        let longitude = (x * 360) - 180;
+        let latitude = Math.atan(Math.sinh(2 * (y - 0.5) * Math.PI)) * (180 / Math.PI);
+
+        return [latitude, longitude];
+    };
+
     function mapSize(zoom) {
         return ((tiles.tilesize << zoom) >>> 0);
-    }
-
-    // JS should have this!
-    function clamp(value, min, max) {
-        if (value > max) {
-            return max;
-        } else if (value < min) {
-            return min;
-        } else {
-            return value;
-        }
     }
 
     function distance(p1, p2) {

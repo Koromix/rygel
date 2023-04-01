@@ -1,6 +1,19 @@
-import { net } from '../libjs/util.js';
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see https://www.gnu.org/licenses/.
 
-function AppRunner(canvas, update, draw) {
+import { util, net } from '../libjs/util.js';
+
+function AppRunner(canvas) {
     let self = this;
 
     let ctx = canvas.getContext('2d');
@@ -8,6 +21,10 @@ function AppRunner(canvas, update, draw) {
     let prev_canvas_width = 0;
     let prev_canvas_height = 0;
     let prev_timestamp = 0;
+
+    let idle_timeout = 0;
+    let last_event = 0;
+    let is_idle = false;
 
     let updates = 0;
     let update_counter = 0;
@@ -39,14 +56,21 @@ function AppRunner(canvas, update, draw) {
         x: 0,
         y: 0,
 
+        contact: false,
+        moving: false,
+
         left: 0,
         middle: 0,
         right: 0,
         wheel: 0
     };
+    let mouse_mirror = {};
+    let skip_clicks = 0;
 
     let buttons = [];
+
     let cursor = 'default';
+    let ignore_new_cursor = false;
 
     let prev_widgets = new Map;
     let new_widgets = new Map;
@@ -58,21 +82,59 @@ function AppRunner(canvas, update, draw) {
         canvas: { value: canvas, writable: false, enumerable: true },
         ctx: { value: ctx, writable: false, enumerable: true },
         pressed_keys: { value: pressed_keys, writable: false, enumerable: true },
-        mouse_state: { value: mouse_state, writable: false, enumerable: true }
+        mouse_state: { value: mouse_state, writable: false, enumerable: true },
+
+        idle_timeout: { get: () => idle_timeout, set: value => { idle_timeout = value; }, enumerable: true },
+
+        update_counter: { get: () => update_counter, enumerate: true },
+        draw_counter: { get: () => draw_counter, enumerate: true },
+
+        cursor: {
+            get: () => cursor,
+            set: value => {
+                if (!ignore_new_cursor)
+                    cursor = value;
+                ignore_new_cursor = true;
+            },
+            enumerable: true
+        }
     });
+
+    // ------------------------------------------------------------------------
+    // Client functions
+    // ------------------------------------------------------------------------
+
+    this.update = null;
+    this.draw = null;
+    this.context = null;
 
     // ------------------------------------------------------------------------
     // Init
     // ------------------------------------------------------------------------
 
-    this.init = async function() {
+    this.start = async function() {
+        canvas.addEventListener('contextmenu', e => {
+            if (self.context == null)
+                return;
+
+            let rect = canvas.getBoundingClientRect();
+            let at = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+            self.context(at);
+
+            e.preventDefault();
+        });
+
         canvas.addEventListener('keydown', handleKeyEvent);
         canvas.addEventListener('keyup', handleKeyEvent);
+        canvas.setAttribute('tabindex', '0');
 
-        canvas.addEventListener('mousemove', handleMouseEvent);
-        canvas.addEventListener('mousedown', handleMouseEvent);
-        canvas.addEventListener('mouseup', handleMouseEvent);
-        canvas.addEventListener('wheel', handleMouseEvent);
+        if (!isTouchDevice()) {
+            canvas.addEventListener('mousemove', handleMouseEvent);
+            canvas.addEventListener('mousedown', handleMouseEvent);
+            canvas.addEventListener('mouseup', handleMouseEvent);
+            canvas.addEventListener('wheel', handleMouseEvent);
+        }
 
         canvas.addEventListener('touchstart', handleTouchEvent);
         canvas.addEventListener('touchmove', handleTouchEvent);
@@ -80,6 +142,17 @@ function AppRunner(canvas, update, draw) {
 
         window.requestAnimationFrame(loop);
     };
+
+    function isTouchDevice() {
+        if (!('ontouchstart' in window))
+            return false;
+        if (!navigator.maxTouchPoints)
+            return false;
+        if (navigator.msMaxTouchPoints)
+            return false;
+
+        return true;
+    }
 
     this.loadTexture = async function(url) {
         let texture = await new Promise((resolve, reject) => {
@@ -111,6 +184,9 @@ function AppRunner(canvas, update, draw) {
     // ------------------------------------------------------------------------
 
     function handleKeyEvent(e) {
+        canvas.focus();
+        self.wakeUp();
+
         if (e.repeat)
             return;
 
@@ -137,6 +213,9 @@ function AppRunner(canvas, update, draw) {
     }
 
     function handleMouseEvent(e) {
+        canvas.focus();
+        self.wakeUp();
+
         let rect = canvas.getBoundingClientRect();
 
         mouse_state.x = e.clientX - rect.left;
@@ -145,27 +224,39 @@ function AppRunner(canvas, update, draw) {
         if ((e.buttons & 0b001) && !mouse_state.left) {
             mouse_state.left = 1;
         } else if (!(e.buttons & 0b001) && mouse_state.left)  {
-            mouse_state.left = -1;
+            mouse_state.left = (skip_clicks & 0b001) ? 0 : -1;
+            skip_clicks &= ~0b001;
         }
         if ((e.buttons & 0b100) && !mouse_state.middle) {
             mouse_state.middle = 1;
         } else if (!(e.buttons & 0b100) && mouse_state.middle)  {
-            mouse_state.middle = -1;
+            mouse_state.middle = (skip_clicks & 0b100) ? 0 : -1;
+            skip_clicks &= ~0b100;
         }
         if ((e.buttons & 0b010) && !mouse_state.right) {
             mouse_state.right = 1;
         } else if (!(e.buttons & 0b010) && mouse_state.right)  {
-            mouse_state.right = -1;
+            mouse_state.right = (skip_clicks & 0b010) ? 0 : -1;
+            skip_clicks &= ~0b010;
+        }
+
+        mouse_state.contact = true;
+
+        if (e.type == 'mousemove') {
+            skip_clicks |= e.buttons;
+            mouse_state.moving = true;
+        } else {
+            mouse_state.moving = false;
         }
 
         if (e.deltaMode != null) {
             switch (e.deltaMode) {
                 case WheelEvent.DOM_DELTA_PIXEL: {
-                    let mult = clamp(e.deltaY, -1, 1);
+                    let mult = util.clamp(e.deltaY, -1, 1);
                     mouse_state.wheel += mult * Math.ceil(mult * e.deltaY / 120);
                 } break;
                 case WheelEvent.DOM_DELTA_LINE:
-                case WheelEvent.DOM_DELTA_PAGE: { mouse_state.wheel += clamp(e.deltaY, -1, 1); } break;
+                case WheelEvent.DOM_DELTA_PAGE: { mouse_state.wheel += util.clamp(e.deltaY, -1, 1); } break;
             }
 
             e.preventDefault();
@@ -174,6 +265,11 @@ function AppRunner(canvas, update, draw) {
     }
 
     function handleTouchEvent(e) {
+        canvas.focus();
+        self.wakeUp();
+
+        let rect = canvas.getBoundingClientRect();
+
         // Prevent refresh when swipping up and other stuff
         if (e.type == 'touchmove') {
             e.preventDefault();
@@ -187,14 +283,14 @@ function AppRunner(canvas, update, draw) {
                 return;
 
             if (touch_digits == 1) {
-                mouse_state.x = e.touches[0].pageX;
-                mouse_state.y = e.touches[0].pageY;
+                mouse_state.x = e.touches[0].pageX - rect.left;
+                mouse_state.y = e.touches[0].pageY - rect.top;
 
                 if (!mouse_state.left)
                     mouse_state.left = 1;
             } else if (touch_digits == 2) {
-                let p1 = { x: e.touches[0].pageX, y: e.touches[0].pageY };
-                let p2 = { x: e.touches[1].pageX, y: e.touches[1].pageY };
+                let p1 = { x: e.touches[0].pageX - rect.left, y: e.touches[0].pageY - rect.top };
+                let p2 = { x: e.touches[1].pageX - rect.left, y: e.touches[1].pageY - rect.top };
 
                 mouse_state.x = (p1.x + p2.x) / 2;
                 mouse_state.y = (p1.y + p2.y) / 2;
@@ -217,26 +313,31 @@ function AppRunner(canvas, update, draw) {
                 }
             }
 
-            if (e.type == 'touchstart') {
+            mouse_state.contact = true;
+
+            if (e.type == 'touchmove') {
+                skip_clicks = 1;
+                mouse_state.moving = true;
+            } else {
                 touch_start = {
                     x: mouse_state.x,
                     y: mouse_state.y,
                     counter: update_counter
                 };
+
+                mouse_state.moving = false;
             }
         } else if (e.type == 'touchend') {
             if (touch_start == null)
                 return;
 
-            // Was it a click?
+            mouse_state.contact = false;
+
             if (touch_digits == 1) {
-                if (distance(mouse_state, touch_start) >= 2 ||
-                        update_counter - touch_start.counter < 3) {
-                    mouse_state.left = 0;
-                } else {
-                    mouse_state.left = -1;
-                }
+                mouse_state.left = skip_clicks ? 0 : -1;
+                mouse_state.moving = false;
             }
+            skip_clicks = 0;
 
             touch_start = null;
             touch_distance = null;
@@ -282,9 +383,13 @@ function AppRunner(canvas, update, draw) {
             while (updates >= 0) {
                 updates--;
 
+                Object.assign(mouse_mirror, mouse_state);
+
                 updateUI();
-                update();
+                self.update();
                 update_counter++;
+
+                Object.assign(mouse_state, mouse_mirror);
 
                 for (let key in pressed_keys) {
                     if (pressed_keys[key])
@@ -304,19 +409,22 @@ function AppRunner(canvas, update, draw) {
                 }
                 old_sources = new_sources;
                 new_sources = new Map;
+
+                ignore_new_cursor = false;
             }
         });
 
         draw_time = measurePerf(draw_times, () => {
-            draw();
+            self.draw();
             drawUI();
             draw_counter++;
         });
 
-        switch (cursor) {
-            case 'default': { document.body.style.cursor = 'default'; } break;
-            case 'pointer': { document.body.style.cursor = 'pointer'; } break;
-            case 'crosshair': { document.body.style.cursor = 'url("assets/ui/crosshair.png") 8 8, crosshair'; } break;
+        canvas.style.cursor = cursor;
+
+        if (idle_timeout && performance.now() - last_event >= idle_timeout) {
+            is_idle = true;
+            return;
         }
 
         window.requestAnimationFrame(loop);
@@ -446,6 +554,18 @@ function AppRunner(canvas, update, draw) {
             ctx.restore();
         }
     }
+
+    this.wakeUp = function() {
+        if (!idle_timeout)
+            return;
+
+        last_event = performance.now();
+
+        if (is_idle) {
+            is_idle = false;
+            window.requestAnimationFrame(loop);
+        }
+    };
 
     // ------------------------------------------------------------------------
     // Widgets
@@ -601,17 +721,6 @@ function AppRunner(canvas, update, draw) {
     this.playOnce = function(asset, start = true) {
         playSound(asset, { loop: false, start: start });
     };
-
-    // JS should have this!
-    function clamp(value, min, max) {
-        if (value > max) {
-            return max;
-        } else if (value < min) {
-            return min;
-        } else {
-            return value;
-        }
-    }
 
     function distance(p1, p2) {
         let dx = p1.x - p2.x;

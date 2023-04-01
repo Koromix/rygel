@@ -17,10 +17,12 @@ import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
 import { util, log, net } from '../../../web/libjs/util.js';
 import { ui } from '../lib/ui.js';
 import parse from '../lib/parse.js';
+import { AppRunner } from '../../../web/libcanvas/runner.js';
 import { FastMap } from '../../../web/libcanvas/fastmap.js';
 
 let provider = null;
 
+let runner;
 let map;
 let map_markers = [];
 
@@ -42,11 +44,15 @@ export async function start(prov, options = {}) {
 
     let canvas = document.querySelector('#map');
 
+    runner = new AppRunner(canvas);
+    map = new FastMap(runner);
+
     // Set up map
-    map = new FastMap(canvas);
-    map.start(ENV.map);
+    map.init(ENV.map);
     map.setMarkers('Etablissements', map_markers);
     map.move(options.latitude, options.longitude, options.zoom);
+
+    runner.start();
 
     profile = await net.get('api/admin/profile') || {};
 
