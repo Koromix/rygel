@@ -213,7 +213,7 @@ function TileMap(runner) {
 
         state.zoom += delta;
 
-        stopFetches();
+        stopFetchers();
     }
 
     function getViewport() {
@@ -338,9 +338,40 @@ function TileMap(runner) {
             ctx.restore();
         }
 
-        if (!missing_assets)
-            stopFetches();
+        if (missing_assets) {
+            let start = Math.min(fetch_queue.length, MAX_FETCHERS - active_fetchers);
+
+            for (let i = 0; i < start; i++)
+                startFetcher();
+        } else {
+            stopFetchers();
+        }
     };
+
+    async function startFetcher() {
+        active_fetchers++;
+
+        while (fetch_queue.length) {
+            let idx = util.getRandomInt(0, fetch_queue.length);
+            let [handle] = fetch_queue.splice(idx, 1);
+
+            fetch_handles.set(handle.url, handle);
+
+            try {
+                let img = await fetchImage(handle);
+
+                handle.cache.set(handle.url, img);
+                runner.busy();
+            } catch (err) {
+                if (err != null)
+                    console.error(err);
+            } finally {
+                fetch_handles.delete(handle.url);
+            }
+        }
+
+        active_fetchers--;
+    }
 
     function adaptMarkerSize(size, zoom) {
         if (zoom >= 7) {
@@ -431,40 +462,14 @@ function TileMap(runner) {
             if (fetch_handles.has(url))
                 return null;
 
-            fetch_queue.push(url);
+            let handle = {
+                valid: true,
+                cache: cache,
+                url: url,
+                img: null
+            };
 
-            if (active_fetchers < MAX_FETCHERS) {
-                let run_fetcher = async function() {
-                    active_fetchers++;
-
-                    while (fetch_queue.length) {
-                        let url = fetch_queue.pop();
-
-                        let handle = {
-                            url: url,
-                            img: null
-                        };
-
-                        fetch_handles.set(url, handle);
-
-                        try {
-                            let img = await fetchImage(handle);
-
-                            cache.set(url, img);
-                            runner.busy();
-                        } catch (err) {
-                            if (err != null)
-                                console.error(err);
-                        } finally {
-                            fetch_handles.delete(url);
-                        }
-                    }
-
-                    active_fetchers--;
-                };
-
-                run_fetcher();
-            }
+            fetch_queue.push(handle);
         }
 
         return img;
@@ -489,14 +494,14 @@ function TileMap(runner) {
         let img = await new Promise((resolve, reject) => {
             let img = new Image();
 
-            if (handle.url == null) {
+            if (!handle.valid) {
                 reject(null);
                 return;
             }
 
             img.onload = () => resolve(img);
             img.onerror = () => {
-                if (handle.url == null)
+                if (!handle.valid)
                     reject(null);
 
                 reject(new Error(`Failed to load texture '${handle.url}'`));
@@ -515,11 +520,11 @@ function TileMap(runner) {
         return img;
     }
 
-    function stopFetches() {
+    function stopFetchers() {
         fetch_queue.length = 0;
 
         for (let handle of fetch_handles.values()) {
-            handle.url = null;
+            handle.valid = false;
 
             if (handle.img != null)
                 handle.img.setAttribute('src', '');
