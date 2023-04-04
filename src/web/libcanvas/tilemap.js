@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import { util, LruMap } from '../libjs/util.js';
+import { util, net, LruMap } from '../libjs/util.js';
 
 function TileMap(runner) {
     let self = this;
@@ -404,6 +404,9 @@ function TileMap(runner) {
     }
 
     function getImage(map, url, fetch = true) {
+        if (typeof url != 'string')
+            return url;
+
         let img = map.get(url);
 
         if (img == null && fetch) {
@@ -421,7 +424,7 @@ function TileMap(runner) {
                         let url = fetch_queue.pop();
 
                         try {
-                            let img = await runner.loadTexture(url);
+                            let img = await net.loadImage(url, true);
 
                             map.set(url, img);
                             runner.busy();

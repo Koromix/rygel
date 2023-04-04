@@ -30,16 +30,36 @@ import { util, log, net } from '../../../../web/libjs/util.js';
 import { ui } from '../../lib/ui.js';
 import { start, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
+const ICONS = {
+    dual: 'static/icons/dual.png',
+    demheter: 'static/icons/demheter.png',
+    ect: 'static/icons/ect.png',
+    psychologist: 'static/icons/psychologist.png'
+};
+
 function DemheterProvider() {
     let etablissements;
 
+    let icons = {};
+
     this.loadMap = async function() {
-        let json = await net.get('api/entries');
+        let [data, images] = await Promise.all([
+            net.get('api/entries'),
+            Promise.all(Object.values(ICONS).map(url => net.loadImage(url, true)))
+        ]);
 
         etablissements = [
-            ...json.psychologues.rows.map(psy => ({ type: 'Psychologue', ...psy })),
-            ...json.centres.rows.map(centre => ({ type: 'Centre', ...centre }))
+            ...data.psychologues.rows.map(psy => ({ type: 'Psychologue', ...psy })),
+            ...data.centres.rows.map(centre => ({ type: 'Centre', ...centre }))
         ];
+
+        // We've preloaded images
+        {
+            let keys = Object.keys(ICONS);
+
+            for (let i = 0; i < keys.length; i++)
+                icons[keys[i]] = images[i];
+        }
     };
 
     this.renderFilters = function() {
@@ -108,14 +128,14 @@ function DemheterProvider() {
     function getEtabIcon(etab) {
         if (etab.type == 'Centre') {
             if (etab.demheter && etab.ect) {
-                return 'static/icons/dual.png';
+                return icons.dual;
             } else if (etab.demheter) {
-                return 'static/icons/demheter.png';
+                return icons.demheter;
             } else if (etab.ect) {
-                return 'static/icons/ect.png';
+                return icons.ect;
             }
         } else if (etab.type === 'Psychologue') {
-            return 'static/icons/psychologist.png';
+            return icons.psychologist;
         }
 
         return null;

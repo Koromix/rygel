@@ -18,17 +18,35 @@ import { ui } from '../../lib/ui.js';
 import parse from '../../lib/parse.js';
 import { start, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
+const ICONS = {
+    crp: 'static/icons/crp.png',
+    misc: 'static/icons/misc.png'
+};
+
 function Cn2rProvider() {
     let etablissements;
     let fields;
 
+    let icons = {};
+
     this.loadMap = async function() {
-        let data = await net.get('api/entries/etablissements');
+        let [data, images] = await Promise.all([
+            net.get('api/entries/etablissements'),
+            Promise.all(Object.values(ICONS).map(url => net.loadImage(url, true)))
+        ]);
 
         etablissements = data.rows;
         fields = data.fields;
 
         etablissements.sort((etab1, etab2) => !!etab1.etab_crp - !!etab2.etab_crp);
+
+        // We've preloaded images
+        {
+            let keys = Object.keys(ICONS);
+
+            for (let i = 0; i < keys.length; i++)
+                icons[keys[i]] = images[i];
+        }
     }
 
     this.renderFilters = function() {
@@ -103,14 +121,14 @@ function Cn2rProvider() {
                         marker = {
                             latitude: etab.address.latitude,
                             longitude: etab.address.longitude,
-                            icon: 'static/icons/crp.png',
+                            icon: icons.crp,
                             size: 48,
                         };
                     } else {
                         marker = {
                             latitude: etab.address.latitude,
                             longitude: etab.address.longitude,
-                            icon: 'static/icons/misc.png',
+                            icon: icons.misc,
                             size: 40
                         };
                     }

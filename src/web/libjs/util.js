@@ -839,6 +839,33 @@ const net = new function() {
         });
     };
 
+    this.loadImage = async function(url, texture = false) {
+        let img = await new Promise((resolve, reject) => {
+            let img = new Image();
+
+            img.src = url;
+            img.crossOrigin = 'anonymous';
+
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error(`Failed to load texture '${url}'`));
+        });
+
+        // Fix latency spikes caused by image decoding
+        if (texture && typeof createImageBitmap != 'undefined')
+            img = await createImageBitmap(img);
+
+        return img;
+    };
+
+    this.loadSound = async function(url) {
+        let response = await net.fetch(url);
+
+        let buf = await response.arrayBuffer();
+        let sound = await audio.decodeAudioData(buf);
+
+        return sound;
+    };
+
     this.setOnline = function(online2) {
         if (online2 !== online) {
             online = online2;

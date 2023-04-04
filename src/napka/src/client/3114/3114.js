@@ -38,16 +38,29 @@ function PpnpsProvider() {
 
     let ignore_refresh = false;
 
-    this.loadMap = async function() {
-        etablissements = await net.get('api/entries/commun');
-        etablissements = etablissements.rows;
+    let icons = {};
 
+    this.loadMap = async function() {
+        let [data, images] = await Promise.all([
+            net.get('api/entries/commun'),
+            Promise.all(Object.values(ICONS).map(url => net.loadImage(url, true)))
+        ]);
+
+        etablissements = data.rows;
         etablissements.sort((etab1, etab2) => {
             let wide1 = (etab1.rayon != null && etab1.rayon.startsWith('France'));
             let wide2 = (etab2.rayon != null && etab2.rayon.startsWith('France'));
 
             return wide1 - wide2;
         });
+
+        // We've preloaded images
+        {
+            let keys = Object.keys(ICONS);
+
+            for (let i = 0; i < keys.length; i++)
+                icons[keys[i]] = images[i];
+        }
     };
 
     this.renderFilters = function() {
@@ -236,12 +249,12 @@ function PpnpsProvider() {
 
                 if (filters.every(filtre => filtre(etab))) {
                     let wide = etab.rayon != null && etab.rayon.startsWith('France');
-                    let icon = ICONS[etab.categorie];
+                    let icon = icons[etab.categorie];
 
                     if (icon == null) {
                         if (etab.categorie != null)
                             console.error('Missing icon', etab.categorie);
-                        icon = ICONS['Non connu'];
+                        icon = icons['Non connu'];
                     }
 
                     let marker = {
