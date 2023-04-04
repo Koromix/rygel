@@ -34,14 +34,14 @@ function transformValues(values) {
 }
 
 module.exports = {
-    html: html,
-    svg: svg,
-    render: render,
-    noChange: noChange,
-    nothing: nothing,
-    directive: directive,
-    Directive: Directive,
-    guard: guard,
-    live: live,
-    until: until
+    html,
+    svg,
+    render,
+    noChange,
+    nothing,
+    directive,
+    Directive,
+    guard,
+    live,
+    until
 };
