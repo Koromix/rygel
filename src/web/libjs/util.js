@@ -898,8 +898,11 @@ function LruMap(limit) {
     let self = this;
 
     let map = {};
+    let size = 0;
 
-    this.size = 0;
+    Object.defineProperties(this, {
+        size: { get: () => size, enumerable: true }
+    });
 
     let root_bucket = {
         prev: null,
@@ -931,7 +934,7 @@ function LruMap(limit) {
                 link(bucket);
             }
         } else {
-            if (self.size >= limit)
+            if (size >= limit)
                 deleteBucket(root_bucket.next);
 
             bucket = {
@@ -943,7 +946,7 @@ function LruMap(limit) {
 
             map[key] = bucket;
             link(bucket);
-            self.size++;
+            size++;
         }
     };
 
@@ -956,7 +959,7 @@ function LruMap(limit) {
     function deleteBucket(bucket) {
         unlink(bucket);
         delete map[bucket.key];
-        self.size--;
+        size--;
     }
 
     this.get = function(key) {
@@ -987,7 +990,7 @@ function LruMap(limit) {
         root_bucket.next = root_bucket;
 
         map = {};
-        self.size = 0;
+        size = 0;
     };
 
     this.entries = function*() {
