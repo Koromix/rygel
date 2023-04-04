@@ -376,11 +376,11 @@ function TileMap(runner) {
                 ctx.drawImage(tile, tiles.tilesize / factor * (i % factor), tiles.tilesize / factor * (j % factor),
                                     tiles.tilesize / factor, tiles.tilesize / factor,
                                     x, y, tiles.tilesize, tiles.tilesize);
-                return;
+                break;
             }
         }
 
-        // Last restort, try zoomed in tiles (could be partial)
+        // Also put in zoomed in tiles (could be partial)
         for (let out = 1; out < 5; out++) {
             if (state.zoom + out > tiles.max_zoom)
                 break;
