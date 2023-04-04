@@ -37,8 +37,8 @@ function TileMap(runner) {
     let active_fetchers = 0;
     let fetch_queue = [];
 
-    let known_tiles = new LruMap(1024);
-    let marker_textures = new LruMap(64);
+    let known_tiles = new LruMap(256);
+    let marker_textures = new LruMap(32);
 
     Object.defineProperties(this, {
         width: { get: () => canvas.width, enumerable: true },
@@ -249,18 +249,14 @@ function TileMap(runner) {
             ctx.scale(scale, scale);
             ctx.translate(-state.pos.x + adjust.x, -state.pos.y + adjust.y);
 
-            let i1 = Math.floor(viewport.x1 / tiles.tilesize) - 1;
-            let j1 = Math.floor(viewport.y1 / tiles.tilesize) - 1;
-            let i2 = Math.floor(viewport.x2 / tiles.tilesize) + 1;
-            let j2 = Math.floor(viewport.y2 / tiles.tilesize) + 1;
+            let i1 = Math.floor(viewport.x1 / tiles.tilesize) - (zoom_animation != null);
+            let j1 = Math.floor(viewport.y1 / tiles.tilesize) - (zoom_animation != null);
+            let i2 = Math.ceil(viewport.x2 / tiles.tilesize) + (zoom_animation != null);
+            let j2 = Math.ceil(viewport.y2 / tiles.tilesize) + (zoom_animation != null);
 
             for (let i = i1; i <= i2; i++) {
-                for (let j = j1; j < j2; j++) {
-                    let x = i * tiles.tilesize;
-                    let y = j * tiles.tilesize;
-
-                    drawTile(origin, i, j, x, y);
-                }
+                for (let j = j1; j < j2; j++)
+                    drawTile(origin, i, j);
             }
 
             ctx.restore();
@@ -336,7 +332,10 @@ function TileMap(runner) {
         }
     }
 
-    function drawTile(origin, i, j, x, y) {
+    function drawTile(origin, i, j) {
+        let x = Math.floor(i * tiles.tilesize);
+        let y = Math.floor(j * tiles.tilesize);
+
         // Start with appropriate tile (if any)
         {
             let tile = getTile(state.zoom, i, j);
