@@ -173,6 +173,10 @@ function TileMap(runner) {
             if (size >= canvas.height)
                 state.pos.y = util.clamp(state.pos.y, canvas.height / 2, size - canvas.height / 2);
         }
+
+        // Fix rounding issues
+        state.pos.x = Math.floor(state.pos.x);
+        state.pos.y = Math.floor(state.pos.y);
     };
 
     function zoom(delta, at) {
@@ -245,7 +249,7 @@ function TileMap(runner) {
         {
             ctx.save();
 
-            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.translate(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2));
             ctx.scale(scale, scale);
             ctx.translate(-state.pos.x + adjust.x, -state.pos.y + adjust.y);
 
@@ -281,8 +285,8 @@ function TileMap(runner) {
                             y: pos.y - canvas.height / 2
                         };
 
-                        pos.x = canvas.width / 2 + scale * (centered.x + adjust.x);
-                        pos.y = canvas.height / 2 + scale * (centered.y + adjust.y);
+                        pos.x = Math.round(canvas.width / 2 + scale * (centered.x + adjust.x));
+                        pos.y = Math.round(canvas.height / 2 + scale * (centered.y + adjust.y));
                     }
 
                     if (pos.x < -marker.size || pos.x > canvas.width + marker.size)
