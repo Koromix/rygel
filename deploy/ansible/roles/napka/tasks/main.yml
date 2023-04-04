@@ -77,6 +77,7 @@
     group: napka
     mode: '0755'
   loop:
+    - '{{ napka_root_path }}/cache'
     - '{{ napka_root_path }}/databases'
     - '{{ napka_root_path }}/builds/{{ napka_name }}'
   become: yes

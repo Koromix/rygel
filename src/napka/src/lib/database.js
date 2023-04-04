@@ -15,7 +15,7 @@ const path = require('path');
 const sqlite3 = require('better-sqlite3');
 
 const DATABASE = path.resolve(__dirname + '/../..', process.env.DATABASE || 'data/napka.db');
-const SCHEMA = 14;
+const SCHEMA = 15;
 
 function open(options = {}) {
     let db = sqlite3(DATABASE, options);
@@ -569,7 +569,13 @@ function migrate(db, version) {
                         type TEXT NOT NULL
                     );
                 `);
-            }
+            } // fallthrough
+
+            case 14: {
+                db.exec(`
+                    DROP TABLE tiles;
+                `);
+            } // fallthrough
         }
 
         db.pragma('user_version = ' + SCHEMA);

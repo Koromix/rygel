@@ -21,6 +21,7 @@ const esbuild = require('esbuild');
 const nunjucks = require('nunjucks');
 const fetch = require('node-fetch');
 
+const cache = require('../lib/cache.js');
 const database = require('../lib/database.js');
 const map = require('./map.js');
 const session = require('./session.js');
@@ -89,7 +90,9 @@ function main() {
     }
 
     let app = express();
+
     let db = database.open();
+    let cache_db = cache.open();
 
     app.enable('strict routing');
 
@@ -136,7 +139,7 @@ function main() {
         app.route('/' + it.name + '/api/admin/delete').post((req, res) => map.deleteEntry(db, req, res));
 
         // Tiles API
-        app.route('/' + it.name + '/tiles/:z/:x/:y').get((req, res) => relayTile(db, req, res));
+        app.route('/' + it.name + '/tiles/:z/:x/:y').get((req, res) => relayTile(cache_db, req, res));
     }
 
     app.listen(PORT, () => {
