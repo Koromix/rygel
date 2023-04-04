@@ -417,6 +417,8 @@ function AppRunner(canvas) {
         });
 
         draw_time = measurePerf(draw_times, () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             handle_draw();
             drawUI();
             draw_counter++;

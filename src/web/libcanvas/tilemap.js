@@ -363,8 +363,6 @@ function TileMap(runner) {
             }
         }
 
-        ctx.clearRect(x, y, tiles.tilesize, tiles.tilesize);
-
         // Last restort, try zoomed in tiles (could be partial)
         for (let out = 1; out < 5; out++) {
             if (state.zoom + out > tiles.max_zoom)
