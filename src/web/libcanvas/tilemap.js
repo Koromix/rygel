@@ -13,7 +13,7 @@
 
 import { util, LruMap } from '../libjs/util.js';
 
-function FastMap(runner) {
+function TileMap(runner) {
     let self = this;
 
     // Shortcuts
@@ -30,6 +30,8 @@ function FastMap(runner) {
     const MAX_FETCHERS = 8;
 
     let state = null;
+
+    let zoom_animation = null;
 
     let missing_assets = 0;
     let active_fetchers = 0;
@@ -73,7 +75,9 @@ function FastMap(runner) {
             state.zoom = zoom;
         state.pos = latLongToXY(lat, lng, state.zoom);
 
-        runner.wakeUp();
+        zoom_animation = null;
+
+        runner.busy();
     };
 
     this.setMarkers = function(key, markers) {
@@ -90,6 +94,18 @@ function FastMap(runner) {
     this.update = function() {
         if (ctx == null)
             return;
+
+        // Animate zoom
+        if (zoom_animation != null) {
+            let t = (runner.updateCounter - zoom_animation.start) / 12;
+
+            if (t < 1) {
+                zoom_animation.value = zoom_animation.from + t * (zoom_animation.to - zoom_animation.from);
+                runner.busy();
+            } else {
+                zoom_animation = null;
+            }
+        }
 
         // Detect what we're pointing at (if anything)
         let target = null;
@@ -175,6 +191,21 @@ function FastMap(runner) {
             }
         }
 
+        if (zoom_animation == null) {
+            zoom_animation = {
+                start: null,
+                from: state.zoom,
+                to: null,
+                value: state.zoom,
+                at: null
+            };
+        } else {
+            zoom_animation.from = zoom_animation.value;
+        }
+        zoom_animation.start = runner.updateCounter;
+        zoom_animation.to = state.zoom + delta;
+        zoom_animation.at = { x: at.x, y: at.y };
+
         state.zoom += delta;
     }
 
@@ -198,10 +229,25 @@ function FastMap(runner) {
         fetch_queue.length = 0;
         missing_assets = 0;
 
+        let adjust = { x: 0, y: 0 };
+        let scale = 1;
+
+        if (zoom_animation != null) {
+            let delta = Math.pow(2, state.zoom - zoom_animation.value) - 1;
+
+            adjust.x = delta * (zoom_animation.at.x - canvas.width / 2);
+            adjust.y = delta * (zoom_animation.at.y - canvas.height / 2);
+
+            scale = Math.pow(2, zoom_animation.value - state.zoom);
+        }
+
         // Draw tiles
         {
             ctx.save();
-            ctx.translate(-viewport.x1, -viewport.y1);
+
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.scale(scale, scale);
+            ctx.translate(-state.pos.x + adjust.x, -state.pos.y + adjust.y);
 
             let i1 = Math.floor(viewport.x1 / tiles.tilesize) - 1;
             let j1 = Math.floor(viewport.y1 / tiles.tilesize) - 1;
@@ -232,6 +278,16 @@ function FastMap(runner) {
             for (let markers of Object.values(marker_groups)) {
                 for (let marker of markers) {
                     let pos = self.coordToScreen(marker.latitude, marker.longitude);
+
+                    if (zoom_animation != null) {
+                        let centered = {
+                            x: pos.x - canvas.width / 2,
+                            y: pos.y - canvas.height / 2
+                        };
+
+                        pos.x = canvas.width / 2 + scale * (centered.x + adjust.x);
+                        pos.y = canvas.height / 2 + scale * (centered.y + adjust.y);
+                    }
 
                     if (pos.x < -marker.size || pos.x > canvas.width + marker.size)
                         continue;
@@ -367,7 +423,7 @@ function FastMap(runner) {
                             let img = await runner.loadTexture(url);
 
                             map.set(url, img);
-                            runner.wakeUp();
+                            runner.busy();
                         } catch (err) {
                             console.error(err);
                         }
@@ -455,5 +511,5 @@ function FastMap(runner) {
 }
 
 module.exports = {
-    FastMap
+    TileMap
 };

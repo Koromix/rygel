@@ -18,7 +18,7 @@ import { util, log, net } from '../../../web/libjs/util.js';
 import { ui } from '../lib/ui.js';
 import parse from '../lib/parse.js';
 import { AppRunner } from '../../../web/libcanvas/runner.js';
-import { FastMap } from '../../../web/libcanvas/fastmap.js';
+import { TileMap } from '../../../web/libcanvas/tilemap.js';
 
 let provider = null;
 
@@ -45,12 +45,15 @@ export async function start(prov, options = {}) {
     let canvas = document.querySelector('#map');
 
     runner = new AppRunner(canvas);
-    map = new FastMap(runner);
+    map = new TileMap(runner);
 
     // Set up map
     map.init(ENV.map);
     map.setMarkers('Etablissements', map_markers);
     map.move(options.latitude, options.longitude, options.zoom);
+
+    runner.onUpdate = map.update;
+    runner.onDraw = map.draw;
 
     runner.idleTimeout = 1000;
     runner.start();
@@ -274,7 +277,7 @@ export function refreshMap() {
 
     map_markers.push(...markers);
 
-    runner.wakeUp();
+    runner.busy();
 }
 
 function handlePopupClick(e) {

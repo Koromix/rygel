@@ -23,7 +23,8 @@ function AppRunner(canvas) {
     let prev_timestamp = 0;
 
     let idle_timeout = 0;
-    let last_event = 0;
+    let run_next = false;
+    let run_until = 0;
     let is_idle = false;
 
     let updates = 0;
@@ -186,7 +187,7 @@ function AppRunner(canvas) {
 
     function handleKeyEvent(e) {
         canvas.focus();
-        self.wakeUp();
+        self.busy();
 
         if (e.repeat)
             return;
@@ -215,7 +216,7 @@ function AppRunner(canvas) {
 
     function handleMouseEvent(e) {
         canvas.focus();
-        self.wakeUp();
+        self.busy();
 
         let rect = canvas.getBoundingClientRect();
 
@@ -267,7 +268,7 @@ function AppRunner(canvas) {
 
     function handleTouchEvent(e) {
         canvas.focus();
-        self.wakeUp();
+        self.busy();
 
         let rect = canvas.getBoundingClientRect();
 
@@ -423,10 +424,13 @@ function AppRunner(canvas) {
 
         canvas.style.cursor = cursor;
 
-        if (idle_timeout && performance.now() - last_event >= idle_timeout) {
-            is_idle = true;
-            return;
+        if (idle_timeout && !run_next) {
+            if (performance.now() > run_until) {
+                is_idle = true;
+                return;
+            }
         }
+        run_next = false;
 
         window.requestAnimationFrame(loop);
     }
@@ -556,11 +560,12 @@ function AppRunner(canvas) {
         }
     }
 
-    this.wakeUp = function() {
+    this.busy = function() {
         if (!idle_timeout)
             return;
 
-        last_event = performance.now();
+        run_until = performance.now() + idle_timeout;
+        run_next = true;
 
         if (is_idle) {
             is_idle = false;
