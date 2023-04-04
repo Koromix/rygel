@@ -36,6 +36,7 @@ function TileMap(runner) {
     let missing_assets = 0;
     let active_fetchers = 0;
     let fetch_queue = [];
+    let fetch_images = [];
 
     let known_tiles = new LruMap(256);
     let marker_textures = new LruMap(32);
@@ -76,8 +77,6 @@ function TileMap(runner) {
         state.pos = latLongToXY(lat, lng, state.zoom);
 
         zoom_animation = null;
-
-        fetch_queue.length = 0;
 
         runner.busy();
     };
@@ -214,7 +213,7 @@ function TileMap(runner) {
 
         state.zoom += delta;
 
-        fetch_queue.length = 0;
+        stopFetches();
     }
 
     function getViewport() {
@@ -329,7 +328,7 @@ function TileMap(runner) {
         }
 
         if (!missing_assets)
-            fetch_queue.length = 0;
+            stopFetches();
     };
 
     function adaptMarkerSize(size, zoom) {
@@ -428,12 +427,13 @@ function TileMap(runner) {
                         let url = fetch_queue.pop();
 
                         try {
-                            let img = await net.loadImage(url, true);
+                            let img = await fetchImage(url);
 
                             map.set(url, img);
                             runner.busy();
                         } catch (err) {
-                            console.error(err);
+                            if (err != null)
+                                console.error(err);
                         }
                     }
 
@@ -460,6 +460,48 @@ function TileMap(runner) {
         });
 
         return ret;
+    }
+
+    async function fetchImage(url) {
+        let img = await new Promise((resolve, reject) => {
+            let img = new Image();
+
+            img.src = url;
+            img.crossOrigin = 'anonymous';
+
+            img.onload = () => {
+                cleanup();
+                resolve(img);
+            };
+            img.onerror = () => {
+                cleanup();
+
+                if (img.src != url)
+                    reject(null);
+
+                reject(new Error(`Failed to load texture '${url}'`));
+            };
+
+            fetch_images.push(img);
+
+            function cleanup() {
+                let idx = fetch_images.indexOf(img);
+                fetch_images.splice(idx, 1);
+            }
+        });
+
+        // Fix latency spikes caused by image decoding
+        if (typeof createImageBitmap != 'undefined')
+            img = await createImageBitmap(img);
+
+        return img;
+    }
+
+    function stopFetches() {
+        fetch_queue.length = 0;
+
+        for (let img of fetch_images)
+            img.setAttribute('src', '');
     }
 
     function latLongToXY(latitude, longitude, zoom) {
