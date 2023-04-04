@@ -52,7 +52,7 @@ export async function start(prov, options = {}) {
     map.setMarkers('Etablissements', map_markers);
     map.move(options.latitude, options.longitude, options.zoom);
 
-    runner.idle_timeout = 1000;
+    runner.idleTimeout = 1000;
     runner.start();
 
     profile = await net.get('api/admin/profile') || {};

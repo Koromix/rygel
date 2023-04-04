@@ -37,6 +37,10 @@ function AppRunner(canvas) {
     let draw_times = [];
     let draw_time = 0;
 
+    let handle_update = null;
+    let handle_draw = null;
+    let handle_context_menu = null;
+
     let touch_digits = -1;
     let touch_start = null;
     let touch_distance = 0;
@@ -81,13 +85,18 @@ function AppRunner(canvas) {
     Object.defineProperties(this,  {
         canvas: { value: canvas, writable: false, enumerable: true },
         ctx: { value: ctx, writable: false, enumerable: true },
-        pressed_keys: { value: pressed_keys, writable: false, enumerable: true },
-        mouse_state: { value: mouse_state, writable: false, enumerable: true },
 
-        idle_timeout: { get: () => idle_timeout, set: value => { idle_timeout = value; }, enumerable: true },
+        onUpdate: { get: () => handle_draw, set: func => { handle_update = func; }, enumerable: true },
+        onDraw: { get: () => handle_draw, set: func => { handle_draw = func; }, enumerable: true },
+        onContextMenu: { get: () => handle_draw, set: func => { handle_context_menu = func; }, enumerable: true },
 
-        update_counter: { get: () => update_counter, enumerate: true },
-        draw_counter: { get: () => draw_counter, enumerate: true },
+        pressedKeys: { value: pressed_keys, writable: false, enumerable: true },
+        mouseState: { value: mouse_state, writable: false, enumerable: true },
+
+        idleTimeout: { get: () => idle_timeout, set: value => { idle_timeout = value; }, enumerable: true },
+
+        updateCounter: { get: () => update_counter, enumerate: true },
+        drawCounter: { get: () => draw_counter, enumerate: true },
 
         cursor: {
             get: () => cursor,
@@ -101,26 +110,18 @@ function AppRunner(canvas) {
     });
 
     // ------------------------------------------------------------------------
-    // Client functions
-    // ------------------------------------------------------------------------
-
-    this.update = null;
-    this.draw = null;
-    this.context = null;
-
-    // ------------------------------------------------------------------------
     // Init
     // ------------------------------------------------------------------------
 
     this.start = async function() {
         canvas.addEventListener('contextmenu', e => {
-            if (self.context == null)
+            if (handle_context_menu == null)
                 return;
 
             let rect = canvas.getBoundingClientRect();
             let at = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
-            self.context(at);
+            handle_context_menu(at);
 
             e.preventDefault();
         });
@@ -386,7 +387,7 @@ function AppRunner(canvas) {
                 Object.assign(mouse_mirror, mouse_state);
 
                 updateUI();
-                self.update();
+                handle_update();
                 update_counter++;
 
                 Object.assign(mouse_state, mouse_mirror);
@@ -415,7 +416,7 @@ function AppRunner(canvas) {
         });
 
         draw_time = measurePerf(draw_times, () => {
-            self.draw();
+            handle_draw();
             drawUI();
             draw_counter++;
         });
@@ -472,7 +473,7 @@ function AppRunner(canvas) {
                        mouse_state.x <= btn.x + btn.width &&
                        mouse_state.y >= btn.y &&
                        mouse_state.y <= btn.y + btn.height;
-            apply_over &= !btn.over;
+            apply_over &&= !btn.over;
         }
 
         prev_widgets = new_widgets;

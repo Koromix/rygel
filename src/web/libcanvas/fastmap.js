@@ -19,8 +19,8 @@ function FastMap(runner) {
     // Shortcuts
     let canvas = runner.canvas;
     let ctx = runner.ctx;
-    let mouse_state = runner.mouse_state;
-    let pressed_keys = runner.pressed_keys;
+    let mouse_state = runner.mouseState;
+    let pressed_keys = runner.pressedKeys;
 
     let tiles = null;
 
@@ -51,11 +51,6 @@ function FastMap(runner) {
     });
 
     this.init = async function(config) {
-        if (runner.update == null)
-            runner.update = self.update;
-        if (runner.draw == null)
-            runner.draw = self.draw;
-
         tiles = Object.assign({
             min_zoom: 1
         }, config);
@@ -183,20 +178,22 @@ function FastMap(runner) {
         state.zoom += delta;
     }
 
-    function getOrigin() {
-        let origin = {
-            x: Math.floor(state.pos.x - canvas.width / 2),
-            y: Math.floor(state.pos.y - canvas.height / 2)
+    function getViewport() {
+        let viewport = {
+            x1: Math.floor(state.pos.x - canvas.width / 2),
+            y1: Math.floor(state.pos.y - canvas.height / 2),
+            x2: Math.ceil(state.pos.x + canvas.width / 2),
+            y2: Math.floor(state.pos.y + canvas.height / 2)
         };
 
-        return origin;
+        return viewport;
     }
 
     this.draw = function() {
         if (ctx == null)
             return;
 
-        let origin = getOrigin();
+        let viewport = getViewport();
 
         fetch_queue.length = 0;
         missing_assets = 0;
@@ -204,22 +201,19 @@ function FastMap(runner) {
         // Draw tiles
         {
             ctx.save();
+            ctx.translate(-viewport.x1, -viewport.y1);
 
-            let adjust = {
-                x: -(origin.x % tiles.tilesize),
-                y: -(origin.y % tiles.tilesize)
-            };
+            let i1 = Math.floor(viewport.x1 / tiles.tilesize) - 1;
+            let j1 = Math.floor(viewport.y1 / tiles.tilesize) - 1;
+            let i2 = Math.floor(viewport.x2 / tiles.tilesize) + 1;
+            let j2 = Math.floor(viewport.y2 / tiles.tilesize) + 1;
 
-            if (origin.x < 0 && adjust.x)
-                adjust.x -= tiles.tilesize;
-            if (origin.y < 0 && adjust.y)
-                adjust.y -= tiles.tilesize;
+            for (let i = i1; i <= i2; i++) {
+                for (let j = j1; j < j2; j++) {
+                    let x = i * tiles.tilesize;
+                    let y = j * tiles.tilesize;
 
-            ctx.translate(adjust.x, adjust.y);
-
-            for (let x = 0; x < canvas.width + tiles.tilesize; x += tiles.tilesize) {
-                for (let y = 0; y < canvas.height + tiles.tilesize; y += tiles.tilesize) {
-                    drawTile(origin, x, y);
+                    drawTile(origin, i, j, x, y);
                 }
             }
 
@@ -276,8 +270,6 @@ function FastMap(runner) {
 
         if (!missing_assets)
             fetch_queue.length = 0;
-
-        ctx.restore();
     };
 
     function adaptMarkerSize(size, zoom) {
@@ -288,10 +280,7 @@ function FastMap(runner) {
         }
     }
 
-    function drawTile(origin, x, y) {
-        let i = Math.floor((x + origin.x) / tiles.tilesize);
-        let j = Math.floor((y + origin.y) / tiles.tilesize);
-
+    function drawTile(origin, i, j, x, y) {
         // Start with appropriate tile (if any)
         {
             let tile = getTile(state.zoom, i, j);
@@ -430,18 +419,16 @@ function FastMap(runner) {
     }
 
     this.coordToScreen = function(latitude, longitude) {
-        let origin = getOrigin();
+        let viewport = getViewport();
         let pos = latLongToXY(latitude, longitude, state.zoom);
 
-        pos.x -= origin.x;
-        pos.y -= origin.y;
+        pos.x -= viewport.x1;
+        pos.y -= viewport.y1;
 
         return pos;
     };
 
     this.screenToCoord = function(pos) {
-        let origin = getOrigin();
-
         let size = mapSize(state.zoom);
         let px = util.clamp(pos.x + state.pos.x - canvas.width / 2, 0, size);
         let py = size - util.clamp(pos.y + state.pos.y - canvas.height / 2, 0, size);
@@ -456,7 +443,7 @@ function FastMap(runner) {
     };
 
     function mapSize(zoom) {
-        return ((tiles.tilesize << zoom) >>> 0);
+        return tiles.tilesize * Math.pow(2, zoom);
     }
 
     function distance(p1, p2) {
