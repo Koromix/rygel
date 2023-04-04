@@ -205,8 +205,8 @@ function buildFiles(map) {
             map: {
                 url: 'tiles/{z}/{x}/{y}',
                 tilesize: MAPBOX_TILESIZE,
-                min_zoom: 3,
-                max_zoom: 19,
+                min_zoom: 2,
+                max_zoom: 20,
                 attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors"
             }
         }
