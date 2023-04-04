@@ -36,7 +36,7 @@ function TileMap(runner) {
     let missing_assets = 0;
     let active_fetchers = 0;
     let fetch_queue = [];
-    let fetch_images = [];
+    let fetch_handles = new Map;
 
     let known_tiles = new LruMap(256);
     let marker_textures = new LruMap(32);
@@ -406,17 +406,20 @@ function TileMap(runner) {
         return tile;
     }
 
-    function getImage(map, url, fetch = true) {
+    function getImage(cache, url, fetch = true) {
         if (typeof url != 'string')
             return url;
 
-        let img = map.get(url);
+        let img = cache.get(url);
+
+        missing_assets += (img == null && fetch);
 
         if (img == null && fetch) {
             if (fetch_queue.includes(url))
                 return null;
+            if (fetch_handles.has(url))
+                return null;
 
-            missing_assets++;
             fetch_queue.push(url);
 
             if (active_fetchers < MAX_FETCHERS) {
@@ -426,14 +429,23 @@ function TileMap(runner) {
                     while (fetch_queue.length) {
                         let url = fetch_queue.pop();
 
-                        try {
-                            let img = await fetchImage(url);
+                        let handle = {
+                            url: url,
+                            img: null
+                        };
 
-                            map.set(url, img);
+                        fetch_handles.set(url, handle);
+
+                        try {
+                            let img = await fetchImage(handle);
+
+                            cache.set(url, img);
                             runner.busy();
                         } catch (err) {
                             if (err != null)
                                 console.error(err);
+                        } finally {
+                            fetch_handles.delete(url);
                         }
                     }
 
@@ -462,32 +474,27 @@ function TileMap(runner) {
         return ret;
     }
 
-    async function fetchImage(url) {
+    async function fetchImage(handle) {
         let img = await new Promise((resolve, reject) => {
             let img = new Image();
 
-            img.src = url;
-            img.crossOrigin = 'anonymous';
+            if (handle.url == null) {
+                reject(null);
+                return;
+            }
 
-            img.onload = () => {
-                cleanup();
-                resolve(img);
-            };
+            img.onload = () => resolve(img);
             img.onerror = () => {
-                cleanup();
-
-                if (img.src != url)
+                if (handle.url == null)
                     reject(null);
 
-                reject(new Error(`Failed to load texture '${url}'`));
+                reject(new Error(`Failed to load texture '${handle.url}'`));
             };
 
-            fetch_images.push(img);
+            img.src = handle.url;
+            img.crossOrigin = 'anonymous';
 
-            function cleanup() {
-                let idx = fetch_images.indexOf(img);
-                fetch_images.splice(idx, 1);
-            }
+            handle.img = img;
         });
 
         // Fix latency spikes caused by image decoding
@@ -500,8 +507,12 @@ function TileMap(runner) {
     function stopFetches() {
         fetch_queue.length = 0;
 
-        for (let img of fetch_images)
-            img.setAttribute('src', '');
+        for (let handle of fetch_handles.values()) {
+            handle.url = null;
+
+            if (handle.img != null)
+                handle.img.setAttribute('src', '');
+        }
     }
 
     function latLongToXY(latitude, longitude, zoom) {
