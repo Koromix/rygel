@@ -781,7 +781,8 @@ const net = new function() {
         options = Object.assign({}, options, {
             method: 'POST',
             headers: {
-                'X-Requested-With': 'XMLHTTPRequest'
+                'X-Requested-With': 'XMLHTTPRequest',
+                'Content-Type': 'application/json'
             },
             body: (obj != null) ? JSON.stringify(obj) : null
         });
