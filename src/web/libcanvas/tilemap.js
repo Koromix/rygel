@@ -256,14 +256,25 @@ function TileMap(runner) {
             ctx.scale(scale, scale);
             ctx.translate(-state.pos.x + adjust.x, -state.pos.y + adjust.y);
 
-            let i1 = Math.floor(viewport.x1 / tiles.tilesize) - (zoom_animation != null);
-            let j1 = Math.floor(viewport.y1 / tiles.tilesize) - (zoom_animation != null);
-            let i2 = Math.ceil(viewport.x2 / tiles.tilesize) + (zoom_animation != null);
-            let j2 = Math.ceil(viewport.y2 / tiles.tilesize) + (zoom_animation != null);
+            let i1 = Math.floor(viewport.x1 / tiles.tilesize);
+            let j1 = Math.floor(viewport.y1 / tiles.tilesize);
+            let i2 = Math.ceil(viewport.x2 / tiles.tilesize);
+            let j2 = Math.ceil(viewport.y2 / tiles.tilesize);
 
             for (let i = i1; i <= i2; i++) {
-                for (let j = j1; j < j2; j++)
+                for (let j = j1; j <= j2; j++)
                     drawTile(origin, i, j);
+            }
+
+            if (zoom_animation != null) {
+                for (let j = j1 - 1; j <= j2 + 1; j++) {
+                    drawTile(origin, i1 - 1, j, false);
+                    drawTile(origin, i2 + 1, j, false);
+                }
+                for (let i = i1; i <= i2; i++) {
+                    drawTile(origin, i, j1 - 1, false);
+                    drawTile(origin, i, j2 + 1, false);
+                }
             }
 
             ctx.restore();
@@ -339,13 +350,13 @@ function TileMap(runner) {
         }
     }
 
-    function drawTile(origin, i, j) {
+    function drawTile(origin, i, j, fetch = true) {
         let x = Math.floor(i * tiles.tilesize);
         let y = Math.floor(j * tiles.tilesize);
 
         // Start with appropriate tile (if any)
         {
-            let tile = getTile(state.zoom, i, j);
+            let tile = getTile(state.zoom, i, j, fetch);
 
             if (tile != null) {
                 ctx.drawImage(tile, x, y, tiles.tilesize, tiles.tilesize);
