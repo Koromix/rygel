@@ -77,6 +77,8 @@ function TileMap(runner) {
 
         zoom_animation = null;
 
+        fetch_queue.length = 0;
+
         runner.busy();
     };
 
@@ -211,6 +213,8 @@ function TileMap(runner) {
         zoom_animation.at = { x: at.x, y: at.y };
 
         state.zoom += delta;
+
+        fetch_queue.length = 0;
     }
 
     function getViewport() {
