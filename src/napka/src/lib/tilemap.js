@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import { util, net, LruMap } from '../libjs/util.js';
+import { util, net, LruMap } from '../../../web/libjs/util.js';
 
 function TileMap(runner) {
     let self = this;

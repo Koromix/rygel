@@ -17,8 +17,8 @@ import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
 import { util, log, net } from '../../../web/libjs/util.js';
 import { ui } from '../lib/ui.js';
 import parse from '../lib/parse.js';
-import { AppRunner } from '../../../web/libcanvas/runner.js';
-import { TileMap } from '../../../web/libcanvas/tilemap.js';
+import { AppRunner } from '../../../web/libjs/runner.js';
+import { TileMap } from '../lib/tilemap.js';
 
 let provider = null;
 
