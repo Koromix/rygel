@@ -181,17 +181,20 @@ function completeAddress(e) {
         complete_timer = setTimeout(async () => {
             complete_timer = null;
 
-            let results = await net.post('api/admin/geocode', { address: addr });
+            try {
+                let results = await net.post('api/admin/geocode', { address: addr });
 
-            if (complete_id == id) {
-                if (results.length) {
-                    let list = document.querySelector('#suggestions');
-                    render(results.map(result => html`<a @click=${e => selectAddress(result)}>${result.address}</a>`), list);
-                } else {
-                    closeSuggestions();
+                if (complete_id == id) {
+                    if (results.length) {
+                        let list = document.querySelector('#suggestions');
+                        render(results.map(result => html`<a @click=${e => selectAddress(result)}>${result.address}</a>`), list);
+                    } else {
+                        closeSuggestions();
+                    }
                 }
-
-                document.querySelector('#search').classList.remove('busy');
+            } finally {
+                if (complete_id == id)
+                    document.querySelector('#search').classList.remove('busy');
             }
         }, 200);
     } else {
