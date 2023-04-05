@@ -4,6 +4,13 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.14
+
+**Main changes:**
+
+- Add `koffi.errno()` function to get and set current errno value
+- Add `koffi.os.errno` object with valid errno codes
+
 #### Koffi 2.3.13
 
 **Main changes:**
