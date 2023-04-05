@@ -35,6 +35,7 @@
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
 #else
+    #include <unistd.h>
     #include <errno.h>
     #include <pthread.h>
 #endif
@@ -886,4 +887,9 @@ EXPORT int CallMeChar(CharCallback *func)
     ret += func(1, 'b');
 
     return ret;
+}
+
+EXPORT void ChangeDirectory(const char *dirname)
+{
+    chdir(dirname);
 }

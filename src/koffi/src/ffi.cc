@@ -27,6 +27,7 @@
 #ifdef _WIN32
     #include "win32.hh"
 #endif
+#include "errno.inc"
 
 #ifdef _WIN32
     #ifndef NOMINMAX
@@ -753,6 +754,26 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
     free(ptr);
 
     return env.Undefined();
+}
+
+static Napi::Value GetOrSetErrNo(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() >= 1) {
+        Napi::Number value = info[0].As<Napi::Number>();
+
+        if (!value.IsNumber()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for errno, expected integer", GetValueType(instance, value));
+            return env.Null();
+        }
+
+        errno = value;
+    }
+
+    Napi::Number ret = Napi::Number::New(env, errno);
+    return ret;
 }
 
 static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
@@ -2070,6 +2091,22 @@ static void SetExports(Napi::Env env, Func func)
     func("as", Napi::Function::New(env, CastValue));
     func("decode", Napi::Function::New(env, DecodeValue));
     func("address", Napi::Function::New(env, GetPointerAddress));
+
+    func("errno", Napi::Function::New(env, GetOrSetErrNo));
+
+    Napi::Object os = Napi::Object::New(env);
+    func("os", os);
+
+    // Init constants mapping
+    {
+        Napi::Object codes = Napi::Object::New(env);
+
+        for (const ErrnoCodeInfo &info: ErrnoCodes) {
+            codes.Set(info.name, Napi::Number::New(env, info.value));
+        }
+
+        os.Set("errno", codes);
+    }
 
 #if defined(_WIN32)
     func("extension", Napi::String::New(env, ".dll"));

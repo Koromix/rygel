@@ -131,6 +131,13 @@ declare module 'koffi' {
     export function config(cfg: Record<string, unknown>): Record<string, unknown>;
     export function stats(): Record<string, unknown>;
 
-    export let internal: Boolean;
-    export let extension: String;
+    export function errno(): number;
+    export function errno(value: number): number;
+
+    export const internal: Boolean;
+    export const extension: String;
+
+    export const os: {
+        errno: Record<string, number>
+    };
 }

@@ -235,6 +235,7 @@ async function test() {
     const ReverseBigText = lib.func('BigText ReverseBigText(BigText buf)');
     const UpperCaseStrAscii = lib.func('size_t UpperCaseStrAscii(const char *str, _Out_ char *out)');
     const UpperCaseStrAscii16 = lib.func('size_t UpperCaseStrAscii16(const char16_t *str16, _Out_ char16_t *out)');
+    const ChangeDirectory = lib.func('void ChangeDirectory(const char *dirname)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -608,5 +609,14 @@ async function test() {
 
         assert.deepEqual(koffi.decode(array1, 'Pack3'), { a: 14, b: 87, c: -7 });
         assert.deepEqual(koffi.decode(array2, 'Pack3'), { a: -10, b: -3, c: -3 });
+    }
+
+    // Test errno
+    {
+        koffi.errno(1);
+        assert.equal(koffi.errno(), 1);
+
+        ChangeDirectory("/nonexistent");
+        assert.equal(koffi.errno(), koffi.os.errno.ENOENT);
     }
 }

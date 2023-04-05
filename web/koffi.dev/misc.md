@@ -101,3 +101,25 @@ max_type_size        | 64 MiB  | Maximum size of Koffi types (for arrays and str
 *New in Koffi 2.3.2*
 
 You can use `koffi.stats()` to get a few statistics related to Koffi.
+
+## POSIX error codes
+
+*New in Koffi 2.3.14*
+
+You can use `koffi.errno()` to the current errno value, and `koffi.errno(value)` to change it.
+
+The standard POSIX error codes are available in `koffi.os.errno`, as in the example below:
+
+```js
+const assert = require('assert');
+const koffi = require('koffi');
+
+const lib = koffi.load('libc.so.6');
+
+const close = lib.func('int close(int fd)');
+
+close(-1);
+assert.equal(koffi.errno(), koffi.os.errno.EBADF);
+
+console.log('close() with invalid FD is POSIX compliant!');
+```
