@@ -71,11 +71,11 @@ function profile(db, req, res) {
         return;
     }
 
-    let profile = row_to_profile(row);
+    let profile = rowToProfile(row);
     res.json(profile);
 }
 
-function row_to_profile(row) {
+function rowToProfile(row) {
     let profile = {
         userid: row.userid,
         username: row.username

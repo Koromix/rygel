@@ -36,10 +36,10 @@ async function main() {
             throw new Error(`Missing command, use --help`);
 
         switch (process.argv[2]) {
-            case 'list_users': { command = list_users; } break;
-            case 'allow_users': { command = allow_users; } break;
-            case 'revoke_users': { command = revoke_users; } break;
-            case 'clear_tiles': { command = clear_tiles; } break;
+            case 'list_users': { command = listUsers; } break;
+            case 'allow_users': { command = allowUsers; } break;
+            case 'revoke_users': { command = revokeUsers; } break;
+            case 'clear_tiles': { command = clearTiles; } break;
 
             default: { throw new Error(`Unknown command '${process.argv[2]}'`); } break;
         }
@@ -88,7 +88,7 @@ async function main() {
     }
 }
 
-function allow_users(usernames) {
+function allowUsers(usernames) {
     let db = database.open({ fileMustExist: true });
 
     if (!usernames.length)
@@ -99,7 +99,7 @@ function allow_users(usernames) {
 
     db.transaction(() => {
         for (let username of usernames) {
-            let password = generate_password(24);
+            let password = generatePassword(24);
             let password_hash = pwhash.pbkdf2(password);
 
             let userid = db.prepare(`INSERT INTO users (username, password_hash)
@@ -112,7 +112,7 @@ function allow_users(usernames) {
     })();
 }
 
-function revoke_users(usernames) {
+function revokeUsers(usernames) {
     let db = database.open({ fileMustExist: true });
 
     if (!usernames.length)
@@ -138,7 +138,7 @@ function revoke_users(usernames) {
     console.log(`Removed ${removed} ${removed == 1 ? 'user' : 'users'}`);
 }
 
-function list_users() {
+function listUsers() {
     let db = database.open({ fileMustExist: true });
 
     let users = db.prepare('SELECT userid, username FROM users').all();
@@ -150,7 +150,7 @@ function list_users() {
         console.log(`${String(user.userid).padEnd(6, ' ')} | ${user.username}`);
 }
 
-function generate_password(len = 24) {
+function generatePassword(len = 24) {
     const CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!_-%$";
 
     let password = '';
@@ -163,14 +163,14 @@ function generate_password(len = 24) {
     return password;
 }
 
-function clear_tiles() {
+function clearTiles() {
     let db = cache.open({ fileMustExist: true });
 
     db.prepare('DELETE FROM tiles').run();
     console.log('Tile cache cleared');
 }
 
-function print_usage() {
+function printUsage() {
     let help = `Usage: node users.js <command> [users...]
 
 User commands:
