@@ -189,9 +189,12 @@ function completeAddress(e) {
                         let list = document.querySelector('#suggestions');
                         render(results.map(result => html`<a @click=${e => selectAddress(result)}>${result.address}</a>`), list);
                     } else {
-                        closeSuggestions();
+                        throw new Error('Aucun correspondance trouvée');
                     }
                 }
+            } catch (err) {
+                log.error(err);
+                closeSuggestions();
             } finally {
                 if (complete_id == id)
                     document.querySelector('#search').classList.remove('busy');
