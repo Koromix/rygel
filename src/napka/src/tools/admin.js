@@ -16,15 +16,15 @@
 'use strict';
 
 const crypto = require('crypto');
+const cache = require('../lib/cache.js');
 const database = require('../lib/database.js');
 const pwhash = require('../lib/pwhash.js');
 
 main();
 
 async function main() {
-    let usernames = [];
-
     let command = null;
+    let values = [];
 
     // Parse options
     {
@@ -72,15 +72,13 @@ async function main() {
             } else if (arg[0] == '-') {
                 throw new Error(`Unexpected argument '${arg}'`);
             } else {
-                usernames.push(arg);
+                values.push(arg);
             }
         }
     }
 
-    let db = database.open({ fileMustExist: true });
-
     try {
-        let success = !!command(db, usernames);
+        let success = !!command(values);
         process.exit(!success);
     } catch (err) {
         console.error(err);
@@ -90,7 +88,9 @@ async function main() {
     }
 }
 
-function allow_users(db, usernames) {
+function allow_users(usernames) {
+    let db = database.open({ fileMustExist: true });
+
     if (!usernames.length)
         throw new Error('Missing user names');
 
@@ -112,7 +112,9 @@ function allow_users(db, usernames) {
     })();
 }
 
-function revoke_users(db, usernames) {
+function revoke_users(usernames) {
+    let db = database.open({ fileMustExist: true });
+
     if (!usernames.length)
         throw new Error('Missing user names');
 
@@ -136,7 +138,9 @@ function revoke_users(db, usernames) {
     console.log(`Removed ${removed} ${removed == 1 ? 'user' : 'users'}`);
 }
 
-function list_users(db) {
+function list_users() {
+    let db = database.open({ fileMustExist: true });
+
     let users = db.prepare('SELECT userid, username FROM users').all();
 
     console.log('ID     | Username');
@@ -159,7 +163,9 @@ function generate_password(len = 24) {
     return password;
 }
 
-function clear_tiles(db) {
+function clear_tiles() {
+    let db = cache.open({ fileMustExist: true });
+
     db.prepare('DELETE FROM tiles').run();
     console.log('Tile cache cleared');
 }
