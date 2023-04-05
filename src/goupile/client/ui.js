@@ -511,7 +511,7 @@ const ui = new function() {
     }
 
     function notifyHandler(action, entry) {
-        if (typeof lithtml !== 'undefined' && entry.type !== 'debug') {
+        if (typeof render == 'function' && entry.type !== 'debug') {
             switch (action) {
                 case 'open': {
                     log_entries.unshift(entry);
