@@ -11,7 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import { render, html } from '../../node_modules/lit/html.js';
+import { render, html, noChange } from '../../node_modules/lit/html.js';
+import { directive, Directive } from '../../node_modules/lit/directive.js';
 import { util, log } from '../../../web/libjs/util.js';
 
 const ui = new (function() {
@@ -26,33 +27,36 @@ const ui = new (function() {
     let drag_src = null;
     let drag_restore = null;
 
-    this.notify_handler = function(action, entry) {
-        if (entry.type !== 'debug') {
+    let table_orders = {};
+    let table_filters = {};
+
+    this.notifyHandler = function(action, entry) {
+        if (typeof render == 'function' && entry.type !== 'debug') {
             switch (action) {
                 case 'open': {
                     log_entries.unshift(entry);
 
                     if (entry.type === 'progress') {
                         // Wait a bit to show progress entries to prevent quick actions from showing up
-                        setTimeout(render_log, 300);
+                        setTimeout(renderLog, 300);
                     } else {
-                        render_log();
+                        renderLog();
                     }
                 } break;
                 case 'edit': {
-                    render_log();
+                    renderLog();
                 } break;
                 case 'close': {
                     log_entries = log_entries.filter(it => it !== entry);
-                    render_log();
+                    renderLog();
                 } break;
             }
         }
 
-        log.default_handler(action, entry);
+        log.defaultHandler(action, entry);
     };
 
-    function render_log() {
+    function renderLog() {
         let log_el = document.querySelector('#log');
 
         render(log_entries.map(entry => {
@@ -83,8 +87,8 @@ const ui = new (function() {
 
     this.wrap = function(func) {
         return async e => {
-            let target = e.target;
-            let busy = e.target;
+            let target = e.currentTarget || e.target;
+            let busy = target;
 
             if (target.tagName == 'FORM') {
                 e.preventDefault();
@@ -117,8 +121,10 @@ const ui = new (function() {
     };
 
     this.insist = function(func) {
-        return self.wrap(async e => {
-            let target = e.currentTarget;
+        let wrapped = self.wrap(func);
+
+        return async e => {
+            let target = e.currentTarget || e.target;
 
             if (!target.classList.contains('insist')) {
                 target.classList.add('insist');
@@ -129,19 +135,21 @@ const ui = new (function() {
                 e.stopPropagation();
             } else {
                 target.classList.remove('insist');
-                await func(e);
+                await wrapped(e);
             }
-        });
+        };
     };
 
     this.confirm = function(action, func) {
+        let T = app.T;
+
         return self.wrap(() => self.dialog({
             run: (render, close) => html`
                 <div class="title">${action}</div>
-                <div>Attention cette action est irréversible</div>
+                <div>${T.confirm_not_reversible}</div>
                 <div class="footer">
-                    <button type="button" class="secondary" @click=${ui.wrap(close)}>Annuler</button>
-                    <button type="submit" class="danger">Confirmer</button>
+                    <button type="button" class="secondary" @click=${ui.wrap(close)}>${T.cancel}</button>
+                    <button type="submit" class="danger">${T.confirm}</button>
                 </div>
             `,
 
@@ -160,12 +168,6 @@ const ui = new (function() {
         if (dialog_el == null) {
             dialog_el = document.createElement('div');
 
-            window.addEventListener('click', e => {
-                if (dialogs.length) {
-                    let dlg = dialogs[dialogs.length - 1];
-                    dlg.reject();
-                }
-            });
             window.addEventListener('keydown', e => {
                 if (e.keyCode == 27 && dialogs.length) {
                     let dlg = dialogs[dialogs.length - 1];
@@ -219,7 +221,7 @@ const ui = new (function() {
                 dialog_el = null;
             }
 
-            // setTimeout(app.go, 0);
+            setTimeout(app.go, 0);
         });
 
         dialogs.push(dlg);
@@ -241,22 +243,49 @@ const ui = new (function() {
         resolve(ret);
     }
 
-    this.is_dialog_running = function() { return !!dialogs.length; };
+    this.isDialogOpen = function() { return !!dialogs.length; };
 
-    this.run_dialog = async function() {
+    this.runDialog = async function() {
         if (dialogs.length) {
             let dlg = dialogs[dialogs.length - 1];
             dlg.update();
         }
     };
-    this.close_dialog = function() {
+    this.closeDialog = function() {
         if (dialogs.length) {
             let dlg = dialogs[dialogs.length - 1];
             dlg.reject();
         }
     };
 
-    this.drag_start = function(e, items, src) {
+    class ReorderDirective extends Directive {
+        item = null;
+        installed = false;
+
+        update(part, [items, item, enable]) {
+            let el = part.element;
+
+            if (enable == null)
+                enable = true;
+
+            el.setAttribute('draggable', enable ? 'true' : 'false');
+            this.item = item;
+
+            if (!this.installed) {
+                el.addEventListener('dragstart', self.wrap(e => dragStart(e, items, this.item)));
+                el.addEventListener('dragover', self.wrap(e => dragOver(e, items, this.item)));
+                el.addEventListener('dragend', self.wrap(dragEnd));
+
+                this.installed = true;
+            }
+
+            return noChange;
+        }
+    }
+
+    this.reorderItems = directive(ReorderDirective);
+
+    function dragStart(e, items, src) {
         drag_items = items;
         drag_src = src;
         drag_restore = items.indexOf(src);
@@ -265,7 +294,7 @@ const ui = new (function() {
         e.dataTransfer.effectAllowed = 'move';
     };
 
-    this.drag_over = function(e, items, dest) {
+    function dragOver(e, items, dest) {
         if (items != drag_items) {
             e.dataTransfer.dropEffect = 'none';
             return;
@@ -278,9 +307,11 @@ const ui = new (function() {
 
         e.dataTransfer.dropEffect = 'move';
         e.preventDefault();
+
+        return app.go();
     };
 
-    this.drag_end = function(e) {
+    function dragEnd(e) {
         if (e.dataTransfer.dropEffect != 'move') {
             let idx = drag_items.indexOf(drag_src);
             reorder(drag_items, idx, drag_restore);
@@ -288,6 +319,8 @@ const ui = new (function() {
 
         drag_items = null;
         drag_src = null;
+
+        return app.go();
     };
 
     function reorder(items, idx1, idx2) {
@@ -314,12 +347,136 @@ const ui = new (function() {
         }
     };
 
-    this.remove = function(items, item) {
-        let idx = items.indexOf(item);
+    this.tableHeader = function(key, by, title) {
+        let info = table_orders[key];
 
-        if (idx >= 0)
-            items.splice(idx, 1);
+        let ascending = (info != null && info.by_str == String(by)) ? info.ascending : null;
+
+        return html`
+            <th class="item" @click=${e => { setOrder(key, by); app.go(); }}>
+                ${title}
+                <div class="arrows">
+                    <span class=${'up' + (ascending === false ? ' active' : '')}></span>
+                    <span class=${'down' + (ascending === true ? ' active' : '')}></span>
+                </div>
+            </th>
+        `;
     };
+
+    function setOrder(key, by, ascending = null) {
+        let by_str = String(by);
+        let by_func = (typeof by == 'function') ? by : (value => value[by_str]);
+
+        if (ascending == null) {
+            let order = table_orders[key];
+
+            if (order != null && order.by_str == String(by)) {
+                ascending = !order.ascending;
+            } else {
+                ascending = true;
+            }
+        }
+
+        let order = {
+            by_str: by_str,
+            by_func: by_func,
+            ascending: ascending,
+
+            comparator: null,
+            language: null
+        };
+
+        order.comparator = makeComparator(order, app.userLanguage);
+        order.language = app.userLanguage;
+
+        table_orders[key] = order;
+    }
+
+    this.tableFilter = function(key, ...keys) {
+        let T = app.T;
+
+        let filter = table_filters[key];
+
+        return html`<input type="search" placeholder=${T.filter + '...'}
+                           value=${(filter != null) ? filter.str : ''}
+                           @input=${e => { setFilter(key, e.target.value, keys); app.go(); }} />`;
+    };
+
+    function setFilter(key, str, keys) {
+        if (str) {
+            let filter = {
+                str: str,
+                keys: keys
+            };
+
+            table_filters[key] = filter;
+        } else {
+            delete table_filters[key];
+        }
+    }
+
+    this.tableValues = function(key, values) {
+        let order = table_orders[key];
+        let filter = table_filters[key];
+
+        if (order != null) {
+            if (order.language != app.userLanguage) {
+                order.comparator = makeComparator(info, app.userLanguage);
+                order.language = app.userLanguage;
+            }
+
+            values = values.slice().sort(order.comparator);
+        }
+
+        if (filter != null) {
+            let against = filter.str.toLowerCase();
+
+            values = values.filter(it => {
+                for (let key of filter.keys) {
+                    let value = it[key];
+
+                    if (value == null)
+                        continue;
+                    value = String(value).toLowerCase();
+
+                    return value.includes(against);
+                }
+            });
+        }
+
+        return values;
+    };
+
+    function makeComparator(info, language) {
+        let collator = new Intl.Collator(language, {
+            numeric: true,
+            ignorePunctuation: true,
+            sensitivity: 'base'
+        });
+
+        let comparator = (obj1, obj2) => {
+            let value1 = info.by_func(obj1);
+            let value2 = info.by_func(obj2);
+
+            if (value1 === '')
+                value1 = null;
+            if (value2 === '')
+                value2 = null;
+
+            if (value1 == null && value2 == null) {
+                return 0;
+            } else if (value1 == null) {
+                return 1;
+            } else if (value2 == null) {
+                return -1;
+            } else {
+                let ret = collator.compare(String(value1), String(value2));
+                return info.ascending ? ret : -ret;
+            }
+        };
+
+        return comparator;
+    }
 })();
 
 module.exports = {

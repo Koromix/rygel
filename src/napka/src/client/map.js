@@ -37,7 +37,7 @@ let edit_changes = new Set;
 let edit_key = null;
 
 export async function start(prov, options = {}) {
-    log.pushHandler(ui.notify_handler);
+    log.pushHandler(ui.notifyHandler);
 
     provider = prov;
     await provider.loadMap();
@@ -378,7 +378,7 @@ function handleTextShortcuts(e, etab, key, type) {
 
 function toggleEdit(e, key) {
     edit_key = key;
-    ui.run_dialog();
+    ui.runDialog();
 
     e.stopPropagation();
     e.preventDefault();
@@ -412,7 +412,7 @@ async function editText(etab, key, type, value) {
     edit_key = null;
     edit_changes.add(key);
 
-    ui.run_dialog();
+    ui.runDialog();
 }
 
 function editMulti(etab, key, idx, value, insert) {
@@ -432,7 +432,7 @@ async function editEnum(etab, key, value) {
     edit_changes.add(key);
 
     edit_key = null;
-    ui.run_dialog();
+    ui.runDialog();
 }
 
 export async function updateEntry(etab) {
