@@ -776,6 +776,30 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 {
     RG_ASSERT(state != State::Sync && state != State::WebSocket);
 
+    // Only allow Gzip for now, to reduce attack surface
+    CompressionType compression_type = CompressionType::None;
+    {
+        const char *content_str = request.GetHeaderValue("Content-Encoding");
+
+        if (content_str) {
+            if (max_len < 0) {
+                LogError("Refusing Content-Encoding without server limit");
+                AttachError(400);
+                return false;
+            }
+
+            if (TestStr(content_str, "gzip")) {
+                compression_type = CompressionType::Gzip;
+            } else {
+                LogError("Refusing Content-Encoding value other than gzip");
+                AttachError(400);
+                return false;
+            }
+        }
+    }
+
+    // Precheck with Content-Length for quick dismissal, but even
+    // if the header is missing the StreamReader will enforce the limit.
     if (max_len >= 0) {
         if (const char *str = request.GetHeaderValue("Content-Length"); str) {
             Size len;
@@ -797,7 +821,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
         }
     }
 
-    bool success = out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>");
+    bool success = out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>", compression_type);
     RG_ASSERT(success);
 
     out_st->SetReadLimit(max_len);
