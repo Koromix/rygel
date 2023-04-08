@@ -32,6 +32,11 @@
 
 namespace RG {
 
+// Fix mess caused by windows.h
+#ifdef CreateSymbolicLink
+    #undef CreateSymbolicLink
+#endif
+
 enum class ExtractFlag {
     SkipMeta = 1 << 0,
     AllowSeparators = 1 << 1,
@@ -130,7 +135,7 @@ static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uin
     return true;
 }
 
-static bool CreateSymbolicLink(const char *filename, const char *target)
+static bool CreateSymbolicLink(const char *filename, const char *target, bool)
 {
     LogWarning("Ignoring symbolic link '%1' to '%2'", filename, target);
     return true;
