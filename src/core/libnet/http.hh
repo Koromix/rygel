@@ -176,10 +176,8 @@ class http_IO {
     bool force_queue = false;
 
     std::condition_variable read_cv;
-    Size read_max = -1;
     Span<uint8_t> read_buf = {};
     Size read_len = 0;
-    Size read_total = 0;
     bool read_eof = false;
 
     int write_code;

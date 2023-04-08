@@ -5891,6 +5891,8 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
     raw_read = 0;
+    read_total = 0;
+    read_max = -1;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
@@ -5912,6 +5914,8 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
     raw_read = 0;
+    read_total = 0;
+    read_max = -1;
 
     RG_ASSERT(fp);
     RG_ASSERT(filename);
@@ -5935,6 +5939,8 @@ OpenResult StreamReader::Open(const char *filename, CompressionType compression_
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
     raw_read = 0;
+    read_total = 0;
+    read_max = -1;
 
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
@@ -5962,6 +5968,8 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
     RG_DEFER_N(err_guard) { error = true; };
     error = false;
     raw_read = 0;
+    read_total = 0;
+    read_max = -1;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
 
@@ -6080,6 +6088,13 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
         read_len = ReadRaw(out_buf.len, out_buf.ptr);
         eof = source.eof;
     }
+
+    if (RG_UNLIKELY(!error && read_max >= 0 && read_len > read_max - read_total)) {
+        LogError("Exceeded max stream size of %1", FmtDiskSize(read_max));
+        error = true;
+        return -1;
+    }
+    read_total += read_len;
 
     return read_len;
 }

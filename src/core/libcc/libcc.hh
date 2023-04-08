@@ -4229,6 +4229,9 @@ class StreamReader {
     const char *filename = nullptr;
     bool error = true;
 
+    int64_t read_total = 0;
+    int64_t read_max = -1;
+
     struct {
         SourceType type = SourceType::Memory;
         union U {
@@ -4289,15 +4292,18 @@ public:
 
     const char *GetFileName() const { return filename; }
     CompressionType GetCompressionType() const { return compression_type; }
+    int64_t GetReadLimit() { return read_max; }
     bool IsValid() const { return filename && !error; }
     bool IsEOF() const { return eof; }
 
     FILE *GetFile() const;
     int GetDescriptor() const;
 
+    void SetReadLimit(int64_t limit) { read_max = limit; }
+
     Size Read(Span<uint8_t> out_buf);
     Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
-    Size Read(Size max_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, max_len)); }
+    Size Read(Size buf_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, buf_len)); }
 
     Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
     Size ReadAll(Size max_len, HeapArray<char> *out_buf)

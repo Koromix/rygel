@@ -797,10 +797,10 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
         }
     }
 
-    read_max = max_len;
-
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>");
     RG_ASSERT(success);
+
+    out_st->SetReadLimit(max_len);
 
     return true;
 }
@@ -869,13 +869,6 @@ Size http_IO::Read(Span<uint8_t> out_buf)
         LogError("Connection aborted while reading");
         return -1;
     }
-
-    if (RG_UNLIKELY(read_max >= 0 && read_len > read_max - read_total)) {
-        LogError("HTTP body is too big (max = %1)", FmtDiskSize(read_max));
-        AttachError(413);
-        return -1;
-    }
-    read_total += read_len;
 
     return read_len;
 }
