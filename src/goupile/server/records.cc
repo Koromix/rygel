@@ -412,7 +412,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         bool has_deletes = false;
         {
             StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
+            if (!io->OpenForRead(Kibibytes(64), &st))
                 return;
             json_Parser parser(&st, &io->allocator);
 
