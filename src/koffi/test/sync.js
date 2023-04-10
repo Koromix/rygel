@@ -23,6 +23,7 @@
 
 const koffi = require('./build/koffi.node');
 const assert = require('assert');
+const util = require('util');
 
 const Pack1 = koffi.struct('Pack1', {
     a: 'int'
@@ -235,6 +236,8 @@ async function test() {
     const ReverseBigText = lib.func('BigText ReverseBigText(BigText buf)');
     const UpperCaseStrAscii = lib.func('size_t UpperCaseStrAscii(const char *str, _Out_ char *out)');
     const UpperCaseStrAscii16 = lib.func('size_t UpperCaseStrAscii16(const char16_t *str16, _Out_ char16_t *out)');
+    const UpperToInternalBuffer1 = lib.func('void UpperToInternalBuffer(const char *str, _Out_ char **ptr)');
+    const UpperToInternalBuffer2 = lib.func('void UpperToInternalBuffer(const char *str, _Out_ uint8_t **ptr)');
     const ChangeDirectory = lib.func('void ChangeDirectory(const char *dirname)');
 
     // Simple signed value returns
@@ -572,6 +575,19 @@ async function test() {
 
         assert.equal(len, 10);
         assert.equal(str[0], 'FOOBAR_1X3');
+    }
+
+    // Do the same but with an internal buffer
+    {
+        let ptr1 = [null];
+        let ptr2 = [null];
+
+        UpperToInternalBuffer1('HeLlO WoRlD', ptr1);
+        UpperToInternalBuffer2('BoNjOuR MoNdE', ptr2);
+
+        assert.equal(ptr1[0], 'HELLO WORLD')
+        assert.ok(util.types.isExternal(ptr2[0]));
+        assert.equal(koffi.decode(ptr2[0], 'char', -1), 'BONJOUR MONDE');
     }
 
     // Use raw buffers for struct output

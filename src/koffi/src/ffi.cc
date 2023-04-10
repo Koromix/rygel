@@ -816,6 +816,11 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         ArrayHint hint = {};
 
         if (to == "Typed" || to == "typed") {
+            if (!(ref->flags & (int)TypeFlag::HasTypedArray)) {
+                ThrowError<Napi::Error>(env, "Array hint 'Typed' cannot be used with type %1", ref->name);
+                return env.Null();
+            }
+
             hint = ArrayHint::Typed;
         } else if (to == "Array" || to == "array") {
             hint = ArrayHint::Array;
@@ -1733,7 +1738,6 @@ void LibraryHolder::Unref() const
     }
 }
 
-
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
                                   PrimitiveKind primitive, int32_t size, int16_t align, const char *ref = nullptr)
 {
@@ -1749,6 +1753,13 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
     type->primitive = primitive;
     type->size = size;
     type->align = align;
+
+    if (IsInteger(type) || IsFloat(type)) {
+        type->flags |= (int)TypeFlag::HasTypedArray;
+    }
+    if (TestStr(type->name, "char") || TestStr(type->name, "char16") || TestStr(type->name, "char16_t")) {
+        type->flags |= (int)TypeFlag::IsCharLike;
+    }
 
     if (ref) {
         const TypeInfo *marker = instance->types_map.FindValue(ref, nullptr);
@@ -1999,10 +2010,16 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 
     Napi::Value value = info[0];
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
-    int64_t len = has_len ? info[2u + has_offset].As<Napi::Number>().Int64Value() : -1;
 
-    Napi::Value ret = Decode(value, offset, type, len);
-    return ret;
+    if (has_len) {
+        Size len = info[2u + has_offset].As<Napi::Number>();
+
+        Napi::Value ret = Decode(value, offset, type, &len);
+        return ret;
+    } else {
+        Napi::Value ret = Decode(value, offset, type);
+        return ret;
+    }
 }
 
 static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)

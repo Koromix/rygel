@@ -160,8 +160,8 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref);
 void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref);
 
-Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, Size len = -1);
-Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, Size len = -1);
+Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len = nullptr);
+Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, const Size *len = nullptr);
 
 static inline Napi::Value NewBigInt(Napi::Env env, int64_t value)
 {

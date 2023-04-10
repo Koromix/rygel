@@ -893,3 +893,25 @@ EXPORT void ChangeDirectory(const char *dirname)
 {
     chdir(dirname);
 }
+
+EXPORT void UpperToInternalBuffer(const char *str, char **ptr)
+{
+    static char buf[512];
+
+    size_t len = 0;
+
+    while (str[len]) {
+        char c = str[len];
+
+        if (c >= 'a' && c <= 'z') {
+            buf[len] = (char)(c - 32);
+        } else {
+            buf[len] = c;
+        }
+
+        len++;
+    }
+    buf[len] = 0;
+
+    *ptr = buf;
+}

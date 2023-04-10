@@ -329,11 +329,12 @@ const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size 
 {
     ArrayHint hint = {};
 
-    if (TestStr(ref->name, "char") || TestStr(ref->name, "char16") ||
-                                             TestStr(ref->name, "char16_t")) {
+    if (ref->flags & (int)TypeFlag::IsCharLike) {
         hint = ArrayHint::String;
-    } else {
+    } else if (ref->flags & (int)TypeFlag::HasTypedArray) {
         hint = ArrayHint::Typed;
+    } else {
+        hint = ArrayHint::Array;
     }
 
     return MakeArrayType(instance, ref, len, hint, true);
@@ -1002,7 +1003,7 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *r
 #undef SWAP
 }
 
-Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, Size len)
+Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len)
 {
     Napi::Env env = value.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1035,13 +1036,35 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, Size le
     return ret;
 }
 
-Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, Size len)
+Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, const Size *len)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (len >= 0 && type->primitive != PrimitiveKind::String &&
-                    type->primitive != PrimitiveKind::String16) {
-        type = MakeArrayType(instance, type, len);
+    if (len && type->primitive != PrimitiveKind::String &&
+               type->primitive != PrimitiveKind::String16) {
+        if (*len >= 0) {
+            type = MakeArrayType(instance, type, *len);
+        } else {
+            if (RG_UNLIKELY(!(type->flags & (int)TypeFlag::IsCharLike))) {
+                ThrowError<Napi::TypeError>(env, "Only char-like types can find their length automatically", type->name);
+                return env.Null();
+            }
+
+            switch (type->primitive) {
+                case PrimitiveKind::Int8: {
+                    Size count = strlen((const char *)ptr);
+                    type = MakeArrayType(instance, type, count);
+                } break;
+                case PrimitiveKind::Int16: {
+                    Size count = WideStringLength((const char16_t *)ptr, RG_SIZE_MAX);
+                    type = MakeArrayType(instance, type, count);
+                } break;
+
+                default: { RG_UNREACHABLE(); } break;
+            }
+
+        }
+
     }
 
 #define RETURN_INT(Type, NewCall) \
@@ -1080,18 +1103,18 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, Size
         case PrimitiveKind::UInt64: { RETURN_INT(uint64_t, NewBigInt); } break;
         case PrimitiveKind::UInt64S: { RETURN_INT_SWAP(uint64_t, NewBigInt); } break;
         case PrimitiveKind::String: {
-            if (len >= 0) {
+            if (len) {
                 const char *str = *(const char **)ptr;
-                return str ? Napi::String::New(env, str, len) : env.Null();
+                return str ? Napi::String::New(env, str, *len) : env.Null();
             } else {
                 const char *str = *(const char **)ptr;
                 return str ? Napi::String::New(env, str) : env.Null();
             }
         } break;
         case PrimitiveKind::String16: {
-            if (len >= 0) {
+            if (len) {
                 const char16_t *str16 = *(const char16_t **)ptr;
-                return str16 ? Napi::String::New(env, str16, len) : env.Null();
+                return str16 ? Napi::String::New(env, str16, *len) : env.Null();
             } else {
                 const char16_t *str16 = *(const char16_t **)ptr;
                 return str16 ? Napi::String::New(env, str16) : env.Null();
