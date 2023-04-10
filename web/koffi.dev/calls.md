@@ -68,6 +68,60 @@ The same can be done when declaring a function with a C-like prototype string, w
 - `_Out_` for output parameters
 - `_Inout_` for dual input/output parameters
 
+### Primitive value
+
+This Windows example enumerate all Chrome windows along with their PID and their title. The `GetWindowThreadProcessId()` function illustrates how to get a primitive value from an output argument.
+
+```js
+const koffi = require('koffi');
+const user32 = koffi.load('user32.dll');
+
+const DWORD = koffi.alias('DWORD', 'uint32_t');
+const HANDLE = koffi.pointer(koffi.opaque('HANDLE'));
+const HWND = koffi.alias('HWND', HANDLE);
+
+const FindWindowEx = user32.func('HWND __stdcall FindWindowExW(HWND hWndParent, HWND hWndChildAfter, const char16_t *lpszClass, const char16_t *lpszWindow)');
+const GetWindowThreadProcessId = user32.func('DWORD __stdcall GetWindowThreadProcessId(HWND hWnd, _Out_ DWORD *lpdwProcessId)');
+const GetWindowText = user32.func('int __stdcall GetWindowTextA(HWND hWnd, _Out_ uint8_t *lpString, int nMaxCount)');
+
+for (let hwnd = null;;) {
+    hwnd = FindWindowEx(0, hwnd, 'Chrome_WidgetWin_1', null);
+
+    if (!hwnd)
+        break;
+
+    // Get PID
+    let pid;
+    {
+        let ptr = [null];
+        let tid = GetWindowThreadProcessId(hwnd, ptr);
+
+        if (!tid) {
+            // Maybe the process ended in-between?
+            continue;
+        }
+
+        pid = ptr[0];
+    }
+
+    // Get window title
+    let title;
+    {
+        let buf = Buffer.allocUnsafe(1024);
+        let length = GetWindowText(hwnd, buf, buf.length);
+
+        if (!length) {
+            // Maybe the process ended in-between?
+            continue;
+        }
+
+        title = koffi.decode(buf, 'char', length);
+    }
+
+    console.log({ PID: pid, Title: title });
+}
+```
+
 ### Struct example
 
 This example calls the POSIX function `gettimeofday()`, and uses the prototype-like syntax.
