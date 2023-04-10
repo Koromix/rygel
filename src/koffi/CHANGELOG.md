@@ -4,6 +4,13 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.15
+
+**Main changes:**
+
+- Improve manual decoding of 0-terminated strings
+- Add checks around array conversion hints
+
 #### Koffi 2.3.14
 
 **Main changes:**
