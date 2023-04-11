@@ -103,7 +103,7 @@ function Builder(config = {}) {
             let basename = `node-v${runtime_version}-headers.tar.gz`;
             let urls = [
                 `https://nodejs.org/dist/v${runtime_version}/${basename}`,
-                `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${basename}`
+                // `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${basename}`
             ];
             let destname = `${cache_dir}/${basename}`;
 
@@ -130,7 +130,7 @@ function Builder(config = {}) {
             if (!fs.existsSync(destname)) {
                 let urls = [
                     `https://nodejs.org/dist/v${runtime_version}/${dirname}/node.lib`,
-                    `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${dirname}/node.lib`
+                    // `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${dirname}/node.lib`
                 ];
                 await tools.download_http(urls, destname);
             }
