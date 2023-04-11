@@ -207,7 +207,7 @@
             "Windows ARM64": {
                 "arch": "arm64",
                 "directory": "C:/Users/windows/Desktop/luigi_arm64",
-                "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -a arm64 -v 16.13.0 --config release"
+                "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -a arm64 -v 19.9.0 --config release"
             }
         },
 
