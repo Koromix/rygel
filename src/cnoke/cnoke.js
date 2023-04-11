@@ -155,7 +155,7 @@ Options:
                                          (default: ${cnoke.DefaultOptions.mode})
     -D, --debug                          Shortcut for --config Debug
 
-        --prebuild                       Use prebuilt binari if available
+        --prebuild                       Use prebuilt binary if available
 
     -a, --arch <ARCH>                    Change architecture and ABI
                                          (default: ${cnoke.determine_arch()})
