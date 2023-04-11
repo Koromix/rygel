@@ -4,6 +4,17 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.16
+
+**Main changes:**
+
+- Fix Windows ARM64 build to work with official Node.js version
+- Compile Windows builds with Visual Studio 2022 17.5.3
+
+**Other changes:**
+
+- Support null in `koffi.free()` and `koffi.address()`
+
 #### Koffi 2.3.15
 
 **Main changes:**
