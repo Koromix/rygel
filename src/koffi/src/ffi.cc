@@ -723,18 +723,25 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     return WrapType(env, instance, type);
 }
 
-static inline bool CheckExternalPointer(Napi::Env env, Napi::Value value)
+static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **out_ptr)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (!value.IsExternal() || CheckValueTag(instance, value, &TypeInfoMarker) ||
-                               CheckValueTag(instance, value, &CastMarker) ||
-                               CheckValueTag(instance, value, &MagicUnionMarker)) {
+    if (IsNullOrUndefined(value)) {
+        *out_ptr = 0;
+        return true;
+    } else if (value.IsExternal() && !CheckValueTag(instance, value, &TypeInfoMarker) &&
+                                     !CheckValueTag(instance, value, &CastMarker) &&
+                                     !CheckValueTag(instance, value, &MagicUnionMarker)) {
+        Napi::External<void> external = value.As<Napi::External<void>>();
+        void *ptr = external.Data();
+
+        *out_ptr = ptr;
+        return true;
+    } else {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected external pointer", GetValueType(instance, value));
         return false;
     }
-
-    return true;
 }
 
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
@@ -745,11 +752,10 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-    if (!CheckExternalPointer(env, info[0]))
-        return env.Null();
 
-    Napi::External<void> external = info[0].As<Napi::External<void>>();
-    void *ptr = external.Data();
+    void *ptr = nullptr;
+    if (!GetExternalPointer(env, info[0], &ptr))
+        return env.Null();
 
     free(ptr);
 
@@ -2030,11 +2036,10 @@ static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-    if (!CheckExternalPointer(env, info[0]))
-        return env.Null();
 
-    Napi::External<void> external = info[0].As<Napi::External<void>>();
-    void *ptr = external.Data();
+    void *ptr = nullptr;
+    if (!GetExternalPointer(env, info[0], &ptr))
+        return env.Null();
 
     uint64_t ptr64 = (uint64_t)(uintptr_t)ptr;
     Napi::BigInt bigint = Napi::BigInt::New(env, ptr64);

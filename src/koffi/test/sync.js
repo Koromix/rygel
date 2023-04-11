@@ -635,4 +635,7 @@ async function test() {
         ChangeDirectory("/nonexistent");
         assert.equal(koffi.errno(), koffi.os.errno.ENOENT);
     }
+
+    // Support null in koffi.address()
+    assert.strictEqual(koffi.address(null), 0n);
 }
