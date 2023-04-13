@@ -142,6 +142,9 @@ function AppRunner(canvas) {
         canvas.addEventListener('touchmove', handleTouchEvent);
         canvas.addEventListener('touchend', handleTouchEvent);
 
+        new ResizeObserver(() => self.busy()).observe(canvas);
+        syncSize();
+
         window.requestAnimationFrame(loop);
     };
 
@@ -326,21 +329,7 @@ function AppRunner(canvas) {
     // ------------------------------------------------------------------------
 
     function loop(timestamp) {
-        // Sync canvas dimensions
-        {
-            let rect = canvas.getBoundingClientRect();
-
-            // Accessing canvas.width or canvas.height (even for reading) seems to trigger
-            // a reset or something, and can cause flicker on Firefox Mobile.
-            if (rect.width != prev_canvas_width) {
-                canvas.width = rect.width;
-                prev_canvas_width = rect.width;
-            }
-            if (rect.height != prev_canvas_height) {
-                canvas.height = rect.height;
-                prev_canvas_height = rect.height;
-            }
-        }
+        syncSize();
 
         let delay = timestamp - prev_timestamp;
         prev_timestamp = timestamp;
@@ -410,6 +399,24 @@ function AppRunner(canvas) {
         run_next = false;
 
         window.requestAnimationFrame(loop);
+    }
+
+    function syncSize() {
+        let rect = canvas.getBoundingClientRect();
+
+        if (!rect.width && !rect.height)
+            return;
+
+        // Accessing canvas.width or canvas.height (even for reading) seems to trigger
+        // a reset or something, and can cause flicker on Firefox Mobile.
+        if (rect.width != prev_canvas_width) {
+            canvas.width = rect.width;
+            prev_canvas_width = rect.width;
+        }
+        if (rect.height != prev_canvas_height) {
+            canvas.height = rect.height;
+            prev_canvas_height = rect.height;
+        }
     }
 
     function measurePerf(times, time) {
