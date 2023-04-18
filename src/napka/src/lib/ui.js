@@ -15,8 +15,20 @@ import { render, html, noChange } from '../../node_modules/lit/html.js';
 import { directive, Directive } from '../../node_modules/lit/directive.js';
 import { util, log } from '../../../web/libjs/util.js';
 
+let T = {};
+
+Object.assign(T, {
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    confirm_not_reversible: 'Be careful, this action cannot be reversed!',
+    error_has_occured: 'An error has occured',
+    filter: 'Filter'
+});
+
 const ui = new (function() {
     let self = this;
+
+    let run_func = () => {};
 
     let log_entries = [];
 
@@ -29,6 +41,10 @@ const ui = new (function() {
 
     let table_orders = {};
     let table_filters = {};
+
+    Object.defineProperties(this, {
+        runFunction: { get: () => run_func, set: func => { run_func = func; }, enumerable: true }
+    });
 
     this.notifyHandler = function(action, entry) {
         if (typeof render == 'function' && entry.type !== 'debug') {
@@ -73,7 +89,7 @@ const ui = new (function() {
             } else if (entry.type === 'error') {
                 return html`<div class="error" @click=${e => entry.close()}>
                     <button class="log_close">X</button>
-                    <b>An error has occured</b><br/>
+                    <b>${T.error_has_occured}</b><br/>
                     ${msg}
                 </div>`;
             } else {
@@ -141,8 +157,6 @@ const ui = new (function() {
     };
 
     this.confirm = function(action, func) {
-        let T = app.T;
-
         return self.wrap(() => self.dialog({
             run: (render, close) => html`
                 <div class="title">${action}</div>
@@ -221,7 +235,7 @@ const ui = new (function() {
                 dialog_el = null;
             }
 
-            setTimeout(app.go, 0);
+            setTimeout(run_func, 0);
         });
 
         dialogs.push(dlg);
@@ -308,7 +322,7 @@ const ui = new (function() {
         e.dataTransfer.dropEffect = 'move';
         e.preventDefault();
 
-        return app.go();
+        return run_func();
     };
 
     function dragEnd(e) {
@@ -320,7 +334,7 @@ const ui = new (function() {
         drag_items = null;
         drag_src = null;
 
-        return app.go();
+        return run_func();
     };
 
     function reorder(items, idx1, idx2) {
@@ -353,7 +367,7 @@ const ui = new (function() {
         let ascending = (info != null && info.by_str == String(by)) ? info.ascending : null;
 
         return html`
-            <th class="item" @click=${e => { setOrder(key, by); app.go(); }}>
+            <th class="item" @click=${e => { setOrder(key, by); run_func(); }}>
                 ${title}
                 <div class="arrows">
                     <span class=${'up' + (ascending === false ? ' active' : '')}></span>
@@ -393,13 +407,11 @@ const ui = new (function() {
     }
 
     this.tableFilter = function(key, ...keys) {
-        let T = app.T;
-
         let filter = table_filters[key];
 
         return html`<input type="search" placeholder=${T.filter + '...'}
                            value=${(filter != null) ? filter.str : ''}
-                           @input=${e => { setFilter(key, e.target.value, keys); app.go(); }} />`;
+                           @input=${e => { setFilter(key, e.target.value, keys); run_func(); }} />`;
     };
 
     function setFilter(key, str, keys) {
@@ -478,6 +490,7 @@ const ui = new (function() {
         return comparator;
     }
 })();
+
 
 module.exports = {
     ui
