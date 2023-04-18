@@ -52,7 +52,7 @@ function login(db, req, res) {
 
     req.session.userid = row.userid;
 
-    let profile = row_to_profile(row);
+    let profile = rowToProfile(row);
     res.json(profile);
 }
 
