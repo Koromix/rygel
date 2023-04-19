@@ -105,7 +105,7 @@ a:hover { color: var(--color, #0d114a); }
 }
 #suggestions:not(:empty) {
     padding-top: 6px;
-    background: white;
+    background: var(--background, white);
     padding: 12px;
 }
 #suggestions > a {
