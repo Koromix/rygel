@@ -22,9 +22,13 @@ import { TileMap } from '../lib/tilemap.js';
 
 let provider = null;
 
+let canvas;
+let ctx;
+
 let runner;
 let map;
 let map_markers = [];
+let flash_pos = null;
 
 let profile = null;
 
@@ -42,7 +46,8 @@ export async function start(prov, options = {}) {
     provider = prov;
     await provider.loadMap();
 
-    let canvas = document.querySelector('#map');
+    canvas = document.querySelector('#map');
+    ctx = canvas.getContext('2d');
 
     runner = new AppRunner(canvas);
     map = new TileMap(runner);
@@ -52,8 +57,8 @@ export async function start(prov, options = {}) {
     map.setMarkers('Etablissements', map_markers);
     map.move(options.latitude, options.longitude, options.zoom);
 
-    runner.onUpdate = map.update;
-    runner.onDraw = map.draw;
+    runner.onUpdate = updateMap;
+    runner.onDraw = drawMap;
 
     runner.idleTimeout = 1000;
     runner.start();
@@ -93,6 +98,50 @@ export async function start(prov, options = {}) {
     refreshMap();
 
     document.body.classList.remove('loading');
+}
+
+function updateMap() {
+    map.update();
+
+    if (flash_pos != null) {
+        let pos = map.coordToScreen(flash_pos.latitude, flash_pos.longitude);
+        let age = runner.updateCounter - flash_pos.start;
+
+        flash_pos.x = pos.x;
+        flash_pos.y = pos.y;
+
+        flash_pos.speed = age / 300;
+        flash_pos.radius = Math.max(16 - flash_pos.speed * 4, flash_pos.radius - age / 8);
+        flash_pos.opacity = (13000 - Math.max(age * 16, 12000)) / 1000;
+
+        if (flash_pos.opacity <= 0)
+            flash_pos = null;
+
+        runner.busy();
+    }
+}
+
+function drawMap() {
+    map.draw();
+
+    if (flash_pos != null) {
+        ctx.save();
+
+        ctx.fillStyle = '#ff660022';
+        ctx.strokeStyle = '#ff6600';
+
+        ctx.lineWidth = 4;
+        ctx.lineDashOffset = flash_pos.speed * -runner.drawCounter;
+        ctx.setLineDash([6, 6]);
+        ctx.globalAlpha = flash_pos.opacity;
+
+        ctx.beginPath();
+        ctx.arc(flash_pos.x, flash_pos.y, flash_pos.radius, 0, Math.PI * 2, false);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.restore();
+    }
 }
 
 function renderMenu() {
@@ -214,14 +263,21 @@ function selectAddress(result) {
     if (result != null) {
         document.querySelector('#search input').value = result.address || '';
 
-        map.setMarkers('User', [{
+        flash_pos = {
+            start: runner.updateCounter,
+
             latitude: result.latitude,
             longitude: result.longitude,
 
-            circle: '#2d8261',
-            size: 16
-        }]);
-        map.move(result.latitude, result.longitude, 12);
+            x: null,
+            y: null,
+
+            speed: 1,
+            radius: 480,
+            opacity: 1
+        };
+
+        map.move(result.latitude, result.longitude, 14);
     }
 
     closeSuggestions();
