@@ -4,6 +4,13 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.17
+
+**Main changes:**
+
+- Allow strings for input `void *`, `int8_t *` and `int16_t *` pointer arguments
+- Support using `[string]` (single-element string arrays) for polymorphic input/output arguments
+
 #### Koffi 2.3.16
 
 **Main changes:**
