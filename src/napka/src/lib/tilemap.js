@@ -274,13 +274,17 @@ function TileMap(runner) {
             }
 
             if (zoom_animation != null) {
-                for (let j = j1 - 1; j <= j2 + 1; j++) {
+                for (let j = j1 - 2; j <= j2 + 2; j++) {
+                    drawTile(origin, i1 - 2, j, false);
                     drawTile(origin, i1 - 1, j, false);
                     drawTile(origin, i2 + 1, j, false);
+                    drawTile(origin, i2 + 2, j, false);
                 }
                 for (let i = i1; i <= i2; i++) {
+                    drawTile(origin, i, j1 - 2, false);
                     drawTile(origin, i, j1 - 1, false);
                     drawTile(origin, i, j2 + 1, false);
+                    drawTile(origin, i, j2 + 2, false);
                 }
             }
 
