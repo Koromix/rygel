@@ -915,3 +915,8 @@ EXPORT void UpperToInternalBuffer(const char *str, char **ptr)
 
     *ptr = buf;
 }
+
+EXPORT int ComputeLengthUntilNul(void *ptr)
+{
+    return (int)strlen(ptr);
+}

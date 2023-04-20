@@ -239,6 +239,9 @@ async function test() {
     const UpperToInternalBuffer1 = lib.func('void UpperToInternalBuffer(const char *str, _Out_ char **ptr)');
     const UpperToInternalBuffer2 = lib.func('void UpperToInternalBuffer(const char *str, _Out_ uint8_t **ptr)');
     const ChangeDirectory = lib.func('void ChangeDirectory(const char *dirname)');
+    const ComputeLengthUntilNulV = lib.func('int ComputeLengthUntilNul(void *ptr)');
+    const ComputeLengthUntilNulB = lib.func('int ComputeLengthUntilNul(int8_t *ptr)');
+    const ComputeLengthUntilNulW = lib.func('int ComputeLengthUntilNul(int16_t *ptr)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -638,4 +641,12 @@ async function test() {
 
     // Support null in koffi.address()
     assert.strictEqual(koffi.address(null), 0n);
+
+    // Test polymorphic arguments with strings
+    assert.equal(ComputeLengthUntilNulV(koffi.as([1, 2, 42, 0], 'int8_t *')), 3);
+    assert.equal(ComputeLengthUntilNulV('Hello World!'), 12);
+    assert.equal(ComputeLengthUntilNulB([1, 42, 0]), 2);
+    assert.equal(ComputeLengthUntilNulB('Hello..'), 7);
+    assert.equal(ComputeLengthUntilNulW([0xAAAA, 0xAAAA, 42]), 5);
+    assert.equal(ComputeLengthUntilNulW('ẹỊ¢'), 5);
 }
