@@ -99,7 +99,7 @@
     owner: false
     group: false
     rsync_opts:
-      - "--mkpath"
+      - "--mkpath --exclude=node_modules/"
   delegate_to: '{{ inventory_hostname }}'
   become: yes
   become_user: napka
