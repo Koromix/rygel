@@ -241,7 +241,7 @@ async function test() {
     const ChangeDirectory = lib.func('void ChangeDirectory(const char *dirname)');
     const ComputeLengthUntilNulV = lib.func('int ComputeLengthUntilNul(void *ptr)');
     const ComputeLengthUntilNulB = lib.func('int ComputeLengthUntilNul(int8_t *ptr)');
-    const ComputeLengthUntilNulW = lib.func('int ComputeLengthUntilNul(int16_t *ptr)');
+    const ComputeLengthUntilNulWide = lib.func('int ComputeLengthUntilNulWide(int16_t *ptr)');
     const ReverseStringVoid = lib.func('void ReverseStringVoid(_Inout_ void *ptr)');
     const ReverseString16Void = lib.func('void ReverseString16Void(_Inout_ void *ptr)');
 
@@ -649,8 +649,8 @@ async function test() {
     assert.equal(ComputeLengthUntilNulV('Hello World!'), 12);
     assert.equal(ComputeLengthUntilNulB([1, 42, 0]), 2);
     assert.equal(ComputeLengthUntilNulB('Hello..'), 7);
-    assert.equal(ComputeLengthUntilNulW([0xAAAA, 0xAAAA, 42]), 5);
-    assert.equal(ComputeLengthUntilNulW('ẹỊ¢'), 5);
+    assert.equal(ComputeLengthUntilNulWide([0xAAAA, 0xAAAA, 42, 0]), 3);
+    assert.equal(ComputeLengthUntilNulWide('ẹỊ¢a'), 4);
 
     // Test input/output strings with polymorphic arguments
     {

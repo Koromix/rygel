@@ -916,9 +916,25 @@ EXPORT void UpperToInternalBuffer(const char *str, char **ptr)
     *ptr = buf;
 }
 
-EXPORT int ComputeLengthUntilNul(void *ptr)
+EXPORT int ComputeLengthUntilNul(const void *ptr)
 {
     return (int)strlen(ptr);
+}
+
+static size_t WideStringLength(const char16_t *str16)
+{
+    size_t len = 0;
+
+    while (str16[len]) {
+        len++;
+    }
+
+    return len;
+}
+
+EXPORT int ComputeLengthUntilNulWide(const int16_t *ptr)
+{
+    return (int)WideStringLength((const char16_t *)ptr);
 }
 
 EXPORT void ReverseStringVoid(void *ptr)
@@ -931,17 +947,6 @@ EXPORT void ReverseStringVoid(void *ptr)
         str[i] = str[len - i - 1];
         str[len - i - 1] = tmp;
     }
-}
-
-static size_t WideStringLength(const char16_t *str16)
-{
-    size_t len = 0;
-
-    while (str16[len]) {
-        len++;
-    }
-
-    return len;
 }
 
 EXPORT void ReverseString16Void(void *ptr)
