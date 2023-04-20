@@ -98,7 +98,7 @@ function TileMap(runner) {
 
         // Animate zoom
         if (zoom_animation != null) {
-            let t = (runner.updateCounter - zoom_animation.start) / 12;
+            let t = easeInOutSine((runner.updateCounter - zoom_animation.start) / 60);
 
             if (t < 1) {
                 zoom_animation.value = zoom_animation.from + t * (zoom_animation.to - zoom_animation.from);
@@ -180,6 +180,10 @@ function TileMap(runner) {
         state.pos.y = Math.floor(state.pos.y);
     };
 
+    function easeInOutSine(t) {
+        return -(Math.cos(Math.PI * t) - 1) / 2;
+    }
+
     function zoom(delta, at) {
         if (state.zoom + delta < tiles.min_zoom || state.zoom + delta > tiles.max_zoom)
             return;
@@ -237,15 +241,18 @@ function TileMap(runner) {
         missing_assets = 0;
 
         let adjust = { x: 0, y: 0 };
-        let scale = 1;
+        let anim_zoom = state.zoom;
+        let anim_scale = 1;
 
         if (zoom_animation != null) {
-            let delta = Math.pow(2, state.zoom - zoom_animation.value) - 1;
+            anim_zoom = zoom_animation.value;
+
+            let delta = Math.pow(2, state.zoom - anim_zoom) - 1;
 
             adjust.x = delta * (zoom_animation.at.x - canvas.width / 2);
             adjust.y = delta * (zoom_animation.at.y - canvas.height / 2);
 
-            scale = Math.pow(2, zoom_animation.value - state.zoom);
+            anim_scale = Math.pow(2, anim_zoom - state.zoom);
         }
 
         // Draw tiles
@@ -253,7 +260,7 @@ function TileMap(runner) {
             ctx.save();
 
             ctx.translate(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2));
-            ctx.scale(scale, scale);
+            ctx.scale(anim_scale, anim_scale);
             ctx.translate(-state.pos.x + adjust.x, -state.pos.y + adjust.y);
 
             let i1 = Math.floor(viewport.x1 / tiles.tilesize);
@@ -299,8 +306,8 @@ function TileMap(runner) {
                             y: pos.y - canvas.height / 2
                         };
 
-                        pos.x = Math.round(canvas.width / 2 + scale * (centered.x + adjust.x));
-                        pos.y = Math.round(canvas.height / 2 + scale * (centered.y + adjust.y));
+                        pos.x = Math.round(canvas.width / 2 + anim_scale * (centered.x + adjust.x));
+                        pos.y = Math.round(canvas.height / 2 + anim_scale * (centered.y + adjust.y));
                     }
 
                     if (pos.x < -marker.size || pos.x > canvas.width + marker.size)
@@ -316,8 +323,8 @@ function TileMap(runner) {
                     if (marker.icon != null) {
                         let img = getImage(marker_textures, marker.icon);
 
-                        let width = adaptMarkerSize(marker.size, state.zoom);
-                        let height = adaptMarkerSize(marker.size, state.zoom);
+                        let width = adaptMarkerSize(marker.size, anim_zoom);
+                        let height = adaptMarkerSize(marker.size, anim_zoom);
 
                         if (img != null)
                             ctx.drawImage(img, pos.x - width / 2, pos.y - height / 2, width, height);
