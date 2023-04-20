@@ -200,6 +200,7 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
             napi_status status = napi_create_reference(env, array, 1, &out->ref);
             RG_ASSERT(status == napi_ok);
 
+            out->kind = OutArgument::Kind::Array;
             out->ptr = (const uint8_t *)*out_str;
             out->type = type;
         }
@@ -301,6 +302,7 @@ bool CallData::PushString16(Napi::Value value, int directions, const char16_t **
             napi_status status = napi_create_reference(env, array, 1, &out->ref);
             RG_ASSERT(status == napi_ok);
 
+            out->kind = OutArgument::Kind::Array;
             out->ptr = (const uint8_t *)*out_str16;
             out->type = type;
         }
@@ -973,6 +975,9 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         case napi_object: {
             uint8_t *ptr = nullptr;
 
+            OutArgument::Kind out_kind;
+            Size out_max_len = -1;
+
             if (value.IsArray()) {
                 if (RG_UNLIKELY(!type->ref.type->size)) {
                     ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to void *, use koffi.as()",
@@ -981,17 +986,25 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 }
 
                 Napi::Array array = value.As<Napi::Array>();
+                Size len = PushIndirectString(array, type->ref.type, &ptr);
 
-                Size len = (Size)array.Length();
-                Size size = len * type->ref.type->size;
-
-                ptr = AllocHeap(size, 16);
-
-                if (directions & 1) {
-                    if (!PushNormalArray(array, len, type, ptr))
-                        return false;
+                if (len >= 0) {
+                    out_kind = (type->ref.type->size == 2) ? OutArgument::Kind::String16 : OutArgument::Kind::String;
+                    out_max_len = len;
                 } else {
-                    memset_safe(ptr, 0, size);
+                    Size len = (Size)array.Length();
+                    Size size = len * type->ref.type->size;
+
+                    ptr = AllocHeap(size, 16);
+
+                    if (directions & 1) {
+                        if (!PushNormalArray(array, len, type, ptr))
+                            return false;
+                    } else {
+                        memset_safe(ptr, 0, size);
+                    }
+
+                    out_kind = OutArgument::Kind::Array;
                 }
             } else if (IsRawBuffer(value)) {
                 Span<uint8_t> buffer = GetRawBuffer(value);
@@ -1006,6 +1019,8 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     ptr = buffer.ptr;
                     directions = 1;
                 }
+
+                out_kind = OutArgument::Kind::Buffer;
             } else if (RG_LIKELY(type->ref.type->primitive == PrimitiveKind::Record ||
                                  type->ref.type->primitive == PrimitiveKind::Union)) {
                 if (RG_UNLIKELY(!type->ref.type->size)) {
@@ -1031,6 +1046,8 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
                     memset_safe(ptr, 0, type->size);
                 }
+
+                out_kind = OutArgument::Kind::Object;
             } else {
                 goto unexpected;
             }
@@ -1041,8 +1058,10 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 napi_status status = napi_create_reference(env, value, 1, &out->ref);
                 RG_ASSERT(status == napi_ok);
 
+                out->kind = out_kind;
                 out->ptr = ptr;
                 out->type = type->ref.type;
+                out->max_len = out_max_len;
             }
 
             *out_ptr = ptr;
@@ -1095,6 +1114,27 @@ unexpected:
     return false;
 }
 
+Size CallData::PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr)
+{
+    if (array.Length() != 1)
+        return -1;
+
+    Napi::Value value = array[0u];
+
+    if (!value.IsString())
+        return -1;
+
+    if (ref == instance->void_type) {
+        return PushStringValue(value, (const char **)out_ptr);
+    } else if (ref->primitive == PrimitiveKind::Int8) {
+        return PushStringValue(value, (const char **)out_ptr);
+    } else if (ref->primitive == PrimitiveKind::Int16) {
+        return PushString16Value(value, (const char16_t **)out_ptr);
+    } else {
+        return -1;
+    }
+}
+
 static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)
 {
     napi_value value;
@@ -1111,21 +1151,55 @@ void CallData::PopOutArguments()
         Napi::Value value = GetReferenceValue(env, out.ref);
         RG_ASSERT(!value.IsEmpty());
 
-        if (value.IsArray()) {
-            Napi::Array array(env, value);
-            DecodeNormalArray(array, out.ptr, out.type);
-        } else if (IsRawBuffer(value)) {
-            Span<uint8_t> buffer = GetRawBuffer(value);
-            DecodeBuffer(buffer, out.ptr, out.type);
-        } else {
-            Napi::Object obj = value.As<Napi::Object>();
+        switch (out.kind) {
+            case OutArgument::Kind::Array: {
+                RG_ASSERT(value.IsArray());
 
-            if (CheckValueTag(instance, value, &MagicUnionMarker)) {
-                MagicUnion *u = MagicUnion::Unwrap(obj);
-                u->SetRaw(out.ptr);
-            } else {
-                DecodeObject(obj, out.ptr, out.type);
-            }
+                Napi::Array array(env, value);
+                DecodeNormalArray(array, out.ptr, out.type);
+            } break;
+
+            case OutArgument::Kind::Buffer: {
+                RG_ASSERT(IsRawBuffer(value));
+
+                Span<uint8_t> buffer = GetRawBuffer(value);
+                DecodeBuffer(buffer, out.ptr, out.type);
+            } break;
+
+            case OutArgument::Kind::String: {
+                Napi::Array array(env, value);
+
+                RG_ASSERT(array.IsArray());
+                RG_ASSERT(array.Length() == 1);
+
+                Size len = strnlen((const char *)out.ptr, out.max_len);
+                Napi::String str = Napi::String::New(env, (const char *)out.ptr, len);
+
+                array.Set(0u, str);
+            } break;
+
+            case OutArgument::Kind::String16: {
+                Napi::Array array(env, value);
+
+                RG_ASSERT(array.IsArray());
+                RG_ASSERT(array.Length() == 1);
+
+                Size len = WideStringLength((const char16_t *)out.ptr, out.max_len);
+                Napi::String str = Napi::String::New(env, (const char16_t *)out.ptr, len);
+
+                array.Set(0u, str);
+            } break;
+
+            case OutArgument::Kind::Object: {
+                Napi::Object obj = value.As<Napi::Object>();
+
+                if (CheckValueTag(instance, value, &MagicUnionMarker)) {
+                    MagicUnion *u = MagicUnion::Unwrap(obj);
+                    u->SetRaw(out.ptr);
+                } else {
+                    DecodeObject(obj, out.ptr, out.type);
+                }
+            } break;
         }
     }
 }

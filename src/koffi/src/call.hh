@@ -37,9 +37,21 @@ struct BackRegisters;
 // But on Windows i386, without it, the alignment may not be correct (compiler bug?).
 class alignas(8) CallData {
     struct OutArgument {
+        enum class Kind {
+            Array,
+            Buffer,
+            String,
+            String16,
+            Object
+        };
+
+        Kind kind;
+
         napi_ref ref;
         const uint8_t *ptr;
         const TypeInfo *type;
+
+        Size max_len; // Only for indirect strings
     };
 
     Napi::Env env;
@@ -116,6 +128,7 @@ private:
     bool PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin);
     bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
     bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
+    Size PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr);
 
     void PopOutArguments();
 

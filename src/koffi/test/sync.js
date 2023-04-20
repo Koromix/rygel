@@ -242,6 +242,8 @@ async function test() {
     const ComputeLengthUntilNulV = lib.func('int ComputeLengthUntilNul(void *ptr)');
     const ComputeLengthUntilNulB = lib.func('int ComputeLengthUntilNul(int8_t *ptr)');
     const ComputeLengthUntilNulW = lib.func('int ComputeLengthUntilNul(int16_t *ptr)');
+    const ReverseStringVoid = lib.func('void ReverseStringVoid(_Inout_ void *ptr)');
+    const ReverseString16Void = lib.func('void ReverseString16Void(_Inout_ void *ptr)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -642,11 +644,22 @@ async function test() {
     // Support null in koffi.address()
     assert.strictEqual(koffi.address(null), 0n);
 
-    // Test polymorphic arguments with strings
+    // Test polymorphic input string arguments
     assert.equal(ComputeLengthUntilNulV(koffi.as([1, 2, 42, 0], 'int8_t *')), 3);
     assert.equal(ComputeLengthUntilNulV('Hello World!'), 12);
     assert.equal(ComputeLengthUntilNulB([1, 42, 0]), 2);
     assert.equal(ComputeLengthUntilNulB('Hello..'), 7);
     assert.equal(ComputeLengthUntilNulW([0xAAAA, 0xAAAA, 42]), 5);
     assert.equal(ComputeLengthUntilNulW('ẹỊ¢'), 5);
+
+    // Test input/output strings with polymorphic arguments
+    {
+        let ptr = ['Hello World!'];
+
+        ReverseStringVoid(koffi.as(ptr, 'char *'));
+        assert.equal(ptr[0], '!dlroW olleH');
+
+        ReverseString16Void(koffi.as(ptr, 'char16_t *'))
+        assert.equal(ptr[0], 'Hello World!');
+    }
 }

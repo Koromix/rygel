@@ -154,6 +154,8 @@ T GetNumber(Napi::Value value)
     RG_UNREACHABLE();
 }
 
+Size WideStringLength(const char16_t *str16, Size max);
+
 Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
 void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type);
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type);

@@ -647,7 +647,7 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
     }
 }
 
-static Size WideStringLength(const char16_t *str16, Size max)
+Size WideStringLength(const char16_t *str16, Size max)
 {
     Size len = 0;
 

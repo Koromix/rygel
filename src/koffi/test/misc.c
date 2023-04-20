@@ -920,3 +920,38 @@ EXPORT int ComputeLengthUntilNul(void *ptr)
 {
     return (int)strlen(ptr);
 }
+
+EXPORT void ReverseStringVoid(void *ptr)
+{
+    char *str = (char *)ptr;
+    size_t len = strlen(str);
+
+    for (size_t i = 0; i < len / 2; i++) {
+        char tmp = str[i];
+        str[i] = str[len - i - 1];
+        str[len - i - 1] = tmp;
+    }
+}
+
+static size_t WideStringLength(const char16_t *str16)
+{
+    size_t len = 0;
+
+    while (str16[len]) {
+        len++;
+    }
+
+    return len;
+}
+
+EXPORT void ReverseString16Void(void *ptr)
+{
+    char16_t *str16 = (char16_t *)ptr;
+    size_t len = WideStringLength(ptr);
+
+    for (size_t i = 0; i < len / 2; i++) {
+        char16_t tmp = str16[i];
+        str16[i] = str16[len - i - 1];
+        str16[len - i - 1] = tmp;
+    }
+}
