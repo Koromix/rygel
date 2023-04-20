@@ -105,14 +105,17 @@ function updateMap() {
 
     if (flash_pos != null) {
         let pos = map.coordToScreen(flash_pos.latitude, flash_pos.longitude);
-        let age = runner.updateCounter - flash_pos.start;
 
         flash_pos.x = pos.x;
         flash_pos.y = pos.y;
 
-        flash_pos.speed = age / 300;
-        flash_pos.radius = Math.max(16 - flash_pos.speed * 4, flash_pos.radius - age / 8);
-        flash_pos.opacity = (13000 - Math.max(age * 16, 12000)) / 1000;
+        let t = (runner.updateCounter - flash_pos.start) / 240;
+        let t1 = util.clamp(t, 0, 1);
+        let t2 = util.clamp(t - 4, 0, 1);
+
+        flash_pos.speed = 0.5 + 4 * Math.max(0, 1 - t1);
+        flash_pos.radius = 10 + 390 * (1 - easeInOutSine(t1));
+        flash_pos.opacity = 1 - t2;
 
         if (flash_pos.opacity <= 0)
             flash_pos = null;
@@ -121,13 +124,17 @@ function updateMap() {
     }
 }
 
+function easeInOutSine(t) {
+    return -(Math.cos(Math.PI * t) - 1) / 2;
+}
+
 function drawMap() {
     map.draw();
 
     if (flash_pos != null) {
         ctx.save();
 
-        ctx.fillStyle = '#ff660022';
+        ctx.fillStyle = '#ff660066';
         ctx.strokeStyle = '#ff6600';
 
         ctx.lineWidth = 4;
