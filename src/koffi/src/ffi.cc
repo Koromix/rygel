@@ -605,8 +605,10 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     if (!type)
         return env.Null();
 
-    if (type->primitive != PrimitiveKind::Pointer) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", type->name);
+    if (type->primitive != PrimitiveKind::Pointer &&
+            type->primitive != PrimitiveKind::String &&
+            type->primitive != PrimitiveKind::String16) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", type->name);
         return env.Null();
     }
 
@@ -653,9 +655,9 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     const TypeInfo *src = ResolveType(info[named]);
     if (!src)
         return env.Null();
-    if (src->primitive != PrimitiveKind::String &&
-            src->primitive != PrimitiveKind::String16 &&
-            src->primitive != PrimitiveKind::Pointer) {
+    if (src->primitive != PrimitiveKind::Pointer &&
+            src->primitive != PrimitiveKind::String &&
+            src->primitive != PrimitiveKind::String16) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", src->name);
         return env.Null();
     }
@@ -1982,8 +1984,10 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     const TypeInfo *type = ResolveType(info[1]);
     if (RG_UNLIKELY(!type))
         return env.Null();
-    if (type->primitive != PrimitiveKind::Pointer) {
-        ThrowError<Napi::TypeError>(env, "Only pointer types can be used for casting");
+    if (type->primitive != PrimitiveKind::Pointer &&
+            type->primitive != PrimitiveKind::String &&
+            type->primitive != PrimitiveKind::String16) {
+        ThrowError<Napi::TypeError>(env, "Only pointer or string types can be used for casting");
         return env.Null();
     }
 

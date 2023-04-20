@@ -147,7 +147,7 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
 {
     if (value.IsString()) {
         if (RG_UNLIKELY(directions & 2)) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
         }
 
@@ -1047,6 +1047,26 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
             *out_ptr = ptr;
             return true;
+        } break;
+
+        case napi_string: {
+            RG_ASSERT(type->primitive == PrimitiveKind::Pointer);
+
+            if (RG_UNLIKELY(directions & 2))
+                goto unexpected;
+
+            if (type->ref.type == instance->void_type) {
+                PushStringValue(value, (const char **)out_ptr);
+                return true;
+            } else if (type->ref.type->primitive == PrimitiveKind::Int8) {
+                PushStringValue(value, (const char **)out_ptr);
+                return true;
+            } else if (type->ref.type->primitive == PrimitiveKind::Int16) {
+                PushString16Value(value, (const char16_t **)out_ptr);
+                return true;
+            } else {
+                goto unexpected;
+            }
         } break;
 
         case napi_number: {
