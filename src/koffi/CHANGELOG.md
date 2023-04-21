@@ -4,6 +4,12 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.18
+
+**Main fixes:**
+
+- Fix possible crash on exit caused by unregistered callbacks
+
 #### Koffi 2.3.17
 
 **Main changes:**
