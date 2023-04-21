@@ -981,19 +981,24 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             Size out_max_len = -1;
 
             if (value.IsArray()) {
-                if (RG_UNLIKELY(!type->ref.type->size)) {
-                    ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to void *, use koffi.as()",
-                                                type->ref.type != instance->void_type ? "opaque" : "ambiguous");
-                    return false;
-                }
-
                 Napi::Array array = value.As<Napi::Array>();
                 Size len = PushIndirectString(array, type->ref.type, &ptr);
 
                 if (len >= 0) {
+                    if (RG_UNLIKELY(!type->ref.type->size && type->ref.type != instance->void_type)) {
+                        ThrowError<Napi::TypeError>(env, "Cannot pass [string] value to %1", type->name);
+                        return false;
+                    }
+
                     out_kind = (type->ref.type->size == 2) ? OutArgument::Kind::String16 : OutArgument::Kind::String;
                     out_max_len = len;
                 } else {
+                    if (RG_UNLIKELY(!type->ref.type->size)) {
+                        ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to %2, use koffi.as()",
+                                                    type->ref.type != instance->void_type ? "opaque" : "ambiguous", type->name);
+                        return false;
+                    }
+
                     Size len = (Size)array.Length();
                     Size size = len * type->ref.type->size;
 
@@ -1026,8 +1031,8 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             } else if (RG_LIKELY(type->ref.type->primitive == PrimitiveKind::Record ||
                                  type->ref.type->primitive == PrimitiveKind::Union)) {
                 if (RG_UNLIKELY(!type->ref.type->size)) {
-                    ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to void *, use koffi.as()",
-                                                type->ref.type != instance->void_type ? "opaque" : "ambiguous");
+                    ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to %2, use koffi.as()",
+                                                type->ref.type != instance->void_type ? "opaque" : "ambiguous", type->name);
                     return false;
                 }
 

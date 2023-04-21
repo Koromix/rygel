@@ -656,10 +656,13 @@ async function test() {
     {
         let ptr = ['Hello World!'];
 
-        ReverseStringVoid(koffi.as(ptr, 'char *'));
+        ReverseStringVoid(ptr);
         assert.equal(ptr[0], '!dlroW olleH');
 
-        ReverseString16Void(koffi.as(ptr, 'char16_t *'))
+        ReverseStringVoid(koffi.as(ptr, 'char *'));
         assert.equal(ptr[0], 'Hello World!');
+
+        ReverseString16Void(koffi.as(ptr, 'char16_t *'))
+        assert.equal(ptr[0], '!dlroW olleH');
     }
 }
