@@ -12,7 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 function cleanURL(url) {
-    let m = url?.match(/(https?:\/\/)?(?:www\.)?(?:[a-zA-Z0-9-]+\.)+[a-z]+(?:[^ ]+\/)*/);
+    let m = url ? url.match(/(https?:\/\/)?(?:www\.)?(?:[a-zA-Z0-9-]+\.)+[a-z]+(?:[^ ]+\/)*/) : null;
 
     if (m != null) {
         url = m[0];
@@ -29,12 +29,12 @@ function cleanURL(url) {
 }
 
 function cleanMail(mail) {
-    let m = mail?.match(/[a-zA-Z0-9\.\-_]+@(?:[a-zA-Z0-9-]+\.)+[a-z]+/);
+    let m = mail ? mail.match(/[a-zA-Z0-9\.\-_]+@(?:[a-zA-Z0-9-]+\.)+[a-z]+/) : null;
     return m?.[0];
 }
 
 function cleanPhoneNumber(tel) {
-    tel = tel?.replace(/[\. ]/g, '').match(/(.{1,2})/g).join('.');
+    tel = tel ? tel.replace(/[\. ]/g, '').match(/(.{1,2})/g).join('.') : null;
     return tel;
 }
 
