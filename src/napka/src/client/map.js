@@ -334,7 +334,7 @@ export function refreshMap() {
                             <button type="button" class="danger"
                                     @click=${ui.confirm('Supprimer cet établissement', e => deleteEntry(etab.id).then(close))}>Supprimer</button>
                             <div style="flex: 1;"></div>
-                            <button type="submit">Modifier</button>
+                            <button @click=${closeOrSubmit} type="submit">Modifier</button>
                             <button type="button" class="secondary" @click=${ui.insist(close)}>Annuler</button>
                         </div>
                     ` : ''}
@@ -347,6 +347,11 @@ export function refreshMap() {
     map_markers.push(...markers);
 
     runner.busy();
+}
+
+function closeOrSubmit(e) {
+    if (edit_key != null)
+        toggleEdit(e, null);
 }
 
 function handlePopupClick(e) {
