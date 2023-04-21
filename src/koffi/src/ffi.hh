@@ -305,6 +305,8 @@ RG_STATIC_ASSERT(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
 RG_STATIC_ASSERT(MaxAsyncCalls >= DefaultMaxAsyncCalls);
 
 struct TrampolineInfo {
+    InstanceData *instance;
+
     const FunctionInfo *proto;
     Napi::FunctionReference func;
     Napi::Reference<Napi::Value> recv;

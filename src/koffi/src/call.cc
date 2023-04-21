@@ -77,8 +77,10 @@ void CallData::Dispose()
             int16_t idx = used_trampolines[i];
             TrampolineInfo *trampoline = &shared.trampolines[idx];
 
+            RG_ASSERT(trampoline->instance == instance);
             RG_ASSERT(!trampoline->func.IsEmpty());
 
+            trampoline->instance = nullptr;
             trampoline->func.Reset();
             trampoline->recv.Reset();
 
@@ -1225,6 +1227,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
 
     TrampolineInfo *trampoline = &shared.trampolines[idx];
 
+    trampoline->instance = instance;
     trampoline->proto = proto;
     trampoline->func.Reset(func, 1);
     trampoline->recv.Reset();

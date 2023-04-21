@@ -1654,6 +1654,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     TrampolineInfo *trampoline = &shared.trampolines[idx];
 
+    trampoline->instance = instance;
     trampoline->proto = type->ref.proto;
     trampoline->func.Reset(func, 1);
     if (!IsNullOrUndefined(recv)) {
@@ -1954,10 +1955,8 @@ InstanceData::~InstanceData()
         for (int16_t idx = 0; idx < MaxTrampolines; idx++) {
             TrampolineInfo *trampoline = &shared.trampolines[idx];
 
-            if (trampoline->func.IsEmpty())
-                continue;
-
-            if (trampoline->func.Env().GetInstanceData<InstanceData>() == this) {
+            if (trampoline->instance == this) {
+                trampoline->instance = nullptr;
                 trampoline->func.Reset();
                 trampoline->recv.Reset();
             }

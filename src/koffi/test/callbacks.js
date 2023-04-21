@@ -258,6 +258,9 @@ async function test() {
 
         let ret = CallMeChar(cb);
         assert.equal(ret, 97 + 98);
+
+        // Don't unregister to make lingering trampolines don't make node crash on exit
+        // koffi.unregister(cb);
     }
 
     // Test callback inside async function
@@ -268,6 +271,9 @@ async function test() {
         let ret = await util.promisify(CallMeChar.async)(cb);
 
         assert.equal(ret, 97 + 2 * 98);
+
+        // Don't unregister to make lingering trampolines don't make node crash on exit
+        // koffi.unregister(cb);
     }
 
     // Use callbacks from secondary threads
