@@ -11,6 +11,8 @@ module.exports = require('./common').runTestWithBindingPath(test);
 
 function test (bindingPath) {
   const binding = require(bindingPath);
+  binding.error.testErrorCopySemantics();
+  binding.error.testErrorMoveSemantics();
 
   assert.throws(() => binding.error.throwApiError('test'), function (err) {
     return err instanceof Error && err.message.includes('Invalid');
@@ -24,12 +26,24 @@ function test (bindingPath) {
     return err instanceof Error && err.message === 'test';
   });
 
-  assert.throws(() => binding.error.throwTypeError('test'), function (err) {
+  assert.throws(() => binding.error.throwTypeErrorCStr('test'), function (err) {
     return err instanceof TypeError && err.message === 'test';
+  });
+
+  assert.throws(() => binding.error.throwRangeErrorCStr('test'), function (err) {
+    return err instanceof RangeError && err.message === 'test';
   });
 
   assert.throws(() => binding.error.throwRangeError('test'), function (err) {
     return err instanceof RangeError && err.message === 'test';
+  });
+
+  assert.throws(() => binding.error.throwTypeErrorCtor(new TypeError('jsTypeError')), function (err) {
+    return err instanceof TypeError && err.message === 'jsTypeError';
+  });
+
+  assert.throws(() => binding.error.throwRangeErrorCtor(new RangeError('rangeTypeError')), function (err) {
+    return err instanceof RangeError && err.message === 'rangeTypeError';
   });
 
   assert.throws(
