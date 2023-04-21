@@ -4,6 +4,12 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.19
+
+**Main fixes:**
+
+- Actually allow non-ambiguous [string] values for `void *` arguments
+
 #### Koffi 2.3.18
 
 **Main fixes:**
