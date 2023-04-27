@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-ansible_host: 192.168.196.157
+ansible_host: 192.168.192.157
 ansible_port: 22
 ansible_user: debian
 ansible_python_interpreter: /usr/bin/python3

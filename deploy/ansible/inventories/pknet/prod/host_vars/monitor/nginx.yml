@@ -119,11 +119,11 @@ nginx_domains:
 
       # Some stuff still lives on the old server
       location /R/ {
-          proxy_pass http://192.168.196.250;
+          proxy_pass http://192.168.192.250;
       }
       location /procemot/ {
           client_max_body_size 256M;
-          proxy_pass http://192.168.196.250;
+          proxy_pass http://192.168.192.250;
       }
   - name: www.koromix.dev
     ssl_certbot_email: niels.martignene@protonmail.com
@@ -175,7 +175,7 @@ nginx_domains:
 
       # Some stuff still lives on the old server
       location /R/ {
-          proxy_pass http://192.168.196.250;
+          proxy_pass http://192.168.192.250;
       }
 
   - name: carto.demheter.fr
