@@ -88,8 +88,8 @@ bool ssh_Config::Validate() const
         LogError("Missing SFTP host name");
         valid = false;
     }
-    if (port <= 0 || port > 65535) {
-        LogError("Missing or invalid SFTP port");
+    if (!port || port > 65535) {
+        LogError("Invalid SFTP port");
         valid = false;
     }
     if (!username) {
@@ -164,7 +164,7 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
             out_config->path++;
         }
     } else {
-        out_config->port = 22;
+        out_config->port = -1;
     }
 
     return true;
@@ -198,7 +198,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
         bool success = true;
 
         success &= SetStringOption(ssh, SSH_OPTIONS_HOST, config.host);
-        success &= SetIntegerOption(ssh, SSH_OPTIONS_PORT, config.port);
+        success &= SetIntegerOption(ssh, SSH_OPTIONS_PORT, config.port > 0 ? config.port : 22);
         success &= SetStringOption(ssh, SSH_OPTIONS_USER, config.username);
         success &= SetIntegerOption(ssh, SSH_OPTIONS_TIMEOUT_USEC, 60000000L);
 
