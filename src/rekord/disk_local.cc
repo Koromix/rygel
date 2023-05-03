@@ -154,18 +154,16 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
     // Create temporary file
-    FILE *fp;
+    FILE *fp = nullptr;
     LocalArray<char, MaxPathSize + 128> tmp;
     {
         tmp.len = Fmt(tmp.data, "%1%/", url).len;
 
-        OpenResult ret = OpenResult::OtherError;
-
         for (int i = 0; i < 1000; i++) {
             Size len = Fmt(tmp.TakeAvailable(), "%1.tmp", FmtRandom(24)).len;
 
-            ret = OpenFile(tmp.data, (int)OpenFlag::Write | (int)OpenFlag::Exclusive,
-                                     (int)OpenResult::FileExists, &fp);
+            OpenResult ret = OpenFile(tmp.data, (int)OpenFlag::Write | (int)OpenFlag::Exclusive,
+                                                (int)OpenResult::FileExists, &fp);
 
             if (RG_LIKELY(ret == OpenResult::Success)) {
                 tmp.len += len;
@@ -174,12 +172,11 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
                 return -1;
             }
         }
-        if (RG_UNLIKELY(ret == OpenResult::FileExists)) {
+
+        if (RG_UNLIKELY(!fp)) {
             LogError("Failed to create temporary file in '%1'", tmp);
             return -1;
         }
-
-        RG_ASSERT(ret == OpenResult::Success);
     }
     RG_DEFER_N(file_guard) { fclose(fp); };
     RG_DEFER_N(tmp_guard) { UnlinkFile(tmp.data); };

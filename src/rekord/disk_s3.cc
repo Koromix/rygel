@@ -59,7 +59,9 @@ S3Disk::~S3Disk()
 
 bool S3Disk::Init(const char *full_pwd, const char *write_pwd)
 {
+    RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
+
     return InitKeys(full_pwd, write_pwd);
 }
 

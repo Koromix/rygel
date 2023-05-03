@@ -529,7 +529,7 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     }
 
     out_guard.Disable();
-    return out_obj->len - prev_len;
+    return ctx.total_len;
 }
 
 bool s3_Session::HasObject(Span<const char> key)
