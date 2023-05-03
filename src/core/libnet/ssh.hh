@@ -22,6 +22,14 @@
 #pragma once
 
 #include "src/core/libcc/libcc.hh"
+#ifdef _WIN32
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+#endif
 #include "vendor/libssh/include/libssh/libssh.h"
 #include "vendor/libssh/include/libssh/sftp.h"
 
