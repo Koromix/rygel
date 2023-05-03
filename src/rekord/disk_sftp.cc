@@ -21,15 +21,11 @@ class SftpDisk: public rk_Disk {
     ssh_session ssh = nullptr;
     sftp_session sftp = nullptr;
 
-    int threads;
-
 public:
     SftpDisk(const ssh_Config &config, int threads);
     ~SftpDisk() override;
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
-
-    int GetThreads() const override;
 
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
@@ -75,11 +71,6 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
 {
     RG_ASSERT(mode == rk_DiskMode::Secure);
     return InitKeys(full_pwd, write_pwd);
-}
-
-int SftpDisk::GetThreads() const
-{
-    return threads;
 }
 
 Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)

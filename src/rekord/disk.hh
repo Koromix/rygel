@@ -61,6 +61,7 @@ protected:
     sq_Database cache_db;
     std::mutex cache_mutex;
     std::atomic_int cache_misses { 0 };
+    int threads = 1;
 
     BlockAllocator str_alloc;
 
@@ -95,7 +96,7 @@ public:
     }
 
     sq_Database *GetCache() { return &cache_db; }
-    virtual int GetThreads() const = 0;
+    int GetThreads() const { return threads; }
 
     bool ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
     Size WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj);

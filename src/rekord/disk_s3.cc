@@ -21,15 +21,11 @@ namespace RG {
 class S3Disk: public rk_Disk {
     s3_Session s3;
 
-    int threads;
-
 public:
     S3Disk(const s3_Config &config, int threads);
     ~S3Disk() override;
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
-
-    int GetThreads() const override;
 
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
@@ -44,18 +40,17 @@ public:
 
 S3Disk::S3Disk(const s3_Config &config, int threads)
 {
+    // S3 is slow unless you use parallelism
+    if (threads < 0) {
+        threads = 64;
+    }
+
     if (!s3.Open(config))
         return;
 
-    if (threads > 0) {
-        this->threads = threads;
-    } else {
-        // S3 is slow unless you use parallelism
-        this->threads = 64;
-    }
-
     // We're good!
     url = s3.GetURL();
+    this->threads = threads;
 }
 
 S3Disk::~S3Disk()
@@ -66,11 +61,6 @@ bool S3Disk::Init(const char *full_pwd, const char *write_pwd)
 {
     RG_ASSERT(mode == rk_DiskMode::Secure);
     return InitKeys(full_pwd, write_pwd);
-}
-
-int S3Disk::GetThreads() const
-{
-    return threads;
 }
 
 Size S3Disk::ReadRaw(const char *path, Span<uint8_t> out_buf)
