@@ -44,29 +44,20 @@ struct s3_Config {
 
     bool Complete();
     bool Validate() const;
+
+    void Clone(s3_Config *out_config) const;
 };
 
 bool s3_DecodeURL(Span<const char> url, s3_Config *out_config);
 
 class s3_Session {
-    const char *scheme = nullptr;
-    const char *host = nullptr;
-    int port = -1;
-    const char *region = nullptr;
-    const char *bucket = nullptr;
-    bool path_mode = false;
-
+    s3_Config config;
     const char *url = nullptr;
-
-    const char *access_id = nullptr;
-    const char *access_key = nullptr;
 
     bool open = false;
 
     void *share = nullptr; // CURLSH
     std::mutex share_mutexes[8];
-
-    BlockAllocator str_alloc;
 
 public:
     s3_Session();

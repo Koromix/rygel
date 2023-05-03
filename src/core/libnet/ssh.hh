@@ -45,6 +45,8 @@ struct ssh_Config {
 
     bool Complete();
     bool Validate() const;
+
+    void Clone(ssh_Config *out_config) const;
 };
 
 bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config);

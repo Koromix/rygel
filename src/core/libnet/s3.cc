@@ -118,6 +118,20 @@ bool s3_Config::Validate() const
     return valid;
 }
 
+void s3_Config::Clone(s3_Config *out_config) const
+{
+    out_config->str_alloc.ReleaseAll();
+
+    out_config->scheme = scheme ? DuplicateString(scheme, &out_config->str_alloc).ptr : nullptr;
+    out_config->host = host ? DuplicateString(host, &out_config->str_alloc).ptr : nullptr;
+    out_config->port = port;
+    out_config->region = region ? DuplicateString(region, &out_config->str_alloc).ptr : nullptr;
+    out_config->bucket = bucket ? DuplicateString(bucket, &out_config->str_alloc).ptr : nullptr;
+    out_config->path_mode = path_mode;
+    out_config->access_id = access_id ? DuplicateString(access_id, &out_config->str_alloc).ptr : nullptr;
+    out_config->access_key = access_key ? DuplicateString(access_key, &out_config->str_alloc).ptr : nullptr;
+}
+
 bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
 {
     CURLU *h = curl_url();
@@ -253,32 +267,25 @@ bool s3_Session::Open(const s3_Config &config)
     if (!config.Validate())
         return false;
 
-    this->scheme = DuplicateString(config.scheme, &str_alloc).ptr;
-    this->host = DuplicateString(config.host, &str_alloc).ptr;
-    if (config.port >= 0) {
-        this->port = config.port;
-    } else if (TestStr(config.scheme, "https")) {
-        this->port = 443;
-    } else if (TestStr(config.scheme, "http")) {
-        this->port = 80;
+    config.Clone(&this->config);
+
+    // Skip explicit port when not needed
+    if (config.port == 80 && TestStr(config.scheme, "http")) {
+        this->config.port = -1;
+    } else if (config.port == 443 && TestStr(config.scheme, "https")) {
+        this->config.port = -1;
     }
-    if (config.region) {
-        this->region = DuplicateString(config.region, &str_alloc).ptr;
-    } else {
+
+    if (this->config.region) {
         const char *region = getenv("AWS_REGION");
-        this->region = region ? DuplicateString(region, &str_alloc).ptr : nullptr;
+        this->config.region = region ? DuplicateString(region, &this->config.str_alloc).ptr : nullptr;
     }
-    this->bucket = DuplicateString(config.bucket, &str_alloc).ptr;
-    this->path_mode = config.path_mode;
 
-    if (path_mode) {
-        url = Fmt(&str_alloc, "%1://%2/%3", scheme, host, bucket).ptr;
+    if (config.port > 0) {
+        url = Fmt(&this->config.str_alloc, "%1://%2:%3/%4", config.scheme, config.host, this->config.port, config.path_mode ? config.bucket : "").ptr;
     } else {
-        url = Fmt(&str_alloc, "%1://%2/", scheme, host).ptr;
+        url = Fmt(&this->config.str_alloc, "%1://%2/%3", config.scheme, config.host, config.path_mode ? config.bucket : "").ptr;
     }
-
-    this->access_id = DuplicateString(config.access_id, &str_alloc).ptr;
-    this->access_key = DuplicateString(config.access_key, &str_alloc).ptr;
 
     return OpenAccess();
 }
@@ -286,14 +293,7 @@ bool s3_Session::Open(const s3_Config &config)
 void s3_Session::Close()
 {
     open = false;
-
-    scheme = nullptr;
-    host = nullptr;
-    url = nullptr;
-    region = nullptr;
-    bucket = nullptr;
-
-    str_alloc.ReleaseAll();
+    config = {};
 }
 
 bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<const char *> *out_keys)
@@ -682,7 +682,7 @@ bool s3_Session::OpenAccess()
     Span<const char> url = MakeURL({}, &temp_alloc, &path);
 
     // Determine region if needed
-    if (!region && !DetermineRegion(url.ptr))
+    if (!config.region && !DetermineRegion(url.ptr))
         return false;
 
     CURL *curl = InitConnection();
@@ -710,8 +710,8 @@ bool s3_Session::OpenAccess()
                 Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
                 value = TrimStr(value);
 
-                if (!session->region && TestStrI(key, "x-amz-bucket-region")) {
-                    session->region = DuplicateString(value, &session->str_alloc).ptr;
+                if (!session->config.region && TestStrI(key, "x-amz-bucket-region")) {
+                    session->config.region = DuplicateString(value, &session->config.str_alloc).ptr;
                 }
 
                 return nmemb;
@@ -761,8 +761,8 @@ bool s3_Session::DetermineRegion(const char *url)
             Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
             value = TrimStr(value);
 
-            if (!session->region && TestStrI(key, "x-amz-bucket-region")) {
-                session->region = DuplicateString(value, &session->str_alloc).ptr;
+            if (!session->config.region && TestStrI(key, "x-amz-bucket-region")) {
+                session->config.region = DuplicateString(value, &session->config.str_alloc).ptr;
             }
 
             return nmemb;
@@ -778,7 +778,7 @@ bool s3_Session::DetermineRegion(const char *url)
     if (RunSafe("connect to S3", [&]() { return curl_Perform(curl, nullptr); }) != 200)
         return false;
 
-    if (!region) {
+    if (!config.region) {
         LogError("Failed to retrieve bucket region, please define AWS_REGION");
         return false;
     }
@@ -913,7 +913,7 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
         LocalArray<char, 4096> buf;
 
         buf.len += Fmt(buf.TakeAvailable(), "%1\n%2\n%3\n", method, path, query ? query : "").len;
-        buf.len += Fmt(buf.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", host, FormatSha256(sha256), FmtTimeISO(date)).len;
+        buf.len += Fmt(buf.TakeAvailable(), "host:%1\nx-amz-content-sha256:%2\nx-amz-date:%3\n\n", config.host, FormatSha256(sha256), FmtTimeISO(date)).len;
         buf.len += Fmt(buf.TakeAvailable(), "host;x-amz-content-sha256;x-amz-date\n").len;
         buf.len += Fmt(buf.TakeAvailable(), "%1", FormatSha256(sha256)).len;
 
@@ -925,7 +925,7 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
     {
         string.len += Fmt(string.TakeAvailable(), "AWS4-HMAC-SHA256\n").len;
         string.len += Fmt(string.TakeAvailable(), "%1\n", FmtTimeISO(date)).len;
-        string.len += Fmt(string.TakeAvailable(), "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), region).len;
+        string.len += Fmt(string.TakeAvailable(), "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), config.region).len;
         string.len += Fmt(string.TakeAvailable(), "%1", FormatSha256(canonical)).len;
     }
 
@@ -935,11 +935,11 @@ void s3_Session::MakeSignature(const char *method, const char *path, const char 
 
         LocalArray<char, 256> secret;
         LocalArray<char, 256> ymd;
-        secret.len = Fmt(secret.data, "AWS4%1", access_key).len;
+        secret.len = Fmt(secret.data, "AWS4%1", config.access_key).len;
         ymd.len = Fmt(ymd.data, "%1", FormatYYYYMMDD(date)).len;
 
         HmacSha256(secret.As<uint8_t>(), ymd, out_signature);
-        HmacSha256(signature, region, out_signature);
+        HmacSha256(signature, config.region, out_signature);
         HmacSha256(signature, "s3", out_signature);
         HmacSha256(signature, "aws4_request", out_signature);
         HmacSha256(signature, string, out_signature);
@@ -953,7 +953,7 @@ Span<char> s3_Session::MakeAuthorization(const uint8_t signature[32], const Time
     HeapArray<char> buf(alloc);
 
     Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
-    Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", access_id, FormatYYYYMMDD(date), region);
+    Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", config.access_id, FormatYYYYMMDD(date), config.region);
     Fmt(&buf, "SignedHeaders=host;x-amz-content-sha256;x-amz-date, ");
     Fmt(&buf, "Signature=%1", FormatSha256(signature));
 
@@ -966,12 +966,15 @@ Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Spa
 
     HeapArray<char> buf(alloc);
 
-    Fmt(&buf, "%1://%2:%3", scheme, host, port);
+    Fmt(&buf, "%1://%2", config.scheme, config.host);
+    if (config.port > 0) {
+        Fmt(&buf, ":%1", config.port);
+    }
     Size path_offset = buf.len;
 
-    if (path_mode) {
+    if (config.path_mode) {
         buf.Append('/');
-        http_EncodeUrlSafe(bucket, &buf);
+        http_EncodeUrlSafe(config.bucket, &buf);
     }
     if (key.len) {
         buf.Append('/');

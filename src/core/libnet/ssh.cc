@@ -109,6 +109,20 @@ bool ssh_Config::Validate() const
     return valid;
 }
 
+void ssh_Config::Clone(ssh_Config *out_config) const
+{
+    out_config->str_alloc.ReleaseAll();
+
+    out_config->host = host ? DuplicateString(host, &out_config->str_alloc).ptr : nullptr;
+    out_config->port = port;
+    out_config->username = username ? DuplicateString(username, &out_config->str_alloc).ptr : nullptr;
+    out_config->path = path ? DuplicateString(path, &out_config->str_alloc).ptr : nullptr;
+    out_config->known_hosts = known_hosts;
+    out_config->host_hash = host_hash ? DuplicateString(host_hash, &out_config->str_alloc).ptr : nullptr;
+    out_config->password = password ? DuplicateString(password, &out_config->str_alloc).ptr : nullptr;
+    out_config->keyfile = keyfile ? DuplicateString(keyfile, &out_config->str_alloc).ptr : nullptr;
+}
+
 bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
 {
     CURLU *h = curl_url();
