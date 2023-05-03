@@ -291,6 +291,7 @@ public:
         supported |= (int)CompileFeature::SSE42;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
+        supported |= (int)CompileFeature::AESNI;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -433,6 +434,9 @@ public:
         }
         if (features & (int)CompileFeature::AVX512) {
             Fmt(&buf, " -mavx512f -mavx512vl");
+        }
+        if (features & (int)CompileFeature::AESNI) {
+            Fmt(&buf, " -maes -mpclmul");
         }
 #elif defined(__i386__)
         Fmt(&buf, " -msse2");
@@ -771,6 +775,7 @@ public:
         supported |= (int)CompileFeature::SSE42;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
+        supported |= (int)CompileFeature::AESNI;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -908,6 +913,9 @@ public:
         }
         if (features & (int)CompileFeature::AVX512) {
             Fmt(&buf, " -mavx512f -mavx512vl");
+        }
+        if (features & (int)CompileFeature::AESNI) {
+            Fmt(&buf, " -maes -mpclmul");
         }
 #elif defined(__i386__)
         Fmt(&buf, " -msse2");
@@ -1165,6 +1173,7 @@ public:
         supported |= (int)CompileFeature::SSE42;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
+        supported |= (int)CompileFeature::AESNI;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
