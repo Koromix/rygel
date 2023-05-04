@@ -235,11 +235,12 @@ ssh_session ssh_Connect(const ssh_Config &config)
 
         ssh_known_hosts_e state = ssh_session_is_known_server(ssh);
 
+        // XXX: Implement proper host verification
         switch (state) {
-            case SSH_KNOWN_HOSTS_OK: { LogInfo("OK"); } break;
-            case SSH_KNOWN_HOSTS_CHANGED: { LogInfo("Changed"); } break;
-            case SSH_KNOWN_HOSTS_OTHER: { LogInfo("Other"); } break;
-            case SSH_KNOWN_HOSTS_NOT_FOUND: { LogInfo("Not Found"); } break;
+            case SSH_KNOWN_HOSTS_OK: { /* LogInfo("OK"); */ } break;
+            case SSH_KNOWN_HOSTS_CHANGED: { LogInfo("Host changed"); } break;
+            case SSH_KNOWN_HOSTS_OTHER: { LogInfo("Host verification failed"); } break;
+            case SSH_KNOWN_HOSTS_NOT_FOUND: { LogInfo("Host not Found"); } break;
             case SSH_KNOWN_HOSTS_UNKNOWN: {
                 char hex[256];
                 Fmt(hex, "%1", FmtSpan(hash, FmtType::SmallHex, ":"));
@@ -247,7 +248,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
                 LogInfo("The server is unknown. Do you trust the host key?");
                 LogInfo("Public key hash: %1", hex);
             } break;
-            case SSH_KNOWN_HOSTS_ERROR: { LogInfo("Error: %1", ssh_get_error(ssh)); } break;
+            case SSH_KNOWN_HOSTS_ERROR: { LogInfo("Host error: %1", ssh_get_error(ssh)); } break;
         }
     }
 
