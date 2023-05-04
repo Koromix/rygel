@@ -158,13 +158,9 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
     out_config->username = curl_GetUrlPartStr(h, CURLUPART_USER, &out_config->str_alloc).ptr;
     out_config->path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
 
-    if (out_config->port >= 0) {
-        // The first '/' separates the explicit port from the path, use '//' for port + absolute path
-        if (out_config->path && out_config->path[0] == '/') {
-            out_config->path++;
-        }
-    } else {
-        out_config->port = -1;
+    // The first '/' separates the host from the path, use '//' for absolute path
+    if (out_config->path && out_config->path[0] == '/') {
+        out_config->path++;
     }
 
     return true;
