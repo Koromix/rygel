@@ -226,7 +226,7 @@ Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
     Size total_len = 0;
 
     while (total_len < out_buf.len) {
-        ssize_t bytes = sftp_read(file, out_buf.ptr + total_len, total_len - out_buf.len);
+        ssize_t bytes = sftp_read(file, out_buf.ptr + total_len, out_buf.len - total_len);
         if (bytes < 0) {
             LogError("Failed to read file '%1': %2", filename, ssh_get_error(conn->ssh));
             return -1;
@@ -281,6 +281,7 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
             break;
     }
 
+    out_guard.Disable();
     return total_len;
 }
 
