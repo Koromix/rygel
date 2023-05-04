@@ -60,7 +60,7 @@ protected:
 
     sq_Database cache_db;
     std::mutex cache_mutex;
-    std::atomic_int cache_misses { 0 };
+    int cache_misses = 0;
     int threads = 1;
 
     BlockAllocator str_alloc;

@@ -467,8 +467,8 @@ rk_Disk::TestResult rk_Disk::TestFast(const char *path)
 
             if (++cache_misses >= 20) {
                 RebuildCache();
+                cache_misses = 0;
             }
-            cache_misses = 0;
 
             return really_exists ? TestResult::Exists : TestResult::Missing;
         } else if (should_exist && !really_exists) {
@@ -709,25 +709,22 @@ bool rk_Disk::RebuildCache()
 
     BlockAllocator temp_alloc;
 
+    if (!cache_db.Run("DELETE FROM objects"))
+        return false;
+    if (!cache_db.Run("DELETE FROM stats"))
+        return false;
+
     HeapArray<const char *> paths;
     if (!ListRaw(nullptr, &temp_alloc, &paths))
         return -1;
 
-    bool success = cache_db.Transaction([&]() {
-        if (!cache_db.Run("DELETE FROM objects"))
+    for (const char *path: paths) {
+        if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                             ON CONFLICT (key) DO NOTHING)", path))
             return false;
-        if (!cache_db.Run("DELETE FROM stats"))
-            return false;
+    }
 
-        for (const char *path: paths) {
-            if (!cache_db.Run("INSERT INTO objects (key) VALUES (?1)", path))
-                return false;
-        }
-
-        return true;
-    });
-
-    return success;
+    return true;
 }
 
 }
