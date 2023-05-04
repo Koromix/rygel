@@ -315,7 +315,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
         for (int i = 0; i < 10; i++) {
             Size len = Fmt(tmp.TakeAvailable(), "%1.tmp", FmtRandom(24)).len;
 
-            file = sftp_open(conn->sftp, tmp.data, flags, 0755);
+            file = sftp_open(conn->sftp, tmp.data, flags, 0644);
 
             if (file) {
                 tmp.len += len;
