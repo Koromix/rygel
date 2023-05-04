@@ -27,6 +27,9 @@ clients must be made or how a client should react.
 #ifdef HAVE_ARGP_H
 #include <argp.h>
 #endif
+#ifndef _WIN32
+#include <netinet/in.h>
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdbool.h>
@@ -197,7 +200,7 @@ subsystem_request(UNUSED_PARAM(ssh_session session),
                   UNUSED_PARAM(void *userdata))
 {
     _ssh_log(SSH_LOG_PROTOCOL,
-             "=== subsystem_request", "Channel subsystem reqeuest: %s",
+             "=== subsystem_request", "Channel subsystem request: %s",
              subsystem);
     return 0;
 }
@@ -293,7 +296,7 @@ my_channel_eof_function(ssh_session session,
 
     _ssh_log(SSH_LOG_PROTOCOL,
              "=== my_channel_eof_function",
-             "Got EOF on channel. Shuting down write on socket (fd = %d).",
+             "Got EOF on channel. Shutting down write on socket (fd = %d).",
              *event_fd_data->p_fd);
 
     stack_socket_close(session, event_fd_data);

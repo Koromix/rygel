@@ -73,9 +73,9 @@ if (CLIENT_TESTING)
     )
 endif ()
 
-if (ARGP_LIBRARY)
+if (ARGP_LIBRARIES)
     target_link_libraries(${TORTURE_LIBRARY}
-        ${ARGP_LIBRARY}
+        ${ARGP_LIBRARIES}
     )
 endif()
 

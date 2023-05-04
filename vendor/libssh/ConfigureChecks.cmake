@@ -320,7 +320,7 @@ int main(void) {
 # For detecting attributes we need to treat warnings as
 # errors
 if (UNIX OR MINGW)
-    # Get warnings for attributs
+    # Get warnings for attributes
     check_c_compiler_flag("-Wattributes" REQUIRED_FLAGS_WERROR)
     if (REQUIRED_FLAGS_WERROR)
         string(APPEND CMAKE_REQUIRED_FLAGS "-Wattributes ")

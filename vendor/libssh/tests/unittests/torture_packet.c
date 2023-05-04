@@ -272,10 +272,15 @@ static void torture_packet_aes256_cbc_etm(UNUSED_PARAM(void **state))
     }
 }
 
-static void torture_packet_3des_cbc(void **state)
+static void torture_packet_3des_cbc(UNUSED_PARAM(void **state))
 {
     int i;
-    (void)state; /* unused */
+
+    /* 3des is not completely FIPS-allowed cipher since 140-3 */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     for (i=1;i<256;++i){
         torture_packet("3des-cbc", "hmac-sha1", "none", i);
     }
@@ -284,6 +289,12 @@ static void torture_packet_3des_cbc(void **state)
 static void torture_packet_3des_cbc_etm(UNUSED_PARAM(void **state))
 {
     int i;
+
+    /* 3des is not completely FIPS-allowed cipher since 140-3 */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     for (i = 1; i < 256; ++i) {
         torture_packet("3des-cbc", "hmac-sha1-etm@openssh.com", "none", i);
     }

@@ -154,12 +154,9 @@ int ssh_dh_keypair_get_keys(struct dh_ctx *ctx, int peer,
 #endif /* OPENSSL_VERSION_NUMBER */
 
 int ssh_dh_keypair_set_keys(struct dh_ctx *ctx, int peer,
-                            const bignum priv, const bignum pub)
+                            bignum priv, bignum pub)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-    bignum priv_key = NULL;
-    bignum pub_key = NULL;
-#else
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
     int rc;
     OSSL_PARAM *params = NULL, *out_params = NULL, *merged_params = NULL;
     OSSL_PARAM_BLD *param_bld = NULL;
@@ -172,7 +169,11 @@ int ssh_dh_keypair_set_keys(struct dh_ctx *ctx, int peer,
         return SSH_ERROR;
     }
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    (void)DH_set0_key(ctx->keypair[peer], pub, priv);
+
+    return SSH_OK;
+#else
     rc = EVP_PKEY_todata(ctx->keypair[peer], EVP_PKEY_KEYPAIR, &out_params);
     if (rc != 1) {
         return SSH_ERROR;
@@ -195,35 +196,22 @@ int ssh_dh_keypair_set_keys(struct dh_ctx *ctx, int peer,
         rc = SSH_ERROR;
         goto out;
     }
-#endif /* OPENSSL_VERSION_NUMBER */
 
     if (priv) {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-        priv_key = priv;
-#else
         rc = OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_PRIV_KEY, priv);
         if (rc != 1) {
             rc = SSH_ERROR;
             goto out;
         }
-#endif /* OPENSSL_VERSION_NUMBER */
     }
     if (pub) {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-        pub_key = pub;
-#else
         rc = OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_PUB_KEY, pub);
         if (rc != 1) {
             rc = SSH_ERROR;
             goto out;
         }
-#endif /* OPENSSL_VERSION_NUMBER */
     }
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-    (void)DH_set0_key(ctx->keypair[peer], pub_key, priv_key);
 
-    return SSH_OK;
-#else
     params = OSSL_PARAM_BLD_to_param(param_bld);
     if (params == NULL) {
         rc = SSH_ERROR;
@@ -248,6 +236,8 @@ int ssh_dh_keypair_set_keys(struct dh_ctx *ctx, int peer,
 
     rc = SSH_OK;
 out:
+    bignum_safe_free(priv);
+    bignum_safe_free(pub);
     EVP_PKEY_CTX_free(evp_ctx);
     OSSL_PARAM_free(out_params);
     OSSL_PARAM_free(params);
@@ -341,8 +331,16 @@ int ssh_dh_set_parameters(struct dh_ctx *ctx,
             goto done;
         }
 
-        OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_P, modulus);
-        OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_G, generator);
+        rc = OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_P, modulus);
+        if (rc != 1) {
+            rc = SSH_ERROR;
+            goto done;
+        }
+        rc = OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_G, generator);
+        if (rc != 1) {
+            rc = SSH_ERROR;
+            goto done;
+        }
         params = OSSL_PARAM_BLD_to_param(param_bld);
         if (params == NULL) {
             OSSL_PARAM_BLD_free(param_bld);
@@ -458,7 +456,8 @@ void ssh_dh_cleanup(struct ssh_crypto_struct *crypto)
 /** @internal
  * @brief generates a secret DH parameter of at least DH_SECURITY_BITS
  *        security as well as the corresponding public key.
- * @param[out] parms a dh_ctx that will hold the new keys.
+ *
+ * @param[out] params a dh_ctx that will hold the new keys.
  * @param peer Select either client or server key storage. Valid values are:
  *        DH_CLIENT_KEYPAIR or DH_SERVER_KEYPAIR
  *

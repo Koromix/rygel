@@ -97,8 +97,8 @@ static void cleanup_pcap(struct session_data_st *sdata)
     }
 
     /* Do not free the pcap data context here since its ownership was
-     * transfered to the session object, which will take care of its cleanup.
-     * Morover it is still in use so we can very simply crash by freeing
+     * transferred to the session object, which will take care of its cleanup.
+     * Moreover it is still in use so we can very simply crash by freeing
      * it here.
      */
     sdata->pcap = NULL;
@@ -161,7 +161,7 @@ static int authenticate_kbdint(ssh_session session,
     initial_prompt[0] = "username: ";
     initial_prompt[1] = "password: ";
 
-    /* Prompt for aditional prompts */
+    /* Prompt for additional prompts */
     retype_prompt[0] = "retype password: ";
 
     if ((session == NULL) || (message == NULL) || (sdata == NULL)) {

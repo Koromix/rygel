@@ -1370,9 +1370,9 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
 }
 
 static int pki_key_generate(ssh_key key, int parameter, const char *type_s, int type){
-    gcry_sexp_t parms;
+    gcry_sexp_t params;
     int rc;
-    rc = gcry_sexp_build(&parms,
+    rc = gcry_sexp_build(&params,
             NULL,
             "(genkey(%s(nbits %d)(transient-key)))",
             type_s,
@@ -1381,20 +1381,20 @@ static int pki_key_generate(ssh_key key, int parameter, const char *type_s, int 
         return SSH_ERROR;
     switch (type) {
     case SSH_KEYTYPE_RSA:
-        rc = gcry_pk_genkey(&key->rsa, parms);
+        rc = gcry_pk_genkey(&key->rsa, params);
         break;
     case SSH_KEYTYPE_DSS:
-        rc = gcry_pk_genkey(&key->dsa, parms);
+        rc = gcry_pk_genkey(&key->dsa, params);
         break;
     case SSH_KEYTYPE_ECDSA_P256:
     case SSH_KEYTYPE_ECDSA_P384:
     case SSH_KEYTYPE_ECDSA_P521:
-        rc = gcry_pk_genkey(&key->ecdsa, parms);
+        rc = gcry_pk_genkey(&key->ecdsa, params);
         break;
     default:
         assert (! "reached");
     }
-    gcry_sexp_release(parms);
+    gcry_sexp_release(params);
     if (rc != 0)
         return SSH_ERROR;
     return SSH_OK;
@@ -1524,8 +1524,8 @@ int pki_key_compare(const ssh_key k1,
             break;
         case SSH_KEYTYPE_ED25519:
         case SSH_KEYTYPE_SK_ED25519:
-		/* ed25519 keys handled globaly */
-		return 0;
+            /* ed25519 keys handled globally */
+            return 0;
         case SSH_KEYTYPE_ECDSA_P256:
         case SSH_KEYTYPE_ECDSA_P384:
         case SSH_KEYTYPE_ECDSA_P521:
@@ -2543,6 +2543,7 @@ int ssh_key_size(ssh_key key)
     }
 }
 
+#ifdef WITH_PKCS11_URI
 int pki_uri_import(const char *uri_name, ssh_key *key, enum ssh_key_e key_type)
 {
     (void) uri_name;
@@ -2552,4 +2553,5 @@ int pki_uri_import(const char *uri_name, ssh_key *key, enum ssh_key_e key_type)
             "gcrypt does not support PKCS #11");
     return SSH_ERROR;
 }
+#endif /* WITH_PKCS11_URI */
 #endif /* HAVE_LIBGCRYPT */

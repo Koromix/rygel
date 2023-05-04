@@ -1,125 +1,125 @@
-diff --git b/vendor/libssh/include/libssh/agent.h a/vendor/libssh/include/libssh/agent.h
-index 466a884fc..720521596 100644
---- b/vendor/libssh/include/libssh/agent.h
-+++ a/vendor/libssh/include/libssh/agent.h
+diff --git a/vendor/libssh/include/libssh/agent.h b/vendor/libssh/include/libssh/agent.h
+index caf8d3e26..9b9afee1f 100644
+--- a/vendor/libssh/include/libssh/agent.h
++++ b/vendor/libssh/include/libssh/agent.h
 @@ -21,7 +21,7 @@
  #ifndef __AGENT_H
  #define __AGENT_H
  
--#include "libssh.h"
-+#include "libssh/libssh.h"
+-#include "libssh/libssh.h"
++#include "libssh.h"
  
  /* Messages for the authentication agent connection. */
  #define SSH_AGENTC_REQUEST_RSA_IDENTITIES        1
-diff --git b/vendor/libssh/include/libssh/auth.h a/vendor/libssh/include/libssh/auth.h
-index ee7a36bd1..90b377d4f 100644
---- b/vendor/libssh/include/libssh/auth.h
-+++ a/vendor/libssh/include/libssh/auth.h
+diff --git a/vendor/libssh/include/libssh/auth.h b/vendor/libssh/include/libssh/auth.h
+index b358b7a2d..c8d44eb1e 100644
+--- a/vendor/libssh/include/libssh/auth.h
++++ b/vendor/libssh/include/libssh/auth.h
 @@ -21,7 +21,7 @@
  #ifndef AUTH_H_
  #define AUTH_H_
  #include "config.h"
--#include "callbacks.h"
-+#include "libssh/callbacks.h"
+-#include "libssh/callbacks.h"
++#include "callbacks.h"
  
- SSH_PACKET_CALLBACK(ssh_packet_userauth_banner);
- SSH_PACKET_CALLBACK(ssh_packet_userauth_failure);
-diff --git b/vendor/libssh/include/libssh/bignum.h a/vendor/libssh/include/libssh/bignum.h
-index 328fbc99a..726ed7b9a 100644
---- b/vendor/libssh/include/libssh/bignum.h
-+++ a/vendor/libssh/include/libssh/bignum.h
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/vendor/libssh/include/libssh/bignum.h b/vendor/libssh/include/libssh/bignum.h
+index 6b5dc1a2a..6f972a8fa 100644
+--- a/vendor/libssh/include/libssh/bignum.h
++++ b/vendor/libssh/include/libssh/bignum.h
 @@ -21,9 +21,9 @@
  #ifndef BIGNUM_H_
  #define BIGNUM_H_
  
--#include "libcrypto.h"
--#include "libgcrypt.h"
--#include "libmbedcrypto.h"
-+#include "libssh/libcrypto.h"
-+#include "libssh/libgcrypt.h"
-+#include "libssh/libmbedcrypto.h"
+-#include "libssh/libcrypto.h"
+-#include "libssh/libgcrypt.h"
+-#include "libssh/libmbedcrypto.h"
++#include "libcrypto.h"
++#include "libgcrypt.h"
++#include "libmbedcrypto.h"
  
- bignum ssh_make_string_bn(ssh_string string);
- ssh_string ssh_make_bignum_string(bignum num);
-diff --git b/vendor/libssh/include/libssh/bind.h a/vendor/libssh/include/libssh/bind.h
-index 9035307a2..c0439d2c1 100644
---- b/vendor/libssh/include/libssh/bind.h
-+++ a/vendor/libssh/include/libssh/bind.h
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/vendor/libssh/include/libssh/bind.h b/vendor/libssh/include/libssh/bind.h
+index 56f97f27d..db475a6bc 100644
+--- a/vendor/libssh/include/libssh/bind.h
++++ b/vendor/libssh/include/libssh/bind.h
 @@ -21,9 +21,9 @@
  #ifndef BIND_H_
  #define BIND_H_
  
--#include "priv.h"
--#include "kex.h"
--#include "session.h"
-+#include "libssh/priv.h"
-+#include "libssh/kex.h"
-+#include "libssh/session.h"
+-#include "libssh/priv.h"
+-#include "libssh/kex.h"
+-#include "libssh/session.h"
++#include "priv.h"
++#include "kex.h"
++#include "session.h"
  
- struct ssh_bind_struct {
-   struct ssh_common_struct common; /* stuff common to ssh_bind and ssh_session */
-diff --git b/vendor/libssh/include/libssh/bind_config.h a/vendor/libssh/include/libssh/bind_config.h
-index 39fb719c8..7ee19b873 100644
---- b/vendor/libssh/include/libssh/bind_config.h
-+++ a/vendor/libssh/include/libssh/bind_config.h
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/vendor/libssh/include/libssh/bind_config.h b/vendor/libssh/include/libssh/bind_config.h
+index 5f2dccce9..0624d4985 100644
+--- a/vendor/libssh/include/libssh/bind_config.h
++++ b/vendor/libssh/include/libssh/bind_config.h
 @@ -26,7 +26,7 @@
  #ifndef BIND_CONFIG_H_
  #define BIND_CONFIG_H_
  
--#include "server.h"
-+#include "libssh/server.h"
+-#include "libssh/server.h"
++#include "server.h"
  
- enum ssh_bind_config_opcode_e {
-     /* Known but not allowed in Match block */
-diff --git b/vendor/libssh/include/libssh/buffer.h a/vendor/libssh/include/libssh/buffer.h
-index 7f0085347..a55a1b402 100644
---- b/vendor/libssh/include/libssh/buffer.h
-+++ a/vendor/libssh/include/libssh/buffer.h
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/vendor/libssh/include/libssh/buffer.h b/vendor/libssh/include/libssh/buffer.h
+index 1fce7b762..ab0592a75 100644
+--- a/vendor/libssh/include/libssh/buffer.h
++++ b/vendor/libssh/include/libssh/buffer.h
 @@ -23,7 +23,7 @@
  
  #include <stdarg.h>
  
--#include "libssh.h"
-+#include "libssh/libssh.h"
+-#include "libssh/libssh.h"
++#include "libssh.h"
  
  #define SSH_BUFFER_PACK_END ((uint32_t) 0x4f65feb3)
  
-diff --git b/vendor/libssh/include/libssh/callbacks.h a/vendor/libssh/include/libssh/callbacks.h
-index 9e5f2409e..36fe7f8c0 100644
---- b/vendor/libssh/include/libssh/callbacks.h
-+++ a/vendor/libssh/include/libssh/callbacks.h
+diff --git a/vendor/libssh/include/libssh/callbacks.h b/vendor/libssh/include/libssh/callbacks.h
+index 8ccc05119..17bac6d6e 100644
+--- a/vendor/libssh/include/libssh/callbacks.h
++++ b/vendor/libssh/include/libssh/callbacks.h
 @@ -25,7 +25,7 @@
  #ifndef _SSH_CALLBACK_H
  #define _SSH_CALLBACK_H
  
--#include "libssh.h"
-+#include <libssh/libssh.h>
+-#include <libssh/libssh.h>
++#include "libssh.h"
  #include <string.h>
  
  #ifdef __cplusplus
-diff --git b/vendor/libssh/include/libssh/channels.h a/vendor/libssh/include/libssh/channels.h
-index daafa1764..ce8540ae6 100644
---- b/vendor/libssh/include/libssh/channels.h
-+++ a/vendor/libssh/include/libssh/channels.h
+diff --git a/vendor/libssh/include/libssh/channels.h b/vendor/libssh/include/libssh/channels.h
+index cb2bea43e..b3f2e622a 100644
+--- a/vendor/libssh/include/libssh/channels.h
++++ b/vendor/libssh/include/libssh/channels.h
 @@ -20,7 +20,7 @@
  
  #ifndef CHANNELS_H_
  #define CHANNELS_H_
--#include "priv.h"
-+#include "libssh/priv.h"
+-#include "libssh/priv.h"
++#include "priv.h"
  
- /**  @internal
-  * Describes the different possible states in a
-diff --git b/vendor/libssh/include/libssh/crypto.h a/vendor/libssh/include/libssh/crypto.h
-index 50c4bbb7d..1d73613b4 100644
---- b/vendor/libssh/include/libssh/crypto.h
-+++ a/vendor/libssh/include/libssh/crypto.h
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/vendor/libssh/include/libssh/crypto.h b/vendor/libssh/include/libssh/crypto.h
+index 3dba18d03..7c5d27778 100644
+--- a/vendor/libssh/include/libssh/crypto.h
++++ b/vendor/libssh/include/libssh/crypto.h
 @@ -33,7 +33,7 @@
  #elif defined(HAVE_LIBMBEDCRYPTO)
  #include <mbedtls/gcm.h>
  #endif
--#include "wrapper.h"
-+#include "libssh/wrapper.h"
+-#include "libssh/wrapper.h"
++#include "wrapper.h"
  
  #ifdef cbc_encrypt
  #undef cbc_encrypt
@@ -127,109 +127,109 @@ index 50c4bbb7d..1d73613b4 100644
  #ifdef HAVE_OPENSSL_ECDH_H
  #include <openssl/ecdh.h>
  #endif
--#include "dh.h"
--#include "ecdh.h"
--#include "kex.h"
--#include "curve25519.h"
-+#include "libssh/dh.h"
-+#include "libssh/ecdh.h"
-+#include "libssh/kex.h"
-+#include "libssh/curve25519.h"
+-#include "libssh/dh.h"
+-#include "libssh/ecdh.h"
+-#include "libssh/kex.h"
+-#include "libssh/curve25519.h"
++#include "dh.h"
++#include "ecdh.h"
++#include "kex.h"
++#include "curve25519.h"
  
  #define DIGEST_MAX_LEN 64
  
-diff --git b/vendor/libssh/include/libssh/dh.h a/vendor/libssh/include/libssh/dh.h
-index 0011f2937..353dc2335 100644
---- b/vendor/libssh/include/libssh/dh.h
-+++ a/vendor/libssh/include/libssh/dh.h
+diff --git a/vendor/libssh/include/libssh/dh.h b/vendor/libssh/include/libssh/dh.h
+index 34c4a7ed9..3424b2e96 100644
+--- a/vendor/libssh/include/libssh/dh.h
++++ b/vendor/libssh/include/libssh/dh.h
 @@ -23,7 +23,7 @@
  
  #include "config.h"
  
--#include "crypto.h"
-+#include "libssh/crypto.h"
+-#include "libssh/crypto.h"
++#include "crypto.h"
  
  struct dh_ctx;
  
-diff --git b/vendor/libssh/include/libssh/ecdh.h a/vendor/libssh/include/libssh/ecdh.h
-index d594a3cec..17fe02e7b 100644
---- b/vendor/libssh/include/libssh/ecdh.h
-+++ a/vendor/libssh/include/libssh/ecdh.h
+diff --git a/vendor/libssh/include/libssh/ecdh.h b/vendor/libssh/include/libssh/ecdh.h
+index 4c4c54eb0..1257de900 100644
+--- a/vendor/libssh/include/libssh/ecdh.h
++++ b/vendor/libssh/include/libssh/ecdh.h
 @@ -22,7 +22,7 @@
  #define ECDH_H_
  
  #include "config.h"
--#include "callbacks.h"
-+#include "libssh/callbacks.h"
+-#include "libssh/callbacks.h"
++#include "callbacks.h"
  
  #ifdef HAVE_LIBCRYPTO
  #ifdef HAVE_OPENSSL_ECDH_H
-diff --git b/vendor/libssh/include/libssh/ed25519.h a/vendor/libssh/include/libssh/ed25519.h
-index b45f507d2..8a3263c8d 100644
---- b/vendor/libssh/include/libssh/ed25519.h
-+++ a/vendor/libssh/include/libssh/ed25519.h
+diff --git a/vendor/libssh/include/libssh/ed25519.h b/vendor/libssh/include/libssh/ed25519.h
+index 7974158c1..8fee314ec 100644
+--- a/vendor/libssh/include/libssh/ed25519.h
++++ b/vendor/libssh/include/libssh/ed25519.h
 @@ -20,7 +20,7 @@
  
  #ifndef ED25519_H_
  #define ED25519_H_
--#include "priv.h"
-+#include "libssh/priv.h"
+-#include "libssh/priv.h"
++#include "priv.h"
  
  /**
   * @defgroup ed25519 ed25519 API
-diff --git b/vendor/libssh/include/libssh/fe25519.h a/vendor/libssh/include/libssh/fe25519.h
-index 87497b8d4..438d85db6 100644
---- b/vendor/libssh/include/libssh/fe25519.h
-+++ a/vendor/libssh/include/libssh/fe25519.h
+diff --git a/vendor/libssh/include/libssh/fe25519.h b/vendor/libssh/include/libssh/fe25519.h
+index 0dfb0613f..ff41efbd5 100644
+--- a/vendor/libssh/include/libssh/fe25519.h
++++ b/vendor/libssh/include/libssh/fe25519.h
 @@ -9,7 +9,7 @@
  #ifndef FE25519_H
  #define FE25519_H
  
--#include "priv.h"
-+#include "libssh/priv.h"
+-#include "libssh/priv.h"
++#include "priv.h"
  
  #define fe25519              crypto_sign_ed25519_ref_fe25519
  #define fe25519_freeze       crypto_sign_ed25519_ref_fe25519_freeze
-diff --git b/vendor/libssh/include/libssh/kex.h a/vendor/libssh/include/libssh/kex.h
-index 5e9946678..3a1f4a6f2 100644
---- b/vendor/libssh/include/libssh/kex.h
-+++ a/vendor/libssh/include/libssh/kex.h
+diff --git a/vendor/libssh/include/libssh/kex.h b/vendor/libssh/include/libssh/kex.h
+index ede7fa8ad..003610fb1 100644
+--- a/vendor/libssh/include/libssh/kex.h
++++ b/vendor/libssh/include/libssh/kex.h
 @@ -21,8 +21,8 @@
  #ifndef KEX_H_
  #define KEX_H_
  
--#include "priv.h"
--#include "callbacks.h"
-+#include "libssh/priv.h"
-+#include "libssh/callbacks.h"
+-#include "libssh/priv.h"
+-#include "libssh/callbacks.h"
++#include "priv.h"
++#include "callbacks.h"
  
  #define SSH_KEX_METHODS 10
  
-diff --git b/vendor/libssh/include/libssh/keys.h a/vendor/libssh/include/libssh/keys.h
-index 6b3681c6a..934189c27 100644
---- b/vendor/libssh/include/libssh/keys.h
-+++ a/vendor/libssh/include/libssh/keys.h
+diff --git a/vendor/libssh/include/libssh/keys.h b/vendor/libssh/include/libssh/keys.h
+index 615f1eaef..c5c6d9120 100644
+--- a/vendor/libssh/include/libssh/keys.h
++++ b/vendor/libssh/include/libssh/keys.h
 @@ -22,8 +22,8 @@
  #define KEYS_H_
  
  #include "config.h"
--#include "libssh.h"
--#include "wrapper.h"
-+#include "libssh/libssh.h"
-+#include "libssh/wrapper.h"
+-#include "libssh/libssh.h"
+-#include "libssh/wrapper.h"
++#include "libssh.h"
++#include "wrapper.h"
  
  struct ssh_public_key_struct {
      int type;
-diff --git b/vendor/libssh/include/libssh/libssh.h a/vendor/libssh/include/libssh/libssh.h
-index 68c13cf01..7857a77bb 100644
---- b/vendor/libssh/include/libssh/libssh.h
-+++ a/vendor/libssh/include/libssh/libssh.h
+diff --git a/vendor/libssh/include/libssh/libssh.h b/vendor/libssh/include/libssh/libssh.h
+index 669a0a960..bd8acba3e 100644
+--- a/vendor/libssh/include/libssh/libssh.h
++++ b/vendor/libssh/include/libssh/libssh.h
 @@ -21,7 +21,7 @@
  #ifndef _LIBSSH_H
  #define _LIBSSH_H
  
--#include "libssh_version.h"
-+#include <libssh/libssh_version.h>
+-#include <libssh/libssh_version.h>
++#include "libssh_version.h"
  
  #if defined _WIN32 || defined __CYGWIN__
    #ifdef LIBSSH_STATIC
@@ -237,62 +237,62 @@ index 68c13cf01..7857a77bb 100644
  LIBSSH_API int ssh_session_set_disconnect_message(ssh_session session, const char *message);
  
  #ifndef LIBSSH_LEGACY_0_4
--#include "legacy.h"
-+#include "libssh/legacy.h"
+-#include "libssh/legacy.h"
++#include "legacy.h"
  #endif
  
  #ifdef __cplusplus
-diff --git b/vendor/libssh/include/libssh/libsshpp.hpp a/vendor/libssh/include/libssh/libsshpp.hpp
-index d12c49189..602c7aecb 100644
---- b/vendor/libssh/include/libssh/libsshpp.hpp
-+++ a/vendor/libssh/include/libssh/libsshpp.hpp
+diff --git a/vendor/libssh/include/libssh/libsshpp.hpp b/vendor/libssh/include/libssh/libsshpp.hpp
+index 602c7aecb..d12c49189 100644
+--- a/vendor/libssh/include/libssh/libsshpp.hpp
++++ b/vendor/libssh/include/libssh/libsshpp.hpp
 @@ -51,8 +51,8 @@
  /* do not use deprecated functions */
  #define LIBSSH_LEGACY_0_4
  
--#include "libssh.h"
--#include "server.h"
-+#include <libssh/libssh.h>
-+#include <libssh/server.h>
+-#include <libssh/libssh.h>
+-#include <libssh/server.h>
++#include "libssh.h"
++#include "server.h"
  #include <stdlib.h>
  #include <stdarg.h>
  #include <stdio.h>
-diff --git b/vendor/libssh/include/libssh/packet.h a/vendor/libssh/include/libssh/packet.h
-index aab461e4b..dec3a439a 100644
---- b/vendor/libssh/include/libssh/packet.h
-+++ a/vendor/libssh/include/libssh/packet.h
+diff --git a/vendor/libssh/include/libssh/packet.h b/vendor/libssh/include/libssh/packet.h
+index 7f10a709f..734535e5c 100644
+--- a/vendor/libssh/include/libssh/packet.h
++++ b/vendor/libssh/include/libssh/packet.h
 @@ -21,7 +21,7 @@
  #ifndef PACKET_H_
  #define PACKET_H_
  
--#include "wrapper.h"
-+#include "libssh/wrapper.h"
+-#include "libssh/wrapper.h"
++#include "wrapper.h"
  
  struct ssh_socket_struct;
  
-diff --git b/vendor/libssh/include/libssh/pcap.h a/vendor/libssh/include/libssh/pcap.h
-index 374825f35..2e43ae87a 100644
---- b/vendor/libssh/include/libssh/pcap.h
-+++ a/vendor/libssh/include/libssh/pcap.h
+diff --git a/vendor/libssh/include/libssh/pcap.h b/vendor/libssh/include/libssh/pcap.h
+index 2a6c3c279..2fc3c650d 100644
+--- a/vendor/libssh/include/libssh/pcap.h
++++ b/vendor/libssh/include/libssh/pcap.h
 @@ -22,7 +22,7 @@
  #define PCAP_H_
  
  #include "config.h"
--#include "libssh.h"
-+#include "libssh/libssh.h"
+-#include "libssh/libssh.h"
++#include "libssh.h"
  
  #ifdef WITH_PCAP
  typedef struct ssh_pcap_context_struct* ssh_pcap_context;
-diff --git b/vendor/libssh/include/libssh/pki.h a/vendor/libssh/include/libssh/pki.h
-index 0728f267f..1d5250fff 100644
---- b/vendor/libssh/include/libssh/pki.h
-+++ a/vendor/libssh/include/libssh/pki.h
+diff --git a/vendor/libssh/include/libssh/pki.h b/vendor/libssh/include/libssh/pki.h
+index 879a1d5c1..e702e0dbb 100644
+--- a/vendor/libssh/include/libssh/pki.h
++++ b/vendor/libssh/include/libssh/pki.h
 @@ -22,7 +22,7 @@
  #define PKI_H_
  
  #include <stdint.h>
--#include "priv.h"
-+#include "libssh/priv.h"
+-#include "libssh/priv.h"
++#include "priv.h"
  #ifdef HAVE_OPENSSL_EC_H
  #include <openssl/ec.h>
  #endif
@@ -300,160 +300,160 @@ index 0728f267f..1d5250fff 100644
  #ifdef HAVE_LIBCRYPTO
  #include <openssl/evp.h>
  #endif
--#include "crypto.h"
-+#include "libssh/crypto.h"
+-#include "libssh/crypto.h"
++#include "crypto.h"
  #if defined(HAVE_LIBCRYPTO) && defined(HAVE_OPENSSL_ED25519)
- /* If using OpenSSL implementation, define the signature lenght which would be
+ /* If using OpenSSL implementation, define the signature length which would be
   * defined in libssh/ed25519.h otherwise */
  #define ED25519_SIG_LEN 64
  #else
--#include "ed25519.h"
-+#include "libssh/ed25519.h"
+-#include "libssh/ed25519.h"
++#include "ed25519.h"
  #endif
  /* This definition is used for both OpenSSL and internal implementations */
  #define ED25519_KEY_LEN 32
-diff --git b/vendor/libssh/include/libssh/pki_priv.h a/vendor/libssh/include/libssh/pki_priv.h
-index 13628c2d1..c0edb851c 100644
---- b/vendor/libssh/include/libssh/pki_priv.h
-+++ a/vendor/libssh/include/libssh/pki_priv.h
+diff --git a/vendor/libssh/include/libssh/pki_priv.h b/vendor/libssh/include/libssh/pki_priv.h
+index d0e1ef44a..db5448653 100644
+--- a/vendor/libssh/include/libssh/pki_priv.h
++++ b/vendor/libssh/include/libssh/pki_priv.h
 @@ -21,7 +21,7 @@
  #ifndef PKI_PRIV_H_
  #define PKI_PRIV_H_
  
--#include "pki.h"
-+#include "libssh/pki.h"
+-#include "libssh/pki.h"
++#include "pki.h"
  
- /* defined in bcrypt_pbkdf.c */
- int bcrypt_pbkdf(const char *pass,
-diff --git b/vendor/libssh/include/libssh/poly1305.h a/vendor/libssh/include/libssh/poly1305.h
-index e1259502d..513f1b99a 100644
---- b/vendor/libssh/include/libssh/poly1305.h
-+++ a/vendor/libssh/include/libssh/poly1305.h
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/vendor/libssh/include/libssh/poly1305.h b/vendor/libssh/include/libssh/poly1305.h
+index a22fea878..8ed9b7139 100644
+--- a/vendor/libssh/include/libssh/poly1305.h
++++ b/vendor/libssh/include/libssh/poly1305.h
 @@ -5,7 +5,7 @@
  
  #ifndef POLY1305_H
  #define POLY1305_H
--#include "chacha20-poly1305-common.h"
-+#include "libssh/chacha20-poly1305-common.h"
+-#include "libssh/chacha20-poly1305-common.h"
++#include "chacha20-poly1305-common.h"
  
- void poly1305_auth(uint8_t out[POLY1305_TAGLEN], const uint8_t *m, size_t inlen,
-     const uint8_t key[POLY1305_KEYLEN])
-diff --git b/vendor/libssh/include/libssh/priv.h a/vendor/libssh/include/libssh/priv.h
-index b21519034..bab761b0d 100644
---- b/vendor/libssh/include/libssh/priv.h
-+++ a/vendor/libssh/include/libssh/priv.h
-@@ -166,8 +166,8 @@ int ssh_gettimeofday(struct timeval *__p, void *__t);
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/vendor/libssh/include/libssh/priv.h b/vendor/libssh/include/libssh/priv.h
+index 47af57f4a..5ac02ce53 100644
+--- a/vendor/libssh/include/libssh/priv.h
++++ b/vendor/libssh/include/libssh/priv.h
+@@ -170,8 +170,8 @@ int ssh_gettimeofday(struct timeval *__p, void *__t);
  
  #endif /* _WIN32 */
  
--#include "libssh.h"
--#include "callbacks.h"
-+#include "libssh/libssh.h"
-+#include "libssh/callbacks.h"
+-#include "libssh/libssh.h"
+-#include "libssh/callbacks.h"
++#include "libssh.h"
++#include "callbacks.h"
  
  /* some constants */
  #ifndef PATH_MAX
-diff --git b/vendor/libssh/include/libssh/server.h a/vendor/libssh/include/libssh/server.h
-index 7c7b18ec4..c1a9c15cc 100644
---- b/vendor/libssh/include/libssh/server.h
-+++ a/vendor/libssh/include/libssh/server.h
+diff --git a/vendor/libssh/include/libssh/server.h b/vendor/libssh/include/libssh/server.h
+index 80f74e1a1..ad9db8e3e 100644
+--- a/vendor/libssh/include/libssh/server.h
++++ b/vendor/libssh/include/libssh/server.h
 @@ -28,7 +28,7 @@
  #ifndef SERVER_H
  #define SERVER_H
  
--#include "libssh.h"
-+#include "libssh/libssh.h"
+-#include "libssh/libssh.h"
++#include "libssh.h"
  #define SERVERBANNER CLIENTBANNER
  
  #ifdef __cplusplus
-diff --git b/vendor/libssh/include/libssh/session.h a/vendor/libssh/include/libssh/session.h
-index 124687257..d3e5787cc 100644
---- b/vendor/libssh/include/libssh/session.h
-+++ a/vendor/libssh/include/libssh/session.h
+diff --git a/vendor/libssh/include/libssh/session.h b/vendor/libssh/include/libssh/session.h
+index eb14e97a3..928fbce77 100644
+--- a/vendor/libssh/include/libssh/session.h
++++ b/vendor/libssh/include/libssh/session.h
 @@ -22,16 +22,16 @@
  #define SESSION_H_
  #include <stdbool.h>
  
--#include "priv.h"
--#include "callbacks.h"
--#include "kex.h"
--#include "packet.h"
--#include "pcap.h"
--#include "auth.h"
--#include "channels.h"
--#include "poll.h"
--#include "config.h"
--#include "misc.h"
-+#include "libssh/priv.h"
-+#include "libssh/callbacks.h"
-+#include "libssh/kex.h"
-+#include "libssh/packet.h"
-+#include "libssh/pcap.h"
-+#include "libssh/auth.h"
-+#include "libssh/channels.h"
-+#include "libssh/poll.h"
-+#include "libssh/config.h"
-+#include "libssh/misc.h"
+-#include "libssh/priv.h"
+-#include "libssh/callbacks.h"
+-#include "libssh/kex.h"
+-#include "libssh/packet.h"
+-#include "libssh/pcap.h"
+-#include "libssh/auth.h"
+-#include "libssh/channels.h"
+-#include "libssh/poll.h"
+-#include "libssh/config.h"
+-#include "libssh/misc.h"
++#include "priv.h"
++#include "callbacks.h"
++#include "kex.h"
++#include "packet.h"
++#include "pcap.h"
++#include "auth.h"
++#include "channels.h"
++#include "poll.h"
++#include "config.h"
++#include "misc.h"
  
  /* These are the different states a SSH session can be into its life */
  enum ssh_session_state_e {
-diff --git b/vendor/libssh/include/libssh/socket.h a/vendor/libssh/include/libssh/socket.h
-index d9766594a..ae56f5f6e 100644
---- b/vendor/libssh/include/libssh/socket.h
-+++ a/vendor/libssh/include/libssh/socket.h
+diff --git a/vendor/libssh/include/libssh/socket.h b/vendor/libssh/include/libssh/socket.h
+index cdd3c8370..ab09e4b28 100644
+--- a/vendor/libssh/include/libssh/socket.h
++++ b/vendor/libssh/include/libssh/socket.h
 @@ -21,7 +21,7 @@
  #ifndef SOCKET_H_
  #define SOCKET_H_
  
--#include "callbacks.h"
-+#include "libssh/callbacks.h"
+-#include "libssh/callbacks.h"
++#include "callbacks.h"
  struct ssh_poll_handle_struct;
  /* socket.c */
  
-diff --git b/vendor/libssh/include/libssh/string.h a/vendor/libssh/include/libssh/string.h
-index e74b80876..8c7db1df0 100644
---- b/vendor/libssh/include/libssh/string.h
-+++ a/vendor/libssh/include/libssh/string.h
+diff --git a/vendor/libssh/include/libssh/string.h b/vendor/libssh/include/libssh/string.h
+index 35b2ea2e9..533c62056 100644
+--- a/vendor/libssh/include/libssh/string.h
++++ b/vendor/libssh/include/libssh/string.h
 @@ -20,7 +20,7 @@
  
  #ifndef STRING_H_
  #define STRING_H_
--#include "priv.h"
-+#include "libssh/priv.h"
+-#include "libssh/priv.h"
++#include "priv.h"
  
- /* must be 32 bits number + immediately our data */
- #ifdef _MSC_VER
-diff --git b/vendor/libssh/include/libssh/threads.h a/vendor/libssh/include/libssh/threads.h
-index 7ba45706c..522f91d5b 100644
---- b/vendor/libssh/include/libssh/threads.h
-+++ a/vendor/libssh/include/libssh/threads.h
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/vendor/libssh/include/libssh/threads.h b/vendor/libssh/include/libssh/threads.h
+index 47340d17a..ca5eacd81 100644
+--- a/vendor/libssh/include/libssh/threads.h
++++ b/vendor/libssh/include/libssh/threads.h
 @@ -21,8 +21,8 @@
  #ifndef THREADS_H_
  #define THREADS_H_
  
--#include "libssh.h"
--#include "callbacks.h"
-+#include <libssh/libssh.h>
-+#include <libssh/callbacks.h>
+-#include <libssh/libssh.h>
+-#include <libssh/callbacks.h>
++#include "libssh.h"
++#include "callbacks.h"
  
  #if HAVE_PTHREAD
  
-diff --git b/vendor/libssh/include/libssh/wrapper.h a/vendor/libssh/include/libssh/wrapper.h
-index 2275032eb..f4a33d2dc 100644
---- b/vendor/libssh/include/libssh/wrapper.h
-+++ a/vendor/libssh/include/libssh/wrapper.h
+diff --git a/vendor/libssh/include/libssh/wrapper.h b/vendor/libssh/include/libssh/wrapper.h
+index b5a3ce776..c2f908583 100644
+--- a/vendor/libssh/include/libssh/wrapper.h
++++ b/vendor/libssh/include/libssh/wrapper.h
 @@ -24,10 +24,10 @@
  #include <stdbool.h>
  
  #include "config.h"
--#include "libssh.h"
--#include "libcrypto.h"
--#include "libgcrypt.h"
--#include "libmbedcrypto.h"
-+#include "libssh/libssh.h"
-+#include "libssh/libcrypto.h"
-+#include "libssh/libgcrypt.h"
-+#include "libssh/libmbedcrypto.h"
+-#include "libssh/libssh.h"
+-#include "libssh/libcrypto.h"
+-#include "libssh/libgcrypt.h"
+-#include "libssh/libmbedcrypto.h"
++#include "libssh.h"
++#include "libcrypto.h"
++#include "libgcrypt.h"
++#include "libmbedcrypto.h"
  
- enum ssh_kdf_digest {
-     SSH_KDF_SHA1=1,
+ #ifdef __cplusplus
+ extern "C" {

@@ -295,7 +295,7 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
     }
     session->next_crypto->ecdh_client_pubkey = q_c_string;
 
-    /* Build server's keypair */
+    /* Build server's key pair */
     err = gcry_sexp_build(&param, NULL, "(genkey(ecdh(curve %s) (flags transient-key)))",
                           curve);
     if (err) {

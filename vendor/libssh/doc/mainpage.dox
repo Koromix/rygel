@@ -149,7 +149,7 @@ The libssh Team
 
 @subsection main-rfc-secsh Secure Shell (SSH)
 
-The following RFC documents described SSH-2 protcol as an Internet standard.
+The following RFC documents described SSH-2 protocol as an Internet standard.
 
  - <a href="https://tools.ietf.org/html/rfc4250" target="_blank">RFC 4250</a>,
     The Secure Shell (SSH) Protocol Assigned Numbers

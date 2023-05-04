@@ -25,6 +25,12 @@
 #include <openssl/rand.h>
 
 /**
+ * @addtogroup libssh_misc
+ *
+ * @{
+ */
+
+/**
  * @brief Get random bytes
  *
  * Make sure to always check the return code of this function!
@@ -52,3 +58,7 @@ ssh_get_random(void *where, int len, int strong)
     /* Returns -1 when not supported, 0 on error, 1 on success */
     return !!RAND_bytes(where, len);
 }
+
+/**
+ * @}
+ */

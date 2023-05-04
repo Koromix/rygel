@@ -172,7 +172,7 @@ static void torture_rekey_send(void **state)
                      bytes / c->in_cipher->blocksize);
     assert_int_equal(c->out_cipher->max_blocks,
                      bytes / c->out_cipher->blocksize);
-    /* We should have less encrypted packets than transfered (first are not encrypted) */
+    /* We should have less encrypted packets than transferred (first are not encrypted) */
     assert_true(c->out_cipher->packets < s->ssh.session->send_seq);
     assert_true(c->in_cipher->packets < s->ssh.session->recv_seq);
     /* Copy the initial secret hash = session_id so we know we changed keys later */
@@ -192,10 +192,11 @@ static void torture_rekey_send(void **state)
     rc = ssh_userauth_publickey_auto(s->ssh.session, NULL, NULL);
     assert_int_equal(rc, SSH_AUTH_SUCCESS);
 
-    /* send ignore packets of up to 1KB to trigger rekey */
+    /* send ignore packets of up to 1KB to trigger rekey. Send little bit more
+     * to make sure it completes with all different ciphers */
     memset(data, 0, sizeof(data));
     memset(data, 'A', 128);
-    for (i = 0; i < 16; i++) {
+    for (i = 0; i < KEX_RETRY; i++) {
         ssh_send_ignore(s->ssh.session, data);
         ssh_handle_packets(s->ssh.session, 50);
     }
@@ -274,9 +275,10 @@ static void torture_rekey_recv(void **state)
 
     /* The blocks limit is set correctly */
     c = s->ssh.session->current_crypto;
+    assert_non_null(c);
     assert_int_equal(c->in_cipher->max_blocks, bytes / c->in_cipher->blocksize);
     assert_int_equal(c->out_cipher->max_blocks, bytes / c->out_cipher->blocksize);
-    /* We should have less encrypted packets than transfered (first are not encrypted) */
+    /* We should have less encrypted packets than transferred (first are not encrypted) */
     assert_true(c->out_cipher->packets < s->ssh.session->send_seq);
     assert_true(c->in_cipher->packets < s->ssh.session->recv_seq);
     /* Copy the initial secret hash = session_id so we know we changed keys later */
@@ -471,7 +473,7 @@ static void torture_rekey_different_kex(void **state)
                      bytes / c->in_cipher->blocksize);
     assert_int_equal(c->out_cipher->max_blocks,
                      bytes / c->out_cipher->blocksize);
-    /* We should have less encrypted packets than transfered (first are not encrypted) */
+    /* We should have less encrypted packets than transferred (first are not encrypted) */
     assert_true(c->out_cipher->packets < s->ssh.session->send_seq);
     assert_true(c->in_cipher->packets < s->ssh.session->recv_seq);
     /* Copy the initial secret hash = session_id so we know we changed keys later */
@@ -497,7 +499,7 @@ static void torture_rekey_different_kex(void **state)
     rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_KEY_EXCHANGE, kex2);
     assert_ssh_return_code(s->ssh.session, rc);
 
-    /* send ignore packets of up to 1KB to trigger rekey. Send litle bit more
+    /* send ignore packets of up to 1KB to trigger rekey. Send little bit more
      * to make sure the rekey it completes with all different ciphers (paddings */
     memset(data, 0, sizeof(data));
     memset(data, 'A', 128);
@@ -575,7 +577,7 @@ static void torture_rekey_server_different_kex(void **state)
     rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_KEY_EXCHANGE, kex2);
     assert_ssh_return_code(s->ssh.session, rc);
 
-    /* send ignore packets of up to 1KB to trigger rekey. Send litle bit more
+    /* send ignore packets of up to 1KB to trigger rekey. Send little bit more
      * to make sure the rekey it completes with all different ciphers (paddings */
     memset(data, 0, sizeof(data));
     memset(data, 'A', 128);
@@ -670,6 +672,164 @@ static void torture_rekey_server_recv(void **state)
 }
 #endif /* WITH_SFTP */
 
+#ifdef WITH_ZLIB
+/* This is disabled by OpenSSH since OpenSSH 7.4p1 */
+#if (OPENSSH_VERSION_MAJOR == 7 && OPENSSH_VERSION_MINOR < 4) || OPENSSH_VERSION_MAJOR < 7
+/* Compression can be funky to get right after rekey
+ */
+static void torture_rekey_send_compression(void **state)
+{
+    struct torture_state *s = *state;
+    const char *comp = "zlib";
+    int rc;
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_COMPRESSION_C_S, comp);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_COMPRESSION_S_C, comp);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    torture_rekey_send(state);
+}
+
+#ifdef WITH_SFTP
+static void torture_rekey_recv_compression(void **state)
+{
+    struct torture_state *s = *state;
+    const char *comp = "zlib";
+    int rc;
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_COMPRESSION_C_S, comp);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_COMPRESSION_S_C, comp);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    torture_rekey_recv(state);
+}
+#endif /* WITH_SFTP */
+#endif
+
+/* Especially the delayed compression by openssh.
+ */
+static void torture_rekey_send_compression_delayed(void **state)
+{
+    struct torture_state *s = *state;
+    const char *comp = "zlib@openssh.com";
+    int rc;
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_COMPRESSION_C_S, comp);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_COMPRESSION_S_C, comp);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    torture_rekey_send(state);
+}
+
+#ifdef WITH_SFTP
+static void torture_rekey_recv_compression_delayed(void **state)
+{
+    struct torture_state *s = *state;
+    const char *comp = "zlib@openssh.com";
+    int rc;
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_COMPRESSION_C_S, comp);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_COMPRESSION_S_C, comp);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    torture_rekey_recv(state);
+}
+#endif /* WITH_SFTP */
+#endif /* WITH_ZLIB */
+
+static void setup_server_for_good_guess(void *state)
+{
+    const char *default_sshd_config = "KexAlgorithms curve25519-sha256";
+    const char *fips_sshd_config = "KexAlgorithms ecdh-sha2-nistp256";
+    const char *sshd_config = default_sshd_config;
+
+    if (ssh_fips_mode()) {
+        sshd_config = fips_sshd_config;
+    }
+    /* This sets an only supported kex algorithm that we do not have as a first
+    * option */
+    torture_update_sshd_config(state, sshd_config);
+}
+
+static void torture_rekey_guess_send(void **state)
+{
+    struct torture_state *s = *state;
+
+    setup_server_for_good_guess(state);
+
+    /* Make the client send the first_kex_packet_follows flag during key
+     * exchange as well as during the rekey */
+    s->ssh.session->send_first_kex_follows = true;
+
+    torture_rekey_send(state);
+}
+
+static void torture_rekey_guess_wrong_send(void **state)
+{
+    struct torture_state *s = *state;
+    const char *sshd_config = "KexAlgorithms diffie-hellman-group14-sha256";
+
+    /* This sets an only supported kex algorithm that we do not have as a first
+     * option */
+    torture_update_sshd_config(state, sshd_config);
+
+    /* Make the client send the first_kex_packet_follows flag during key
+     * exchange as well as during the rekey */
+    s->ssh.session->send_first_kex_follows = true;
+
+    torture_rekey_send(state);
+}
+
+#ifdef WITH_SFTP
+static void torture_rekey_guess_recv(void **state)
+{
+    struct torture_state *s = *state;
+    int rc;
+
+    setup_server_for_good_guess(state);
+
+    /* Make the client send the first_kex_packet_follows flag during key
+     * exchange as well as during the rekey */
+    s->ssh.session->send_first_kex_follows = true;
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_REKEY_DATA, &bytes);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    session_setup_sftp(state);
+
+    torture_rekey_recv(state);
+}
+
+static void torture_rekey_guess_wrong_recv(void **state)
+{
+    struct torture_state *s = *state;
+    const char *sshd_config = "KexAlgorithms diffie-hellman-group14-sha256";
+    int rc;
+
+    /* This sets an only supported kex algorithm that we do not have as a first
+     * option */
+    torture_update_sshd_config(state, sshd_config);
+
+    /* Make the client send the first_kex_packet_follows flag during key
+     * exchange as well as during the rekey */
+    s->ssh.session->send_first_kex_follows = true;
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_REKEY_DATA, &bytes);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    session_setup_sftp(state);
+
+    torture_rekey_recv(state);
+}
+#endif /* WITH_SFTP */
 
 int torture_run_tests(void) {
     int rc;
@@ -691,19 +851,54 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_rekey_different_kex,
                                         session_setup,
                                         session_teardown),
-        /* Note, that this modifies the sshd_config */
+#ifdef WITH_ZLIB
+#if (OPENSSH_VERSION_MAJOR == 7 && OPENSSH_VERSION_MINOR < 4) || OPENSSH_VERSION_MAJOR < 7
+        cmocka_unit_test_setup_teardown(torture_rekey_send_compression,
+                                        session_setup,
+                                        session_teardown),
+#ifdef WITH_SFTP
+        cmocka_unit_test_setup_teardown(torture_rekey_recv_compression,
+                                        session_setup_sftp_client,
+                                        session_teardown),
+#endif /* WITH_SFTP */
+#endif
+        cmocka_unit_test_setup_teardown(torture_rekey_send_compression_delayed,
+                                        session_setup,
+                                        session_teardown),
+#ifdef WITH_SFTP
+        cmocka_unit_test_setup_teardown(torture_rekey_recv_compression_delayed,
+                                        session_setup_sftp_client,
+                                        session_teardown),
+#endif /* WITH_SFTP */
+#endif /* WITH_ZLIB */
+        /* TODO verify the two rekey are possible and the states are not broken after rekey */
+
+        cmocka_unit_test_setup_teardown(torture_rekey_server_different_kex,
+                                        session_setup,
+                                        session_teardown),
+        /* Note, that these tests modify the sshd_config so follow-up tests
+         * might get unexpected behavior if they do not update the server with
+         * torture_update_sshd_config() too */
         cmocka_unit_test_setup_teardown(torture_rekey_server_send,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_rekey_guess_send,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_rekey_guess_wrong_send,
                                         session_setup,
                                         session_teardown),
 #ifdef WITH_SFTP
         cmocka_unit_test_setup_teardown(torture_rekey_server_recv,
                                         session_setup_sftp_server,
                                         session_teardown),
-#endif /* WITH_SFTP */
-        cmocka_unit_test_setup_teardown(torture_rekey_server_different_kex,
+        cmocka_unit_test_setup_teardown(torture_rekey_guess_recv,
                                         session_setup,
                                         session_teardown),
-        /* TODO verify the two rekey are possible and the states are not broken after rekey */
+        cmocka_unit_test_setup_teardown(torture_rekey_guess_wrong_recv,
+                                        session_setup,
+                                        session_teardown),
+#endif /* WITH_SFTP */
     };
 
     ssh_init();

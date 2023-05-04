@@ -30,7 +30,7 @@ if (UNIX AND NOT WIN32)
     target_link_libraries(test_server
                           testserver
                           ssh::ssh
-                          ${ARGP_LIBRARY}
+                          ${ARGP_LIBRARIES}
                           util)
 endif ()
 

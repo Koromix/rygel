@@ -17,16 +17,16 @@ set(CTEST_BUILD_OPTIONS "-DUNIT_TESTING=ON -WITH_SFTP=ON -DWITH_SERVER=ON -DWITH
 
 #set(CTEST_CUSTOM_MEMCHECK_IGNORE torture_rand)
 
-## The Model to set: Nightly, Continous, Experimental
+## The Model to set: Nightly, Continuous, Experimental
 set(CTEST_MODEL "Experimental")
 
 ## The branch
 #set(CTEST_GIT_BRANCH "--branch v0-5")
 
-## Wether to enable memory checking.
+## Whether to enable memory checking.
 set(WITH_MEMCHECK FALSE)
 
-## Wether to enable code coverage.
+## Whether to enable code coverage.
 set(WITH_COVERAGE FALSE)
 
 #######################################################################

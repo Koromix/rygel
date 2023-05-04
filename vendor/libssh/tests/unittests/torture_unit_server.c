@@ -120,7 +120,7 @@ static void test_ssh_accept_interrupt(void **state)
     server = ssh_new();
     assert_non_null(server);
 
-    /* Send interupt in 1 second */
+    /* Send interrupt in 1 second */
     rc = pthread_create(&interrupt_pthread, NULL, int_thread, NULL);
     assert_return_code(rc, errno);
 

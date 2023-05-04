@@ -20,7 +20,7 @@
  */
 
 /*
- * This test checks if the messages accepted by the packet filter were intented
+ * This test checks if the messages accepted by the packet filter were intended
  * to be accepted.
  *
  * The process consists in 2 steps:

@@ -1,8 +1,8 @@
 diff --git a/vendor/libssh/include/libssh/curve25519.h b/vendor/libssh/include/libssh/curve25519.h
-index f0cc63487..2313505c4 100644
+index a55f52c7d..d56588a79 100644
 --- a/vendor/libssh/include/libssh/curve25519.h
 +++ b/vendor/libssh/include/libssh/curve25519.h
-@@ -29,14 +29,14 @@
+@@ -29,8 +29,8 @@
  #include <nacl/crypto_scalarmult_curve25519.h>
  #define CURVE25519_PUBKEY_SIZE crypto_scalarmult_curve25519_BYTES
  #define CURVE25519_PRIVKEY_SIZE crypto_scalarmult_curve25519_SCALARBYTES
@@ -11,6 +11,9 @@ index f0cc63487..2313505c4 100644
 +#define _ssh_crypto_scalarmult_base crypto_scalarmult_curve25519_base
 +#define _ssh_crypto_scalarmult crypto_scalarmult_curve25519
  #else
+ 
+ #ifdef __cplusplus
+@@ -39,8 +39,8 @@ extern "C" {
  
  #define CURVE25519_PUBKEY_SIZE 32
  #define CURVE25519_PRIVKEY_SIZE 32
@@ -22,10 +25,10 @@ index f0cc63487..2313505c4 100644
  
  #ifdef HAVE_ECC
 diff --git a/vendor/libssh/include/libssh/ed25519.h b/vendor/libssh/include/libssh/ed25519.h
-index b45f507d2..c9f0b5cca 100644
+index 72a86c0b0..7974158c1 100644
 --- a/vendor/libssh/include/libssh/ed25519.h
 +++ b/vendor/libssh/include/libssh/ed25519.h
-@@ -43,7 +43,7 @@ typedef uint8_t ed25519_signature[ED25519_SIG_LEN];
+@@ -47,7 +47,7 @@ extern "C" {
   * @param[out] sk generated secret key
   * @return     0 on success, -1 on error.
   * */
@@ -34,7 +37,7 @@ index b45f507d2..c9f0b5cca 100644
  
  /** @internal
   * @brief sign a message with ed25519
-@@ -55,7 +55,7 @@ int crypto_sign_ed25519_keypair(ed25519_pubkey pk, ed25519_privkey sk);
+@@ -59,7 +59,7 @@ int crypto_sign_ed25519_keypair(ed25519_pubkey pk, ed25519_privkey sk);
   * @param[in] sk secret key to sign the message with
   * @return    0 on success.
   */
@@ -43,7 +46,7 @@ index b45f507d2..c9f0b5cca 100644
      unsigned char *sm, uint64_t *smlen,
      const unsigned char *m, uint64_t mlen,
      const ed25519_privkey sk);
-@@ -70,7 +70,7 @@ int crypto_sign_ed25519(
+@@ -74,7 +74,7 @@ int crypto_sign_ed25519(
   * @param[in] pk public key used to sign the message
   * @returns   0 on success (supposedly).
   */
@@ -53,10 +56,10 @@ index b45f507d2..c9f0b5cca 100644
      const unsigned char *sm, uint64_t smlen,
      const ed25519_pubkey pk);
 diff --git a/vendor/libssh/include/libssh/wrapper.h b/vendor/libssh/include/libssh/wrapper.h
-index 2275032eb..24f7c0d1a 100644
+index 36589cffa..b5a3ce776 100644
 --- a/vendor/libssh/include/libssh/wrapper.h
 +++ b/vendor/libssh/include/libssh/wrapper.h
-@@ -67,29 +67,29 @@ struct ssh_cipher_struct;
+@@ -71,29 +71,29 @@ struct ssh_cipher_struct;
  struct ssh_crypto_struct;
  
  typedef struct ssh_mac_ctx_struct *ssh_mac_ctx;
@@ -110,7 +113,7 @@ index 2275032eb..24f7c0d1a 100644
  void evp(int nid, unsigned char *digest, size_t len, unsigned char *hash, unsigned int *hlen);
  EVPCTX evp_init(int nid);
 diff --git a/vendor/libssh/src/curve25519.c b/vendor/libssh/src/curve25519.c
-index 6a930faf6..f288dce51 100644
+index 66291b5fe..a11aed21b 100644
 --- a/vendor/libssh/src/curve25519.c
 +++ b/vendor/libssh/src/curve25519.c
 @@ -130,11 +130,11 @@ static int ssh_curve25519_init(ssh_session session)
@@ -129,7 +132,7 @@ index 6a930faf6..f288dce51 100644
      }
  #endif /* defined(HAVE_LIBCRYPTO) && defined(HAVE_OPENSSL_X25519) */
  
-@@ -249,11 +249,11 @@ out:
+@@ -254,11 +254,11 @@ out:
      }
  #else
      if (session->server) {
@@ -146,7 +149,7 @@ index 6a930faf6..f288dce51 100644
  #endif /* defined(HAVE_LIBCRYPTO) && defined(HAVE_OPENSSL_X25519) */
  
 diff --git a/vendor/libssh/src/external/bcrypt_pbkdf.c b/vendor/libssh/src/external/bcrypt_pbkdf.c
-index 75c02151b..952392967 100644
+index 85f4be47e..62ac4aee4 100644
 --- a/vendor/libssh/src/external/bcrypt_pbkdf.c
 +++ b/vendor/libssh/src/external/bcrypt_pbkdf.c
 @@ -136,9 +136,9 @@ bcrypt_pbkdf(const char *pass, size_t passlen, const uint8_t *salt, size_t saltl
@@ -374,10 +377,10 @@ index 44f06631c..2d5039a22 100644
      }
      SAFE_FREE(ctx);
 diff --git a/vendor/libssh/src/kex.c b/vendor/libssh/src/kex.c
-index 192eb8810..9341a68f6 100644
+index b9455d2d5..9ceca586d 100644
 --- a/vendor/libssh/src/kex.c
 +++ b/vendor/libssh/src/kex.c
-@@ -1191,8 +1191,8 @@ int ssh_make_sessionid(ssh_session session)
+@@ -1346,8 +1346,8 @@ int ssh_make_sessionid(ssh_session session)
              ssh_set_error_oom(session);
              goto error;
          }
@@ -388,7 +391,7 @@ index 192eb8810..9341a68f6 100644
          break;
      case SSH_KEX_DH_GROUP14_SHA256:
      case SSH_KEX_ECDH_SHA2_NISTP256:
-@@ -1208,8 +1208,8 @@ int ssh_make_sessionid(ssh_session session)
+@@ -1363,8 +1363,8 @@ int ssh_make_sessionid(ssh_session session)
              ssh_set_error_oom(session);
              goto error;
          }
@@ -399,7 +402,7 @@ index 192eb8810..9341a68f6 100644
          break;
      case SSH_KEX_ECDH_SHA2_NISTP384:
          session->next_crypto->digest_len = SHA384_DIGEST_LENGTH;
-@@ -1219,8 +1219,8 @@ int ssh_make_sessionid(ssh_session session)
+@@ -1374,8 +1374,8 @@ int ssh_make_sessionid(ssh_session session)
              ssh_set_error_oom(session);
              goto error;
          }
@@ -410,7 +413,7 @@ index 192eb8810..9341a68f6 100644
          break;
      case SSH_KEX_DH_GROUP16_SHA512:
      case SSH_KEX_DH_GROUP18_SHA512:
-@@ -1232,9 +1232,9 @@ int ssh_make_sessionid(ssh_session session)
+@@ -1387,9 +1387,9 @@ int ssh_make_sessionid(ssh_session session)
              ssh_set_error_oom(session);
              goto error;
          }
@@ -925,10 +928,10 @@ index 227e20ab4..35566b7cc 100644
      mbedtls_md_finish(c, md);
      mbedtls_md_free(c);
 diff --git a/vendor/libssh/src/pki.c b/vendor/libssh/src/pki.c
-index 8f62ce2bd..73b97a86f 100644
+index a7c84c5e7..c98fb3ff1 100644
 --- a/vendor/libssh/src/pki.c
 +++ b/vendor/libssh/src/pki.c
-@@ -2520,24 +2520,24 @@ int ssh_pki_signature_verify(ssh_session session,
+@@ -2543,24 +2543,24 @@ int ssh_pki_signature_verify(ssh_session session,
          unsigned char application_hash[SHA256_DIGEST_LEN] = {0};
          unsigned char input_hash[SHA256_DIGEST_LEN] = {0};
  
@@ -1009,7 +1012,7 @@ index 6a5a4a8ae..7ab2bd661 100644
      explicit_bzero(buffer, hlen + ED25519_SIG_LEN);
      explicit_bzero(buffer2, hlen);
 diff --git a/vendor/libssh/src/pki_gcrypt.c b/vendor/libssh/src/pki_gcrypt.c
-index b619b1a3f..e2368c6a6 100644
+index 418a46b3f..db75def5f 100644
 --- a/vendor/libssh/src/pki_gcrypt.c
 +++ b/vendor/libssh/src/pki_gcrypt.c
 @@ -256,22 +256,22 @@ static int passphrase_to_key(char *data, unsigned int datalen,
@@ -1098,7 +1101,7 @@ index b619b1a3f..e2368c6a6 100644
          hash_type = "sha1";
          verify_input = hash;
 diff --git a/vendor/libssh/src/pki_mbedcrypto.c b/vendor/libssh/src/pki_mbedcrypto.c
-index 4439b3cd6..ffa5f38d1 100644
+index cb9d3228e..3e0f63a6e 100644
 --- a/vendor/libssh/src/pki_mbedcrypto.c
 +++ b/vendor/libssh/src/pki_mbedcrypto.c
 @@ -1491,22 +1491,22 @@ ssh_signature pki_sign_data(const ssh_key privkey,
@@ -1159,10 +1162,10 @@ index 4439b3cd6..ffa5f38d1 100644
          md = MBEDTLS_MD_SHA1;
          verify_input = hash;
 diff --git a/vendor/libssh/src/session.c b/vendor/libssh/src/session.c
-index 6025c1335..205cdf048 100644
+index 0fb758cee..07a322399 100644
 --- a/vendor/libssh/src/session.c
 +++ b/vendor/libssh/src/session.c
-@@ -1009,7 +1009,7 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
+@@ -1029,7 +1029,7 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
          return SSH_ERROR;
      }
  
@@ -1171,7 +1174,7 @@ index 6025c1335..205cdf048 100644
      if (ctx == NULL) {
          SAFE_FREE(h);
          return SSH_ERROR;
-@@ -1017,7 +1017,7 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
+@@ -1037,7 +1037,7 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
  
      rc = ssh_get_server_publickey(session, &pubkey);
      if (rc != SSH_OK) {
@@ -1180,7 +1183,7 @@ index 6025c1335..205cdf048 100644
          SAFE_FREE(h);
          return SSH_ERROR;
      }
-@@ -1025,14 +1025,14 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
+@@ -1045,14 +1045,14 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
      rc = ssh_pki_export_pubkey_blob(pubkey, &pubkey_blob);
      ssh_key_free(pubkey);
      if (rc != SSH_OK) {
@@ -1198,7 +1201,7 @@ index 6025c1335..205cdf048 100644
  
      *hash = h;
  
-@@ -1146,15 +1146,15 @@ int ssh_get_publickey_hash(const ssh_key key,
+@@ -1166,15 +1166,15 @@ int ssh_get_publickey_hash(const ssh_key key,
                  goto out;
              }
  
@@ -1217,7 +1220,7 @@ index 6025c1335..205cdf048 100644
  
              *hlen = SHA_DIGEST_LEN;
          }
-@@ -1169,15 +1169,15 @@ int ssh_get_publickey_hash(const ssh_key key,
+@@ -1189,15 +1189,15 @@ int ssh_get_publickey_hash(const ssh_key key,
                  goto out;
              }
  
@@ -1236,7 +1239,7 @@ index 6025c1335..205cdf048 100644
  
              *hlen = SHA256_DIGEST_LEN;
          }
-@@ -1200,15 +1200,15 @@ int ssh_get_publickey_hash(const ssh_key key,
+@@ -1220,15 +1220,15 @@ int ssh_get_publickey_hash(const ssh_key key,
                  goto out;
              }
  

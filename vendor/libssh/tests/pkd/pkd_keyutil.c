@@ -22,7 +22,7 @@
 #include "pkd_keyutil.h"
 #include "pkd_util.h"
 
-void setup_rsa_key() {
+void setup_rsa_key(void) {
     int rc = 0;
     if (access(LIBSSH_RSA_TESTKEY, F_OK) != 0) {
         rc = system_checked(OPENSSH_KEYGEN " -t rsa -q -N \"\" -f "
@@ -31,7 +31,7 @@ void setup_rsa_key() {
     assert_int_equal(rc, 0);
 }
 
-void setup_ed25519_key() {
+void setup_ed25519_key(void) {
     int rc = 0;
     if (access(LIBSSH_ED25519_TESTKEY, F_OK) != 0) {
         rc = system_checked(OPENSSH_KEYGEN " -t ed25519 -q -N \"\" -f "
@@ -41,7 +41,7 @@ void setup_ed25519_key() {
 }
 
 #ifdef HAVE_DSA
-void setup_dsa_key() {
+void setup_dsa_key(void) {
     int rc = 0;
     if (access(LIBSSH_DSA_TESTKEY, F_OK) != 0) {
         rc = system_checked(OPENSSH_KEYGEN " -t dsa -q -N \"\" -f "
@@ -51,7 +51,7 @@ void setup_dsa_key() {
 }
 #endif
 
-void setup_ecdsa_keys() {
+void setup_ecdsa_keys(void) {
     int rc = 0;
 
     if (access(LIBSSH_ECDSA_256_TESTKEY, F_OK) != 0) {
@@ -71,27 +71,27 @@ void setup_ecdsa_keys() {
     }
 }
 
-void cleanup_rsa_key() {
+void cleanup_rsa_key(void) {
     cleanup_key(LIBSSH_RSA_TESTKEY);
 }
 
-void cleanup_ed25519_key() {
+void cleanup_ed25519_key(void) {
     cleanup_key(LIBSSH_ED25519_TESTKEY);
 }
 
 #ifdef HAVE_DSA
-void cleanup_dsa_key() {
+void cleanup_dsa_key(void) {
     cleanup_key(LIBSSH_DSA_TESTKEY);
 }
 #endif
 
-void cleanup_ecdsa_keys() {
+void cleanup_ecdsa_keys(void) {
     cleanup_key(LIBSSH_ECDSA_256_TESTKEY);
     cleanup_key(LIBSSH_ECDSA_384_TESTKEY);
     cleanup_key(LIBSSH_ECDSA_521_TESTKEY);
 }
 
-void setup_openssh_client_keys() {
+void setup_openssh_client_keys(void) {
     int rc = 0;
 
     if (access(OPENSSH_CA_TESTKEY, F_OK) != 0) {
@@ -184,7 +184,7 @@ void setup_openssh_client_keys() {
     }
 }
 
-void cleanup_openssh_client_keys() {
+void cleanup_openssh_client_keys(void) {
     cleanup_key(OPENSSH_CA_TESTKEY);
     cleanup_key(OPENSSH_RSA_TESTKEY);
     cleanup_file(OPENSSH_RSA_TESTKEY "-sha256-cert.pub");
@@ -199,7 +199,7 @@ void cleanup_openssh_client_keys() {
     }
 }
 
-void setup_dropbear_client_rsa_key() {
+void setup_dropbear_client_rsa_key(void) {
     int rc = 0;
     if (access(DROPBEAR_RSA_TESTKEY, F_OK) != 0) {
         rc = system_checked(DROPBEAR_KEYGEN " -t rsa -f "
@@ -208,6 +208,6 @@ void setup_dropbear_client_rsa_key() {
     assert_int_equal(rc, 0);
 }
 
-void cleanup_dropbear_client_rsa_key() {
+void cleanup_dropbear_client_rsa_key(void) {
     unlink(DROPBEAR_RSA_TESTKEY);
 }

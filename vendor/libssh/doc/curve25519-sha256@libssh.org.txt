@@ -3,13 +3,13 @@ curve25519-sha256@libssh.org.txt        Aris Adamantiadis <aris@badcode.be>
 
 1. Introduction
 
-This document describes the key exchange methode curve25519-sha256@libssh.org
+This document describes the key exchange method curve25519-sha256@libssh.org
 for SSH version 2 protocol. It is provided as an alternative to the existing
 key exchange mechanisms based on either Diffie-Hellman or Elliptic Curve Diffie-
 Hellman [RFC5656].
 The reason is the following : During summer of 2013, revelations from ex-
 consultant at NSA Edward Snowden gave proof that NSA willingly inserts backdoors
-into softwares, hardware components and published standards. While it is still
+into software, hardware components and published standards. While it is still
 believed that the mathematics behind ECC cryptography are still sound and solid,
 some people (including Bruce Schneier [SCHNEIER]), showed their lack of confidence
 in NIST-published curves such as nistp256, nistp384, nistp521, for which constant
@@ -42,8 +42,8 @@ The following is an overview of the key exchange process:
 Client                                                            Server
 ------                                                            ------
 Generate ephemeral key pair.
-SSH_MSG_KEX_ECDH_INIT          -------->                      
-                                            Verify that client public key 
+SSH_MSG_KEX_ECDH_INIT          -------->
+                                            Verify that client public key
                                             length is 32 bytes.
                                              Generate ephemeral key pair.
                                                    Compute shared secret.
@@ -55,7 +55,7 @@ Compute shared secret.
 Generate exchange hash.
 Verify server's signature.
 
-*   Optional but strongly recommanded as this protects against MITM attacks.
+*   Optional but strongly recommended as this protects against MITM attacks.
 
 This is implemented using the same messages as described in RFC5656 chapter 4
 
@@ -109,7 +109,7 @@ This number is calculated using the following procedure:
      side's public key and the local private key scalar.
 
      The whole 32 bytes of the number X are then converted into a big integer k.
-     This conversion follows the network byte order. This step differs from 
+     This conversion follows the network byte order. This step differs from
      RFC5656.
 
 [RFC5656]    https://tools.ietf.org/html/rfc5656

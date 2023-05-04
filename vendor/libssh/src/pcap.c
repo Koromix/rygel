@@ -44,13 +44,10 @@
 #include "libssh/socket.h"
 
 /**
- * @internal
- *
  * @defgroup libssh_pcap The libssh pcap functions
  * @ingroup libssh
  *
  * The pcap file generation
- *
  *
  * @{
  */
@@ -98,7 +95,6 @@ struct pcaprec_hdr_s {
  * in a SSH session only. Multiple pcap contexts may be used into
  * a single pcap file.
  */
-
 struct ssh_pcap_context_struct {
 	ssh_session session;
 	ssh_pcap_file file;
@@ -280,7 +276,6 @@ void ssh_pcap_file_free(ssh_pcap_file pcap){
 /** @internal
  * @brief allocates a new ssh_pcap_context object
  */
-
 ssh_pcap_context ssh_pcap_context_new(ssh_session session){
 	ssh_pcap_context ctx = (struct ssh_pcap_context_struct *) malloc(sizeof(struct ssh_pcap_context_struct));
 	if(ctx==NULL){
@@ -523,7 +518,7 @@ int ssh_set_pcap_file(ssh_session session, ssh_pcap_file pcap){
 	session->pcap_ctx=ctx;
 	return SSH_OK;
 }
-
+/** @} */
 
 #else /* WITH_PCAP */
 
@@ -557,5 +552,3 @@ int ssh_set_pcap_file(ssh_session session, ssh_pcap_file pcapfile){
 }
 
 #endif
-
-/** @} */

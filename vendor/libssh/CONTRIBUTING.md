@@ -274,7 +274,7 @@ This is bad:
      * This is a multi line comment,
      * with some more words...*/
 
-### Indention & Whitespace & 80 columns
+### Indentation & Whitespace & 80 columns
 
 To avoid confusion, indentations have to be 4 spaces. Do not use tabs!.  When
 wrapping parameters for function calls, align the parameter list with the first

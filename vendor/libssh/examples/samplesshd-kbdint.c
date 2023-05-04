@@ -369,9 +369,9 @@ int main(int argc, char **argv){
         }
     } while(!chan);
 
-    if(!chan) {
-        printf("Error: cleint did not ask for a channel session (%s)\n",
-                                                    ssh_get_error(session));
+    if (!chan) {
+        printf("Error: client did not ask for a channel session (%s)\n",
+               ssh_get_error(session));
         ssh_finalize();
         return 1;
     }

@@ -110,7 +110,7 @@ int auth_pubkey_cb(UNUSED_PARAM(ssh_session session),
     }
 
     /* TODO */
-    /* Check wheter the user and public key are in authorized keys list */
+    /* Check whether the user and public key are in authorized keys list */
 
     /* Authenticated */
     printf("Authenticated\n");

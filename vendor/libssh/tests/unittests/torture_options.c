@@ -230,7 +230,7 @@ static void torture_options_set_pubkey_accepted_types(void **state) {
         /* simulate the SHA2 extension was negotiated */
         session->extensions = SSH_EXT_SIG_RSA_SHA256;
 
-        /* previous configuration did not list the SHA2 extension algoritms, so
+        /* previous configuration did not list the SHA2 extension algorithms, so
          * it should not be used */
         type = ssh_key_type_to_hash(session, SSH_KEYTYPE_RSA);
         assert_int_equal(type, SSH_DIGEST_SHA1);
@@ -319,6 +319,7 @@ static void torture_options_set_port(void **state) {
 
     rc = ssh_options_set(session, SSH_OPTIONS_PORT_STR, "five");
     assert_true(rc == -1);
+    assert_int_not_equal(session->opts.port, 0);
 
     rc = ssh_options_set(session, SSH_OPTIONS_PORT, NULL);
     assert_true(rc == -1);
@@ -406,12 +407,12 @@ static void torture_options_set_identity(void **state) {
 
     rc = ssh_options_set(session, SSH_OPTIONS_ADD_IDENTITY, "identity1");
     assert_true(rc == 0);
-    assert_string_equal(session->opts.identity->root->data, "identity1");
+    assert_string_equal(session->opts.identity_non_exp->root->data, "identity1");
 
     rc = ssh_options_set(session, SSH_OPTIONS_IDENTITY, "identity2");
     assert_true(rc == 0);
-    assert_string_equal(session->opts.identity->root->data, "identity2");
-    assert_string_equal(session->opts.identity->root->next->data, "identity1");
+    assert_string_equal(session->opts.identity_non_exp->root->data, "identity2");
+    assert_string_equal(session->opts.identity_non_exp->root->next->data, "identity1");
 }
 
 static void torture_options_get_identity(void **state) {
@@ -429,7 +430,7 @@ static void torture_options_get_identity(void **state) {
 
     rc = ssh_options_set(session, SSH_OPTIONS_IDENTITY, "identity2");
     assert_int_equal(rc, SSH_OK);
-    assert_string_equal(session->opts.identity->root->data, "identity2");
+    assert_string_equal(session->opts.identity_non_exp->root->data, "identity2");
     rc = ssh_options_get(session, SSH_OPTIONS_IDENTITY, &identity);
     assert_int_equal(rc, SSH_OK);
     assert_non_null(identity);
@@ -867,9 +868,9 @@ static void torture_options_copy(void **state)
     assert_non_null(new);
 
     /* Check the identities match */
-    it = ssh_list_get_iterator(session->opts.identity);
+    it = ssh_list_get_iterator(session->opts.identity_non_exp);
     assert_non_null(it);
-    it2 = ssh_list_get_iterator(new->opts.identity);
+    it2 = ssh_list_get_iterator(new->opts.identity_non_exp);
     assert_non_null(it2);
     while (it != NULL && it2 != NULL) {
         assert_string_equal(it->data, it2->data);
@@ -918,6 +919,34 @@ static void torture_options_copy(void **state)
                         sizeof(session->opts.options_seen));
 
     ssh_free(new);
+
+    /* test if ssh_options_apply was called before ssh_options_copy
+     * the opts.identity list gets copied (percent expanded list) */
+    rv = ssh_options_apply(session);
+    assert_ssh_return_code(session, rv);
+
+    rv = ssh_options_copy(session, &new);
+    assert_ssh_return_code(session, rv);
+    assert_non_null(new);
+
+    it = ssh_list_get_iterator(session->opts.identity_non_exp);
+    assert_null(it);
+    it2 = ssh_list_get_iterator(new->opts.identity_non_exp);
+    assert_null(it2);
+
+    it = ssh_list_get_iterator(session->opts.identity);
+    assert_non_null(it);
+    it2 = ssh_list_get_iterator(new->opts.identity);
+    assert_non_null(it2);
+    while (it != NULL && it2 != NULL) {
+        assert_string_equal(it->data, it2->data);
+        it = it->next;
+        it2 = it2->next;
+    }
+    assert_null(it);
+    assert_null(it2);
+
+    ssh_free(new);
 }
 
 #define EXECUTABLE_NAME "test-exec"
@@ -956,12 +985,12 @@ static void torture_options_getopt(void **state)
                         "aes128-ctr");
     assert_string_equal(session->opts.wanted_methods[SSH_CRYPT_S_C],
                         "aes128-ctr");
-    assert_string_equal(session->opts.identity->root->data, "id_rsa");
+    assert_string_equal(session->opts.identity_non_exp->root->data, "id_rsa");
 #ifdef WITH_ZLIB
     assert_string_equal(session->opts.wanted_methods[SSH_COMP_C_S],
-                        "zlib@openssh.com,zlib,none");
+                        "zlib@openssh.com,none");
     assert_string_equal(session->opts.wanted_methods[SSH_COMP_S_C],
-                        "zlib@openssh.com,zlib,none");
+                        "zlib@openssh.com,none");
 #else
     assert_string_equal(session->opts.wanted_methods[SSH_COMP_C_S],
                         "none");
@@ -1040,9 +1069,9 @@ static void torture_options_getopt(void **state)
     assert_ssh_return_code(session, rc);
 #ifdef WITH_ZLIB
     assert_string_equal(session->opts.wanted_methods[SSH_COMP_C_S],
-                        "none,zlib@openssh.com,zlib");
+                        "none,zlib@openssh.com");
     assert_string_equal(session->opts.wanted_methods[SSH_COMP_S_C],
-                        "none,zlib@openssh.com,zlib");
+                        "none,zlib@openssh.com");
 #else
     assert_string_equal(session->opts.wanted_methods[SSH_COMP_C_S],
                         "none");
@@ -1056,9 +1085,9 @@ static void torture_options_getopt(void **state)
     assert_string_equal(argv[0], EXECUTABLE_NAME);
 #ifdef WITH_ZLIB
     assert_string_equal(session->opts.wanted_methods[SSH_COMP_C_S],
-                        "zlib@openssh.com,zlib,none");
+                        "zlib@openssh.com,none");
     assert_string_equal(session->opts.wanted_methods[SSH_COMP_S_C],
-                        "zlib@openssh.com,zlib,none");
+                        "zlib@openssh.com,none");
 #else
     assert_string_equal(session->opts.wanted_methods[SSH_COMP_C_S],
                         "none");
@@ -1085,6 +1114,190 @@ static void torture_options_getopt(void **state)
     assert_string_equal(argv[0], EXECUTABLE_NAME);
 
 #endif /* _NSC_VER */
+}
+
+static void torture_options_apply (void **state) {
+    ssh_session session = *state;
+    struct ssh_list *awaited_list = NULL;
+    struct ssh_iterator *it1 = NULL, *it2 = NULL;
+    char *id = NULL;
+    int rc;
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_KNOWNHOSTS,
+                         "%%d/.ssh/known_hosts");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_GLOBAL_KNOWNHOSTS,
+                         "/etc/%%u/libssh/known_hosts");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_PROXYCOMMAND,
+                         "exec echo \"Hello libssh %%d!\"");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_ADD_IDENTITY,
+                         "%%d/do_not_expand");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_apply(session);
+    assert_ssh_return_code(session, rc);
+
+    /* check that the values got expanded */
+    assert_true(session->opts.exp_flags & SSH_OPT_EXP_FLAG_KNOWNHOSTS);
+    assert_true(session->opts.exp_flags & SSH_OPT_EXP_FLAG_GLOBAL_KNOWNHOSTS);
+    assert_true(session->opts.exp_flags & SSH_OPT_EXP_FLAG_PROXYCOMMAND);
+    assert_true(ssh_list_count(session->opts.identity_non_exp) == 0);
+    assert_true(ssh_list_count(session->opts.identity) > 0);
+
+    /* should not change anything calling it again */
+    rc = ssh_options_apply(session);
+    assert_ssh_return_code(session, rc);
+
+    /* check that the expansion was done only once */
+    assert_string_equal(session->opts.knownhosts, "%d/.ssh/known_hosts");
+    assert_string_equal(session->opts.global_knownhosts,
+                        "/etc/%u/libssh/known_hosts");
+    /* no exec should be added if there already is one */
+    assert_string_equal(session->opts.ProxyCommand,
+                        "exec echo \"Hello libssh %d!\"");
+    assert_string_equal(session->opts.identity->root->data,
+                        "%d/do_not_expand");
+
+    /* apply should keep the freshest setting */
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_KNOWNHOSTS,
+                         "hello there");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_GLOBAL_KNOWNHOSTS,
+                         "lorem ipsum");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_PROXYCOMMAND,
+                         "mission_impossible");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_ADD_IDENTITY,
+                         "007");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_ADD_IDENTITY,
+                         "3");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_ADD_IDENTITY,
+                         "2");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_ADD_IDENTITY,
+                         "1");
+    assert_ssh_return_code(session, rc);
+
+    /* check that flags show need of escape expansion */
+    assert_false(session->opts.exp_flags & SSH_OPT_EXP_FLAG_KNOWNHOSTS);
+    assert_false(session->opts.exp_flags & SSH_OPT_EXP_FLAG_GLOBAL_KNOWNHOSTS);
+    assert_false(session->opts.exp_flags & SSH_OPT_EXP_FLAG_PROXYCOMMAND);
+    assert_false(ssh_list_count(session->opts.identity_non_exp) == 0);
+
+    rc = ssh_options_apply(session);
+    assert_ssh_return_code(session, rc);
+
+    /* check that the values got expanded */
+    assert_true(session->opts.exp_flags & SSH_OPT_EXP_FLAG_KNOWNHOSTS);
+    assert_true(session->opts.exp_flags & SSH_OPT_EXP_FLAG_GLOBAL_KNOWNHOSTS);
+    assert_true(session->opts.exp_flags & SSH_OPT_EXP_FLAG_PROXYCOMMAND);
+    assert_true(ssh_list_count(session->opts.identity_non_exp) == 0);
+
+    assert_string_equal(session->opts.knownhosts, "hello there");
+    assert_string_equal(session->opts.global_knownhosts, "lorem ipsum");
+    /* check that the "exec " was added at the beginning */
+    assert_string_equal(session->opts.ProxyCommand, "exec mission_impossible");
+    assert_string_equal(session->opts.identity->root->data, "1");
+
+    /* check the order of the identity files after double expansion */
+    awaited_list = ssh_list_new();
+    /* append the new data in order */
+    id = strdup("1");
+    rc = ssh_list_append(awaited_list, id);
+    assert_int_equal(rc, SSH_OK);
+    id = strdup("2");
+    rc = ssh_list_append(awaited_list, id);
+    assert_int_equal(rc, SSH_OK);
+    id = strdup("3");
+    rc = ssh_list_append(awaited_list, id);
+    assert_int_equal(rc, SSH_OK);
+    id = strdup("007");
+    rc = ssh_list_append(awaited_list, id);
+    assert_int_equal(rc, SSH_OK);
+    id = strdup("%d/do_not_expand");
+    rc = ssh_list_append(awaited_list, id);
+    assert_int_equal(rc, SSH_OK);
+    /* append the defaults; this list is copied from ssh_new@src/session.c */
+    id = ssh_path_expand_escape(session, "%d/id_ed25519");
+    rc = ssh_list_append(awaited_list, id);
+    assert_int_equal(rc, SSH_OK);
+#ifdef HAVE_ECC
+    id = ssh_path_expand_escape(session, "%d/id_ecdsa");
+    rc = ssh_list_append(awaited_list, id);
+    assert_int_equal(rc, SSH_OK);
+#endif
+    id = ssh_path_expand_escape(session, "%d/id_rsa");
+    rc = ssh_list_append(awaited_list, id);
+    assert_int_equal(rc, SSH_OK);
+#ifdef HAVE_DSA
+    id = ssh_path_expand_escape(session, "%d/id_dsa");
+    rc = ssh_list_append(awaited_list, id);
+    assert_int_equal(rc, SSH_OK);
+#endif
+
+    assert_int_equal(ssh_list_count(awaited_list),
+                     ssh_list_count(session->opts.identity));
+
+    it1 = ssh_list_get_iterator(awaited_list);
+    assert_non_null(it1);
+    it2 = ssh_list_get_iterator(session->opts.identity);
+    assert_non_null(it2);
+    while (it1 != NULL && it2 != NULL) {
+        assert_string_equal(it1->data, it2->data);
+
+        free((void*)it1->data);
+        it1 = it1->next;
+        it2 = it2->next;
+    }
+    assert_null(it1);
+    assert_null(it2);
+
+    ssh_list_free(awaited_list);
+}
+
+static void torture_options_set_verbosity (void **state)
+{
+    ssh_session session = *state;
+    int rc, new_level;
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_LOG_VERBOSITY_STR,
+                         "3");
+    assert_int_equal(rc, SSH_OK);
+    new_level = ssh_get_log_level();
+    assert_int_equal(new_level, SSH_LOG_PACKET);
+
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_LOG_VERBOSITY_STR,
+                         "datsun");
+    assert_int_equal(rc, -1);
+    new_level = ssh_get_log_level();
+    assert_int_not_equal(new_level, 0);
 }
 
 #ifdef WITH_SERVER
@@ -1341,6 +1554,10 @@ static void torture_bind_options_bindport_str(void **state)
     rc = ssh_bind_options_set(bind, SSH_BIND_OPTIONS_BINDPORT_STR, "23");
     assert_int_equal(rc, 0);
     assert_int_equal(bind->bindport, 23);
+
+    rc = ssh_bind_options_set(bind, SSH_BIND_OPTIONS_BINDPORT_STR, "twentythree");
+    assert_int_equal(rc, -1);
+    assert_int_not_equal(bind->bindport, 0);
 }
 
 static void torture_bind_options_log_verbosity(void **state)
@@ -1389,6 +1606,11 @@ static void torture_bind_options_log_verbosity_str(void **state)
 
     new_level = ssh_get_log_level();
     assert_int_equal(new_level, SSH_LOG_PACKET);
+
+    rc = ssh_bind_options_set(bind, SSH_BIND_OPTIONS_LOG_VERBOSITY_STR, "verbosity");
+    assert_int_equal(rc, -1);
+    new_level = ssh_get_log_level();
+    assert_int_not_equal(new_level, 0);
 
     rc = ssh_set_log_level(previous_level);
     assert_int_equal(rc, SSH_OK);
@@ -1881,6 +2103,8 @@ int torture_run_tests(void) {
                                         setup, teardown),
         cmocka_unit_test_setup_teardown(torture_options_getopt,
                                         setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_options_apply, setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_options_set_verbosity, setup, teardown),
     };
 
 #ifdef WITH_SERVER

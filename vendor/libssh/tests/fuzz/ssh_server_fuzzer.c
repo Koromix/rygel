@@ -186,6 +186,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     ssh_set_auth_methods(session, SSH_AUTH_METHOD_NONE);
 
     ssh_callbacks_init(&server_cb);
+    ssh_set_server_callbacks(session, &server_cb);
 
     rc = ssh_bind_accept_fd(sshbind, session, socket_fds[0]);
     assert(rc == SSH_OK);

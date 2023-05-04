@@ -95,7 +95,7 @@ You can either pick up my branch or workaround them locally:
 ### Reproduce locally
 
 Clone the above repository from https://github.com/google/oss-fuzz/, apply
-changes from previous secion if needed, setup local clone of libssh repository
+changes from previous section if needed, setup local clone of libssh repository
 and build the fuzzers locally (where `~/devel/libssh` is path to local libssh
 checkout):
 
@@ -111,7 +111,7 @@ This should give you the same error/leak/crash as you see on the testcase
 detail in oss-fuzz.com.
 
 I find it very useful to run libssh in debug mode, to see what happened and
-what exit path was taken to get to the error. Fortunatelly, we can simply
+what exit path was taken to get to the error. Fortunately, we can simply
 pass environment variables to the container:
 
     python infra/helper.py reproduce -eLIBSSH_VERBOSITY=9 libssh ssh_client_fuzzer ~/Downloads/clusterfuzz-testcase-ssh_client_fuzzer-4637376441483264

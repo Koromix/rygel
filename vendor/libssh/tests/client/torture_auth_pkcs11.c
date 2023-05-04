@@ -196,7 +196,7 @@ static void torture_auth_autopubkey(void **state, const char *obj_name, const ch
 
     rc = ssh_options_set(session, SSH_OPTIONS_IDENTITY, priv_uri);
     assert_int_equal(rc, SSH_OK);
-    assert_string_equal(session->opts.identity->root->data, priv_uri);
+    assert_string_equal(session->opts.identity_non_exp->root->data, priv_uri);
 
     rc = ssh_connect(session);
     assert_int_equal(rc, SSH_OK);

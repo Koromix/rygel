@@ -130,10 +130,12 @@ void torture_teardown_sshd_server(void **state);
 int torture_update_sshd_config(void **state, const char *config);
 #endif /* SSHD_EXECUTABLE */
 
+#ifdef WITH_PKCS11_URI
 void torture_setup_tokens(const char *temp_dir,
                           const char *filename,
                           const char object_name[],
                           const char *load_public);
+#endif /* WITH_PKCS11_URI */
 
 void torture_reset_config(ssh_session session);
 

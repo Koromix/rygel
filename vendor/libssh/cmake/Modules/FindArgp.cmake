@@ -1,4 +1,8 @@
 # - Try to find ARGP
+#
+# The argp can be either shipped as part of libc (ex. glibc) or as a separate
+# library that requires additional linking (ex. Windows, Mac, musl libc, ...)
+#
 # Once done this will define
 #
 #  ARGP_ROOT_DIR - Set this variable to the root installation of ARGP

@@ -594,24 +594,34 @@ static void torture_algorithms_zlib(void **state) {
 
     rc = ssh_options_set(session, SSH_OPTIONS_COMPRESSION_C_S, "zlib");
 #ifdef WITH_ZLIB
-    assert_int_equal(rc, SSH_OK);
+    if (ssh_fips_mode()) {
+        assert_int_equal(rc, SSH_ERROR);
+    } else {
+        assert_int_equal(rc, SSH_OK);
+    }
 #else
     assert_int_equal(rc, SSH_ERROR);
 #endif
 
     rc = ssh_options_set(session, SSH_OPTIONS_COMPRESSION_S_C, "zlib");
 #ifdef WITH_ZLIB
-    assert_int_equal(rc, SSH_OK);
+    if (ssh_fips_mode()) {
+        assert_int_equal(rc, SSH_ERROR);
+    } else {
+        assert_int_equal(rc, SSH_OK);
+    }
 #else
     assert_int_equal(rc, SSH_ERROR);
 #endif
 
     rc = ssh_connect(session);
 #ifdef WITH_ZLIB
-    if (ssh_get_openssh_version(session)) {
-        assert_false(rc == SSH_OK);
-        ssh_disconnect(session);
-        return;
+    if (!ssh_fips_mode()) {
+        if (ssh_get_openssh_version(session)) {
+            assert_false(rc == SSH_OK);
+            ssh_disconnect(session);
+            return;
+        }
     }
 #endif
     assert_int_equal(rc, SSH_OK);

@@ -130,7 +130,7 @@ static void torture_client_config_system(void **state)
  * configuration files retains OpenSSH semantics (the per-user overrides
  * the system-wide values).
  * The function ssh_options_parse_config() has hardcoded path to the
- * system-wide configuraion file so we try to emmulate the behavior by parsing
+ * system-wide configuration file so we try to emulate the behavior by parsing
  * the files separately in the same order.
  */
 static void torture_client_config_emulate(void **state)

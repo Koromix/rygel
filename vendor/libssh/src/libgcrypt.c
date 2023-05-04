@@ -390,7 +390,7 @@ aes_gcm_decrypt(struct ssh_cipher_struct *cipher,
     err = gcry_cipher_setiv(cipher->key[0],
                             cipher->last_iv,
                             AES_GCM_IVLEN);
-    /* This actualy does not increment the packet counter for the
+    /* This actually does not increment the packet counter for the
      * current encryption operation, but for the next one. The first
      * operation needs to be completed with the derived IV.
      *

@@ -21,6 +21,10 @@
 #ifndef SFTP_PRIV_H
 #define SFTP_PRIV_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 sftp_packet sftp_packet_read(sftp_session sftp);
 int sftp_packet_write(sftp_session sftp, uint8_t type, ssh_buffer payload);
 void sftp_packet_free(sftp_packet packet);
@@ -28,5 +32,9 @@ int buffer_add_attributes(ssh_buffer buffer, sftp_attributes attr);
 sftp_attributes sftp_parse_attr(sftp_session session,
                                 ssh_buffer buf,
                                 int expectname);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SFTP_PRIV_H */

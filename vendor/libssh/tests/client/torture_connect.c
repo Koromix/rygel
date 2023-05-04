@@ -83,6 +83,26 @@ static int session_teardown(void **state)
     return 0;
 }
 
+static void torture_connect_peer_discon_msg(void **state) {
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_HOST, TORTURE_SSH_SERVER);
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_connect(session);
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_service_request(session, "wrong-service");
+    assert_int_not_equal(rc, SSH_OK);
+
+    ssh_disconnect(session);
+    assert_non_null(session->peer_discon_msg);
+    assert_non_null(ssh_get_disconnect_message(session));
+}
+
 static void torture_connect_nonblocking(void **state) {
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
@@ -189,7 +209,7 @@ static void torture_connect_uninitialized(UNUSED_PARAM(void **state))
     ssh_session session;
     struct passwd *pwd;
 
-    /* Make sure the library is unitialized */
+    /* Make sure the library is uninitialized */
     while (is_ssh_initialized()) {
         rc = ssh_finalize();
         assert_return_code(rc, errno);
@@ -218,6 +238,7 @@ static void torture_connect_uninitialized(UNUSED_PARAM(void **state))
 int torture_run_tests(void) {
     int rc;
     struct CMUnitTest tests[] = {
+        cmocka_unit_test_setup_teardown(torture_connect_peer_discon_msg, session_setup, session_teardown),
         cmocka_unit_test_setup_teardown(torture_connect_nonblocking, session_setup, session_teardown),
         cmocka_unit_test_setup_teardown(torture_connect_double, session_setup, session_teardown),
         cmocka_unit_test_setup_teardown(torture_connect_failure, session_setup, session_teardown),

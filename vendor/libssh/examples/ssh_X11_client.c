@@ -453,7 +453,7 @@ connect_local_xsocket(int display_number)
 
 
 static int
-x11_connect_display()
+x11_connect_display(void)
 {
 	int display_number;
 	const char *display = NULL;

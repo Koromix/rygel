@@ -39,7 +39,7 @@ GNU/Linux, MacOS X, MSYS/MinGW:
     cmake -DUNIT_TESTING=ON -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ..
     make
 
-On Windows you should choose a makefile gernerator with -G or use
+On Windows you should choose a makefile generator with -G or use
 
     cmake-gui.exe ..
 

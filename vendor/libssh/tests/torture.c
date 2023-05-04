@@ -1231,6 +1231,7 @@ void torture_teardown_sshd_server(void **state)
 }
 #endif /* SSHD_EXECUTABLE */
 
+#ifdef WITH_PKCS11_URI
 void torture_setup_tokens(const char *temp_dir,
                           const char *filename,
                           const char object_name[],
@@ -1240,15 +1241,18 @@ void torture_setup_tokens(const char *temp_dir,
     int rc;
 
     snprintf(token_setup_start_cmd, sizeof(token_setup_start_cmd),
-             "%s/tests/pkcs11/setup-softhsm-tokens.sh %s %s %s %s",
+             "%s/tests/pkcs11/setup-softhsm-tokens.sh %s %s %s %s %s",
              BINARYDIR,
              temp_dir,
              filename,
-             object_name, load_public);
+             object_name,
+             load_public,
+             SOFTHSM2_LIBRARY);
 
     rc = system(token_setup_start_cmd);
     assert_return_code(rc, errno);
 }
+#endif /* WITH_PKCS11_URI */
 
 char *torture_make_temp_dir(const char *template)
 {

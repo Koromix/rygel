@@ -716,7 +716,7 @@ evp_cipher_aead_decrypt(struct ssh_cipher_struct *cipher,
                            (unsigned char *)out,
                            &outlen,
                            (unsigned char *)complete_packet + aadlen,
-                           encrypted_size /* already substracted aadlen*/);
+                           encrypted_size /* already subtracted aadlen */);
     if (rc != 1) {
         SSH_LOG(SSH_LOG_WARNING, "EVP_DecryptUpdate failed");
         return SSH_ERROR;
@@ -1573,19 +1573,19 @@ static int evp_dup_pkey(const char* name, const ssh_key key, int demote,
     return SSH_OK;
 }
 
-int evp_dup_dsa_pkey(const ssh_key key, ssh_key new, int demote)
+int evp_dup_dsa_pkey(const ssh_key key, ssh_key new_key, int demote)
 {
-    return evp_dup_pkey("DSA", key, demote, new);
+    return evp_dup_pkey("DSA", key, demote, new_key);
 }
 
-int evp_dup_rsa_pkey(const ssh_key key, ssh_key new, int demote)
+int evp_dup_rsa_pkey(const ssh_key key, ssh_key new_key, int demote)
 {
-    return evp_dup_pkey("RSA", key, demote, new);
+    return evp_dup_pkey("RSA", key, demote, new_key);
 }
 
-int evp_dup_ecdsa_pkey(const ssh_key key, ssh_key new, int demote)
+int evp_dup_ecdsa_pkey(const ssh_key key, ssh_key new_key, int demote)
 {
-    return evp_dup_pkey("EC", key, demote, new);
+    return evp_dup_pkey("EC", key, demote, new_key);
 }
 #endif /* OPENSSL_VERSION_NUMBER */
 
