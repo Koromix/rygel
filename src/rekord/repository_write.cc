@@ -212,6 +212,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                     entry->readable = true;
                                     pending->total_len += size;
 
+                                    // Done by PutFile in theory, but we're skipping it
+                                    stat_len += size;
+
                                     break;
                                 }
                             } else if (!stmt.IsValid()) {
