@@ -21,7 +21,11 @@ bool rk_Config::Complete(bool require_auth)
 {
     if (!repository) {
         const char *str = getenv("REKORD_REPOSITORY");
-        repository = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+        if (!str) {
+            LogError("Missing repository location");
+            return false;
+        }
+        repository = DuplicateString(str, &str_alloc).ptr;
     }
 
     if (!rk_DecodeURL(repository, this))
@@ -29,7 +33,11 @@ bool rk_Config::Complete(bool require_auth)
 
     if (require_auth && !username) {
         const char *str = getenv("REKORD_USERNAME");
-        username = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+        if (!str) {
+            LogError("Missing repository username");
+            return false;
+        }
+        username = DuplicateString(str, &str_alloc).ptr;
     }
 
     if (require_auth && !password) {
