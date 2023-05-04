@@ -217,6 +217,8 @@ bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char
     Size prev_len = out_paths->len;
     Size url_len = strlen(url);
 
+    path = path ? path : "";
+
     LocalArray<char, MaxPathSize + 128> dirname;
     dirname.len = Fmt(dirname.data, "%1%/%2", url, path).len;
 

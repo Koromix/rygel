@@ -102,7 +102,7 @@ bool S3Disk::DeleteRaw(const char *path)
 
 bool S3Disk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths)
 {
-    if (!EndsWith(path, "/")) {
+    if (path && !EndsWith(path, "/")) {
         path = Fmt(alloc, "%1/", path).ptr;
     }
 
