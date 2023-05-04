@@ -187,7 +187,13 @@ ssh_session ssh_Connect(const ssh_Config &config)
     ssh_session ssh = ssh_new();
     if (!ssh)
         throw std::bad_alloc();
-    RG_DEFER_N(err_guard) { ssh_free(ssh); };
+
+    RG_DEFER_N(err_guard) {
+        if (ssh_is_connected(ssh)) {
+            ssh_disconnect(ssh);
+        }
+        ssh_free(ssh);
+    };
 
     // Set options
     {
@@ -207,7 +213,6 @@ ssh_session ssh_Connect(const ssh_Config &config)
         LogError("Failed to connect to '%1': %2", config.host, ssh_get_error(ssh));
         return nullptr;
     }
-    RG_DEFER { ssh_disconnect(ssh); };
 
     // Authenticate server
     {
