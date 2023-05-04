@@ -15,32 +15,33 @@
 #include "disk.hh"
 #include "src/core/libnet/ssh.hh"
 
+#include <fcntl.h>
+
 namespace RG {
 
 static const int MaxPathSize = 4096 - 128;
 
-#include <fcntl.h>
+struct ConnectionData {
+    int reserved = 0;
+
+    ssh_session ssh = nullptr;
+    sftp_session sftp = nullptr;
+};
 
 #define GET_CONNECTION(VarName) \
-    ConnectionData *VarName = ReserveConnection(Async::GetWorkerIdx()); \
+    ConnectionData *VarName = ReserveConnection(); \
     if (!(VarName)) \
         return false; \
     RG_DEFER { ReleaseConnection(VarName); };
 
+static RG_THREAD_LOCAL ConnectionData *thread_conn;
+
 class SftpDisk: public rk_Disk {
-    struct ConnectionData {
-        std::mutex mutex;
-        std::condition_variable cv;
-
-        int reserved = 0;
-        std::thread::id owner;
-
-        ssh_session ssh = nullptr;
-        sftp_session sftp = nullptr;
-    };
-
     ssh_Config config;
-    HeapArray<ConnectionData> connections;
+
+    std::mutex connections_mutex;
+    std::condition_variable connections_cv;
+    HeapArray<ConnectionData *> connections;
 
 public:
     SftpDisk(const ssh_Config &config, int threads);
@@ -59,7 +60,7 @@ public:
     bool TestSlow(const char *path) override;
 
 private:
-    ConnectionData *ReserveConnection(int idx);
+    ConnectionData *ReserveConnection();
     void ReleaseConnection(ConnectionData *conn);
 };
 
@@ -68,7 +69,6 @@ SftpDisk::SftpDisk(const ssh_Config &config, int threads)
     if (threads < 0) {
         threads = std::min(32, GetCoreCount() * 4);
     }
-    connections.AppendDefault(threads);
 
     config.Clone(&this->config);
 
@@ -83,7 +83,7 @@ SftpDisk::SftpDisk(const ssh_Config &config, int threads)
     }
 
     // Connect once to check
-    ConnectionData *conn = ReserveConnection(0);
+    ConnectionData *conn = ReserveConnection();
     if (!conn)
         return;
     ReleaseConnection(conn);
@@ -99,13 +99,15 @@ SftpDisk::SftpDisk(const ssh_Config &config, int threads)
 
 SftpDisk::~SftpDisk()
 {
-    for (ConnectionData &conn: connections) {
-        sftp_free(conn.sftp);
+    for (ConnectionData *conn: connections) {
+        sftp_free(conn->sftp);
 
-        if (conn.ssh && ssh_is_connected(conn.ssh)) {
-            ssh_disconnect(conn.ssh);
+        if (conn->ssh && ssh_is_connected(conn->ssh)) {
+            ssh_disconnect(conn->ssh);
         }
-        ssh_free(conn.ssh);
+        ssh_free(conn->ssh);
+
+        delete conn;
     }
 }
 
@@ -116,7 +118,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
 
     BlockAllocator temp_alloc;
 
-    ConnectionData *conn = ReserveConnection(0);
+    ConnectionData *conn = ReserveConnection();
     if (!conn)
         return false;
     RG_DEFER { ReleaseConnection(conn); };
@@ -459,47 +461,85 @@ bool SftpDisk::TestSlow(const char *path)
     return exists;
 }
 
-SftpDisk::ConnectionData *SftpDisk::ReserveConnection(int idx)
+ConnectionData *SftpDisk::ReserveConnection()
 {
-    ConnectionData *conn = &connections[idx];
-    std::unique_lock lock(conn->mutex);
-
-    while (conn->reserved && conn->owner != std::this_thread::get_id()) {
-        conn->cv.wait(lock);
+    // Deal with reentrancy
+    if (thread_conn) {
+        thread_conn->reserved++;
+        return thread_conn;
     }
 
-    if (!conn->ssh) {
-        conn->ssh = ssh_Connect(config);
-        if (!conn->ssh)
-            return nullptr;
-    }
+    // Reuse existing connection
+    {
+        std::lock_guard<std::mutex> lock(connections_mutex);
 
-    if (!conn->sftp) {
-        conn->sftp = sftp_new(conn->ssh);
-        if (!conn->sftp)
-            throw std::bad_alloc();
+        if (connections.len) {
+            ConnectionData *conn = connections.ptr[--connections.len];
+            conn->reserved = 1;
 
-        if (sftp_init(conn->sftp) < 0) {
-            LogError("Failed to initialize SFTP: %1", ssh_get_error(conn->ssh));
-            return nullptr;
+            return conn;
         }
     }
 
-    conn->reserved++;
-    conn->owner = std::this_thread::get_id();
+    // Try to make a new connection
+    ssh_session ssh;
+    if (url) {
+        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+        RG_DEFER_N(log_guard) { PopLogFilter(); };
 
+        ssh = ssh_Connect(config);
+
+        if (!ssh) {
+            std::unique_lock<std::mutex> lock(connections_mutex);
+
+            while (!connections.len) {
+                connections_cv.wait(lock);
+            }
+
+            ConnectionData *conn = connections.ptr[--connections.len];
+
+            conn->reserved = 1;
+            thread_conn = conn;
+
+            return conn;
+        }
+    } else {
+        ssh = ssh_Connect(config);
+        if (!ssh)
+            return nullptr;
+    }
+
+    ConnectionData *conn = new ConnectionData;
+    RG_DEFER_N(err_guard) { delete conn; };
+
+    conn->ssh = ssh;
+    conn->sftp = sftp_new(conn->ssh);
+
+    if (!conn->sftp)
+        throw std::bad_alloc();
+    if (sftp_init(conn->sftp) < 0) {
+        LogError("Failed to initialize SFTP: %1", ssh_get_error(conn->ssh));
+        return nullptr;
+    }
+
+    conn->reserved = 1;
+    thread_conn = conn;
+
+    err_guard.Disable();
     return conn;
 }
 
-void SftpDisk::ReleaseConnection(SftpDisk::ConnectionData *conn)
+void SftpDisk::ReleaseConnection(ConnectionData *conn)
 {
-    std::unique_lock lock(conn->mutex);
+    if (--conn->reserved)
+        return;
 
-    RG_ASSERT(conn->reserved);
+    std::lock_guard<std::mutex> lock(connections_mutex);
 
-    if (!--conn->reserved) {
-        conn->cv.notify_one();
-    }
+    connections.Append(conn);
+    connections_cv.notify_one();
+
+    thread_conn = nullptr;
 }
 
 std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, int threads)
