@@ -718,11 +718,17 @@ bool rk_Disk::RebuildCache()
     if (!ListRaw(nullptr, &temp_alloc, &paths))
         return -1;
 
-    for (const char *path: paths) {
-        if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                             ON CONFLICT (key) DO NOTHING)", path))
-            return false;
-    }
+    bool success = cache_db.Transaction([&]() {
+        for (const char *path: paths) {
+            if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                                 ON CONFLICT (key) DO NOTHING)", path))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return false;
 
     return true;
 }
