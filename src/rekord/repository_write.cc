@@ -268,6 +268,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                 return false;
                             stat_written += ret;
 
+                            stat_len += target.len;
+
                             entry->readable = true;
 
                             return true;
@@ -306,6 +308,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 if (written < 0)
                     return false;
                 stat_written += written;
+
+                stat_len += pending->obj.len;
 
                 if (parent) {
                     rk_FileEntry *entry = (rk_FileEntry *)(parent->obj.ptr + pending->parent_entry);
