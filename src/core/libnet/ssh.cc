@@ -253,9 +253,25 @@ ssh_session ssh_Connect(const ssh_Config &config)
     }
 
     // Authenticate user
-    if (ssh_userauth_password(ssh, nullptr, config.password) != SSH_AUTH_SUCCESS) {
-        LogError("Failed to authenticate to '%1@%2': %3", config.host, config.username, ssh_get_error(ssh));
-        return nullptr;
+    if (config.keyfile) {
+        ssh_key private_key = nullptr;
+        if (ssh_pki_import_privkey_file(config.keyfile, nullptr, nullptr, nullptr, &private_key) < 0) {
+            LogError("Failed to load private key from '%1'", config.keyfile);
+            return nullptr;
+        }
+        RG_DEFER { ssh_key_free(private_key); };
+
+        if (ssh_userauth_publickey(ssh, nullptr, private_key) != SSH_AUTH_SUCCESS) {
+            LogError("Failed to authenticate to '%1@%2': %3", config.host, config.username, ssh_get_error(ssh));
+            return nullptr;
+        }
+    } else {
+        RG_ASSERT(config.password);
+
+        if (ssh_userauth_password(ssh, nullptr, config.password) != SSH_AUTH_SUCCESS) {
+            LogError("Failed to authenticate to '%1@%2': %3", config.host, config.username, ssh_get_error(ssh));
+            return nullptr;
+        }
     }
 
     err_guard.Disable();
