@@ -301,24 +301,23 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
             HashBlake3(rk_ObjectType::Directory, pending->obj, salt.ptr, &pending->id);
 
-            PendingDirectory *parent = (pending->parent_idx >= 0) ? &pending_directories[pending->parent_idx] : nullptr;
+            if (pending->parent_idx >= 0) {
+                PendingDirectory *parent = &pending_directories[pending->parent_idx];
+                rk_FileEntry *entry = (rk_FileEntry *)(parent->obj.ptr + pending->parent_entry);
 
-            async.Run([pending, parent, this]() mutable {
+                entry->id = pending->id;
+                entry->readable = !pending->failed;
+
+                parent->total_len += pending->total_len;
+            }
+
+            async.Run([pending, this]() mutable {
                 Size written = disk->WriteObject(pending->id, rk_ObjectType::Directory, pending->obj);
                 if (written < 0)
                     return false;
                 stat_written += written;
 
                 stat_len += pending->obj.len;
-
-                if (parent) {
-                    rk_FileEntry *entry = (rk_FileEntry *)(parent->obj.ptr + pending->parent_entry);
-
-                    entry->id = pending->id;
-                    entry->readable = !pending->failed;
-
-                    parent->total_len += pending->total_len;
-                }
 
                 return true;
             });
