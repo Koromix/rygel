@@ -383,7 +383,11 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *ke
 
         if (!truncated)
             break;
-        RG_ASSERT(after_node);
+
+        if (RG_UNLIKELY(!after_node)) {
+            LogError("Unexpected XML content");
+            return false;
+        }
 
         const char *key = after_node->node().child("Key").text().get();
         after = DuplicateString(key, &temp_alloc).ptr;
