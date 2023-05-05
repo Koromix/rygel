@@ -188,14 +188,30 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
             return false;
         if (!make_directory("tmp"))
             return false;
+    }
+
+    // Init blob subdirectories
+    {
+        Async async(GetThreads());
 
         for (int i = 0; i < 4096; i++) {
-            char name[128];
-            Fmt(name, "blobs/%1", FmtHex(i).Pad0(-3));
+            const char *path = Fmt(&temp_alloc, "%1/blobs/%2", config.path, FmtHex(i).Pad0(-3)).ptr;
 
-            if (!make_directory(name))
-                return false;
+            async.Run([=]() {
+                GET_CONNECTION(conn);
+
+                if (sftp_mkdir(conn->sftp, path, 0755) < 0) {
+                    LogError("Cannot create directory '%1': %2", path, ssh_get_error(conn->ssh));
+                    return false;
+                }
+
+                return true;
+            });
+
+            directories.Append(path);
         }
+
+        async.Sync();
     }
 
     if (!InitKeys(full_pwd, write_pwd))
