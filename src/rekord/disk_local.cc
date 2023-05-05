@@ -109,6 +109,8 @@ bool LocalDisk::Init(const char *full_pwd, const char *write_pwd)
             return false;
         if (!make_directory("blobs"))
             return false;
+        if (!make_directory("tmp"))
+            return false;
 
         for (int i = 0; i < 4096; i++) {
             char name[128];
@@ -157,7 +159,7 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
     FILE *fp = nullptr;
     LocalArray<char, MaxPathSize + 128> tmp;
     {
-        tmp.len = Fmt(tmp.data, "%1%/", url).len;
+        tmp.len = Fmt(tmp.data, "%1%/tmp%/", url).len;
 
         for (int i = 0; i < 1000; i++) {
             Size len = Fmt(tmp.TakeAvailable(), "%1.tmp", FmtRandom(24)).len;
@@ -229,9 +231,12 @@ bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char
     if (!EnumerateFiles(dirname.data, nullptr, -1, -1, alloc, out_paths))
         return false;
 
+    Size j = prev_len;
     for (Size i = prev_len; i < out_paths->len; i++) {
-        out_paths->ptr[i] += url_len + 1;
+        out_paths->ptr[j] = out_paths->ptr[i] + url_len + 1;
+        j += !StartsWith(out_paths->ptr[j], "tmp/");
     }
+    out_paths->len = j;
 
     return true;
 }

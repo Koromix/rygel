@@ -186,6 +186,8 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
             return false;
         if (!make_directory("blobs"))
             return false;
+        if (!make_directory("tmp"))
+            return false;
 
         for (int i = 0; i < 4096; i++) {
             char name[128];
@@ -304,7 +306,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
     sftp_file file = nullptr;
     LocalArray<char, MaxPathSize + 128> tmp;
     {
-        tmp.len = Fmt(tmp.data, "%1/", config.path).len;
+        tmp.len = Fmt(tmp.data, "%1/tmp/", config.path).len;
 
 #ifdef _WIN32
         int flags = _O_WRONLY | _O_CREAT | _O_EXCL;
@@ -433,6 +435,8 @@ bool SftpDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char 
                                        : DuplicateString(attr->name, alloc).ptr;
 
         if (attr->type == SSH_FILEXFER_TYPE_DIRECTORY) {
+            if (TestStr(filename, "tmp"))
+                continue;
             if (!ListRaw(filename, alloc, out_paths))
                 return false;
         } else {
