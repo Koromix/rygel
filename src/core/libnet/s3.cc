@@ -777,7 +777,7 @@ bool s3_Session::DetermineRegion(const char *url)
         }
     }
 
-    if (RunSafe("connect to S3", [&]() { return curl_Perform(curl, nullptr); }) != 200)
+    if (curl_Perform(curl, "S3") < 0)
         return false;
 
     if (!config.region) {
