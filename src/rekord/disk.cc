@@ -467,13 +467,13 @@ rk_Disk::TestResult rk_Disk::TestFast(const char *path)
     }
 
     // Probabilistic check
-    if (GetRandomIntSafe(0, 100) <= 4) {
+    if (GetRandomIntSafe(0, 100) < 2) {
         bool really_exists = TestSlow(path);
 
         if (really_exists && !should_exist) {
             std::unique_lock<std::mutex> lock(cache_mutex, std::try_to_lock);
 
-            if (lock.owns_lock() && ++cache_misses >= 20) {
+            if (lock.owns_lock() && ++cache_misses >= 4) {
                 RebuildCache();
                 cache_misses = 0;
             }
