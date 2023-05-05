@@ -117,7 +117,7 @@ protected:
 
     bool PutCache(const char *key);
 
-    virtual bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) = 0;
+    virtual bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) = 0;
 
     virtual bool TestSlow(const char *path) = 0;
 

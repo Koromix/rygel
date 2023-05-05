@@ -32,7 +32,7 @@ public:
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
-    bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
+    bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
 
     bool TestSlow(const char *path) override;
 };
@@ -214,29 +214,48 @@ bool LocalDisk::DeleteRaw(const char *path)
     return UnlinkFile(filename.data);
 }
 
-bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths)
+bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
 {
-    Size prev_len = out_paths->len;
-    Size url_len = strlen(url);
+    BlockAllocator temp_alloc;
 
     path = path ? path : "";
 
-    LocalArray<char, MaxPathSize + 128> dirname;
-    if (path[0]) {
-        dirname.len = Fmt(dirname.data, "%1%/%2", url, path).len;
-    } else {
-        dirname.len = Fmt(dirname.data, "%1", url).len;
-    }
+    const char *dirname0 = path[0] ? Fmt(&temp_alloc, "%1/%2", url, path).ptr : url;
+    Size url_len = strlen(url);
 
-    if (!EnumerateFiles(dirname.data, nullptr, -1, -1, alloc, out_paths))
-        return false;
+    HeapArray<const char *> pending_directories;
+    pending_directories.Append(dirname0);
 
-    Size j = prev_len;
-    for (Size i = prev_len; i < out_paths->len; i++) {
-        out_paths->ptr[j] = out_paths->ptr[i] + url_len + 1;
-        j += !StartsWith(out_paths->ptr[j], "tmp/");
+    for (Size i = 0; i < pending_directories.len; i++) {
+        const char *dirname = pending_directories[i];
+
+        EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
+            const char *filename = Fmt(&temp_alloc, "%1/%2", dirname, basename).ptr;
+            const char *path = filename + url_len + 1;
+
+            switch (file_type) {
+                case FileType::Directory: {
+                    if (TestStr(path, "tmp"))
+                        return true;
+                    pending_directories.Append(filename);
+                } break;
+
+                case FileType::File:
+                case FileType::Link: {
+                    if (!func(path))
+                        return false;
+                } break;
+
+                case FileType::Device:
+                case FileType::Pipe:
+                case FileType::Socket: {} break;
+            }
+
+            return true;
+        });
+        if (ret != EnumResult::Success && ret != EnumResult::PartialEnum)
+            return false;
     }
-    out_paths->len = j;
 
     return true;
 }

@@ -349,8 +349,16 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
     RG_DEFER_N(out_guard) { out_ids->RemoveFrom(start_len); };
 
     HeapArray<const char *> filenames;
-    if (!ListRaw("tags", &temp_alloc, &filenames))
-        return false;
+    {
+        bool success = ListRaw("tags", [&](const char *filename) {
+            filename = DuplicateString(filename, &temp_alloc).ptr;
+            filenames.Append(filename);
+
+            return true;
+        });
+        if (!success)
+            return false;
+    }
 
     HeapArray<bool> ready;
     out_ids->AppendDefault(filenames.len);
@@ -714,16 +722,10 @@ bool rk_Disk::RebuildCache()
     if (!cache_db.Run("DELETE FROM stats"))
         return false;
 
-    HeapArray<const char *> paths;
-    if (!ListRaw(nullptr, &temp_alloc, &paths))
-        return -1;
-
-    bool success = cache_db.Transaction([&]() {
-        for (const char *path: paths) {
-            if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                                 ON CONFLICT (key) DO NOTHING)", path))
-                return false;
-        }
+    bool success = ListRaw(nullptr, [&](const char *path) {
+        if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                             ON CONFLICT (key) DO NOTHING)", path))
+            return false;
 
         return true;
     });

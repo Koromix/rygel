@@ -37,6 +37,13 @@ struct ConnectionData {
 static RG_THREAD_LOCAL ConnectionData *thread_conn;
 
 class SftpDisk: public rk_Disk {
+    struct ListContext {
+        Async *tasks;
+
+        std::mutex mutex;
+        FunctionRef<bool(const char *path)> func;
+    };
+
     ssh_Config config;
 
     std::mutex connections_mutex;
@@ -55,13 +62,15 @@ public:
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
-    bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
+    bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
 
     bool TestSlow(const char *path) override;
 
 private:
     ConnectionData *ReserveConnection();
     void ReleaseConnection(ConnectionData *conn);
+
+    bool ListRaw(ListContext *ctx, const char *path);
 };
 
 SftpDisk::SftpDisk(const ssh_Config &config, int threads)
@@ -414,11 +423,20 @@ bool SftpDisk::DeleteRaw(const char *path)
     return true;
 }
 
-bool SftpDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths)
+bool SftpDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
+{
+    ListContext ctx = {};
+    Async tasks(GetThreads());
+
+    ctx.tasks = &tasks;
+    ctx.func = func;
+
+    return ListRaw(&ctx, path);
+}
+
+bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
 {
     GET_CONNECTION(conn);
-
-    RG_DEFER_NC(err_guard, len = out_paths->len) { out_paths->RemoveFrom(len); };
 
     path = path ? path : "";
 
@@ -431,6 +449,11 @@ bool SftpDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char 
         return false;
     }
     RG_DEFER { sftp_closedir(dir); };
+
+    HeapArray<const char *> temp_paths;
+    BlockAllocator temp_alloc;
+
+    Async async(ctx->tasks);
 
     for (;;) {
         sftp_attributes attr = sftp_readdir(conn->sftp, dir);
@@ -447,20 +470,32 @@ bool SftpDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char 
         if (TestStr(attr->name, ".") || TestStr(attr->name, ".."))
             continue;
 
-        const char *filename = path[0] ? Fmt(alloc, "%1/%2", path, attr->name).ptr
-                                       : DuplicateString(attr->name, alloc).ptr;
+        const char *filename = path[0] ? Fmt(&temp_alloc, "%1/%2", path, attr->name).ptr
+                                       : DuplicateString(attr->name, &temp_alloc).ptr;
 
         if (attr->type == SSH_FILEXFER_TYPE_DIRECTORY) {
             if (TestStr(filename, "tmp"))
                 continue;
-            if (!ListRaw(filename, alloc, out_paths))
+            if (!ListRaw(ctx, filename))
                 return false;
         } else {
-            out_paths->Append(filename);
+            temp_paths.Append(filename);
         }
     }
 
-    err_guard.Disable();
+    if (!async.Sync())
+        return false;
+
+    // Give collected paths to callback
+    {
+        std::lock_guard<std::mutex> lock(ctx->mutex);
+
+        for (const char *path: temp_paths) {
+            if (!ctx->func(path))
+                return false;
+        }
+    }
+
     return true;
 }
 

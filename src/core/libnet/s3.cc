@@ -296,11 +296,9 @@ void s3_Session::Close()
     config = {};
 }
 
-bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<const char *> *out_keys)
+bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *key)> func)
 {
     BlockAllocator temp_alloc;
-
-    RG_DEFER_NC(out_guard, len = out_keys->len) { out_keys->RemoveFrom(len); };
 
     CURL *curl = InitConnection();
     if (!curl)
@@ -321,7 +319,8 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
         query.RemoveFrom(0);
         xml.RemoveFrom(0);
 
-        Fmt(&query, "list-type=2&prefix="); http_EncodeUrlSafe(prefix, &query);
+        Fmt(&query, "list-type=2");
+        Fmt(&query, "&prefix="); http_EncodeUrlSafe(prefix, &query);
         Fmt(&query, "&start-after="); http_EncodeUrlSafe(after, &query);
 
         int status = RunSafe("list S3 objects", [&]() {
@@ -370,23 +369,26 @@ bool s3_Session::ListObjects(const char *prefix, Allocator *alloc, HeapArray<con
         pugi::xpath_node_set contents = doc.select_nodes("/ListBucketResult/Contents");
         bool truncated = doc.select_node("/ListBucketResult/IsTruncated").node().text().as_bool();
 
+        const pugi::xpath_node *after_node = nullptr;
+
         for (const pugi::xpath_node &node: contents) {
             const char *key = node.node().child("Key").text().get();
 
             if (RG_LIKELY(key && key[0])) {
-                key = DuplicateString(key, alloc).ptr;
-                out_keys->Append(key);
+                if (!func(key))
+                    return false;
+                after_node = &node;
             }
         }
 
         if (!truncated)
             break;
-        RG_ASSERT(contents.size() > 0);
+        RG_ASSERT(after_node);
 
-        after = out_keys->ptr[out_keys->len - 1];
+        const char *key = after_node->node().child("Key").text().get();
+        after = DuplicateString(key, &temp_alloc).ptr;
     }
 
-    out_guard.Disable();
     return true;
 }
 

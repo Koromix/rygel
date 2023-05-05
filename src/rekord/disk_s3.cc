@@ -33,7 +33,7 @@ public:
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
-    bool ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths) override;
+    bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
 
     bool TestSlow(const char *path) override;
 };
@@ -100,13 +100,17 @@ bool S3Disk::DeleteRaw(const char *path)
     return s3.DeleteObject(path);
 }
 
-bool S3Disk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char *> *out_paths)
+bool S3Disk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
 {
+    char prefix[4096];
+
     if (path && !EndsWith(path, "/")) {
-        path = Fmt(alloc, "%1/", path).ptr;
+        Fmt(prefix, "%1/", path);
+    } else {
+        CopyString(path ? path : "", prefix);
     }
 
-    return s3.ListObjects(path, alloc, out_paths);
+    return s3.ListObjects(prefix, func);
 }
 
 bool S3Disk::TestSlow(const char *path)

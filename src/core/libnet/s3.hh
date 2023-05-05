@@ -69,7 +69,7 @@ public:
     bool IsValid() const { return open; }
     const char *GetURL() const { return url; }
 
-    bool ListObjects(const char *prefix, Allocator *alloc, HeapArray<const char *> *out_keys);
+    bool ListObjects(const char *prefix, FunctionRef<bool(const char *key)> func);
     Size GetObject(Span<const char> key, Span<uint8_t> out_buf);
     Size GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t> *out_obj);
     bool HasObject(Span<const char> key);
