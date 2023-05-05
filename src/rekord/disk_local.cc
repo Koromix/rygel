@@ -220,9 +220,13 @@ bool LocalDisk::ListRaw(const char *path, Allocator *alloc, HeapArray<const char
     path = path ? path : "";
 
     LocalArray<char, MaxPathSize + 128> dirname;
-    dirname.len = Fmt(dirname.data, "%1%/%2", url, path).len;
+    if (path[0]) {
+        dirname.len = Fmt(dirname.data, "%1%/%2", url, path).len;
+    } else {
+        dirname.len = Fmt(dirname.data, "%1", url).len;
+    }
 
-    if (!EnumerateFiles(dirname.data, nullptr, 0, -1, alloc, out_paths))
+    if (!EnumerateFiles(dirname.data, nullptr, -1, -1, alloc, out_paths))
         return false;
 
     for (Size i = prev_len; i < out_paths->len; i++) {
