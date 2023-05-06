@@ -35,6 +35,11 @@ RG_STATIC_ASSERT(RG_SIZE(rk_SnapshotHeader) == 536);
 
 #pragma pack(push, 1)
 struct rk_FileEntry {
+    enum class Flags {
+        Stated = 1 << 0,
+        Readable = 1 << 1
+    };
+
     enum class Kind {
         Directory = 0,
         File = 1,
@@ -43,19 +48,24 @@ struct rk_FileEntry {
     };
 
     rk_ID id;
-    int8_t stated;
-    int8_t readable;
-    int8_t kind; // Kind
+    int16_t flags; // Little Endian
+    int16_t kind; // Little Endian
+    int16_t name_len; // Little Endian
+    int16_t extended_len; // Little Endian
     int64_t mtime; // Little Endian
     int64_t btime; // Little Endian
     uint32_t uid; // Little Endian
     uint32_t gid; // Little Endian
     uint32_t mode; // Little Endian
     int64_t size; // Little Endian
-    char name[];
+
+    inline Size GetSize() { return RG_SIZE(rk_FileEntry) + name_len + extended_len; }
+
+    inline Span<char> GetName() { return MakeSpan((char *)this + RG_SIZE(rk_FileEntry), name_len); }
+    inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(rk_FileEntry), name_len); }
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(rk_FileEntry) == 71);
+RG_STATIC_ASSERT(RG_SIZE(rk_FileEntry) == 76);
 
 #pragma pack(push, 1)
 struct rk_ChunkEntry {

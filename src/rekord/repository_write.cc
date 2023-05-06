@@ -111,7 +111,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                                 [&](const char *basename, FileType) {
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, basename).ptr;
 
-                Size entry_len = RG_SIZE(rk_FileEntry) + strlen(basename) + 1;
+                Size basename_len = strlen(basename);
+                Size entry_len = RG_SIZE(rk_FileEntry) + basename_len;
+
                 rk_FileEntry *entry = (rk_FileEntry *)pending->obj.AppendDefault(entry_len);
 
                 // Stat file
@@ -122,11 +124,11 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     StatResult ret = StatFile(filename, flags, &file_info);
 
                     if (ret == StatResult::Success) {
-                        entry->stated = true;
+                        entry->flags |= LittleEndian((int16_t)rk_FileEntry::Flags::Stated);
 
                         switch (file_info.type) {
                             case FileType::Directory: {
-                                entry->kind = (int8_t)rk_FileEntry::Kind::Directory;
+                                entry->kind = (int16_t)rk_FileEntry::Kind::Directory;
 
                                 PendingDirectory *ptr = pending_directories.AppendDefault();
 
@@ -136,11 +138,11 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                             } break;
 
                             case FileType::File: {
-                                entry->kind = (int8_t)rk_FileEntry::Kind::File;
+                                entry->kind = (int16_t)rk_FileEntry::Kind::File;
                                 entry->size = LittleEndian(file_info.size);
                             } break;
 #ifndef _WIN32
-                            case FileType::Link: { entry->kind = (int8_t)rk_FileEntry::Kind::Link; } break;
+                            case FileType::Link: { entry->kind = (int16_t)rk_FileEntry::Kind::Link; } break;
 #endif
 
 #ifdef _WIN32
@@ -149,7 +151,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                             case FileType::Device:
                             case FileType::Pipe:
                             case FileType::Socket: {
-                                entry->kind = (int8_t)rk_FileEntry::Kind::Unknown;
+                                entry->kind = (int16_t)rk_FileEntry::Kind::Unknown;
                                 LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
                             } break;
                         }
@@ -162,7 +164,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     }
                 }
 
-                CopyString(basename, MakeSpan(entry->name, entry_len - RG_SIZE(rk_FileEntry)));
+                entry->name_len = (int16_t)basename_len;
+                memcpy_safe(entry->GetName().ptr, basename, basename_len);
 
                 return true;
             });
@@ -182,7 +185,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             // Process data entries (file, links)
             for (Size offset = 0; offset < pending->obj.len;) {
                 rk_FileEntry *entry = (rk_FileEntry *)(pending->obj.ptr + offset);
-                const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, entry->name).ptr;
+
+                const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, entry->GetName()).ptr;
 
                 switch ((rk_FileEntry::Kind)entry->kind) {
                     case rk_FileEntry::Kind::Directory: {} break; // Already processed
@@ -209,7 +213,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                                                 size == LittleEndian(entry->size)) {
                                     memcpy(&entry->id, id.ptr, RG_SIZE(rk_ID));
 
-                                    entry->readable = true;
+                                    entry->flags |= LittleEndian((int16_t)rk_FileEntry::Flags::Readable);
                                     pending->total_len += size;
 
                                     // Done by PutFile in theory, but we're skipping it
@@ -228,7 +232,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                             PutResult ret = PutFile(filename, &entry->id, &file_len);
 
                             if (ret == PutResult::Success) {
-                                entry->readable = true;
+                                entry->flags |= LittleEndian((int16_t)rk_FileEntry::Flags::Readable);
                                 pending->total_len += file_len;
 
                                 return true;
@@ -270,7 +274,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                             stat_len += target.len;
 
-                            entry->readable = true;
+                            entry->flags |= LittleEndian((int16_t)rk_FileEntry::Flags::Readable);
 
                             return true;
                         });
@@ -280,8 +284,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     case rk_FileEntry::Kind::Unknown: {} break;
                 }
 
-                Size entry_len = RG_SIZE(rk_FileEntry) + strlen(entry->name) + 1;
-                offset += entry_len;
+                offset += entry->GetSize();
             }
         }
     }
@@ -306,7 +309,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 rk_FileEntry *entry = (rk_FileEntry *)(parent->obj.ptr + pending->parent_entry);
 
                 entry->id = pending->id;
-                entry->readable = !pending->failed;
+                if (!pending->failed) {
+                    entry->flags |= LittleEndian((int16_t)rk_FileEntry::Flags::Readable);
+                }
 
                 parent->total_len += pending->total_len;
             }
@@ -337,9 +342,12 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                 for (Size offset = 0; offset < limit;) {
                     rk_FileEntry *entry = (rk_FileEntry *)(pending.obj.ptr + offset);
-                    const char *filename = Fmt(&temp_alloc, "%1%/%2", pending.dirname, entry->name).ptr;
 
-                    if (entry->readable && entry->kind == (int8_t)rk_FileEntry::Kind::File) {
+                    const char *filename = Fmt(&temp_alloc, "%1%/%2", pending.dirname, entry->GetName()).ptr;
+                    int flags = LittleEndian(entry->flags);
+
+                    if ((flags & (int)rk_FileEntry::Flags::Readable) &&
+                            entry->kind == (int16_t)rk_FileEntry::Kind::File) {
                         if (!db->Run(R"(INSERT INTO stats (path, mtime, mode, size, id)
                                             VALUES (?1, ?2, ?3, ?4, ?5)
                                             ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
@@ -351,8 +359,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                             return false;
                     }
 
-                    Size entry_len = RG_SIZE(rk_FileEntry) + strlen(entry->name) + 1;
-                    offset += entry_len;
+                    offset += entry->GetSize();
                 }
             }
 
@@ -525,7 +532,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         RG_ASSERT(PathIsAbsolute(name.ptr));
         RG_ASSERT(!PathContainsDotDot(name.ptr));
 
-        Size entry_len = RG_SIZE(rk_FileEntry) + name.len + 1;
+        Size entry_len = RG_SIZE(rk_FileEntry) + name.len;
         rk_FileEntry *entry = (rk_FileEntry *)snapshot_obj.Grow(entry_len);
 
         // Transform name (same length or shorter)
@@ -547,40 +554,38 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
             name = name.Take(1, name.len - 1);
 
-            memcpy(entry->name, name.ptr, name.len);
-            entry->name[name.len] = 0;
+            entry->name_len = (int16_t)name.len;
+            memcpy_safe(entry->GetName().ptr, name.ptr, name.len);
 
             if (changed) {
-                LogWarning("Storing '%1' as '%2'", filename, entry->name);
+                LogWarning("Storing '%1' as '%2'", filename, entry->GetName());
             }
         }
 
-        // Adjust entry length
-        entry_len = RG_SIZE(rk_FileEntry) + name.len + 1;
-        snapshot_obj.len += entry_len;
+        snapshot_obj.len += entry->GetSize();
 
         FileInfo file_info;
         if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
             return false;
-        entry->stated = true;
+        entry->flags |= LittleEndian((int16_t)rk_FileEntry::Flags::Stated);
 
         switch (file_info.type) {
             case FileType::Directory: {
-                entry->kind = (int8_t)rk_FileEntry::Kind::Directory;
+                entry->kind = (int16_t)rk_FileEntry::Kind::Directory;
 
                 if (put.PutDirectory(filename, settings.follow_symlinks, &entry->id) != PutResult::Success)
                     return false;
 
-                entry->readable = true;
+                entry->flags |= LittleEndian((int16_t)rk_FileEntry::Flags::Readable);
             } break;
             case FileType::File: {
-                entry->kind = (int8_t)rk_FileEntry::Kind::File;
+                entry->kind = (int16_t)rk_FileEntry::Kind::File;
                 entry->size = LittleEndian((uint32_t)file_info.size);
 
                 if (put.PutFile(filename, &entry->id) != PutResult::Success)
                     return false;
 
-                entry->readable = true;
+                entry->flags |= LittleEndian((int16_t)rk_FileEntry::Flags::Readable);
             } break;
 
             case FileType::Link: { RG_UNREACHABLE(); } break;

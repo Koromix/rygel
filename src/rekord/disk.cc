@@ -50,7 +50,7 @@ struct ObjectIntro {
 
 static const int SecretVersion = 1;
 static const int CacheVersion = 2;
-static const int ObjectVersion = 6;
+static const int ObjectVersion = 7;
 static const Size ObjectSplit = Kibibytes(32);
 
 bool rk_Disk::Open(const char *username, const char *pwd)
@@ -164,7 +164,7 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
         remain.len -= RG_SIZE(ObjectIntro);
     }
 
-    if (version < 6) {
+    if (version < 7) {
         LogError("Unsupported old object format version %1", version);
         return false;
     }

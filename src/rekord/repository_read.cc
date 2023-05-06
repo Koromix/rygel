@@ -304,7 +304,6 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         EntryInfo entry = {};
 
         // Extract entry information
-        bool valid = true;
         {
             rk_FileEntry *ptr = (rk_FileEntry *)(entries.ptr + offset);
 
@@ -312,12 +311,18 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                 LogError("Malformed entry in directory object");
                 return false;
             }
-            if (!ptr->readable)
-                valid = false;
+
+            // Skip entry for next iteration
+            offset += ptr->GetSize();
+
+            int flags = LittleEndian(ptr->flags);
+
+            if (!(flags & (int)rk_FileEntry::Flags::Readable))
+                continue;
 
             entry.id = ptr->id;
-            entry.kind = ptr->kind;
-            entry.basename = ptr->name;
+            entry.kind = LittleEndian(ptr->kind);
+            entry.basename = DuplicateString(ptr->GetName(), &shared->temp_alloc).ptr;
 
             entry.mtime = LittleEndian(ptr->mtime);
             entry.btime = LittleEndian(ptr->btime);
@@ -326,21 +331,6 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             entry.gid = LittleEndian(ptr->gid);
             entry.size = LittleEndian(ptr->size);
         }
-
-        // Skip entry for next iteration
-        {
-            const uint8_t *end = (const uint8_t *)memchr(entry.basename, 0, entries.end() - (const uint8_t *)entry.basename);
-
-            if (!end) {
-                LogError("Malformed entry in directory object");
-                return false;
-            }
-
-            offset = end - entries.ptr + 1;
-        }
-
-        if (!valid)
-            continue;
 
         // Sanity checks
         if (entry.kind != (int8_t)rk_FileEntry::Kind::Directory &&
@@ -378,7 +368,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                 return false;
 
             switch (entry.kind) {
-                case (int8_t)rk_FileEntry::Kind::Directory: {
+                case (int)rk_FileEntry::Kind::Directory: {
                     if (entry_type != rk_ObjectType::Directory) {
                         LogError("Object '%1' is not a directory", entry.id);
                         return false;
@@ -390,7 +380,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                 } break;
 
-                case (int8_t)rk_FileEntry::Kind::File: {
+                case (int)rk_FileEntry::Kind::File: {
                     if (entry_type != rk_ObjectType::File && entry_type != rk_ObjectType::Chunk) {
                         LogError("Object '%1' is not a file", entry.id);
                         return false;
@@ -408,7 +398,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     SetFileMetaData(fd, entry.filename, entry.mtime, entry.btime, entry.mode);
                 } break;
 
-                case (int8_t)rk_FileEntry::Kind::Link: {
+                case (int)rk_FileEntry::Kind::Link: {
                     if (entry_type != rk_ObjectType::Link) {
                         LogError("Object '%1' is not a link", entry.id);
                         return false;
