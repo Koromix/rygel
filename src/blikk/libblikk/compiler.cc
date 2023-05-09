@@ -2959,9 +2959,6 @@ const bk_TypeInfo *bk_Parser::ParseType()
 
 void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
 {
-    if (out_type->size > 1)
-        return;
-
     Size addr = IR.len - 2;
 
     for (Size remain = count;; addr--) {
@@ -2972,6 +2969,13 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
             // Go on
         } else if (code == bk_Opcode::Push) {
             if (!--remain)
+                break;
+        } else if (code == bk_Opcode::Fetch) {
+            if (IR[addr].u1.i > remain)
+                return;
+            remain -= IR[addr].u1.i;
+
+            if (!remain)
                 break;
         } else {
             return;
@@ -2998,6 +3002,12 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
             bk_PrimitiveKind primitive = out_type->primitive;
 
             Emit(bk_Opcode::Push, { .primitive = primitive }, value);
+        } else {
+            Size ptr = program->ro.len;
+
+            program->ro.Append(folder.stack);
+
+            Emit(bk_Opcode::Fetch, { .i = (int32_t)folder.stack.len }, ptr);
         }
     } else {
         IR.len--;
@@ -3086,7 +3096,11 @@ bool bk_Parser::CopyBigConstant(Size size)
 
     program->ro.Grow(size);
 
-    for (Size addr = IR.len - 1, offset = size; offset > 0; addr--) {
+    Size addr = IR.len;
+
+    for (Size offset = size; offset > 0;) {
+        addr--;
+
         switch (IR[addr].code) {
             case bk_Opcode::Push: {
                 offset--;
@@ -3111,7 +3125,7 @@ bool bk_Parser::CopyBigConstant(Size size)
         }
     }
 
-    TrimInstructions(size);
+    TrimInstructions(IR.len - addr);
     program->globals.Append({ bk_Opcode::Fetch, { .i = (int32_t)size }, { .i = program->ro.len } });
     program->ro.len += size;
 
