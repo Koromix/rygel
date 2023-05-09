@@ -2436,7 +2436,7 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
             fwd = fwd->next;
         } while (fwd);
 
-        var = (fwd0 && fwd0->var->type != bk_IntType) ? fwd0->var : nullptr;
+        var = (fwd0 && fwd0->var->type != bk_NullType) ? fwd0->var : nullptr;
         forwards_map.Remove(ptr);
     }
 
