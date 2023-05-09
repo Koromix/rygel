@@ -188,7 +188,7 @@ private:
     void DestroyTypes(BucketArray<T> *types, Size first_idx);
 
     void FixJumps(Size jump_addr, Size target_addr);
-    void TrimInstructions(Size count);
+    void TrimInstructions(Size trim_addr);
 
     bool TestOverload(const bk_FunctionTypeInfo &func_type, Span<const bk_TypeInfo *const> params);
 
@@ -1295,7 +1295,7 @@ void bk_Parser::ParseLet()
             const char *name = var->name;
 
             // We're about to alias var to slot.var... we need to drop the load instructions
-            TrimInstructions(IR.len - prev_addr);
+            TrimInstructions(prev_addr);
 
             *var = *slot.var;
             var->name = name;
@@ -1309,7 +1309,7 @@ void bk_Parser::ParseLet()
             if (IR[IR.len - 1].code == bk_Opcode::Push ||
                     IR[IR.len - 1].code == bk_Opcode::Reserve) {
                 program->globals.Append(IR[IR.len - 1]);
-                TrimInstructions(1);
+                TrimInstructions(IR.len - 1);
 
                 var->constant = true;
             }
@@ -1317,7 +1317,7 @@ void bk_Parser::ParseLet()
             if (IR[IR.len - 1].code == bk_Opcode::Reserve &&
                     IR[IR.len - 1].u2.i == slot.type->size) {
                 program->globals.Append(IR[IR.len - 1]);
-                TrimInstructions(1);
+                TrimInstructions(IR.len - 1);
 
                 var->constant = true;
             } else {
@@ -1352,7 +1352,7 @@ bool bk_Parser::ParseIf()
     bool fold = (IR[IR.len - 1].code == bk_Opcode::Push);
     bool fold_test = fold && IR[IR.len - 1].u2.b;
     bool fold_skip = fold && fold_test;
-    TrimInstructions(fold);
+    TrimInstructions(IR.len - fold);
 
     Size branch_addr = IR.len;
     if (!fold) {
@@ -1369,7 +1369,7 @@ bool bk_Parser::ParseIf()
             if (fold_test) {
                 is_exhaustive = true;
             } else {
-                TrimInstructions(IR.len - branch_addr);
+                TrimInstructions(branch_addr);
             }
         } else {
             IR[branch_addr].u2.i = IR.len - branch_addr;
@@ -1380,7 +1380,7 @@ bool bk_Parser::ParseIf()
         if (MatchToken(bk_TokenKind::Else)) {
             Size jump_addr;
             if (fold && !fold_test) {
-                TrimInstructions(IR.len - branch_addr);
+                TrimInstructions(branch_addr);
                 jump_addr = -1;
             } else if (!fold) {
                 jump_addr = IR.len;
@@ -1400,7 +1400,7 @@ bool bk_Parser::ParseIf()
 
                     fold = fold_skip || (IR[IR.len - 1].code == bk_Opcode::Push);
                     fold_test = fold && !fold_skip && IR[IR.len - 1].u2.b;
-                    TrimInstructions(fold ? (IR.len - test_addr) : 0);
+                    TrimInstructions(fold ? test_addr : IR.len);
 
                     if (RG_LIKELY(EndStatement())) {
                         branch_addr = IR.len;
@@ -1415,7 +1415,7 @@ bool bk_Parser::ParseIf()
                                 has_return = block_return;
                                 is_exhaustive = true;
                             } else {
-                                TrimInstructions(IR.len - branch_addr);
+                                TrimInstructions(branch_addr);
                             }
                         } else {
                             has_return &= block_return;
@@ -1436,7 +1436,7 @@ bool bk_Parser::ParseIf()
                     }
                     is_exhaustive = true;
 
-                    TrimInstructions(fold_skip ? (IR.len - else_addr) : 0);
+                    TrimInstructions(fold_skip ? else_addr : IR.len);
 
                     break;
                 }
@@ -1448,7 +1448,7 @@ bool bk_Parser::ParseIf()
                 if (fold_test) {
                     is_exhaustive = true;
                 } else {
-                    TrimInstructions(IR.len - branch_addr);
+                    TrimInstructions(branch_addr);
                 }
             } else {
                 IR[branch_addr].u2.i = IR.len - branch_addr;
@@ -1473,7 +1473,7 @@ void bk_Parser::ParseWhile()
 
     bool fold = (IR[IR.len - 1].code == bk_Opcode::Push);
     bool fold_test = fold && IR[IR.len - 1].u2.b;
-    TrimInstructions(fold);
+    TrimInstructions(IR.len - fold);
 
     Size branch_addr = IR.len;
     if (!fold) {
@@ -1500,7 +1500,7 @@ void bk_Parser::ParseWhile()
             Emit(bk_Opcode::Jump, branch_addr - IR.len);
             FixJumps(ctx.break_addr, IR.len);
         } else {
-            TrimInstructions(IR.len - branch_addr);
+            TrimInstructions(branch_addr);
         }
     } else {
         FixJumps(ctx.continue_addr, IR.len);
@@ -1580,7 +1580,7 @@ void bk_Parser::ParseFor()
         FixJumps(ctx.break_addr, IR.len);
         EmitPop(3);
     } else {
-        TrimInstructions(IR.len - body_addr + 1);
+        TrimInstructions(body_addr - 1);
         DiscardResult(2);
     }
 
@@ -1870,7 +1870,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                             bk_FunctionInfo *func = (bk_FunctionInfo *)IR[IR.len - 1].u2.func;
                             bool overload = var->module;
 
-                            TrimInstructions(1);
+                            TrimInstructions(IR.len - 1);
                             stack.len--;
 
                             if (!ParseCall(var->type->AsFunctionType(), func, overload))
@@ -1889,7 +1889,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                                 const bk_RecordTypeInfo *record_type = type->AsRecordType();
                                 bk_FunctionInfo *func = (bk_FunctionInfo *)record_type->func;
 
-                                TrimInstructions(1);
+                                TrimInstructions(IR.len - 1);
                                 stack.len--;
 
                                 if (!ParseCall(func->type, func, false))
@@ -2005,7 +2005,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                     // stack slots, because it will be needed when we emit the store instruction
                     // and will be removed then.
                     Size trim = std::min(stack[stack.len - 1].type->size, (Size)2);
-                    TrimInstructions(trim);
+                    TrimInstructions(IR.len - trim);
                 } else if (tok.kind == bk_TokenKind::AndAnd) {
                     op.branch_addr = IR.len;
                     Emit(bk_Opcode::SkipIfFalse);
@@ -2227,7 +2227,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                     bk_Instruction *inst = &IR[IR.len - 1];
 
                     if (inst->code == bk_Opcode::NegateInt || inst->code == bk_Opcode::NegateFloat) {
-                        TrimInstructions(1);
+                        TrimInstructions(IR.len - 1);
                         success = true;
                     } else {
                         success = EmitOperator1(bk_PrimitiveKind::Integer, bk_Opcode::NegateInt, stack[stack.len - 1].type) ||
@@ -2525,7 +2525,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
             // should work without any change here.
             if (RG_LIKELY(IR[IR.len - 1].code == bk_Opcode::Push)) {
                 type_buf.len = IR[IR.len - 1].u2.i;
-                TrimInstructions(1);
+                TrimInstructions(IR.len - 1);
             } else {
                 MarkError(def_pos, "Complex 'Int' expression cannot be resolved statically");
                 type_buf.len = 0;
@@ -2595,7 +2595,7 @@ void bk_Parser::ParseArraySubscript()
         const bk_TypeInfo *unit_type = array_type->unit_type;
 
         // Kill the load instructions, we need to adjust the index
-        TrimInstructions(IR.len - stack[stack.len - 1].indirect_addr);
+        TrimInstructions(stack[stack.len - 1].indirect_addr);
 
         Size idx_pos = pos;
 
@@ -2624,7 +2624,7 @@ void bk_Parser::ParseArraySubscript()
             if (IR[IR.len - 2].code == bk_Opcode::Lea ||
                     IR[IR.len - 2].code == bk_Opcode::LeaLocal ||
                     IR[IR.len - 2].code == bk_Opcode::LeaRel) {
-                TrimInstructions(1);
+                TrimInstructions(IR.len - 1);
                 IR[IR.len - 1].u2.i += offset;
             } else {
                 IR[IR.len - 1].u2.i = offset;
@@ -2677,7 +2677,7 @@ void bk_Parser::ParseRecordDot()
     }
 
     // Kill the load instructions, we need to adjust the index
-    TrimInstructions(IR.len - stack[stack.len - 1].indirect_addr);
+    TrimInstructions(stack[stack.len - 1].indirect_addr);
 
     const char *name = ConsumeIdentifier();
     const bk_RecordTypeInfo::Member *member =
@@ -2878,7 +2878,7 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
         }
 
         // typeOf() does not execute anything!
-        TrimInstructions(IR.len - call_addr);
+        TrimInstructions(call_addr);
         Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Type }, args[0]);
 
         stack.Append({ bk_TypeType });
@@ -2952,7 +2952,7 @@ const bk_TypeInfo *bk_Parser::ParseType()
     }
 
     const bk_TypeInfo *type = IR[IR.len - 1].u2.type;
-    TrimInstructions(1);
+    TrimInstructions(IR.len - 1);
 
     return type;
 }
@@ -2995,7 +2995,7 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
     bool folded = folder.Run();
 
     if (folded) {
-        TrimInstructions(IR.len - addr);
+        TrimInstructions(addr);
 
         if (out_type->size == 1) {
             bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
@@ -3024,7 +3024,7 @@ void bk_Parser::DiscardResult(Size size)
             case bk_Opcode::LeaRel:
             case bk_Opcode::Load:
             case bk_Opcode::LoadLocal: {
-                TrimInstructions(1);
+                TrimInstructions(IR.len - 1);
                 size--;
             } break;
 
@@ -3032,7 +3032,7 @@ void bk_Parser::DiscardResult(Size size)
                 Size operand = IR[IR.len - 1].u2.i;
 
                 if (size >= operand) {
-                    TrimInstructions(1);
+                    TrimInstructions(IR.len - 1);
                     size -= operand;
                 } else {
                     EmitPop(size);
@@ -3043,7 +3043,7 @@ void bk_Parser::DiscardResult(Size size)
                 Size operand = IR[IR.len - 1].u1.i;
 
                 if (size >= operand) {
-                    TrimInstructions(1);
+                    TrimInstructions(IR.len - 1);
                     size -= operand;
                 } else {
                     EmitPop(size);
@@ -3073,7 +3073,7 @@ void bk_Parser::DiscardResult(Size size)
                 const bk_FunctionTypeInfo *func_type = func->type;
 
                 if (!func->side_effects && !func_type->variadic && size >= func_type->ret_type->size) {
-                    TrimInstructions(1);
+                    TrimInstructions(IR.len - 1);
                     size += func_type->params_size - func_type->ret_type->size;
                 } else {
                     EmitPop(size);
@@ -3125,7 +3125,7 @@ bool bk_Parser::CopyBigConstant(Size size)
         }
     }
 
-    TrimInstructions(IR.len - addr);
+    TrimInstructions(addr);
     program->globals.Append({ bk_Opcode::Fetch, { .i = (int32_t)size }, { .i = program->ro.len } });
     program->ro.len += size;
 
@@ -3294,9 +3294,8 @@ void bk_Parser::FixJumps(Size jump_addr, Size target_addr)
     }
 }
 
-void bk_Parser::TrimInstructions(Size count)
+void bk_Parser::TrimInstructions(Size trim_addr)
 {
-    Size trim_addr = IR.len - count;
     Size min_addr = current_func ? 0 : prev_main_len;
 
     // Don't trim previously compiled code
