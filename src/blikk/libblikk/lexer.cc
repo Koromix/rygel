@@ -404,13 +404,12 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     }
                 }
 
-                // Intern stirng
+                // Intern string
                 {
                     bool inserted;
                     Span<const char> *ptr = strings.TrySet(str_buf, &inserted);
 
                     if (inserted) {
-                        str_buf.Append(0);
                         *ptr = str_buf.TrimAndLeak();
                     }
 
