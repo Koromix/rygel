@@ -2843,9 +2843,9 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         Emit(bk_Opcode::Call, func);
 
         if (valid && !func->impure) {
-            show_errors &= func->valid;
             FoldInstruction(args_size, func_type->ret_type);
         }
+        show_errors &= func->valid;
 
         stack.Append({ func_type->ret_type });
     }
@@ -2959,30 +2959,37 @@ const bk_TypeInfo *bk_Parser::ParseType()
 
 void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
 {
-    Size addr = IR.len - 2;
+    Size addr = IR.len - 1;
 
-    for (Size remain = count;; addr--) {
-        bk_Opcode code = IR[addr].code;
+    // Make sure only constant data instructions are in use and skip them
+    {
+        Size remain = count;
 
-        if (code == bk_Opcode::SkipIfTrue ||
-                code == bk_Opcode::SkipIfFalse) {
-            // Go on
-        } else if (code == bk_Opcode::Push) {
-            if (!--remain)
-                break;
-        } else if (code == bk_Opcode::Fetch) {
-            if (IR[addr].u1.i > remain)
+        while (remain) {
+            addr--;
+
+            bk_Opcode code = IR[addr].code;
+
+            if (code == bk_Opcode::SkipIfTrue ||
+                    code == bk_Opcode::SkipIfFalse) {
+                // Go on
+            } else if (code == bk_Opcode::Push) {
+                if (!--remain)
+                    break;
+            } else if (code == bk_Opcode::Fetch) {
+                if (IR[addr].u1.i > remain)
+                    return;
+                remain -= IR[addr].u1.i;
+
+                if (!remain)
+                    break;
+            } else {
                 return;
-            remain -= IR[addr].u1.i;
+            }
 
-            if (!remain)
-                break;
-        } else {
-            return;
+            if (RG_UNLIKELY(addr <= 1))
+                return;
         }
-
-        if (RG_UNLIKELY(addr <= 1))
-            return;
     }
 
     Emit(bk_Opcode::End, out_type->size);
