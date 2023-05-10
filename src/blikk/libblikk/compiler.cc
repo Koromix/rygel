@@ -3002,7 +3002,7 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
             bk_PrimitiveKind primitive = out_type->primitive;
 
             Emit(bk_Opcode::Push, { .primitive = primitive }, value);
-        } else {
+        } else if (out_type->size) {
             Size ptr = program->ro.len;
 
             program->ro.Append(folder.stack);
