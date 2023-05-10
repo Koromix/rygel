@@ -207,6 +207,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
             if (prop.key == "Type") {
                 if (OptionToEnum(TargetTypeNames, prop.value, &target_config.type)) {
                     target_config.enable_by_default = (target_config.type == TargetType::Executable);
+                } else if (prop.value == "ExternalLibrary") { // Compatibility
+                    target_config.type = TargetType::Library;
                 } else {
                     LogError("Unknown target type '%1'", prop.value);
                     valid = false;
