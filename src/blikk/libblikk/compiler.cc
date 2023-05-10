@@ -2842,7 +2842,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     } else {
         Emit(bk_Opcode::Call, func);
 
-        if (!func->impure) {
+        if (valid && !func->impure) {
             show_errors &= func->valid;
             FoldInstruction(args_size, func_type->ret_type);
         }
