@@ -1,20 +1,32 @@
-# Function definitions
+# Library functions
 
-## Definition syntax
+## Loading libraries
 
 To declare functions, start by loading the shared library with `koffi.load(filename)`.
 
 ```js
 const koffi = require('koffi');
 const lib = koffi.load('/path/to/shared/library'); // File extension depends on platforms: .so, .dll, .dylib, etc.
+````
+
+This library will be automatically unloaded once all references to it (including all the functions that use it, as described below).
+
+Starting with *Koffi 2.3.20*, you can explicitly unload a library by calling `lib.unload()`. Any attempt to find or call a function from this library after unloading it will crash.
+
+```{note}
+On some platforms (such as with the [musl C library on Linux](https://wiki.musl-libc.org/functional-differences-from-glibc.html#Unloading-libraries)), shared libraries cannot be unloaded, so the library will remain loaded and memory mapped after the call to `lib.unload()`.
 ```
 
-You can use the returned object to load C functions from the library. To do so, you can use two syntaxes:
+## Function definitions
+
+### Definition syntax
+
+Use the object returned by `koffi.load()` to load C functions from the library. To do so, you can use two syntaxes:
 
 - The classic syntax, inspired by node-ffi
 - C-like prototypes
 
-### Classic syntax
+#### Classic syntax
 
 To declare a function, you need to specify its non-mangled name, its return type, and its parameters. Use an ellipsis as the last parameter for variadic functions.
 
@@ -25,7 +37,7 @@ const atoi = lib.func('atoi', 'int', ['str']);
 
 Koffi automatically tries mangled names for non-standard x86 calling conventions. See the section on [calling conventions](#calling-conventions) for more information on this subject.
 
-### C-like prototypes
+#### C-like prototypes
 
 If you prefer, you can declare functions using simple C-like prototype strings, as shown below:
 
@@ -36,7 +48,7 @@ const atoi = lib.func('int atoi(str)'); // The parameter name is not used by Kof
 
 You can use `()` or `(void)` for functions that take no argument.
 
-## Variadic functions
+### Variadic functions
 
 Variadic functions are declared with an ellipsis as the last argument.
 
@@ -51,7 +63,7 @@ printf('Integer %d, double %g, str %s', 'int', 6, 'double', 8.5, 'str', 'THE END
 
 On x86 platforms, only the Cdecl convention can be used for variadic functions.
 
-## Calling conventions
+### Calling conventions
 
 By default, calling a C function happens synchronously.
 

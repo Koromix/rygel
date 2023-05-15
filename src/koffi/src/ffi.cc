@@ -1532,6 +1532,16 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
     return wrapper;
 }
 
+static Napi::Value UnloadLibrary(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    LibraryHolder *lib = (LibraryHolder *)info.Data();
+
+    lib->Unload();
+
+    return env.Undefined();
+}
+
 static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -1609,6 +1619,8 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     ADD_CONVENTION("thiscall", CallConvention::Thiscall);
 
 #undef ADD_CONVENTION
+
+    obj.Set("unload", Napi::Function::New(env, UnloadLibrary, "unload", (void *)lib->Ref()));
 
     return obj;
 }
@@ -1721,7 +1733,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     return env.Undefined();
 }
 
-LibraryHolder::~LibraryHolder()
+void LibraryHolder::Unload()
 {
 #ifdef _WIN32
     if (module && module != GetModuleHandle(nullptr)) {
@@ -1732,6 +1744,8 @@ LibraryHolder::~LibraryHolder()
         dlclose(module);
     }
 #endif
+
+    module = nullptr;
 }
 
 const LibraryHolder *LibraryHolder::Ref() const

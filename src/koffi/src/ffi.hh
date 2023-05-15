@@ -155,7 +155,9 @@ struct LibraryHolder {
     mutable std::atomic_int refcount { 1 };
 
     LibraryHolder(void *module) : module(module) {}
-    ~LibraryHolder();
+    ~LibraryHolder() { Unload(); }
+
+    void Unload();
 
     const LibraryHolder *Ref() const;
     void Unref() const;

@@ -665,4 +665,6 @@ async function test() {
         ReverseString16Void(koffi.as(ptr, 'char16_t *'))
         assert.equal(ptr[0], '!dlroW olleH');
     }
+
+    lib.unload();
 }
