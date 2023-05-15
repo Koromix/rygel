@@ -4,6 +4,12 @@
 
 ### Koffi 2.3
 
+#### Koffi 2.3.20
+
+**Main fixes:**
+
+- Support explicit library unloading with `lib.unload()`
+
 #### Koffi 2.3.19
 
 **Main fixes:**
