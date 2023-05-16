@@ -720,6 +720,4 @@ function AppRunner(canvas) {
     }
 }
 
-module.exports = {
-    AppRunner
-};
+export { AppRunner };
