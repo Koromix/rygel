@@ -100,6 +100,11 @@ export async function start(prov, options = {}) {
     document.body.classList.remove('loading');
 }
 
+export function zoom(delta) {
+    console.log(map);
+    map.zoom(delta);
+}
+
 function updateMap() {
     map.update();
 

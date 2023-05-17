@@ -16,7 +16,7 @@ import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js'
 import { util, log, net } from '../../../../web/libjs/util.js';
 import { ui } from '../../lib/ui.js';
 import parse from '../../lib/parse.js';
-import { start, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
+import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
 const ICONS = {
     crp: 'static/icons/crp.png',
@@ -275,3 +275,5 @@ export async function main() {
         zoom: zoom
     });
 }
+
+export { zoom }

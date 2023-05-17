@@ -50,7 +50,7 @@ function TileMap(runner) {
             return self.screenToCoord(center);
         }, enumerable: true },
 
-        zoom: { get: () => state.zoom, enumerable: true }
+        zoomLevel: { get: () => state.zoom, enumerable: true }
     });
 
     this.init = async function(config) {
@@ -160,9 +160,9 @@ function TileMap(runner) {
 
         // Handle zooming
         if (mouse_state.wheel < 0) {
-            zoom(1, mouse_state);
+            self.zoom(1, mouse_state);
         } else if (mouse_state.wheel > 0) {
-            zoom(-1, mouse_state);
+            self.zoom(-1, mouse_state);
         }
 
         // Make sure we stay in the box
@@ -184,9 +184,11 @@ function TileMap(runner) {
         return -(Math.cos(Math.PI * t) - 1) / 2;
     }
 
-    function zoom(delta, at) {
+    this.zoom = function(delta, at = null) {
         if (state.zoom + delta < tiles.min_zoom || state.zoom + delta > tiles.max_zoom)
             return;
+        if (at == null)
+            at = { x: canvas.width / 2, y: canvas.height / 2 };
 
         if (delta > 0) {
             for (let i = 0; i < delta; i++) {
@@ -218,7 +220,7 @@ function TileMap(runner) {
         state.zoom += delta;
 
         stopFetchers();
-    }
+    };
 
     function getViewport() {
         let viewport = {
