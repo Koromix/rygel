@@ -229,15 +229,8 @@ function AppRunner(canvas) {
             mouse_state.moving = false;
         }
 
-        if (e.deltaMode != null) {
-            switch (e.deltaMode) {
-                case WheelEvent.DOM_DELTA_PIXEL: {
-                    let mult = util.clamp(e.deltaY, -1, 1);
-                    mouse_state.wheel += mult * Math.ceil(mult * e.deltaY / 120);
-                } break;
-                case WheelEvent.DOM_DELTA_LINE:
-                case WheelEvent.DOM_DELTA_PAGE: { mouse_state.wheel += util.clamp(e.deltaY, -1, 1); } break;
-            }
+        if (e.deltaY) {
+            mouse_state.wheel += util.clamp(e.deltaY, -1, 1);
 
             e.preventDefault();
             e.stopPropagation();
