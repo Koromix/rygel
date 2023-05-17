@@ -31,6 +31,7 @@ function TileMap(runner) {
 
     let state = null;
 
+    let last_wheel_time = 0;
     let zoom_animation = null;
 
     let missing_assets = 0;
@@ -159,10 +160,18 @@ function TileMap(runner) {
         }
 
         // Handle zooming
-        if (mouse_state.wheel < 0) {
-            self.zoom(1, mouse_state);
-        } else if (mouse_state.wheel > 0) {
-            self.zoom(-1, mouse_state);
+        if (mouse_state.wheel) {
+            let now = performance.now();
+
+            if (now - last_wheel_time >= 200) {
+                if (mouse_state.wheel < 0) {
+                    self.zoom(1, mouse_state);
+                } else if (mouse_state.wheel > 0) {
+                    self.zoom(-1, mouse_state);
+                }
+
+                last_wheel_time = now;
+            }
         }
 
         // Make sure we stay in the box
