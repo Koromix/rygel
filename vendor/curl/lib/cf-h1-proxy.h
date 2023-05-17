@@ -1,5 +1,5 @@
-#ifndef HEADER_CURL_H2H3_H
-#define HEADER_CURL_H2H3_H
+#ifndef HEADER_CURL_H1_PROXY_H
+#define HEADER_CURL_H1_PROXY_H
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -23,40 +23,17 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
-#define H2H3_PSEUDO_METHOD ":method"
-#define H2H3_PSEUDO_SCHEME ":scheme"
-#define H2H3_PSEUDO_AUTHORITY ":authority"
-#define H2H3_PSEUDO_PATH ":path"
-#define H2H3_PSEUDO_STATUS ":status"
+#if !defined(CURL_DISABLE_PROXY) && !defined(CURL_DISABLE_HTTP)
 
-struct h2h3pseudo {
-  const char *name;
-  size_t namelen;
-  const char *value;
-  size_t valuelen;
-};
+CURLcode Curl_cf_h1_proxy_insert_after(struct Curl_cfilter *cf,
+                                       struct Curl_easy *data);
 
-struct h2h3req {
-  size_t entries;
-  struct h2h3pseudo header[1]; /* the array is allocated to contain entries */
-};
+extern struct Curl_cftype Curl_cft_h1_proxy;
 
-/*
- * Curl_pseudo_headers() creates the array with pseudo headers to be
- * used in an HTTP/2 or HTTP/3 request. Returns an allocated struct.
- * Free it with Curl_pseudo_free().
- */
-CURLcode Curl_pseudo_headers(struct Curl_easy *data,
-                             const char *request,
-                             const size_t len,
-                             size_t* hdrlen /* optional */,
-                             struct h2h3req **hp);
 
-/*
- * Curl_pseudo_free() frees a h2h3req struct.
- */
-void Curl_pseudo_free(struct h2h3req *hp);
+#endif /* !CURL_DISABLE_PROXY && !CURL_DISABLE_HTTP */
 
-#endif /* HEADER_CURL_H2H3_H */
+#endif /* HEADER_CURL_H1_PROXY_H */

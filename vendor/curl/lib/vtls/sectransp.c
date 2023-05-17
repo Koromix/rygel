@@ -1548,13 +1548,13 @@ static CURLcode sectransp_set_selected_ciphers(struct Curl_easy *data,
 
     /* Skip separators */
     while(is_separator(*cipher_start))
-       cipher_start++;
+      cipher_start++;
     if(*cipher_start == '\0') {
       break;
     }
     /* Find last position of a cipher in the ciphers string */
     cipher_end = cipher_start;
-    while (*cipher_end != '\0' && !is_separator(*cipher_end)) {
+    while(*cipher_end != '\0' && !is_separator(*cipher_end)) {
       ++cipher_end;
     }
 
@@ -2796,7 +2796,7 @@ check_handshake:
     }
 
 #if(CURL_BUILD_MAC_10_13 || CURL_BUILD_IOS_11) && HAVE_BUILTIN_AVAILABLE == 1
-    if(cf->conn->bits.tls_enable_alpn) {
+    if(connssl->alpn) {
       if(__builtin_available(macOS 10.13.4, iOS 11, tvOS 11, *)) {
         CFArrayRef alpnArr = NULL;
         CFStringRef chosenProtocol = NULL;
