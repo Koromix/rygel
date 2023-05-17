@@ -82,14 +82,15 @@
         <nav id="menu"></nav>
 
         <canvas id="map"></canvas>
-        <div id="map_attribution">
+
+        <div class="map_box attribution">
             <a href="https://www.mapbox.com/about/maps/">© Mapbox</a>, <a href="https://www.openstreetmap.org/">© OpenStreetMap</a> | <a href="https://www.mapbox.com/map-feedback/">Improve this map</a>
+        </div>
+        <div class="map_box error">
+            <a href="mailto:{{ mail }}">Signaler une erreur</a>
         </div>
 
         <div id="log"></div>
-        <div id="wip">
-            <a href="mailto:{{ mail }}">Signaler une erreur</a>
-        </div>
 
         <script>
             try {

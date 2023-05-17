@@ -77,7 +77,7 @@ a:hover { color: var(--color, #0d114a); }
     gap: 10px;
 }
 #search > label > input {
-    width: 400px;
+    width: 300px;
     padding: 4px 6px;
 }
 #search.busy::after {
@@ -151,7 +151,7 @@ a:hover { color: var(--color, #0d114a); }
     flex-direction: column;
     background: var(--background, white);
     padding: 12px;
-    min-width: 200px;
+    min-width: 160px;
 }
 #count {
     padding: 12px 20px 12px 0;
@@ -159,33 +159,28 @@ a:hover { color: var(--color, #0d114a); }
     filter: opacity(80%);
 }
 
-#wip {
-    position: absolute;
-    z-index: 999;
-    left: 10px;
-    bottom: 10px;
-    padding: 3px 6px;
-    background: #fc2727;
-    color: white;
-    --color: white;
-    border-radius: 2px;
-    text-align: center;
-    font-size: 0.9em;
-}
-
 #map {
     height: 100%;
     width: 100%;
 }
-#map_attribution {
+.map_box {
     position: absolute;
+    z-index: 1;
+    padding: 3px 6px;
+    border-radius: 2px;
+    font-size: 0.9em;
+}
+.map_box.attribution {
     bottom: 10px;
     right: 10px;
-    z-index: 1;
-    margin: 0;
-    padding: 3px 6px;
-    font-size: 0.9em;
-    background: #00000022;
+    background: #cdcdcdbb;
+}
+.map_box.error {
+    right: 10px;
+    bottom: 46px;
+    background: #de0a0abb;
+    color: white;
+    --color: white;
 }
 
 .planning_tip {
@@ -529,14 +524,16 @@ form > .footer {
     #menu {
         flex-direction: column;
         align-items: center;
-        gap: 6px;
     }
 
     #suggestions { width: 100vw; }
 
     #filters { gap: 50px; }
     #filters > fieldset { justify-content: center; }
+    #filters legend { padding: 6px; }
     #count { display: none; }
+
+    .map_box.error { bottom: 40px; }
 
     .dialog > form div.info {
         flex-direction: column;
@@ -548,10 +545,4 @@ form > .footer {
 
 @media (max-width: 581px) {
     #filters { gap: 0px; }
-
-    #wip {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-    }
 }
