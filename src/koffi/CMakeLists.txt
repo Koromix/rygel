@@ -34,6 +34,8 @@ else()
     set(CMAKE_CXX_STANDARD 14)
 endif()
 if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+
     add_compile_options(/Zc:__cplusplus /W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201 /wd4324)
 
     # ASM_MASM does not (yet) work on Windows ARM64
@@ -60,8 +62,6 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     # CMAKE_SYSTEM_PROCESSOR is wrong on Windows ARM64
 
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm" OR CMAKE_GENERATOR_PLATFORM STREQUAL "ARM64" OR CMAKE_OSX_ARCHITECTURES MATCHES "arm")
-        set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
-
         if(WIN32)
             get_filename_component(cl_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
             file(TO_CMAKE_PATH "${cl_dir}/armasm64.exe" asm_compiler)
