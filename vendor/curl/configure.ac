@@ -186,6 +186,17 @@ dnl
 INITIAL_LDFLAGS=$LDFLAGS
 INITIAL_LIBS=$LIBS
 
+dnl
+dnl Generates a shell script to run the compiler with LD_LIBRARY_PATH set to
+dnl the value used right now. This lets CURL_RUN_IFELSE set LD_LIBRARY_PATH to
+dnl something different but only have that affect the execution of the results
+dnl of the compile, not change the libraries for the compiler itself.
+dnl
+compilersh="run-compiler"
+echo "CC=$CC" > $compilersh
+echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $compilersh
+echo 'exec $CC $@' >> $compilersh
+
 dnl **********************************************************************
 dnl See which TLS backend(s) that are requested. Just do all the
 dnl TLS AC_ARG_WITH() invokes here and do the checks later
@@ -895,13 +906,11 @@ if test X"$want_hyper" != Xno; then
   AC_MSG_NOTICE([Disable RTSP support with hyper])
   AC_DEFINE(CURL_DISABLE_RTSP, 1, [to disable RTSP])
   AC_SUBST(CURL_DISABLE_RTSP, [1])
-
 else
-
   AC_MSG_CHECKING([whether to support rtsp])
   AC_ARG_ENABLE(rtsp,
-  AS_HELP_STRING([--enable-rtsp],[Enable RTSP support])
-  AS_HELP_STRING([--disable-rtsp],[Disable RTSP support]),
+AS_HELP_STRING([--enable-rtsp],[Enable RTSP support])
+AS_HELP_STRING([--disable-rtsp],[Disable RTSP support]),
   [ case "$enableval" in
     no)
        AC_MSG_RESULT(no)
@@ -4260,14 +4269,13 @@ AS_HELP_STRING([--disable-headers-api],[Disable headers-api support]),
 
 dnl only check for HSTS if there's SSL present
 if test -n "$SSL_ENABLED"; then
-
   dnl ************************************************************
   dnl switch on/off hsts
   dnl
   AC_MSG_CHECKING([whether to support HSTS])
   AC_ARG_ENABLE(hsts,
-  AS_HELP_STRING([--enable-hsts],[Enable HSTS support])
-  AS_HELP_STRING([--disable-hsts],[Disable HSTS support]),
+AS_HELP_STRING([--enable-hsts],[Enable HSTS support])
+AS_HELP_STRING([--disable-hsts],[Disable HSTS support]),
   [ case "$enableval" in
     no)
        AC_MSG_RESULT(no)
@@ -4395,6 +4403,8 @@ else
   LIBCURL_NO_SHARED=
 fi
 AC_SUBST(LIBCURL_NO_SHARED)
+
+rm $compilersh
 
 dnl
 dnl For keeping supported features and protocols also in pkg-config file

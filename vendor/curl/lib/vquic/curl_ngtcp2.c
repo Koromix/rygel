@@ -1305,20 +1305,19 @@ static int init_ngh3_conn(struct Curl_cfilter *cf)
   }
 
   return CURLE_OK;
-  fail:
+fail:
 
   return result;
 }
 
 static ssize_t recv_closed_stream(struct Curl_cfilter *cf,
                                   struct Curl_easy *data,
+                                  struct stream_ctx *stream,
                                   CURLcode *err)
 {
-  struct stream_ctx *stream = H3_STREAM_CTX(data);
   ssize_t nread = -1;
 
   (void)cf;
-  DEBUGASSERT(stream);
   if(stream->reset) {
     failf(data,
           "HTTP/3 stream %" PRId64 " reset by server", stream->id);
@@ -1413,7 +1412,7 @@ static ssize_t cf_ngtcp2_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
   }
   else {
     if(stream->closed) {
-      nread = recv_closed_stream(cf, data, err);
+      nread = recv_closed_stream(cf, data, stream, err);
       goto out;
     }
     *err = CURLE_AGAIN;
@@ -1439,6 +1438,7 @@ static int cb_h3_acked_req_body(nghttp3_conn *conn, int64_t stream_id,
   struct Curl_cfilter *cf = user_data;
   struct Curl_easy *data = stream_user_data;
   struct stream_ctx *stream = H3_STREAM_CTX(data);
+  size_t skiplen;
 
   (void)cf;
   if(!stream)
@@ -1446,9 +1446,12 @@ static int cb_h3_acked_req_body(nghttp3_conn *conn, int64_t stream_id,
   /* The server ackknowledged `datalen` of bytes from our request body.
    * This is a delta. We have kept this data in `sendbuf` for
    * re-transmissions and can free it now. */
-  Curl_bufq_skip(&stream->sendbuf, datalen);
-  DEBUGASSERT(stream->sendbuf_len_in_flight >= datalen);
-  stream->sendbuf_len_in_flight -= datalen;
+  if(datalen >= (uint64_t)stream->sendbuf_len_in_flight)
+    skiplen = stream->sendbuf_len_in_flight;
+  else
+    skiplen = (size_t)datalen;
+  Curl_bufq_skip(&stream->sendbuf, skiplen);
+  stream->sendbuf_len_in_flight -= skiplen;
 
   /* `sendbuf` *might* now have more room. If so, resume this
    * possibly paused stream. And also tell our transfer engine that
@@ -1550,7 +1553,7 @@ static ssize_t h3_stream_open(struct Curl_cfilter *cf,
   nghttp3_data_reader reader;
   nghttp3_data_reader *preader = NULL;
 
-  Curl_h1_req_parse_init(&h1, (4*1024));
+  Curl_h1_req_parse_init(&h1, H1_PARSE_DEFAULT_MAX_LINE_LEN);
   Curl_dynhds_init(&h2_headers, 0, DYN_HTTP_REQUEST);
 
   *err = h3_data_setup(cf, data);
