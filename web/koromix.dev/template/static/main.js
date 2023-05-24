@@ -13,7 +13,7 @@
 
 function initMenuHighlight() {
     // Find all side menu items, and the pointed to elements
-    let links = [].slice.call(document.querySelectorAll('nav#side_menu a'));
+    let links = [].slice.call(document.querySelectorAll('nav#side a'));
     let items = [].slice.call(links).map(link => {
         let anchor = document.querySelector(link.getAttribute('href'));
         return [link, anchor];
@@ -85,14 +85,21 @@ function initMenuHighlight() {
     });
 }
 
-function toggleMenu(selector) {
-    let menu = document.querySelector(selector);
+function initScroll() {
+    let top = document.querySelector('nav#top');
+    window.addEventListener('scroll', () => { top.classList.toggle('border', window.pageYOffset > 0); });
+}
+
+function deploy() {
+    let menu = document.querySelector('#top ul');
     menu.classList.toggle('active');
 }
 
 document.addEventListener('readystatechange', () => {
-    if (document.readyState === 'complete')
+    if (document.readyState === 'complete') {
         initMenuHighlight();
+        initScroll();
+    }
 });
 
 document.body.classList.remove('nojs');

@@ -2,35 +2,35 @@
 <html lang="en" class="nojs">
     <head>
         {BASE_URL}
+
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>{TITLE}</title>
 
         <link rel="stylesheet" href="static/main.css">
-        <link rel="stylesheet" href="static/OpenSans.css">
+        <link rel="stylesheet" href="static/opensans/OpenSans.css">
 
         <script type="text/javascript" src="static/main.js" async></script>
     </head>
     <body>
-        <div id="top">
-            <a id="top_deploy" href="#" onclick="toggleMenu('#top_menu'); return false;"></a>
-            <nav id="top_menu">
-                <ul>
+        <a id="deploy" href="#" onclick="deploy(); return false;"></a>
+
+        <nav id="top">
+            <ul>
 {LINKS}
 
-                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
-                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub</a></li>
-                </ul>
-            </nav>
-        </div>
-        <div id="content">
-{TOC}
+                <div style="flex: 1;"></div>
+                <li><a href="https://github.com/Koromix">GitHub</a></li>
+                <div style="flex: 1;"></div>
+                <li><a href="mailto:niels.martignene@protonmail.com">Contact me</a></li>
+            </ul>
+        </nav>
 
-            <main>
-{CONTENT}
-            </main>
-        </div>
-        <footer>Niels Martignène&nbsp;&nbsp;&nbsp;<span style="opacity: 0.6;">Koromix<span></footer>
+        <nav id="side">
+            <ul>{TOC}</ul>
+        </nav>
+
+        <main>{CONTENT}</main>
     </body>
 </html>

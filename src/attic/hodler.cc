@@ -244,20 +244,9 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
                 }
             }
         } else if (key == "TOC") {
-            if (page.sections.len) {
-                PrintLn(writer,
-R"(<a id="side_deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
-<nav id="side_menu">
-    <ul>)");
-
-                for (const PageSection &sec: page.sections) {
-                    PrintLn(writer, "        <li><a href=\"#%1\" class=\"lv%2\">%3</a></li>",
-                                    sec.id, sec.level, sec.title);
-                }
-
-                Print(writer,
-R"(    </ul>
-</nav>)");
+            for (const PageSection &sec: page.sections) {
+                PrintLn(writer, "        <li><a href=\"#%1\" class=\"lv%2\">%3</a></li>",
+                                sec.id, sec.level, sec.title);
             }
         } else if (key == "CONTENT") {
             writer->Write(page.html);

@@ -2,21 +2,22 @@
 <html lang="en" class="nojs">
     <head>
         <base href="/koffi"/>
+
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>koromix.dev — Koffi</title>
 
         <link rel="stylesheet" href="static/main.css">
-        <link rel="stylesheet" href="static/OpenSans.css">
+        <link rel="stylesheet" href="static/opensans/OpenSans.css">
 
         <script type="text/javascript" src="static/main.js" async></script>
     </head>
     <body>
-        <div id="top">
-            <a id="top_deploy" href="#" onclick="toggleMenu('#top_menu'); return false;"></a>
-            <nav id="top_menu">
-                <ul>
+        <a id="deploy" href="#" onclick="deploy(); return false;"></a>
+
+        <nav id="top">
+            <ul>
 <li><a href="index">Home</a></li>
 <li><a href="goupile">Goupile</a></li>
 <li><a href="koffi" class="active">Koffi</a></li>
@@ -25,22 +26,20 @@
 <li><a href="misc">Other</a></li>
 
 
-                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
-                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub</a></li>
-                </ul>
-            </nav>
-        </div>
-        <div id="content">
-<a id="side_deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
-<nav id="side_menu">
-    <ul>
-        <li><a href="#overview" class="lv1">Overview</a></li>
-        <li><a href="#license" class="lv1">License</a></li>
-    </ul>
-</nav>
+                <div style="flex: 1;"></div>
+                <li><a href="https://github.com/Koromix">GitHub</a></li>
+                <div style="flex: 1;"></div>
+                <li><a href="mailto:niels.martignene@protonmail.com">Contact me</a></li>
+            </ul>
+        </nav>
 
-            <main>
-<h1 id="overview">Overview</h1>
+        <nav id="side">
+            <ul>        <li><a href="#overview" class="lv1">Overview</a></li>
+        <li><a href="#license" class="lv1">License</a></li>
+</ul>
+        </nav>
+
+        <main><h1 id="overview">Overview</h1>
 <p>Koffi is a fast and easy-to-use C FFI module for <a href="https://nodejs.org/">Node.js</a>, featuring:</p>
 
 <ul>
@@ -112,9 +111,6 @@
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the <strong>MIT License</strong>.</p>
 
 <p>Find more information here: <a href="https://choosealicense.com/licenses/mit/">https://choosealicense.com/licenses/mit/</a></p>
-
-            </main>
-        </div>
-        <footer>Niels Martignène&nbsp;&nbsp;&nbsp;<span style="opacity: 0.6;">Koromix<span></footer>
+</main>
     </body>
 </html>

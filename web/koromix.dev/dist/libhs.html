@@ -2,21 +2,22 @@
 <html lang="en" class="nojs">
     <head>
         <base href="/libhs"/>
+
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>koromix.dev — libhs</title>
 
         <link rel="stylesheet" href="static/main.css">
-        <link rel="stylesheet" href="static/OpenSans.css">
+        <link rel="stylesheet" href="static/opensans/OpenSans.css">
 
         <script type="text/javascript" src="static/main.js" async></script>
     </head>
     <body>
-        <div id="top">
-            <a id="top_deploy" href="#" onclick="toggleMenu('#top_menu'); return false;"></a>
-            <nav id="top_menu">
-                <ul>
+        <a id="deploy" href="#" onclick="deploy(); return false;"></a>
+
+        <nav id="top">
+            <ul>
 <li><a href="index">Home</a></li>
 <li><a href="goupile">Goupile</a></li>
 <li><a href="koffi">Koffi</a></li>
@@ -25,25 +26,23 @@
 <li><a href="misc">Other</a></li>
 
 
-                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
-                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub</a></li>
-                </ul>
-            </nav>
-        </div>
-        <div id="content">
-<a id="side_deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
-<nav id="side_menu">
-    <ul>
-        <li><a href="#overview" class="lv1">Overview</a></li>
+                <div style="flex: 1;"></div>
+                <li><a href="https://github.com/Koromix">GitHub</a></li>
+                <div style="flex: 1;"></div>
+                <li><a href="mailto:niels.martignene@protonmail.com">Contact me</a></li>
+            </ul>
+        </nav>
+
+        <nav id="side">
+            <ul>        <li><a href="#overview" class="lv1">Overview</a></li>
         <li><a href="#build" class="lv1">Build</a></li>
         <li><a href="#license" class="lv1">License</a></li>
         <li><a href="#contribute" class="lv1">Contribute</a></li>
         <li><a href="#examples" class="lv1">Examples</a></li>
-    </ul>
-</nav>
+</ul>
+        </nav>
 
-            <main>
-<h1 id="overview">Overview</h1>
+        <main><h1 id="overview">Overview</h1>
 <p>libhs is a C library to enumerate HID and serial devices and interact with them.</p>
 
 <ul>
@@ -155,9 +154,6 @@ repository</a>.</p>
 <span class="line">    return 0;</span>
 <span class="line">}</span>
 </pre>
-
-            </main>
-        </div>
-        <footer>Niels Martignène&nbsp;&nbsp;&nbsp;<span style="opacity: 0.6;">Koromix<span></footer>
+</main>
     </body>
 </html>
