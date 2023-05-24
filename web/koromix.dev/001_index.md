@@ -10,7 +10,7 @@ My name is **Niels Martignène**, and I've been a programmer for over twenty yea
 
 Nowadays I work on various **C++ applications/libraries**, and some **web applications**. I also do some C and assembly programming. You can find information about some of the open-source projects I've worked on over the years on this website.
 
-I'm **available for hire**, please contact me on [niels.martignene@protonmail.com](niels.martignene@protonmail.com) if you are interested.
+I'm **available for hire**, please contact me on [niels.martignene@protonmail.com](mailto:niels.martignene@protonmail.com) if you are interested.
 
 # Main projects
 
