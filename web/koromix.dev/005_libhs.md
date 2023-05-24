@@ -23,9 +23,9 @@ libhs depends on **a few OS-provided libraries** that you need to link:
 OS                  | Dependencies
 ------------------- | --------------------------------------------------------------------------------
 Windows (MSVC)      | Nothing to do, libhs uses `#pragma comment(lib)`
-Windows (MinGW-w64) | Link _user32, advapi32, setupapi and hid_ `-luser32 -ladvapi32 -lsetupapi -lhid`
+Windows (MinGW-w64) | Link `-luser32 -ladvapi32 -lsetupapi -lhid`
 OSX (Clang)         | Link _CoreFoundation and IOKit_
-Linux (GCC)         | Link _libudev_ `-ludev`
+Linux (GCC)         | Link `-ludev`
 
 This library is developed as part of the TyTools project where you can find the original
 [libhs source code](https://github.com/Koromix/tytools/tree/master/src/libhs). The
