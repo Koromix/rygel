@@ -12,9 +12,9 @@ Rekord is a multi-platform backup tool with deduplication and asymmetric encrypt
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/rekord).
 
-# blikk
+# Blikk
 
-blikk is an **embeddable beginner-friendly programming language** with static types, fast compilation.
+Blikk is an **embeddable beginner-friendly programming language** with static types, fast compilation.
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/blikk).
 
@@ -54,9 +54,9 @@ It is mainly useful for automated test systems, do not install it on production 
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/seatsh).
 
-# drd
+# DRD
 
-The drd project strives to provide a **fully-featured and up-to-date alternative french PMSI MCO classifier**.
+The DRD project strives to provide a **fully-featured and up-to-date alternative french PMSI MCO classifier**.
 
 Using the data files (.tab) provided with GenRSA, it can classify MCO stays from 2013 to 2022 *several hundred times faster* than the official classifier (on a 4 core computer from 2015, it can classify around 4 million stays per second).
 
