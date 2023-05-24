@@ -57,6 +57,7 @@ The projects on this page are provided as-is, and are in **various states of com
 
 Project | Description                                                                                                                                 | Language
 ------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------
+[rekord](https://github.com/Koromix/rygel/tree/master/src/rekord) | Backup tool with deduplication and asymmetric encryption | C++
 [blikk](https://github.com/Koromix/rygel/tree/master/src/blikk)   | Embeddable beginner-friendly programming language with static types, fast compilation                                                       | C++
 [CNoke](https://www.npmjs.com/package/cnoke)   | Simple alternative to CMake.js, without any dependency, designed to build native Node addons based on CMake                                 | Javascript
 [SeatSH](https://github.com/Koromix/rygel/tree/master/src/seatsh)  | SeatSH is a Windows service that enables you to launch graphical programs from an SSH connection on Windows 10, for automated test systems. | C++
