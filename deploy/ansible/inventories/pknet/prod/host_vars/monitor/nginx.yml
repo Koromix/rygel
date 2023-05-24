@@ -49,6 +49,12 @@ nginx_domains:
 
           root /opt/static/live/goupile.fr/www;
 
+          gzip on;
+          gzip_vary on;
+          gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml;
+          gzip_proxied no-cache no-store private expired auth;
+          gzip_min_length 1000;
+
           location /demo/ {
               error_page 404 /demo/index.html;
           }
@@ -103,6 +109,15 @@ nginx_domains:
           try_files $uri $uri/ =404;
 
           root /opt/static/live/koromix.dev/www;
+
+          expires 1h;
+          add_header Cache-Control "public, no-transform";
+
+          gzip on;
+          gzip_vary on;
+          gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml;
+          gzip_proxied no-cache no-store private expired auth;
+          gzip_min_length 1000;
       }
 
       location /files/ {
