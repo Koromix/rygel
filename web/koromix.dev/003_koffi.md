@@ -4,7 +4,7 @@
 
 # Overview
 
-Koffi is a fast and easy-to-use C FFI module for [Node.js](https://nodejs.org/), featuring:
+Koffi is a **fast and easy-to-use C to JS FFI module** for [Node.js](https://nodejs.org/), featuring:
 
 * Low-overhead and fast performance (see [benchmarks](https://koffi.dev/benchmarks))
 * Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value

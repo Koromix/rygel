@@ -2,15 +2,27 @@
      Menu: Home
      Created: 2017-01-15 -->
 
-# Goupile
+# Introduction
+
+Hi visitor!
+
+My name is **Niels Martignène**, and I've been a programmer for over twenty years. It all began when I stumbled upon an old [Amstrad CPC-6128](https://en.wikipedia.org/wiki/Amstrad_CPC#CPC6128) in my parents' attic, and found out you could use BASIC to program simple games on it.
+
+Nowadays I work on various **C++ applications/libraries**, and some **web applications**. I also do some C and assembly programming. You can find information about some of the open-source projects I've worked on over the years on this website.
+
+I'm **available for hire**, please contact me on [niels.martignene@protonmail.com](niels.martignene@protonmail.com) if you are interested.
+
+# Main projects
+
+## Goupile
 
 Goupile is an **open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
 
 Find out more on the [page dedicated to Goupile](goupile).
 
-# Koffi
+## Koffi
 
-Koffi is a fast and easy-to-use C FFI module for [Node.js](https://nodejs.org/), featuring:
+Koffi is a **fast and easy-to-use JS to C FFI module** for [Node.js](https://nodejs.org/), featuring:
 
 * Low-overhead and fast performance (see [benchmarks](https://koffi.dev/benchmarks))
 * Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
@@ -19,7 +31,7 @@ Koffi is a fast and easy-to-use C FFI module for [Node.js](https://nodejs.org/),
 
 Find out more on the [page dedicated to Koffi](koffi).
 
-# TyTools
+## TyTools
 
 TyTools is a collection of **independent tools** and you only need one executable to use any of them. The Qt-based GUI tools are statically compiled to make that possible.
 
@@ -31,7 +43,7 @@ tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boa
 
 Find out more on the [page dedicated to TyTools](tytools).
 
-# libhs
+## libhs
 
 libhs is a cross-platform C library to enumerate **HID and serial devices** and interact with them.
 
