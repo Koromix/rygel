@@ -136,6 +136,14 @@ td {
     background: white;
     border: 1px solid #ebebeb;
 }
+th.center, td.center { text-align: center; }
+th.right, td.right { text-align: right; }
+
+table + div.legend {
+    margin-top: calc(-1em + 2px);
+    text-align: center;
+    font-size: 0.8em;
+}
 
 pre {
     position: relative;

@@ -35,6 +35,7 @@
 
         <nav id="side">
             <ul>        <li><a href="#overview" class="lv1">Overview</a></li>
+        <li><a href="#platforms" class="lv1">Platforms</a></li>
         <li><a href="#license" class="lv1">License</a></li>
 </ul>
         </nav>
@@ -49,64 +50,37 @@
 <li>Well-tested code base for popular OS/architecture combinations</li>
 </ul>
 
+<p>You can find more information about Koffi on the official web site: <a href="https://koffi.dev">https://koffi.dev/</a></p>
+<h1 id="platforms">Platforms</h1>
 <p>The following combinations of OS and architectures <strong>are officially supported and tested</strong> at the moment:</p>
 
-<table>
-<thead>
-  <tr>
-    <th>ISA / OS</th>
-    <th>Windows</th>
-    <th>Linux</th>
-    <th>macOS</th>
-    <th>FreeBSD</th>
-    <th>OpenBSD</th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td>x86 (IA32)</td>
-    <td>✅ Yes</td>
-    <td>✅ Yes</td>
-    <td>⬜️ <em>N/A</em></td>
-    <td>✅ Yes</td>
-    <td>✅ Yes</td>
-  </tr>
-  <tr>
-    <td>x86_64 (AMD64)</td>
-    <td>✅ Yes</td>
-    <td>✅ Yes</td>
-    <td>✅ Yes</td>
-    <td>✅ Yes</td>
-    <td>✅ Yes</td>
-  </tr>
-  <tr>
-    <td>ARM32 LE</td>
-    <td>⬜️ <em>N/A</em></td>
-    <td>✅ Yes</td>
-    <td>⬜️ <em>N/A</em></td>
-    <td>🟨 Probably</td>
-    <td>🟨 Probably</td>
-  </tr>
-  <tr>
-    <td>ARM64 (AArch64) LE</td>
-    <td>✅ Yes</td>
-    <td>✅ Yes</td>
-    <td>✅ Yes</td>
-    <td>✅ Yes</td>
-    <td>🟨 Probably</td>
-  </tr>
-  <tr>
-    <td>RISC-V 64</td>
-    <td>⬜️ <em>N/A</em></td>
-    <td>✅ Yes</td>
-    <td>⬜️ <em>N/A</em></td>
-    <td>🟨 Probably</td>
-    <td>🟨 Probably</td>
-  </tr>
-</tbody>
+<p><table>
+     <thead>
+          <tr><th>ISA / OS</th><th>Windows</th><th>Linux</th><th>macOS</th></tr>
+     </thead>
+     <tbody>
+          <tr><td>x86 (IA32)</td><td class="center">✅</td><td class="center">✅</td><td class="center">⬜️</td></tr>
+          <tr><td>x86_64 (AMD64)</td><td class="center">✅</td><td class="center">✅</td><td class="center">✅</td></tr>
+          <tr><td>ARM32 Little Endian</td><td class="center">⬜️</td><td class="center">✅</td> <td class="center">⬜️</td></tr>
+          <tr><td>ARM64 (AArch64) Little Endian</td><td class="center">✅</td><td class="center">✅</td><td class="center">✅</td></tr>
+          <tr><td>RISC-V 64</td><td class="center">⬜️</td><td class="center">✅</td><td class="center">⬜️</td></tr>
+     </tbody>
 </table>
+<div class="legend">✅ Yes | 🟨 Probably | ⬜️ <em>Not applicable</em></div></p>
 
-<p>You can find more information about Koffi on the official web site: <a href="https://koffi.dev">https://koffi.dev/</a></p>
+<p><table>
+     <thead>
+          <tr><th>ISA / OS</th><th>FreeBSD</th><th>OpenBSD</th></tr>
+     </thead>
+     <tbody>
+          <tr><td>x86 (IA32)</td><td class="center">✅</td><td class="center">✅</td></tr>
+          <tr><td>x86_64 (AMD64)</td><td class="center">✅</td><td class="center">✅</td></tr>
+          <tr><td>ARM32 Little Endian</td><td class="center">🟨</td><td class="center">🟨</td></tr>
+          <tr><td>ARM64 (AArch64) Little Endian</td><td class="center">✅</td><td class="center">🟨</td></tr>
+          <tr><td>RISC-V 64</td><td class="center">🟨</td><td class="center">🟨</td></tr>
+     </tbody>
+</table>
+<div class="legend">✅ Yes | 🟨 Probably | ⬜️ <em>Not applicable</em></div></p>
 <h1 id="license">License</h1>
 <p>This program is free software: you can redistribute it and/or modify it under the terms of the <strong>MIT License</strong>.</p>
 

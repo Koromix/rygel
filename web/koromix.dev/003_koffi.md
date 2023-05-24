@@ -11,17 +11,39 @@ Koffi is a fast and easy-to-use C FFI module for [Node.js](https://nodejs.org/),
 * Javascript functions can be used as C callbacks (since 1.2.0)
 * Well-tested code base for popular OS/architecture combinations
 
+You can find more information about Koffi on the official web site: [https://koffi.dev/](https://koffi.dev)
+
+# Platforms
+
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
-ISA / OS           | Windows     | Linux    | macOS       | FreeBSD     | OpenBSD
------------------- | ----------- | -------- | ----------- | ----------- | --------
-x86 (IA32)         | ✅ Yes      | ✅ Yes   | ⬜️ *N/A*    | ✅ Yes      | ✅ Yes
-x86_64 (AMD64)     | ✅ Yes      | ✅ Yes   | ✅ Yes      | ✅ Yes      | ✅ Yes
-ARM32 LE           | ⬜️ *N/A*    | ✅ Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
-ARM64 (AArch64) LE | ✅ Yes      | ✅ Yes   | ✅ Yes      | ✅ Yes      | 🟨 Probably
-RISC-V 64          | ⬜️ *N/A*    | ✅ Yes   | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
+<table>
+     <thead>
+          <tr><th>ISA / OS</th><th>Windows</th><th>Linux</th><th>macOS</th></tr>
+     </thead>
+     <tbody>
+          <tr><td>x86 (IA32)</td><td class="center">✅</td><td class="center">✅</td><td class="center">⬜️</td></tr>
+          <tr><td>x86_64 (AMD64)</td><td class="center">✅</td><td class="center">✅</td><td class="center">✅</td></tr>
+          <tr><td>ARM32 Little Endian</td><td class="center">⬜️</td><td class="center">✅</td> <td class="center">⬜️</td></tr>
+          <tr><td>ARM64 (AArch64) Little Endian</td><td class="center">✅</td><td class="center">✅</td><td class="center">✅</td></tr>
+          <tr><td>RISC-V 64</td><td class="center">⬜️</td><td class="center">✅</td><td class="center">⬜️</td></tr>
+     </tbody>
+</table>
+<div class="legend">✅ Yes | 🟨 Probably | ⬜️ *Not applicable*</div>
 
-You can find more information about Koffi on the official web site: [https://koffi.dev/](https://koffi.dev)
+<table>
+     <thead>
+          <tr><th>ISA / OS</th><th>FreeBSD</th><th>OpenBSD</th></tr>
+     </thead>
+     <tbody>
+          <tr><td>x86 (IA32)</td><td class="center">✅</td><td class="center">✅</td></tr>
+          <tr><td>x86_64 (AMD64)</td><td class="center">✅</td><td class="center">✅</td></tr>
+          <tr><td>ARM32 Little Endian</td><td class="center">🟨</td><td class="center">🟨</td></tr>
+          <tr><td>ARM64 (AArch64) Little Endian</td><td class="center">✅</td><td class="center">🟨</td></tr>
+          <tr><td>RISC-V 64</td><td class="center">🟨</td><td class="center">🟨</td></tr>
+     </tbody>
+</table>
+<div class="legend">✅ Yes | 🟨 Probably | ⬜️ *Not applicable*</div>
 
 # License
 
