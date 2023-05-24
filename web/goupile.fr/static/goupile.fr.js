@@ -49,7 +49,7 @@ function initMenu() {
 
             let a = document.createElement('a');
             a.setAttribute('href', '#' + h.id);
-            a.style.fontWeight = (h.tagName == 'H1') ? 'bold' : 'normal';
+            a.classList.toggle('toplevel', h.tagName == 'H1');
             a.textContent = h.textContent;
 
             li.appendChild(a);
@@ -58,11 +58,13 @@ function initMenu() {
     }
 
     if (uls.length) {
+        let main = document.querySelector('main');
         let menu = document.createElement('nav');
+
         menu.id = 'menu';
         menu.appendChild(uls[0]);
 
-        document.body.appendChild(menu);
+        document.body.insertBefore(menu, main);
     }
 }
 

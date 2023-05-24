@@ -22,6 +22,7 @@ body {
     font-family: 'Open Sans', sans-serif;
     font-size: 16px;
     line-height: 1.5;
+    color: #383838;
 }
 
 a {
@@ -114,7 +115,7 @@ td {
 
 #menu {
     position: fixed;
-    left: calc(50% + 485px);
+    left: calc(50% + 325px);
     top: 4em;
     width: 240px;
     padding: 0 1em 0 0;
@@ -135,9 +136,11 @@ td {
     display: block;
     text-decoration: none;
     padding-left: 0;
+    color: inherit;
 }
+#menu a.toplevel { font-weight: bold; }
 #menu a:hover { text-decoration: underline; }
-#menu a.active { background: #f6f6f6; }
+#menu a.active { text-decoration: underline; }
 #menu li li a { padding-left: 1em; }
 #menu li li li a { padding-left: 2em; }
 
@@ -145,9 +148,10 @@ main {
     width: 100%;
     background: white;
     box-sizing: border-box;
-    max-width: 970px;
-    padding: 1.5em 1.5em 1.5em;
+    max-width: 1200px;
+    padding: 1.5em;
 }
+#menu ~ main { padding-right: calc(280px + 1.5em); }
 
 .slideshow {
     position: relative;
@@ -295,7 +299,21 @@ pre {
     top: -0.5em;
 }
 
-@media screen and (max-width: 680px) {
+@media screen and (max-width: 1300px) {
+    #menu {
+        position: static;
+        width: calc(100% - 3em);
+        background: white;
+        box-sizing: border-box;
+        max-width: calc(1200px - 3em);
+        margin: 3em 1.5em 1.5em 1.5em;
+        border: 2px solid #383838;
+    }
+
+    main { padding: 1.5em !important; }
+}
+
+@media screen and (max-width: 960px) {
     #header { height: auto; }
     #header > div:first-child > a { text-align: right; }
     #header > div:not(:first-child) > a { text-align: left; }
@@ -307,15 +325,19 @@ pre {
     }
     #logo { margin: 2px 6px; }
 
+    #menu {
+        width: calc(100% - 2em);
+        margin: 2em 1em 1em 1em;
+    }
+
     .flag {
-        top: 8px;
+        top: 20px;
         left: 8px;
         width: 24px;
         height: 18px;
     }
 
-    #menu { display: none; }
-    main { padding: 1em; }
+    main { padding: 1em !important; }
 
     .slideshow { margin-top: 20px; }
     .legend {
