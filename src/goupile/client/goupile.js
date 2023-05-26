@@ -383,7 +383,7 @@ const goupile = new function() {
             d.password('*new_password', 'Nouveau mot de passe');
             d.password('*new_password2', null, {
                 placeholder: 'Confirmation',
-                help: 'Doit contenir au moins 8 caractères de 3 classes différentes'
+                help: 'Votre mot de passe doit être suffisamment complexe (longueur, lettres, chiffres, symboles)'
             });
             if (d.values.new_password != null && d.values.new_password2 != null &&
                                                  d.values.new_password !== d.values.new_password2)
