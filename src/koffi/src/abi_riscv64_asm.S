@@ -169,7 +169,7 @@ ForwardCallXDD:
     addi a1, sp, 8
     addi a2, sp, 176
     addi a3, sp, 136
-    jal RelayCallback
+    call RelayCallback
     ld ra, 0(sp)
     ld a0, 136(sp)
     ld a1, 144(sp)
@@ -201,7 +201,7 @@ ForwardCallXDD:
     addi a1, sp, 8
     addi a2, sp, 176
     addi a3, sp, 136
-    jal RelayCallback
+    call RelayCallback
     ld ra, 0(sp)
     ld a0, 136(sp)
     ld a1, 144(sp)
