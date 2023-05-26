@@ -64,3 +64,4 @@ if NOT ERRORLEVEL 1 (
 
 echo Could not find any compiler (cl/link, clang-cl/link, g++) in PATH
 echo To build with Clang or MSVC, you need to use the Visual Studio command prompt
+exit /B 1

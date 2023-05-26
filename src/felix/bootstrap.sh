@@ -41,3 +41,4 @@ if command -v g++ >/dev/null 2>&1; then
 fi
 
 echo "Could not find any compiler (g++, clang++) in PATH"
+exit 1
