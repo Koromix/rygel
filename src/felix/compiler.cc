@@ -500,7 +500,11 @@ public:
             Fmt(&buf, " -fsanitize=safe-stack");
         }
         if (features & (int)CompileFeature::ZeroInit) {
-            Fmt(&buf, " -ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang");
+            Fmt(&buf, " -ftrivial-auto-var-init=zero");
+
+            if (clang_ver < 160000) {
+                Fmt(&buf, " -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang");
+            }
         }
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(features & (int)CompileFeature::LTO);
