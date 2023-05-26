@@ -21,15 +21,9 @@ sudo -u $USER git fetch --all
 sudo -u $USER git reset --hard
 sudo -u $USER git checkout 'origin/{{ goupile_commit }}'
 
-# Update or bootstrap Felix
-if ! sudo -u $USER bin/Paranoid/felix -pParanoid --host=,clang-11,lld-11 felix; then
-    sudo -u $USER ./bootstrap.sh
-    sudo -u $USER ./felix -pParanoid --host=,clang-11,lld-11 felix
-    rm -f felix
-fi
-
 # Build Goupile
-sudo -u $USER bin/Paranoid/felix -pParanoid --host=,clang-11,lld-11 felix goupile
+sudo -u $USER ./boostrap.sh
+sudo -u $USER ./felix -pParanoid --host=,clang-11,lld-11 goupile
 
 # Install Goupile
 rsync -cp bin/Paranoid/goupile '{{ goupile_root_path }}/goupile'
