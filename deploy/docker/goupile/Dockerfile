@@ -9,4 +9,4 @@ RUN LDFLAGS="-static-libstdc++ -static-libgcc" ./felix -pParanoid --host=,clang-
 
 FROM gcr.io/distroless/base-debian11
 COPY --from=build /build/bin/Paranoid/goupile /goupile
-CMD ["/goupile"]
+CMD ["/goupile", "--sandbox"]
