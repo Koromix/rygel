@@ -513,7 +513,7 @@ public:
             }
 
             if (clang_ver >= 150000) {
-                Fmt(&buf, " -cfprotection=branch");
+                Fmt(&buf, " -fcf-protection=branch");
             }
         }
         if (features & (int)CompileFeature::ShuffleCode) {
@@ -968,7 +968,7 @@ public:
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
         }
         if (features & (int)CompileFeature::CFI) {
-            Fmt(&buf, " -cfprotection=branch");
+            Fmt(&buf, " -fcf-protection=branch");
         }
 
         // Sources and definitions
