@@ -38,7 +38,7 @@ static const Size DefaultMaxTypeSize = Mebibytes(64);
 static const int MaxAsyncCalls = 256;
 static const Size MaxParameters = 32;
 static const Size MaxOutParameters = 16;
-static const Size MaxTrampolines = 1024;
+static const Size MaxTrampolines = 8192;
 
 enum class PrimitiveKind {
     Void,
