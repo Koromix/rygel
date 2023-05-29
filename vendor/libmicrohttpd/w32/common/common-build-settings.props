@@ -1,19 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="UserMacros">
-    <!-- WinXP = 0; Vista = 1; Win7 = 2; Win8 = 3...
-         Only 0 and 1 are used currently -->
-    <TargetOSLevel Condition="$(PlatformToolset.EndsWith('_xp'))">0</TargetOSLevel>
-    <TargetOSLevel Condition="! $(PlatformToolset.EndsWith('_xp'))">1</TargetOSLevel>
+    <!-- Target minimum OS version: WinXP = 0; Vista = 1; Win7 = 2; Win8 = 3...
+         Only 0, 1 and 3 are used currently -->
+    <TargetOSLevel Condition="$(Platform.StartsWith('ARM'))">3</TargetOSLevel>
+    <TargetOSLevel Condition="! $(Platform.StartsWith('ARM')) And $(PlatformToolset.EndsWith('_xp'))">0</TargetOSLevel>
+    <TargetOSLevel Condition="! $(Platform.StartsWith('ARM')) And ! $(PlatformToolset.EndsWith('_xp'))">1</TargetOSLevel>
+    <MhdNumBits Condition="$(Platform.EndsWith('64'))">64</MhdNumBits>
+    <MhdNumBits Condition="! $(Platform.EndsWith('64'))">32</MhdNumBits>
   </PropertyGroup>
   <PropertyGroup>
     <IncludePath>$(SolutionDir);$(MhdW32Common);$(MhdSrc)include;$(IncludePath)</IncludePath>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Platform)'=='Win32'">
-    <IntDir>$(SolutionDir)$(ProjectName)\$(Configuration)\</IntDir>
-    <OutDir>$(SolutionDir)Output\</OutDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Platform)'=='x64'">
+  <PropertyGroup>
     <IntDir>$(SolutionDir)$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)Output\$(Platform)\</OutDir>
   </PropertyGroup>
@@ -27,8 +26,8 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4996;4820;4127;5045</DisableSpecificWarnings>
       <TreatSpecificWarningsAsErrors>4013</TreatSpecificWarningsAsErrors>
       <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -38,7 +37,23 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(TargetOSLevel)'&gt;'0'">
+  <ItemDefinitionGroup Condition="'$(MhdNumBits)' == '32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(TargetOSLevel)'&gt;='3'">
+    <ClCompile>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0602;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <MinimumRequiredVersion>6.02</MinimumRequiredVersion>
+    </Link>
+    <Lib>
+      <MinimumRequiredVersion>6.02</MinimumRequiredVersion>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(TargetOSLevel)'&gt;'0' And '$(TargetOSLevel)'&lt;'3'">
     <ClCompile>
       <PreprocessorDefinitions>_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>

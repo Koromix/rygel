@@ -91,6 +91,7 @@ host_triplet = @host@
 @HEAVY_TESTS_TRUE@am__append_2 = \
 @HEAVY_TESTS_TRUE@  test_add_conn_cleanup \
 @HEAVY_TESTS_TRUE@  test_add_conn_cleanup_nolisten \
+@HEAVY_TESTS_TRUE@  test_timeout \
 @HEAVY_TESTS_TRUE@  $(EMPTY_ITEM)
 
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__append_3 = \
@@ -164,14 +165,28 @@ host_triplet = @host@
 @HAVE_CURL_TRUE@	test_get_chunked_empty_forced$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_get_chunked_close_empty_forced$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_put_chunked$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_callback$(EXEEXT) $(am__EXEEXT_1) \
-@HAVE_CURL_TRUE@	$(am__EXEEXT_2) $(am__EXEEXT_3) \
-@HAVE_CURL_TRUE@	$(am__EXEEXT_4) $(am__EXEEXT_13) \
-@HAVE_CURL_TRUE@	$(am__EXEEXT_14)
+@HAVE_CURL_TRUE@	test_callback$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_get_header_fold$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_put_header_fold$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_put_large_header_fold$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_put_header_fold_last$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_put_header_fold_large$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_get_header_double_fold$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_put_header_double_fold$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_put_large_header_double_fold$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_put_header_double_fold_last$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_put_header_double_fold_large$(EXEEXT) \
+@HAVE_CURL_TRUE@	$(am__EXEEXT_1) $(am__EXEEXT_2) \
+@HAVE_CURL_TRUE@	$(am__EXEEXT_3) $(am__EXEEXT_4) \
+@HAVE_CURL_TRUE@	$(am__EXEEXT_5) $(am__EXEEXT_14) \
+@HAVE_CURL_TRUE@	$(am__EXEEXT_15)
 @HAVE_CURL_TRUE@@HEAVY_TESTS_TRUE@am__append_9 = \
 @HAVE_CURL_TRUE@@HEAVY_TESTS_TRUE@  perf_get
 
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__append_10 = \
+@ENABLE_BAUTH_TRUE@@HAVE_CURL_TRUE@am__append_10 = \
+@ENABLE_BAUTH_TRUE@@HAVE_CURL_TRUE@  test_basicauth
+
+@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__append_11 = \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_postform \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post_loop \
@@ -179,11 +194,11 @@ host_triplet = @host@
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_postform11 \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post_loop11
 
-@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@am__append_11 = test_get_response_cleanup
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__append_12 = \
+@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@am__append_12 = test_get_response_cleanup
+@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__append_13 = \
 @HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
 
-@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__append_13 = \
+@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__append_14 = \
 @HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
 
 subdir = src/testcurl
@@ -198,19 +213,22 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/ax_have_epoll.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/ax_require_defined.m4 \
-	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/host-cpu-c-abi.m4 \
-	$(top_srcdir)/m4/iconv.m4 $(top_srcdir)/m4/intlmacosx.m4 \
-	$(top_srcdir)/m4/lib-ld.m4 $(top_srcdir)/m4/lib-link.m4 \
-	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/libcurl.m4 \
-	$(top_srcdir)/m4/libgcrypt.m4 $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
-	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/gettext.m4 \
+	$(top_srcdir)/m4/host-cpu-c-abi.m4 $(top_srcdir)/m4/iconv.m4 \
+	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/lib-ld.m4 \
+	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
+	$(top_srcdir)/m4/libcurl.m4 $(top_srcdir)/m4/libgcrypt.m4 \
+	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
+	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
+	$(top_srcdir)/m4/lt~obsolete.m4 \
 	$(top_srcdir)/m4/mhd_check_func.m4 \
+	$(top_srcdir)/m4/mhd_check_link_run.m4 \
+	$(top_srcdir)/m4/mhd_find_lib.m4 \
+	$(top_srcdir)/m4/mhd_norm_expd.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
 	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/m4/search_h.m4 \
-	$(top_srcdir)/m4/tsearch.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -221,39 +239,40 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__EXEEXT_1 =
 @HAVE_CURL_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_2 = perf_get$(EXEEXT)
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_3 =  \
+@ENABLE_BAUTH_TRUE@@HAVE_CURL_TRUE@am__EXEEXT_3 =  \
+@ENABLE_BAUTH_TRUE@@HAVE_CURL_TRUE@	test_basicauth$(EXEEXT)
+@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_4 =  \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_postform$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post_loop$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post11$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_postform11$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post_loop11$(EXEEXT)
-@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_4 = test_get_response_cleanup$(EXEEXT)
-@HEAVY_TESTS_TRUE@am__EXEEXT_5 = test_add_conn_cleanup$(EXEEXT) \
+@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_5 = test_get_response_cleanup$(EXEEXT)
+@HEAVY_TESTS_TRUE@am__EXEEXT_6 = test_add_conn_cleanup$(EXEEXT) \
 @HEAVY_TESTS_TRUE@	test_add_conn_cleanup_nolisten$(EXEEXT) \
-@HEAVY_TESTS_TRUE@	$(am__EXEEXT_1)
-@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_6 = perf_get_concurrent11$(EXEEXT) \
+@HEAVY_TESTS_TRUE@	test_timeout$(EXEEXT) $(am__EXEEXT_1)
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_7 = perf_get_concurrent11$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@	$(am__EXEEXT_1)
-@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_7 = test_get_wait$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_8 = test_get_wait$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@	test_get_wait11$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@	test_quiesce$(EXEEXT) $(am__EXEEXT_1)
-@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_8 = test_concurrent_stop$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_9 = test_concurrent_stop$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@	$(am__EXEEXT_1)
-@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_9 = test_quiesce_stream$(EXEEXT)
-@ENABLE_DAUTH_TRUE@am__EXEEXT_10 = test_digestauth$(EXEEXT) \
+@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_10 = test_quiesce_stream$(EXEEXT)
+@ENABLE_DAUTH_TRUE@am__EXEEXT_11 = test_digestauth$(EXEEXT) \
 @ENABLE_DAUTH_TRUE@	test_digestauth_sha256$(EXEEXT) \
 @ENABLE_DAUTH_TRUE@	test_digestauth_with_arguments$(EXEEXT)
-@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_11 = perf_get_concurrent$(EXEEXT)
-am__EXEEXT_12 = test_urlparse$(EXEEXT) test_long_header$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_12 = perf_get_concurrent$(EXEEXT)
+am__EXEEXT_13 = test_urlparse$(EXEEXT) test_long_header$(EXEEXT) \
 	test_long_header11$(EXEEXT) test_iplimit11$(EXEEXT) \
-	test_termination$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_5) \
-	test_timeout$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_6) \
+	test_termination$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_6) \
 	$(am__EXEEXT_7) $(am__EXEEXT_8) $(am__EXEEXT_9) \
-	$(am__EXEEXT_10) $(am__EXEEXT_11)
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_13 =  \
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@	$(am__EXEEXT_12)
-@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_14 =  \
-@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@	$(am__EXEEXT_12)
+	$(am__EXEEXT_10) $(am__EXEEXT_11) $(am__EXEEXT_12)
+@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_14 =  \
+@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@	$(am__EXEEXT_13)
+@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_15 =  \
+@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@	$(am__EXEEXT_13)
 am_perf_get_OBJECTS = perf_get.$(OBJEXT)
 perf_get_OBJECTS = $(am_perf_get_OBJECTS)
 perf_get_LDADD = $(LDADD)
@@ -318,6 +337,11 @@ test_add_conn_nolisten_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(test_add_conn_nolisten_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_test_basicauth_OBJECTS = test_basicauth.$(OBJEXT)
+test_basicauth_OBJECTS = $(am_test_basicauth_OBJECTS)
+test_basicauth_LDADD = $(LDADD)
+test_basicauth_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_callback_OBJECTS = test_callback.$(OBJEXT)
 test_callback_OBJECTS = $(am_test_callback_OBJECTS)
 test_callback_LDADD = $(LDADD)
@@ -462,6 +486,18 @@ am_test_get_close10_OBJECTS = test_get_close_keep_alive.$(OBJEXT)
 test_get_close10_OBJECTS = $(am_test_get_close10_OBJECTS)
 test_get_close10_LDADD = $(LDADD)
 test_get_close10_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am__objects_1 = test_put_header_fold.$(OBJEXT)
+am_test_get_header_double_fold_OBJECTS = $(am__objects_1)
+test_get_header_double_fold_OBJECTS =  \
+	$(am_test_get_header_double_fold_OBJECTS)
+test_get_header_double_fold_LDADD = $(LDADD)
+test_get_header_double_fold_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_get_header_fold_OBJECTS = $(am__objects_1)
+test_get_header_fold_OBJECTS = $(am_test_get_header_fold_OBJECTS)
+test_get_header_fold_LDADD = $(LDADD)
+test_get_header_fold_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_get_iovec_OBJECTS = test_get_iovec.$(OBJEXT)
 test_get_iovec_OBJECTS = $(am_test_get_iovec_OBJECTS)
@@ -611,6 +647,54 @@ test_put_chunked_OBJECTS = $(am_test_put_chunked_OBJECTS)
 test_put_chunked_LDADD = $(LDADD)
 test_put_chunked_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_put_header_double_fold_OBJECTS = $(am__objects_1)
+test_put_header_double_fold_OBJECTS =  \
+	$(am_test_put_header_double_fold_OBJECTS)
+test_put_header_double_fold_LDADD = $(LDADD)
+test_put_header_double_fold_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am__objects_2 = $(am__objects_1)
+am_test_put_header_double_fold_large_OBJECTS = $(am__objects_2)
+test_put_header_double_fold_large_OBJECTS =  \
+	$(am_test_put_header_double_fold_large_OBJECTS)
+test_put_header_double_fold_large_LDADD = $(LDADD)
+test_put_header_double_fold_large_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_put_header_double_fold_last_OBJECTS = $(am__objects_2)
+test_put_header_double_fold_last_OBJECTS =  \
+	$(am_test_put_header_double_fold_last_OBJECTS)
+test_put_header_double_fold_last_LDADD = $(LDADD)
+test_put_header_double_fold_last_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_put_header_fold_OBJECTS = test_put_header_fold.$(OBJEXT)
+test_put_header_fold_OBJECTS = $(am_test_put_header_fold_OBJECTS)
+test_put_header_fold_LDADD = $(LDADD)
+test_put_header_fold_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_put_header_fold_large_OBJECTS = $(am__objects_1)
+test_put_header_fold_large_OBJECTS =  \
+	$(am_test_put_header_fold_large_OBJECTS)
+test_put_header_fold_large_LDADD = $(LDADD)
+test_put_header_fold_large_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_put_header_fold_last_OBJECTS = $(am__objects_1)
+test_put_header_fold_last_OBJECTS =  \
+	$(am_test_put_header_fold_last_OBJECTS)
+test_put_header_fold_last_LDADD = $(LDADD)
+test_put_header_fold_last_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_put_large_header_double_fold_OBJECTS = $(am__objects_2)
+test_put_large_header_double_fold_OBJECTS =  \
+	$(am_test_put_large_header_double_fold_OBJECTS)
+test_put_large_header_double_fold_LDADD = $(LDADD)
+test_put_large_header_double_fold_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_put_large_header_fold_OBJECTS = $(am__objects_1)
+test_put_large_header_fold_OBJECTS =  \
+	$(am_test_put_large_header_fold_OBJECTS)
+test_put_large_header_fold_LDADD = $(LDADD)
+test_put_large_header_fold_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_quiesce_OBJECTS = test_quiesce-test_quiesce.$(OBJEXT)
 test_quiesce_OBJECTS = $(am_test_quiesce_OBJECTS)
 test_quiesce_DEPENDENCIES = $(am__DEPENDENCIES_1) \
@@ -722,7 +806,7 @@ am__depfiles_remade = ./$(DEPDIR)/perf_get.Po \
 	./$(DEPDIR)/test_add_conn_cleanup-test_add_conn.Po \
 	./$(DEPDIR)/test_add_conn_cleanup_nolisten-test_add_conn.Po \
 	./$(DEPDIR)/test_add_conn_nolisten-test_add_conn.Po \
-	./$(DEPDIR)/test_callback.Po \
+	./$(DEPDIR)/test_basicauth.Po ./$(DEPDIR)/test_callback.Po \
 	./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po \
 	./$(DEPDIR)/test_delete.Po ./$(DEPDIR)/test_digestauth.Po \
 	./$(DEPDIR)/test_digestauth_sha256.Po \
@@ -742,6 +826,7 @@ am__depfiles_remade = ./$(DEPDIR)/perf_get.Po \
 	./$(DEPDIR)/test_process_arguments.Po \
 	./$(DEPDIR)/test_process_headers.Po ./$(DEPDIR)/test_put.Po \
 	./$(DEPDIR)/test_put_chunked.Po \
+	./$(DEPDIR)/test_put_header_fold.Po \
 	./$(DEPDIR)/test_quiesce-test_quiesce.Po \
 	./$(DEPDIR)/test_quiesce_stream-test_quiesce_stream.Po \
 	./$(DEPDIR)/test_termination.Po ./$(DEPDIR)/test_timeout.Po \
@@ -770,9 +855,10 @@ SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(perf_get_concurrent11_SOURCES) $(test_add_conn_SOURCES) \
 	$(test_add_conn_cleanup_SOURCES) \
 	$(test_add_conn_cleanup_nolisten_SOURCES) \
-	$(test_add_conn_nolisten_SOURCES) $(test_callback_SOURCES) \
-	$(test_concurrent_stop_SOURCES) $(test_delete_SOURCES) \
-	$(test_digestauth_SOURCES) $(test_digestauth_sha256_SOURCES) \
+	$(test_add_conn_nolisten_SOURCES) $(test_basicauth_SOURCES) \
+	$(test_callback_SOURCES) $(test_concurrent_stop_SOURCES) \
+	$(test_delete_SOURCES) $(test_digestauth_SOURCES) \
+	$(test_digestauth_sha256_SOURCES) \
 	$(test_digestauth_with_arguments_SOURCES) $(test_get_SOURCES) \
 	$(test_get11_SOURCES) $(test_get_chunked_SOURCES) \
 	$(test_get_chunked_close_SOURCES) \
@@ -791,8 +877,9 @@ SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(test_get_chunked_string_SOURCES) \
 	$(test_get_chunked_string_empty_SOURCES) \
 	$(test_get_close_SOURCES) $(test_get_close10_SOURCES) \
-	$(test_get_iovec_SOURCES) $(test_get_iovec11_SOURCES) \
-	$(test_get_keep_alive_SOURCES) \
+	$(test_get_header_double_fold_SOURCES) \
+	$(test_get_header_fold_SOURCES) $(test_get_iovec_SOURCES) \
+	$(test_get_iovec11_SOURCES) $(test_get_keep_alive_SOURCES) \
 	$(test_get_keep_alive10_SOURCES) \
 	$(test_get_response_cleanup_SOURCES) \
 	$(test_get_sendfile_SOURCES) $(test_get_sendfile11_SOURCES) \
@@ -807,9 +894,16 @@ SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(test_postform11_SOURCES) $(test_process_arguments_SOURCES) \
 	$(test_process_headers_SOURCES) $(test_put_SOURCES) \
 	$(test_put11_SOURCES) $(test_put_chunked_SOURCES) \
-	$(test_quiesce_SOURCES) $(test_quiesce_stream_SOURCES) \
-	$(test_termination_SOURCES) $(test_timeout_SOURCES) \
-	$(test_toolarge_method_SOURCES) \
+	$(test_put_header_double_fold_SOURCES) \
+	$(test_put_header_double_fold_large_SOURCES) \
+	$(test_put_header_double_fold_last_SOURCES) \
+	$(test_put_header_fold_SOURCES) \
+	$(test_put_header_fold_large_SOURCES) \
+	$(test_put_header_fold_last_SOURCES) \
+	$(test_put_large_header_double_fold_SOURCES) \
+	$(test_put_large_header_fold_SOURCES) $(test_quiesce_SOURCES) \
+	$(test_quiesce_stream_SOURCES) $(test_termination_SOURCES) \
+	$(test_timeout_SOURCES) $(test_toolarge_method_SOURCES) \
 	$(test_toolarge_reply_header_name_SOURCES) \
 	$(test_toolarge_reply_header_value_SOURCES) \
 	$(test_toolarge_reply_headers_SOURCES) \
@@ -822,9 +916,10 @@ DIST_SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(perf_get_concurrent11_SOURCES) $(test_add_conn_SOURCES) \
 	$(test_add_conn_cleanup_SOURCES) \
 	$(test_add_conn_cleanup_nolisten_SOURCES) \
-	$(test_add_conn_nolisten_SOURCES) $(test_callback_SOURCES) \
-	$(test_concurrent_stop_SOURCES) $(test_delete_SOURCES) \
-	$(test_digestauth_SOURCES) $(test_digestauth_sha256_SOURCES) \
+	$(test_add_conn_nolisten_SOURCES) $(test_basicauth_SOURCES) \
+	$(test_callback_SOURCES) $(test_concurrent_stop_SOURCES) \
+	$(test_delete_SOURCES) $(test_digestauth_SOURCES) \
+	$(test_digestauth_sha256_SOURCES) \
 	$(test_digestauth_with_arguments_SOURCES) $(test_get_SOURCES) \
 	$(test_get11_SOURCES) $(test_get_chunked_SOURCES) \
 	$(test_get_chunked_close_SOURCES) \
@@ -843,8 +938,9 @@ DIST_SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(test_get_chunked_string_SOURCES) \
 	$(test_get_chunked_string_empty_SOURCES) \
 	$(test_get_close_SOURCES) $(test_get_close10_SOURCES) \
-	$(test_get_iovec_SOURCES) $(test_get_iovec11_SOURCES) \
-	$(test_get_keep_alive_SOURCES) \
+	$(test_get_header_double_fold_SOURCES) \
+	$(test_get_header_fold_SOURCES) $(test_get_iovec_SOURCES) \
+	$(test_get_iovec11_SOURCES) $(test_get_keep_alive_SOURCES) \
 	$(test_get_keep_alive10_SOURCES) \
 	$(test_get_response_cleanup_SOURCES) \
 	$(test_get_sendfile_SOURCES) $(test_get_sendfile11_SOURCES) \
@@ -859,9 +955,16 @@ DIST_SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(test_postform11_SOURCES) $(test_process_arguments_SOURCES) \
 	$(test_process_headers_SOURCES) $(test_put_SOURCES) \
 	$(test_put11_SOURCES) $(test_put_chunked_SOURCES) \
-	$(test_quiesce_SOURCES) $(test_quiesce_stream_SOURCES) \
-	$(test_termination_SOURCES) $(test_timeout_SOURCES) \
-	$(test_toolarge_method_SOURCES) \
+	$(test_put_header_double_fold_SOURCES) \
+	$(test_put_header_double_fold_large_SOURCES) \
+	$(test_put_header_double_fold_last_SOURCES) \
+	$(test_put_header_fold_SOURCES) \
+	$(test_put_header_fold_large_SOURCES) \
+	$(test_put_header_fold_last_SOURCES) \
+	$(test_put_large_header_double_fold_SOURCES) \
+	$(test_put_large_header_fold_SOURCES) $(test_quiesce_SOURCES) \
+	$(test_quiesce_stream_SOURCES) $(test_termination_SOURCES) \
+	$(test_timeout_SOURCES) $(test_toolarge_method_SOURCES) \
 	$(test_toolarge_reply_header_name_SOURCES) \
 	$(test_toolarge_reply_header_value_SOURCES) \
 	$(test_toolarge_reply_headers_SOURCES) \
@@ -1177,12 +1280,10 @@ EMPTY_VAR = @EMPTY_VAR@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FILECMD = @FILECMD@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
-GNULIB_MDA_LFIND = @GNULIB_MDA_LFIND@
-GNULIB_MDA_LSEARCH = @GNULIB_MDA_LSEARCH@
-GNULIB_TSEARCH = @GNULIB_TSEARCH@
 GNUTLS_CFLAGS = @GNUTLS_CFLAGS@
 GNUTLS_CPPFLAGS = @GNUTLS_CPPFLAGS@
 GNUTLS_LDFLAGS = @GNUTLS_LDFLAGS@
@@ -1190,8 +1291,6 @@ GNUTLS_LIBS = @GNUTLS_LIBS@
 GREP = @GREP@
 HAVE_CURL_BINARY = @HAVE_CURL_BINARY@
 HAVE_MAKEINFO_BINARY = @HAVE_MAKEINFO_BINARY@
-HAVE_TSEARCH = @HAVE_TSEARCH@
-HAVE_TWALK = @HAVE_TWALK@
 HEAVY_TESTS_NOTPARALLEL = @HEAVY_TESTS_NOTPARALLEL@
 HIDDEN_VISIBILITY_CFLAGS = @HIDDEN_VISIBILITY_CFLAGS@
 INSTALL = @INSTALL@
@@ -1268,7 +1367,6 @@ PTHREAD_CXX = @PTHREAD_CXX@
 PTHREAD_LIBS = @PTHREAD_LIBS@
 RANLIB = @RANLIB@
 RC = @RC@
-REPLACE_TSEARCH = @REPLACE_TSEARCH@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -1356,9 +1454,8 @@ LDADD = \
 
 THREAD_ONLY_TESTS = test_urlparse test_long_header test_long_header11 \
 	test_iplimit11 test_termination $(EMPTY_ITEM) $(am__append_2) \
-	test_timeout $(EMPTY_ITEM) $(am__append_3) $(am__append_4) \
-	$(am__append_5) $(am__append_6) $(am__append_7) \
-	$(am__append_8)
+	$(am__append_3) $(am__append_4) $(am__append_5) \
+	$(am__append_6) $(am__append_7) $(am__append_8)
 @HAVE_CURL_TRUE@TESTS = $(check_PROGRAMS)
 test_concurrent_stop_SOURCES = \
   test_concurrent_stop.c
@@ -1416,6 +1513,9 @@ perf_get_concurrent11_CFLAGS = \
 
 perf_get_concurrent11_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
+
+test_basicauth_SOURCES = \
+  test_basicauth.c
 
 test_digestauth_SOURCES = \
   test_digestauth.c
@@ -1680,6 +1780,18 @@ test_tricky_url_SOURCES = \
 test_tricky_header2_SOURCES = \
   test_tricky.c ../microhttpd/test_helpers.h
 
+test_put_header_fold_SOURCES = \
+  test_put_header_fold.c ../microhttpd/test_helpers.h
+
+test_put_large_header_fold_SOURCES = $(test_put_header_fold_SOURCES)
+test_get_header_fold_SOURCES = $(test_put_header_fold_SOURCES)
+test_put_header_fold_last_SOURCES = $(test_put_header_fold_SOURCES)
+test_put_header_fold_large_SOURCES = $(test_put_header_fold_SOURCES)
+test_put_header_double_fold_SOURCES = $(test_put_header_fold_SOURCES)
+test_put_large_header_double_fold_SOURCES = $(test_put_large_header_fold_SOURCES)
+test_get_header_double_fold_SOURCES = $(test_put_header_fold_SOURCES)
+test_put_header_double_fold_last_SOURCES = $(test_put_header_fold_last_SOURCES)
+test_put_header_double_fold_large_SOURCES = $(test_put_header_fold_large_SOURCES)
 all: all-recursive
 
 .SUFFIXES:
@@ -1750,6 +1862,10 @@ test_add_conn_cleanup_nolisten$(EXEEXT): $(test_add_conn_cleanup_nolisten_OBJECT
 test_add_conn_nolisten$(EXEEXT): $(test_add_conn_nolisten_OBJECTS) $(test_add_conn_nolisten_DEPENDENCIES) $(EXTRA_test_add_conn_nolisten_DEPENDENCIES) 
 	@rm -f test_add_conn_nolisten$(EXEEXT)
 	$(AM_V_CCLD)$(test_add_conn_nolisten_LINK) $(test_add_conn_nolisten_OBJECTS) $(test_add_conn_nolisten_LDADD) $(LIBS)
+
+test_basicauth$(EXEEXT): $(test_basicauth_OBJECTS) $(test_basicauth_DEPENDENCIES) $(EXTRA_test_basicauth_DEPENDENCIES) 
+	@rm -f test_basicauth$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_basicauth_OBJECTS) $(test_basicauth_LDADD) $(LIBS)
 
 test_callback$(EXEEXT): $(test_callback_OBJECTS) $(test_callback_DEPENDENCIES) $(EXTRA_test_callback_DEPENDENCIES) 
 	@rm -f test_callback$(EXEEXT)
@@ -1854,6 +1970,14 @@ test_get_close$(EXEEXT): $(test_get_close_OBJECTS) $(test_get_close_DEPENDENCIES
 test_get_close10$(EXEEXT): $(test_get_close10_OBJECTS) $(test_get_close10_DEPENDENCIES) $(EXTRA_test_get_close10_DEPENDENCIES) 
 	@rm -f test_get_close10$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_get_close10_OBJECTS) $(test_get_close10_LDADD) $(LIBS)
+
+test_get_header_double_fold$(EXEEXT): $(test_get_header_double_fold_OBJECTS) $(test_get_header_double_fold_DEPENDENCIES) $(EXTRA_test_get_header_double_fold_DEPENDENCIES) 
+	@rm -f test_get_header_double_fold$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_get_header_double_fold_OBJECTS) $(test_get_header_double_fold_LDADD) $(LIBS)
+
+test_get_header_fold$(EXEEXT): $(test_get_header_fold_OBJECTS) $(test_get_header_fold_DEPENDENCIES) $(EXTRA_test_get_header_fold_DEPENDENCIES) 
+	@rm -f test_get_header_fold$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_get_header_fold_OBJECTS) $(test_get_header_fold_LDADD) $(LIBS)
 
 test_get_iovec$(EXEEXT): $(test_get_iovec_OBJECTS) $(test_get_iovec_DEPENDENCIES) $(EXTRA_test_get_iovec_DEPENDENCIES) 
 	@rm -f test_get_iovec$(EXEEXT)
@@ -1971,6 +2095,38 @@ test_put_chunked$(EXEEXT): $(test_put_chunked_OBJECTS) $(test_put_chunked_DEPEND
 	@rm -f test_put_chunked$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_put_chunked_OBJECTS) $(test_put_chunked_LDADD) $(LIBS)
 
+test_put_header_double_fold$(EXEEXT): $(test_put_header_double_fold_OBJECTS) $(test_put_header_double_fold_DEPENDENCIES) $(EXTRA_test_put_header_double_fold_DEPENDENCIES) 
+	@rm -f test_put_header_double_fold$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_header_double_fold_OBJECTS) $(test_put_header_double_fold_LDADD) $(LIBS)
+
+test_put_header_double_fold_large$(EXEEXT): $(test_put_header_double_fold_large_OBJECTS) $(test_put_header_double_fold_large_DEPENDENCIES) $(EXTRA_test_put_header_double_fold_large_DEPENDENCIES) 
+	@rm -f test_put_header_double_fold_large$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_header_double_fold_large_OBJECTS) $(test_put_header_double_fold_large_LDADD) $(LIBS)
+
+test_put_header_double_fold_last$(EXEEXT): $(test_put_header_double_fold_last_OBJECTS) $(test_put_header_double_fold_last_DEPENDENCIES) $(EXTRA_test_put_header_double_fold_last_DEPENDENCIES) 
+	@rm -f test_put_header_double_fold_last$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_header_double_fold_last_OBJECTS) $(test_put_header_double_fold_last_LDADD) $(LIBS)
+
+test_put_header_fold$(EXEEXT): $(test_put_header_fold_OBJECTS) $(test_put_header_fold_DEPENDENCIES) $(EXTRA_test_put_header_fold_DEPENDENCIES) 
+	@rm -f test_put_header_fold$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_header_fold_OBJECTS) $(test_put_header_fold_LDADD) $(LIBS)
+
+test_put_header_fold_large$(EXEEXT): $(test_put_header_fold_large_OBJECTS) $(test_put_header_fold_large_DEPENDENCIES) $(EXTRA_test_put_header_fold_large_DEPENDENCIES) 
+	@rm -f test_put_header_fold_large$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_header_fold_large_OBJECTS) $(test_put_header_fold_large_LDADD) $(LIBS)
+
+test_put_header_fold_last$(EXEEXT): $(test_put_header_fold_last_OBJECTS) $(test_put_header_fold_last_DEPENDENCIES) $(EXTRA_test_put_header_fold_last_DEPENDENCIES) 
+	@rm -f test_put_header_fold_last$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_header_fold_last_OBJECTS) $(test_put_header_fold_last_LDADD) $(LIBS)
+
+test_put_large_header_double_fold$(EXEEXT): $(test_put_large_header_double_fold_OBJECTS) $(test_put_large_header_double_fold_DEPENDENCIES) $(EXTRA_test_put_large_header_double_fold_DEPENDENCIES) 
+	@rm -f test_put_large_header_double_fold$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_large_header_double_fold_OBJECTS) $(test_put_large_header_double_fold_LDADD) $(LIBS)
+
+test_put_large_header_fold$(EXEEXT): $(test_put_large_header_fold_OBJECTS) $(test_put_large_header_fold_DEPENDENCIES) $(EXTRA_test_put_large_header_fold_DEPENDENCIES) 
+	@rm -f test_put_large_header_fold$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_large_header_fold_OBJECTS) $(test_put_large_header_fold_LDADD) $(LIBS)
+
 test_quiesce$(EXEEXT): $(test_quiesce_OBJECTS) $(test_quiesce_DEPENDENCIES) $(EXTRA_test_quiesce_DEPENDENCIES) 
 	@rm -f test_quiesce$(EXEEXT)
 	$(AM_V_CCLD)$(test_quiesce_LINK) $(test_quiesce_OBJECTS) $(test_quiesce_LDADD) $(LIBS)
@@ -2044,6 +2200,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_add_conn_cleanup-test_add_conn.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_add_conn_cleanup_nolisten-test_add_conn.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_add_conn_nolisten-test_add_conn.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_basicauth.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_callback.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_delete.Po@am__quote@ # am--include-marker
@@ -2070,6 +2227,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_process_headers.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_put.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_put_chunked.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_put_header_fold.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_quiesce-test_quiesce.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_quiesce_stream-test_quiesce_stream.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_termination.Po@am__quote@ # am--include-marker
@@ -2865,9 +3023,86 @@ test_callback.log: test_callback$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_get_header_fold.log: test_get_header_fold$(EXEEXT)
+	@p='test_get_header_fold$(EXEEXT)'; \
+	b='test_get_header_fold'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_header_fold.log: test_put_header_fold$(EXEEXT)
+	@p='test_put_header_fold$(EXEEXT)'; \
+	b='test_put_header_fold'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_large_header_fold.log: test_put_large_header_fold$(EXEEXT)
+	@p='test_put_large_header_fold$(EXEEXT)'; \
+	b='test_put_large_header_fold'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_header_fold_last.log: test_put_header_fold_last$(EXEEXT)
+	@p='test_put_header_fold_last$(EXEEXT)'; \
+	b='test_put_header_fold_last'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_header_fold_large.log: test_put_header_fold_large$(EXEEXT)
+	@p='test_put_header_fold_large$(EXEEXT)'; \
+	b='test_put_header_fold_large'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_get_header_double_fold.log: test_get_header_double_fold$(EXEEXT)
+	@p='test_get_header_double_fold$(EXEEXT)'; \
+	b='test_get_header_double_fold'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_header_double_fold.log: test_put_header_double_fold$(EXEEXT)
+	@p='test_put_header_double_fold$(EXEEXT)'; \
+	b='test_put_header_double_fold'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_large_header_double_fold.log: test_put_large_header_double_fold$(EXEEXT)
+	@p='test_put_large_header_double_fold$(EXEEXT)'; \
+	b='test_put_large_header_double_fold'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_header_double_fold_last.log: test_put_header_double_fold_last$(EXEEXT)
+	@p='test_put_header_double_fold_last$(EXEEXT)'; \
+	b='test_put_header_double_fold_last'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_header_double_fold_large.log: test_put_header_double_fold_large$(EXEEXT)
+	@p='test_put_header_double_fold_large$(EXEEXT)'; \
+	b='test_put_header_double_fold_large'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 perf_get.log: perf_get$(EXEEXT)
 	@p='perf_get$(EXEEXT)'; \
 	b='perf_get'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_basicauth.log: test_basicauth$(EXEEXT)
+	@p='test_basicauth$(EXEEXT)'; \
+	b='test_basicauth'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3172,6 +3407,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/test_add_conn_cleanup-test_add_conn.Po
 	-rm -f ./$(DEPDIR)/test_add_conn_cleanup_nolisten-test_add_conn.Po
 	-rm -f ./$(DEPDIR)/test_add_conn_nolisten-test_add_conn.Po
+	-rm -f ./$(DEPDIR)/test_basicauth.Po
 	-rm -f ./$(DEPDIR)/test_callback.Po
 	-rm -f ./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po
 	-rm -f ./$(DEPDIR)/test_delete.Po
@@ -3198,6 +3434,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/test_process_headers.Po
 	-rm -f ./$(DEPDIR)/test_put.Po
 	-rm -f ./$(DEPDIR)/test_put_chunked.Po
+	-rm -f ./$(DEPDIR)/test_put_header_fold.Po
 	-rm -f ./$(DEPDIR)/test_quiesce-test_quiesce.Po
 	-rm -f ./$(DEPDIR)/test_quiesce_stream-test_quiesce_stream.Po
 	-rm -f ./$(DEPDIR)/test_termination.Po
@@ -3257,6 +3494,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/test_add_conn_cleanup-test_add_conn.Po
 	-rm -f ./$(DEPDIR)/test_add_conn_cleanup_nolisten-test_add_conn.Po
 	-rm -f ./$(DEPDIR)/test_add_conn_nolisten-test_add_conn.Po
+	-rm -f ./$(DEPDIR)/test_basicauth.Po
 	-rm -f ./$(DEPDIR)/test_callback.Po
 	-rm -f ./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po
 	-rm -f ./$(DEPDIR)/test_delete.Po
@@ -3283,6 +3521,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/test_process_headers.Po
 	-rm -f ./$(DEPDIR)/test_put.Po
 	-rm -f ./$(DEPDIR)/test_put_chunked.Po
+	-rm -f ./$(DEPDIR)/test_put_header_fold.Po
 	-rm -f ./$(DEPDIR)/test_quiesce-test_quiesce.Po
 	-rm -f ./$(DEPDIR)/test_quiesce_stream-test_quiesce_stream.Po
 	-rm -f ./$(DEPDIR)/test_termination.Po

@@ -3,13 +3,13 @@
 /* Define if building universal (internal helper macro) */
 #undef AC_APPLE_UNIVERSAL_BUILD
 
-/* Define to 1 if libmicrohttpd is compiled with basic Auth support. */
+/* Define to 1 if libmicrohttpd is compiled with Basic Auth support. */
 #undef BAUTH_SUPPORT
 
 /* This is a Cygwin system */
 #undef CYGWIN
 
-/* Define to 1 if libmicrohttpd is compiled with digest Auth support. */
+/* Define to 1 if libmicrohttpd is compiled with Digest Auth support. */
 #undef DAUTH_SUPPORT
 
 /* Define to 1 if translation of program messages to the user's native
@@ -34,7 +34,7 @@
 /* Define to `1' if host machine runs on GNU Hurd. */
 #undef GNU_HURD
 
-/* Define to 1 if you have the `accept4' function. */
+/* Define to 1 if you have the 'accept4' function. */
 #undef HAVE_ACCEPT4
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
@@ -42,6 +42,9 @@
 
 /* Define if you have usable assert() and assert.h */
 #undef HAVE_ASSERT
+
+/* Define to 1 if you have the real boolean type. */
+#undef HAVE_BUILTIN_TYPE_BOOL
 
 /* Define to 1 if you have the `gmtime_s' function in C11 form. */
 #undef HAVE_C11_GMTIME_S
@@ -57,11 +60,10 @@
    the CoreFoundation framework. */
 #undef HAVE_CFPREFERENCESCOPYAPPVALUE
 
-/* Have clock_gettime */
+/* Define to '1' if you have clock_gettime() function */
 #undef HAVE_CLOCK_GETTIME
 
-/* Define to 1 if you have `clock_get_time', `host_get_clock_service' and
-   `mach_port_deallocate' functions. */
+/* Define to 1 if you have the 'clock_get_time' function. */
 #undef HAVE_CLOCK_GET_TIME
 
 /* Define to 1 if your compiler supports 'alignof()' */
@@ -77,13 +79,29 @@
    */
 #undef HAVE_DCGETTEXT
 
+/* Define to 1 if you have the declaration of `CTL_NET', and to 0 if you
+   don't. */
+#undef HAVE_DECL_CTL_NET
+
+/* Define to 1 if you have the declaration of `ICMPCTL_ICMPLIM', and to 0 if
+   you don't. */
+#undef HAVE_DECL_ICMPCTL_ICMPLIM
+
+/* Define to 1 if you have the declaration of `IPPROTO_ICMP', and to 0 if you
+   don't. */
+#undef HAVE_DECL_IPPROTO_ICMP
+
+/* Define to 1 if you have the declaration of `PF_INET', and to 0 if you
+   don't. */
+#undef HAVE_DECL_PF_INET
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
 /* Define to 1 if you have the <endian.h> header file. */
 #undef HAVE_ENDIAN_H
 
-/* Define if you have epoll_create1 function. */
+/* Define to 1 if you have the 'epoll_create1' function. */
 #undef HAVE_EPOLL_CREATE1
 
 /* Define to 1 if you have the <errno.h> header file. */
@@ -104,20 +122,20 @@
 /* Define to 1 if you have the <gcrypt.h> header file. */
 #undef HAVE_GCRYPT_H
 
-/* Define to 1 if you have `gethrtime' function. */
+/* Define to 1 if you have the 'gethrtime' function. */
 #undef HAVE_GETHRTIME
-
-/* Define to 1 if you have the `getsockname' function. */
-#undef HAVE_GETSOCKNAME
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
 
-/* Define to 1 if you have `gettimeofday' function. */
+/* Define to 1 if you have the 'gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
-/* Define to 1 if you have the `gmtime_r' function. */
+/* Define to 1 if you have the 'gmtime_r' function. */
 #undef HAVE_GMTIME_R
+
+/* Define to 1 if you have the 'gnutls_check_version' function. */
+#undef HAVE_GNUTLS_CHECK_VERSION
 
 /* Define to 1 if you have the <gnutls/gnutls.h> header file. */
 #undef HAVE_GNUTLS_GNUTLS_H
@@ -125,7 +143,7 @@
 /* Define if you have the iconv() function and it works. */
 #undef HAVE_ICONV
 
-/* Provides IPv6 headers */
+/* Define to '1' if you have IPv6 headers */
 #undef HAVE_INET6
 
 /* Define to 1 if you have the <inetLib.h> header file. */
@@ -146,7 +164,7 @@
 /* can use shutdown on listen sockets */
 #undef HAVE_LISTEN_SHUTDOWN
 
-/* Define to 1 if you have the `lseek64' function. */
+/* Define to 1 if you have the 'lseek64' function. */
 #undef HAVE_LSEEK64
 
 /* Define to 1 if you have the <machine/endian.h> header file. */
@@ -155,13 +173,16 @@
 /* Define to 1 if you have the <machine/param.h> header file. */
 #undef HAVE_MACHINE_PARAM_H
 
-/* Define to 1 if you have the `memmem' function. */
+/* Define to 1 if you have the 'magic_open' function. */
+#undef HAVE_MAGIC_OPEN
+
+/* Define to 1 if you have the 'memmem' function. */
 #undef HAVE_MEMMEM
 
 /* Define to 1 to enable support for error messages. */
 #undef HAVE_MESSAGES
 
-/* Define to 1 if you have the `nanosleep' function. */
+/* Define to 1 if you have the 'nanosleep' function. */
 #undef HAVE_NANOSLEEP
 
 /* Define to 1 if you have the <netdb.h> header file. */
@@ -172,6 +193,9 @@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
+
+/* Define to 1 if you have the <netinet/in_systm.h> header file. */
+#undef HAVE_NETINET_IN_SYSTM_H
 
 /* Define to 1 if you have the <netinet/ip.h> header file. */
 #undef HAVE_NETINET_IP_H
@@ -188,7 +212,7 @@
 /* Define if you have usable pipe2(2) function */
 #undef HAVE_PIPE2_FUNC
 
-/* Define to 1 if you have the `poll' function. */
+/* Define to 1 if you have the 'poll' function. */
 #undef HAVE_POLL
 
 /* Define to 1 if you have the <poll.h> header file. */
@@ -197,10 +221,10 @@
 /* Define to 1 if libmicrohttpd is compiled with postprocessor support. */
 #undef HAVE_POSTPROCESSOR
 
-/* Define to 1 if you have the `pread' function. */
+/* Define to 1 if you have the 'pread' function. */
 #undef HAVE_PREAD
 
-/* Define to 1 if you have the `pread64' function. */
+/* Define to 1 if you have the 'pread64' function. */
 #undef HAVE_PREAD64
 
 /* Define if you have IBM i form (or Solaris form) of
@@ -236,14 +260,11 @@
 /* Define to 1 if you have the pthread_sigmask(3) function. */
 #undef HAVE_PTHREAD_SIGMASK
 
-/* Define to 1 if you have the `rand' function. */
+/* Define to 1 if you have the 'rand' function. */
 #undef HAVE_RAND
 
-/* Define to 1 if you have the `random' function. */
+/* Define to 1 if you have the 'random' function. */
 #undef HAVE_RANDOM
-
-/* Define to 1 if you have the real boolean type. */
-#undef HAVE_REAL_BOOL
 
 /* Define to 1 if you have the <sanitizer/asan_interface.h> header file. */
 #undef HAVE_SANITIZER_ASAN_INTERFACE_H
@@ -251,20 +272,16 @@
 /* Define to 1 if you have the <sdkddkver.h> header file. */
 #undef HAVE_SDKDDKVER_H
 
-/* Define to 1 if you have the <search.h> header file and your system have
-   properly functioning tsearch(), tfind() and tdelete() functions */
-#undef HAVE_SEARCH_H
-
-/* Define to 1 if you have the `sendfile64' function. */
+/* Define to 1 if you have the 'sendfile64' function. */
 #undef HAVE_SENDFILE64
 
-/* Define if your platform supports sendmsg */
+/* Define to '1' if your have sendmsg() function */
 #undef HAVE_SENDMSG
 
 /* Define to 1 if you have the <signal.h> header file. */
 #undef HAVE_SIGNAL_H
 
-/* Define to 1 if you have the `snprintf' function. */
+/* Define to 1 if you have the 'snprintf' function. */
 #undef HAVE_SNPRINTF
 
 /* Define to 1 if you have the <sockLib.h> header file. */
@@ -310,13 +327,13 @@
 /* Define to 1 if `ss_len' is a member of `struct sockaddr_storage'. */
 #undef HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN
 
-/* Define to 1 if you have the `sysconf' function. */
+/* Define to 1 if you have the 'sysconf' function. */
 #undef HAVE_SYSCONF
 
-/* Define to 1 if you have the `sysctl' function. */
+/* Define to 1 if you have the 'sysctl' function. */
 #undef HAVE_SYSCTL
 
-/* Define to 1 if you have the `sysctlbyname' function. */
+/* Define to 1 if you have the 'sysctlbyname' function. */
 #undef HAVE_SYSCTLBYNAME
 
 /* Define to 1 if you have the <sys/byteorder.h> header file. */
@@ -324,9 +341,6 @@
 
 /* Define to 1 if you have the <sys/endian.h> header file. */
 #undef HAVE_SYS_ENDIAN_H
-
-/* Define to 1 if you have the <sys/eventfd.h> header file. */
-#undef HAVE_SYS_EVENTFD_H
 
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #undef HAVE_SYS_IOCTL_H
@@ -364,23 +378,19 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
-/* Define to 1 if you have C11 `mhd_cv_func_timespec_get' function and
-   TIME_UTC macro. */
+/* Define to 1 if you have the <sys/uio.h> header file. */
+#undef HAVE_SYS_UIO_H
+
+/* Define to 1 if you have the 'timespec_get' function. */
 #undef HAVE_TIMESPEC_GET
 
 /* Define to 1 if you have the <time.h> header file. */
 #undef HAVE_TIME_H
 
-/* Define to 1 if you have the `tsearch' function. */
-#undef HAVE_TSEARCH
-
-/* Define to 1 if you have the `twalk' function. */
-#undef HAVE_TWALK
-
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to 1 if you have the `usleep' function. */
+/* Define to 1 if you have the 'usleep' function. */
 #undef HAVE_USLEEP
 
 /* Define to 1 if you have the `gmtime_s' function in W32 form. */
@@ -395,11 +405,14 @@
 /* Define to 1 if you have the <winsock2.h> header file. */
 #undef HAVE_WINSOCK2_H
 
-/* Define to 1 if you have the `writev' function. */
+/* Define to 1 if you have the 'writev' function. */
 #undef HAVE_WRITEV
 
 /* Define to 1 if you have the <ws2tcpip.h> header file. */
 #undef HAVE_WS2TCPIP_H
+
+/* Define to 1 if you have the 'WSAPoll' function. */
+#undef HAVE_WSAPOLL
 
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
@@ -409,6 +422,9 @@
 
 /* Define to 1 if your compiler supports __func__ magic-macro. */
 #undef HAVE___FUNC__
+
+/* Define to 1 if your compiler supports __PRETTY_FUNCTION__ magic-macro. */
+#undef HAVE___PRETTY_FUNCTION__
 
 /* Define to 1 if libmicrohttpd is compiled with HTTPS support. */
 #undef HTTPS_SUPPORT
@@ -538,6 +554,10 @@
 
 /* define to use pthreads */
 #undef MHD_USE_POSIX_THREADS
+
+/* Define to 1 if you have properly working tsearch(), tfind() and tdelete()
+   functions. */
+#undef MHD_USE_SYS_TSEARCH
 
 /* define to use W32 threads */
 #undef MHD_USE_W32_THREADS

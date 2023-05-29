@@ -87,16 +87,17 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@USE_COVERAGE_TRUE@am__append_1 = -fprofile-arcs -ftest-coverage
 check_PROGRAMS = test_get$(EXEEXT) test_get_chunked$(EXEEXT) \
 	test_post$(EXEEXT) test_post_form$(EXEEXT) test_put$(EXEEXT) \
 	test_put_chunked$(EXEEXT) test_put_large$(EXEEXT) \
 	test_get11$(EXEEXT) test_post11$(EXEEXT) \
 	test_post_form11$(EXEEXT) test_put11$(EXEEXT) \
 	test_put_large11$(EXEEXT) $(am__EXEEXT_2) $(am__EXEEXT_3)
-@USE_POSIX_THREADS_TRUE@am__append_1 = \
+@USE_POSIX_THREADS_TRUE@am__append_2 = \
 @USE_POSIX_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
 
-@USE_W32_THREADS_TRUE@am__append_2 = \
+@USE_W32_THREADS_TRUE@am__append_3 = \
 @USE_W32_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
 
 subdir = src/testzzuf
@@ -111,19 +112,22 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/ax_have_epoll.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/ax_require_defined.m4 \
-	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/host-cpu-c-abi.m4 \
-	$(top_srcdir)/m4/iconv.m4 $(top_srcdir)/m4/intlmacosx.m4 \
-	$(top_srcdir)/m4/lib-ld.m4 $(top_srcdir)/m4/lib-link.m4 \
-	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/libcurl.m4 \
-	$(top_srcdir)/m4/libgcrypt.m4 $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
-	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/gettext.m4 \
+	$(top_srcdir)/m4/host-cpu-c-abi.m4 $(top_srcdir)/m4/iconv.m4 \
+	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/lib-ld.m4 \
+	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
+	$(top_srcdir)/m4/libcurl.m4 $(top_srcdir)/m4/libgcrypt.m4 \
+	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
+	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
+	$(top_srcdir)/m4/lt~obsolete.m4 \
 	$(top_srcdir)/m4/mhd_check_func.m4 \
+	$(top_srcdir)/m4/mhd_check_link_run.m4 \
+	$(top_srcdir)/m4/mhd_find_lib.m4 \
+	$(top_srcdir)/m4/mhd_norm_expd.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
 	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/m4/search_h.m4 \
-	$(top_srcdir)/m4/tsearch.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -137,6 +141,7 @@ am__EXEEXT_1 = test_long_header$(EXEEXT)
 @USE_W32_THREADS_TRUE@am__EXEEXT_3 = $(am__EXEEXT_1)
 am_test_get_OBJECTS = test_get.$(OBJEXT)
 test_get_OBJECTS = $(am_test_get_OBJECTS)
+test_get_LDADD = $(LDADD)
 test_get_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -145,50 +150,62 @@ am__v_lt_0 = --silent
 am__v_lt_1 = 
 am_test_get11_OBJECTS = test_get.$(OBJEXT)
 test_get11_OBJECTS = $(am_test_get11_OBJECTS)
+test_get11_LDADD = $(LDADD)
 test_get11_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_get_chunked_OBJECTS = test_get_chunked.$(OBJEXT)
 test_get_chunked_OBJECTS = $(am_test_get_chunked_OBJECTS)
+test_get_chunked_LDADD = $(LDADD)
 test_get_chunked_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_long_header_OBJECTS = test_long_header.$(OBJEXT)
 test_long_header_OBJECTS = $(am_test_long_header_OBJECTS)
+test_long_header_LDADD = $(LDADD)
 test_long_header_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_post_OBJECTS = test_post.$(OBJEXT)
 test_post_OBJECTS = $(am_test_post_OBJECTS)
+test_post_LDADD = $(LDADD)
 test_post_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_post11_OBJECTS = test_post.$(OBJEXT)
 test_post11_OBJECTS = $(am_test_post11_OBJECTS)
+test_post11_LDADD = $(LDADD)
 test_post11_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_post_form_OBJECTS = test_post_form.$(OBJEXT)
 test_post_form_OBJECTS = $(am_test_post_form_OBJECTS)
+test_post_form_LDADD = $(LDADD)
 test_post_form_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_post_form11_OBJECTS = test_post_form.$(OBJEXT)
 test_post_form11_OBJECTS = $(am_test_post_form11_OBJECTS)
+test_post_form11_LDADD = $(LDADD)
 test_post_form11_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_put_OBJECTS = test_put.$(OBJEXT)
 test_put_OBJECTS = $(am_test_put_OBJECTS)
+test_put_LDADD = $(LDADD)
 test_put_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_put11_OBJECTS = test_put.$(OBJEXT)
 test_put11_OBJECTS = $(am_test_put11_OBJECTS)
+test_put11_LDADD = $(LDADD)
 test_put11_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_put_chunked_OBJECTS = test_put_chunked.$(OBJEXT)
 test_put_chunked_OBJECTS = $(am_test_put_chunked_OBJECTS)
+test_put_chunked_LDADD = $(LDADD)
 test_put_chunked_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_put_large_OBJECTS = test_put_large.$(OBJEXT)
 test_put_large_OBJECTS = $(am_test_put_large_OBJECTS)
+test_put_large_LDADD = $(LDADD)
 test_put_large_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_put_large11_OBJECTS = test_put_large.$(OBJEXT)
 test_put_large11_OBJECTS = $(am_test_put_large11_OBJECTS)
+test_put_large11_LDADD = $(LDADD)
 test_put_large11_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 AM_V_P = $(am__v_P_@AM_V@)
@@ -551,12 +568,10 @@ EMPTY_VAR = @EMPTY_VAR@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FILECMD = @FILECMD@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
-GNULIB_MDA_LFIND = @GNULIB_MDA_LFIND@
-GNULIB_MDA_LSEARCH = @GNULIB_MDA_LSEARCH@
-GNULIB_TSEARCH = @GNULIB_TSEARCH@
 GNUTLS_CFLAGS = @GNUTLS_CFLAGS@
 GNUTLS_CPPFLAGS = @GNUTLS_CPPFLAGS@
 GNUTLS_LDFLAGS = @GNUTLS_LDFLAGS@
@@ -564,8 +579,6 @@ GNUTLS_LIBS = @GNUTLS_LIBS@
 GREP = @GREP@
 HAVE_CURL_BINARY = @HAVE_CURL_BINARY@
 HAVE_MAKEINFO_BINARY = @HAVE_MAKEINFO_BINARY@
-HAVE_TSEARCH = @HAVE_TSEARCH@
-HAVE_TWALK = @HAVE_TWALK@
 HEAVY_TESTS_NOTPARALLEL = @HEAVY_TESTS_NOTPARALLEL@
 HIDDEN_VISIBILITY_CFLAGS = @HIDDEN_VISIBILITY_CFLAGS@
 INSTALL = @INSTALL@
@@ -642,7 +655,6 @@ PTHREAD_CXX = @PTHREAD_CXX@
 PTHREAD_LIBS = @PTHREAD_LIBS@
 RANLIB = @RANLIB@
 RC = @RC@
-REPLACE_TSEARCH = @REPLACE_TSEARCH@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -715,9 +727,16 @@ top_srcdir = @top_srcdir@
 
 # This Makefile.am is in the public domain
 SUBDIRS = .
-@USE_COVERAGE_TRUE@AM_CFLAGS = -fprofile-arcs -ftest-coverage
-AM_CPPFLAGS = -I$(top_srcdir)/src/include \
-  $(LIBCURL_CPPFLAGS)
+AM_CPPFLAGS = \
+  -I$(top_srcdir)/src/include \
+  -DMHD_CPU_COUNT=$(CPU_COUNT) \
+  $(CPPFLAGS_ac) $(LIBCURL_CPPFLAGS)
+
+AM_CFLAGS = $(CFLAGS_ac) @LIBGCRYPT_CFLAGS@ $(am__append_1)
+AM_LDFLAGS = $(LDFLAGS_ac)
+LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
 
 EXTRA_DIST = README socat.c
 THREAD_ONLY_TESTS = \
@@ -727,93 +746,41 @@ TESTS = $(check_PROGRAMS)
 test_get_SOURCES = \
   test_get.c
 
-test_get_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
-
 test_get_chunked_SOURCES = \
   test_get_chunked.c
-
-test_get_chunked_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_post_SOURCES = \
   test_post.c
 
-test_post_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
-
 test_post_form_SOURCES = \
   test_post_form.c
-
-test_post_form_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_put_SOURCES = \
   test_put.c
 
-test_put_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
-
 test_put_chunked_SOURCES = \
   test_put_chunked.c
-
-test_put_chunked_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_put_large_SOURCES = \
   test_put_large.c
 
-test_put_large_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
-
 test_get11_SOURCES = \
   test_get.c
-
-test_get11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_post11_SOURCES = \
   test_post.c
 
-test_post11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
-
 test_post_form11_SOURCES = \
   test_post_form.c
-
-test_post_form11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_put11_SOURCES = \
   test_put.c
 
-test_put11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
-
 test_put_large11_SOURCES = \
   test_put_large.c
 
-test_put_large11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
-
 test_long_header_SOURCES = \
   test_long_header.c
-
-test_long_header_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 all: all-recursive
 

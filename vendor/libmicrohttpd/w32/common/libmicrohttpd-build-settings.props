@@ -14,6 +14,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>BUILDING_MHD_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4746;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <Subsystem>WINDOWS</Subsystem>

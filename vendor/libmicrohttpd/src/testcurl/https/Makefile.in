@@ -87,12 +87,19 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@HAVE_GNUTLS_MTHREAD_BROKEN_FALSE@am__append_1 = \
+
+# The next tests are badly broken and fixed in next MHD version only
+@USE_BROKEN_TLS_TESTS_TRUE@am__append_1 = \
+@USE_BROKEN_TLS_TESTS_TRUE@  test_tls_options \
+@USE_BROKEN_TLS_TESTS_TRUE@  test_https_session_info \
+@USE_BROKEN_TLS_TESTS_TRUE@  $(EMPTY_ITEM)
+
+@HAVE_GNUTLS_MTHREAD_BROKEN_FALSE@am__append_2 = \
 @HAVE_GNUTLS_MTHREAD_BROKEN_FALSE@  test_https_time_out \
 @HAVE_GNUTLS_MTHREAD_BROKEN_FALSE@  $(EMPTY_ITEM)
 
-check_PROGRAMS = test_https_get_select$(EXEEXT) $(am__EXEEXT_6)
-@USE_THREADS_TRUE@am__append_2 = \
+check_PROGRAMS = test_https_get_select$(EXEEXT) $(am__EXEEXT_7)
+@USE_THREADS_TRUE@am__append_3 = \
 @USE_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
 
 subdir = src/testcurl/https
@@ -107,19 +114,22 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/ax_have_epoll.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/ax_require_defined.m4 \
-	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/host-cpu-c-abi.m4 \
-	$(top_srcdir)/m4/iconv.m4 $(top_srcdir)/m4/intlmacosx.m4 \
-	$(top_srcdir)/m4/lib-ld.m4 $(top_srcdir)/m4/lib-link.m4 \
-	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/libcurl.m4 \
-	$(top_srcdir)/m4/libgcrypt.m4 $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
-	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/gettext.m4 \
+	$(top_srcdir)/m4/host-cpu-c-abi.m4 $(top_srcdir)/m4/iconv.m4 \
+	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/lib-ld.m4 \
+	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
+	$(top_srcdir)/m4/libcurl.m4 $(top_srcdir)/m4/libgcrypt.m4 \
+	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
+	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
+	$(top_srcdir)/m4/lt~obsolete.m4 \
 	$(top_srcdir)/m4/mhd_check_func.m4 \
+	$(top_srcdir)/m4/mhd_check_link_run.m4 \
+	$(top_srcdir)/m4/mhd_find_lib.m4 \
+	$(top_srcdir)/m4/mhd_norm_expd.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
 	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/m4/search_h.m4 \
-	$(top_srcdir)/m4/tsearch.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -133,15 +143,17 @@ CONFIG_CLEAN_VPATH_FILES =
 @HAVE_POSIX_THREADS_TRUE@	test_https_get_parallel_threads$(EXEEXT)
 @HAVE_GNUTLS_SNI_TRUE@am__EXEEXT_2 = test_https_sni$(EXEEXT)
 am__EXEEXT_3 =
-@HAVE_GNUTLS_MTHREAD_BROKEN_FALSE@am__EXEEXT_4 = test_https_time_out$(EXEEXT) \
+@USE_BROKEN_TLS_TESTS_TRUE@am__EXEEXT_4 = test_tls_options$(EXEEXT) \
+@USE_BROKEN_TLS_TESTS_TRUE@	test_https_session_info$(EXEEXT) \
+@USE_BROKEN_TLS_TESTS_TRUE@	$(am__EXEEXT_3)
+@HAVE_GNUTLS_MTHREAD_BROKEN_FALSE@am__EXEEXT_5 = test_https_time_out$(EXEEXT) \
 @HAVE_GNUTLS_MTHREAD_BROKEN_FALSE@	$(am__EXEEXT_3)
-am__EXEEXT_5 = test_tls_options$(EXEEXT) \
-	test_tls_authentication$(EXEEXT) $(am__EXEEXT_1) \
-	$(am__EXEEXT_2) test_https_session_info$(EXEEXT) \
-	test_https_multi_daemon$(EXEEXT) test_https_get$(EXEEXT) \
-	test_empty_response$(EXEEXT) test_https_get_iovec$(EXEEXT) \
-	$(am__EXEEXT_3) $(am__EXEEXT_4)
-@USE_THREADS_TRUE@am__EXEEXT_6 = $(am__EXEEXT_5)
+am__EXEEXT_6 = test_tls_authentication$(EXEEXT) $(am__EXEEXT_1) \
+	$(am__EXEEXT_2) test_https_multi_daemon$(EXEEXT) \
+	test_https_get$(EXEEXT) test_empty_response$(EXEEXT) \
+	test_https_get_iovec$(EXEEXT) $(am__EXEEXT_3) $(am__EXEEXT_4) \
+	$(am__EXEEXT_5)
+@USE_THREADS_TRUE@am__EXEEXT_7 = $(am__EXEEXT_6)
 am_test_empty_response_OBJECTS = test_empty_response.$(OBJEXT) \
 	tls_test_common.$(OBJEXT)
 test_empty_response_OBJECTS = $(am_test_empty_response_OBJECTS)
@@ -622,12 +634,10 @@ EMPTY_VAR = @EMPTY_VAR@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FILECMD = @FILECMD@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
-GNULIB_MDA_LFIND = @GNULIB_MDA_LFIND@
-GNULIB_MDA_LSEARCH = @GNULIB_MDA_LSEARCH@
-GNULIB_TSEARCH = @GNULIB_TSEARCH@
 GNUTLS_CFLAGS = @GNUTLS_CFLAGS@
 GNUTLS_CPPFLAGS = @GNUTLS_CPPFLAGS@
 GNUTLS_LDFLAGS = @GNUTLS_LDFLAGS@
@@ -635,8 +645,6 @@ GNUTLS_LIBS = @GNUTLS_LIBS@
 GREP = @GREP@
 HAVE_CURL_BINARY = @HAVE_CURL_BINARY@
 HAVE_MAKEINFO_BINARY = @HAVE_MAKEINFO_BINARY@
-HAVE_TSEARCH = @HAVE_TSEARCH@
-HAVE_TWALK = @HAVE_TWALK@
 HEAVY_TESTS_NOTPARALLEL = @HEAVY_TESTS_NOTPARALLEL@
 HIDDEN_VISIBILITY_CFLAGS = @HIDDEN_VISIBILITY_CFLAGS@
 INSTALL = @INSTALL@
@@ -713,7 +721,6 @@ PTHREAD_CXX = @PTHREAD_CXX@
 PTHREAD_LIBS = @PTHREAD_LIBS@
 RANLIB = @RANLIB@
 RC = @RC@
-REPLACE_TSEARCH = @REPLACE_TSEARCH@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -803,15 +810,14 @@ LDADD = \
 @HAVE_POSIX_THREADS_TRUE@    test_https_get_parallel \
 @HAVE_POSIX_THREADS_TRUE@    test_https_get_parallel_threads
 
-THREAD_ONLY_TESTS = test_tls_options test_tls_authentication \
-	$(HTTPS_PARALLEL_TESTS) $(TEST_HTTPS_SNI) \
-	test_https_session_info test_https_multi_daemon test_https_get \
+THREAD_ONLY_TESTS = test_tls_authentication $(HTTPS_PARALLEL_TESTS) \
+	$(TEST_HTTPS_SNI) test_https_multi_daemon test_https_get \
 	test_empty_response test_https_get_iovec $(EMPTY_ITEM) \
-	$(am__append_1)
+	$(am__append_1) $(am__append_2)
 EXTRA_DIST = \
   test-ca.crt test-ca.key \
-  host1.crt host1.key \
-  host2.crt host2.key
+  mhdhost1.crt mhdhost1.key \
+  mhdhost2.crt mhdhost2.key
 
 TESTS = \
   $(check_PROGRAMS)
@@ -1393,13 +1399,6 @@ test_https_get_select.log: test_https_get_select$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test_tls_options.log: test_tls_options$(EXEEXT)
-	@p='test_tls_options$(EXEEXT)'; \
-	b='test_tls_options'; \
-	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
-	--log-file $$b.log --trs-file $$b.trs \
-	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
-	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_tls_authentication.log: test_tls_authentication$(EXEEXT)
 	@p='test_tls_authentication$(EXEEXT)'; \
 	b='test_tls_authentication'; \
@@ -1428,13 +1427,6 @@ test_https_sni.log: test_https_sni$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test_https_session_info.log: test_https_session_info$(EXEEXT)
-	@p='test_https_session_info$(EXEEXT)'; \
-	b='test_https_session_info'; \
-	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
-	--log-file $$b.log --trs-file $$b.trs \
-	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
-	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_https_multi_daemon.log: test_https_multi_daemon$(EXEEXT)
 	@p='test_https_multi_daemon$(EXEEXT)'; \
 	b='test_https_multi_daemon'; \
@@ -1459,6 +1451,20 @@ test_empty_response.log: test_empty_response$(EXEEXT)
 test_https_get_iovec.log: test_https_get_iovec$(EXEEXT)
 	@p='test_https_get_iovec$(EXEEXT)'; \
 	b='test_https_get_iovec'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_tls_options.log: test_tls_options$(EXEEXT)
+	@p='test_tls_options$(EXEEXT)'; \
+	b='test_tls_options'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_https_session_info.log: test_https_session_info$(EXEEXT)
+	@p='test_https_session_info$(EXEEXT)'; \
+	b='test_https_session_info'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
