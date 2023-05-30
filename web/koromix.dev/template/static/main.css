@@ -71,7 +71,6 @@ nav#side ul {
 
     border: 2px solid #383838;
 }
-nav#side ul:empty { display: none !important; }
 nav#side li { list-style-type: none; }
 nav#side a {
     display: block;
@@ -92,8 +91,9 @@ main {
     max-width: 1200px;
     box-sizing: border-box;
     margin: 20px auto 0 auto;
-    padding: 0 290px 16px 16px;
+    padding: 0 16px 16px 16px;
 }
+nav#side ~ main { padding-right: 290px; }
 
 h1, h2, h3 { margin-top: 0; }
 * + h1, * + h2, * + h3 { margin: 0.8em 0 0 0; }
@@ -185,7 +185,7 @@ code {
         position: static;
     }
 
-    main { padding: 16px; }
+    main { padding-right: 16px; }
 }
 
 @media screen and (max-width: 960px) {
