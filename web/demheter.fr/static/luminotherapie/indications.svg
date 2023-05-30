@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="827"
+   height="433.99991"
+   overflow="hidden"
+   version="1.1"
+   id="svg293"
+   sodipodi:docname="Indications.svg"
+   inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <style>
+    @import url("/static/opensans/OpenSans.css");
+  </style>
+  <sodipodi:namedview
+     id="namedview295"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="0.27838542"
+     inkscape:cx="1607.4836"
+     inkscape:cy="168.83068"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg293" />
+  <defs
+     id="defs5">
+    <clipPath
+       id="clip0">
+      <rect
+         x="0"
+         y="0"
+         width="960"
+         height="720"
+         id="rect2" />
+    </clipPath>
+  </defs>
+  <rect
+     x="1.5"
+     y="1.5"
+     width="824"
+     height="217"
+     stroke="#ee7f02"
+     stroke-width="3"
+     stroke-linejoin="round"
+     stroke-miterlimit="10"
+     fill="none"
+     id="rect9" />
+  <text
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="24px"
+     id="text11"
+     x="277.05191"
+     y="38.999901">Indications principales</text>
+  <text
+     fill="#ee7f02"
+     font-family="Arial, Arial_MSFontService, sans-serif"
+     font-weight="400"
+     font-size="21px"
+     id="text13"
+     x="15.385597"
+     y="93.999901">•</text>
+  <text
+     fill="#ee7f02"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="21px"
+     id="text15"
+     x="45.385902"
+     y="93.999901">Épisode dépressif caractérisé de caractéristique saisonnière unipolaire</text>
+  <text
+     fill="#ee7f02"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="21px"
+     id="text17"
+     x="45.385902"
+     y="118.9999">et bipolaire</text>
+  <text
+     fill="#ee7f02"
+     font-family="Arial, Arial_MSFontService, sans-serif"
+     font-weight="400"
+     font-size="21px"
+     id="text19"
+     x="15.385597"
+     y="144.99991">•</text>
+  <text
+     fill="#ee7f02"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="21px"
+     id="text21"
+     x="45.385902"
+     y="144.99991">Épisode dépressif caractérisé non saisonnier résistant pour</text>
+  <text
+     fill="#ee7f02"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="21px"
+     id="text23"
+     x="45.385902"
+     y="169.99991">potentialisation des effets des antidépresseurs</text>
+  <text
+     fill="#ee7f02"
+     font-family="Arial, Arial_MSFontService, sans-serif"
+     font-weight="400"
+     font-size="21px"
+     id="text25"
+     x="15.385597"
+     y="195.99991">•</text>
+  <text
+     fill="#ee7f02"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="21px"
+     id="text27"
+     x="45.385902"
+     y="195.99991">Symptômes dépressifs résiduels</text>
+  <rect
+     x="1.5"
+     y="242.49991"
+     width="824"
+     height="190"
+     stroke="#ff3300"
+     stroke-width="3"
+     stroke-linejoin="round"
+     stroke-miterlimit="10"
+     fill="none"
+     id="rect29" />
+  <text
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="24px"
+     id="text31"
+     x="293.55191"
+     y="278.99991">Contre–indications</text>
+  <text
+     fill="#ff0000"
+     font-family="Arial, Arial_MSFontService, sans-serif"
+     font-weight="400"
+     font-size="21px"
+     id="text37"
+     x="15.385597"
+     y="333.99991">•</text>
+  <text
+     fill="#ff0000"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="21px"
+     id="text39"
+     x="45.385902"
+     y="333.99991">Absence de traitement thymorégulateur dans le cadre d’un trouble</text>
+  <text
+     fill="#ff0000"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="21px"
+     id="text45"
+     x="45.385902"
+     y="358.99991">bipolaire de l’humeur</text>
+  <text
+     fill="#ff0000"
+     font-family="Arial, Arial_MSFontService, sans-serif"
+     font-weight="400"
+     font-size="21px"
+     id="text47"
+     x="15.385597"
+     y="384.99991">•</text>
+  <text
+     fill="#ff0000"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="21px"
+     id="text49"
+     x="45.385902"
+     y="384.99991">Absence de suivi psychiatrique régulier</text>
+  <text
+     fill="#ff0000"
+     font-family="Arial, Arial_MSFontService, sans-serif"
+     font-weight="400"
+     font-size="21px"
+     id="text51"
+     x="15.385597"
+     y="409.99991">•</text>
+  <text
+     fill="#ff0000"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="21px"
+     id="text53"
+     x="45.385902"
+     y="409.99991">Pathologie ophtalmique de type rétinopathie, glaucome ou cataracte.</text>
+</svg>

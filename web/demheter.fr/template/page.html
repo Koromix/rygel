@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr" class="nojs">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>{TITLE}</title>
+
+        <link rel="stylesheet" href="static/main.css">
+        <link rel="stylesheet" href="static/opensans/OpenSans.css">
+
+        <script type="text/javascript" src="static/main.js" async></script>
+    </head>
+    <body>
+        <a id="deploy" href="#" onclick="deploy(); return false;"></a>
+
+        <nav id="top">
+            <ul>
+                <img id="logo" src="static/logo.png" alt="Logo DEMHETER" />
+
+{LINKS}
+            </ul>
+        </nav>
+
+        <nav id="side">
+            <ul>{TOC}</ul>
+        </nav>
+
+        <main>{CONTENT}</main>
+    </body>
+</html>

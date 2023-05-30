@@ -1,0 +1,633 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="861.828"
+   height="309.95599"
+   overflow="hidden"
+   version="1.1"
+   id="svg320"
+   sodipodi:docname="Luminotherapie1.svg"
+   inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <style>
+    @import url("/static/opensans/OpenSans.css");
+  </style>
+  <sodipodi:namedview
+     id="namedview322"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="0.55677083"
+     inkscape:cx="169.72872"
+     inkscape:cy="167.03461"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg320"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <defs
+     id="defs92">
+    <clipPath
+       id="clip0">
+      <rect
+         x="0"
+         y="0"
+         width="960"
+         height="720"
+         id="rect2" />
+    </clipPath>
+    <clipPath
+       id="clip1">
+      <rect
+         x="242"
+         y="-40"
+         width="668"
+         height="135"
+         id="rect5" />
+    </clipPath>
+    <clipPath
+       id="clip2">
+      <rect
+         x="242"
+         y="-67"
+         width="668"
+         height="269"
+         id="rect8" />
+    </clipPath>
+    <clipPath
+       id="clip3">
+      <rect
+         x="242"
+         y="-67"
+         width="668"
+         height="269"
+         id="rect11" />
+    </clipPath>
+    <clipPath
+       id="clip4">
+      <rect
+         x="242"
+         y="-17"
+         width="668"
+         height="270"
+         id="rect14" />
+    </clipPath>
+    <clipPath
+       id="clip5">
+      <rect
+         x="242"
+         y="-17"
+         width="668"
+         height="270"
+         id="rect17" />
+    </clipPath>
+    <clipPath
+       id="clip6">
+      <rect
+         x="242"
+         y="-76"
+         width="668"
+         height="538"
+         id="rect20" />
+    </clipPath>
+    <clipPath
+       id="clip7">
+      <rect
+         x="242"
+         y="-76"
+         width="668"
+         height="538"
+         id="rect23" />
+    </clipPath>
+    <clipPath
+       id="clip8">
+      <rect
+         x="242"
+         y="-76"
+         width="668"
+         height="538"
+         id="rect26" />
+    </clipPath>
+    <clipPath
+       id="clip9">
+      <rect
+         x="242"
+         y="-76"
+         width="668"
+         height="538"
+         id="rect29" />
+    </clipPath>
+    <clipPath
+       id="clip10">
+      <rect
+         x="242"
+         y="-76"
+         width="668"
+         height="538"
+         id="rect32" />
+    </clipPath>
+    <clipPath
+       id="clip11">
+      <rect
+         x="244"
+         y="313"
+         width="669"
+         height="673"
+         id="rect35" />
+    </clipPath>
+    <clipPath
+       id="clip12">
+      <rect
+         x="244"
+         y="313"
+         width="669"
+         height="673"
+         id="rect38" />
+    </clipPath>
+    <clipPath
+       id="clip13">
+      <rect
+         x="244"
+         y="313"
+         width="669"
+         height="673"
+         id="rect41" />
+    </clipPath>
+    <clipPath
+       id="clip14">
+      <rect
+         x="244"
+         y="313"
+         width="669"
+         height="673"
+         id="rect44" />
+    </clipPath>
+    <clipPath
+       id="clip15">
+      <rect
+         x="244"
+         y="313"
+         width="669"
+         height="673"
+         id="rect47" />
+    </clipPath>
+    <clipPath
+       id="clip16">
+      <rect
+         x="243"
+         y="211"
+         width="668"
+         height="135"
+         id="rect50" />
+    </clipPath>
+    <clipPath
+       id="clip17">
+      <rect
+         x="49"
+         y="284"
+         width="195"
+         height="136"
+         id="rect53" />
+    </clipPath>
+    <clipPath
+       id="clip18">
+      <rect
+         x="243"
+         y="16"
+         width="668"
+         height="673"
+         id="rect56" />
+    </clipPath>
+    <clipPath
+       id="clip19">
+      <rect
+         x="243"
+         y="16"
+         width="668"
+         height="673"
+         id="rect59" />
+    </clipPath>
+    <clipPath
+       id="clip20">
+      <rect
+         x="243"
+         y="16"
+         width="668"
+         height="673"
+         id="rect62" />
+    </clipPath>
+    <clipPath
+       id="clip21">
+      <rect
+         x="243"
+         y="16"
+         width="668"
+         height="673"
+         id="rect65" />
+    </clipPath>
+    <clipPath
+       id="clip22">
+      <rect
+         x="243"
+         y="16"
+         width="668"
+         height="673"
+         id="rect68" />
+    </clipPath>
+    <clipPath
+       id="clip23">
+      <rect
+         x="243"
+         y="354"
+         width="668"
+         height="136"
+         id="rect71" />
+    </clipPath>
+    <clipPath
+       id="clip24">
+      <rect
+         x="243"
+         y="212"
+         width="668"
+         height="539"
+         id="rect74" />
+    </clipPath>
+    <clipPath
+       id="clip25">
+      <rect
+         x="243"
+         y="212"
+         width="668"
+         height="539"
+         id="rect77" />
+    </clipPath>
+    <clipPath
+       id="clip26">
+      <rect
+         x="243"
+         y="212"
+         width="668"
+         height="539"
+         id="rect80" />
+    </clipPath>
+    <clipPath
+       id="clip27">
+      <rect
+         x="243"
+         y="212"
+         width="668"
+         height="539"
+         id="rect83" />
+    </clipPath>
+    <clipPath
+       id="clip28">
+      <rect
+         x="243"
+         y="415"
+         width="668"
+         height="270"
+         id="rect86" />
+    </clipPath>
+    <clipPath
+       id="clip29">
+      <rect
+         x="243"
+         y="415"
+         width="668"
+         height="270"
+         id="rect89" />
+    </clipPath>
+  </defs>
+  <path
+     d="M 0,0 H 194.365 V 33.478 H 0 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path214" />
+  <path
+     d="M 194.365,0 H 861.828 V 33.478 H 194.365 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path216" />
+  <path
+     d="M 0,33.478 H 194.365 V 147.32 H 0 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path218" />
+  <path
+     d="M 194.365,33.478 H 861.828 V 147.32 H 194.365 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path220" />
+  <path
+     d="m 0,147.32 h 194.365 v 25.724 H 0 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path222" />
+  <path
+     d="m 194.365,147.32 h 667.463 v 25.724 H 194.365 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path224" />
+  <path
+     d="m 0,173.044 h 194.365 v 93.309 H 0 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path226" />
+  <path
+     d="m 194.365,173.044 h 667.463 v 93.309 H 194.365 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path228" />
+  <path
+     d="m 0,266.353 h 194.365 v 43.603 H 0 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path230" />
+  <path
+     d="m 194.365,266.353 h 667.463 v 43.603 H 194.365 Z"
+     fill="#ee7f02"
+     fill-rule="evenodd"
+     id="path232" />
+  <path
+     d="M 194.365,0 V 309.956"
+     stroke="#eb9b31"
+     stroke-width="1.33333"
+     stroke-linejoin="round"
+     stroke-miterlimit="10"
+     fill="none"
+     fill-rule="evenodd"
+     id="path234" />
+  <path
+     d="M 0,33.478 H 861.828"
+     stroke="#eb9b31"
+     stroke-width="1.33333"
+     stroke-linejoin="round"
+     stroke-miterlimit="10"
+     fill="none"
+     fill-rule="evenodd"
+     id="path236" />
+  <path
+     d="M 0,147.32 H 861.828"
+     stroke="#eb9b31"
+     stroke-width="1.33333"
+     stroke-linejoin="round"
+     stroke-miterlimit="10"
+     fill="none"
+     fill-rule="evenodd"
+     id="path238" />
+  <path
+     d="M 0,173.044 H 861.828"
+     stroke="#eb9b31"
+     stroke-width="1.33333"
+     stroke-linejoin="round"
+     stroke-miterlimit="10"
+     fill="none"
+     fill-rule="evenodd"
+     id="path240" />
+  <path
+     d="M 0,266.353 H 861.828"
+     stroke="#eb9b31"
+     stroke-width="1.33333"
+     stroke-linejoin="round"
+     stroke-miterlimit="10"
+     fill="none"
+     fill-rule="evenodd"
+     id="path242" />
+  <text
+     fill="#ffffff"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="16px"
+     id="text244"
+     x="55.181999"
+     y="22.278999">Fréquence</text>
+  <g
+     clip-path="url(#clip16)"
+     id="g248"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="700"
+       font-size="16px"
+       transform="translate(248.717,284)"
+       id="text246">Quotidienne</text>
+  </g>
+  <g
+     clip-path="url(#clip17)"
+     id="g252"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="700"
+       font-size="16px"
+       transform="translate(58.1017,358)"
+       id="text250">Moment de la journée</text>
+  </g>
+  <g
+     clip-path="url(#clip18)"
+     id="g256"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="700"
+       font-size="16px"
+       transform="translate(248.717,319)"
+       id="text254">Horaire fixe</text>
+  </g>
+  <g
+     clip-path="url(#clip19)"
+     id="g260"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="700"
+       font-size="16px"
+       transform="translate(248.717,338)"
+       id="text258">Le matin au lever</text>
+  </g>
+  <text
+     fill="#ffffff"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="400"
+     font-size="16px"
+     id="text262"
+     x="342.965"
+     y="76.278999">(En cas de réponse trop « vive » de type irritabilité, énervement</text>
+  <text
+     fill="#ffffff"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="400"
+     font-size="16px"
+     id="text264"
+     x="815.63098"
+     y="76.278999">:</text>
+  <g
+     clip-path="url(#clip20)"
+     id="g268"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="16px"
+       transform="translate(248.717,357)"
+       id="text266">décaler la séance plus tard dans la matinée ou à la mi-journée)</text>
+  </g>
+  
+  <g
+     clip-path="url(#clip21)"
+     id="g276"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="16px"
+       transform="translate(248.717,377)"
+       id="text274">Éviter horaires trop tôt pour prévenir le virage maniaque dans le trouble bipolaire</text>
+  </g>
+  <g
+     clip-path="url(#clip22)"
+     id="g280"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-style="italic"
+       font-weight="400"
+       font-size="16px"
+       transform="translate(248.717,396)"
+       id="text278">L’horaire peut être avancé en cas d’inefficacité</text>
+  </g>
+  <text
+     fill="#ffffff"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="16px"
+     id="text282"
+     x="24.432402"
+     y="165.27901">Temps de réponse</text>
+  <g
+     clip-path="url(#clip23)"
+     id="g286"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="700"
+       font-size="16px"
+       transform="translate(248.717,427)"
+       id="text284">1 à 2 semaines</text>
+  </g>
+  <text
+     fill="#ffffff"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="16px"
+     id="text288"
+     x="14.3491"
+     y="225.27901">Durée du traitement</text>
+  <g
+     clip-path="url(#clip24)"
+     id="g292"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="16px"
+       transform="translate(248.717,458)"
+       id="text290">Jusqu’à</text>
+  </g>
+  <text
+     fill="#ffffff"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="16px"
+     id="text294"
+     x="256.798"
+     y="196.27901">réduction des symptômes dépressifs</text>
+  <g
+     clip-path="url(#clip25)"
+     id="g298"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="16px"
+       transform="translate(248.717,477)"
+       id="text296">Si rechute à l’arrêt : jusqu’à la période de rémission naturelle en cas d’EDC de</text>
+  </g>
+  <g
+     clip-path="url(#clip26)"
+     id="g302"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="16px"
+       transform="translate(248.717,496)"
+       id="text300">caractéristique saisonnière (habituellement au printemps en cas de dépression</text>
+  </g>
+  <g
+     clip-path="url(#clip27)"
+     id="g306"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="16px"
+       transform="translate(248.717,516)"
+       id="text304">hivernale)</text>
+  </g>
+  <text
+     fill="#ffffff"
+     font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+     font-weight="700"
+     font-size="16px"
+     id="text308"
+     x="53.098999"
+     y="293.27899">Prévention</text>
+  <g
+     clip-path="url(#clip28)"
+     id="g312"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="16px"
+       transform="translate(248.717,546)"
+       id="text310">Possibilité de traiter quelques semaines avant la période de rechute dépressive</text>
+  </g>
+  <g
+     clip-path="url(#clip29)"
+     id="g316"
+     transform="translate(-49.086,-261.721)">
+    <text
+       fill="#ffffff"
+       font-family="'Open Sans', 'Open Sans_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="16px"
+       transform="translate(248.717,565)"
+       id="text314">saisonnière habituelle</text>
+  </g>
+</svg>

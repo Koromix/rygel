@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.1"
+   width="9.2205553in"
+   height="4.7590199in"
+   class="slides-canvas"
+   viewBox="0 0 663.87998 342.64943"
+   id="svg145"
+   sodipodi:docname="Differentiel.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview147"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="in"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="0.94722222"
+     inkscape:cx="437.59531"
+     inkscape:cy="234.89736"
+     inkscape:window-width="1920"
+     inkscape:window-height="1025"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg145" />
+  <style>
+    @import url("/static/opensans/OpenSans.css");
+  </style>
+  <defs
+     id="defs7">
+    <marker
+       id="ah1"
+       markerUnits="userSpaceOnUse"
+       markerWidth="12"
+       markerHeight="7"
+       viewBox="-6 -3.5 12 7"
+       orient="auto">
+      <path
+         d="M -3,1.75 0,0 -3,-1.75"
+         fill="none"
+         stroke="#808080"
+         stroke-width="1"
+         stroke-linecap="round"
+         id="path4" />
+    </marker>
+  </defs>
+  <path
+     stroke-width="0.75"
+     stroke="#808080"
+     fill="none"
+     d="m 88.84,0.37499997 469.97,0.18"
+     id="path11"
+     style="text-rendering:geometricPrecision" />
+  <path
+     marker-end="url(#ah1)"
+     stroke-width="0.75"
+     stroke="#808080"
+     fill="none"
+     d="M 88.68,0.53499997 V 18.715 v 0.37"
+     id="path13"
+     style="text-rendering:geometricPrecision" />
+  <path
+     fill="#ee7f02"
+     d="m 0,24.895 h 177.17 v 26.92 H 0 Z"
+     id="path15"
+     style="text-rendering:geometricPrecision" />
+  <g
+     transform="translate(17.50632,30.1272)"
+     id="g21"
+     style="text-rendering:geometricPrecision">
+    <text
+       font-family="Open Sans"
+       font-style="normal"
+       font-weight="bold"
+       font-stretch="normal"
+       font-size="14px"
+       fill="#ffffff"
+       x="0"
+       y="30.405533"
+       id="text19"><tspan
+         x="0"
+         y="13.605533"
+         id="tspan17">NON PSYCHIATRIQUE</tspan></text>
+  </g>
+  <path
+     marker-end="url(#ah1)"
+     stroke-width="0.75"
+     stroke="#808080"
+     fill="none"
+     d="M 558.9,0.54499997 V 18.625 v 0.38"
+     id="path23"
+     style="text-rendering:geometricPrecision" />
+  <path
+     fill="#db4239"
+     d="m 448.18,24.815 h 215.7 v 27.54 h -215.7 z"
+     id="path25"
+     style="text-rendering:geometricPrecision" />
+  <g
+     transform="translate(464.80698,30.1272)"
+     id="g31"
+     style="text-rendering:geometricPrecision">
+    <text
+       font-family="Open Sans"
+       font-style="normal"
+       font-weight="bold"
+       font-stretch="normal"
+       font-size="14px"
+       fill="#ffffff"
+       x="39.984665"
+       y="13.605533"
+       id="text29"><tspan
+         x="39.984665"
+         y="13.605533"
+         id="tspan27">PSYCHIATRIQUE</tspan></text>
+  </g>
+  <g
+     transform="translate(6.365747,61.72058)"
+     id="g53"
+     style="text-rendering:geometricPrecision">
+    <text
+       font-family="Open Sans"
+       font-style="normal"
+       font-weight="bold"
+       font-stretch="normal"
+       font-size="14px"
+       fill="#ee7f02"
+       x="0"
+       y="80.805534"
+       id="text51"><tspan
+         x="0"
+         y="13.605533"
+         id="tspan33">Toxique</tspan><tspan
+         x="0"
+         y="30.405533"
+         id="tspan35">Neurologique</tspan><tspan
+         x="0"
+         y="47.205536"
+         id="tspan37">Endocrinien</tspan><tspan
+         x="0"
+         y="64.005539"
+         id="tspan39">Métabolique</tspan><tspan
+         x="0"
+         y="80.805534"
+         id="tspan45">Iatrogénique</tspan></text>
+  </g>
+  <g
+     transform="translate(455.2502,61.75342)"
+     id="g73"
+     style="text-rendering:geometricPrecision">
+    <text
+       font-family="Open Sans"
+       font-style="normal"
+       font-weight="bold"
+       font-stretch="normal"
+       font-size="14px"
+       fill="#db4239"
+       x="0"
+       y="114.40553"
+       id="text71"><tspan
+         x="0"
+         y="13.605533"
+         id="tspan55">Trouble bipolaire</tspan><tspan
+         x="0"
+         y="30.405533"
+         id="tspan57">Trouble psychotique</tspan><tspan
+         x="0"
+         y="47.205536"
+         id="tspan59">Trouble de la personnalité</tspan><tspan
+         x="0"
+         y="64.005539"
+         id="tspan63">Trouble anxieux</tspan><tspan
+         x="0"
+         y="80.805534"
+         id="tspan65">Trouble de stress post-</tspan><tspan
+         x="0"
+         y="97.60553"
+         id="tspan67">traumatique</tspan><tspan
+         x="0"
+         y="114.40553"
+         id="tspan69">Addictions</tspan></text>
+  </g>
+  <g
+     transform="translate(69.81253,186.72156)"
+     id="g115"
+     style="text-rendering:geometricPrecision">
+    <text
+       font-family="Open Sans"
+       font-style="normal"
+       font-weight="normal"
+       font-stretch="normal"
+       font-size="8px"
+       fill="#ff0000"
+       x="34.518234"
+       y="7.6893535"
+       id="text113"><tspan
+         x="34.518234"
+         y="7.6893535"
+         id="tspan75">⚠ Penser à rechercher un antécédent d'épisode (hypo)maniaque à l'aide du questionnaire MDQ (Mood Disorder Questionnaire)</tspan></text>
+  </g>
+  <g
+     transform="translate(53.135225,234.4565)"
+     id="g135"
+     style="text-rendering:geometricPrecision">
+    <text
+       font-family="Open Sans"
+       font-style="normal"
+       font-weight="bold"
+       font-stretch="normal"
+       font-size="16px"
+       fill="#777777"
+       x="22.549999"
+       y="104.34918"
+       id="text133"><tspan
+         x="0"
+         y="15.549181"
+         id="tspan117">AIDE AU DIAGNOSTIC GRACE A DES QUESTIONNAIRES :</tspan><tspan
+         x="0"
+         y="46.749184"
+         font-weight="normal"
+         font-size="16.5px"
+         id="tspan119">-</tspan><tspan
+         x="22.549999"
+         y="46.749184"
+         font-weight="normal"
+         id="tspan121">MADRS : Echelle de dépression de Montgomery et Asberg (évalue l’intensité)</tspan><tspan
+         x="0"
+         y="65.949188"
+         font-weight="normal"
+         font-size="16.5px"
+         id="tspan123">-</tspan><tspan
+         x="22.549999"
+         y="65.949188"
+         font-weight="normal"
+         id="tspan125">HAD : Hospital anxiety and depression scale (évalue l’intensité et aide au</tspan><tspan
+         x="66"
+         y="85.149185"
+         font-weight="normal"
+         id="tspan127">diagnostic)</tspan><tspan
+         x="0"
+         y="104.34918"
+         font-weight="normal"
+         font-size="16.5px"
+         id="tspan129">-</tspan><tspan
+         x="22.549999"
+         y="104.34918"
+         font-weight="normal"
+         font-style="italic"
+         id="tspan131">MDQ : Antécédent d'épisode (hypo)maniaque</tspan></text>
+  </g>
+  <path
+     stroke-width="0.75"
+     stroke="#808080"
+     fill="none"
+     d="m 339.96,69.975 105.89,0.58"
+     id="path137"
+     style="text-rendering:geometricPrecision" />
+  <g
+     transform="matrix(-1,0,0,1,705.1171,-93.685)"
+     id="g141"
+     style="text-rendering:geometricPrecision">
+    <path
+       marker-end="url(#ah1)"
+       stroke-width="0.75"
+       stroke="#808080"
+       fill="none"
+       d="m 364.97,163.99 0.39,110.27 v 0.37"
+       id="path139" />
+  </g>
+</svg>
