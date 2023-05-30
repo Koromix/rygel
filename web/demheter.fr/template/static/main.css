@@ -293,7 +293,7 @@ table + div.legend {
 }
 .pills > div > div:first-child {
     border: 1px solid #3d787922;
-    width: 170px;
+    width: 120px;
     background: #3d7879;
     color: white;
     padding: 1em;
