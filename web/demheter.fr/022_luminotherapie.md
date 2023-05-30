@@ -1,4 +1,4 @@
-<!-- Title: DEMHETER
+<!-- Title: Luminothérapie
      Menu: Pour les médecins / Luminothérapie
      Created: 2023-05-30 -->
 

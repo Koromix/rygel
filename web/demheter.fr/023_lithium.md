@@ -1,4 +1,4 @@
-<!-- Title: DEMHETER
+<!-- Title: Traitement au lithium
      Menu: Pour les médecins / Lithium
      Created: 2023-05-30 -->
 
