@@ -200,11 +200,11 @@ code {
     nav#top a { border-bottom: none; }
     nav#top a:hover { margin-bottom: -2px; }
     .js nav#top a:not(.active) { display: none; }
-    nav#top ul.active {
+    nav#top.active ul {
         height: auto;
         gap: 4px;
     }
-    nav#top ul.active a { display: block !important; }
+    nav#top.active a { display: block !important; }
 
     .js a#deploy {
         display: block !important;

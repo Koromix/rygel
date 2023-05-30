@@ -86,13 +86,18 @@ function initMenuHighlight() {
 }
 
 function initScroll() {
-    let top = document.querySelector('nav#top');
-    window.addEventListener('scroll', () => { top.classList.toggle('border', window.pageYOffset > 0); });
+    window.addEventListener('scroll', adjust_top);
+    adjust_top();
+
+    function adjust_top() {
+        let top = document.querySelector('nav#top');
+        top.classList.toggle('border', window.pageYOffset > 0);
+    }
 }
 
 function deploy() {
-    let menu = document.querySelector('#top ul');
-    menu.classList.toggle('active');
+    let top = document.querySelector('nav#top');
+    top.classList.toggle('active');
 }
 
 document.addEventListener('readystatechange', () => {
