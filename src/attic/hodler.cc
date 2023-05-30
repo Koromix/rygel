@@ -31,6 +31,17 @@ struct PageData {
     const char *url;
 };
 
+enum class UrlFormat {
+    Pretty,
+    PrettySub,
+    Ugly
+};
+static const char *const UrlFormatNames[] = {
+    "Pretty",
+    "PrettySub",
+    "Ugly"
+};
+
 static const char *FileNameToPageName(const char *filename, Allocator *alloc)
 {
     // File name and extension
@@ -263,6 +274,126 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
     return true;
 }
 
+static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat urls, const char *output_dir)
+{
+    BlockAllocator temp_alloc;
+
+    // List input files
+    HeapArray<const char *> filenames;
+    if (!EnumerateFiles(input_dir, "*.md", 0, 1024, &temp_alloc, &filenames))
+        return false;
+    std::sort(filenames.begin(), filenames.end(),
+              [](const char *filename1, const char *filename2) { return CmpStr(filename1, filename2) < 0; });
+
+    // Render pages
+    HeapArray<PageData> pages;
+    {
+        HashMap<const char *, Size> pages_map;
+
+        for (const char *filename: filenames) {
+            PageData page = {};
+
+            page.src_filename = filename;
+            if (!RenderPageContent(&page, &temp_alloc))
+                return false;
+            page.name = FileNameToPageName(filename, &temp_alloc);
+
+            if (TestStr(page.name, "index")) {
+                page.url = "/";
+            } else {
+                switch (urls) {
+                    case UrlFormat::Pretty:
+                    case UrlFormat::PrettySub: { page.url = Fmt(&temp_alloc, "/%1", page.name).ptr; } break;
+                    case UrlFormat::Ugly: { page.url = Fmt(&temp_alloc, "/%1.html", page.name).ptr; } break;
+                }
+            }
+
+            bool valid = true;
+            if (!page.name) {
+                LogError("%1: Page with empty name", page.src_filename);
+                valid = false;
+            }
+            if (!page.title) {
+                LogError("%1: Ignoring page without title", page.src_filename);
+                valid = false;
+            }
+            if (!page.created) {
+                LogError("%1: Missing creation date", page.src_filename);
+            }
+            if (Size prev_idx = pages_map.FindValue(page.name, -1); prev_idx >= 0) {
+                LogError("%1: Ignoring duplicate of '%2'",
+                         page.src_filename, pages[prev_idx].src_filename);
+                valid = false;
+            }
+
+            if (valid) {
+                pages_map.Set(page.name, pages.len);
+                pages.Append(page);
+            }
+        }
+    }
+
+    // Output directory
+    if (!MakeDirectory(output_dir, false))
+        return false;
+    LogInfo("Template: %!..+%1%!0", template_dir);
+    LogInfo("Output directory: %!..+%1%!0", output_dir);
+
+    const char *template_filename = Fmt(&temp_alloc, "%1%/page.html", template_dir).ptr;
+    const char *static_directory = Fmt(&temp_alloc, "%1%/static", template_dir).ptr;
+
+    HeapArray<uint8_t> template_html;
+    if (!ReadFile(template_filename, Mebibytes(1), &template_html))
+        return false;
+
+    // Output fully-formed pages
+    for (Size i = 0; i < pages.len; i++) {
+        const PageData &page = pages[i];
+
+        const char *dest_filename;
+        if (urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
+            dest_filename = Fmt(&temp_alloc, "%1%/%2%/index.html", output_dir, page.name).ptr;
+            if (!EnsureDirectoryExists(dest_filename))
+                return false;
+        } else {
+            dest_filename = Fmt(&temp_alloc, "%1%/%2.html", output_dir, page.name).ptr;
+        }
+
+        if (!RenderFullPage(template_html, pages, i, dest_filename))
+            return false;
+    }
+
+    // Copy template assets
+    if (TestFile(static_directory, FileType::Directory)) {
+        HeapArray<const char *> template_files;
+        if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &template_files))
+            return false;
+
+        Size prefix_len = strlen(static_directory);
+
+        for (const char *src_filename: template_files) {
+            const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
+
+            if (TestStr(basename, "page.html"))
+                continue;
+
+            const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
+
+            if (!EnsureDirectoryExists(dest_filename))
+                return false;
+
+            StreamReader reader(src_filename);
+            StreamWriter writer(dest_filename);
+            if (!SpliceStream(&reader, Megabytes(4), &writer))
+                return false;
+            if (!writer.Close())
+                return false;
+        }
+    }
+
+    return true;
+}
+
 int RunHodler(int argc, char *argv[])
 {
     BlockAllocator temp_alloc;
@@ -271,10 +402,9 @@ int RunHodler(int argc, char *argv[])
     const char *input_dir = nullptr;
     const char *template_dir = {};
     const char *output_dir = nullptr;
-    bool subdirs = false;
-    bool ugly_urls = false;
+    UrlFormat urls = UrlFormat::Pretty;
 
-    const auto print_usage = [](FILE *fp) {
+    const auto print_usage = [=](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 <input_dir> -O <output_dir>%!0
 
 Options:
@@ -282,8 +412,9 @@ Options:
 
     %!..+-O, --output_dir <dir>%!0       Set output directory
 
-    %!..+-u, --ugly_urls%!0              Add '.html' extension to page URLs
-        %!..+--subdirs%!0                Output HTML pages in subdirectories)", FelixTarget);
+    %!..+-u, --urls <FORMAT>%!0          Change URL format (%2)
+                                 %!D..(default: %3)%!0)",
+                FelixTarget, FmtSpan(UrlFormatNames), UrlFormatNames[(int)urls]);
     };
 
     // Handle version
@@ -305,10 +436,11 @@ Options:
                 template_dir = opt.current_value;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
-            } else if (opt.Test("-u", "--ugly_urls")) {
-                ugly_urls = true;
-            } else if (opt.Test("--subdirs")) {
-                subdirs = true;
+            } else if (opt.Test("-u", "--urls", OptionType::Value)) {
+                if (!OptionToEnum(UrlFormatNames, opt.current_value, &urls)) {
+                    LogError("Unknown URL format '%1'", opt.current_value);
+                    return true;
+                }
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -346,119 +478,8 @@ Options:
         template_dir = directory;
     }
 
-    // List input files
-    HeapArray<const char *> filenames;
-    if (!EnumerateFiles(input_dir, "*.md", 0, 1024, &temp_alloc, &filenames))
+    if (!BuildAll(input_dir, template_dir, urls, output_dir))
         return 1;
-    std::sort(filenames.begin(), filenames.end(),
-              [](const char *filename1, const char *filename2) { return CmpStr(filename1, filename2) < 0; });
-
-    // Render pages
-    HeapArray<PageData> pages;
-    {
-        HashMap<const char *, Size> pages_map;
-
-        for (const char *filename: filenames) {
-            PageData page = {};
-
-            page.src_filename = filename;
-            if (!RenderPageContent(&page, &temp_alloc))
-                return 1;
-            page.name = FileNameToPageName(filename, &temp_alloc);
-            if (subdirs) {
-                if (TestStr(page.name, "index")) {
-                    page.url = "/";
-                } else {
-                    page.url = Fmt(&temp_alloc, "/%1", page.name).ptr;
-                }
-            } else if (ugly_urls) {
-                page.url = Fmt(&temp_alloc, "%1.html", page.name).ptr;
-            } else {
-                page.url = page.name;
-            }
-
-            bool valid = true;
-            if (!page.name) {
-                LogError("%1: Page with empty name", page.src_filename);
-                valid = false;
-            }
-            if (!page.title) {
-                LogError("%1: Ignoring page without title", page.src_filename);
-                valid = false;
-            }
-            if (!page.created) {
-                LogError("%1: Missing creation date", page.src_filename);
-            }
-            if (Size prev_idx = pages_map.FindValue(page.name, -1); prev_idx >= 0) {
-                LogError("%1: Ignoring duplicate of '%2'",
-                         page.src_filename, pages[prev_idx].src_filename);
-                valid = false;
-            }
-
-            if (valid) {
-                pages_map.Set(page.name, pages.len);
-                pages.Append(page);
-            }
-        }
-    }
-
-    // Output directory
-    if (!MakeDirectory(output_dir, false))
-        return 1;
-    LogInfo("Template: %!..+%1%!0", template_dir);
-    LogInfo("Output directory: %!..+%1%!0", output_dir);
-
-    const char *template_filename = Fmt(&temp_alloc, "%1%/page.html", template_dir).ptr;
-    const char *static_directory = Fmt(&temp_alloc, "%1%/static", template_dir).ptr;
-
-    HeapArray<uint8_t> template_html;
-    if (!ReadFile(template_filename, Mebibytes(1), &template_html))
-        return 1;
-
-    // Output fully-formed pages
-    for (Size i = 0; i < pages.len; i++) {
-        const PageData &page = pages[i];
-
-        const char *dest_filename;
-        if (subdirs && !TestStr(pages[i].name, "index")) {
-            dest_filename = Fmt(&temp_alloc, "%1%/%2%/index.html", output_dir, page.name).ptr;
-            if (!EnsureDirectoryExists(dest_filename))
-                return 1;
-        } else {
-            dest_filename = Fmt(&temp_alloc, "%1%/%2.html", output_dir, page.name).ptr;
-        }
-
-        if (!RenderFullPage(template_html, pages, i, dest_filename))
-            return 1;
-    }
-
-    // Copy template assets
-    if (TestFile(static_directory, FileType::Directory)) {
-        HeapArray<const char *> template_files;
-        if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &template_files))
-            return 1;
-
-        Size prefix_len = strlen(static_directory);
-
-        for (const char *src_filename: template_files) {
-            const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
-
-            if (TestStr(basename, "page.html"))
-                continue;
-
-            const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
-
-            if (!EnsureDirectoryExists(dest_filename))
-                return 1;
-
-            StreamReader reader(src_filename);
-            StreamWriter writer(dest_filename);
-            if (!SpliceStream(&reader, Megabytes(4), &writer))
-                return 1;
-            if (!writer.Close())
-                return 1;
-        }
-    }
 
     LogInfo("Done!");
     return 0;
