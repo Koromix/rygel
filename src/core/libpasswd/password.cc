@@ -144,20 +144,21 @@ static Size SimplifyText(Span<const char> password, Span<char> out_buf)
             out_buf[len++] = LowerAscii(password[offset]);
         } else if (bytes > 1) {
             const char *ptr = replacements.FindValue(uc, nullptr);
+            Size expand = bytes;
 
             if (ptr) {
-                bytes = strlen(ptr);
+                expand = strlen(ptr);
             } else {
                 ptr = password.ptr + offset;
             }
 
-            if (RG_UNLIKELY(len >= out_buf.len - bytes - 1)) {
+            if (RG_UNLIKELY(len >= out_buf.len - expand - 1)) {
                 LogError("Excessive password length");
                 return -1;
             }
 
-            memcpy_safe(out_buf.ptr + len, ptr, (size_t)bytes);
-            len += bytes;
+            memcpy_safe(out_buf.ptr + len, ptr, (size_t)expand);
+            len += expand;
         } else {
             LogError("Illegal UTF-8 sequence");
             return -1;
