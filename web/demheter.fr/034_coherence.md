@@ -6,4 +6,6 @@
 
 <img class="schema" src="/static/psycho/coherence1.svg" alt="" />
 
+# Exercices pratiques
+
 <img class="schema" src="/static/psycho/coherence2.svg" alt="" />

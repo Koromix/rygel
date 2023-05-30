@@ -203,7 +203,7 @@ table + div.legend {
 .schema {
     display: block;
     margin: 0 auto;
-    max-width: min(100%, 800px);
+    width: min(100%, 800px);
 }
 
 .columns {

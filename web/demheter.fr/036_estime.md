@@ -6,4 +6,6 @@
 
 <img class="schema" src="/static/psycho/estime1.svg" alt="" />
 
+# Exercices pratiques
+
 <img class="schema" src="/static/psycho/estime2.svg" alt="" />

@@ -6,4 +6,6 @@
 
 <img class="schema" src="/static/psycho/activation1.svg" alt="" />
 
+# Cahier d'activités
+
 <img class="schema" src="/static/psycho/activation2.svg" alt="" />
