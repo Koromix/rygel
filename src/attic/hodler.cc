@@ -337,8 +337,11 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
     LogInfo("Template: %!..+%1%!0", template_dir);
     LogInfo("Output directory: %!..+%1%!0", output_dir);
 
+    const char *static_directories[] = {
+        Fmt(&temp_alloc, "%1%/static", input_dir).ptr,
+        Fmt(&temp_alloc, "%1%/static", template_dir).ptr
+    };
     const char *template_filename = Fmt(&temp_alloc, "%1%/page.html", template_dir).ptr;
-    const char *static_directory = Fmt(&temp_alloc, "%1%/static", template_dir).ptr;
 
     HeapArray<uint8_t> template_html;
     if (!ReadFile(template_filename, Mebibytes(1), &template_html))
@@ -362,26 +365,28 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
     }
 
     // Copy template assets
-    if (TestFile(static_directory, FileType::Directory)) {
-        HeapArray<const char *> static_files;
-        if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &static_files))
-            return false;
-
-        Size prefix_len = strlen(static_directory);
-
-        for (const char *src_filename: static_files) {
-            const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
-            const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
-
-            if (!EnsureDirectoryExists(dest_filename))
+    for (const char *static_directory: static_directories) {
+        if (TestFile(static_directory, FileType::Directory)) {
+            HeapArray<const char *> static_files;
+            if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &static_files))
                 return false;
 
-            StreamReader reader(src_filename);
-            StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
-            if (!SpliceStream(&reader, Megabytes(4), &writer))
-                return false;
-            if (!writer.Close())
-                return false;
+            Size prefix_len = strlen(static_directory);
+
+            for (const char *src_filename: static_files) {
+                const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
+                const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
+
+                if (!EnsureDirectoryExists(dest_filename))
+                    return false;
+
+                StreamReader reader(src_filename);
+                StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
+                if (!SpliceStream(&reader, Megabytes(4), &writer))
+                    return false;
+                if (!writer.Close())
+                    return false;
+            }
         }
     }
 
