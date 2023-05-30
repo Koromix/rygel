@@ -240,16 +240,41 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
             writer->Write(page.title);
         } else if (key == "LINKS") {
             for (Size i = 0; i < pages.len; i++) {
-                const PageData &menu_page = pages[i];
+                const PageData *menu_page = &pages[i];
 
-                if (menu_page.menu) {
-                    if (i == page_idx) {
-                        PrintLn(writer, "<li><a href=\"%1\" class=\"active\">%2</a></li>",
-                                        menu_page.url, menu_page.menu);
-                    } else {
-                        PrintLn(writer, "<li><a href=\"%1\">%2</a></li>",
-                                        menu_page.url, menu_page.menu);
+                if (!menu_page->menu)
+                    continue;
+
+                if (strchr(menu_page->menu, '/')) {
+                    Span<const char> category = TrimStr(SplitStr(menu_page->menu, '/'));
+
+                    Size j = i + 1;
+                    while (j < pages.len) {
+                        Span<const char> new_category = TrimStr(SplitStr(pages[j].menu, '/'));
+
+                        if (new_category != category)
+                            break;
+                        j++;
                     }
+
+                    bool active = (page_idx >= i && page_idx < j);
+                    PrintLn(writer, "<li><a%1>%2</a><div>", active ? " class=\"active\"" : "", category);
+
+                    for (; i < j; i++) {
+                        menu_page = &pages[i];
+
+                        const char *item = TrimStrLeft(strchr(menu_page->menu, '/') + 1).ptr;
+                        SplitStr(menu_page->menu, '/', &item);
+
+                        bool active = (page_idx == i);
+                        PrintLn(writer, "<a href=\"%1\"%2>%3</a>", menu_page->url, active ? " class=\"active\"" : "", item);
+                    }
+                    i = j - 1;
+
+                    PrintLn(writer, "</div></li>");
+                } else {
+                    bool active = (page_idx == i);
+                    PrintLn(writer, "<li><a href=\"%1\"%2>%3</a></li>", menu_page->url, active ? " class=\"active\"" : "", menu_page->menu);
                 }
             }
         } else if (key == "TOC") {
