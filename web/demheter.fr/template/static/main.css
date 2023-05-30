@@ -129,6 +129,7 @@ nav#side a.lv6 { padding-left: 87px; }
 a#deploy { display: none; }
 
 main {
+    width: 100%;
     max-width: 1200px;
     box-sizing: border-box;
     margin: 20px auto 0 auto;
@@ -238,7 +239,7 @@ table + div.legend {
         position: static;
     }
 
-    main { padding-right: 16px; }
+    main { padding-right: 16px !important; }
 }
 
 @media screen and (max-width: 960px) {
