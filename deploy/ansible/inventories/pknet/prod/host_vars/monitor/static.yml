@@ -41,3 +41,14 @@ static_deploys:
         chdir: '{{ static_root_path }}/repo/koffi.dev/www/web/koffi.dev'
       - cmd: '/root/.local/share/pypoetry/venv/bin/poetry run make html'
         chdir: '{{ static_root_path }}/repo/koffi.dev/www/web/koffi.dev'
+
+  - name: demheter.fr/beta
+    repo: https://github.com/Koromix/rygel.git
+    path: web/demheter.fr/dist
+    build:
+      - cmd: '{{ static_root_path }}/repo/demheter.fr/beta/bootstrap.sh'
+        chdir: '{{ static_root_path }}/repo/demheter.fr/beta'
+      - cmd: '/usr/bin/rm -rf {{ static_root_path }}/repo/demheter.fr/beta/web/demheter.fr/dist'
+        chdir: '{{ static_root_path }}/repo/demheter.fr/beta'
+      - cmd: '{{ static_root_path }}/repo/demheter.fr/beta/felix -pFast --run_here hodler . -O dist'
+        chdir: '{{ static_root_path }}/repo/demheter.fr/beta/web/demheter.fr'
