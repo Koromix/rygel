@@ -42,6 +42,65 @@ static const char *const UrlFormatNames[] = {
     "Ugly"
 };
 
+static int32_t DecodeUtf8Unsafe(const char *str);
+
+static const HashMap<int32_t, const char *> replacements = {
+    { DecodeUtf8Unsafe("Ç"), "c" },
+    { DecodeUtf8Unsafe("È"), "e" },
+    { DecodeUtf8Unsafe("É"), "e" },
+    { DecodeUtf8Unsafe("Ê"), "e" },
+    { DecodeUtf8Unsafe("Ë"), "e" },
+    { DecodeUtf8Unsafe("À"), "a" },
+    { DecodeUtf8Unsafe("Å"), "a" },
+    { DecodeUtf8Unsafe("Â"), "a" },
+    { DecodeUtf8Unsafe("Ä"), "a" },
+    { DecodeUtf8Unsafe("Î"), "i" },
+    { DecodeUtf8Unsafe("Ï"), "i" },
+    { DecodeUtf8Unsafe("Ù"), "u" },
+    { DecodeUtf8Unsafe("Ü"), "u" },
+    { DecodeUtf8Unsafe("Û"), "u" },
+    { DecodeUtf8Unsafe("Ú"), "u" },
+    { DecodeUtf8Unsafe("Ñ"), "n" },
+    { DecodeUtf8Unsafe("Ô"), "o" },
+    { DecodeUtf8Unsafe("Ó"), "o" },
+    { DecodeUtf8Unsafe("Ö"), "o" },
+    { DecodeUtf8Unsafe("Œ"), "oe" },
+    { DecodeUtf8Unsafe("Ÿ"), "y" },
+
+    { DecodeUtf8Unsafe("ç"), "c" },
+    { DecodeUtf8Unsafe("è"), "e" },
+    { DecodeUtf8Unsafe("é"), "e" },
+    { DecodeUtf8Unsafe("ê"), "e" },
+    { DecodeUtf8Unsafe("ë"), "e" },
+    { DecodeUtf8Unsafe("à"), "a" },
+    { DecodeUtf8Unsafe("å"), "a" },
+    { DecodeUtf8Unsafe("â"), "a" },
+    { DecodeUtf8Unsafe("ä"), "a" },
+    { DecodeUtf8Unsafe("î"), "i" },
+    { DecodeUtf8Unsafe("ï"), "i" },
+    { DecodeUtf8Unsafe("ù"), "u" },
+    { DecodeUtf8Unsafe("ü"), "u" },
+    { DecodeUtf8Unsafe("û"), "u" },
+    { DecodeUtf8Unsafe("ú"), "u" },
+    { DecodeUtf8Unsafe("ñ"), "n" },
+    { DecodeUtf8Unsafe("ô"), "o" },
+    { DecodeUtf8Unsafe("ó"), "o" },
+    { DecodeUtf8Unsafe("ö"), "o" },
+    { DecodeUtf8Unsafe("œ"), "oe" },
+    { DecodeUtf8Unsafe("ÿ"), "y" }
+};
+
+static int32_t DecodeUtf8Unsafe(const char *str)
+{
+    int32_t uc = -1;
+    Size bytes = DecodeUtf8(str, &uc);
+
+    RG_ASSERT(bytes > 0);
+    RG_ASSERT(!str[bytes]);
+
+    return uc;
+}
+
 static const char *FileNameToPageName(const char *filename, Allocator *alloc)
 {
     // File name and extension
@@ -66,26 +125,57 @@ static const char *FileNameToPageName(const char *filename, Allocator *alloc)
     return name2;
 }
 
-static Span<const char> TextToID(Span<const char> text, Allocator *alloc)
+static const char *TextToID(Span<const char> text, Allocator *alloc)
 {
     Span<char> id = AllocateSpan<char>(alloc, text.len + 1);
 
-    Size j = 0;
-    for (Size i = 0; i < text.len; i++) {
-        if (IsAsciiAlphaOrDigit(text[i])) {
-            id[j++] = LowerAscii(text[i]);
-        } else {
-            id[j++] = '_';
+    Size offset = 0;
+    Size len = 0;
+    bool skip_special = false;
 
-            while (++i < text.len && !IsAsciiAlphaOrDigit(text[i]));
-            i--;
+    while (offset < text.len) {
+        int32_t uc;
+        Size bytes = DecodeUtf8(text, offset, &uc);
+
+        if (bytes == 1) {
+            if (IsAsciiAlphaOrDigit((char)uc)) {
+                id[len++] = LowerAscii((char)uc);
+                skip_special = false;
+            } else if (!skip_special) {
+                id[len++] = '_';
+                skip_special = true;
+            }
+        } else if (bytes > 1) {
+            const char *ptr = replacements.FindValue(uc, nullptr);
+            Size expand = bytes;
+
+            if (ptr) {
+                expand = strlen(ptr);
+            } else {
+                ptr = text.ptr + offset;
+            }
+
+            memcpy_safe(id.ptr + len, ptr, (size_t)expand);
+            len += expand;
+
+            skip_special = false;
+        } else {
+            LogError("Illegal UTF-8 sequence");
+            return nullptr;
         }
+
+        offset += bytes;
     }
 
-    id.len = j;
-    id.ptr[j] = 0;
+    while (len > 1 && id[len - 1] == '_') {
+        len--;
+    }
+    if (!len)
+        return nullptr;
 
-    return id;
+    id.ptr[len] = 0;
+
+    return id.ptr;
 }
 
 // XXX: Resolve page links in content
@@ -129,12 +219,15 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
 
             sec.level = level;
             sec.title = DuplicateString(MakeSpan(text->data, text->size), ctx->alloc).ptr;
-            sec.id = TextToID(sec.title, ctx->alloc).ptr;
+            sec.id = TextToID(sec.title, ctx->alloc);
 
-            // XXX: Detect duplicate sections
-            ctx->page->sections.Append(sec);
-
-            bufprintf(ob, "<h%d id=\"%s\">%s</h%d>", level, sec.id, sec.title, level);
+            if (sec.id) {
+                // XXX: Detect duplicate sections
+                ctx->page->sections.Append(sec);
+                bufprintf(ob, "<h%d id=\"%s\">%s</h%d>", level, sec.id, sec.title, level);
+            } else {
+                bufprintf(ob, "<h%d>%.*s</h%d>", level, (int)text->size, text->data, level);
+            }
         } else {
             bufprintf(ob, "<h%d>%.*s</h%d>", level, (int)text->size, text->data, level);
         }
