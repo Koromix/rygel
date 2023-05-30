@@ -231,7 +231,7 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
 static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
                            Size page_idx, const char *dest_filename)
 {
-    StreamWriter st(dest_filename);
+    StreamWriter st(dest_filename, (int)StreamWriterFlag::Atomic);
 
     const PageData &page = pages[page_idx];
 
@@ -365,25 +365,21 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
 
     // Copy template assets
     if (TestFile(static_directory, FileType::Directory)) {
-        HeapArray<const char *> template_files;
-        if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &template_files))
+        HeapArray<const char *> static_files;
+        if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &static_files))
             return false;
 
         Size prefix_len = strlen(static_directory);
 
-        for (const char *src_filename: template_files) {
+        for (const char *src_filename: static_files) {
             const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
-
-            if (TestStr(basename, "page.html"))
-                continue;
-
             const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
 
             if (!EnsureDirectoryExists(dest_filename))
                 return false;
 
             StreamReader reader(src_filename);
-            StreamWriter writer(dest_filename);
+            StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
             if (!SpliceStream(&reader, Megabytes(4), &writer))
                 return false;
             if (!writer.Close())
