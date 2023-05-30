@@ -651,7 +651,7 @@ static CURLUcode hostname_check(struct Curl_URL *u, char *hostname,
  */
 
 #define HOST_ERROR   -1 /* out of memory */
-#define HOST_BAD     -2 /* bad IPv4 adddress */
+#define HOST_BAD     -2 /* bad IPv4 address */
 
 #define HOST_NAME    1
 #define HOST_IPV4    2
@@ -1724,15 +1724,10 @@ CURLUcode curl_url_set(CURLU *u, CURLUPart what,
   case CURLUPART_OPTIONS:
     storep = &u->options;
     break;
-  case CURLUPART_HOST: {
-    size_t len = strcspn(part, " \r\n");
-    if(strlen(part) != len)
-      /* hostname with bad content */
-      return CURLUE_BAD_HOSTNAME;
+  case CURLUPART_HOST:
     storep = &u->host;
     Curl_safefree(u->zoneid);
     break;
-  }
   case CURLUPART_ZONEID:
     storep = &u->zoneid;
     break;

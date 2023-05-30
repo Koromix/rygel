@@ -6,6 +6,197 @@
 
                                   Changelog
 
+Version 8.1.2 (30 May 2023)
+
+Daniel Stenberg (30 May 2023)
+
+- RELEASE-NOTES: synced
+
+  8.1.2 release
+
+- THANKS: contributors from 8.1.2
+
+- lib1560: verify more scheme guessing
+
+  - on 2nd level domains
+  - on names without dots
+
+  As mentioned in #11161, "imap.com" will be guessed IMAP
+
+  Closes #11219
+
+- page-header: minor wording polish in the URL segment
+
+  Closes #11217
+
+- page-header: mention curl version and how to figure out current release
+
+  Closes #11216
+
+- RELEASE-NOTES: synced
+
+- configure: without pkg-config and no custom path, use -lnghttp2
+
+  Reported-by: correctmost on github
+  Fixes #11186
+  Closes #11210
+
+Stefan Eissing (28 May 2023)
+
+- curl: cache the --trace-time value for a second
+
+  - caches HH:MM:SS computed and reuses it for logging during
+    the same second.
+  - common function for plain log line start formatting
+
+  Closes #11211
+
+Kev Jackson (28 May 2023)
+
+- libcurl.m4: remove trailing 'dnl' that causes this to break autoconf
+
+  Closes #11212
+
+Stefan Eissing (26 May 2023)
+
+- http3: send EOF indicator early as possible
+
+  - ngtcp2 and quiche implementations relied on the DONE_SEND event
+    to forward the EOF for uploads to the libraries. This often
+    result in a last 0 length EOF data. Tracking the amount of
+    data left to upload allows EOF indication earlier.
+  - refs #11205 where CloudFlare DoH servers did not like to
+    receive the initial upload DATA without EOF and returned
+    a 400 Bad Request
+
+  Reported-by: Sergey Fionov
+  Fixes #11205
+  Closes #11207
+
+Daniel Stenberg (26 May 2023)
+
+- scripts/contri*sh: no longer grep -v ' '
+
+  Originally these scripts filtered out names that have no space so that
+  they better avoid nick names not intended for credits. Such names are
+  not too commonly used, plus we now give credit even to those.
+
+  Additionally: non-latin names, like Asian, don't have spaces at all so
+  they were also filtered out and had to be manually added which made it
+  an error-prone operation where Asian names eventually easily fell off by
+  mistake.
+
+  Closes #11206
+
+- cf-socket: restore Curl_sock_assign_addr()
+
+  Regression since it was not private. Also used by msh3.c
+
+  Follow-up to 8e85764b7bd7f05f5
+  Reported-by: Gisle Vanem
+  Fixes #11202
+  Closes #11204
+
+- RELEASE-NOTES: synced
+
+  Taken down to 8.1.2 now for pending patch release
+
+- libssh: when keyboard-interactive auth fails, try password
+
+  The state machine had a mistake in that it would not carry on to that
+  next step.
+
+  This also adds a verbose output what methods that are available from the
+  server and renames the macros that change to the next auth methods to
+  try.
+
+  Reported-by: 左潇峰
+  Fixes #11196
+  Closes #11197
+
+Emanuele Torre (25 May 2023)
+
+- configure: fix build with arbitrary CC and LD_LIBRARY_PATH
+
+  Since ./configure and processes that inherit its environment variables
+  are the only callers of the run-compiler script, we can just save the
+  current value of the LD_LIBRARY_PATH and CC variables to another pair of
+  environment variables, and make run-compiler a static script that
+  simply restores CC and LD_LIBRARY_PATH to the saved value, and before
+  running the compiler.
+
+  This avoids having to inject the values of the variables in the script,
+  possibly causing problems if they contains spaces, quotes, and other
+  special characters.
+
+  Also add exports in the script just in case LD_LIBRARY_PATH and CC are
+  not already in the environment.
+
+  follow-up from 471dab2
+
+  Closes #11182
+
+Daniel Stenberg (25 May 2023)
+
+- urlapi: remove superfluous host name check
+
+  ... as it is checked later more proper.
+
+  Closes #11195
+
+Stefan Eissing (25 May 2023)
+
+- http2: fix EOF handling on uploads with auth negotiation
+
+  - doing a POST with `--digest` does an override on the initial request
+    with `Content-Length: 0`, but the http2 filter was unaware of that
+    and expected the originally request body. It did therefore not
+    send a final DATA frame with EOF flag to the server.
+  - The fix overrides any initial notion of post size when the `done_send`
+    event is triggered by the transfer loop, leading to the EOF that
+    is necessary.
+  - refs #11194. The fault did not happen in testing, as Apache httpd
+    never tries to read the request body of the initial request,
+    sends the 401 reply and closes the stream. The server used in the
+    reported issue however tried to read the EOF and timed out on the
+    request.
+
+  Reported-by: Aleksander Mazur
+  Fixes #11194
+  Cloes #11200
+
+Daniel Stenberg (23 May 2023)
+
+- RELEASE-NOTES: synced
+
+  bump to 8.2.0
+
+- lib: remove unused functions, make single-use static
+
+  Closes #11174
+
+- scripts/singleuse.pl: add more API calls
+
+Christian Hesse (23 May 2023)
+
+- configure: quote the assignments for run-compiler
+
+  Building for multilib failed, as the compiler command contains an
+  extra argument. That needs quoting.
+
+  Regression from b78ca50cb3dda361f9c1
+
+  Fixes #11179
+  Closes #11180
+
+Daniel Stenberg (23 May 2023)
+
+- misc: fix spelling mistakes
+
+  Reported-by: musvaage on github
+  Fixes #11171
+  Closes #11172
+
 Version 8.1.1 (23 May 2023)
 
 Daniel Stenberg (23 May 2023)
@@ -9052,169 +9243,3 @@ Daniel Stenberg (18 Nov 2022)
   Reported-by: Andy Stamp
   Fixes #9937
   Closes #9939
-
-Alexandre Ferrieux (18 Nov 2022)
-
-- CURLOPT_QUICK_EXIT: don't wait for DNS thread on exit
-
-  Fixes #2975
-  Closes #9147
-
-Daniel Stenberg (17 Nov 2022)
-
-- HTTP-COOKIES.md: mention that http://localhost is a secure context
-
-  Reported-by: Trail of Bits
-
-  Closes #9938
-
-- lib: parse numbers with fixed known base 10
-
-  ... instead of using 0 argument that allows decimal, hex or octal when
-  the number is documented and assumed to use base 10.
-
-  Closes #9933
-
-- RELEASE-NOTES: synced
-
-- scripts/delta: adapt to curl.h changes for the opt counter
-
-- cookie: expire cookies at once when max-age is negative
-
-  Update test 329 to verify
-
-  Reported-by: godmar on github
-  Fixes #9930
-  Closes #9932
-
-Stefan Eissing (17 Nov 2022)
-
-- proxy: haproxy filter is only available when PROXY and HTTP are
-
-  Closes #9935
-
-Daniel Stenberg (16 Nov 2022)
-
-- OtherTests.cmake: check for cross-compile, not for toolchain
-
-  Build systems like vcpkg alway sets `CMAKE_TOOLCHAIN_FILE` so it should
-  not be used as a sign that this is a cross-compile.
-
-  Also indented the function correctly.
-
-  Reported-by: Philip Chan
-  Fixes #9921
-  Closes #9923
-
-- ntlm: improve comment for encrypt_des
-
-  Reported-by: Andrei Rybak
-  Fixes #9903
-  Closes #9925
-
-- include/curl/curl.h: bump the deprecated requirements to gcc 5.3
-
-  Reported-by: Stephan Guilloux
-  Fixes #9917
-  Closes #9918
-
-Stefan Eissing (15 Nov 2022)
-
-- proxy: refactor haproxy protocol handling as connection filter
-
-  Closes #9893
-
-Patrick Monnerat (15 Nov 2022)
-
-- lib: feature deprecation warnings in gcc >= 4.3
-
-  Add a deprecated attribute to functions and enum values that should not
-  be used anymore.
-  This uses a gcc 4.3 dialect, thus is only available for this version of
-  gcc and newer. Note that the _Pragma() keyword is introduced by C99, but
-  is available as part of the gcc dialect even when compiling in C89 mode.
-
-  It is still possible to disable deprecation at a calling module compile
-  time by defining CURL_DISABLE_DEPRECATION.
-
-  Gcc type checking macros are made aware of possible deprecations.
-
-  Some testing support Perl programs are adapted to the extended
-  declaration syntax.
-
-  Several test and unit test C programs intentionally use deprecated
-  functions/options and are annotated to not generate a warning.
-
-  New test 1222 checks the deprecation status in doc and header files.
-
-  Closes #9667
-
-Daniel Stenberg (15 Nov 2022)
-
-- log2changes.pl: wrap long lines at 80 columns
-
-  Also, only use author names in the output.
-
-  Fixes #9896
-  Reported-by: John Sherrill
-  Closes #9897
-
-- cfilters: use %zu for outputting size_t
-
-  Detected by Coverity CID 1516894
-
-  Closes #9907
-
-- Curl_closesocket: avoid using 'conn' if NULL
-
-  ... in debug-only code.
-
-  Reported by Coverity CID 1516896
-
-  Closes #9907
-
-- url: only acknowledge fresh_reuse for non-followed transfers
-
-  ... to make sure NTLM auth sticks to the connection it needs, as
-  verified by 2032.
-
-  Follow-up to fa0b9227616e
-
-  Assisted-by: Stefan Eissing
-  Closes #9905
-
-- netrc.d: provide mutext info
-
-  Reported-by: xianghongai on github
-  Fixes #9899
-  Closes #9901
-
-- cmdline-opts/page-footer: remove long option nroff formatting
-
-  As gen.pl adds them
-
-- nroff-scan.pl: detect double highlights
-
-- cmdline-opts/gen.pl: fix the linkifier
-
-  Improved logic for finding existing --options in text and replacing with
-  the full version with nroff syntax. This also makes the web version link
-  options better.
-
-  Reported-by: xianghongai on github
-  Fixes #9899
-  Closes #9902
-
-Patrick Monnerat (14 Nov 2022)
-
-- tool: use feature names instead of bit mask, when possible
-
-  If the run-time libcurl is too old to support feature names, the name
-  array is created locally from the bit masks. This is the only sequence
-  left that uses feature bit masks.
-
-  Closes #9583
-
-- docs: curl_version_info is not thread-safe before libcurl initialization
-
-  Closes #9583

@@ -6676,9 +6676,13 @@ INITIAL_LDFLAGS=$LDFLAGS
 INITIAL_LIBS=$LIBS
 
 compilersh="run-compiler"
-echo "CC=$CC" > $compilersh
-echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $compilersh
-echo 'exec $CC $@' >> $compilersh
+export "CURL_SAVED_CC=$CC"
+export "CURL_SAVED_LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+cat <<\EOF > "$compilersh"
+export "CC=$CURL_SAVED_CC"
+export "LD_LIBRARY_PATH=$CURL_SAVED_LD_LIBRARY_PATH"
+exec $CC "$@"
+EOF
 
 OPT_SCHANNEL=no
 
@@ -31155,6 +31159,8 @@ printf "%s\n" "$as_me: -L is $LD_H2" >&6;}
     DIR_H2=${want_nghttp2_path}/lib$libsuff
   elif test X"$want_nghttp2" != Xdefault; then
             as_fn_error $? "--with-nghttp2 was specified but could not find libnghttp2 pkg-config file." "$LINENO" 5
+  else
+    LIB_H2="-lnghttp2"
   fi
 
   LDFLAGS="$LDFLAGS $LD_H2"
