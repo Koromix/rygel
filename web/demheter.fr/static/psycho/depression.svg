@@ -25,7 +25,7 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="0.88802083"
-     inkscape:cx="474.65103"
+     inkscape:cx="94.029326"
      inkscape:cy="250.55718"
      inkscape:window-width="1920"
      inkscape:window-height="1025"
@@ -38,70 +38,70 @@
     <g
        id="g2" />
     <clipPath
-       id="ee620f1144">
+       id="7c289c0ff7">
       <path
          d="m 371,191.57031 h 58.48437 v 16.5 H 371 Z m 0,0"
          clip-rule="nonzero"
          id="path4" />
     </clipPath>
     <clipPath
-       id="5bf04ac1a5">
+       id="b0a480fc2b">
       <path
          d="m 370.22656,265.16797 h 58.5 v 16.5 h -58.5 z m 0,0"
          clip-rule="nonzero"
          id="path7" />
     </clipPath>
     <clipPath
-       id="f2bbd2fa60">
+       id="84c7fada6c">
       <path
          d="m 585.60547,191.57031 h 58.5 v 16.5 h -58.5 z m 0,0"
          clip-rule="nonzero"
          id="path10" />
     </clipPath>
     <clipPath
-       id="0377b0f709">
+       id="a0b0a46239">
       <path
          d="m 580.84375,265.16797 h 58.5 v 16.5 h -58.5 z m 0,0"
          clip-rule="nonzero"
          id="path13" />
     </clipPath>
     <clipPath
-       id="e6f25d079d">
+       id="2ac208d5a7">
       <path
          d="m 512.21484,108.23828 h 58.5 v 16.5 h -58.5 z m 0,0"
          clip-rule="nonzero"
          id="path16" />
     </clipPath>
     <clipPath
-       id="1f84ff0e6f">
+       id="0da7fb18c2">
       <path
          d="m 450.02344,350 h 58.5 v 16.5 h -58.5 z m 0,0"
          clip-rule="nonzero"
          id="path19" />
     </clipPath>
     <clipPath
-       id="2b54ba1548">
+       id="389cab0a83">
       <path
          d="m 450.02344,388.83594 h 58.5 v 16.5 h -58.5 z m 0,0"
          clip-rule="nonzero"
          id="path22" />
     </clipPath>
     <clipPath
-       id="a325e0f6f6">
+       id="3e45d8a867">
       <path
          d="m 450.02344,430.23828 h 58.5 v 16.5 h -58.5 z m 0,0"
          clip-rule="nonzero"
          id="path25" />
     </clipPath>
     <clipPath
-       id="cd35b9938f">
+       id="ff41574527">
       <path
          d="m 450.02344,474.32422 h 58.5 v 16.5 h -58.5 z m 0,0"
          clip-rule="nonzero"
          id="path28" />
     </clipPath>
     <clipPath
-       id="6de35bc1d2">
+       id="9a74d52294">
       <path
          d="M 21.117188,99.238281 H 258.92578 V 518.39844 H 21.117188 Z m 0,0"
          clip-rule="nonzero"
@@ -883,7 +883,7 @@
     </g>
   </g>
   <g
-     clip-path="url(#ee620f1144)"
+     clip-path="url(#7c289c0ff7)"
      id="g494"
      transform="translate(-21.117188,-99.238281)">
     <path
@@ -894,7 +894,7 @@
        id="path492" />
   </g>
   <g
-     clip-path="url(#5bf04ac1a5)"
+     clip-path="url(#b0a480fc2b)"
      id="g498"
      transform="translate(-21.117188,-99.238281)">
     <path
@@ -905,7 +905,7 @@
        id="path496" />
   </g>
   <g
-     clip-path="url(#f2bbd2fa60)"
+     clip-path="url(#84c7fada6c)"
      id="g502"
      transform="translate(-21.117188,-99.238281)">
     <path
@@ -916,7 +916,7 @@
        id="path500" />
   </g>
   <g
-     clip-path="url(#0377b0f709)"
+     clip-path="url(#a0b0a46239)"
      id="g506"
      transform="translate(-21.117188,-99.238281)">
     <path
@@ -1411,7 +1411,7 @@
     </g>
   </g>
   <g
-     clip-path="url(#e6f25d079d)"
+     clip-path="url(#2ac208d5a7)"
      id="g800"
      transform="translate(-21.117188,-99.238281)">
     <path
@@ -1422,7 +1422,7 @@
        id="path798" />
   </g>
   <g
-     clip-path="url(#1f84ff0e6f)"
+     clip-path="url(#0da7fb18c2)"
      id="g804"
      transform="translate(-21.117188,-99.238281)">
     <path
@@ -1433,7 +1433,7 @@
        id="path802" />
   </g>
   <g
-     clip-path="url(#2b54ba1548)"
+     clip-path="url(#389cab0a83)"
      id="g808"
      transform="translate(-21.117188,-99.238281)">
     <path
@@ -1444,7 +1444,7 @@
        id="path806" />
   </g>
   <g
-     clip-path="url(#a325e0f6f6)"
+     clip-path="url(#3e45d8a867)"
      id="g812"
      transform="translate(-21.117188,-99.238281)">
     <path
@@ -1455,7 +1455,7 @@
        id="path810" />
   </g>
   <g
-     clip-path="url(#cd35b9938f)"
+     clip-path="url(#ff41574527)"
      id="g816"
      transform="translate(-21.117188,-99.238281)">
     <path
@@ -1466,11 +1466,11 @@
        id="path814" />
   </g>
   <g
-     clip-path="url(#6de35bc1d2)"
+     clip-path="url(#9a74d52294)"
      id="g820"
      transform="translate(-21.117188,-99.238281)">
     <path
-       fill="#0c72ab"
+       fill="#3c8ebb"
        d="M 21.117188,99.238281 H 258.71484 V 518.41406 H 21.117188 Z m 0,0"
        fill-opacity="1"
        fill-rule="nonzero"
