@@ -4,8 +4,8 @@
 
 # Activation comportementale
 
-<img class="schema" src="/static/psycho/activation1.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/psycho/activation1.svg"></object>
 
 # Cahier d'activités
 
-<img class="schema" src="/static/psycho/activation2.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/psycho/activation2.svg"></object>

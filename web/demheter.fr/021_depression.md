@@ -17,21 +17,21 @@ Source : [https://www.la-depression.org/comprendre-la-depression/la-depression-e
 
 ## Sémiologie
 
-<img class="schema" src="/static/depression/semiologie.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/depression/semiologie.svg"></object>
 
 ## Diagnostic différentiel
 
-<img class="schema" src="/static/depression/differentiel.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/depression/differentiel.svg"></object>
 
 # Traitement
 
 ## Traitement initial
 
-<img class="schema" src="/static/depression/traitement.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/depression/traitement.svg"></object>
 
 ## Règles hygiéno-diététiques
 
-<img class="schema" src="/static/depression/RHD.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/depression/RHD.svg"></object>
 
 # Bilan biologique
 

@@ -4,4 +4,4 @@
 
 # Psycho-éducation de la dépression
 
-<img class="schema" src="/static/psycho/depression.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/psycho/depression.svg"></object>

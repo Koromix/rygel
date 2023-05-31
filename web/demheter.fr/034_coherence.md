@@ -4,7 +4,7 @@
 
 # Cohérence cardiaque
 
-<img class="schema" src="/static/psycho/coherence.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/psycho/coherence.svg"></object>
 
 # Exercices pratiques
 

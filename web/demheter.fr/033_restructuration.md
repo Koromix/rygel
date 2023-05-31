@@ -4,7 +4,7 @@
 
 # Restructuration cognitive
 
-<img class="schema" src="/static/psycho/restructuration.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/psycho/restructuration.svg"></object>
 
 Pour en savoir plus, téléchargez l'application [Worry Watch](https://worrywatch.com/).
 

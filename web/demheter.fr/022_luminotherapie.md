@@ -18,9 +18,11 @@
 
 # Réalisation
 
-<img class="schema" src="/static/luminotherapie/realisation1.svg" alt="" />
-<img class="schema" src="/static/luminotherapie/realisation2.svg" alt="" />
-<img class="schema" src="/static/luminotherapie/realisation3.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/luminotherapie/realisation1.svg"></object>
+
+<object class="schema" type="image/svg+xml" data="/static/luminotherapie/realisation2.svg"></object>
+
+<object class="schema" type="image/svg+xml" data="/static/luminotherapie/realisation3.svg"></object>
 
 <style>
     #indications\_principales { background: #3c7778; }

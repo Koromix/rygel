@@ -4,7 +4,7 @@
 
 # Thérapies Émotionnelles, Comportementales et Cognitives
 
-<img class="schema" src="/static/psycho/TECC.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/psycho/TECC.svg"></object>
 
 # Applications gratuites
 

@@ -4,4 +4,4 @@
 
 # Affirmation de soi
 
-<img class="schema" src="/static/psycho/affirmation.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/psycho/affirmation.svg"></object>

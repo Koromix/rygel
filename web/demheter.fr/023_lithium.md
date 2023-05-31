@@ -17,7 +17,7 @@
 
 # Mise en place
 
-<img class="schema" src="/static/lithium/mise-en-place.svg" alt="" />
+<object class="schema" type="image/svg+xml" data="/static/lithium/mise-en-place.svg"></object>
 
 # Surveillance
 
