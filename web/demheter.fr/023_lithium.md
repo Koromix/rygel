@@ -58,7 +58,7 @@
 
 <style>
     #indications\_principales { background: #3c7778; }
-    #autres\_indications\_psychiatriques\_hors\_amm\_ { background: #92ccc9; }
+    #autres\_indications\_psychiatriques\_hors\_amm { background: #92ccc9; }
     #surveillance\_table {
         table-layout: fixed;
         width: 90%;
