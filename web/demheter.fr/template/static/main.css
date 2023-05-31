@@ -29,6 +29,13 @@ body {
     flex-direction: column;
 }
 
+a {
+    color: #383838;
+    cursor: pointer;
+    text-decoration: underline;
+}
+a:hover { color: black; }
+
 nav#top {
     position: sticky;
     top: 0;
@@ -171,13 +178,6 @@ h3 {
     font-weight: normal;
     font-style: italic;
 }
-
-a {
-    color: #ff6600;
-    cursor: pointer;
-    text-decoration: none;
-}
-a:hover { text-decoration: underline; }
 
 table {
     margin: 1em auto;
