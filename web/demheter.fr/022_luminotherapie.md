@@ -23,6 +23,6 @@
 <img class="schema" src="/static/luminotherapie/realisation3.svg" alt="" />
 
 <style>
-     #indications\_principales { background: #3c7778; }
-     #contre\_indications { background: #db4239; }
+    #indications\_principales { background: #3c7778; }
+    #contre\_indications { background: #db4239; }
 </style>
