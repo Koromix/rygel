@@ -80,15 +80,15 @@ nav#top li > a:hover, nav#top li.active > a {
 }
 nav#top li > a.active { font-weight: bold; }
 nav#top li > div { display: none; }
-nav#top li.active {
+.nojs nav#top li:hover, nav#top li.active {
     border-left: 2px solid #ff6600;
     padding-left: 8px;
 }
-nav#top li.active > a {
+.nojs nav#top li:hover > a, nav#top li.active > a {
     margin-bottom: 1px;
     border-bottom: none;
 }
-nav#top li.active > div {
+.nojs nav#top li:hover > div, nav#top li.active > div {
     position: absolute;
     margin-top: 0px;
     margin-left: -10px;
@@ -278,7 +278,7 @@ footer {
     }
     nav#top li > a { border-bottom: none; }
     nav#top li > a:hover, nav#top li.active > a { margin-bottom: -2px; }
-    .js nav#top li > a { display: none; }
+    nav#top li > a { display: none; }
     nav#top.active ul {
         height: auto;
         gap: 4px;
@@ -293,7 +293,7 @@ footer {
     }
     nav#top.active a#logo { display: none; }
 
-    .js a#deploy {
+    a#deploy {
         display: block !important;
         position: fixed;
         width: 42px;
