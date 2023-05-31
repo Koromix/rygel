@@ -382,3 +382,20 @@ footer {
     font-size: 0.8em;
     margin-top: -8px;
 }
+
+.colorful th, .colorful td {
+    background: transparent !important;
+    border: 1px solid #ffffff11;
+    color: white;
+}
+.colorful th {
+    font-weight: bold;
+    font-style: normal;
+}
+.colorful th:first-child {
+    width: 200px;
+}
+.colorful {
+    table-layout: fixed;
+    width: min(100%, 800px);
+}
