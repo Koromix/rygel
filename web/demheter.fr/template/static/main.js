@@ -14,14 +14,10 @@
 function initMenu() {
     let items = document.querySelectorAll('nav#top li');
 
-    for (let item of items) {
-        if (item.querySelector('div') != null) {
-            let anchor = item.querySelector('a');
-            anchor.addEventListener('click', toggle);
-        }
-    }
+    document.body.addEventListener('click', e => {
+        if (e.target.tagName == 'DIV' && findParent(e.target, el => el.id == 'top'))
+            return;
 
-    function toggle(e) {
         let target = findParent(e.target, el => el.tagName == 'LI');
 
         for (let item of items) {
@@ -31,7 +27,7 @@ function initMenu() {
                 item.classList.remove('active');
             }
         }
-    }
+    });
 }
 
 function initSide() {
