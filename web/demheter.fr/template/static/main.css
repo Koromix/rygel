@@ -405,3 +405,21 @@ footer {
 .colorful th:first-child {
     width: 200px;
 }
+
+.partners {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 40px;
+}
+.partners > a {
+    width: 40%;
+    min-width: 300px;
+    max-height: 150px;
+    margin: 20px 0;
+}
+.partners > a > img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
