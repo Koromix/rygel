@@ -313,7 +313,8 @@ footer {
 
     footer {
         flex-direction: column;
-        gap: 8px;
+        padding: 0.5em;
+        gap: 6px;
         text-align: center;
     }
     footer > img { display: none; }
