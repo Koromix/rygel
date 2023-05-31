@@ -25,9 +25,9 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:zoom="0.94722222"
-     inkscape:cx="419.64809"
-     inkscape:cy="257.06745"
+     inkscape:zoom="1.3395745"
+     inkscape:cx="381.09116"
+     inkscape:cy="285.53843"
      inkscape:window-width="1920"
      inkscape:window-height="1025"
      inkscape:window-x="1920"
@@ -150,7 +150,7 @@
      id="g53"
      style="text-rendering:geometricPrecision">
     <text
-       font-family="Open Sans"
+       font-family="'Open Sans'"
        font-style="normal"
        font-weight="bold"
        font-stretch="normal"
@@ -171,7 +171,7 @@
          y="36.766655"
          font-weight="normal"
          font-size="16px"
-         id="tspan49">La plupart de la journée &amp; Presque tous les jours &amp; Plus de 15 jours</tspan></text>
+         id="tspan49">La plupart de la journée + Presque tous les jours + Plus de 15 jours</tspan></text>
   </g>
   <path
      fill="#e88c17"
@@ -360,40 +360,36 @@
          style="fill:#ec9d36;fill-opacity:1">Diminution du désir sexuel</tspan></text>
   </g>
   <g
-     transform="translate(58.803245,341.71277)"
-     id="g139"
-     style="text-rendering:geometricPrecision">
-    <text
-       font-family="Open Sans"
-       font-style="normal"
-       font-weight="bold"
-       font-stretch="normal"
-       font-size="18px"
-       fill="#db4239"
-       x="0"
-       y="38.553177"
-       id="text137"><tspan
-         x="0"
-         y="16.953175"
-         id="tspan131">ALTERATION MARQUEE DU FONCTIONNEMENT PROFESSIONNEL,</tspan><tspan
-         xml:space="preserve"
-         x="574.83398"
-         y="16.953175"
-         id="tspan133"> </tspan><tspan
+     id="g26717"
+     transform="translate(15.547767,-0.27934731)">
+    <g
+       transform="translate(58.803245,341.71277)"
+       id="g139"
+       style="text-rendering:geometricPrecision">
+      <text
+         font-family="'Open Sans'"
+         font-style="normal"
+         font-weight="bold"
+         font-stretch="normal"
+         font-size="18px"
+         fill="#db4239"
          x="0"
          y="38.553177"
-         id="tspan135">DES ACTIVITES SOCIALES OU DES RELATIONS INTERPERSONNELLES</tspan></text>
+         id="text137"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';white-space:pre;inline-size:541.478"
+         transform="translate(21.057074,-32.457187)"
+         xml:space="preserve"><tspan
+           x="0"
+           y="38.553177"
+           id="tspan39267">Altération marquée du fonctionnement professionnel, des activités </tspan><tspan
+           x="0"
+           y="58.553177"
+           id="tspan39269">sociales ou des relations interpersonnelles</tspan></text>
+    </g>
+    <path
+       fill="#db4239"
+       d="m 38.644059,349.76175 h 8.99 v -8.99 h 8.47 v 8.99 h 9 v 8.47 h -9 v 8.99 h -8.47 v -8.99 h -8.99 z"
+       id="path141"
+       style="text-rendering:geometricPrecision" />
   </g>
-  <path
-     fill="#db4239"
-     d="m 12.84929,358.93 h 8.99 v -8.99 h 8.47 v 8.99 h 9 v 8.47 h -9 v 8.99 h -8.47 v -8.99 h -8.99 z"
-     id="path141"
-     style="text-rendering:geometricPrecision" />
-  <path
-     stroke-width="2"
-     stroke="#db4239"
-     fill="none"
-     d="m 12.84929,358.93 h 8.99 v -8.99 h 8.47 v 8.99 h 9 v 8.47 h -9 v 8.99 h -8.47 v -8.99 h -8.99 z"
-     id="path143"
-     style="text-rendering:geometricPrecision" />
 </svg>
