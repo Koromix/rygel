@@ -9,7 +9,7 @@
 # Exercices pratiques
 
 <div class="columns">
-    <ul style="color: #db4239;">
+    <ul style="color: #3e7573;">
         <div class="exercise">La cohérence rapide</div>
         <li><i>Focaliser l'attention sur la poitrine, en haut vers la gauche <b>(Heart Focus)</b>.</i>
         <li><i>Se centrer sur la respiration et se concentrer sur son inspiration et expiration <b>(Heart Breathing)</b>.</i>
