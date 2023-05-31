@@ -263,7 +263,9 @@ footer {
 @media screen and (max-width: 960px) {
     nav#top.border { border-bottom: none; }
     nav#top ul {
+        height: 90px;
         padding-left: 60px;
+        padding-bottom: 0px;
         flex-direction: column;
         gap: 0;
         align-items: start;
@@ -280,6 +282,7 @@ footer {
     nav#top li.active > div { position: static; }
 
     img#logo {
+        height: 90%;
         margin: 0 auto;
         transform: translate(-24px, 0);
     }
