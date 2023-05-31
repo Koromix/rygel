@@ -24,13 +24,13 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:zoom="0.79445145"
-     inkscape:cx="534.33095"
-     inkscape:cy="376.36032"
+     inkscape:zoom="1.4142136"
+     inkscape:cx="74.599763"
+     inkscape:cy="167.23075"
      inkscape:window-width="1920"
-     inkscape:window-height="1007"
+     inkscape:window-height="1025"
      inkscape:window-x="1920"
-     inkscape:window-y="120"
+     inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg6939" />
   <defs
@@ -100,34 +100,28 @@
          clip-rule="nonzero"
          id="path28" />
     </clipPath>
+    <clipPath
+       id="373428eab1-3">
+      <path
+         d="M 67.140625,28.214844 H 219 V 104.62891 H 67.140625 Z m 0,0"
+         clip-rule="nonzero"
+         id="path19-6" />
+    </clipPath>
+    <clipPath
+       id="373428eab1-3-3">
+      <path
+         d="M 67.140625,28.214844 H 219 V 104.62891 H 67.140625 Z m 0,0"
+         clip-rule="nonzero"
+         id="path19-6-5" />
+    </clipPath>
+    <clipPath
+       id="373428eab1-3-1">
+      <path
+         d="M 67.140625,28.214844 H 219 V 104.62891 H 67.140625 Z m 0,0"
+         clip-rule="nonzero"
+         id="path19-6-2" />
+    </clipPath>
   </defs>
-  <g
-     clip-path="url(#beb36287d1)"
-     id="g35"
-     transform="translate(-19.762909,-14.894531)">
-    <path
-       fill="#e78404"
-       d="m 68.070312,144.32812 131.371098,0.39844 19.38671,36.98047 -19.38671,38.57422 L 67.675781,219.48437 87.0625,181.70703 Z m 0,0"
-       fill-opacity="1"
-       fill-rule="evenodd"
-       id="path33" />
-  </g>
-  <g
-     clip-path="url(#3696d2c4b6)"
-     id="g39"
-     transform="translate(-19.762909,-14.894531)">
-    <path
-       stroke-linecap="butt"
-       transform="matrix(0.353668,0,0,0.35541,49.076956,85.917736)"
-       fill="none"
-       stroke-linejoin="miter"
-       d="m 53.703962,164.34655 371.453468,1.12106 54.8162,104.0502 -54.8162,108.53446 -372.569011,-2.24213 54.816201,-106.29233 z m 0,0"
-       stroke="#ff6600"
-       stroke-width="1.25"
-       stroke-opacity="1"
-       stroke-miterlimit="4"
-       id="path37" />
-  </g>
   <g
      clip-path="url(#7f3ae93a7d)"
      id="g43"
@@ -8238,64 +8232,49 @@
     </g>
   </g>
   <g
-     clip-path="url(#fb81c11033)"
-     id="g4749"
-     transform="translate(-19.762909,-14.894531)">
-    <path
-       fill="#e78404"
-       d="m 245.43359,28.421875 131.3711,0.398437 19.38672,36.980469 -19.38672,38.574219 -131.76953,-0.79687 19.39062,-37.777349 z m 0,0"
-       fill-opacity="1"
-       fill-rule="evenodd"
-       id="path4747" />
-  </g>
-  <g
-     clip-path="url(#4e02fb6cd0)"
-     id="g4753"
-     transform="translate(-19.762909,-14.894531)">
-    <path
-       stroke-linecap="butt"
-       transform="matrix(0.353668,0,0,0.35541,226.43975,-29.989165)"
-       fill="none"
-       stroke-linejoin="miter"
-       d="m 53.70535,164.34838 371.45347,1.12107 54.8162,104.05019 -54.8162,108.53446 -372.580058,-2.24213 54.827248,-106.29233 z m 0,0"
-       stroke="#ff6600"
-       stroke-width="1.25"
-       stroke-opacity="1"
-       stroke-miterlimit="4"
-       id="path4751" />
-  </g>
-  <g
      clip-path="url(#373428eab1)"
      id="g4757"
-     transform="translate(-19.762909,-14.894531)">
+     transform="translate(-27.762909,-14.894531)">
     <path
        fill="#e78404"
-       d="M 68.070312,28.421875 199.44141,28.820312 218.82812,65.800781 199.44141,104.375 67.675781,103.57813 87.0625,65.800781 Z m 0,0"
+       d="M 68.070312,28.421875 199.28987,28.394183 218.82812,65.800781 199.44141,104.375 67.675781,104.21815 87.0625,65.800781 Z"
        fill-opacity="1"
        fill-rule="evenodd"
-       id="path4755" />
+       id="path4755"
+       sodipodi:nodetypes="ccccccc"
+       style="fill:#ec9d36;fill-opacity:1" />
   </g>
   <g
-     clip-path="url(#3189ae9e9b)"
-     id="g4761"
-     transform="translate(-19.762909,-14.894531)">
+     clip-path="url(#373428eab1-3)"
+     id="g4757-7"
+     transform="translate(-27.762876,101.01175)">
     <path
-       stroke-linecap="butt"
-       transform="matrix(0.353668,0,0,0.35541,49.076956,-29.989165)"
-       fill="none"
-       stroke-linejoin="miter"
-       d="m 53.703962,164.34838 371.453468,1.12107 54.8162,104.05019 -54.8162,108.53446 -372.569011,-2.24213 54.816201,-106.29233 z m 0,0"
-       stroke="#ff6600"
-       stroke-width="1.25"
-       stroke-opacity="1"
-       stroke-miterlimit="4"
-       id="path4759" />
+       fill="#e78404"
+       d="M 68.070312,28.421875 199.28987,28.394183 218.82812,65.800781 199.44141,104.375 67.675781,104.21815 87.0625,65.800781 Z"
+       fill-opacity="1"
+       fill-rule="evenodd"
+       id="path4755-5"
+       sodipodi:nodetypes="ccccccc"
+       style="fill:#ec9d36;fill-opacity:1" />
+  </g>
+  <g
+     clip-path="url(#373428eab1-3-3)"
+     id="g4757-7-2"
+     transform="translate(149.60041,100.07816)">
+    <path
+       fill="#e78404"
+       d="M 68.070312,28.421875 199.28987,28.394183 218.82812,65.800781 199.44141,104.375 67.675781,104.21815 87.0625,65.800781 Z"
+       fill-opacity="1"
+       fill-rule="evenodd"
+       id="path4755-5-9"
+       sodipodi:nodetypes="ccccccc"
+       style="fill:#ec9d36;fill-opacity:1" />
   </g>
   <g
      fill="#ffffff"
      fill-opacity="1"
      id="g4823"
-     transform="translate(-19.762909,-14.894531)">
+     transform="translate(-27.762909,-14.894531)">
     <g
        transform="translate(105.73455,72.611338)"
        id="g4767">
@@ -8401,7 +8380,7 @@
      fill="#ffffff"
      fill-opacity="1"
      id="g4891"
-     transform="translate(-19.762909,-14.894531)">
+     transform="translate(-27.762909,-14.894531)">
     <g
        transform="translate(106.64757,189.90829)"
        id="g4829">
@@ -8514,10 +8493,23 @@
     </g>
   </g>
   <g
+     clip-path="url(#373428eab1-3-1)"
+     id="g4757-7-0"
+     transform="translate(149.59649,-15.534514)">
+    <path
+       fill="#e78404"
+       d="M 68.070312,28.421875 199.28987,28.394183 218.82812,65.800781 199.44141,104.375 67.675781,104.21815 87.0625,65.800781 Z"
+       fill-opacity="1"
+       fill-rule="evenodd"
+       id="path4755-5-93"
+       sodipodi:nodetypes="ccccccc"
+       style="fill:#ec9d36;fill-opacity:1" />
+  </g>
+  <g
      fill="#ffffff"
      fill-opacity="1"
      id="g4959"
-     transform="translate(-19.762909,-14.894531)">
+     transform="translate(-27.762909,-14.894531)">
     <g
        transform="translate(280.5188,72.611338)"
        id="g4897">
@@ -8630,37 +8622,10 @@
     </g>
   </g>
   <g
-     clip-path="url(#1edb60a056)"
-     id="g4963"
-     transform="translate(-19.762909,-14.894531)">
-    <path
-       fill="#e78404"
-       d="m 245.43359,143.39453 131.3711,0.39844 19.38672,36.98047 -19.38672,38.57031 -131.76953,-0.79297 19.39062,-37.77734 z m 0,0"
-       fill-opacity="1"
-       fill-rule="evenodd"
-       id="path4961" />
-  </g>
-  <g
-     clip-path="url(#ac2ae7eb28)"
-     id="g4967"
-     transform="translate(-19.762909,-14.894531)">
-    <path
-       stroke-linecap="butt"
-       transform="matrix(0.353668,0,0,0.35541,226.43975,84.981958)"
-       fill="none"
-       stroke-linejoin="miter"
-       d="m 53.70535,164.3527 371.45347,1.12106 54.8162,104.0502 -54.8162,108.52346 -372.580058,-2.23114 54.827248,-106.29232 z m 0,0"
-       stroke="#ff6600"
-       stroke-width="1.25"
-       stroke-opacity="1"
-       stroke-miterlimit="4"
-       id="path4965" />
-  </g>
-  <g
      fill="#ffffff"
      fill-opacity="1"
      id="g5041"
-     transform="translate(-19.762909,-14.894531)">
+     transform="translate(-27.762909,-14.894531)">
     <g
        transform="translate(270.09229,187.58246)"
        id="g4973">
