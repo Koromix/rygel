@@ -1,0 +1,9 @@
+nav#top { display: none; }
+nav#side { display: none; }
+
+main { padding-right: 16px !important; }
+footer { display: none; }
+
+.schema { width: 90%; }
+
+h1:not(:first-child) { break-before: page; }
