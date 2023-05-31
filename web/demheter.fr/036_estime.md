@@ -4,6 +4,8 @@
 
 # Estime de soi
 
+L'estime de soi repose sur **3 piliers** :
+
 <img class="schema" src="/static/psycho/estime1.svg" alt="" />
 
 # Exercices pratiques
