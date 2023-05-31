@@ -104,13 +104,18 @@ nav#top li > div > a { margin-top: 3px; }
 nav#top li > div > a.active { font-weight: bold; }
 nav#top li > div > a:hover { text-decoration: underline; }
 
-img#logo {
+a#logo {
     height: 70%;
     object-fit: contain;
     margin-right: 2em;
     transition: filter 0.4s ease;
 }
-nav#top.border img#logo { filter: saturate(0%) brightness(0); }
+a#logo > img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+nav#top.border a#logo { filter: saturate(0%) brightness(0); }
 
 nav#side ul {
     margin: 0;
@@ -281,12 +286,12 @@ footer {
     nav#top.active li > a { display: block !important; }
     nav#top li.active > div { position: static; }
 
-    img#logo {
+    a#logo {
         height: 90%;
         margin: 0 auto;
         transform: translate(-24px, 0);
     }
-    nav#top.active img#logo { display: none; }
+    nav#top.active a#logo { display: none; }
 
     .js a#deploy {
         display: block !important;
