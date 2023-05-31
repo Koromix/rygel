@@ -5,7 +5,7 @@
    viewBox="0 0 663.87998 342.64943"
    preserveAspectRatio="xMidYMid meet"
    id="svg145"
-   sodipodi:docname="Differentiel.svg"
+   sodipodi:docname="differentiel.svg"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -26,16 +26,17 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="0.94722222"
-     inkscape:cx="437.59531"
-     inkscape:cy="234.89736"
+     inkscape:cx="341.52493"
+     inkscape:cy="210.61584"
      inkscape:window-width="1920"
      inkscape:window-height="1025"
      inkscape:window-x="1920"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg145" />
-  <style>
-    @import url("/static/opensans/OpenSans.css");
+  <style
+     id="style3">
+    @import url(&quot;/static/opensans/OpenSans.css&quot;);
   </style>
   <defs
      id="defs7">
@@ -74,7 +75,7 @@
      fill="#ee7f02"
      d="m 0,24.895 h 177.17 v 26.92 H 0 Z"
      id="path15"
-     style="text-rendering:geometricPrecision" />
+     style="text-rendering:geometricPrecision;fill:#ec9d36;fill-opacity:1" />
   <g
      transform="translate(17.50632,30.1272)"
      id="g21"
@@ -129,7 +130,7 @@
      id="g53"
      style="text-rendering:geometricPrecision">
     <text
-       font-family="Open Sans"
+       font-family="'Open Sans'"
        font-style="normal"
        font-weight="bold"
        font-stretch="normal"
@@ -137,22 +138,28 @@
        fill="#ee7f02"
        x="0"
        y="80.805534"
-       id="text51"><tspan
+       id="text51"
+       style="fill:#ec9d36;fill-opacity:1"><tspan
          x="0"
          y="13.605533"
-         id="tspan33">Toxique</tspan><tspan
+         id="tspan33"
+         style="fill:#ec9d36;fill-opacity:1">Toxique</tspan><tspan
          x="0"
          y="30.405533"
-         id="tspan35">Neurologique</tspan><tspan
+         id="tspan35"
+         style="fill:#ec9d36;fill-opacity:1">Neurologique</tspan><tspan
          x="0"
          y="47.205536"
-         id="tspan37">Endocrinien</tspan><tspan
+         id="tspan37"
+         style="fill:#ec9d36;fill-opacity:1">Endocrinien</tspan><tspan
          x="0"
          y="64.005539"
-         id="tspan39">Métabolique</tspan><tspan
+         id="tspan39"
+         style="fill:#ec9d36;fill-opacity:1">Métabolique</tspan><tspan
          x="0"
          y="80.805534"
-         id="tspan45">Iatrogénique</tspan></text>
+         id="tspan45"
+         style="fill:#ec9d36;fill-opacity:1">Iatrogénique</tspan></text>
   </g>
   <g
      transform="translate(455.2502,61.75342)"

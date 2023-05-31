@@ -5,7 +5,7 @@
    viewBox="0 0 665.37927 380.44174"
    preserveAspectRatio="xMidYMid meet"
    id="svg147"
-   sodipodi:docname="Semiologie.svg"
+   sodipodi:docname="semiologie.svg"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -26,7 +26,7 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="0.94722222"
-     inkscape:cx="428.09384"
+     inkscape:cx="419.64809"
      inkscape:cy="257.06745"
      inkscape:window-width="1920"
      inkscape:window-height="1025"
@@ -34,8 +34,9 @@
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg147" />
-  <style>
-    @import url("/static/opensans/OpenSans.css");
+  <style
+     id="style3">
+    @import url(&quot;/static/opensans/OpenSans.css&quot;);
   </style>
   <defs
      id="defs7">
@@ -81,7 +82,7 @@
      fill="#e88c17"
      d="m 242.88929,98.409998 h 175.4 V 127.81 h -175.4 z"
      id="path23"
-     style="text-rendering:geometricPrecision" />
+     style="text-rendering:geometricPrecision;fill:#ec9d36;fill-opacity:1" />
   <g
      transform="translate(257.48922,104.02362)"
      id="g29"
@@ -104,7 +105,7 @@
      fill="#e88c17"
      d="m 3.87929,98.579998 h 167.9 V 127.54 h -167.9 z"
      id="path31"
-     style="text-rendering:geometricPrecision" />
+     style="text-rendering:geometricPrecision;fill:#ec9d36;fill-opacity:1" />
   <g
      transform="translate(22.289375,104.48473)"
      id="g37"
@@ -143,7 +144,7 @@
      fill="#3e7573"
      d="m 19.95929,0 h 618.02 v 48.199998 h -618.02 z"
      id="path43"
-     style="text-rendering:geometricPrecision" />
+     style="text-rendering:geometricPrecision;fill:#4d9290;fill-opacity:1" />
   <g
      transform="translate(27.1567,3.60268)"
      id="g53"
@@ -176,7 +177,7 @@
      fill="#e88c17"
      d="m 482.73929,98.239998 h 182.64 V 125.78 h -182.64 z"
      id="path55"
-     style="text-rendering:geometricPrecision" />
+     style="text-rendering:geometricPrecision;fill:#ec9d36;fill-opacity:1" />
   <g
      transform="translate(500.77519,103.1415)"
      id="g61"
@@ -208,41 +209,53 @@
        fill="#e88c17"
        x="0"
        y="164.38582"
-       id="text85"><tspan
+       id="text85"
+       style="fill:#ec9d36;fill-opacity:1"><tspan
          x="0"
          y="13.185802"
-         id="tspan63">Humeur triste quasi-</tspan><tspan
+         id="tspan63"
+         style="fill:#ec9d36;fill-opacity:1">Humeur triste quasi-</tspan><tspan
          xml:space="preserve"
          x="140.875"
          y="13.185802"
-         id="tspan65"> </tspan><tspan
+         id="tspan65"
+         style="fill:#ec9d36;fill-opacity:1"> </tspan><tspan
          x="0"
          y="29.985804"
-         id="tspan67">constante</tspan><tspan
+         id="tspan67"
+         style="fill:#ec9d36;fill-opacity:1">constante</tspan><tspan
          x="0"
          y="46.785805"
-         id="tspan69">Anhédonie</tspan><tspan
+         id="tspan69"
+         style="fill:#ec9d36;fill-opacity:1">Anhédonie</tspan><tspan
          x="0"
          y="63.585808"
-         id="tspan71">Anesthésie affective</tspan><tspan
+         id="tspan71"
+         style="fill:#ec9d36;fill-opacity:1">Anesthésie affective</tspan><tspan
          x="0"
          y="80.385803"
-         id="tspan73">Anxiété</tspan><tspan
+         id="tspan73"
+         style="fill:#ec9d36;fill-opacity:1">Anxiété</tspan><tspan
          x="0"
          y="97.185806"
-         id="tspan75">Angoisses</tspan><tspan
+         id="tspan75"
+         style="fill:#ec9d36;fill-opacity:1">Angoisses</tspan><tspan
          x="0"
          y="113.98581"
-         id="tspan77">Culpabilité</tspan><tspan
+         id="tspan77"
+         style="fill:#ec9d36;fill-opacity:1">Culpabilité</tspan><tspan
          x="0"
          y="130.78581"
-         id="tspan79">Dévalorisation</tspan><tspan
+         id="tspan79"
+         style="fill:#ec9d36;fill-opacity:1">Dévalorisation</tspan><tspan
          x="0"
          y="147.58582"
-         id="tspan81">Idées d’incurabilité</tspan><tspan
+         id="tspan81"
+         style="fill:#ec9d36;fill-opacity:1">Idées d’incurabilité</tspan><tspan
          x="0"
          y="164.38582"
-         id="tspan83">Idées suicidaires</tspan></text>
+         id="tspan83"
+         style="fill:#ec9d36;fill-opacity:1">Idées suicidaires</tspan></text>
   </g>
   <g
      transform="translate(242.47692,143.4389)"
@@ -257,35 +270,45 @@
        fill="#e88c17"
        x="0"
        y="130.78581"
-       id="text107"><tspan
+       id="text107"
+       style="fill:#ec9d36;fill-opacity:1"><tspan
          x="0"
          y="13.185802"
-         id="tspan89">Bradypsychie</tspan><tspan
+         id="tspan89"
+         style="fill:#ec9d36;fill-opacity:1">Bradypsychie</tspan><tspan
          x="0"
          y="29.985804"
-         id="tspan91">Ruminations</tspan><tspan
+         id="tspan91"
+         style="fill:#ec9d36;fill-opacity:1">Ruminations</tspan><tspan
          x="0"
          y="46.785805"
-         id="tspan93">Monodéïsme</tspan><tspan
+         id="tspan93"
+         style="fill:#ec9d36;fill-opacity:1">Monodéïsme</tspan><tspan
          x="0"
          y="63.585808"
-         id="tspan95">Altération de la</tspan><tspan
+         id="tspan95"
+         style="fill:#ec9d36;fill-opacity:1">Altération de la</tspan><tspan
          xml:space="preserve"
          x="108.36328"
          y="63.585808"
-         id="tspan97"> </tspan><tspan
+         id="tspan97"
+         style="fill:#ec9d36;fill-opacity:1"> </tspan><tspan
          x="0"
          y="80.385803"
-         id="tspan99">concentration</tspan><tspan
+         id="tspan99"
+         style="fill:#ec9d36;fill-opacity:1">concentration</tspan><tspan
          x="0"
          y="97.185806"
-         id="tspan101">Altération de la mémoire</tspan><tspan
+         id="tspan101"
+         style="fill:#ec9d36;fill-opacity:1">Altération de la mémoire</tspan><tspan
          x="0"
          y="113.98581"
-         id="tspan103">Déficit de l’attention</tspan><tspan
+         id="tspan103"
+         style="fill:#ec9d36;fill-opacity:1">Déficit de l’attention</tspan><tspan
          x="0"
          y="130.78581"
-         id="tspan105">Indécision</tspan></text>
+         id="tspan105"
+         style="fill:#ec9d36;fill-opacity:1">Indécision</tspan></text>
   </g>
   <g
      transform="translate(483.07015,143.4389)"
@@ -300,32 +323,41 @@
        fill="#e88c17"
        x="0"
        y="113.98581"
-       id="text127"><tspan
+       id="text127"
+       style="fill:#ec9d36;fill-opacity:1"><tspan
          x="0"
          y="13.185802"
-         id="tspan111">Perturbations du sommeil</tspan><tspan
+         id="tspan111"
+         style="fill:#ec9d36;fill-opacity:1">Perturbations du sommeil</tspan><tspan
          x="0"
          y="29.985804"
-         id="tspan113">Perturbation du rythme</tspan><tspan
+         id="tspan113"
+         style="fill:#ec9d36;fill-opacity:1">Perturbation du rythme</tspan><tspan
          xml:space="preserve"
          x="167.875"
          y="29.985804"
-         id="tspan115"> </tspan><tspan
+         id="tspan115"
+         style="fill:#ec9d36;fill-opacity:1"> </tspan><tspan
          x="0"
          y="46.785805"
-         id="tspan117">circadien</tspan><tspan
+         id="tspan117"
+         style="fill:#ec9d36;fill-opacity:1">circadien</tspan><tspan
          x="0"
          y="63.585808"
-         id="tspan119">Fatigue</tspan><tspan
+         id="tspan119"
+         style="fill:#ec9d36;fill-opacity:1">Fatigue</tspan><tspan
          x="0"
          y="80.385803"
-         id="tspan121">Perte d’énergie</tspan><tspan
+         id="tspan121"
+         style="fill:#ec9d36;fill-opacity:1">Perte d’énergie</tspan><tspan
          x="0"
          y="97.185806"
-         id="tspan123">Perte ou gain d’appétit</tspan><tspan
+         id="tspan123"
+         style="fill:#ec9d36;fill-opacity:1">Perte ou gain d’appétit</tspan><tspan
          x="0"
          y="113.98581"
-         id="tspan125">Diminution du désir sexuel</tspan></text>
+         id="tspan125"
+         style="fill:#ec9d36;fill-opacity:1">Diminution du désir sexuel</tspan></text>
   </g>
   <g
      transform="translate(58.803245,341.71277)"
