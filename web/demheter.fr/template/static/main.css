@@ -313,6 +313,7 @@ footer {
         gap: 8px;
         text-align: center;
     }
+    footer > img { display: none; }
 }
 
 .pills > div {
