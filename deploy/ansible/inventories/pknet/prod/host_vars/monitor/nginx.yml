@@ -175,7 +175,7 @@ nginx_domains:
       }
 
   - name: demheter.fr
-    # ssl_certbot_email: niels.martignene@protonmail.com
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           index index.html;
