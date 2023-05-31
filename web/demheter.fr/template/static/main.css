@@ -388,6 +388,11 @@ footer {
     margin-top: -8px;
 }
 
+.colorful {
+    table-layout: fixed;
+    width: min(100%, 800px);
+    font-size: 0.9em;
+}
 .colorful th, .colorful td {
     background: transparent !important;
     border: 1px solid #ffffff11;
@@ -399,8 +404,4 @@ footer {
 }
 .colorful th:first-child {
     width: 200px;
-}
-.colorful {
-    table-layout: fixed;
-    width: min(100%, 800px);
 }
