@@ -22,6 +22,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 const atoi = require('./build/atoi_napi.node');
+const { performance } = require('perf_hooks');
 
 const strings = [
     '424242',

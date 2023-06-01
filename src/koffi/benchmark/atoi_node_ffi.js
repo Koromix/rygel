@@ -24,6 +24,7 @@
 const ref = require('ref-napi');
 const ffi = require('ffi-napi');
 const struct = require('ref-struct-di')(ref);
+const { performance } = require('perf_hooks');
 
 const strings = [
     '424242',

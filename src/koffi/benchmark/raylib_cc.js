@@ -21,6 +21,7 @@
 
 const { spawnSync } = require('child_process');
 const path = require('path');
+const { performance } = require('perf_hooks');
 
 main();
 

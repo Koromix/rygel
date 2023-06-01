@@ -22,6 +22,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 const koffi = require('./build/koffi.node');
+const { performance } = require('perf_hooks');
 
 const strings = [
     '424242',

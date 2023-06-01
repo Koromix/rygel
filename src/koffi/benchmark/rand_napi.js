@@ -22,6 +22,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 const rand = require('./build/rand_napi.node');
+const { performance } = require('perf_hooks');
 
 let sum = 0;
 

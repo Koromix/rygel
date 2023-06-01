@@ -22,6 +22,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 const r = require('raylib');
+const { performance } = require('perf_hooks');
 
 main();
 
