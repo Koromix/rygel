@@ -99,6 +99,8 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
     }
     Consume(")");
 
+    out_func->required_parameters = (int8_t)out_func->parameters.len;
+
     Match(";");
     if (offset < tokens.len) {
         MarkError("Unexpected token '%1' after prototype", tokens[offset]);

@@ -920,6 +920,8 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
         func->parameters.Append(param);
     }
 
+    func->required_parameters = (int8_t)func->parameters.len;
+
     return true;
 }
 
@@ -955,6 +957,12 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 
     if (!AnalyseFunction(env, instance, func))
         return env.Null();
+
+    // Adjust parameter offsets for koffi.call()
+    for (ParameterInfo &param: func->parameters) {
+        param.offset += 2;
+    }
+    func->required_parameters += 2;
 
     // We cannot fail after this check
     if (instance->types_map.Find(func->name)) {
@@ -1239,13 +1247,13 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     return mem;
 }
 
-static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
+static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
+                                       const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-    FunctionInfo *func = (FunctionInfo *)info.Data();
 
-    if (RG_UNLIKELY(info.Length() < (uint32_t)func->parameters.len)) {
+    if (RG_UNLIKELY(info.Length() < (uint32_t)func->required_parameters)) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
         return env.Null();
     }
@@ -1265,37 +1273,44 @@ static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
         RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
-        call.Execute(func);
+        call.Execute(func, native);
     }
 
     return call.Complete(func);
 }
 
-static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
+static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
+{
+    FunctionInfo *func = (FunctionInfo *)info.Data();
+    return TranslateNormalCall(func, func->native, info);
+}
+
+static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
+                                         const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    FunctionInfo func;
-    memcpy((void *)&func, info.Data(), RG_SIZE(FunctionInfo));
-    func.lib = nullptr;
+    FunctionInfo copy;
+    memcpy((void *)&copy, func, RG_SIZE(*func));
+    copy.lib = nullptr;
 
     // This makes variadic calls non-reentrant
-    RG_DEFER_C(len = func.parameters.len) {
-        func.parameters.RemoveFrom(len);
-        func.parameters.Leak();
+    RG_DEFER_C(len = copy.parameters.len) {
+        copy.parameters.RemoveFrom(len);
+        copy.parameters.Leak();
     };
 
-    if (RG_UNLIKELY(info.Length() < (uint32_t)func.parameters.len)) {
-        ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", func.parameters.len, info.Length());
+    if (RG_UNLIKELY(info.Length() < (uint32_t)copy.required_parameters)) {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", copy.parameters.len, info.Length());
         return env.Null();
     }
-    if (RG_UNLIKELY((info.Length() - func.parameters.len) % 2)) {
+    if (RG_UNLIKELY((info.Length() - copy.required_parameters) % 2)) {
         ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
         return env.Null();
     }
 
-    for (Size i = func.parameters.len; i < (Size)info.Length(); i += 2) {
+    for (Size i = copy.required_parameters; i < (Size)info.Length(); i += 2) {
         ParameterInfo param = {};
 
         param.type = ResolveType(info[(uint32_t)i], &param.directions);
@@ -1306,11 +1321,11 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
             return env.Null();
         }
-        if (RG_UNLIKELY(func.parameters.len >= MaxParameters)) {
+        if (RG_UNLIKELY(copy.parameters.len >= MaxParameters)) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
             return env.Null();
         }
-        if (RG_UNLIKELY((param.directions & 2) && ++func.out_parameters >= MaxOutParameters)) {
+        if (RG_UNLIKELY((param.directions & 2) && ++copy.out_parameters >= MaxOutParameters)) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 output parameters", MaxOutParameters);
             return env.Null();
         }
@@ -1318,20 +1333,20 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         param.variadic = true;
         param.offset = (int8_t)(i + 1);
 
-        func.parameters.Append(param);
+        copy.parameters.Append(param);
     }
 
-    if (RG_UNLIKELY(!AnalyseFunction(env, instance, &func)))
+    if (RG_UNLIKELY(!AnalyseFunction(env, instance, &copy)))
         return env.Null();
 
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-    if (!RG_UNLIKELY(call.Prepare(&func, info)))
+    if (!RG_UNLIKELY(call.Prepare(&copy, info)))
         return env.Null();
 
     if (instance->debug) {
-        call.DumpForward(&func);
+        call.DumpForward(&copy);
     }
 
     // Execute call
@@ -1339,23 +1354,31 @@ static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
         RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
-        call.Execute(&func);
+        call.Execute(&copy, native);
     }
 
-    return call.Complete(&func);
+    return call.Complete(&copy);
+}
+
+static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
+{
+    FunctionInfo *func = (FunctionInfo *)info.Data();
+    return TranslateVariadicCall(func, func->native, info);
 }
 
 class AsyncCall: public Napi::AsyncWorker {
     Napi::Env env;
+
     const FunctionInfo *func;
+    void *native;
 
     CallData call;
     bool prepared = false;
 
 public:
     AsyncCall(Napi::Env env, InstanceData *instance, const FunctionInfo *func,
-              InstanceMemory *mem, Napi::Function &callback)
-        : Napi::AsyncWorker(callback), env(env), func(func->Ref()),
+              void *native, InstanceMemory *mem, Napi::Function &callback)
+        : Napi::AsyncWorker(callback), env(env), func(func->Ref()), native(native),
           call(env, instance, mem) {}
     ~AsyncCall() { func->Unref(); }
 
@@ -1381,7 +1404,7 @@ void AsyncCall::Execute()
         RG_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
-        call.Execute(func);
+        call.Execute(func, native);
     }
 }
 
@@ -1400,18 +1423,20 @@ void AsyncCall::OnOK()
     callback.Call(self, RG_LEN(args), args);
 }
 
-static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
+static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native,
+                                      const Napi::CallbackInfo &info)
 {
+    RG_ASSERT(!func->variadic);
+
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-    FunctionInfo *func = (FunctionInfo *)info.Data();
 
-    if (info.Length() <= (uint32_t)func->parameters.len) {
+    if (info.Length() <= (uint32_t)func->required_parameters) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len + 1, info.Length());
         return env.Null();
     }
 
-    Napi::Function callback = info[(uint32_t)func->parameters.len].As<Napi::Function>();
+    Napi::Function callback = info[(uint32_t)func->required_parameters].As<Napi::Function>();
 
     if (!callback.IsFunction()) {
         ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, callback));
@@ -1423,7 +1448,7 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
         return env.Null();
     }
-    AsyncCall *async = new AsyncCall(env, instance, func, mem, callback);
+    AsyncCall *async = new AsyncCall(env, instance, func, native, mem, callback);
 
     if (async->Prepare(info) && instance->debug) {
         async->DumpForward();
@@ -1431,6 +1456,12 @@ static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     async->Queue();
 
     return env.Undefined();
+}
+
+static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
+{
+    FunctionInfo *func = (FunctionInfo *)info.Data();
+    return TranslateAsyncCall(func, func->native, info);
 }
 
 static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConvention convention)
@@ -1478,36 +1509,44 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
 #ifdef _WIN32
     if (info[0].IsString()) {
         if (func->decorated_name) {
-            func->func = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
+            func->native = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
         }
-        if (!func->func) {
-            func->func = (void *)GetProcAddress((HMODULE)lib->module, func->name);
+        if (!func->native) {
+            func->native = (void *)GetProcAddress((HMODULE)lib->module, func->name);
         }
     } else {
         uint16_t ordinal = (uint16_t)info[0].As<Napi::Number>().Uint32Value();
 
         func->decorated_name = nullptr;
-        func->func = (void *)GetProcAddress((HMODULE)lib->module, (LPCSTR)(size_t)ordinal);
+        func->native = (void *)GetProcAddress((HMODULE)lib->module, (LPCSTR)(size_t)ordinal);
     }
 #else
     if (func->decorated_name) {
-        func->func = dlsym(lib->module, func->decorated_name);
+        func->native = dlsym(lib->module, func->decorated_name);
     }
-    if (!func->func) {
-        func->func = dlsym(lib->module, func->name);
+    if (!func->native) {
+        func->native = dlsym(lib->module, func->name);
     }
 #endif
-    if (!func->func) {
+    if (!func->native) {
         ThrowError<Napi::Error>(env, "Cannot find function '%1' in shared library", func->name);
         return env.Null();
     }
 
-    Napi::Function::Callback call = func->variadic ? TranslateVariadicCall : TranslateNormalCall;
-    Napi::Function wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+    Napi::Function wrapper;
+    if (func->variadic) {
+        Napi::Function::Callback call = TranslateVariadicCall;
+        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+    } else {
+        Napi::Function::Callback call = TranslateNormalCall;
+        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+    }
     wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, func);
 
     if (!func->variadic) {
-        Napi::Function async = Napi::Function::New(env, TranslateAsyncCall, func->name, (void *)func->Ref());
+        Napi::Function::Callback call = TranslateAsyncCall;
+        Napi::Function async = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+
         async.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, func);
         wrapper.Set("async", async);
     }
@@ -2064,6 +2103,69 @@ static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
     return bigint;
 }
 
+static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (RG_UNLIKELY(info.Length() < 2)) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    void *ptr = nullptr;
+    if (RG_UNLIKELY(!GetExternalPointer(env, info[0], &ptr)))
+        return env.Null();
+
+    const TypeInfo *type = ResolveType(info[1]);
+    if (RG_UNLIKELY(!type))
+        return env.Null();
+    if (RG_UNLIKELY(type->primitive != PrimitiveKind::Callback)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function pointer type", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+
+    const FunctionInfo *proto = type->ref.proto;
+
+    if (proto->variadic) {
+        return TranslateVariadicCall(proto, ptr, info);
+    } else {
+        return TranslateNormalCall(proto, ptr, info);
+    }
+}
+
+static Napi::Value CallPointerAsync(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (RG_UNLIKELY(info.Length() < 2)) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    void *ptr = nullptr;
+    if (RG_UNLIKELY(!GetExternalPointer(env, info[0], &ptr)))
+        return env.Null();
+
+    const TypeInfo *type = ResolveType(info[1]);
+    if (RG_UNLIKELY(!type))
+        return env.Null();
+    if (RG_UNLIKELY(type->primitive != PrimitiveKind::Callback)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function pointer type", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+
+    const FunctionInfo *proto = type->ref.proto;
+
+    if (RG_UNLIKELY(proto->variadic)) {
+        ThrowError<Napi::TypeError>(env, "Cannot call variadic function asynchronously");
+        return env.Null();
+    }
+
+    return TranslateAsyncCall(proto, ptr, info);
+}
+
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
     if (RG_LIKELY(exec_call)) {
@@ -2130,6 +2232,8 @@ static void SetExports(Napi::Env env, Func func)
     func("as", Napi::Function::New(env, CastValue));
     func("decode", Napi::Function::New(env, DecodeValue));
     func("address", Napi::Function::New(env, GetPointerAddress));
+    func("call", Napi::Function::New(env, CallPointerSync));
+    func("callAsync", Napi::Function::New(env, CallPointerAsync));
 
     func("errno", Napi::Function::New(env, GetOrSetErrNo));
 

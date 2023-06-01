@@ -960,3 +960,25 @@ EXPORT void ReverseString16Void(void *ptr)
         str16[len - i - 1] = tmp;
     }
 }
+
+typedef int BinaryIntFunc(int a, int b);
+
+static int AddInt(int a, int b) { return a + b; }
+static int SubstractInt(int a, int b) { return a - b; }
+static int MultiplyInt(int a, int b) { return a * b; }
+static int DivideInt(int a, int b) { return a / b; }
+
+EXPORT BinaryIntFunc *GetBinaryIntFunction(const char *type)
+{
+    if (!strcmp(type, "add")) {
+        return AddInt;
+    } else if (!strcmp(type, "substract")) {
+        return SubstractInt;
+    } else if (!strcmp(type, "multiply")) {
+        return MultiplyInt;
+    } else if (!strcmp(type, "divide")) {
+        return DivideInt;
+    } else {
+        return NULL;
+    }
+}

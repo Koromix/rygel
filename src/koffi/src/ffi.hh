@@ -221,11 +221,12 @@ struct FunctionInfo {
     const char *decorated_name; // Only set for some platforms/calling conventions
     const LibraryHolder *lib = nullptr;
 
-    void *func;
+    void *native;
     CallConvention convention;
 
     ParameterInfo ret;
     HeapArray<ParameterInfo> parameters;
+    int8_t required_parameters;
     int8_t out_parameters;
     bool variadic;
 

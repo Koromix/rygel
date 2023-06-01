@@ -142,6 +142,8 @@ const BigText = koffi.struct('BigText', {
     text: koffi.array('uint8_t', 262145)
 });
 
+const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
+
 main();
 
 async function main() {
@@ -244,6 +246,7 @@ async function test() {
     const ComputeLengthUntilNulWide = lib.func('int ComputeLengthUntilNulWide(int16_t *ptr)');
     const ReverseStringVoid = lib.func('void ReverseStringVoid(_Inout_ void *ptr)');
     const ReverseString16Void = lib.func('void ReverseString16Void(_Inout_ void *ptr)');
+    const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -665,6 +668,13 @@ async function test() {
         ReverseString16Void(koffi.as(ptr, 'char16_t *'))
         assert.equal(ptr[0], '!dlroW olleH');
     }
+
+    // Call function pointers
+    assert.equal(koffi.call(GetBinaryIntFunction('add'), 'BinaryIntFunc *', 4, 5), 9);
+    assert.equal(koffi.call(GetBinaryIntFunction('substract'), 'BinaryIntFunc *', 4, 5), -1);
+    assert.equal(koffi.call(GetBinaryIntFunction('multiply'), 'BinaryIntFunc *', 3, 8), 24);
+    assert.equal(koffi.call(GetBinaryIntFunction('divide'), 'BinaryIntFunc *', 100, 2), 50);
+    assert.equal(GetBinaryIntFunction("missing"), null);
 
     lib.unload();
 }

@@ -37,6 +37,7 @@ const PackedBFG = koffi.pack('PackedBFG', {
 });
 
 const CharCallback = koffi.proto('int CharCallback(int idx, char c)');
+const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
 
 main();
 
@@ -57,6 +58,7 @@ async function test() {
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));
     const MakePackedBFG = lib.func('PackedBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
+    const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
 
     let promises = [];
 
@@ -96,6 +98,31 @@ async function test() {
             }
         });
         promises.push(p);
+    }
+
+    // Call function pointers
+    {
+        test_binary('add', 4, 5, 9);
+        test_binary('substract', 4, 5, -1);
+        test_binary('multiply', 3, 8, 24);
+        test_binary('divide', 100, 2, 50);
+
+        function test_binary(type, a, b, expected) {
+            let p = new Promise((resolve, reject) => {
+                try {
+                    let func = GetBinaryIntFunction(type);
+
+                    koffi.callAsync(func, 'BinaryIntFunc *', a, b, (err, res) => {
+                        assert.equal(res, expected);
+                    });
+
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+            promises.push(p);
+        }
     }
 
     await Promise.all(promises);

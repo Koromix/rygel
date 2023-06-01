@@ -102,7 +102,7 @@ public:
 #endif
 
     INLINE_IF_UNITY bool Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info);
-    INLINE_IF_UNITY void Execute(const FunctionInfo *func);
+    INLINE_IF_UNITY void Execute(const FunctionInfo *func, void *native);
     INLINE_IF_UNITY Napi::Value Complete(const FunctionInfo *func);
 
 #undef INLINE_IF_UNITY

@@ -224,7 +224,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     return true;
 }
 
-void CallData::Execute(const FunctionInfo *func)
+void CallData::Execute(const FunctionInfo *func, void *native)
 {
     TEB *teb = GetTEB();
 
@@ -250,8 +250,8 @@ void CallData::Execute(const FunctionInfo *func)
 
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(func->func, new_sp, &old_sp) \
-                                         : ForwardCall ## Suffix(func->func, new_sp, &old_sp)); \
+            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(native, new_sp, &old_sp) \
+                                         : ForwardCall ## Suffix(native, new_sp, &old_sp)); \
             return ret; \
         })()
 
