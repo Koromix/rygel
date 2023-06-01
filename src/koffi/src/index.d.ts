@@ -93,6 +93,8 @@ declare module 'koffi' {
 
     export function opaque(name: string): IKoffiCType;
     export function opaque(): IKoffiCType;
+    /** @deprecated */ export function handle(name: string): IKoffiCType;
+    /** @deprecated */ export function handle(): IKoffiCType;
 
     export function pointer(value: TypeSpec): IKoffiCType;
     export function pointer(value: TypeSpec, asteriskCount: number): IKoffiCType;
