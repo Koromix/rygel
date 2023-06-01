@@ -107,8 +107,10 @@ declare module 'koffi' {
     export function disposable(name: string, type: TypeSpec): IKoffiCType;
     export function disposable(name: string, type: TypeSpec, freeFunction: Function): IKoffiCType;
 
-    export function callback(definition: string): IKoffiCType;
-    export function callback(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
+    export function proto(definition: string): IKoffiCType;
+    export function proto(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
+    /** @deprecated */ export function callback(definition: string): IKoffiCType;
+    /** @deprecated */ export function callback(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 
     export function register(callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
     export function register(thisValue: any, callback: Function, type: TypeSpec): IKoffiRegisteredCallback;

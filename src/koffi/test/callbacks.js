@@ -42,15 +42,15 @@ const Vec2 = koffi.struct('Vec2', {
     y: 'double'
 });
 
-const SimpleCallback = koffi.callback('int SimpleCallback(const char *str)');
-const RecursiveCallback = koffi.callback('RecursiveCallback', 'float', ['int', 'str', 'double']);
-const BigCallback = koffi.callback('BFG BigCallback(BFG bfg)');
-const SuperCallback = koffi.callback('void SuperCallback(int i, int v1, double v2, int v3, int v4, int v5, int v6, float v7, int v8)');
-const ApplyCallback = koffi.callback('int __stdcall ApplyCallback(int a, int b, int c)');
-const IntCallback = koffi.callback('int IntCallback(int x)');
-const VectorCallback = koffi.callback('int VectorCallback(int len, Vec2 *vec)');
-const SortCallback = koffi.callback('int SortCallback(const void *ptr1, const void *ptr2)');
-const CharCallback = koffi.callback('int CharCallback(int idx, char c)');
+const SimpleCallback = koffi.proto('int SimpleCallback(const char *str)');
+const RecursiveCallback = koffi.proto('RecursiveCallback', 'float', ['int', 'str', 'double']);
+const BigCallback = koffi.proto('BFG BigCallback(BFG bfg)');
+const SuperCallback = koffi.proto('void SuperCallback(int i, int v1, double v2, int v3, int v4, int v5, int v6, float v7, int v8)');
+const ApplyCallback = koffi.proto('int __stdcall ApplyCallback(int a, int b, int c)');
+const IntCallback = koffi.proto('int IntCallback(int x)');
+const VectorCallback = koffi.proto('int VectorCallback(int len, Vec2 *vec)');
+const SortCallback = koffi.proto('int SortCallback(const void *ptr1, const void *ptr2)');
+const CharCallback = koffi.proto('int CharCallback(int idx, char c)');
 
 const StructCallbacks = koffi.struct('StructCallbacks', {
     first: koffi.pointer(IntCallback),

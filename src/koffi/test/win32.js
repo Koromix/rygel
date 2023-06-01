@@ -25,7 +25,7 @@ const koffi = require('./build/koffi.node');
 const assert = require('assert');
 const util = require('util');
 
-const CallThroughFunc = koffi.callback('int CallThroughFunc()');
+const CallThroughFunc = koffi.proto('int CallThroughFunc()');
 
 main();
 

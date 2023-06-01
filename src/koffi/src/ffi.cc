@@ -923,7 +923,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
     return true;
 }
 
-static Napi::Value CreateCallbackType(const Napi::CallbackInfo &info)
+static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -2106,7 +2106,7 @@ static void SetExports(Napi::Env env, Func func)
     func("opaque", Napi::Function::New(env, CreateOpaqueType));
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("array", Napi::Function::New(env, CreateArrayType));
-    func("callback", Napi::Function::New(env, CreateCallbackType));
+    func("proto", Napi::Function::New(env, CreateFunctionType));
     func("alias", Napi::Function::New(env, CreateTypeAlias));
 
     func("sizeof", Napi::Function::New(env, GetTypeSize));

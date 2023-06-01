@@ -36,7 +36,7 @@ const PackedBFG = koffi.pack('PackedBFG', {
     })
 });
 
-const CharCallback = koffi.callback('int CharCallback(int idx, char c)');
+const CharCallback = koffi.proto('int CharCallback(int idx, char c)');
 
 main();
 
