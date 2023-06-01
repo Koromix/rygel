@@ -275,7 +275,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             value = array[1u];
             align = (int16_t)align64;
         }
- 
+
         member.type = ResolveType(value);
         if (!member.type)
             return env.Null();
@@ -403,7 +403,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
             value = array[1u];
             align = (int16_t)align64;
         }
- 
+
         member.type = ResolveType(value);
         if (!member.type)
             return env.Null();
