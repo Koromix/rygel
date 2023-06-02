@@ -2126,12 +2126,9 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
     }
 
     const FunctionInfo *proto = type->ref.proto;
+    RG_ASSERT(!proto->variadic);
 
-    if (proto->variadic) {
-        return TranslateVariadicCall(proto, ptr, info);
-    } else {
-        return TranslateNormalCall(proto, ptr, info);
-    }
+    return TranslateNormalCall(proto, ptr, info);
 }
 
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
