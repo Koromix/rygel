@@ -983,6 +983,11 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
         Fmt(&signature_buf, ": %1", record_type->signature);
         Fmt(&prototype_buf, ": %1", record_type->signature);
+
+        // Reuse or add function type
+        type_buf.signature = InternString(signature_buf.ptr);
+        func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
+        func->prototype = InternString(prototype_buf.ptr);
     } else if (MatchToken(bk_TokenKind::Colon)) {
         type_buf.ret_type = ParseType();
 
@@ -990,20 +995,24 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
             Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
             Fmt(&prototype_buf, ": %1", type_buf.ret_type->signature);
         } else {
-            signature_buf.Append(0);
-            prototype_buf.Append(0);
+            signature_buf.Grow(1); signature_buf.ptr[signature_buf.len] = 0;
+            prototype_buf.Grow(1); prototype_buf.ptr[prototype_buf.len] = 0;
         }
+
+        // Reuse or add function type
+        type_buf.signature = InternString(signature_buf.ptr);
+        func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
+        func->prototype = InternString(prototype_buf.ptr);
     } else {
-        type_buf.ret_type = bk_NullType;
+        // type_buf.ret_type = nullptr;
 
-        signature_buf.Append(0);
-        prototype_buf.Append(0);
+        signature_buf.Grow(1); signature_buf.ptr[signature_buf.len] = 0;
+        prototype_buf.Grow(1); prototype_buf.ptr[prototype_buf.len] = 0;
+
+        type_buf.signature = signature_buf.ptr;
+        func->type = &type_buf;
+        func->prototype = prototype_buf.ptr;
     }
-
-    // Reuse or add function type
-    type_buf.signature = InternString(signature_buf.ptr);
-    func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
-    func->prototype = InternString(prototype_buf.ptr);
 
     // Publish function
     {
@@ -1021,7 +1030,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
             while (overload != func) {
                 if (TestOverload(*overload->type, func->type->params)) {
-                    if (overload->type->ret_type == func->type->ret_type) {
+                    if (overload->type->ret_type == func->type->ret_type || !func->type->ret_type) {
                         MarkError(func_pos, "Function '%1' is already defined", func->prototype);
                     } else {
                         MarkError(func_pos, "Function '%1' only differs from previously defined '%2' by return type",
@@ -1036,27 +1045,25 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
     }
 
     // Publish symbol
-    {
-        bk_VariableInfo *var = fwd->var ? fwd->var : CreateGlobal(func->name, bk_NullType, {{}}, true);
+    bk_VariableInfo *var = fwd->var ? fwd->var : CreateGlobal(func->name, bk_NullType, {{}}, true);
 
-        if (record) {
-            var->type = bk_TypeType;
-            var->ir->ptr[var->ir_addr - 1].u2.type = type_buf.ret_type;
-            var->ir->ptr[var->ir_addr - 1].u1.primitive = bk_PrimitiveKind::Type;
+    if (record) {
+        var->type = bk_TypeType;
+        var->ir->ptr[var->ir_addr - 1].u2.type = type_buf.ret_type;
+        var->ir->ptr[var->ir_addr - 1].u1.primitive = bk_PrimitiveKind::Type;
 
-            MapVariable(var, func_pos);
-        } else if (func->overload_next == func) {
-            var->type = func->type;
-            var->ir->ptr[var->ir_addr - 1].u2.func = func;
-            var->ir->ptr[var->ir_addr - 1].u1.primitive = bk_PrimitiveKind::Function;
+        MapVariable(var, func_pos);
+    } else if (func->type != &type_buf && func->overload_next == func) {
+        var->type = func->type;
+        var->ir->ptr[var->ir_addr - 1].u2.func = func;
+        var->ir->ptr[var->ir_addr - 1].u1.primitive = bk_PrimitiveKind::Function;
 
-            MapVariable(var, func_pos);
-        }
+        MapVariable(var, func_pos);
+    }
 
-        // Expressions involving this prototype (function or record) won't issue (visible) errors
-        if (RG_UNLIKELY(!show_errors)) {
-            poisoned_set.Set(var);
-        }
+    // Expressions involving this prototype (function or record) won't issue (visible) errors
+    if (RG_UNLIKELY(!show_errors)) {
+        poisoned_set.Set(var);
     }
 
     func->valid = true;
@@ -1119,6 +1126,28 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         } else if (RG_LIKELY(EndStatement())) {
             has_return = ParseBlock(false);
             ConsumeToken(bk_TokenKind::End);
+        }
+
+        // Deal with inferred return type
+        if (func->type == &type_buf) {
+            if (!type_buf.ret_type) {
+                type_buf.ret_type = bk_NullType;
+            } else if (type_buf.ret_type != bk_NullType) {
+                Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
+                Fmt(&prototype_buf, ": %1", type_buf.ret_type->signature);
+            }
+
+            type_buf.signature = InternString(signature_buf.ptr);
+            func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
+            func->prototype = InternString(prototype_buf.ptr);
+
+            if (func->overload_next == func) {
+                var->type = func->type;
+                var->ir->ptr[var->ir_addr - 1].u2.func = func;
+                var->ir->ptr[var->ir_addr - 1].u1.primitive = bk_PrimitiveKind::Function;
+
+                MapVariable(var, func_pos);
+            }
         }
 
         if (!has_return) {
@@ -1239,9 +1268,14 @@ void bk_Parser::ParseReturn()
     }
 
     if (RG_UNLIKELY(slot.type != current_func->type->ret_type)) {
-        MarkError(return_pos, "Cannot return '%1' value in function defined to return '%2'",
-                  slot.type->signature, current_func->type->ret_type->signature);
-        return;
+        if (RG_LIKELY(!current_func->type->ret_type)) {
+            bk_FunctionTypeInfo *type = (bk_FunctionTypeInfo *)current_func->type;
+            type->ret_type = slot.type;
+        } else {
+            MarkError(return_pos, "Cannot return '%1' value in function defined to return '%2'",
+                      slot.type->signature, current_func->type->ret_type->signature);
+            return;
+        }
     }
 
     EmitReturn(slot.type->size);
@@ -2395,6 +2429,12 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
         if (RG_UNLIKELY(!ptr))
             return nullptr;
 
+        ForwardInfo *fwd0 = *ptr;
+        ForwardInfo *fwd = fwd0;
+
+        // Make sure we don't come back here by accident
+        forwards_map.Remove(ptr);
+
         RG_DEFER_C(prev_ir = ir,
                    prev_src = src,
                    prev_func = current_func,
@@ -2411,9 +2451,6 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
         current_func = nullptr;
         depth = 0;
         offset_ptr = &main_offset;
-
-        ForwardInfo *fwd0 = *ptr;
-        ForwardInfo *fwd = fwd0;
 
         do {
             RG_DEFER_C(prev_pos = pos,
@@ -2439,7 +2476,6 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
         } while (fwd);
 
         var = (fwd0 && fwd0->var->type != bk_NullType) ? fwd0->var : nullptr;
-        forwards_map.Remove(ptr);
     }
 
     return var;

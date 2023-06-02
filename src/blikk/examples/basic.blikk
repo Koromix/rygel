@@ -223,3 +223,11 @@ func fake_math_function(f: Float): Float do return NaN
 printLn("ASIN 0.5 = ", get_math_function("asin")(0.5))
 printLn("ACOS 0.5 = ", get_math_function("acos")(0.5))
 printLn("ERROR 0.5 = ", get_math_function("error")(0.5))
+
+func infer(a: Int) do return a
+
+printLn("INFER1 = ", infer(1))
+printLn("INFER2 = ", infer2(1.2))
+
+func infer2(a: Float) do return infer3(a, 2.0)
+func infer3(a: Float, b: Float): Float do return a * b
