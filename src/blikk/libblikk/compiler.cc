@@ -680,6 +680,8 @@ void bk_Parser::Preparse(Span<const Size> positions)
 
                 fwd->var = prev->var;
             }
+
+            skip_map.Set(fwd_pos, fwd);
         }
     }
 }
@@ -3210,7 +3212,7 @@ bool bk_Parser::MapVariable(bk_VariableInfo *var, Size var_pos)
         it = inserted ? nullptr : *ptr;
     }
 
-    definitions_map.TrySet(var, var_pos);
+    definitions_map.Set(var, var_pos);
 
     while (it && (int)it->local > (int)var->local) {
         RG_ASSERT(it != var);
