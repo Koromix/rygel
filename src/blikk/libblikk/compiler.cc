@@ -2082,7 +2082,7 @@ error:
             break;
 
         parentheses += (tokens[pos].kind == bk_TokenKind::LeftParenthesis);
-        if (tokens[pos].kind == bk_TokenKind::RightParenthesis && --parentheses < 0)
+        if (tokens[pos].kind == bk_TokenKind::RightParenthesis && parentheses-- < 0)
             break;
 
         pos++;
