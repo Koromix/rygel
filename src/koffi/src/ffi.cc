@@ -2120,8 +2120,8 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
     const TypeInfo *type = ResolveType(info[1]);
     if (RG_UNLIKELY(!type))
         return env.Null();
-    if (RG_UNLIKELY(type->primitive != PrimitiveKind::Callback)) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function pointer type", GetValueType(instance, info[1]));
+    if (RG_UNLIKELY(type->primitive != PrimitiveKind::Prototype)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
         return env.Null();
     }
 
