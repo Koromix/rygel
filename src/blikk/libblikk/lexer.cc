@@ -410,7 +410,10 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     Span<const char> *ptr = strings.TrySet(str_buf, &inserted);
 
                     if (inserted) {
-                        *ptr = str_buf.TrimAndLeak();
+                        str_buf.Grow(1);
+                        str_buf.ptr[str_buf.len] = 0;
+
+                        *ptr = str_buf.TrimAndLeak(1);
                     }
 
                     tokens.Append({ bk_TokenKind::String, line, offset, { .str = ptr->ptr } });
