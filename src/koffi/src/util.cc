@@ -345,6 +345,14 @@ const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size 
     return MakeArrayType(instance, ref, len, hint, false);
 }
 
+Napi::External<TypeInfo> WrapType(Napi::Env env, InstanceData *instance, const TypeInfo *type)
+{
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
+}
+
 bool CanPassType(const TypeInfo *type, int directions)
 {
     if (directions & 2) {
@@ -1041,7 +1049,8 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (len && type->primitive != PrimitiveKind::String &&
-               type->primitive != PrimitiveKind::String16) {
+               type->primitive != PrimitiveKind::String16 &&
+               type->primitive != PrimitiveKind::Prototype) {
         if (*len >= 0) {
             type = MakeArrayType(instance, type, *len);
         } else {
@@ -1144,8 +1153,28 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
         } break;
 
         case PrimitiveKind::Prototype: {
-            ThrowError<Napi::TypeError>(env, "Cannot decode value of type %1", type->name);
-            return env.Null();
+            const FunctionInfo *proto = type->ref.proto;
+            RG_ASSERT(!proto->variadic);
+            RG_ASSERT(!proto->lib);
+
+            FunctionInfo *func = new FunctionInfo();
+            RG_DEFER { func->Unref(); };
+
+            memcpy((void *)func, proto, RG_SIZE(*proto));
+            memset((void *)&func->parameters, 0, RG_SIZE(func->parameters));
+            func->parameters = proto->parameters;
+
+            func->name = "<anonymous>";
+            func->native = (void *)ptr;
+
+            // Fix back parameter offset
+            for (ParameterInfo &param: func->parameters) {
+                param.offset -= 2;
+            }
+            func->required_parameters -= 2;
+
+            Napi::Function wrapper = WrapFunction(env, func);
+            return wrapper;
         } break;
     }
 
@@ -1153,6 +1182,48 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 #undef RETURN_INT
 
     return env.Null();
+}
+
+Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
+{
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    Napi::Function wrapper;
+    if (func->variadic) {
+        Napi::Function::Callback call = TranslateVariadicCall;
+        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+    } else {
+        Napi::Function::Callback call = TranslateNormalCall;
+        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+    }
+    wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
+
+    if (!func->variadic) {
+        Napi::Function::Callback call = TranslateAsyncCall;
+        Napi::Function async = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+
+        async.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
+        wrapper.Set("async", async);
+    }
+
+    // Create info object
+    {
+        Napi::Object meta = Napi::Object::New(env);
+        Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
+
+        meta.Set("name", Napi::String::New(env, func->name));
+        meta.Set("arguments", arguments);
+        meta.Set("result", WrapType(env, instance, func->ret.type));
+
+        for (Size i = 0; i < func->parameters.len; i++) {
+            const ParameterInfo &param = func->parameters[i];
+            arguments.Set((uint32_t)i, WrapType(env, instance, param.type));
+        }
+
+        wrapper.Set("info", meta);
+    }
+
+    return wrapper;
 }
 
 static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)

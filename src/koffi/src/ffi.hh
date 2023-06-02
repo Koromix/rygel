@@ -336,4 +336,8 @@ RG_STATIC_ASSERT(MaxTrampolines <= INT16_MAX);
 
 extern SharedData shared;
 
+Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info);
+Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info);
+Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info);
+
 }

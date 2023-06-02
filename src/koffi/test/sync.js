@@ -669,12 +669,27 @@ async function test() {
         assert.equal(ptr[0], '!dlroW olleH');
     }
 
-    // Call function pointers
+    // Call function pointers directly
     assert.equal(koffi.call(GetBinaryIntFunction('add'), BinaryIntFunc, 4, 5), 9);
     assert.equal(koffi.call(GetBinaryIntFunction('substract'), 'BinaryIntFunc', 4, 5), -1);
     assert.equal(koffi.call(GetBinaryIntFunction('multiply'), BinaryIntFunc, 3, 8), 24);
     assert.equal(koffi.call(GetBinaryIntFunction('divide'), BinaryIntFunc, 100, 2), 50);
-    assert.equal(GetBinaryIntFunction("missing"), null);
+    assert.equal(GetBinaryIntFunction('missing'), null);
+
+    // Call decoded function pointers
+    {
+        test_binary('add', 4, 5, 9);
+        test_binary('substract', 4, 5, -1);
+        test_binary('multiply', 3, 8, 24);
+        test_binary('divide', 100, 2, 50);
+
+        function test_binary(type, a, b, expected) {
+            let ptr = GetBinaryIntFunction(type);
+            let func = koffi.decode(ptr, BinaryIntFunc);
+
+            assert.equal(func(a, b), expected);
+        }
+    }
 
     lib.unload();
 }

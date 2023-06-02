@@ -93,6 +93,8 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
+Napi::External<TypeInfo> WrapType(Napi::Env env, InstanceData *instance, const TypeInfo *type);
+
 bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);
 bool CanStoreType(const TypeInfo *type);
@@ -184,6 +186,8 @@ static inline Napi::Value NewBigInt(Napi::Env env, uint64_t value)
         return Napi::BigInt::New(env, value);
     }
 }
+
+Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
 
 int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
 

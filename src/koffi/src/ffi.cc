@@ -204,14 +204,6 @@ static inline bool CheckAlignment(int64_t align)
     return valid;
 }
 
-static inline Napi::External<TypeInfo> WrapType(Napi::Env env, InstanceData *instance, const TypeInfo *type)
-{
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-    SetValueTag(instance, external, &TypeInfoMarker);
-
-    return external;
-}
-
 static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 {
     Napi::Env env = info.Env();
@@ -1279,7 +1271,7 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
     return call.Complete(func);
 }
 
-static Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
+Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
 {
     FunctionInfo *func = (FunctionInfo *)info.Data();
     return TranslateNormalCall(func, func->native, info);
@@ -1360,7 +1352,7 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     return call.Complete(&copy);
 }
 
-static Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
+Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
 {
     FunctionInfo *func = (FunctionInfo *)info.Data();
     return TranslateVariadicCall(func, func->native, info);
@@ -1458,7 +1450,7 @@ static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native,
     return env.Undefined();
 }
 
-static Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
+Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
 {
     FunctionInfo *func = (FunctionInfo *)info.Data();
     return TranslateAsyncCall(func, func->native, info);
@@ -1533,41 +1525,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
         return env.Null();
     }
 
-    Napi::Function wrapper;
-    if (func->variadic) {
-        Napi::Function::Callback call = TranslateVariadicCall;
-        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
-    } else {
-        Napi::Function::Callback call = TranslateNormalCall;
-        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
-    }
-    wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, func);
-
-    if (!func->variadic) {
-        Napi::Function::Callback call = TranslateAsyncCall;
-        Napi::Function async = Napi::Function::New(env, call, func->name, (void *)func->Ref());
-
-        async.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, func);
-        wrapper.Set("async", async);
-    }
-
-    // Create info object
-    {
-        Napi::Object meta = Napi::Object::New(env);
-        Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
-
-        meta.Set("name", Napi::String::New(env, func->name));
-        meta.Set("arguments", arguments);
-        meta.Set("result", WrapType(env, instance, func->ret.type));
-
-        for (Size i = 0; i < func->parameters.len; i++) {
-            const ParameterInfo &param = func->parameters[i];
-            arguments.Set((uint32_t)i, WrapType(env, instance, param.type));
-        }
-
-        wrapper.Set("info", meta);
-    }
-
+    Napi::Function wrapper = WrapFunction(env, func);
     return wrapper;
 }
 
