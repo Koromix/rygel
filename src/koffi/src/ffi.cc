@@ -2134,38 +2134,6 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
     }
 }
 
-static Napi::Value CallPointerAsync(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (RG_UNLIKELY(info.Length() < 2)) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
-        return env.Null();
-    }
-
-    void *ptr = nullptr;
-    if (RG_UNLIKELY(!GetExternalPointer(env, info[0], &ptr)))
-        return env.Null();
-
-    const TypeInfo *type = ResolveType(info[1]);
-    if (RG_UNLIKELY(!type))
-        return env.Null();
-    if (RG_UNLIKELY(type->primitive != PrimitiveKind::Callback)) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function pointer type", GetValueType(instance, info[1]));
-        return env.Null();
-    }
-
-    const FunctionInfo *proto = type->ref.proto;
-
-    if (RG_UNLIKELY(proto->variadic)) {
-        ThrowError<Napi::TypeError>(env, "Cannot call variadic function asynchronously");
-        return env.Null();
-    }
-
-    return TranslateAsyncCall(proto, ptr, info);
-}
-
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
     if (RG_LIKELY(exec_call)) {
@@ -2233,7 +2201,6 @@ static void SetExports(Napi::Env env, Func func)
     func("decode", Napi::Function::New(env, DecodeValue));
     func("address", Napi::Function::New(env, GetPointerAddress));
     func("call", Napi::Function::New(env, CallPointerSync));
-    func("callAsync", Napi::Function::New(env, CallPointerAsync));
 
     func("errno", Napi::Function::New(env, GetOrSetErrNo));
 

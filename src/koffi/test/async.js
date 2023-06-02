@@ -100,30 +100,5 @@ async function test() {
         promises.push(p);
     }
 
-    // Call function pointers
-    {
-        test_binary('add', 4, 5, 9);
-        test_binary('substract', 4, 5, -1);
-        test_binary('multiply', 3, 8, 24);
-        test_binary('divide', 100, 2, 50);
-
-        function test_binary(type, a, b, expected) {
-            let p = new Promise((resolve, reject) => {
-                try {
-                    let func = GetBinaryIntFunction(type);
-
-                    koffi.callAsync(func, 'BinaryIntFunc *', a, b, (err, res) => {
-                        assert.equal(res, expected);
-                    });
-
-                    resolve();
-                } catch (err) {
-                    reject(err);
-                }
-            });
-            promises.push(p);
-        }
-    }
-
     await Promise.all(promises);
 }
