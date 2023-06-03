@@ -133,7 +133,7 @@
 
 **Main changes:**
 
-- Fix type parser issues (such as ignoring some [disposable qualifiers](calls.md#heap-allocated-values))
+- Fix type parser issues (such as ignoring some [disposable qualifiers](parameters.md#heap-allocated-values))
 - Fix crash when using disposable types in output parameters
 - Add basic [koffi.stats()](misc.md#usage-statistics) interface
 
@@ -155,7 +155,7 @@
 **Main changes:**
 
 - Allow buffers (TypedArray or ArrayBuffer) values for input and/or output pointer arguments (for polymorphic arguments)
-- Support opaque buffers (TypedArray or ArrayBuffer) values in `koffi.decode()` to [decode output buffers](calls.md#output-buffers)
+- Support opaque buffers (TypedArray or ArrayBuffer) values in `koffi.decode()` to [decode output buffers](parameters.md#output-buffers)
 - Decode non-string types as arrays when an [explicit length is passed to koffi.decode()](callbacks.md#decoding-pointer-arguments)
 
 **Other changes:**
@@ -220,7 +220,7 @@
 **New features:**
 
 - Add [koffi.decode()](callbacks.md#decoding-pointer-arguments) for callback pointer arguments
-- Support transparent [output string parameters](calls.md#output-parameters)
+- Support transparent [output string parameters](parameters.md#output-parameters)
 - Add `koffi.offsetof()` utility function
 - Support optional *this* binding in `koffi.register()`
 
@@ -270,7 +270,7 @@
 
 **Main changes:**
 
-- Add [koffi.as()](calls.md#polymorphic-parameters) to support polymorphic APIs based on `void *` parameters
+- Add [koffi.as()](parameters.md#polymorphic-parameters) to support polymorphic APIs based on `void *` parameters
 - Add [endian-sensitive integer types](types.md#endian-sensitive-types): `intX_le_t`, `intX_be_t`, `uintX_le_t`, `uintX_be_t`
 - Accept typed arrays for `void *` parameters
 - Introduce `koffi.opaque()` to replace `koffi.handle()` (which remains supported until Koffi 3.0)
@@ -296,7 +296,7 @@
 
 **Major new features:**
 
-- Add [disposable types](calls.md#heap-allocated-values) for automatic disposal of C values (such as heap-allocated strings)
+- Add [disposable types](parameters.md#heap-allocated-values) for automatic disposal of C values (such as heap-allocated strings)
 - Add support for [registered callbacks](callbacks.md#registered-callbacks), that can be called after the initial FFI call
 - Support named pointer types
 - Support complex type specifications outside of prototype parser

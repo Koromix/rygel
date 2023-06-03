@@ -1,56 +1,10 @@
-# Function calls
+# Special parameters
 
-## Call types
-
-### Synchronous calls
-
-Once a native function has been declared, you can simply call it as you would any other JS function.
-
-```js
-const atoi = lib.func('int atoi(const char *str)');
-
-let value = atoi('1257');
-console.log(value);
-```
-
-For [variadic functions](functions.md#variadic-functions), you msut specificy the type and the value for each additional argument.
-
-```js
-const printf = lib.func('printf', 'int', ['str', '...']);
-
-// The variadic arguments are: 6 (int), 8.5 (double), 'THE END' (const char *)
-printf('Integer %d, double %g, str %s', 'int', 6, 'double', 8.5, 'str', 'THE END');
-```
-
-### Asynchronous calls
-
-You can issue asynchronous calls by calling the function through its async member. In this case, you need to provide a callback function as the last argument, with `(err, res)` parameters.
-
-```js
-const koffi = require('koffi');
-const lib = koffi.load('libc.so.6');
-
-const atoi = lib.func('int atoi(const char *str)');
-
-atoi.async('1257', (err, res) => {
-    console.log('Result:', res);
-})
-console.log('Hello World!');
-
-// This program will print:
-//   Hello World!
-//   Result: 1257
-```
-
-These calls are executed by worker threads. It is **your responsibility to deal with data sharing issues** in the native code that may be caused by multi-threading.
-
-You can easily convert this callback-style async function to a promise-based version with `util.promisify()` from the Node.js standard library.
-
-Variadic functions cannot be called asynchronously.
-
-## Output parameters
+## Direction
 
 By default, Koffi will only forward arguments from Javascript to C. However, many C functions use pointer arguments for output values, or input/output values.
+
+## Output parameters
 
 For simplicity, and because Javascript only has value semantics for primitive types, Koffi can marshal out (or in/out) two types of parameters:
 
@@ -348,7 +302,7 @@ let copy = strdup('Hello!');
 console.log(copy); // Prints Hello!
 ```
 
-When you declare functions with the [prototype-like syntax](functions.md#c-like-prototypes), you can either use named disposable types or use the '!' shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls `koffi.free(ptr)`.
+When you declare functions with the [prototype-like syntax](functions.md#definition-syntax), you can either use named disposable types or use the '!' shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls `koffi.free(ptr)`.
 
 ```js
 const koffi = require('koffi');
@@ -366,9 +320,3 @@ Disposable types can only be created from pointer or string types.
 ```{warning}
 Be careful on Windows: if your shared library uses a different CRT (such as msvcrt), the memory could have been allocated by a different malloc/free implementation or heap, resulting in undefined behavior if you use `koffi.free()`.
 ```
-
-## Thread safety
-
-Asynchronous functions run on worker threads. You need to deal with thread safety issues if you share data between threads.
-
-Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess. You've been warned!

@@ -23,10 +23,10 @@ Table of contents
 
    platforms
    start
+   functions
    types
    pointers
-   functions
-   calls
+   parameters
    callbacks
    misc
    benchmarks

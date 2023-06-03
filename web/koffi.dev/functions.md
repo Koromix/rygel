@@ -1,4 +1,4 @@
-# Library functions
+# Native functions
 
 ## Loading libraries
 
@@ -88,3 +88,57 @@ const lib = koffi.load('user32.dll');
 const MessageBoxA_1 = lib.stdcall('MessageBoxA', 'int', ['void *', 'str', 'str', 'uint']);
 const MessageBoxA_2 = lib.func('int __stdcall MessageBoxA(void *hwnd, str text, str caption, uint type)');
 ```
+
+## Function calls
+
+### Synchronous calls
+
+Once a native function has been declared, you can simply call it as you would any other JS function.
+
+```js
+const atoi = lib.func('int atoi(const char *str)');
+
+let value = atoi('1257');
+console.log(value);
+```
+
+For [variadic functions](functions.md#variadic-functions), you msut specificy the type and the value for each additional argument.
+
+```js
+const printf = lib.func('printf', 'int', ['str', '...']);
+
+// The variadic arguments are: 6 (int), 8.5 (double), 'THE END' (const char *)
+printf('Integer %d, double %g, str %s', 'int', 6, 'double', 8.5, 'str', 'THE END');
+```
+
+### Asynchronous calls
+
+You can issue asynchronous calls by calling the function through its async member. In this case, you need to provide a callback function as the last argument, with `(err, res)` parameters.
+
+```js
+const koffi = require('koffi');
+const lib = koffi.load('libc.so.6');
+
+const atoi = lib.func('int atoi(const char *str)');
+
+atoi.async('1257', (err, res) => {
+    console.log('Result:', res);
+})
+console.log('Hello World!');
+
+// This program will print:
+//   Hello World!
+//   Result: 1257
+```
+
+These calls are executed by worker threads. It is **your responsibility to deal with data sharing issues** in the native code that may be caused by multi-threading.
+
+You can easily convert this callback-style async function to a promise-based version with `util.promisify()` from the Node.js standard library.
+
+Variadic functions cannot be called asynchronously.
+
+## Thread safety
+
+Asynchronous functions run on worker threads. You need to deal with thread safety issues if you share data between threads.
+
+Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess. You've been warned!

@@ -65,7 +65,7 @@ html_theme_options = {
     }
 }
 
-html_link_suffix = ''
+# html_link_suffix = ''
 
 html_css_files = ['custom.css']
 
