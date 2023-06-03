@@ -32,7 +32,7 @@ The two versions below illustrate the API difference between Koffi 1.x and Koffi
 ```js
 // Koffi 1.x
 
-const TransferCallback = koffi.callback('int TransferCallback(const char *str, int age)');
+const TransferCallback = koffi.proto('int TransferCallback(const char *str, int age)');
 
 const TransferToJS = lib.func('TransferToJS', 'int', ['str', 'int', TransferCallback]);
 // Equivalent to: const TransferToJS = lib.func('int TransferToJS(str s, int x, TransferCallback cb)');
@@ -48,7 +48,7 @@ console.log(ret);
 ```js
 // Koffi 2.x
 
-const TransferCallback = koffi.callback('int TransferCallback(const char *str, int age)');
+const TransferCallback = koffi.proto('int TransferCallback(const char *str, int age)');
 
 const TransferToJS = lib.func('TransferToJS', 'int', ['str', 'int', koffi.pointer(TransferCallback)]);
 // Equivalent to: const TransferToJS = lib.func('int TransferToJS(str s, int x, TransferCallback *cb)');
@@ -62,6 +62,10 @@ console.log(ret);
 ```
 
 Koffi 1.x only supported [transient callbacks](callbacks.md#callbacks), you must use Koffi 2.x for registered callbacks.
+
+```{note}
+The function `koffi.proto()` was introduced in Koffi 2.4, it was called `koffi.callback()` in earlier versions.
+```
 
 ### Opaque types
 

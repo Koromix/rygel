@@ -1,5 +1,11 @@
 # Callbacks
 
+*Changed in Koffi 2.4*
+
+```{note}
+The function `koffi.proto()` was introduced in Koffi 2.4, it was called `koffi.callback()` in earlier versions.
+```
+
 ## Callback types
 
 In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.
@@ -8,10 +14,10 @@ In order to pass a JS function to a C function expecting a callback, you must fi
 const koffi = require('koffi');
 
 // With the classic syntax, this callback expects an integer and returns nothing
-const ExampleCallback = koffi.callback('ExampleCallback', 'void', ['int']);
+const ExampleCallback = koffi.proto('ExampleCallback', 'void', ['int']);
 
 // With the prototype parser, this callback expects a double and float, and returns the sum as a double
-const AddDoubleFloat = koffi.callback('double AddDoubleFloat(double d, float f)');
+const AddDoubleFloat = koffi.proto('double AddDoubleFloat(double d, float f)');
 ```
 
 Once your callback type is declared, you can use a pointer to it in struct definitions, or as function parameters and/or return types.
@@ -56,7 +62,7 @@ int TransferToJS(const char *name, int age, int (*cb)(const char *str, int age))
 const koffi = require('koffi');
 const lib = koffi.load('./callbacks.so'); // Fake path
 
-const TransferCallback = koffi.callback('int TransferCallback(const char *str, int age)');
+const TransferCallback = koffi.proto('int TransferCallback(const char *str, int age)');
 
 const TransferToJS = lib.func('TransferToJS', 'int', ['str', 'int', koffi.pointer(TransferCallback)]);
 
@@ -104,8 +110,8 @@ void SayIt(const char *name)
 const koffi = require('koffi');
 const lib = koffi.load('./callbacks.so'); // Fake path
 
-const GetCallback = koffi.callback('const char *GetCallback(const char *name)');
-const PrintCallback = koffi.callback('void PrintCallback(const char *str)');
+const GetCallback = koffi.proto('const char *GetCallback(const char *name)');
+const PrintCallback = koffi.proto('void PrintCallback(const char *str)');
 
 const RegisterFunctions = lib.func('void RegisterFunctions(GetCallback *cb1, PrintCallback *cb2)');
 const SayIt = lib.func('void SayIt(const char *name)');
@@ -155,7 +161,7 @@ The following example sorts an array of strings (in-place) with `qsort()`:
 const koffi = require('koffi');
 const lib = koffi.load('libc.so.6');
 
-const SortCallback = koffi.callback('int SortCallback(const void *first, const void *second)');
+const SortCallback = koffi.proto('int SortCallback(const void *first, const void *second)');
 const qsort = lib.func('void qsort(_Inout_ void *array, size_t count, size_t size, SortCallback *cb)');
 
 let array = ['foo', 'bar', '123', 'foobar'];
