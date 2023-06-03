@@ -9,7 +9,7 @@
 **Main changes:**
 
 - Support decoding pointers to callable functions
-- Support calling function pointers with [koffi.call()]
+- Support calling function pointers with `koffi.call()`
 - Deprecate `koffi.callback` in favor of `koffi.proto`
 
 **Other changes:**
