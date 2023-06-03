@@ -2,6 +2,23 @@
 
 ## Version history
 
+### Koffi 2.4
+
+#### Koffi 2.4.1
+
+**Main changes:**
+
+- Support decoding pointers to callable functions
+- Support calling function pointers with [koffi.call()]
+- Deprecate `koffi.callback` in favor of `koffi.proto`
+
+**Other changes:**
+
+- Increase maximum number of callbacks to 8192
+- Build Koffi with static CRT on Windows
+- Reorganize Koffi data conversion documentation
+- Add deprecated `koffi.handle` to TS file
+
 ### Koffi 2.3
 
 #### Koffi 2.3.20
