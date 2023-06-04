@@ -212,7 +212,6 @@ if (filename == null)
 
 let hdr = {};
 {
-
     let fp = fopen(filename, 'rb');
     if (!fp)
         throw new Error(`Failed to open '${filename}'`);

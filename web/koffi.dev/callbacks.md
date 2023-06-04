@@ -20,7 +20,7 @@ const ExampleCallback = koffi.proto('ExampleCallback', 'void', ['int']);
 const AddDoubleFloat = koffi.proto('double AddDoubleFloat(double d, float f)');
 ```
 
-Once your callback type is declared, you can use a pointer to it in struct definitions, or as function parameters and/or return types.
+Once your callback type is declared, you can use a pointer to it in struct definitions, as function parameters and/or return types, or to call/decode function pointers.
 
 ```{note}
 Callbacks **have changed in version 2.0**.

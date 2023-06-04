@@ -132,7 +132,7 @@ By default, just like for objects, array arguments are copied from JS to C but n
 
 Disposable types allow you to register a function that will automatically called after each C to JS conversion performed by Koffi. This can be used to avoid leaking heap-allocated strings, for example.
 
-Read the documentation for [disposable types](parameters.md#heap-allocated-values) on the page about function calls.
+Read the documentation for [disposable types](parameters.md#heap-allocated-values) on the page about special parameters.
 
 ## Unwrap pointers
 
