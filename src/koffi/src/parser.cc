@@ -75,7 +75,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
             param.type = ParseType();
 
             if (!CanPassType(param.type, param.directions)) {
-                MarkError("Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
+                MarkError("Type %1 cannot be used as a parameter", param.type->name);
                 return false;
             }
             if (out_func->parameters.len >= MaxParameters) {

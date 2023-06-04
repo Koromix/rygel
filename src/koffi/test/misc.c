@@ -962,6 +962,7 @@ EXPORT void ReverseString16Void(void *ptr)
 }
 
 typedef int BinaryIntFunc(int a, int b);
+typedef int VariadicIntFunc(int n, ...);
 
 static int AddInt(int a, int b) { return a + b; }
 static int SubstractInt(int a, int b) { return a - b; }
@@ -978,6 +979,45 @@ EXPORT BinaryIntFunc *GetBinaryIntFunction(const char *type)
         return MultiplyInt;
     } else if (!strcmp(type, "divide")) {
         return DivideInt;
+    } else {
+        return NULL;
+    }
+}
+
+static int AddIntN(int n, ...)
+{
+    int total = 0;
+
+    va_list ap;
+    va_start(ap, n);
+    for (int i = 0; i < n; i++) {
+        total += va_arg(ap, int);
+    }
+    va_end(ap);
+
+    return total;
+}
+
+static int MultiplyIntN(int n, ...)
+{
+    int total = 1;
+
+    va_list ap;
+    va_start(ap, n);
+    for (int i = 0; i < n; i++) {
+        total *= va_arg(ap, int);
+    }
+    va_end(ap);
+
+    return total;
+}
+
+EXPORT VariadicIntFunc *GetVariadicIntFunction(const char *type)
+{
+    if (!strcmp(type, "add")) {
+        return AddIntN;
+    } else if (!strcmp(type, "multiply")) {
+        return MultiplyIntN;
     } else {
         return NULL;
     }

@@ -371,6 +371,8 @@ bool CanPassType(const TypeInfo *type, int directions)
             return false;
         if (type->primitive == PrimitiveKind::Prototype)
             return false;
+        if (type->primitive == PrimitiveKind::Callback && type->ref.proto->variadic)
+            return false;
 
         return true;
     }
@@ -393,6 +395,8 @@ bool CanStoreType(const TypeInfo *type)
     if (type->primitive == PrimitiveKind::Void)
         return false;
     if (type->primitive == PrimitiveKind::Prototype)
+        return false;
+    if (type->primitive == PrimitiveKind::Callback && type->ref.proto->variadic)
         return false;
 
     return true;

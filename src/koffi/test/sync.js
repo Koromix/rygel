@@ -143,6 +143,7 @@ const BigText = koffi.struct('BigText', {
 });
 
 const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
+const VariadicIntFunc = koffi.proto('int VariadicIntFunc(int n, ...)');
 
 main();
 
@@ -247,6 +248,7 @@ async function test() {
     const ReverseStringVoid = lib.func('void ReverseStringVoid(_Inout_ void *ptr)');
     const ReverseString16Void = lib.func('void ReverseString16Void(_Inout_ void *ptr)');
     const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
+    const GetVariadicIntFunction = lib.func('VariadicIntFunc *GetVariadicIntFunction(const char *name)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -690,6 +692,12 @@ async function test() {
             assert.equal(func(a, b), expected);
         }
     }
+
+    // Try variadic function pointers
+    assert.equal(koffi.call(GetVariadicIntFunction('add'), VariadicIntFunc, 3, 'int', 4, 'int', 5, 'int', 12), 21);
+    assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 1, 'int', 2, 'int', 21), 2);
+    assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 2, 'int', 2, 'int', 21), 42);
+    assert.equal(GetBinaryIntFunction('missing'), null);
 
     lib.unload();
 }

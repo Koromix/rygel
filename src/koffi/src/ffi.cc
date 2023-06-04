@@ -895,7 +895,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
         if (!param.type)
             return false;
         if (!CanPassType(param.type, param.directions)) {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
             return false;
         }
         if (func->parameters.len >= MaxParameters) {
@@ -939,11 +939,6 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
             return env.Null();
     } else {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 3 arguments, got %1", info.Length());
-        return env.Null();
-    }
-
-    if (func->variadic) {
-        LogError("Variadic callbacks are not supported");
         return env.Null();
     }
 
@@ -1310,7 +1305,7 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
         if (RG_UNLIKELY(!param.type))
             return env.Null();
         if (RG_UNLIKELY(!CanPassType(param.type, param.directions))) {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter (maybe try %1 *)", param.type->name);
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
             return env.Null();
         }
         if (RG_UNLIKELY(copy.parameters.len >= MaxParameters)) {
@@ -2084,9 +2079,9 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
     }
 
     const FunctionInfo *proto = type->ref.proto;
-    RG_ASSERT(!proto->variadic);
 
-    return TranslateNormalCall(proto, ptr, info);
+    return proto->variadic ? TranslateVariadicCall(proto, ptr, info)
+                           : TranslateNormalCall(proto, ptr, info);
 }
 
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
