@@ -4,6 +4,16 @@
 
 ### Koffi 2.4
 
+#### Koffi 2.4.2
+
+**Main changes:**
+
+- Support calling variadic function pointers
+
+**Other changes:**
+
+- Add documentation for function pointers
+
 #### Koffi 2.4.1
 
 **Main changes:**
