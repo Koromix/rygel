@@ -1,4 +1,4 @@
-# Native functions
+# Function calls
 
 ## Loading libraries
 
@@ -89,7 +89,7 @@ const MessageBoxA_1 = lib.stdcall('MessageBoxA', 'int', ['void *', 'str', 'str',
 const MessageBoxA_2 = lib.func('int __stdcall MessageBoxA(void *hwnd, str text, str caption, uint type)');
 ```
 
-## Function calls
+## Call types
 
 ### Synchronous calls
 
@@ -137,8 +137,8 @@ You can easily convert this callback-style async function to a promise-based ver
 
 Variadic functions cannot be called asynchronously.
 
-## Thread safety
-
+```{note}
 Asynchronous functions run on worker threads. You need to deal with thread safety issues if you share data between threads.
 
 Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess. You've been warned!
+```
