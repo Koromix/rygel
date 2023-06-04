@@ -142,3 +142,72 @@ Asynchronous functions run on worker threads. You need to deal with thread safet
 
 Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess. You've been warned!
 ```
+
+## Function pointers
+
+*New in Koffi 2.4*
+
+You can call a function pointer in two ways:
+
+- Directly call the function pointer with `koffi.call(ptr, type, ...)`
+- Decode the function pointer to an actual function with `koffi.decode(ptr, type)`
+
+The example below shows how to call an `int (*)(int, int)` C function pointer both ways, based on the following native C library:
+
+```c
+typedef int BinaryIntFunc(int a, int b);
+
+static int AddInt(int a, int b) { return a + b; }
+static int SubstractInt(int a, int b) { return a - b; }
+
+BinaryIntFunc *GetBinaryIntFunction(const char *type)
+{
+    if (!strcmp(type, "add")) {
+        return AddInt;
+    } else if (!strcmp(type, "substract")) {
+        return SubstractInt;
+    } else {
+        return NULL;
+    }
+}
+```
+
+### Call pointer directly
+
+Use `koffi.call(ptr, type, ...)` to call a function pointer. The first two arguments are the pointer itself and the type of the function you are trying to call (declared with `koffi.proto()` as shown below), and the remaining arguments are used for the call.
+
+```js
+// Declare function type
+const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
+
+const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
+
+const add_ptr = GetBinaryIntFunction('add');
+const substract_ptr = GetBinaryIntFunction('substract');
+
+let sum = koffi.call(add_ptr, BinaryIntFunc, 4, 5);
+let delta = koffi.call(substract_ptr, BinaryIntFunc, 100, 58);
+
+console.log(sum, delta); // Prints 9 and 42
+```
+
+### Decode pointer to function
+
+Use `koffi.decode(ptr, type)` to get back a JS function, which you can then use like any other Koffi function.
+
+This method also allows you to perform an [asynchronous call](#asynchronous-calls) with the async member of the decoded function.
+
+```js
+// Declare function type
+const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
+
+const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
+
+const add = koffi.decode(GetBinaryIntFunction('add'), BinaryIntFunc);
+const substract = koffi.decode(GetBinaryIntFunction('substract'), BinaryIntFunc);
+
+let sum = add(4, 5);
+let delta = substract(100, 58);
+
+console.log(sum, delta); // Prints 9 and 42
+```
