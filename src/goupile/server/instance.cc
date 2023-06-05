@@ -198,7 +198,7 @@ bool MigrateInstance(sq_Database *db)
     }
 
     // Work around version mismatch caused by goupile2 branch
-    if (version >= 57 && version < 60) {
+    if (version >= 57 && version <= 60) {
         sq_Statement stmt;
         if (!db->Prepare("SELECT rowid FROM sqlite_master WHERE name = 'rec_fragments' AND sql LIKE '%tags TEXT%'", &stmt))
             return false;
