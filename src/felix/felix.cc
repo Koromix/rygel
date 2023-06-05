@@ -12,6 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/libcc/libcc.hh"
+#include "compiler.hh"
 
 namespace RG {
 
@@ -35,6 +36,9 @@ int Main(int argc, char **argv)
         } else if (TestStr(argv[1], "--version")) {
             PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
             PrintLn("Compiler: %1", FelixCompiler);
+            PrintLn("Host: %1", HostPlatformNames[(int)NativePlatform]);
+            PrintLn("Architecture: %1", HostArchitectureNames[(int)NativeArchitecture]);
+
             return 0;
         }
     }
