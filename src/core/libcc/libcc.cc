@@ -4081,11 +4081,13 @@ RG_INIT(SetupDefaultHandlers)
 
 RG_EXIT(TerminateChildren)
 {
-    pid_t pid = getpid();
-    RG_ASSERT(pid > 1);
+    if (interrupt_pfd[1] >= 0) {
+        pid_t pid = getpid();
+        RG_ASSERT(pid > 1);
 
-    SetSignalHandler(SIGTERM, [](int) {});
-    kill(-pid, SIGTERM);
+        SetSignalHandler(SIGTERM, [](int) {});
+        kill(-pid, SIGTERM);
+    }
 }
 
 bool CreatePipe(int pfd[2])
