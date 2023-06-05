@@ -181,11 +181,11 @@ class ClangCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    ClangCompiler(HostPlatform platform) : Compiler(platform, "Clang") {}
+    ClangCompiler(HostPlatform platform, HostArchitecture architecture) : Compiler(platform, architecture, "Clang") {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc, const char *ld)
+    static std::unique_ptr<const Compiler> Create(HostPlatform platform, HostArchitecture architecture, const char *cc, const char *ld)
     {
-        std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(platform);
+        std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(platform, architecture);
 
         // Prefer LLD
         if (!ld && FindExecutableInPath("ld.lld")) {
@@ -640,10 +640,9 @@ public:
                     Fmt(&buf, " -pie");
                 }
 
-                // XXX: Ugly, but cross-compilation is not yet supported for this platform anyway
-#if defined(__arm__) || defined(__thumb__)
-                Fmt(&buf, " -latomic");
-#endif
+                if (architecture == HostArchitecture::ARM32) {
+                    Fmt(&buf, " -latomic");
+                }
             } break;
         }
 
@@ -709,11 +708,11 @@ class GnuCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    GnuCompiler(HostPlatform platform) : Compiler(platform, "GCC") {}
+    GnuCompiler(HostPlatform platform, HostArchitecture architecture) : Compiler(platform, architecture, "GCC") {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc, const char *ld)
+    static std::unique_ptr<const Compiler> Create(HostPlatform platform, HostArchitecture architecture, const char *cc, const char *ld)
     {
-        std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>(platform);
+        std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>(platform, architecture);
 
         // Find executables
         {
@@ -944,10 +943,9 @@ public:
                     Fmt(&buf, " -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
                 }
 
-                // XXX: Ugly, but cross-compilation is not yet supported for this platform anyway
-#if defined(__arm__) || defined(__thumb__)
-                Fmt(&buf, " -Wno-psabi");
-#endif
+                if (architecture == HostArchitecture::ARM32) {
+                    Fmt(&buf, " -Wno-psabi");
+                }
             } break;
         }
 
@@ -1081,10 +1079,9 @@ public:
                     Fmt(&buf, " -pie");
                 }
 
-                // XXX: Ugly, but cross-compilation is not yet supported for this platform anyway
-#if defined(__arm__) || defined(__thumb__)
-                Fmt(&buf, " -latomic");
-#endif
+                if (architecture == HostArchitecture::ARM32) {
+                    Fmt(&buf, " -latomic");
+                }
             } break;
         }
 
@@ -1133,11 +1130,11 @@ class MsCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    MsCompiler() : Compiler(HostPlatform::Windows, "MSVC") {}
+    MsCompiler(HostArchitecture architecture) : Compiler(HostPlatform::Windows, architecture, "MSVC") {}
 
-    static std::unique_ptr<const Compiler> Create(const char *cl)
+    static std::unique_ptr<const Compiler> Create(HostArchitecture architecture, const char *cl)
     {
-        std::unique_ptr<MsCompiler> compiler = std::make_unique<MsCompiler>();
+        std::unique_ptr<MsCompiler> compiler = std::make_unique<MsCompiler>(architecture);
 
         // Find executables
         {
@@ -1440,7 +1437,7 @@ class TeensyCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    TeensyCompiler(HostPlatform platform) : Compiler(platform, "GCC") {}
+    TeensyCompiler(HostPlatform platform) : Compiler(platform, HostArchitecture::ARM32, "GCC") {}
 
     static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc)
     {
@@ -1448,8 +1445,14 @@ public:
 
         // Decode model string
         switch (platform) {
-            case HostPlatform::Teensy20: { compiler->model = Model::Teensy20; } break;
-            case HostPlatform::Teensy20pp: { compiler->model = Model::Teensy20pp; } break;
+            case HostPlatform::Teensy20: {
+                compiler->architecture = HostArchitecture::AVR;
+                compiler->model = Model::Teensy20;
+            } break;
+            case HostPlatform::Teensy20pp: {
+                compiler->architecture = HostArchitecture::AVR;
+                compiler->model = Model::Teensy20pp;
+            } break;
             case HostPlatform::TeensyLC: { compiler->model = Model::TeensyLC; } break;
             case HostPlatform::Teensy30: { compiler->model = Model::Teensy30; } break;
             case HostPlatform::Teensy31: { compiler->model = Model::Teensy31; } break;
@@ -1775,7 +1778,7 @@ class EmCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    EmCompiler(HostPlatform platform) : Compiler(platform, "EmCC") {}
+    EmCompiler(HostPlatform platform) : Compiler(platform, HostArchitecture::Web, "EmCC") {}
 
     static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc)
     {
@@ -2081,7 +2084,7 @@ static void FindArduinoCompiler(const char *name, const char *compiler, Span<cha
 
 std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 {
-    if (spec.platform == NativePlatform) {
+    if (spec.platform == NativePlatform && spec.architecture == NativeArchitecture) {
         if (!spec.cc) {
             for (const SupportedCompiler &supported: SupportedCompilers) {
                 if (supported.cc && FindExecutableInPath(supported.cc)) {
@@ -2126,9 +2129,9 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         }
 
         if (IdentifyCompiler(spec.cc, "clang")) {
-            return ClangCompiler::Create(spec.platform, spec.cc, spec.ld);
+            return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
         } else if (IdentifyCompiler(spec.cc, "gcc")) {
-            return GnuCompiler::Create(spec.platform, spec.cc, spec.ld);
+            return GnuCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
 #ifdef _WIN32
         } else if (IdentifyCompiler(spec.cc, "cl")) {
             if (spec.ld) {
@@ -2136,7 +2139,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 return nullptr;
             }
 
-            return MsCompiler::Create(spec.cc);
+            return MsCompiler::Create(spec.architecture, spec.cc);
 #endif
         } else {
             LogError("Cannot find driver for compiler '%1'", spec.cc);
@@ -2158,7 +2161,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 
         return EmCompiler::Create(spec.platform, spec.cc);
 #ifdef __linux__
-    } else if (spec.platform == HostPlatform::Windows) {
+    } else if (spec.platform == HostPlatform::Windows && spec.architecture == HostArchitecture::x64) {
         if (!spec.cc) {
             LogError("Path to cross-platform MinGW must be explicitly specified");
             return nullptr;
@@ -2168,7 +2171,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return nullptr;
         }
 
-        return GnuCompiler::Create(spec.platform, spec.cc, spec.ld);
+        return GnuCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
 #endif
     } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/AVR/")) {
         if (!spec.cc) {
@@ -2213,8 +2216,9 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 
         return TeensyCompiler::Create(spec.platform, spec.cc);
     } else {
-        LogError("Cross-compilation from platform '%1' to '%2' is not supported",
-                 HostPlatformNames[(int)NativePlatform], HostPlatformNames[(int)spec.platform]);
+        LogError("Cross-compilation from platform '%1 (%2)' to '%3 (%4)' is not supported",
+                 HostPlatformNames[(int)NativePlatform], HostArchitectureNames[(int)NativeArchitecture],
+                 HostPlatformNames[(int)spec.platform], HostArchitectureNames[(int)spec.architecture]);
         return nullptr;
     }
 }

@@ -232,7 +232,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
                     if (suffix.len) {
                         bool use_property = false;
-                        valid &= MatchPlatformSuffix(suffix, &use_property);
+                        valid &= MatchPropertySuffix(suffix, &use_property);
 
                         if (!use_property)
                             continue;
@@ -564,13 +564,35 @@ void TargetSetBuilder::Finish(TargetSet *out_set)
     std::swap(*out_set, set);
 }
 
-bool TargetSetBuilder::MatchPlatformSuffix(Span<const char> str, bool *out_match)
+bool TargetSetBuilder::MatchPropertySuffix(Span<const char> str, bool *out_match)
 {
-    unsigned int platforms = ParseSupportedPlatforms(str);
-    if (!platforms)
-        return false;
+    bool match = true;
 
-    *out_match = (platforms & (1 << (int)platform));
+    while (str.len) {
+        Span<const char> test = SplitStr(str, '_', &str);
+
+        if (!test.len)
+            continue;
+
+        // Architecture?
+        {
+            HostArchitecture architecture;
+            if (OptionToEnum(HostArchitectureNames, test, &architecture)) {
+                match &= (architecture == this->architecture);
+                continue;
+            }
+        }
+
+        // Platform?
+        {
+            unsigned int platforms = ParseSupportedPlatforms(test);
+            if (!platforms)
+                return false;
+            match &= !!(platforms & (1 << (int)platform));
+        }
+    }
+
+    *out_match = match;
     return true;
 }
 
@@ -612,9 +634,9 @@ unsigned int ParseSupportedPlatforms(Span<const char> str)
     return platforms;
 }
 
-bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, TargetSet *out_set)
+bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, HostArchitecture architecture, TargetSet *out_set)
 {
-    TargetSetBuilder target_set_builder(platform);
+    TargetSetBuilder target_set_builder(platform, architecture);
     if (!target_set_builder.LoadFiles(filenames))
         return false;
     target_set_builder.Finish(out_set);

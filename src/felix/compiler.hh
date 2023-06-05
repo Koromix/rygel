@@ -76,6 +76,39 @@ static const char *const HostPlatformNames[] = {
     #error Unsupported platform
 #endif
 
+enum class HostArchitecture {
+    x86,
+    x64,
+    ARM32,
+    ARM64,
+    RISCV64,
+    AVR,
+    Web
+};
+static const char *const HostArchitectureNames[] = {
+    "x86",
+    "x64",
+    "ARM32",
+    "ARM64",
+    "RISCV64",
+    "AVR",
+    "Web"
+};
+
+#if defined(__i386__) || defined(_M_IX86)
+    static const HostArchitecture NativeArchitecture = HostArchitecture::x86;
+#elif defined(__x86_64__) || defined(_M_AMD64)
+    static const HostArchitecture NativeArchitecture = HostArchitecture::x64;
+#elif defined(__arm__) || (defined(__M_ARM) && !defined(_M_ARM64))
+    static const HostArchitecture NativeArchitecture = HostArchitecture::ARM32;
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    static const HostArchitecture NativeArchitecture = HostArchitecture::ARM64;
+#elif __riscv_xlen == 64
+    static const HostArchitecture NativeArchitecture = HostArchitecture::RISCV64;
+#else
+    #error Unsupported architecture
+#endif
+
 enum class CompileFeature {
     PCH = 1 << 0,
     Ccache = 1 << 1,
@@ -159,6 +192,7 @@ class Compiler {
 
 public:
     HostPlatform platform;
+    HostArchitecture architecture;
     const char *name;
 
     virtual ~Compiler() {}
@@ -200,7 +234,8 @@ public:
                                  Allocator *alloc, Command *out_cmd) const = 0;
 
 protected:
-    Compiler(HostPlatform platform, const char *name) : platform(platform), name(name) {}
+    Compiler(HostPlatform platform, HostArchitecture architecture, const char *name)
+        : platform(platform), architecture(architecture), name(name) {}
 };
 
 struct SupportedCompiler {
@@ -210,6 +245,7 @@ struct SupportedCompiler {
 
 struct HostSpecifier {
     HostPlatform platform = NativePlatform;
+    HostArchitecture architecture = NativeArchitecture;
     const char *cc = nullptr;
     const char *ld = nullptr;
 };

@@ -144,8 +144,18 @@ static const char *BuildGitVersionString(Allocator *alloc)
 static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifier *out_spec)
 {
     Span<const char> platform = SplitStr(str, ',', &str);
+    Span<const char> architecture = SplitStr(str, ',', &str);
     Span<const char> cc = SplitStr(str, ',', &str);
     Span<const char> ld = SplitStr(str, ',', &str);
+
+    if (architecture == "Native") {
+        out_spec->architecture = NativeArchitecture;
+    } else if (!OptionToEnum(HostArchitectureNames, architecture, &out_spec->architecture)) {
+        out_spec->architecture = NativeArchitecture;
+
+        ld = cc;
+        cc = architecture;
+    }
 
     if (platform.len) {
         if (platform == "Native") {
@@ -592,7 +602,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // Load configuration file
     LogInfo("Loading targets...");
     TargetSet target_set;
-    if (!LoadTargetSet(config_filename, host_spec.platform, &target_set))
+    if (!LoadTargetSet(config_filename, host_spec.platform, host_spec.architecture, &target_set))
         return 1;
     if (!target_set.targets.len) {
         LogError("Configuration file does not contain any target");

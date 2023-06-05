@@ -108,13 +108,15 @@ class TargetSetBuilder {
     RG_DELETE_COPY(TargetSetBuilder)
 
     HostPlatform platform;
+    HostArchitecture architecture;
 
     BlockAllocator temp_alloc;
 
     TargetSet set;
 
 public:
-    TargetSetBuilder(HostPlatform platform) : platform(platform) {}
+    TargetSetBuilder(HostPlatform platform, HostArchitecture architecture)
+        : platform(platform), architecture(architecture) {}
 
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
@@ -126,11 +128,11 @@ private:
     const SourceFileInfo *CreateSource(const TargetInfo *target, const char *filename,
                                        SourceType type, const SourceFeatures *features);
 
-    bool MatchPlatformSuffix(Span<const char> str, bool *out_match);
+    bool MatchPropertySuffix(Span<const char> str, bool *out_match);
 };
 
 unsigned int ParseSupportedPlatforms(Span<const char> str);
 
-bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, TargetSet *out_set);
+bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, HostArchitecture architecture, TargetSet *out_set);
 
 }
