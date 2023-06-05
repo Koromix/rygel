@@ -72,7 +72,9 @@ bool InitMcoTables(Span<const char *const> table_directories)
     LogInfo("Build readable MCO trees");
 
     for (const mco_TableIndex &index: mco_table_set.indexes) {
-        HeapArray<mco_ReadableGhmNode> *readable_nodes = mco_cache_set.readable_nodes.SetDefault(&index);
+        auto bucket = mco_cache_set.readable_nodes.SetDefault(&index);
+        HeapArray<mco_ReadableGhmNode> *readable_nodes = &bucket->value;
+
         if (!mco_BuildReadableGhmTree(index.ghm_nodes, &mco_cache_set.str_alloc, readable_nodes))
             return false;
     }

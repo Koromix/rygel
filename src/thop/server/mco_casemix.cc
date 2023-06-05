@@ -254,10 +254,10 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
 
             if (user->mco_allowed_units.Find(unit)) {
                 bool inserted;
-                Aggregate::Part *ptr = agg_parts_map.TrySetDefault(mono_result.stays[0].unit, &inserted);
+                auto bucket = agg_parts_map.TrySetDefault(mono_result.stays[0].unit, &inserted);
 
-                ptr->mono_count += multiplier;
-                ptr->price_cents += multiplier * mono_pricing.price_cents;
+                bucket->value.mono_count += multiplier;
+                bucket->value.price_cents += multiplier * mono_pricing.price_cents;
 
                 if ((flags & (int)AggregationFlag::KeyOnUnits) && inserted) {
                     agg_units.Append(unit);

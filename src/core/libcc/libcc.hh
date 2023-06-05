@@ -2599,11 +2599,11 @@ public:
 
     ValueType *Set(const KeyType &key, const ValueType &value)
         { return &table.Set({ key, value })->value; }
-    ValueType *SetDefault(const KeyType &key)
+    Bucket *SetDefault(const KeyType &key)
     {
         Bucket *table_it = table.SetDefault(key);
         table_it->key = key;
-        return &table_it->value;
+        return table_it;
     }
 
     ValueType *TrySet(const KeyType &key, const ValueType &value, bool *out_inserted = nullptr)
@@ -2611,7 +2611,7 @@ public:
         Bucket *ptr = table.TrySet({ key, value }, out_inserted);
         return &ptr->value;
     }
-    ValueType *TrySetDefault(const KeyType &key, bool *out_inserted = nullptr)
+    Bucket *TrySetDefault(const KeyType &key, bool *out_inserted = nullptr)
     {
         bool inserted;
         Bucket *ptr = table.TrySetDefault(key, &inserted);
@@ -2623,7 +2623,7 @@ public:
         if (out_inserted) {
             *out_inserted = inserted;
         }
-        return &ptr->value;
+        return ptr;
     }
 
     void Remove(ValueType *it)
@@ -2631,6 +2631,12 @@ public:
         if (!it)
             return;
         table.Remove((Bucket *)((uint8_t *)it - RG_OFFSET_OF(Bucket, value)));
+    }
+    void Remove(Bucket *it)
+    {
+        if (!it)
+            return;
+        table.Remove(it);
     }
     template <typename T = KeyType>
     void Remove(const KeyType &key) { Remove(Find(key)); }
