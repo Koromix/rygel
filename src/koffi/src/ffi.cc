@@ -993,12 +993,15 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
 
-    bool inserted;
-    instance->types_map.TrySet(alias, type, &inserted);
+    // Alias the type
+    {
+        bool inserted;
+        instance->types_map.TrySet(alias, type, &inserted);
 
-    if (!inserted) {
-        ThrowError<Napi::Error>(env, "Type name '%1' already exists", alias);
-        return env.Null();
+        if (!inserted) {
+            ThrowError<Napi::Error>(env, "Type name '%1' already exists", alias);
+            return env.Null();
+        }
     }
 
     return WrapType(env, instance, type);

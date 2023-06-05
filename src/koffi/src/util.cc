@@ -272,10 +272,11 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
         char name_buf[256];
         Fmt(name_buf, "%1%2*", ref->name, EndsWith(ref->name, "*") ? "" : " ");
 
-        TypeInfo *type = (TypeInfo *)instance->types_map.FindValue(name_buf, nullptr);
+        bool inserted;
+        auto bucket = instance->types_map.TrySetDefault(name_buf, &inserted);
 
-        if (!type) {
-            type = instance->types.AppendDefault();
+        if (inserted) {
+            TypeInfo *type = instance->types.AppendDefault();
 
             type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
 
@@ -291,10 +292,11 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
                 type->ref.proto = ref->ref.proto;
             }
 
-            instance->types_map.Set(type->name, type);
+            bucket->key = type->name;
+            bucket->value = type;
         }
 
-        ref = type;
+        ref = bucket->value;
     }
 
     return ref;
