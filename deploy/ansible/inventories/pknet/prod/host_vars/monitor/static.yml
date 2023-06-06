@@ -25,7 +25,7 @@ static_deploys:
         chdir: '{{ static_root_path }}/repo/koromix.dev/www'
       - cmd: '/usr/bin/rm -rf {{ static_root_path }}/repo/koromix.dev/www/web/koromix.dev/dist'
         chdir: '{{ static_root_path }}/repo/koromix.dev/www'
-      - cmd: '{{ static_root_path }}/repo/koromix.dev/www/felix -pFast --run_here hodler . -O dist'
+      - cmd: '{{ static_root_path }}/repo/koromix.dev/www/felix -pFast --run_here hodler . -O dist --gzip'
         chdir: '{{ static_root_path }}/repo/koromix.dev/www/web/koromix.dev'
   - name: koromix.dev/files
   - name: koromix.dev/test
@@ -50,7 +50,7 @@ static_deploys:
         chdir: '{{ static_root_path }}/repo/demheter.fr/www'
       - cmd: '/usr/bin/rm -rf {{ static_root_path }}/repo/demheter.fr/www/web/demheter.fr/dist'
         chdir: '{{ static_root_path }}/repo/demheter.fr/www'
-      - cmd: '{{ static_root_path }}/repo/demheter.fr/www/felix -pFast --run_here hodler . -O dist'
+      - cmd: '{{ static_root_path }}/repo/demheter.fr/www/felix -pFast --run_here hodler . -O dist --gzip'
         chdir: '{{ static_root_path }}/repo/demheter.fr/www/web/demheter.fr'
   - name: demheter.fr/beta
     repo: https://github.com/Koromix/rygel.git
@@ -60,5 +60,5 @@ static_deploys:
         chdir: '{{ static_root_path }}/repo/demheter.fr/beta'
       - cmd: '/usr/bin/rm -rf {{ static_root_path }}/repo/demheter.fr/beta/web/demheter.fr/dist'
         chdir: '{{ static_root_path }}/repo/demheter.fr/beta'
-      - cmd: '{{ static_root_path }}/repo/demheter.fr/beta/felix -pFast --run_here hodler . -O dist'
+      - cmd: '{{ static_root_path }}/repo/demheter.fr/beta/felix -pFast --run_here hodler . -O dist --gzip'
         chdir: '{{ static_root_path }}/repo/demheter.fr/beta/web/demheter.fr'

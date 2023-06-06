@@ -118,6 +118,7 @@ nginx_domains:
           gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
           gzip_proxied no-cache no-store private expired auth;
           gzip_min_length 1000;
+          gzip_static on;
       }
 
       location /files/ {
@@ -195,6 +196,7 @@ nginx_domains:
           gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
           gzip_proxied no-cache no-store private expired auth;
           gzip_min_length 1000;
+          gzip_static on;
       }
   - name: beta.demheter.fr
     ssl_certbot_email: niels.martignene@protonmail.com
@@ -217,6 +219,7 @@ nginx_domains:
           gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
           gzip_proxied no-cache no-store private expired auth;
           gzip_min_length 1000;
+          gzip_static on;
       }
 
   - name: carto.cn2r.fr

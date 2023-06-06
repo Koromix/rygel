@@ -15,7 +15,7 @@
   package:
     update_cache: yes
     pkg:
-      - nginx
+      - nginx-full
       - python3-certbot-nginx
       - logrotate
     state: latest
