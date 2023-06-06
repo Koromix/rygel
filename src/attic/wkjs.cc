@@ -12,50 +12,9 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/libcc/libcc.hh"
-#include "vendor/webkit/include/JavaScriptCore/JavaScript.h"
+#include "src/core/libwrap/jscore.hh"
 
 namespace RG {
-
-class AutoString {
-    JSStringRef ref;
-
-public:
-    AutoString(const char *str) { ref = JSStringCreateWithUTF8CString(str); }
-    ~AutoString() { JSStringRelease(ref); }
-
-    operator JSStringRef() const { return ref; }
-};
-
-static bool PrintValue(JSContextRef ctx, JSValueRef value, JSValueRef *ex)
-{
-    JSStringRef str = nullptr;
-
-    if (JSValueIsString(ctx, value)) {
-        str = (JSStringRef)value;
-        JSStringRetain(str);
-    } else {
-        str = JSValueToStringCopy(ctx, value, ex);
-        if (!str)
-            return false;
-    }
-    RG_DEFER { JSStringRelease(str); };
-
-    Size max = JSStringGetMaximumUTF8CStringSize(str);
-    Span<char> buf = AllocateSpan<char>(nullptr, max);
-    RG_DEFER { ReleaseSpan(nullptr, buf); };
-
-    Size len = JSStringGetUTF8CString(str, buf.ptr, buf.len) - 1;
-    RG_ASSERT(len >= 0);
-
-    stdout_st.Write(buf.Take(0, len));
-
-    return true;
-}
-
-static inline bool IsNullOrUndefined(JSContextRef ctx, JSValueRef value)
-{
-    return JSValueIsNull(ctx, value) || JSValueIsUndefined(ctx, value);
-}
 
 int Main(int argc, char **argv)
 {
@@ -98,21 +57,17 @@ Options:
     }
 
     JSGlobalContextRef ctx = JSGlobalContextCreate(nullptr);
-    if (!ctx) {
-        LogError("Failed to create JS context");
-        return 1;
-    }
     RG_DEFER { JSGlobalContextRelease(ctx); };
 
     // Expose utility functions
     {
         JSObjectRef global = JSContextGetGlobalObject(ctx);
 
-        JSObjectRef func = JSObjectMakeFunctionWithCallback(ctx, AutoString("print"),
+        JSObjectRef func = JSObjectMakeFunctionWithCallback(ctx, js_AutoString("print"),
                                                             [](JSContextRef ctx, JSObjectRef, JSObjectRef,
                                                                size_t argc, const JSValueRef *argv, JSValueRef *ex) -> JSValueRef {
             for (Size i = 0; i < (Size)argc; i++) {
-                if (!PrintValue(ctx, argv[i], ex))
+                if (!js_PrintValue(ctx, argv[i], ex, &stdout_st))
                     return nullptr;
             }
             PrintLn();
@@ -120,7 +75,7 @@ Options:
             return JSValueMakeUndefined(ctx);
         });
 
-        JSObjectSetProperty(ctx, global, AutoString("print"), func, kJSPropertyAttributeNone, nullptr);
+        JSObjectSetProperty(ctx, global, js_AutoString("print"), func, kJSPropertyAttributeNone, nullptr);
     }
 
     // Load code
@@ -135,13 +90,19 @@ Options:
     code.ptr[code.len] = 0;
 
     // Execute code
-    JSValueRef ret = JSEvaluateScript(ctx, AutoString(code.ptr), nullptr, nullptr, 1, nullptr);
-    if (!ret)
-        return 1;
+    JSValueRef ex;
+    JSValueRef ret = JSEvaluateScript(ctx, js_AutoString(code.ptr), nullptr, nullptr, 1, &ex);
+    if (!ret) {
+        RG_ASSERT(ex);
 
-    if (!IsNullOrUndefined(ctx, ret)) {
-        if (!PrintValue(ctx, ret, nullptr))
-            return 1;
+        js_PrintValue(ctx, ex, nullptr, &stderr_st);
+        PrintLn(stderr);
+
+        return 1;
+    }
+
+    if (!js_IsNullOrUndefined(ctx, ret)) {
+        js_PrintValue(ctx, ret, nullptr, &stdout_st);
         PrintLn();
     }
 
