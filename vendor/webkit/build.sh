@@ -19,6 +19,6 @@ ninja
 mkdir -p ../include $BINARY
 
 cp -r JavaScriptCore/Headers/* ../include/
-cp -r WTF/Headers/* ../include/
-cp -r bmalloc/Headers/* ../include/
 cp lib/*.a $BINARY/
+
+ls ../include/JavaScriptCore/*.h | xargs -n1 sed -E -e 's|<JavaScriptCore/([A-Za-z0-9_\.]+)>|"\1"|' -i

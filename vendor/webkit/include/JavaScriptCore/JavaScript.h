@@ -27,11 +27,11 @@
 #ifndef JavaScript_h
 #define JavaScript_h
 
-#include <JavaScriptCore/JSBase.h>
-#include <JavaScriptCore/JSContextRef.h>
-#include <JavaScriptCore/JSStringRef.h>
-#include <JavaScriptCore/JSObjectRef.h>
-#include <JavaScriptCore/JSTypedArray.h>
-#include <JavaScriptCore/JSValueRef.h>
+#include "JSBase.h"
+#include "JSContextRef.h"
+#include "JSStringRef.h"
+#include "JSObjectRef.h"
+#include "JSTypedArray.h"
+#include "JSValueRef.h"
 
 #endif /* JavaScript_h */
