@@ -187,8 +187,13 @@ bool ParseColor(Span<const char> str, RgbColor *out_color)
     }
 
     // Parse hexadecimal color
-    if (str.len && str[0] == '#') {
-        Span<const char> remain = str.Take(1, str.len - 1);
+    {
+        Span<const char> remain = str;
+
+        if (remain.len && remain[0] == '#') {
+            remain.ptr++;
+            remain.len--;
+        }
 
         if (remain.len != 6 || !std::all_of(remain.begin(), remain.end(), [](char c) { return ParseHexadecimalChar(c) >= 0; })) {
             LogError("Malformed hexadecimal color");
