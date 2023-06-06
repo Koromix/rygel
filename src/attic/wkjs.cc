@@ -16,12 +16,12 @@
 
 namespace RG {
 
-class TempString {
+class AutoString {
     JSStringRef ref;
 
 public:
-    TempString(const char *str) { ref = JSStringCreateWithUTF8CString(str); }
-    ~TempString() { JSStringRelease(ref); }
+    AutoString(const char *str) { ref = JSStringCreateWithUTF8CString(str); }
+    ~AutoString() { JSStringRelease(ref); }
 
     operator JSStringRef() const { return ref; }
 };
@@ -108,7 +108,7 @@ Options:
     {
         JSObjectRef global = JSContextGetGlobalObject(ctx);
 
-        JSObjectRef func = JSObjectMakeFunctionWithCallback(ctx, TempString("print"),
+        JSObjectRef func = JSObjectMakeFunctionWithCallback(ctx, AutoString("print"),
                                                             [](JSContextRef ctx, JSObjectRef, JSObjectRef,
                                                                size_t argc, const JSValueRef *argv, JSValueRef *ex) -> JSValueRef {
             for (Size i = 0; i < (Size)argc; i++) {
@@ -120,7 +120,7 @@ Options:
             return JSValueMakeUndefined(ctx);
         });
 
-        JSObjectSetProperty(ctx, global, TempString("print"), func, kJSPropertyAttributeNone, nullptr);
+        JSObjectSetProperty(ctx, global, AutoString("print"), func, kJSPropertyAttributeNone, nullptr);
     }
 
     // Load code
@@ -135,7 +135,7 @@ Options:
     code.ptr[code.len] = 0;
 
     // Execute code
-    JSValueRef ret = JSEvaluateScript(ctx, TempString(code.ptr), nullptr, nullptr, 1, nullptr);
+    JSValueRef ret = JSEvaluateScript(ctx, AutoString(code.ptr), nullptr, nullptr, 1, nullptr);
     if (!ret)
         return 1;
 
