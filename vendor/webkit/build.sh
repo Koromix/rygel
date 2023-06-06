@@ -6,16 +6,20 @@ cd "$(dirname $0)"
 
 PLATFORM=$(felix --version 2| awk -F "/" "/Host/ { print \$NF }")
 ARCHITECTURE=$(felix --version 2| awk -F ": " "/Architecture/ { print \$NF }")
-BINARY=../lib/${PLATFORM}_${ARCHITECTURE}
 
-rm -rf webkit build include $BINARY
+rm -rf webkit build
 
 git clone --branch $COMMIT --depth 1 https://github.com/WebKit/WebKit.git webkit
+
+ls ../_patches/webkit_*.patch | xargs -n1 patch -Np3 -i
 
 mkdir build && cd build
 cmake -G Ninja -DPORT=JSCOnly -DCMAKE_BUILD_TYPE=Release -DDEVELOPER_MODE=OFF -DENABLE_FTL_JIT=ON -DENABLE_STATIC_JSC=ON -DUSE_THIN_ARCHIVES=OFF ../webkit
 ninja
 
+BINARY=../lib/${PLATFORM}_${ARCHITECTURE}
+
+rm -rf ../include $BINARY
 mkdir -p ../include $BINARY
 
 cp -r JavaScriptCore/Headers/* ../include/

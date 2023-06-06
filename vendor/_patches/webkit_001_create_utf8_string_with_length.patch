@@ -1,0 +1,47 @@
+diff --git a/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.cpp b/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.cpp
+index a13221422c..7206407a93 100644
+--- a/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.cpp
++++ b/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.cpp
+@@ -59,6 +59,23 @@ JSStringRef JSStringCreateWithUTF8CString(const char* string)
+     return &OpaqueJSString::create().leakRef();
+ }
+ 
++JSStringRef JSStringCreateWithUTF8CStringWithLength(const char* string, size_t numBytes)
++{
++    JSC::initialize();
++
++    Vector<UChar, 1024> buffer(numBytes);
++    UChar* p = buffer.data();
++    bool sourceIsAllASCII;
++    const LChar* stringStart = reinterpret_cast<const LChar*>(string);
++    if (convertUTF8ToUTF16(string, string + numBytes, &p, p + numBytes, &sourceIsAllASCII)) {
++        if (sourceIsAllASCII)
++            return &OpaqueJSString::create(stringStart, numBytes).leakRef();
++        return &OpaqueJSString::create(buffer.data(), p - buffer.data()).leakRef();
++    }
++
++    return &OpaqueJSString::create().leakRef();
++}
++
+ JSStringRef JSStringCreateWithCharactersNoCopy(const JSChar* chars, size_t numChars)
+ {
+     JSC::initialize();
+diff --git a/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.h b/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.h
+index bc03ed70d8..f0f8dfab3b 100644
+--- a/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.h
++++ b/vendor/webkit/webkit/Source/JavaScriptCore/API/JSStringRef.h
+@@ -66,6 +66,14 @@ JS_EXPORT JSStringRef JSStringCreateWithCharacters(const JSChar* chars, size_t n
+ @result           A JSString containing string. Ownership follows the Create Rule.
+ */
+ JS_EXPORT JSStringRef JSStringCreateWithUTF8CString(const char* string);
++/*!
++@function
++@abstract         Creates a JavaScript string from an UTF8 string with explicit byte length.
++@param string     The UTF8 string to copy into the new JSString.
++@param numBytes   Number of bytes without null terminator.
++@result           A JSString containing string. Ownership follows the Create Rule.
++*/
++JS_EXPORT JSStringRef JSStringCreateWithUTF8CStringWithLength(const char* string, size_t numBytes);
+ 
+ /*!
+ @function

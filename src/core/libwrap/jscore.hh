@@ -31,6 +31,7 @@ class js_AutoString {
 
 public:
     js_AutoString(const char *str) { ref = JSStringCreateWithUTF8CString(str); }
+    js_AutoString(Span<const char> str) { ref = JSStringCreateWithUTF8CStringWithLength(str.ptr, (size_t)str.len); }
     ~js_AutoString() { JSStringRelease(ref); }
 
     operator JSStringRef() const { return ref; }

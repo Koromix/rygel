@@ -66,6 +66,14 @@ JS_EXPORT JSStringRef JSStringCreateWithCharacters(const JSChar* chars, size_t n
 @result           A JSString containing string. Ownership follows the Create Rule.
 */
 JS_EXPORT JSStringRef JSStringCreateWithUTF8CString(const char* string);
+/*!
+@function
+@abstract         Creates a JavaScript string from an UTF8 string with explicit byte length.
+@param string     The UTF8 string to copy into the new JSString.
+@param numBytes   Number of bytes without null terminator.
+@result           A JSString containing string. Ownership follows the Create Rule.
+*/
+JS_EXPORT JSStringRef JSStringCreateWithUTF8CStringWithLength(const char* string, size_t numBytes);
 
 /*!
 @function

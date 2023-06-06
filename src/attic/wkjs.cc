@@ -86,12 +86,10 @@ Options:
         if (ReadFile(filename_or_code, Megabytes(8), &code) < 0)
             return 1;
     }
-    code.Grow(1);
-    code.ptr[code.len] = 0;
 
     // Execute code
     JSValueRef ex;
-    JSValueRef ret = JSEvaluateScript(ctx, js_AutoString(code.ptr), nullptr, nullptr, 1, &ex);
+    JSValueRef ret = JSEvaluateScript(ctx, js_AutoString(code), nullptr, nullptr, 1, &ex);
     if (!ret) {
         RG_ASSERT(ex);
 
