@@ -6418,7 +6418,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
             dest.u.file.tmp_exclusive = true;
         }
 
-        dest.u.file.tmp_filename = CreateUniqueFile(directory, "", ".tmp", &str_alloc, &dest.u.file.fp);
+        dest.u.file.tmp_filename = CreateUniqueFile(directory, ".", ".tmp", &str_alloc, &dest.u.file.fp);
         if (!dest.u.file.tmp_filename)
             return false;
         dest.u.file.owned = true;
