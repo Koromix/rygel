@@ -14,7 +14,7 @@
         <li><i>Focaliser l'attention sur la poitrine, en haut vers la gauche <b>(Heart Focus)</b>.</i>
         <li><i>Se centrer sur la respiration et se concentrer sur son inspiration et expiration <b>(Heart Breathing)</b>.</i>
         <li><i>Prendre conscience du plaisir de respirer. Évoquer un sentiment agréable ou penser à une personne aimée <b>(Heart Feeling)</b>.</i><br><br>
-        <li>Les deux premières étapes de l'exercice sont de la neutralisation et les trois étapes forment de la cohérence rapide. 
+        <li>Les deux premières étapes de l'exercice correspondent à la neutralisation et les trois étapes forment la cohérence rapide.
         <li>Répété au long de la journée, cet exercice peut permettre au patient de s'offrir une « crise de calme ».
     </ul>
     <ul style="color: #0c72ab;">
