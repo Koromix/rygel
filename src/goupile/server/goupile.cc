@@ -20,6 +20,7 @@
 #include "messages.hh"
 #include "records.hh"
 #include "user.hh"
+#include "vm.hh"
 #include "src/core/libnet/libnet.hh"
 #include "src/core/libsandbox/libsandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
@@ -1136,6 +1137,8 @@ int Main(int argc, char **argv)
         return RunMigrate(arguments);
     } else if (TestStr(cmd, "unseal")) {
         return RunUnseal(arguments);
+    } else if (TestStr(cmd, "vm")) {
+        return RunVM(arguments);
     } else if (TestStr(cmd, "serve")) {
         return RunServe(arguments);
     } else {

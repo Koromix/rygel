@@ -27,12 +27,34 @@
 namespace RG {
 
 class js_AutoString {
-    JSStringRef ref;
+    RG_DELETE_COPY(js_AutoString)
+
+    JSStringRef ref = nullptr;
 
 public:
+    js_AutoString() = default;
     js_AutoString(const char *str) { ref = JSStringCreateWithUTF8CString(str); }
     js_AutoString(Span<const char> str) { ref = JSStringCreateWithUTF8CStringWithLength(str.ptr, (size_t)str.len); }
-    ~js_AutoString() { JSStringRelease(ref); }
+
+    ~js_AutoString() { Reset(); }
+
+    void Reset()
+    {
+        if (ref) {
+            JSStringRelease(ref);
+        }
+        ref = nullptr;
+    }
+    void Reset(const char *str)
+    {
+        Reset();
+        ref = JSStringCreateWithUTF8CString(str);
+    }
+    void Reset(Span<const char> str)
+    {
+        Reset();
+        ref = JSStringCreateWithUTF8CStringWithLength(str.ptr, (size_t)str.len);
+    }
 
     operator JSStringRef() const { return ref; }
 };
