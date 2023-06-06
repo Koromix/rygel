@@ -604,6 +604,8 @@ public:
         for (const char *lib: libraries) {
             if (platform == HostPlatform::macOS && lib[0] == '!') {
                 Fmt(&buf, " -framework %1", lib + 1);
+            } else if (GetPathExtension(lib).len) {
+                Fmt(&buf, " %1", lib);
             } else {
                 Fmt(&buf, " -l%1", lib);
             }
@@ -1052,6 +1054,8 @@ public:
         for (const char *lib: libraries) {
             if (platform == HostPlatform::macOS && lib[0] == '!') {
                 Fmt(&buf, " -framework %1", lib + 1);
+            } else if (GetPathExtension(lib).len) {
+                Fmt(&buf, " %1", lib);
             } else {
                 Fmt(&buf, " -l%1", lib);
             }
@@ -1385,7 +1389,11 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         for (const char *lib: libraries) {
-            Fmt(&buf, " %1.lib", lib);
+            if (GetPathExtension(lib).len) {
+                Fmt(&buf, " %1", lib);
+            } else {
+                Fmt(&buf, " %1.lib", lib);
+            }
         }
         Fmt(&buf, " setargv.obj");
 
@@ -1730,7 +1738,11 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         for (const char *lib: libraries) {
-            Fmt(&buf, " -l%1", lib);
+            if (GetPathExtension(lib).len) {
+                Fmt(&buf, " %1", lib);
+            } else {
+                Fmt(&buf, " -l%1", lib);
+            }
         }
 
         // Platform flags and libraries
@@ -1976,7 +1988,11 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         for (const char *lib: libraries) {
-            Fmt(&buf, " -l%1", lib);
+            if (GetPathExtension(lib).len) {
+                Fmt(&buf, " %1", lib);
+            } else {
+                Fmt(&buf, " -l%1", lib);
+            }
         }
 
         // Features
