@@ -31,6 +31,7 @@ struct DomainConfig {
     const char *tmp_directory = nullptr;
     const char *archive_directory = nullptr;
     const char *snapshot_directory = nullptr;
+    const char *view_directory = nullptr;
 
     const char *title = nullptr;
     uint8_t archive_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES

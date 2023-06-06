@@ -71,6 +71,8 @@ public:
     void Ref() const { master->refcount++; }
     void Unref() const { master->refcount--; }
 
+    bool SyncViews(const char *directory);
+
 private:
     InstanceHolder() {};
 

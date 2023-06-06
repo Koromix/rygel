@@ -259,6 +259,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     if (!config.snapshot_directory) {
         config.snapshot_directory = NormalizePath("snapshots", root_directory, &config.str_alloc).ptr;
     }
+    config.view_directory = NormalizePath("views", root_directory, &config.str_alloc).ptr;
 
     std::swap(*out_config, config);
     return true;
@@ -285,6 +286,8 @@ bool DomainHolder::Open(const char *filename)
     if (!MakeDirectory(config.archive_directory, false))
         return false;
     if (!MakeDirectory(config.snapshot_directory, false))
+        return false;
+    if (!MakeDirectory(config.view_directory, false))
         return false;
 
     // Open and configure main database
@@ -622,6 +625,10 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
             LogDebug("Open instance '%1' @%2", start.instance_key, unique);
 
             if (!instance->Open(unique, master, start.instance_key, db, config.auto_migrate)) {
+                complete = false;
+                continue;
+            }
+            if (!instance->SyncViews(config.view_directory)) {
                 complete = false;
                 continue;
             }

@@ -17,6 +17,8 @@
 #include "goupile.hh"
 #include "instance.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+#include "vendor/miniz/miniz.h"
 
 namespace RG {
 
@@ -167,6 +169,116 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 bool InstanceHolder::Checkpoint()
 {
     return db->Checkpoint();
+}
+
+bool InstanceHolder::SyncViews(const char *directory)
+{
+    BlockAllocator temp_alloc;
+    bool logged = false;
+
+    sq_Statement stmt;
+    if (!db->Prepare("SELECT version, mtime FROM fs_versions", &stmt))
+        return false;
+
+    while (stmt.Step()) {
+        int64_t version = sqlite3_column_int64(stmt, 0);
+        MZ_TIME_T mtime = (MZ_TIME_T)(sqlite3_column_int64(stmt, 1) / 1000);
+
+        const char *zip_filename = Fmt(&temp_alloc, "%1%/%2_%3.zip", directory, key, version).ptr;
+
+        if (!TestFile(zip_filename, FileType::File)) {
+            if (!logged) {
+                LogInfo("Exporting new FS views of '%1'", key);
+                logged = true;
+            }
+            LogDebug("Exporting '%1' view for FS version %2", key, version);
+
+            mz_zip_archive zip;
+            mz_zip_zero_struct(&zip);
+            if (!mz_zip_writer_init_file(&zip, zip_filename, 0)) {
+                LogError("Failed to create ZIP archive '%1': %2", zip_filename, mz_zip_get_error_string(zip.m_last_error));
+                return false;
+            }
+            RG_DEFER_N(err_guard) {
+                mz_zip_writer_end(&zip);
+                UnlinkFile(zip_filename);
+            };
+
+            sq_Statement stmt;
+            if (!db->Prepare(R"(SELECT o.rowid, i.filename, o.size, o.compression FROM fs_index i
+                                INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
+                                WHERE i.version = ?1
+                                ORDER BY i.filename)", &stmt))
+                return false;
+            sqlite3_bind_int64(stmt, 1, version);
+
+            while (stmt.Step()) {
+                int64_t rowid = sqlite3_column_int64(stmt, 0);
+                const char *filename = (const char *)sqlite3_column_text(stmt, 1);
+                int64_t size = sqlite3_column_int64(stmt, 2);
+
+                // Simple heuristic, non-compressible files are probably not scripts and
+                // JS processes probably don't need them. Probably dumb but it works for now.
+                if (!ShouldCompressFile(filename))
+                    continue;
+
+                CompressionType src_encoding;
+                {
+                    const char *name = (const char *)sqlite3_column_text(stmt, 3);
+                    if (!name || !OptionToEnum(CompressionTypeNames, name, &src_encoding)) {
+                        LogError("Unknown compression type '%1'", name);
+                        return true;
+                    }
+                }
+
+                sqlite3_blob *src_blob;
+                Size src_len;
+                if (sqlite3_blob_open(*db, "main", "fs_objects", "blob", rowid, 0, &src_blob) != SQLITE_OK) {
+                    LogError("SQLite Error: %1", sqlite3_errmsg(*db));
+                    return false;
+                }
+                src_len = sqlite3_blob_bytes(src_blob);
+                RG_DEFER { sqlite3_blob_close(src_blob); };
+
+                Size offset = 0;
+                StreamReader reader([&](Span<uint8_t> buf) {
+                    Size copy_len = std::min(src_len - offset, buf.len);
+
+                    if (sqlite3_blob_read(src_blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
+                        LogError("SQLite Error: %1", sqlite3_errmsg(*db));
+                        return (Size)-1;
+                    }
+
+                    offset += copy_len;
+                    return copy_len;
+                }, filename, src_encoding);
+
+                bool success = mz_zip_writer_add_read_buf_callback(&zip, filename, [](void *ctx, mz_uint64, void *buf, size_t len) {
+                    StreamReader *reader = (StreamReader *)ctx;
+                    return (size_t)reader->Read(len, buf);
+                }, &reader, size, &mtime, nullptr, 0, 0, nullptr, 0, nullptr, 0);
+                if (!success)
+                    return false;
+            }
+            if (!stmt.IsValid())
+                return false;
+
+            if (!mz_zip_writer_finalize_archive(&zip)) {
+                LogError("Failed to finalize ZIP archive '%1': %2", zip_filename, mz_zip_get_error_string(zip.m_last_error));
+                return false;
+            }
+            if (!mz_zip_writer_end(&zip)) {
+                LogError("Failed to end ZIP archive '%1': %2", zip_filename, mz_zip_get_error_string(zip.m_last_error));
+                return false;
+            }
+
+            err_guard.Disable();
+        }
+    }
+    if (!stmt.IsValid())
+        return false;
+
+    return true;
 }
 
 bool MigrateInstance(sq_Database *db)

@@ -992,6 +992,8 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
             return;
 
         RG_ASSERT(version >= 0);
+        if (!instance->SyncViews(gp_domain.config.view_directory))
+            return;
         instance->fs_version = version;
     });
 }
