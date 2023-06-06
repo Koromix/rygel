@@ -12,9 +12,17 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/libcc/libcc.hh"
-#include "vendor/webkit/include/JavaScriptCore/JavaScript.h"
+#include "jscore.hh"
 
 namespace RG {
+
+void js_ExposeFunction(JSContextRef ctx, JSObjectRef obj, const char *name, JSObjectCallAsFunctionCallback func)
+{
+    js_AutoString key(name);
+
+    JSValueRef value = JSObjectMakeFunctionWithCallback(ctx, key, func);
+    JSObjectSetProperty(ctx, obj, key, value, kJSPropertyAttributeNone, nullptr);
+}
 
 bool js_PrintValue(JSContextRef ctx, JSValueRef value, JSValueRef *ex, StreamWriter *st)
 {

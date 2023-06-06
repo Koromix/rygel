@@ -63,19 +63,16 @@ Options:
     {
         JSObjectRef global = JSContextGetGlobalObject(ctx);
 
-        JSObjectRef func = JSObjectMakeFunctionWithCallback(ctx, js_AutoString("print"),
-                                                            [](JSContextRef ctx, JSObjectRef, JSObjectRef,
-                                                               size_t argc, const JSValueRef *argv, JSValueRef *ex) -> JSValueRef {
+        js_ExposeFunction(ctx, global, "print", [](JSContextRef ctx, JSObjectRef, JSObjectRef,
+                                                   size_t argc, const JSValueRef *argv, JSValueRef *ex) {
             for (Size i = 0; i < (Size)argc; i++) {
                 if (!js_PrintValue(ctx, argv[i], ex, &stdout_st))
-                    return nullptr;
+                    return (JSValueRef)nullptr;
             }
             PrintLn();
 
             return JSValueMakeUndefined(ctx);
         });
-
-        JSObjectSetProperty(ctx, global, js_AutoString("print"), func, kJSPropertyAttributeNone, nullptr);
     }
 
     // Load code
@@ -88,15 +85,19 @@ Options:
     }
 
     // Execute code
-    JSValueRef ex;
-    JSValueRef ret = JSEvaluateScript(ctx, js_AutoString(code), nullptr, nullptr, 1, &ex);
-    if (!ret) {
-        RG_ASSERT(ex);
+    JSValueRef ret;
+    {
+        JSValueRef ex = nullptr;
+        ret = JSEvaluateScript(ctx, js_AutoString(code), nullptr, nullptr, 1, &ex);
 
-        js_PrintValue(ctx, ex, nullptr, &stderr_st);
-        PrintLn(stderr);
+        if (!ret) {
+            RG_ASSERT(ex);
 
-        return 1;
+            js_PrintValue(ctx, ex, nullptr, &stderr_st);
+            PrintLn(stderr);
+
+            return 1;
+        }
     }
 
     if (!js_IsNullOrUndefined(ctx, ret)) {

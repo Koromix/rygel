@@ -42,6 +42,8 @@ static inline bool js_IsNullOrUndefined(JSContextRef ctx, JSValueRef value)
     return JSValueIsNull(ctx, value) || JSValueIsUndefined(ctx, value);
 }
 
+void js_ExposeFunction(JSContextRef ctx, JSObjectRef obj, const char *name, JSObjectCallAsFunctionCallback func);
+
 bool js_PrintValue(JSContextRef ctx, JSValueRef value, JSValueRef *ex, StreamWriter *st);
 
 }
