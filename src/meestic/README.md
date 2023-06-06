@@ -1,8 +1,69 @@
 # Overview
 
-Meestic is a small command-line tool to control the keyboard lights of MSI Delta 15 laptops. It was made by looking at the HID packets sent by the Windows tool with Wireshark. It is provided "as is", I don't make any guarantee about this tool.
+Meestic is a small tool to control the keyboard lights of MSI Delta 15 laptops. It was made by looking at the HID packets sent by the Windows tool with Wireshark. It is provided "as is", I don't make any guarantee about this tool.
+
+You can use the command-line version (Windows and Linux) or the Windows-only GUI version.
 
 For ease of use, pre-built x64 binaries (built statically with musl-libc) are available here: https://koromix.dev/files/meestic/
+
+# Usage
+
+## Command-line version
+
+Here are a few examples on how to use it:
+
+```sh
+# Disable lighting
+meestic -m Disabled
+
+# Set default static MSI blue
+meestic -m Static MsiBlue
+
+# Slowly breathe between Orange and MsiBlue
+meestic -m Breathe -s 0 "#FFA100" MsiBlue
+
+# Quickly transition between Magenta, Orange and MsiBlue colors
+meestic -m Transition -s 2 Magenta Orange MsiBlue
+```
+
+Use `meestic --help` for a list of available options.
+
+Be careful, color names and most options are **case-sensitive**.
+
+## Configure GUI profiles (Windows only)
+
+Create a file named `MeesticGui.ini` to customize the profiles, and put it either:
+- Next to `MeesticGui.exe`
+- Or at `<ProfileDir>\AppData\MeesticGui.ini` (e.g. _C:\Users\JohnDoe\AppData\MeesticGui.ini_)
+
+Restart the GUI to apply each change.
+
+Here is an example:
+
+```ini
+# The profile set with Default will run when the GUI starts
+Default = Disabled
+
+[Static Blue]
+Mode = Static
+Colors = MsiBlue
+
+[Breathe Slow]
+Mode = Breathe
+Speed = 0
+Colors = #FFA100 MsiBlue
+
+[Disabled]
+Mode = Disabled
+
+# [Example]
+# Intensity = 0 to 10
+# Speed = 0 to 2
+# Mode = Disabled, Static, Breathe or Transition
+# Colors = list of Colors (only one for Static, 1 to 7 for Breathe or Transition), use name or CSS-like hexadecimal
+# ManualOnly = Yes or No (if Yes, the option must be used from the context menu and won't be used when cycling modes with the function keys)
+```
+
 
 # Build
 
@@ -31,25 +92,3 @@ sudo apt install git build-essential libudev-dev
 ```
 
 After that, the binary will be available in the `bin/Fast` directory.
-
-# Usage
-
-Here are a few examples on how to use it:
-
-```sh
-# Disable lighting
-meestic -m Disabled
-
-# Set default static MSI blue
-meestic -m Static MsiBlue
-
-# Slowly breathe between Orange and MsiBlue
-meestic -m Breathe -s 0 "#FFA100" MsiBlue
-
-# Quickly transition between Magenta, Orange and MsiBlue colors
-meestic -m Transition -s 2 Magenta Orange MsiBlue
-```
-
-Use `meestic --help` for a list of available options.
-
-Be careful, color names and most options are **case-sensitive**.
