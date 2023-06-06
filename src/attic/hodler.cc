@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "src/core/libcc/libcc.hh"
+#include "src/core/libnet/libnet.hh"
 extern "C" {
     #include "vendor/libsoldout/soldout.h"
 }
@@ -396,23 +397,27 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
     return true;
 }
 
-static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat urls, const char *output_dir)
+static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat urls,
+                     const char *output_dir, bool gzip)
 {
     BlockAllocator temp_alloc;
 
     // List input files
-    HeapArray<const char *> filenames;
-    if (!EnumerateFiles(input_dir, "*.md", 0, 1024, &temp_alloc, &filenames))
+    HeapArray<const char *> page_filenames;
+    if (!EnumerateFiles(input_dir, "*.md", 0, 1024, &temp_alloc, &page_filenames))
         return false;
-    std::sort(filenames.begin(), filenames.end(),
+    std::sort(page_filenames.begin(), page_filenames.end(),
               [](const char *filename1, const char *filename2) { return CmpStr(filename1, filename2) < 0; });
+
+    // Full list of output files
+    HeapArray<const char *> output_filenames;
 
     // Render pages
     HeapArray<PageData> pages;
     {
         HashMap<const char *, Size> pages_map;
 
-        for (const char *filename: filenames) {
+        for (const char *filename: page_filenames) {
             PageData page = {};
 
             page.src_filename = filename;
@@ -486,6 +491,8 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
 
         if (!RenderFullPage(template_html, pages, i, dest_filename))
             return false;
+
+        output_filenames.Append(dest_filename);
     }
 
     // Copy template assets
@@ -506,11 +513,31 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
 
                 StreamReader reader(src_filename);
                 StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
+
                 if (!SpliceStream(&reader, Megabytes(4), &writer))
                     return false;
                 if (!writer.Close())
                     return false;
+
+                output_filenames.Append(dest_filename);
             }
+        }
+    }
+
+    // Create pre-compressed gzip files
+    for (const char *filename: output_filenames) {
+        const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", filename).ptr;
+
+        if (gzip && http_ShouldCompressFile(filename)) {
+            StreamReader reader(filename);
+            StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+
+            if (!SpliceStream(&reader, Megabytes(4), &writer))
+                return false;
+            if (!writer.Close())
+                return false;
+        } else {
+            UnlinkFile(gzip_filename);
         }
     }
 
@@ -527,6 +554,7 @@ int Main(int argc, char *argv[])
     const char *input_dir = nullptr;
     const char *template_dir = {};
     const char *output_dir = nullptr;
+    bool gzip = false;
     UrlFormat urls = UrlFormat::Pretty;
 
     const auto print_usage = [=](FILE *fp) {
@@ -536,6 +564,7 @@ Options:
     %!..+-T, --template_dir <dir>%!0     Set template directory
 
     %!..+-O, --output_dir <dir>%!0       Set output directory
+        %!..+--gzip%!0                   Create static gzip files
 
     %!..+-u, --urls <FORMAT>%!0          Change URL format (%2)
                                  %!D..(default: %3)%!0)",
@@ -561,6 +590,8 @@ Options:
                 template_dir = opt.current_value;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
+            } else if (opt.Test("--gzip")) {
+                gzip = true;
             } else if (opt.Test("-u", "--urls", OptionType::Value)) {
                 if (!OptionToEnum(UrlFormatNames, opt.current_value, &urls)) {
                     LogError("Unknown URL format '%1'", opt.current_value);
@@ -603,7 +634,7 @@ Options:
         template_dir = directory;
     }
 
-    if (!BuildAll(input_dir, template_dir, urls, output_dir))
+    if (!BuildAll(input_dir, template_dir, urls, output_dir, gzip))
         return 1;
 
     LogInfo("Done!");
