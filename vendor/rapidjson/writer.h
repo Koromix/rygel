@@ -196,7 +196,7 @@ public:
         RAPIDJSON_ASSERT(str != 0);
         (void)copy;
         Prefix(kNumberType);
-        return EndValue(WriteString(str, length));
+        return EndValue(WriteRawNumber(str, length));
     }
 
     bool String(const Ch* str, SizeType length, bool copy = false) {
@@ -465,6 +465,15 @@ protected:
                 Transcoder<SourceEncoding, TargetEncoding>::Validate(is, *os_) :
                 Transcoder<SourceEncoding, TargetEncoding>::TranscodeUnsafe(is, *os_))))
                 return false;
+        }
+        return true;
+    }
+
+    bool WriteRawNumber(const Ch* json, size_t length) {
+        PutReserve(*os_, length);
+        for (size_t i = 0; i < length; i++) {
+			RAPIDJSON_ASSERT(json[i] > 0 && json[i] < 128);
+            PutUnsafe(*os_, static_cast<typename OutputStream::Ch>(json[i]));
         }
         return true;
     }

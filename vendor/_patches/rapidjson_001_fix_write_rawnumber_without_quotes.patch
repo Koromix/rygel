@@ -1,0 +1,42 @@
+diff --git a/vendor/rapidjson/prettywriter.h b/vendor/rapidjson/prettywriter.h
+index 45afb6949..85439b4d8 100644
+--- a/vendor/rapidjson/prettywriter.h
++++ b/vendor/rapidjson/prettywriter.h
+@@ -104,7 +104,7 @@ public:
+         RAPIDJSON_ASSERT(str != 0);
+         (void)copy;
+         PrettyPrefix(kNumberType);
+-        return Base::EndValue(Base::WriteString(str, length));
++        return Base::EndValue(Base::WriteRawNumber(str, length));
+     }
+ 
+     bool String(const Ch* str, SizeType length, bool copy = false) {
+diff --git a/vendor/rapidjson/writer.h b/vendor/rapidjson/writer.h
+index 6f5b69034..785c35b48 100644
+--- a/vendor/rapidjson/writer.h
++++ b/vendor/rapidjson/writer.h
+@@ -196,7 +196,7 @@ public:
+         RAPIDJSON_ASSERT(str != 0);
+         (void)copy;
+         Prefix(kNumberType);
+-        return EndValue(WriteString(str, length));
++        return EndValue(WriteRawNumber(str, length));
+     }
+ 
+     bool String(const Ch* str, SizeType length, bool copy = false) {
+@@ -469,6 +469,15 @@ protected:
+         return true;
+     }
+ 
++    bool WriteRawNumber(const Ch* json, size_t length) {
++        PutReserve(*os_, length);
++        for (size_t i = 0; i < length; i++) {
++			RAPIDJSON_ASSERT(json[i] > 0 && json[i] < 128);
++            PutUnsafe(*os_, static_cast<typename OutputStream::Ch>(json[i]));
++        }
++        return true;
++    }
++
+     void Prefix(Type type) {
+         (void)type;
+         if (RAPIDJSON_LIKELY(level_stack_.GetSize() != 0)) { // this value is not at root
