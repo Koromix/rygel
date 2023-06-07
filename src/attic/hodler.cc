@@ -517,8 +517,10 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
     return true;
 }
 
-int RunHodler(int argc, char *argv[])
+int Main(int argc, char *argv[])
 {
+    RG_CRITICAL(argc >= 1, "First argument is missing");
+
     BlockAllocator temp_alloc;
 
     // Options
@@ -611,4 +613,4 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunHodler(argc, argv); }
+int main(int argc, char **argv) { return RG::Main(argc, argv); }

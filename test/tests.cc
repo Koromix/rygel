@@ -31,8 +31,10 @@ BenchmarkInfo::BenchmarkInfo(const char *path, void (*func)())
     benchmarks.Append(this);
 }
 
-int RunTest(int argc, char **argv)
+int Main(int argc, char **argv)
 {
+    RG_CRITICAL(argc >= 1, "First argument is missing");
+
     // Options
     const char *pattern = nullptr;
 
@@ -127,4 +129,4 @@ int RunTest(int argc, char **argv)
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::RunTest(argc, argv); }
+int main(int argc, char **argv) { return RG::Main(argc, argv); }
