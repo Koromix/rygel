@@ -302,7 +302,7 @@ Options:
     }
 
     // Parse config file
-    if (TestFile(config_filename, FileType::File)) {
+    if (config_filename && TestFile(config_filename, FileType::File)) {
         if (!LoadConfig(config_filename, &config))
             return 1;
 
