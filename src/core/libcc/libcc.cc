@@ -5131,8 +5131,9 @@ int OpenIPSocket(SocketType type, int port, SocketMode mode)
 
     int flags = 0;
     switch (mode) {
-        case SocketMode::Stream: { flags = SOCK_STREAM; } break;
-        case SocketMode::Messages: { flags = SOCK_DGRAM; } break;
+        case SocketMode::ConnectStream: { flags = SOCK_STREAM; } break;
+        case SocketMode::ConnectDatagrams: { RG_UNREACHABLE(); } break;
+        case SocketMode::FreeDatagrams: { flags = SOCK_DGRAM; } break;
     }
 
 #ifdef _WIN32
@@ -5201,8 +5202,9 @@ int OpenUnixSocket(const char *path, SocketMode mode)
 {
     int flags = 0;
     switch (mode) {
-        case SocketMode::Stream: { flags = SOCK_STREAM; } break;
-        case SocketMode::Messages: { flags = SOCK_SEQPACKET; } break;
+        case SocketMode::ConnectStream: { flags = SOCK_STREAM; } break;
+        case SocketMode::ConnectDatagrams: { flags = SOCK_SEQPACKET; } break;
+        case SocketMode::FreeDatagrams: { flags = SOCK_DGRAM; } break;
     }
 
 #if defined(_WIN32)
@@ -5254,8 +5256,9 @@ int ConnectToUnixSocket(const char *path, SocketMode mode)
 {
     int flags = 0;
     switch (mode) {
-        case SocketMode::Stream: { flags = SOCK_STREAM; } break;
-        case SocketMode::Messages: { flags = SOCK_SEQPACKET; } break;
+        case SocketMode::ConnectStream: { flags = SOCK_STREAM; } break;
+        case SocketMode::ConnectDatagrams: { flags = SOCK_SEQPACKET; } break;
+        case SocketMode::FreeDatagrams: { flags = SOCK_DGRAM; } break;
     }
 
 #if defined(_WIN32)

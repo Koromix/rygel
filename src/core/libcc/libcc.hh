@@ -4119,14 +4119,15 @@ static const char *const SocketTypeNames[] = {
 };
 
 enum class SocketMode {
-    Stream,
-    Messages
+    ConnectStream,
+    ConnectDatagrams,
+    FreeDatagrams
 };
 
-int OpenIPSocket(SocketType type, int port, SocketMode mode = SocketMode::Stream);
+int OpenIPSocket(SocketType type, int port, SocketMode mode = SocketMode::ConnectStream);
 
-int OpenUnixSocket(const char *path, SocketMode mode = SocketMode::Stream);
-int ConnectToUnixSocket(const char *path, SocketMode mode = SocketMode::Stream);
+int OpenUnixSocket(const char *path, SocketMode mode = SocketMode::ConnectStream);
+int ConnectToUnixSocket(const char *path, SocketMode mode = SocketMode::ConnectStream);
 
 void CloseSocket(int fd);
 
