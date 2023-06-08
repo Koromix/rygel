@@ -75,7 +75,7 @@
     </div>
     <div>
         <div class="name">Dr Jehan ALLYBOKUS</div>
-        <img src="/static/equipe/avatar.png" alt="" />
+        <img src="/static/equipe/jehan_allybokus.jpg" alt="" />
         <div class="title">Psychiatre (Valenciennes)</div>
         <div class="mission">Centre de recours du Nord</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
