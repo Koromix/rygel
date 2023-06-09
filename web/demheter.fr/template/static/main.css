@@ -156,7 +156,7 @@ main {
 }
 nav#side ~ main { padding-right: 290px; }
 
-p { margin-top: 1em; }
+p { margin: 1em 0 0 0; }
 p:first-child, h1 + p, h2 + p, h3 + p { margin-top: 0; }
 
 main img { max-width: 100%; }

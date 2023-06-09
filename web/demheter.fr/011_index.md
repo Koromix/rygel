@@ -8,11 +8,10 @@
     <div>
         <p>Les troubles de l’humeur (c’est-à-dire les troubles dépressifs et les troubles bipolaires), correspondent aux troubles psychiatriques sévères parmi les plus fréquents. Ces troubles touchent en effet 350 millions de personnes dans le monde dont au moins 3 millions en France. La région des Hauts de France apparaît particulièrement touchée par cette problématique puisque la fréquence des troubles de l’humeur est plus élevée que la moyenne nationale.
         <p>Le projet DEMHETER consiste en la mise en place d’un réseau régional Hauts de France organisé en niveaux de soins et  spécialisé dans l’évaluation et la prise en charge des troubles de l’humeur afin de fluidifier le parcours de soins des patients et de faciliter l’accès à l’électroconvulsivothérapie.
+        <p>Ci-contre, à titre indicatif, une carte de la région indiquant les taux populationnels de patients souffrant de troubles dépressifs en service de psychiatrie d’après une <a href="https://www.f2rsmpsy.fr/fichs/13263.pdf">analyse du RIM-P en 2013</a> (Recueil d’Information Médicalisé en Psychiatrie).
     </div>
     <img src="/static/carte.webp" alt="Carte dépression HdF" />
 </div>
-
-Ci-contre, à titre indicatif, une carte de la région indiquant les taux populationnels de patients souffrant de troubles dépressifs en service de psychiatrie d’après l’analyse du RIM-P (Recueil d’Information Médicalisé en Psychiatrie) en 2013 (source : [https://www.f2rsmpsy.fr/fichs/13263.pdf](https://www.f2rsmpsy.fr/fichs/13263.pdf)).
 
 # Niveaux de soin
 
@@ -44,12 +43,9 @@ Ci-contre, à titre indicatif, une carte de la région indiquant les taux popula
         <p>Pendant neuf jours, Déméter parcourt la terre, le cœur plein de tristesse, parle peu et s’abandonne à une profonde et vive douleur, sans manger, sans boire et sans se laver.
         <p>Tant que dure le chagrin de Déméter, la terre n’est plus fertile, plus rien ne pousse sur Terre et les hommes meurent de faim.
         <p>Zeus se rend compte qu’une famine menace les mortels. Il intervient auprès de Hadès pour lui demander de rendre Perséphone à sa mère.
+        <p>Hadès relâche Perséphone, mais en cadeau d’adieu, il lui fait goûter une grenade. Or, quiconque mange dans le royaume des morts ne peut plus le quitter. Zeus convient alors d’un accord avec Hadès : Perséphone doit passer les deux tiers de l’année sur l’Olympe avec Déméter mais doit retourner auprès de Hadès le restant de l’année.
+        <p>Au printemps et en été, sous l’influence de la joie de Déméter, heureuse de retrouver sa fille, toutes les plantes renaissent et la terre est fertile. En automne, les plantes dépérissent en même temps qu’augmente la douleur de Déméter de devoir laisser partir sa fille vers les Enfers. Et enfin en hiver, Déméter, pleine de douleur, rend les sols infertiles.
+        <p>Ainsi naquirent les saisons et l’inexorable cycle d’affliction de Déméter.
     </div>
     <img src="/static/demeter.webp" alt="Déméter" />
 </div>
-
-Hadès relâche Perséphone, mais en cadeau d’adieu, il lui fait goûter une grenade. Or, quiconque mange dans le royaume des morts ne peut plus le quitter. Zeus convient alors d’un accord avec Hadès : Perséphone doit passer les deux tiers de l’année sur l’Olympe avec Déméter mais doit retourner auprès de Hadès le restant de l’année.
-
-Au printemps et en été, sous l’influence de la joie de Déméter, heureuse de retrouver sa fille, toutes les plantes renaissent et la terre est fertile. En automne, les plantes dépérissent en même temps qu’augmente la douleur de Déméter de devoir laisser partir sa fille vers les Enfers. Et enfin en hiver, Déméter, pleine de douleur, rend les sols infertiles.
-
-Ainsi naquirent les saisons et l’inexorable cycle d’affliction de Déméter.
