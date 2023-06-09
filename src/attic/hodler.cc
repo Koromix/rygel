@@ -467,11 +467,22 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
         Fmt(&temp_alloc, "%1%/static", input_dir).ptr,
         Fmt(&temp_alloc, "%1%/static", template_dir).ptr
     };
-    const char *template_filename = Fmt(&temp_alloc, "%1%/page.html", template_dir).ptr;
 
-    HeapArray<uint8_t> template_html;
-    if (!ReadFile(template_filename, Mebibytes(1), &template_html))
-        return false;
+    HeapArray<uint8_t> page_html;
+    HeapArray<uint8_t> index_html;
+    {
+        const char *page_filename = Fmt(&temp_alloc, "%1%/page.html", template_dir).ptr;
+        const char *index_filename = Fmt(&temp_alloc, "%1%/index.html", template_dir).ptr;
+
+        if (!ReadFile(page_filename, Mebibytes(1), &page_html))
+            return false;
+        if (TestFile(index_filename)) {
+            if (!ReadFile(index_filename, Mebibytes(1), &index_html))
+                return false;
+        } else {
+            index_html.Append(page_html);
+        }
+    }
 
     Async async;
 
@@ -491,7 +502,9 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
         const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
         async.Run([=, &pages]() {
-            if (!RenderFullPage(template_html, pages, i, dest_filename))
+            Span<const uint8_t> html = TestStr(pages[i].name, "index") ? index_html : page_html;
+
+            if (!RenderFullPage(html, pages, i, dest_filename))
                 return false;
 
             if (gzip) {
