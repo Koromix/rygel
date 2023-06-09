@@ -409,10 +409,7 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
     std::sort(page_filenames.begin(), page_filenames.end(),
               [](const char *filename1, const char *filename2) { return CmpStr(filename1, filename2) < 0; });
 
-    // Full list of output files
-    HeapArray<const char *> output_filenames;
-
-    // Render pages
+    // List pages
     HeapArray<PageData> pages;
     {
         HashMap<const char *, Size> pages_map;
@@ -476,6 +473,8 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
     if (!ReadFile(template_filename, Mebibytes(1), &template_html))
         return false;
 
+    Async async;
+
     // Output fully-formed pages
     for (Size i = 0; i < pages.len; i++) {
         const PageData &page = pages[i];
@@ -489,59 +488,81 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
             dest_filename = Fmt(&temp_alloc, "%1%/%2.html", output_dir, page.name).ptr;
         }
 
-        if (!RenderFullPage(template_html, pages, i, dest_filename))
-            return false;
+        const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
-        output_filenames.Append(dest_filename);
-    }
-
-    // Copy template assets
-    for (const char *static_directory: static_directories) {
-        if (TestFile(static_directory, FileType::Directory)) {
-            HeapArray<const char *> static_files;
-            if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &static_files))
+        async.Run([=, &pages]() {
+            if (!RenderFullPage(template_html, pages, i, dest_filename))
                 return false;
 
-            Size prefix_len = strlen(static_directory);
-
-            for (const char *src_filename: static_files) {
-                const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
-                const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
-
-                if (!EnsureDirectoryExists(dest_filename))
-                    return false;
-
-                StreamReader reader(src_filename);
-                StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
+            if (gzip) {
+                StreamReader reader(dest_filename);
+                StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
 
                 if (!SpliceStream(&reader, Megabytes(4), &writer))
                     return false;
                 if (!writer.Close())
                     return false;
+            } else {
+                UnlinkFile(gzip_filename);
+            }
 
-                output_filenames.Append(dest_filename);
+            return true;
+        });
+    }
+
+    // Copy template assets
+    for (const char *static_directory: static_directories) {
+        if (TestFile(static_directory, FileType::Directory)) {
+            HeapArray<const char *> static_filenames;
+            if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &static_filenames))
+                return false;
+
+            Size prefix_len = strlen(static_directory);
+
+            for (const char *src_filename: static_filenames) {
+                const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
+
+                const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
+                const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
+
+                async.Run([=]() {
+                    if (!EnsureDirectoryExists(dest_filename))
+                        return false;
+
+                    // Open ahead of time because src_filename won't stay valid
+                    StreamReader reader(src_filename);
+
+                    // Copy raw file
+                    {
+                        StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
+
+                        if (!SpliceStream(&reader, Megabytes(4), &writer))
+                            return false;
+                        if (!writer.Close())
+                            return false;
+                    }
+
+                    // Create gzipped version
+                    if (gzip && http_ShouldCompressFile(dest_filename)) {
+                        reader.Rewind();
+
+                        StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+
+                        if (!SpliceStream(&reader, Megabytes(4), &writer))
+                            return false;
+                        if (!writer.Close())
+                            return false;
+                    } else {
+                        UnlinkFile(gzip_filename);
+                    }
+
+                    return true;
+                });
             }
         }
     }
 
-    // Create pre-compressed gzip files
-    for (const char *filename: output_filenames) {
-        const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", filename).ptr;
-
-        if (gzip && http_ShouldCompressFile(filename)) {
-            StreamReader reader(filename);
-            StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
-
-            if (!SpliceStream(&reader, Megabytes(4), &writer))
-                return false;
-            if (!writer.Close())
-                return false;
-        } else {
-            UnlinkFile(gzip_filename);
-        }
-    }
-
-    return true;
+    return async.Sync();
 }
 
 int Main(int argc, char *argv[])
