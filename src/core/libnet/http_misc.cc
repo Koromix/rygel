@@ -254,7 +254,7 @@ bool http_ShouldCompressFile(const char *filename)
         return false;
     if (StartsWith(mime_type, "audio/"))
         return false;
-    if (StartsWith(mime_type, "image/"))
+    if (StartsWith(mime_type, "image/") && !TestStr(mime_type, "image/svg+xml"))
         return false;
 
     return true;
