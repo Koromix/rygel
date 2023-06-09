@@ -7,3 +7,7 @@ footer { display: none; }
 .schema { width: 90%; }
 
 h1:not(:first-child) { break-before: page; }
+
+.columns { display: block; }
+.columns > * { width: auto; }
+.columns > * + * { margin-top: 3em; }
