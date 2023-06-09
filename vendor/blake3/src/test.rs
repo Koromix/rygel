@@ -52,7 +52,7 @@ pub const TEST_KEY_WORDS: CVWords = [
 ];
 
 // Paint the input with a repeating byte pattern. We use a cycle length of 251,
-// because that's the largets prime number less than 256. This makes it
+// because that's the largest prime number less than 256. This makes it
 // unlikely to swapping any two adjacent input blocks or chunks will give the
 // same answer.
 pub fn paint_test_input(buf: &mut [u8]) {
@@ -494,7 +494,7 @@ fn test_xof_seek() {
 }
 
 #[test]
-fn test_msg_schdule_permutation() {
+fn test_msg_schedule_permutation() {
     let permutation = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8];
 
     let mut generated = [[0; 16]; 7];
@@ -602,4 +602,29 @@ fn test_issue_206_windows_sse2() {
         // This assert fails when the bug is triggered.
         assert_eq!(crate::Hasher::new().update(input).finalize(), expected_hash);
     }
+}
+
+#[test]
+fn test_hash_conversions() {
+    let bytes1 = [42; 32];
+    let hash1: crate::Hash = bytes1.into();
+    let bytes2: [u8; 32] = hash1.into();
+    assert_eq!(bytes1, bytes2);
+
+    let bytes3 = *hash1.as_bytes();
+    assert_eq!(bytes1, bytes3);
+
+    let hash2 = crate::Hash::from_bytes(bytes1);
+    assert_eq!(hash1, hash2);
+
+    let hex = hash1.to_hex();
+    let hash3 = crate::Hash::from_hex(hex.as_bytes()).unwrap();
+    assert_eq!(hash1, hash3);
+}
+
+#[test]
+const fn test_hash_const_conversions() {
+    let bytes = [42; 32];
+    let hash = crate::Hash::from_bytes(bytes);
+    _ = hash.as_bytes();
 }
