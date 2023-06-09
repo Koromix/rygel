@@ -46,6 +46,8 @@ static inline void http_EncodeUrlSafe(Span<const char> str, HeapArray<char> *out
 
 bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io);
 
+bool http_ShouldCompressFile(const char *filename);
+
 class http_JsonPageBuilder: public json_Writer {
     http_IO *io = nullptr;
 

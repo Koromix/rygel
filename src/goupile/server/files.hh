@@ -29,8 +29,6 @@ void HandleFileRestore(InstanceHolder *instance, const http_RequestInfo &request
 void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
-bool ShouldCompressFile(const char *filename);
-
 static inline void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
 {
     RG_ASSERT(hash.len == 32);

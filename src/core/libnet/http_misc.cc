@@ -219,6 +219,47 @@ bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io)
     return true;
 }
 
+bool http_ShouldCompressFile(const char *filename)
+{
+    char extension[8];
+    {
+        const char *ptr = GetPathExtension(filename).ptr;
+
+        Size i = 0;
+        while (i < RG_SIZE(extension) - 1 && ptr[i]) {
+            extension[i] = LowerAscii(ptr[i]);
+            i++;
+        }
+        extension[i] = 0;
+    }
+
+    if (TestStrI(extension, ".zip"))
+        return false;
+    if (TestStrI(extension, ".rar"))
+        return false;
+    if (TestStrI(extension, ".7z"))
+        return false;
+    if (TestStrI(extension, ".gz") || TestStrI(extension, ".tgz"))
+        return false;
+    if (TestStrI(extension, ".bz2") || TestStrI(extension, ".tbz2"))
+        return false;
+    if (TestStrI(extension, ".xz") || TestStrI(extension, ".txz"))
+        return false;
+    if (TestStrI(extension, ".zst") || TestStrI(extension, ".tzst"))
+        return false;
+
+    const char *mime_type = http_GetMimeType(extension);
+
+    if (StartsWith(mime_type, "video/"))
+        return false;
+    if (StartsWith(mime_type, "audio/"))
+        return false;
+    if (StartsWith(mime_type, "image/"))
+        return false;
+
+    return true;
+}
+
 static void ReleaseDataCallback(void *ptr)
 {
     ReleaseRaw(nullptr, ptr, -1);

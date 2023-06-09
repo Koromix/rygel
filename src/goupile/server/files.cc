@@ -470,8 +470,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             UnlinkFile(tmp_filename);
         };
 
-        CompressionType compression_type = ShouldCompressFile(filename) ? CompressionType::Gzip
-                                                                        : CompressionType::None;
+        CompressionType compression_type = http_ShouldCompressFile(filename) ? CompressionType::Gzip
+                                                                             : CompressionType::None;
 
         // Read and compress request body
         Size total_len = 0;
@@ -996,47 +996,6 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
             return;
         instance->fs_version = version;
     });
-}
-
-bool ShouldCompressFile(const char *filename)
-{
-    char extension[8];
-    {
-        const char *ptr = GetPathExtension(filename).ptr;
-
-        Size i = 0;
-        while (i < RG_SIZE(extension) - 1 && ptr[i]) {
-            extension[i] = LowerAscii(ptr[i]);
-            i++;
-        }
-        extension[i] = 0;
-    }
-
-    if (TestStrI(extension, ".zip"))
-        return false;
-    if (TestStrI(extension, ".rar"))
-        return false;
-    if (TestStrI(extension, ".7z"))
-        return false;
-    if (TestStrI(extension, ".gz") || TestStrI(extension, ".tgz"))
-        return false;
-    if (TestStrI(extension, ".bz2") || TestStrI(extension, ".tbz2"))
-        return false;
-    if (TestStrI(extension, ".xz") || TestStrI(extension, ".txz"))
-        return false;
-    if (TestStrI(extension, ".zst") || TestStrI(extension, ".tzst"))
-        return false;
-
-    const char *mime_type = http_GetMimeType(extension);
-
-    if (StartsWith(mime_type, "video/"))
-        return false;
-    if (StartsWith(mime_type, "audio/"))
-        return false;
-    if (StartsWith(mime_type, "image/"))
-        return false;
-
-    return true;
 }
 
 }
