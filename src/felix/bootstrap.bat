@@ -24,7 +24,7 @@ if NOT ERRORLEVEL 1 (
         copy %BUILD%\felix.exe %BINARY% >NUL
 
         echo Cleaning up...
-        ping -n 2 127.0.0.1 >NUL
+        timeout /T 2 /NOBREAK >NUL
         del /Q %TEMP%\*
         rmdir /Q %TEMP%
 
@@ -39,7 +39,7 @@ if NOT ERRORLEVEL 1 (
     copy %BUILD%\felix.exe %BINARY% >NUL
 
     echo Cleaning up...
-    ping -n 2 127.0.0.1 >NUL
+    timeout /T 2 /NOBREAK >NUL
     del /Q %TEMP%\*
     rmdir /Q %TEMP%
 
@@ -55,7 +55,7 @@ if NOT ERRORLEVEL 1 (
     copy %BUILD%\felix.exe %BINARY% >NUL
 
     echo Cleaning up...
-    ping -n 2 127.0.0.1 >NUL
+    timeout /T 2 /NOBREAK >NUL
     del /Q %TEMP%\*
     rmdir /Q %TEMP%
 
