@@ -250,7 +250,11 @@ using parse_options = parse_options_t<char>;
 #define FASTFLOAT_SSE2 1
 #endif
 
-#ifdef FASTFLOAT_SSE2
+#if defined(__aarch64__) || defined(_M_ARM64)
+#define FASTFLOAT_NEON 1
+#endif
+
+#if defined(FASTFLOAT_SSE2) || defined(FASTFLOAT_ARM64)
 #define FASTFLOAT_HAS_SIMD 1
 #endif
 
@@ -697,10 +701,10 @@ template <> inline constexpr binary_format<double>::equiv_uint
 template<typename T>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20
 void to_float(bool negative, adjusted_mantissa am, T &value) {
-  using uint = typename binary_format<T>::equiv_uint;
-  uint word = (uint)am.mantissa;
-  word |= uint(am.power2) << binary_format<T>::mantissa_explicit_bits();
-  word |= uint(negative) << binary_format<T>::sign_index();
+  using fastfloat_uint = typename binary_format<T>::equiv_uint;
+  fastfloat_uint word = (fastfloat_uint)am.mantissa;
+  word |= fastfloat_uint(am.power2) << binary_format<T>::mantissa_explicit_bits();
+  word |= fastfloat_uint(negative) << binary_format<T>::sign_index();
 #if FASTFLOAT_HAS_BIT_CAST
   value = std::bit_cast<T>(word);
 #else
@@ -851,6 +855,9 @@ from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
 #include <emmintrin.h>
 #endif
 
+#ifdef FASTFLOAT_NEON
+#include <arm_neon.h>
+#endif
 
 namespace fast_float {
 
@@ -926,10 +933,29 @@ FASTFLOAT_SIMD_DISABLE_WARNINGS
 FASTFLOAT_SIMD_RESTORE_WARNINGS
 }
 
-#endif
+#elif defined(FASTFLOAT_NEON)
+
+
+fastfloat_really_inline
+uint64_t simd_read8_to_u64(const uint16x8_t data) {
+FASTFLOAT_SIMD_DISABLE_WARNINGS
+  uint8x8_t utf8_packed = vmovn_u16(data);
+  return vget_lane_u64(vreinterpret_u64_u8(utf8_packed), 0);
+FASTFLOAT_SIMD_RESTORE_WARNINGS
+}
+
+fastfloat_really_inline
+uint64_t simd_read8_to_u64(const char16_t* chars) {
+FASTFLOAT_SIMD_DISABLE_WARNINGS
+  return simd_read8_to_u64(vld1q_u16(reinterpret_cast<const uint16_t*>(chars)));
+FASTFLOAT_SIMD_RESTORE_WARNINGS
+}
+
+#endif // FASTFLOAT_SSE2
 
 // dummy for compile
-template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>())>
+//template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>())>
+template <typename UC>
 uint64_t simd_read8_to_u64(UC const*) {
   return 0;
 }
@@ -1008,14 +1034,32 @@ FASTFLOAT_SIMD_DISABLE_WARNINGS
   }
   else return false;
 FASTFLOAT_SIMD_RESTORE_WARNINGS
-#endif
+#elif defined(FASTFLOAT_NEON)
+FASTFLOAT_SIMD_DISABLE_WARNINGS
+  const uint16x8_t data = vld1q_u16(reinterpret_cast<const uint16_t*>(chars));
+  
+  // (x - '0') <= 9
+  // http://0x80.pl/articles/simd-parsing-int-sequences.html
+  const uint16x8_t t0 = vsubq_u16(data, vmovq_n_u16('0'));
+  const uint16x8_t mask = vcltq_u16(t0, vmovq_n_u16('9' - '0' + 1));
+
+  if (vminvq_u16(mask) == 0xFFFF) {
+    i = i * 100000000 + parse_eight_digits_unrolled(simd_read8_to_u64(data));
+    return true;
+  }
+  else return false;
+FASTFLOAT_SIMD_RESTORE_WARNINGS
+#else
+  (void)chars; (void)i;
+  return false;
+#endif // FASTFLOAT_SSE2
 }
 
-#endif
+#endif // FASTFLOAT_HAS_SIMD
 
 // dummy for compile
 template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>())>
-uint64_t simd_parse_if_eight_digits_unrolled(UC const*, uint64_t&) {
+bool simd_parse_if_eight_digits_unrolled(UC const*, uint64_t&) {
   return 0;
 }
 
