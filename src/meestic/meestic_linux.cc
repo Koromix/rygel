@@ -19,6 +19,7 @@
 #include "vendor/basu/src/systemd/sd-bus.h"
 #include "vendor/stb/stb_image.h"
 #include "vendor/stb/stb_image_resize.h"
+#include "vendor/stb/stb_image_write.h"
 
 #include <poll.h>
 #include <sys/types.h>
@@ -46,8 +47,8 @@ static const char *const ParseError = ParseError;
 static const char *const ReplyError = "Failed to reply on D-bus";
 
 static const Vec2<int> IconSizes[] = {
-    { 24, 24 },
-    { 32, 32 },
+    { 22, 22 },
+    { 48, 48 },
     { 64, 64 }
 };
 
@@ -89,10 +90,16 @@ static bool ToggleProfile(int delta)
     return true;
 }
 
-static const Span<const uint8_t> *InitIcons()
+struct IconInfo {
+    const char *filename;
+    Span<const Span<const uint8_t>> pixmaps;
+};
+
+static IconInfo InitIcons()
 {
     static bool init = false;
     static Span<const uint8_t> icons[RG_LEN(IconSizes)];
+    static IconInfo info;
     static LinkedAllocator icons_alloc;
 
     // We could do this at compile-time if we had better (or at least easier to use) compile-time
@@ -118,6 +125,19 @@ static const Span<const uint8_t> *InitIcons()
             int resized = stbir_resize_uint8(png, width, height, 0, icon, size.x, size.y, 0, 4);
             RG_CRITICAL(resized, "Failed to resize icon");
 
+            // Write out first icon size to disk
+            if (!i) {
+                const char *filename = GetUserCachePath("meestic/tray.png", &icons_alloc);
+
+                if (EnsureDirectoryExists(filename)) {
+                    if (stbi_write_png(filename, size.x, size.y, 4, icon, 0)) {
+                        info.filename = filename;
+                    } else {
+                        UnlinkFile(filename);
+                    }
+                }
+            }
+
             // Convert from RGBA32 (Big Endian) to ARGB32 (Big Endian)
             for (Size i = 0; i < len; i += 4) {
                 uint32_t pixel = LittleEndian(*(uint32_t *)(icon + i));
@@ -129,24 +149,26 @@ static const Span<const uint8_t> *InitIcons()
             }
         }
 
+        info.pixmaps = icons;
+
         init = true;
     }
 
-    return icons;
+    return info;
 }
 
 static int GetIconComplexProperty(sd_bus *, const char *, const char *, const char *property,
                                   sd_bus_message *reply, void *, sd_bus_error *)
 {
     if (TestStr(property, "ToolTip")) {
-        const Span<const uint8_t> *icons = InitIcons();
+        IconInfo icons = InitIcons();
 
         CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "sa(iiay)ss"), ReplyError, -1);
         CALL_SDBUS(sd_bus_message_append(reply, "s", "MeesticGui"), ReplyError, -1);
         CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(iiay)"), ReplyError, -1);
         for (Size i = 0; i < RG_LEN(IconSizes); i++) {
             Vec2<int> size = IconSizes[i];
-            Span<const uint8_t> icon = icons[i];
+            Span<const uint8_t> icon = icons.pixmaps[i];
 
             CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "iiay"), ReplyError, -1);
             CALL_SDBUS(sd_bus_message_append(reply, "ii", size.x, size.y), ReplyError, -1);
@@ -158,13 +180,19 @@ static int GetIconComplexProperty(sd_bus *, const char *, const char *, const ch
         CALL_SDBUS(sd_bus_message_close_container(reply), ReplyError, -1);
 
         return 1;
+    } else if (TestStr(property, "IconName")) {
+        IconInfo icons = InitIcons();
+
+        CALL_SDBUS(sd_bus_message_append(reply, "s", icons.filename), ReplyError, -1);
+
+        return 1;
     } else if (TestStr(property, "IconPixmap")) {
-        const Span<const uint8_t> *icons = InitIcons();
+        IconInfo icons = InitIcons();
 
         CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(iiay)"), ReplyError, -1);
         for (Size i = 0; i < RG_LEN(IconSizes); i++) {
             Vec2<int> size = IconSizes[i];
-            Span<const uint8_t> icon = icons[i];
+            Span<const uint8_t> icon = icons.pixmaps[i];
 
             CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "iiay"), ReplyError, -1);
             CALL_SDBUS(sd_bus_message_append(reply, "ii", size.x, size.y), ReplyError, -1);
@@ -214,7 +242,6 @@ static bool RegisterTrayIcon()
         const char *status = "Active";
         uint32_t window_id = 0;
         const char *icon_theme = "";
-        const char *icon_name = "meesticgui";
         bool item_is_menu = false;
         const char *attention_icon_name = "";
         const char *attention_movie_name = "";
@@ -231,7 +258,7 @@ static bool RegisterTrayIcon()
         SD_BUS_PROPERTY("Status", "s", nullptr, RG_OFFSET_OF(decltype(properties), status), 0),
         SD_BUS_PROPERTY("WindowId", "u", nullptr, RG_OFFSET_OF(decltype(properties), window_id), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("IconThemePath", "s", nullptr, RG_OFFSET_OF(decltype(properties), icon_theme), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("IconName", "s", nullptr, RG_OFFSET_OF(decltype(properties), icon_name), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("IconName", "s", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("IconPixmap", "a(iiay)", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("AttentionIconName", "s", nullptr, RG_OFFSET_OF(decltype(properties), attention_icon_name), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("AttentionMovieName", "s", nullptr, RG_OFFSET_OF(decltype(properties), attention_movie_name), SD_BUS_VTABLE_PROPERTY_CONST),
