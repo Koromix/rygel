@@ -42,6 +42,9 @@ namespace RG {
 
 extern "C" const AssetInfo MeesticPng;
 
+static const char *const ParseError = ParseError;
+static const char *const ReplyError = "Failed to reply on D-bus";
+
 static const Vec2<int> IconSizes[] = {
     { 24, 24 },
     { 32, 32 },
@@ -49,6 +52,7 @@ static const Vec2<int> IconSizes[] = {
 };
 
 static int meestic_fd = -1;
+static bool run = true;
 
 static Config config;
 
@@ -131,46 +135,50 @@ static const Span<const uint8_t> *InitIcons()
     return icons;
 }
 
-static int GetComplexProperty(sd_bus *, const char *, const char *, const char *property,
-                              sd_bus_message *reply, void *, sd_bus_error *)
+static int GetIconComplexProperty(sd_bus *, const char *, const char *, const char *property,
+                                  sd_bus_message *reply, void *, sd_bus_error *)
 {
-    static const char *error = "Failed to prepare sd-bus reply";
-
     if (TestStr(property, "ToolTip")) {
         const Span<const uint8_t> *icons = InitIcons();
 
-        CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "sa(iiay)ss"), error, -1);
-        CALL_SDBUS(sd_bus_message_append(reply, "s", "MeesticGui"), error, -1);
-        CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(iiay)"), error, -1);
+        CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "sa(iiay)ss"), ReplyError, -1);
+        CALL_SDBUS(sd_bus_message_append(reply, "s", "MeesticGui"), ReplyError, -1);
+        CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(iiay)"), ReplyError, -1);
         for (Size i = 0; i < RG_LEN(IconSizes); i++) {
             Vec2<int> size = IconSizes[i];
             Span<const uint8_t> icon = icons[i];
 
-            CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "iiay"), error, -1);
-            CALL_SDBUS(sd_bus_message_append(reply, "ii", size.x, size.y), error, -1);
-            CALL_SDBUS(sd_bus_message_append_array(reply, 'y', icon.ptr, (size_t)icon.len), error, -1);
-            CALL_SDBUS(sd_bus_message_close_container(reply), error, -1);
+            CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "iiay"), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_append(reply, "ii", size.x, size.y), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_append_array(reply, 'y', icon.ptr, (size_t)icon.len), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_close_container(reply), ReplyError, -1);
         }
-        CALL_SDBUS(sd_bus_message_close_container(reply), error, -1);
-        CALL_SDBUS(sd_bus_message_append(reply, "ss", FelixTarget, FelixTarget), error, -1);
-        CALL_SDBUS(sd_bus_message_close_container(reply), error, -1);
+        CALL_SDBUS(sd_bus_message_close_container(reply), ReplyError, -1);
+        CALL_SDBUS(sd_bus_message_append(reply, "ss", FelixTarget, FelixTarget), ReplyError, -1);
+        CALL_SDBUS(sd_bus_message_close_container(reply), ReplyError, -1);
 
         return 1;
     } else if (TestStr(property, "IconPixmap")) {
         const Span<const uint8_t> *icons = InitIcons();
 
-        CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(iiay)"), error, -1);
+        CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(iiay)"), ReplyError, -1);
         for (Size i = 0; i < RG_LEN(IconSizes); i++) {
             Vec2<int> size = IconSizes[i];
             Span<const uint8_t> icon = icons[i];
 
-            CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "iiay"), error, -1);
-            CALL_SDBUS(sd_bus_message_append(reply, "ii", size.x, size.y), error, -1);
-            CALL_SDBUS(sd_bus_message_append_array(reply, 'y', icon.ptr, (size_t)icon.len), error, -1);
-            CALL_SDBUS(sd_bus_message_close_container(reply), error, -1);
+            CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "iiay"), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_append(reply, "ii", size.x, size.y), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_append_array(reply, 'y', icon.ptr, (size_t)icon.len), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_close_container(reply), ReplyError, -1);
         }
-        CALL_SDBUS(sd_bus_message_close_container(reply), error, -1);
+        CALL_SDBUS(sd_bus_message_close_container(reply), ReplyError, -1);
 
+        return 1;
+    } else if (TestStr(property, "AttentionIconPixmap")) {
+        CALL_SDBUS(sd_bus_message_append(reply, "a(iiay)", 0), ReplyError, -1);
+        return 1;
+    } else if (TestStr(property, "OverlayIconPixmap")) {
+        CALL_SDBUS(sd_bus_message_append(reply, "a(iiay)", 0), ReplyError, -1);
         return 1;
     }
 
@@ -180,7 +188,7 @@ static int GetComplexProperty(sd_bus *, const char *, const char *, const char *
 static int HandleMatch(sd_bus_message *m, void *, sd_bus_error *)
 {
     const char *name;
-    CALL_SDBUS(sd_bus_message_read(m, "s", &name), "Failed to parse arguments", -1);
+    CALL_SDBUS(sd_bus_message_read(m, "s", &name), ParseError, -1);
 
     if (TestStr(name, "org.kde.StatusNotifierWatcher")) {
         CALL_SDBUS(sd_bus_call_method(bus_user, "org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher", "org.kde.StatusNotifierWatcher",
@@ -203,12 +211,15 @@ static bool RegisterTrayIcon()
         const char *category = "ApplicationStatus";
         const char *id = FelixTarget;
         const char *title = FelixTarget;
-        const char *status = "Passive";
+        const char *status = "Active";
         uint32_t window_id = 0;
         const char *icon_theme = "";
         const char *icon_name = "meesticgui";
         bool item_is_menu = false;
-        const char *menu = "/ContextMenu";
+        const char *attention_icon_name = "";
+        const char *attention_movie_name = "";
+        const char *overlay_icon_name = "";
+        const char *menu = "/MenuBar";
      } properties;
 
     static const sd_bus_vtable vtable[] = {
@@ -221,8 +232,13 @@ static bool RegisterTrayIcon()
         SD_BUS_PROPERTY("WindowId", "u", nullptr, RG_OFFSET_OF(decltype(properties), window_id), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("IconThemePath", "s", nullptr, RG_OFFSET_OF(decltype(properties), icon_theme), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("IconName", "s", nullptr, RG_OFFSET_OF(decltype(properties), icon_name), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("IconPixmap", "a(iiay)", GetComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("ToolTip", "(sa(iiay)ss)", GetComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("IconPixmap", "a(iiay)", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("AttentionIconName", "s", nullptr, RG_OFFSET_OF(decltype(properties), attention_icon_name), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("AttentionMovieName", "s", nullptr, RG_OFFSET_OF(decltype(properties), attention_movie_name), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("AttentionIconPixmap", "a(iiay)", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("OverlayIconName", "s", nullptr, RG_OFFSET_OF(decltype(properties), attention_icon_name), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("OverlayIconPixmap", "a(iiay)", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("ToolTip", "(sa(iiay)ss)", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("ItemIsMenu", "b", nullptr, RG_OFFSET_OF(decltype(properties), item_is_menu), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("Menu", "o", nullptr, RG_OFFSET_OF(decltype(properties), menu), SD_BUS_VTABLE_PROPERTY_CONST),
 
@@ -239,7 +255,7 @@ static bool RegisterTrayIcon()
 
                 int delta;
                 const char *orientation;
-                CALL_SDBUS(sd_bus_message_read(m, "is", &delta, &orientation), "Failed to parse arguments", -1);
+                CALL_SDBUS(sd_bus_message_read(m, "is", &delta, &orientation), ParseError, -1);
 
                 if (TestStrI(orientation, "vertical")) {
                     delta = std::clamp(delta, -1, 1);
@@ -249,6 +265,8 @@ static bool RegisterTrayIcon()
 
             return 1;
         }, 0),
+        SD_BUS_METHOD("SecondaryActivate", "ii", "", [](sd_bus_message *, void *, sd_bus_error *) { return 1; }, 0),
+        SD_BUS_METHOD("ContextMenu", "ii", "", [](sd_bus_message *, void *, sd_bus_error *) { return 1; }, 0),
 
         SD_BUS_SIGNAL("NewTitle", "", 0),
         SD_BUS_SIGNAL("NewIcon", "", 0),
@@ -269,6 +287,184 @@ static bool RegisterTrayIcon()
     // Ignore failure... maybe the watcher is not ready yet?
     sd_bus_call_method(bus_user, "org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher", "org.kde.StatusNotifierWatcher",
                       "RegisterStatusNotifierItem", nullptr, nullptr, "s", bus_name);
+
+    return true;
+}
+
+static int GetMenuComplexProperty(sd_bus *, const char *, const char *, const char *property,
+                                  sd_bus_message *reply, void *, sd_bus_error *)
+{
+    if (TestStr(property, "IconThemePath")) {
+        CALL_SDBUS(sd_bus_message_append(reply, "as", 0), ReplyError, -1);
+        return 1;
+    }
+
+    RG_UNREACHABLE();
+}
+
+static bool DumpMenuItems(FunctionRef<bool(int, const char *)> func)
+{
+#define ITEM(Id, Label) \
+        do { \
+            if (!func((Id), (Label))) \
+                return false; \
+        } while (false)
+
+    for (Size i = 0; i < config.profiles.len; i++) {
+        const ConfigProfile &profile = config.profiles[i];
+        ITEM(100 + i, profile.name);
+    }
+
+    ITEM(-1, "-");
+    ITEM(1, "_Exit");
+
+#undef ITEM
+
+    return true;
+}
+
+static void HandleMenuEvent(int id, const char *type)
+{
+    if (!TestStr(type, "clicked"))
+        return;
+
+    if (id == 1) {
+        run = false;
+    } else if (id >= 100) {
+        ApplyProfile(id - 100);
+    }
+}
+
+static bool RegisterTrayMenu()
+{
+    static struct {
+        unsigned int version = 4;
+        const char *status = "normal";
+        const char *text_direction = "ltr";
+        const char *icon_theme_path = {};
+        unsigned int layout = 0;
+     } properties;
+
+    static const sd_bus_vtable vtable[] = {
+        SD_BUS_VTABLE_START(0),
+
+        SD_BUS_PROPERTY("IconThemePath", "as", GetMenuComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("Version", "u", nullptr, RG_OFFSET_OF(decltype(properties), version), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("TextDirection", "s", nullptr, RG_OFFSET_OF(decltype(properties), text_direction), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("Status", "s", nullptr, RG_OFFSET_OF(decltype(properties), status), SD_BUS_VTABLE_PROPERTY_CONST),
+
+        SD_BUS_METHOD("GetLayout", "iias", "u(ia{sv}av)", [](sd_bus_message *m, void *, sd_bus_error *) {
+            sd_bus_message *reply;
+            CALL_SDBUS(sd_bus_message_new_method_return(m, &reply), ReplyError, -1);
+            RG_DEFER { sd_bus_message_unref(reply); };
+
+            int root;
+            CALL_SDBUS(sd_bus_message_read(m, "i", &root), ParseError, -1);
+
+            CALL_SDBUS(sd_bus_message_append(reply, "u", 1), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "ia{sv}av"), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_append(reply, "ia{sv}", 0, 1,
+                "children-display", "s", "submenu"
+            ), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "v"), ReplyError, -1);
+            DumpMenuItems([&](int id, const char *label) {
+                if (root != 0)
+                    return true;
+
+                CALL_SDBUS(sd_bus_message_append(reply, "v", "(ia{sv}av)", id, 4,
+                    "type", "s", TestStr(label, "-") ? "separator" : "standard",
+                    "label", "s", TestStr(label, "-") ? "" : label,
+                    "enabled", "b", true,
+                    "visible", "b", true,
+                0), ReplyError, false);
+
+                return true;
+            });
+            CALL_SDBUS(sd_bus_message_close_container(reply), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_close_container(reply), ReplyError, -1);
+
+            return sd_bus_send(nullptr, reply, nullptr);
+        }, 0),
+        SD_BUS_METHOD("GetGroupProperties", "aias", "a(ia{sv})", [](sd_bus_message *m, void *, sd_bus_error *) {
+            sd_bus_message *reply;
+            CALL_SDBUS(sd_bus_message_new_method_return(m, &reply), ReplyError, -1);
+            RG_DEFER { sd_bus_message_unref(reply); };
+
+            HashSet<int> items;
+            CALL_SDBUS(sd_bus_message_enter_container(m, 'a', "i"), ParseError, -1);
+            while (sd_bus_message_at_end(m, 0) <= 0) {
+                int item;
+                CALL_SDBUS(sd_bus_message_read_basic(m, 'i', &item), ParseError, -1);
+                items.Set(item);
+            }
+            CALL_SDBUS(sd_bus_message_exit_container(m), ParseError, -1);
+
+            CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(ia{sv})"), "Failed to prepare sd-bus reply A", -1);
+            DumpMenuItems([&](int id, const char *label) {
+                if (!items.Find(id))
+                    return true;
+
+                CALL_SDBUS(sd_bus_message_append(reply, "(ia{sv})", id, 3,
+                    "label", "s", label,
+                    "enabled", "b", true,
+                    "visible", "b", true
+                ), "Failed to prepare sd-bus reply X", false);
+
+                return true;
+            });
+            CALL_SDBUS(sd_bus_message_close_container(reply), "Failed to prepare sd-bus reply B", -1);
+
+            return sd_bus_send(nullptr, reply, nullptr);
+        }, 0),
+        SD_BUS_METHOD("GetProperty", "is", "v", [](sd_bus_message *, void *, sd_bus_error *) {
+            // Not really implemented but nobody seems to care
+            return 1;
+        }, 0),
+        SD_BUS_METHOD("Event", "isvu", "", [](sd_bus_message *m, void *, sd_bus_error *) {
+            int item;
+            const char *type;
+            CALL_SDBUS(sd_bus_message_read(m, "is", &item, &type), ParseError, -1);
+
+            HandleMenuEvent(item, type);
+
+            return 1;
+        }, 0),
+        SD_BUS_METHOD("EventGroup", "a(isvu)", "ai", [](sd_bus_message *m, void *, sd_bus_error *) {
+            CALL_SDBUS(sd_bus_message_enter_container(m, 'a', "(isvu)"), ParseError, -1);
+            while (sd_bus_message_at_end(m, 0) <= 0) {
+                int item;
+                const char *type;
+                CALL_SDBUS(sd_bus_message_enter_container(m, 'r', "isvu"), ParseError, -1);
+                CALL_SDBUS(sd_bus_message_read(m, "is", &item, &type), ParseError, -1);
+                CALL_SDBUS(sd_bus_message_skip(m, "vu"), ParseError, -1);
+                CALL_SDBUS(sd_bus_message_exit_container(m), ParseError, -1);
+
+                HandleMenuEvent(item, type);
+            }
+            CALL_SDBUS(sd_bus_message_exit_container(m), ParseError, -1);
+
+            CALL_SDBUS(sd_bus_reply_method_return(m, "ai", 0), ReplyError, -1);
+
+            return 1;
+        }, SD_BUS_VTABLE_UNPRIVILEGED),
+        SD_BUS_METHOD("AboutToShow", "i", "b", [](sd_bus_message *m, void *, sd_bus_error *) {
+            CALL_SDBUS(sd_bus_reply_method_return(m, "b", false), ReplyError, -1);
+            return 1;
+        }, SD_BUS_VTABLE_UNPRIVILEGED),
+        SD_BUS_METHOD("AboutToShowGroup", "ai", "abab", [](sd_bus_message *m, void *, sd_bus_error *) {
+            CALL_SDBUS(sd_bus_reply_method_return(m, "abab", 0, 0), ReplyError, -1);
+            return 1;
+        }, 0),
+
+        SD_BUS_SIGNAL("ItemsPropertiesUpdated", "a(ia{sv})a(ias)", 0),
+        SD_BUS_SIGNAL("LayoutUpdated", "ui", 0),
+        SD_BUS_SIGNAL("ItemActivationRequested", "iu", 0),
+
+        SD_BUS_VTABLE_END
+    };
+
+    CALL_SDBUS(sd_bus_add_object_vtable(bus_user, nullptr, "/MenuBar", "com.canonical.dbusmenu", vtable, &properties),
+               "Failed to create tray icon menu", false);
 
     return true;
 }
@@ -348,12 +544,14 @@ Options:
     // Register the tray icon
     if (!RegisterTrayIcon())
         return 1;
+    if (!RegisterTrayMenu())
+        return 1;
 
     // From here on, don't quit abruptly
     WaitForInterrupt(0);
 
     // React to main service and D-Bus events
-    for (;;) {
+    while (run) {
         struct pollfd pfds[3] = {
             { meestic_fd, 0, 0 },
             { sd_bus_get_fd(bus_sys), (short)sd_bus_get_events(bus_sys), 0 },
