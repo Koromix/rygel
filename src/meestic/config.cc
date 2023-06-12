@@ -160,6 +160,22 @@ bool LoadConfig(const char *filename, Config *out_config)
     return LoadConfig(&st, out_config);
 }
 
+static inline ConfigProfile MakeDefaultProfile(const char *name, LightMode mode)
+{
+    ConfigProfile profile;
+
+    profile.name = name;
+    profile.settings.mode = mode;
+
+    return profile;
+}
+
+void AddDefaultProfiles(Config *out_config)
+{
+    out_config->profiles.Append(MakeDefaultProfile("Enable", LightMode::Static));
+    out_config->profiles.Append(MakeDefaultProfile("Disable", LightMode::Disabled));
+}
+
 static inline int ParseHexadecimalChar(char c)
 {
     if (c >= '0' && c <= '9') {

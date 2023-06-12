@@ -329,8 +329,7 @@ Options:
 
         profile_idx = config.default_idx;
     } else {
-        config.profiles.Append({ .name = "Enable", .settings = { .mode = LightMode::Static } });
-        config.profiles.Append({ .name = "Disable", .settings = { .mode = LightMode::Disabled } });
+        AddDefaultProfiles(&config);
     }
 
     // Open the keyboard for Fn keys

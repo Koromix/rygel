@@ -30,7 +30,7 @@ struct Config {
     HeapArray<const char *> mco_stay_directories;
     HeapArray<const char *> mco_stay_filenames;
 
-    http_Config http;
+    http_Config http { 8888 };
     const char *base_url = "/";
     int max_age = 3600;
     const char *require_host = nullptr;

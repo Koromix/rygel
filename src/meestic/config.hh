@@ -46,6 +46,8 @@ extern const Span<const PredefinedColor> PredefinedColors;
 bool LoadConfig(StreamReader *st, Config *out_config);
 bool LoadConfig(const char *filename, Config *out_config);
 
+void AddDefaultProfiles(Config *out_config);
+
 bool ParseColor(Span<const char> str, RgbColor *out_color);
 
 }

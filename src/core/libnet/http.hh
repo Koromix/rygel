@@ -64,6 +64,9 @@ struct http_Config {
 
     bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
     bool Validate() const;
+
+    http_Config() = default;
+    http_Config(int port) : port(port) {}
 };
 
 struct http_RequestInfo;

@@ -206,7 +206,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
         for (int i = 0; i < 4096; i++) {
             const char *path = Fmt(&temp_alloc, "%1/blobs/%2", config.path, FmtHex(i).Pad0(-3)).ptr;
 
-            async.Run([=]() {
+            async.Run([=, this]() {
                 GET_CONNECTION(conn);
 
                 if (sftp_mkdir(conn->sftp, path, 0755) < 0) {
