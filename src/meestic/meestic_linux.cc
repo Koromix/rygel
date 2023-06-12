@@ -45,9 +45,7 @@ extern "C" const AssetInfo MeesticPng;
 static const Vec2<int> IconSizes[] = {
     { 24, 24 },
     { 32, 32 },
-    { 64, 64 },
-    { 128, 128 },
-    { 256, 256 }
+    { 64, 64 }
 };
 
 static int meestic_fd = -1;
