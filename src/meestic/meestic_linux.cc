@@ -19,7 +19,8 @@
 #include "vendor/basu/src/systemd/sd-bus.h"
 #include "vendor/stb/stb_image.h"
 #include "vendor/stb/stb_image_resize.h"
-#include "vendor/stb/stb_image_write.h"
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+#include "vendor/miniz/miniz.h"
 
 #include <poll.h>
 #include <sys/types.h>
@@ -95,6 +96,90 @@ struct IconInfo {
     Span<const Span<const uint8_t>> pixmaps;
 };
 
+// Expects RGBA32
+static void GeneratePNG(const uint8_t *data, int32_t width, int32_t height, HeapArray<uint8_t> *out_png)
+{
+    static const uint8_t header[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
+    static const uint8_t footer[] = { 0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82};
+
+    out_png->Append(header);
+
+#pragma pack(push, 1)
+    struct ChunkHeader {
+        uint32_t len;
+        uint8_t type[4];
+    };
+    struct IHDR {
+        uint32_t width;
+        uint32_t height;
+        uint8_t bit_depth;
+        uint8_t color_type;
+        uint8_t compression;
+        uint8_t filter;
+        uint8_t interlace;
+    };
+#pragma pack(pop)
+
+    // Write IHDR chunk
+    {
+        Size chunk_pos = out_png->len;
+
+        ChunkHeader chunk = {};
+        IHDR ihdr = {};
+
+        chunk.len = BigEndian((uint32_t)RG_SIZE(ihdr));
+        memcpy_safe(chunk.type, "IHDR", 4);
+        ihdr.width = BigEndian(width);
+        ihdr.height = BigEndian(width);
+        ihdr.bit_depth = 8;
+        ihdr.color_type = 6;
+        ihdr.compression = 0;
+        ihdr.filter = 0;
+        ihdr.interlace = 0;
+
+        out_png->Append(MakeSpan((const uint8_t *)&chunk, RG_SIZE(chunk)));
+        out_png->Append(MakeSpan((const uint8_t *)&ihdr, RG_SIZE(ihdr)));
+
+        // Chunk CRC-32
+        uint32_t crc = BigEndian((uint32_t)mz_crc32(MZ_CRC32_INIT, out_png->ptr + chunk_pos + 4, RG_SIZE(ihdr) + 4));
+        out_png->Append(MakeSpan((const uint8_t *)&crc, 4));
+    }
+
+    // Write image data (IDAT)
+    {
+        Size chunk_pos = out_png->len;
+
+        ChunkHeader chunk = {};
+        chunk.len = 0; // Unknown for now
+        memcpy_safe(chunk.type, "IDAT", 4);
+        out_png->Append(MakeSpan((const uint8_t *)&chunk, RG_SIZE(chunk)));
+
+        StreamWriter writer(out_png, "<png>", CompressionType::Zlib);
+        for (int y = 0; y < height; y++) {
+            writer.Write((uint8_t)0); // Scanline filter
+
+            Span<const uint8_t> scanline = MakeSpan(data + 4 * y * width, 4 * width);
+            writer.Write(scanline);
+        }
+        bool success = writer.Close();
+        RG_ASSERT(success);
+
+        // Fix length
+        {
+            uint32_t len = BigEndian((uint32_t)(out_png->len - chunk_pos - 8));
+            uint32_t *ptr = (uint32_t *)(out_png->ptr + chunk_pos);
+            memcpy(ptr, &len, RG_SIZE(len));
+        }
+
+        // Chunk CRC-32
+        uint32_t crc = BigEndian((uint32_t)mz_crc32(MZ_CRC32_INIT, out_png->ptr + chunk_pos + 4, out_png->len - chunk_pos - 4));
+        out_png->Append(MakeSpan((const uint8_t *)&crc, 4));
+    }
+
+    // End image (IEND)
+    out_png->Append(footer);
+}
+
 static IconInfo InitIcons()
 {
     static bool init = false;
@@ -130,7 +215,10 @@ static IconInfo InitIcons()
                 const char *filename = GetUserCachePath("meestic/tray.png", &icons_alloc);
 
                 if (EnsureDirectoryExists(filename)) {
-                    if (stbi_write_png(filename, size.x, size.y, 4, icon, 0)) {
+                    HeapArray<uint8_t> png;
+                    GeneratePNG(icon, size.x, size.y, &png);
+
+                    if (WriteFile(png, filename)) {
                         info.filename = filename;
                     } else {
                         UnlinkFile(filename);
