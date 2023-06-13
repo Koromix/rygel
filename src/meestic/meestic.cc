@@ -72,6 +72,9 @@ static bool ApplySandbox()
         {"nanosleep", sb_FilterAction::Allow},
         {"ioctl", sb_FilterAction::Allow},
         {"getpid", sb_FilterAction::Allow},
+        {"accept", sb_FilterAction::Allow},
+        {"accept4", sb_FilterAction::Allow},
+        {"shutdown", sb_FilterAction::Allow},
         {"recv", sb_FilterAction::Allow},
         {"recvfrom", sb_FilterAction::Allow},
         {"recvmmsg", sb_FilterAction::Allow},
@@ -392,6 +395,7 @@ Options:
             if (poll(pfds.ptr, pfds.len, -1) < 0) {
                 if (errno == EINTR) {
                     if (WaitForResult(0) == WaitForResult::Interrupt) {
+                        LogInfo("Exit requested");
                         break;
                     } else {
                         continue;
