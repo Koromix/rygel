@@ -209,8 +209,13 @@ bool sb_SandboxBuilder::Apply()
     gid_t gid = getgid();
 
     if (!uid) {
-        LogError("Refusing to sandbox as root");
-        return false;
+        int random_id = GetRandomIntSafe(58000, 60000);
+
+        RG_STATIC_ASSERT(RG_SIZE(uid_t) >= RG_SIZE(int));
+        RG_STATIC_ASSERT(RG_SIZE(gid_t) >= RG_SIZE(int));
+
+        uid = random_id;
+        gid = random_id;
     }
 
     // Start new namespace
@@ -296,6 +301,8 @@ bool sb_SandboxBuilder::Apply()
                     LogDebug("Something went wrong in the sandbox helper");
                     return false;
                 }
+
+                LogDebug("Change UID/GID to %1/%2", uid, gid);
 
                 // Set non-root container UID and GID
                 if (setresuid(uid, uid, uid) < 0 || setresgid(gid, gid, gid) < 0) {
