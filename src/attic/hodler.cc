@@ -330,7 +330,9 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
     const PageData &page = pages[page_idx];
 
     bool success = PatchFile(html, &st, [&](Span<const char> key, StreamWriter *writer) {
-        if (key == "TITLE") {
+        if (key == "BUSTER") {
+            Print(writer, "%1", FmtRandom(8));
+        } else if (key == "TITLE") {
             writer->Write(page.title);
         } else if (key == "LINKS") {
             for (Size i = 0; i < pages.len; i++) {
