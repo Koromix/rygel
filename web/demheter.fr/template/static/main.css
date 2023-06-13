@@ -266,7 +266,6 @@ footer {
 }
 
 @media screen and (max-width: 960px) {
-    nav#top.border { border-bottom: none; }
     nav#top ul {
         height: 90px;
         padding-left: 60px;
