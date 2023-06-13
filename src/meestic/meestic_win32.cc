@@ -28,6 +28,9 @@
 #include <commctrl.h>
 #include <wchar.h>
 
+// Allows some tests without the MSI Delta 15
+// #define FAKE_LIGHTS
+
 namespace RG {
 
 #define WM_APP_TRAY (WM_APP + 1)
@@ -80,6 +83,9 @@ static void ShowAboutDialog()
 
 static bool ApplyProfile(Size idx)
 {
+    LogInfo("Applying profile %1", idx);
+
+#ifndef FAKE_LIGHTS
     // Should work first time...
     {
         PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
@@ -97,6 +103,7 @@ static bool ApplyProfile(Size idx)
         return false;
     if (!ApplyLight(port, config.profiles[idx].settings))
         return false;
+#endif
 
     profile_idx = idx;
     return true;
@@ -386,14 +393,16 @@ Options:
     }
     RG_DEFER { Shell_NotifyIconA(NIM_DELETE, &notify); };
 
+#ifndef FAKE_LIGHTS
     // Open the light MSI HID device ahead of time
     port = OpenLightDevice();
     if (!port)
         return 1;
     RG_DEFER { CloseLightDevice(port); };
+#endif
 
     // Check that it works once, at least
-    if (!ApplyLight(port, config.profiles[config.default_idx].settings))
+    if (!ApplyProfile(config.default_idx))
         return 1;
 
     // Run main message loop
