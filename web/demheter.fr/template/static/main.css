@@ -30,11 +30,11 @@ body {
 }
 
 a {
-    color: #383838;
+    color: var(--color, #383838);
     cursor: pointer;
     text-decoration: underline;
 }
-a:hover { color: black; }
+a:hover { color: var(--color, black); }
 
 nav#top {
     position: sticky;
