@@ -164,7 +164,6 @@ instances/projet2.db
 instances/projet2@lille.db
 instances/projet2@paris.db
 </code></pre>
-            <p><i>Le support de PostgreSQL pour pouvoir déporter la base de données sur une autre machine est prévu pour plus tard <b>[WIP]</b>.</i></p>
             <h2 id="architecture_isolation">Isolation des services</h2>
             <p>Chaque domaine est géré par un service dédié (par exemple lancé par systemd), qui est capable de s'auto-containériser sur Linux (utilisation des capabilities POSIX, des namespaces et filtres seccomp) dans un namespace avec pratiquement aucun accès sauf au fichier SQLite.</p>
             <p>Ce service peut utiliser un seul (mode mono-processus) ou plusieurs processus (mode multi-processus <b>[WIP]</b>) pour gérer chaque projet. Dans le mode multi-processus, la communication HTTP est relayée par le processus maître au processus en charge de la gestion du projet concerné.</p>
