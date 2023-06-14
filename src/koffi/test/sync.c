@@ -71,6 +71,9 @@ typedef struct Pack3 {
     int c;
 } Pack3;
 
+typedef struct Float1 {
+    float f;
+} Float1;
 typedef struct Float2 {
     float a;
     float b;
@@ -259,6 +262,21 @@ EXPORT void FASTCALL AddPack3(int a, int b, int c, Pack3 *p)
     p->a += a;
     p->b += b;
     p->c += c;
+}
+
+EXPORT Float1 PackFloat1(float f, Float1 *out)
+{
+    Float1 ret;
+
+    ret.f = f;
+    *out = ret;
+
+    return ret;
+}
+
+EXPORT Float1 ThroughFloat1(Float1 f1)
+{
+    return f1;
 }
 
 EXPORT Float2 PackFloat2(float a, float b, Float2 *out)

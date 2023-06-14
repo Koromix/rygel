@@ -38,6 +38,9 @@ const Pack3 = koffi.struct('Pack3', {
     c: 'int'
 });
 
+const Float1 = koffi.struct('Float1', {
+    f: 'float'
+})
 const Float2 = koffi.struct('Float2', {
     a: 'float',
     b: 'float'
@@ -174,6 +177,8 @@ async function test() {
     const FillPack3 = lib.func('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
     const RetPack3 = lib.func('RetPack3', Pack3, ['int', 'int', 'int']);
     const AddPack3 = lib.fastcall('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
+    const PackFloat1 = lib.func('Float1 PackFloat1(float f, _Out_ Float1 *out)');
+    const ThroughFloat1 = lib.func('Float1 ThroughFloat1(Float1 f1)');
     const PackFloat2 = lib.func('Float2 PackFloat2(float a, float b, _Out_ Float2 *out)');
     const ThroughFloat2 = lib.func('Float2 ThroughFloat2(Float2 f2)');
     const PackFloat3 = lib.func('Float3 PackFloat3(float a, float b, float c, _Out_ Float3 *out)');
@@ -300,6 +305,13 @@ async function test() {
 
     // HFA tests
     {
+        let f1p = {};
+        let f1 = PackFloat1(2, f1p);
+        assert.deepEqual(f1, { f: 2 });
+        assert.deepEqual(f1, f1p);
+        assert.deepEqual(ThroughFloat1({ f: 2 }), f1);
+        assert.deepEqual(ThroughFloat1(f1), f1);
+
         let f2p = {};
         let f2 = PackFloat2(1.5, 3.0, f2p);
         assert.deepEqual(f2, { a: 1.5, b: 3.0 });
