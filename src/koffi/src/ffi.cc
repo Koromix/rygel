@@ -2124,8 +2124,8 @@ static void SetExports(Napi::Env env, Func func)
 
     func("struct", Napi::Function::New(env, CreatePaddedStructType));
     func("pack", Napi::Function::New(env, CreatePackedStructType));
-    // func("union", Napi::Function::New(env, CreateUnionType));
-    // func("Union", Napi::Function::New(env, InstantiateUnion));
+    func("union", Napi::Function::New(env, CreateUnionType));
+    func("Union", Napi::Function::New(env, InstantiateUnion));
     func("opaque", Napi::Function::New(env, CreateOpaqueType));
     func("pointer", Napi::Function::New(env, CreatePointerType));
     func("array", Napi::Function::New(env, CreateArrayType));
