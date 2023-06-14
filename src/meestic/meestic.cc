@@ -280,7 +280,7 @@ static int RunDaemon(Span<const char *> arguments)
     LocalArray<const char *, 4> config_filenames;
     const char *config_filename = FindConfigFile("MeesticGui.ini", &temp_alloc, &config_filenames);
     const char *socket_filename = "/run/meestic.sock";
-    bool sandbox = false;
+    bool sandbox = true;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -292,7 +292,7 @@ Options:
     %!..+-S, --socket_file <socket>%!0   Change control socket
                                  %!D..(default: %3)%!0
 
-        %!..+--sandbox%!0                Run in strict OS sandbox (if supported))",
+        %!..+--no_sandbox%!0             Disable use of sandboxing)",
                 FelixTarget, FmtSpan(config_filenames.As()), socket_filename);
     };
 
@@ -312,8 +312,8 @@ Options:
                 }
             } else if (opt.Test("-S", "--socket_file", OptionType::Value)) {
                 socket_filename = opt.current_value;
-            } else if (opt.Test("--sandbox")) {
-                sandbox = true;
+            } else if (opt.Test("--no_sandbox")) {
+                sandbox = false;
             } else if (opt.TestHasFailed()) {
                 return 1;
             }
