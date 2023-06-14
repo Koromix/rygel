@@ -35,6 +35,7 @@ const DualU = koffi.union('DualU', {
 });
 
 const MultiU = koffi.union('MultiU', {
+    d: 'double',
     f2: koffi.array('float', 2),
     u: 'uint64_t',
     raw: koffi.array('uint8_t', 8)
@@ -62,6 +63,8 @@ async function test() {
     const MakeDualUIndirect = lib.func('void MakeDualUIndirect(double d, _Out_ DualU *out)');
     const MakeMultiU = lib.func('MultiU MakeMultiU(float a, float b)');
     const MakeMultiUIndirect = lib.func('void MakeMultiUIndirect(float a, float b, _Out_ MultiU *out)');
+    const GetMultiDouble = lib.func('float GetMultiDouble(MultiU u)');
+    const GetMultiUnsigned = lib.func('float GetMultiUnsigned(MultiU u)');
 
     // Make direct single union
     {
@@ -115,5 +118,20 @@ async function test() {
         assert.equal(u.u, 4629700418002223104n);
         assert.deepEqual(u.f2, Float32Array.from([1, 3]));
         assert.deepEqual(u.raw, Uint8Array.from([0, 0, 128, 63, 0, 0, 64, 64]));
+    }
+
+    // Test simple union passing
+    {
+        assert.equal(GetMultiUnsigned(make_union('f2', [5, -4])), 0xC080000000000140);
+        assert.equal(GetMultiDouble(make_union('d', 450)), 450);
+        assert.equal(GetMultiUnsigned(make_union('d', 450)), 0x407C1FFFFFFFFFB0);
+        assert.equal(GetMultiDouble(make_union('u', 18)), 0);
+        assert.equal(GetMultiUnsigned(make_union('u', 18)), 18);
+
+        function make_union(member, value) {
+            let u = new koffi.Union(MultiU);
+            u[member] = value;
+            return u;
+        }
     }
 }

@@ -68,6 +68,7 @@ typedef union DualU {
 } DualU;
 
 typedef union MultiU {
+    double d;
     float f2[2];
     uint64_t u;
     uint8_t raw[8];
@@ -116,3 +117,6 @@ EXPORT void MakeMultiUIndirect(float a, float b, MultiU *out)
     out->f2[0] = a;
     out->f2[1] = b;
 }
+
+EXPORT float GetMultiDouble(MultiU u) { return u.d; }
+EXPORT float GetMultiUnsigned(MultiU u) { return u.u; }
