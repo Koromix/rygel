@@ -193,7 +193,7 @@ async function test() {
     const MakePolymorphBFG = lib.func('void MakePolymorphBFG(int type, int x, double y, const char *str, _Out_ void *p)');
     const ReturnBigString = process.platform == 'win32' ?
                             lib.stdcall(1, koffi.disposable('str', koffi.free), ['str']) :
-                            lib.func('const char * __stdcall ReturnBigString(const char *str)');
+                            lib.func('const char *! __stdcall ReturnBigString(const char *str)');
     const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
     const Concat16 = lib.func('const char16_t *! Concat16(const char16_t *str1, const char16_t *str2)');
     const Concat16Out = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const char16_t *!*)');
