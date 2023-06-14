@@ -75,11 +75,23 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 #if defined(_WIN32) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
     } else {
         func->ret.trivial = IsRegularSize(func->ret.type->size, 8);
+
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+        if (func->ret.type->members.len == 1) {
+            const RecordMember &member = func->ret.type->members[0];
+
+            if (member.type->primitive == PrimitiveKind::Float32) {
+                func->ret.fast = 1;
+            } else if (member.type->primitive == PrimitiveKind::Float64) {
+                func->ret.fast = 2;
+            }
+        }
+#endif
 #endif
     }
 #ifndef _WIN32
     if (fast && !func->ret.trivial) {
-        func->ret.fast = true;
+        func->ret.fast = 1;
         fast--;
     }
 #endif
@@ -87,7 +99,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
     Size params_size = 0;
     for (ParameterInfo &param: func->parameters) {
         if (fast && param.type->size <= 4) {
-            param.fast = true;
+            param.fast = 1;
             fast--;
         }
 
@@ -362,9 +374,24 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::String:
         case PrimitiveKind::String16:
         case PrimitiveKind::Pointer:
-        case PrimitiveKind::Record:
-        case PrimitiveKind::Union:
         case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(G); } break;
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
+            if (!func->ret.fast) {
+                result.u64 = PERFORM_CALL(G);
+            } else if (func->ret.fast == 1) {
+                result.f = PERFORM_CALL(F);
+            } else if (func->ret.fast == 2) {
+                result.d = PERFORM_CALL(D);
+            } else {
+                RG_UNREACHABLE();
+            }
+        } break;
+#else
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: { result.u64 = PERFORM_CALL(G); } break;
+#endif
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
         case PrimitiveKind::Float64: { result.d = PERFORM_CALL(D); } break;
