@@ -76,7 +76,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
     } else {
         func->ret.trivial = IsRegularSize(func->ret.type->size, 8);
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+    #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
         if (func->ret.type->members.len == 1) {
             const RecordMember &member = func->ret.type->members[0];
 
@@ -86,7 +86,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 func->ret.fast = 2;
             }
         }
-#endif
+    #endif
 #endif
     }
 #ifndef _WIN32
