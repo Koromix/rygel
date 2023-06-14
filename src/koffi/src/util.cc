@@ -62,7 +62,8 @@ MagicUnion::MagicUnion(const Napi::CallbackInfo &info)
 
 void MagicUnion::SetRaw(const uint8_t *ptr)
 {
-    raw = ptr;
+    raw.RemoveFrom(0);
+    raw.Append(MakeSpan(ptr, type->size));
 
     active_idx = -1;
     Value().Set("__active", Env().Undefined());
@@ -80,12 +81,12 @@ Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
     } else {
         Napi::Env env = info.Env();
 
-        if (RG_UNLIKELY(!raw)) {
+        if (RG_UNLIKELY(!raw.len)) {
             ThrowError<Napi::Error>(env, "Cannont convert %1 union value", active_idx < 0 ? "empty" : "assigned");
             return env.Null();
         }
 
-        value = Decode(env, raw, member.type);
+        value = Decode(env, raw.ptr, member.type);
 
         Value().Set("__active", value);
         active_idx = idx;
@@ -102,7 +103,7 @@ void MagicUnion::Setter(const Napi::CallbackInfo &info, const Napi::Value &value
     Value().Set("__active", value);
     active_idx = idx;
 
-    raw = nullptr;
+    raw.Clear();
 }
 
 const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
