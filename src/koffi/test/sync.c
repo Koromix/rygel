@@ -151,15 +151,6 @@ typedef struct StrStruct {
     const char16_t *str16;
 } StrStruct;
 
-typedef int STDCALL ApplyCallback(int a, int b, int c);
-typedef int IntCallback(int x);
-
-typedef struct StructCallbacks {
-    IntCallback *first;
-    IntCallback *second;
-    IntCallback *third;
-} StructCallbacks;
-
 typedef struct EndianInts {
     int16_t i16le;
     int16_t i16be;
@@ -183,10 +174,6 @@ typedef struct Vec2 {
     double x;
     double y;
 } Vec2;
-
-typedef int VectorCallback(int len, Vec2 *vec);
-typedef int SortCallback(const void *ptr1, const void *ptr2);
-typedef int CharCallback(int idx, char c);
 
 EXPORT int8_t GetMinusOne1(void)
 {
@@ -616,17 +603,6 @@ EXPORT BFG ModifyBFG(int x, double y, const char *str, BFG (*func)(BFG bfg), BFG
     return bfg;
 }
 
-EXPORT void Recurse8(int i, void (*func)(int i, int v1, double v2, int v3, int v4, int v5, int v6, float v7, int v8))
-{
-    func(i, i, (double)(i * 2), i + 1, i * 2 + 1, 3 - i, 100 + i, (float)(i % 2), -i - 1);
-}
-
-EXPORT int ApplyStd(int a, int b, int c, ApplyCallback *func)
-{
-    int ret = func(a, b, c);
-    return ret;
-}
-
 EXPORT IntContainer ArrayToStruct(int *values, int len)
 {
     IntContainer ic;
@@ -672,105 +648,6 @@ EXPORT const char16_t *ThroughStrStar16(StrStruct *s)
 {
     return s->str16;
 }
-
-EXPORT int ApplyMany(int x, IntCallback **callbacks, int length)
-{
-    for (int i = 0; i < length; i++) {
-        x = (callbacks[i])(x);
-    }
-
-    return x;
-}
-
-EXPORT int ApplyStruct(int x, StructCallbacks callbacks)
-{
-    x = callbacks.first(x);
-    x = callbacks.second(x);
-    x = callbacks.third(x);
-
-    return x;
-}
-
-static IntCallback *callback;
-
-EXPORT void SetIndirect(IntCallback *cb)
-{
-    callback = cb;
-}
-
-EXPORT int CallIndirect(int x)
-{
-    return callback(x);
-}
-
-#ifdef _WIN32
-
-typedef struct CallContext {
-    IntCallback *callback;
-    int *ptr;
-} CallContext;
-
-static DWORD WINAPI CallThreadedFunc(void *udata)
-{
-    CallContext *ctx = (CallContext *)udata;
-    *ctx->ptr = ctx->callback(*ctx->ptr);
-
-    return 0;
-}
-
-EXPORT int CallThreaded(IntCallback *func, int x)
-{
-    CallContext ctx;
-
-    ctx.callback = func ? func : callback;
-    ctx.ptr = &x;
-
-    HANDLE h = CreateThread(NULL, 0, CallThreadedFunc, &ctx, 0, NULL);
-    if (!h) {
-        perror("CreateThread");
-        exit(1);
-    }
-
-    WaitForSingleObject(h, INFINITE);
-    CloseHandle(h);
-
-    return x;
-}
-
-#else
-
-typedef struct CallContext {
-    IntCallback *callback;
-    int *ptr;
-} CallContext;
-
-static void *CallThreadedFunc(void *udata)
-{
-    CallContext *ctx = (CallContext *)udata;
-    *ctx->ptr = ctx->callback(*ctx->ptr);
-
-    return NULL;
-}
-
-EXPORT int CallThreaded(IntCallback *func, int x)
-{
-    CallContext ctx;
-
-    ctx.callback = func ? func : callback;
-    ctx.ptr = &x;
-
-    pthread_t thread;
-    if (pthread_create(&thread, NULL, CallThreadedFunc, &ctx)) {
-        perror("pthread_create");
-        exit(1);
-    }
-
-    pthread_join(thread, NULL);
-
-    return x;
-}
-
-#endif
 
 EXPORT void ReverseBytes(void *p, int len)
 {
@@ -820,20 +697,6 @@ EXPORT BigText ReverseBigText(BigText buf)
     return ret;
 }
 
-EXPORT int MakeVectors(int len, VectorCallback *func)
-{
-    Vec2 vectors[512];
-
-    for (int i = 0; i < len; i++) {
-        vectors[i].x = (double)i;
-        vectors[i].y = (double)-i;
-    }
-
-    int ret = func(len, vectors);
-
-    return ret;
-}
-
 EXPORT size_t UpperCaseStrAscii(const char *str, char *out)
 {
     size_t len = 0;
@@ -872,21 +735,6 @@ EXPORT size_t UpperCaseStrAscii16(const char16_t *str, char16_t *out)
     out[len] = 0;
 
     return len;
-}
-
-EXPORT void CallQSort(void *base, size_t nmemb, size_t size, SortCallback *cb)
-{
-    qsort(base, nmemb, size, cb);
-}
-
-EXPORT int CallMeChar(CharCallback *func)
-{
-    int ret = 0;
-
-    ret += func(0, 'a');
-    ret += func(1, 'b');
-
-    return ret;
 }
 
 EXPORT void ChangeDirectory(const char *dirname)

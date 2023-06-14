@@ -52,7 +52,7 @@ async function main() {
 }
 
 async function test() {
-    const lib_filename = __dirname + '/build/misc' + koffi.extension;
+    const lib_filename = __dirname + '/build/async' + koffi.extension;
     const lib = koffi.load(lib_filename);
 
     const ConcatenateToInt1 = lib.func('ConcatenateToInt1', 'int64_t', Array(12).fill('int8_t'));

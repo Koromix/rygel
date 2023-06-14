@@ -71,7 +71,7 @@ async function main() {
 }
 
 async function test() {
-    const lib_filename = __dirname + '/build/misc' + koffi.extension;
+    const lib_filename = __dirname + '/build/callbacks' + koffi.extension;
     const lib = koffi.load(lib_filename);
 
     const CallJS = lib.func('int CallJS(const char *str, SimpleCallback *cb)');

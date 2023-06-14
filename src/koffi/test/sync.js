@@ -158,7 +158,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = __dirname + '/build/misc' + koffi.extension;
+    let lib_filename = __dirname + '/build/sync' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');

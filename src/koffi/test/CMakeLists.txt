@@ -115,17 +115,21 @@ if(WIN32)
     target_compile_definitions(sqlite3 PRIVATE SQLITE_API=__declspec\(dllexport\))
 endif()
 
-# ---- Misc ----
+# ---- Test code ----
 
-add_library(misc SHARED misc.c)
-set_target_properties(misc PROPERTIES PREFIX "")
+add_library(sync SHARED sync.c)
+set_target_properties(sync PROPERTIES PREFIX "")
 
 if(MSVC)
-    target_compile_options(misc PRIVATE /wd4116)
-    target_link_options(misc PRIVATE "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/misc.def")
+    target_compile_options(sync PRIVATE /wd4116)
+    target_link_options(sync PRIVATE "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/sync.def")
 endif()
 
-# ---- Win32 ----
+add_library(async SHARED async.c)
+set_target_properties(async PROPERTIES PREFIX "")
+
+add_library(callbacks SHARED callbacks.c)
+set_target_properties(callbacks PROPERTIES PREFIX "")
 
 if(WIN32)
     add_library(win32 SHARED win32.c)
