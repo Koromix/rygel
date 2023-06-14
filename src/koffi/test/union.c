@@ -58,6 +58,10 @@
     #define STDCALL
 #endif
 
+typedef union SingleU {
+    float f;
+} SingleU;
+
 typedef union DualU {
     double d;
     uint64_t u;
@@ -68,6 +72,20 @@ typedef union MultiU {
     uint64_t u;
     uint8_t raw[8];
 } MultiU;
+
+EXPORT SingleU MakeSingleU(float f)
+{
+    SingleU u;
+
+    u.f = f;
+
+    return u;
+}
+
+EXPORT void MakeSingleUIndirect(float f, SingleU *out)
+{
+    out->f = f;
+}
 
 EXPORT DualU MakeDualU(double d)
 {

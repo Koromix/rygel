@@ -25,6 +25,10 @@ const koffi = require('./build/koffi.node');
 const assert = require('assert');
 const util = require('util');
 
+const SingleU = koffi.union('SingleU', {
+    f: 'float'
+});
+
 const DualU = koffi.union('DualU', {
     d: 'double',
     u: 'uint64_t'
@@ -52,10 +56,28 @@ async function test() {
     let lib_filename = __dirname + '/build/union' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
+    const MakeSingleU = lib.func('SingleU MakeSingleU(float f)');
+    const MakeSingleUIndirect = lib.func('void MakeSingleUIndirect(float f, _Out_ SingleU *out)');
     const MakeDualU = lib.func('DualU MakeDualU(double d)');
     const MakeDualUIndirect = lib.func('void MakeDualUIndirect(double d, _Out_ DualU *out)');
     const MakeMultiU = lib.func('MultiU MakeMultiU(float a, float b)');
     const MakeMultiUIndirect = lib.func('void MakeMultiUIndirect(float a, float b, _Out_ MultiU *out)');
+
+    // Make direct single union
+    {
+        let u = MakeSingleU(-2);
+
+        assert.equal(u.f, -2);
+    }
+
+    // Make indirect single union
+    {
+        let ptr = [null];
+        MakeSingleUIndirect(42, ptr);
+        let u = ptr[0];
+
+        assert.equal(u.f, 42);
+    }
 
     // Make direct dual union
     {
