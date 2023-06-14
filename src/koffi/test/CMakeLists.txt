@@ -131,6 +131,9 @@ set_target_properties(async PROPERTIES PREFIX "")
 add_library(callbacks SHARED callbacks.c)
 set_target_properties(callbacks PROPERTIES PREFIX "")
 
+add_library(union SHARED union.c)
+set_target_properties(union PROPERTIES PREFIX "")
+
 if(WIN32)
     add_library(win32 SHARED win32.c)
     set_target_properties(win32 PROPERTIES PREFIX "")
