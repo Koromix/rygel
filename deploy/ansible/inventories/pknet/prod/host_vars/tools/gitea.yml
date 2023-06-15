@@ -28,6 +28,9 @@ gitea_smtp:
   from: noreply@goupile.fr
 
 gitea_config:
+  i18n: |
+    LANGS = fr-FR,en-US
+    NAMES = Français,English
   service: |
     REGISTER_EMAIL_CONFIRM = true
     REGISTER_MANUAL_CONFIRM = true
