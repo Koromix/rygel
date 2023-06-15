@@ -19,6 +19,15 @@
     state: latest
   become: yes
 
+- name: Prepare rclone base directory
+  file:
+    path: '{{ rclone_root_path }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
 - name: Fetch rclone package
   get_url:
     url: '{{ rclone_url }}'
@@ -30,15 +39,6 @@
   apt:
     deb: '{{ rclone_root_path }}/rclone.deb'
     state: present
-  become: yes
-
-- name: Prepare rclone base directory
-  file:
-    path: '{{ rclone_root_path }}'
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
   become: yes
 
 - name: Create rclone config
