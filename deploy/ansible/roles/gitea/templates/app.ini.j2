@@ -34,8 +34,13 @@ FROM = {{ gitea_smtp.from }}
 
 {%- endif %}
 
+[session]
+COOKIE_SECURE = true
+
+{{ gitea_config.session | default('') }}
+
 {% for section, config in gitea_config.items() %}
-{% if section != 'server' and section != 'security' -%}
+{% if section != 'server' and section != 'security' and section != 'session' -%}
 
 [{{ section }}]
 {{ config }}
