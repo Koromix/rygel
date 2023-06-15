@@ -1,0 +1,33 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+gitea_name: F2RSMpsy
+gitea_domain: git.f2rsmpsy.org
+
+gitea_smtp:
+  protocol: smtps
+  host: mail.gandi.net:465
+  username: noreply@goupile.fr
+  password: !vault |
+    $ANSIBLE_VAULT;1.1;AES256
+    31346166613462613537613331623533323331303561386339376238316563636264353235383765
+    3237383439633735646638343361343731313734633137650a666162323732346433636334393437
+    33643038366438373633326564623465306632383435396132303030333962623932643130356564
+    6137366130323864650a396264396433623163333334323130666237633063366364363166393337
+    30323535343731323262326231386237653665663137313963303930336266623039
+  from: noreply@goupile.fr
+
+gitea_config:
+  service: |
+    REGISTER_EMAIL_CONFIRM = true
+    REGISTER_MANUAL_CONFIRM = true

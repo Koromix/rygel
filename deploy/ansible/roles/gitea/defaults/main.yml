@@ -11,8 +11,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-all:
-  hosts:
-    host1:
-    monitor:
-    tools:
+gitea_url: https://dl.gitea.com/gitea/1.19.3/gitea-1.19.3-linux-amd64
+gitea_checksum: 'sha256:1865e72b1302e2bae0a357b30fd747b770b622198e155c2bdf776cfbffca38b7'
+
+gitea_root_path: /opt/gitea
+
+gitea_port: 3000
+gitea_config:
+
+# gitea_name:
+# gitea_domain:
+# gitea_smtp:

@@ -1,0 +1,44 @@
+APP_NAME = {{ gitea_name }}
+RUN_MODE = prod
+
+[server]
+HTTP_ADDR = 127.0.0.1
+HTTP_PORT = {{ gitea_port }}
+ROOT_URL = https://{{ gitea_domain }}
+
+{{ gitea_config.server | default('') }}
+
+[database]
+DB_TYPE = sqlite3
+SQLITE_JOURNAL_MODE = WAL
+
+[security]
+INSTALL_LOCK = true
+SECRET_KEY_URI = file:{{ gitea_root_path }}/etc/secret_key
+INTERNAL_TOKEN_URI = file:{{ gitea_root_path }}/etc/internal_token
+
+{{ gitea_config.security | default('') }}
+
+{% if gitea_smtp is defined -%}
+
+[mailer]
+ENABLED = true
+PROTOCOL = {{ gitea_smtp.protocol }}
+SMTP_ADDR = {{ gitea_smtp.host | split(':') | first }}
+SMTP_PORT = {{ gitea_smtp.host | split(':') | last }}
+{% if gitea_smtp.username is defined %}
+USER = {{ gitea_smtp.username }}
+PASSWD = {{ gitea_smtp.password }}
+{% endif %}
+FROM = {{ gitea_smtp.from }}
+
+{%- endif %}
+
+{% for section, config in gitea_config.items() %}
+{% if section != 'server' and section != 'security' -%}
+
+[{{ section }}]
+{{ config }}
+
+{%- endif %}
+{% endfor %}

@@ -23,6 +23,10 @@
       when: 'nginx_domains is defined'
       tags:
         - nginx
+    - name: gitea
+      when: 'gitea_name is defined'
+      tags:
+        - gitea
     - name: goupile
       when: 'goupile_domains is defined'
       tags:
@@ -47,4 +51,3 @@
       when: 'napka_name is defined'
       tags:
         - napka
-

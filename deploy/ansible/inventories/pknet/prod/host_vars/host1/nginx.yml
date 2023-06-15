@@ -32,7 +32,9 @@ nginx_domains:
           proxy_pass http://127.0.0.1:{{ prometheus_packages[exporter].port }}/metrics;
       }
       {% endfor %}
+
   - name: anesth-lille.goupile.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           proxy_http_version 1.1;
@@ -46,8 +48,9 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/anesth-lille.goupile.fr.sock:;
       }
-    ssl_certbot_email: niels.martignene@protonmail.com
+
   - name: biosurv.goupile.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           proxy_http_version 1.1;
@@ -61,8 +64,9 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/biosurv.goupile.fr.sock:;
       }
-    ssl_certbot_email: niels.martignene@protonmail.com
+
   - name: cn2r.goupile.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           proxy_http_version 1.1;
@@ -76,8 +80,9 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/cn2r.goupile.fr.sock:;
       }
-    ssl_certbot_email: niels.martignene@protonmail.com
+
   - name: medita.goupile.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           proxy_http_version 1.1;
@@ -91,8 +96,9 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/medita.goupile.fr.sock:;
       }
-    ssl_certbot_email: niels.martignene@protonmail.com
+
   - name: test.goupile.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           proxy_http_version 1.1;
@@ -106,9 +112,9 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/test.goupile.fr.sock:;
       }
-    ssl_certbot_email: niels.martignene@protonmail.com
 
   - name: f2rsm.goupile.org
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           proxy_http_version 1.1;
@@ -129,24 +135,9 @@ nginx_domains:
       location /annuaire/ {
           proxy_pass https://carto.koromix.dev/3114/;
       }
-    ssl_certbot_email: niels.martignene@protonmail.com
 
-  - name: thop.koromix.dev
-    config: |
-      location / {
-          proxy_http_version 1.1;
-          proxy_request_buffering off;
-          proxy_buffering on;
-          proxy_read_timeout 180;
-          send_timeout 180;
-
-          proxy_set_header Host $host;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-          proxy_pass http://unix:/run/thop/thop.sock:;
-      }
-    ssl_certbot_email: niels.martignene@protonmail.com
   - name: forparis.goupile.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           proxy_http_version 1.1;
@@ -160,8 +151,9 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/forparis.goupile.fr.sock:;
       }
-    ssl_certbot_email: niels.martignene@protonmail.com
+
   - name: goupile.interhop.org
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           proxy_http_version 1.1;
@@ -175,8 +167,9 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/goupile.interhop.org.sock:;
       }
-    ssl_certbot_email: niels.martignene@protonmail.com
+
   - name: eval1.goupile.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           proxy_http_version 1.1;
@@ -190,4 +183,3 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/eval1.goupile.fr.sock:;
       }
-    ssl_certbot_email: niels.martignene@protonmail.com

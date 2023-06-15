@@ -11,8 +11,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-all:
-  hosts:
-    host1:
-    monitor:
-    tools:
+ansible_host: 192.168.192.180
+ansible_port: 22
+ansible_user: debian
+ansible_python_interpreter: /usr/bin/python3
+
+# Keep SSH public for gitea
+
+ufw_rules:
+  - rule: allow
+    port: 22
+    proto: tcp
+  - rule: allow
+    port: 80
+    proto: tcp
+  - rule: allow
+    port: 443
+    proto: tcp
+  - rule: allow
+    port: 9993
+    proto: udp

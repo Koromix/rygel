@@ -11,8 +11,4 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-all:
-  hosts:
-    host1:
-    monitor:
-    tools:
+thop_tables: 'https://koromix.dev/files/drd/tables_latest.zip'
