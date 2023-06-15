@@ -15,8 +15,8 @@ gitea_name: F2RSMpsy
 gitea_domain: git.f2rsmpsy.org
 
 gitea_smtp:
-  protocol: smtps
-  host: mail.gandi.net:465
+  protocol: smtp+starttls
+  host: mail.gandi.net:587
   username: noreply@goupile.fr
   password: !vault |
     $ANSIBLE_VAULT;1.1;AES256
