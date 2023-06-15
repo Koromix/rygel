@@ -203,15 +203,11 @@ const thop = new function() {
         {
             // We'll parse it manually to revive dates. It's relatively small anyway.
             let url = util.pasteURL(`${ENV.base_url}api/user/settings`, { rnd: user.getSessionRnd() });
-            let json = await net.get(url);
+            let new_settings = await net.get(url);
 
-            settings = JSON.parse(json, (key, value) => {
-                if (typeof value === 'string' && value.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) {
-                    return dates.parse(value);
-                } else {
-                    return value;
-                }
-            });
+            fixDates(new_settings);
+
+            settings = new_settings;
             settings_rnd = user.getSessionRnd();
         }
 
@@ -224,6 +220,21 @@ const thop = new function() {
                     html`${settings.username} (<a href=${user.makeURL({ mode: 'login' })}>changer</a>,
                                                <a @click=${handleLogoutClick}>déconnexion</a>)` : ''}
             `, document.querySelector('#th_session'));
+        }
+    }
+
+    function fixDates(obj) {
+        for (let key in obj) {
+            let value = obj[key];
+
+            if (typeof value == 'string' && value.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)) {
+               obj[key] = dates.parse(value);
+            } else if (Array.isArray(value)) {
+                for (let item of value)
+                    fixDates(item);
+            } else if (util.isPodObject(value)) {
+                fixDates(value);
+            }
         }
     }
 
