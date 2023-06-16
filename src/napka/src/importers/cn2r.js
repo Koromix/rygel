@@ -137,7 +137,7 @@ async function run() {
         let rows = db.prepare(`SELECT e.id, json_extract(e.main, '$.finess') AS finess FROM entries e
                                    INNER JOIN layers l ON (l.id = e.layer_id)
                                    INNER JOIN maps m ON (m.id = l.map_id)
-                                   WHERE m.name = 'cn2r'`).all();
+                                   WHERE m.name = 'cn2r' AND l.name = 'etablissements'`).all();
 
         for (let row of rows) {
             let match = finesses.prepare('SELECT codesph FROM finess WHERE nofinesset = ? OR nofinessej = ?').get(row.finess, row.finess);
@@ -159,7 +159,7 @@ async function run() {
                                             json_extract(e.main, '$.rdv_horaires_str') AS rdv_horaires_str FROM entries e
                                    INNER JOIN layers l ON (l.id = e.layer_id)
                                    INNER JOIN maps m ON (m.id = l.map_id)
-                                   WHERE m.name = 'cn2r'`).all();
+                                   WHERE m.name = 'cn2r' AND l.name = 'etablissements'`).all();
 
         for (let row of rows) {
             if (row.rdv_horaires_str != null) {
@@ -185,6 +185,27 @@ async function run() {
             }
 
             db.prepare(`UPDATE entries SET main = json_remove(main, '$.rdv_horaires_str') WHERE id = ?`).run(row.id);
+        }
+    })();
+
+    // Clean up various existing fields
+    db.transaction(() => {
+        let rows = db.prepare(`SELECT e.id, e.main FROM entries e
+                                   INNER JOIN layers l ON (l.id = e.layer_id)
+                                   INNER JOIN maps m ON (m.id = l.map_id)
+                                   WHERE m.name = 'cn2r' AND l.name = 'etablissements'`).all();
+
+        for (let row of rows) {
+            let main = JSON.parse(row.main);
+
+            main.etab_web = parse.cleanURL(main.etab_web);
+            main.rdv_fixe = parse.cleanPhoneNumber(main.rdv_fixe);
+            main.rdv_portable = parse.cleanPhoneNumber(main.rdv_portable);
+            main.rdv_mail = parse.cleanMail(main.rdv_mail);
+            main.rdv_web = parse.cleanURL(main.rdv_web);
+            main.engag_mail = parse.cleanMail(main.engag_mail);
+
+            db.prepare(`UPDATE entries SET main = ? WHERE id = ?`).run(JSON.stringify(main), row.id);
         }
     })();
 
