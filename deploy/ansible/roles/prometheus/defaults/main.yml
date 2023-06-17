@@ -51,7 +51,7 @@ prometheus_packages:
   systemd_exporter:
     url: 'https://github.com/pelov/systemd_exporter/releases/download/v0.5.0%2Bcpu_stat1/systemd_exporter-0.5.0.linux-amd64.tar.gz'
     checksum: 'sha256:1e75c6fed8952d92372db6c1e0122a7c2bd53cc5ab4f6dd08df6b8bb98c4b22e'
-    binary: systemd_exporter-0.4.0.linux-amd64/systemd_exporter
+    binary: systemd_exporter-0.5.0.linux-amd64/systemd_exporter
     port: 9558
     args: |
       --web.listen-address 127.0.0.1:9558
