@@ -14,12 +14,8 @@
 rclone_directories:
   - src: /opt/nginx
     dest: pknet/prod/tools/opt/nginx
-  - src: '{{ goupile_root_path }}/sync'
-    dest: 'pknet/prod/host1{{ goupile_root_path }}/sync'
-  - src: '{{ goupile_archive_path }}/'
-    dest: 'pknet/prod/host1{{ goupile_archive_path }}'
-  - src: '{{ goupile_snapshot_path }}/'
-    dest: 'pknet/prod/host1{{ goupile_snapshot_path }}'
+  - src: '{{ gitea_root_path }}'
+    dest: 'pknet/prod/tools{{ gitea_root_path }}'
 
 rclone_key: !vault |
   $ANSIBLE_VAULT;1.1;AES256
