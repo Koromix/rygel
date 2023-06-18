@@ -1454,6 +1454,35 @@ Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     return TranslateAsyncCall(func, func->native, info);
 }
 
+extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+{
+    if (RG_LIKELY(exec_call)) {
+        exec_call->RelaySafe(idx, own_sp, caller_sp, false, out_reg);
+    } else {
+        // This happens if the callback pointer is called from a different thread
+        // than the one that runs the FFI call (sync or async).
+
+        TrampolineInfo *trampoline = &shared.trampolines[idx];
+
+        Napi::Env env = trampoline->func.Env();
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+        InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
+        if (RG_UNLIKELY(!mem)) {
+            ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
+            return;
+        }
+
+        // Avoid triggering the "use callback beyond FFI" check
+        RG_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
+        trampoline->generation = -1;
+
+        // We set dispose_call to true so that the main thread will dispose of CallData itself
+        CallData call(env, instance, mem);
+        call.RelaySafe(idx, own_sp, caller_sp, true, out_reg);
+    }
+}
+
 static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConvention convention)
 {
     Napi::Env env = info.Env();
@@ -1728,6 +1757,116 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     return env.Undefined();
 }
 
+static Napi::Value CastValue(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (RG_UNLIKELY(info.Length() < 2)) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    Napi::Value value = info[0];
+
+    const TypeInfo *type = ResolveType(info[1]);
+    if (RG_UNLIKELY(!type))
+        return env.Null();
+    if (type->primitive != PrimitiveKind::Pointer &&
+            type->primitive != PrimitiveKind::String &&
+            type->primitive != PrimitiveKind::String16) {
+        ThrowError<Napi::TypeError>(env, "Only pointer or string types can be used for casting");
+        return env.Null();
+    }
+
+    ValueCast *cast = new ValueCast;
+
+    cast->ref.Reset(value, 1);
+    cast->type = type;
+
+    Napi::External<ValueCast> external = Napi::External<ValueCast>::New(env, cast, [](Napi::Env, ValueCast *cast) { delete cast; });
+    SetValueTag(instance, external, &CastMarker);
+
+    return external;
+}
+
+static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
+    bool has_len = (info.Length() >= 3u + has_offset && info[2u + has_offset].IsNumber());
+
+    if (RG_UNLIKELY(info.Length() < 2u + has_offset)) {
+        ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, info.Length());
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(info[1u + has_offset]);
+    if (RG_UNLIKELY(!type))
+        return env.Null();
+
+    Napi::Value value = info[0];
+    int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
+
+    if (has_len) {
+        Size len = info[2u + has_offset].As<Napi::Number>();
+
+        Napi::Value ret = Decode(value, offset, type, &len);
+        return ret;
+    } else {
+        Napi::Value ret = Decode(value, offset, type);
+        return ret;
+    }
+}
+
+static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+
+    void *ptr = nullptr;
+    if (!GetExternalPointer(env, info[0], &ptr))
+        return env.Null();
+
+    uint64_t ptr64 = (uint64_t)(uintptr_t)ptr;
+    Napi::BigInt bigint = Napi::BigInt::New(env, ptr64);
+
+    return bigint;
+}
+
+static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (RG_UNLIKELY(info.Length() < 2)) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    void *ptr = nullptr;
+    if (RG_UNLIKELY(!GetExternalPointer(env, info[0], &ptr)))
+        return env.Null();
+
+    const TypeInfo *type = ResolveType(info[1]);
+    if (RG_UNLIKELY(!type))
+        return env.Null();
+    if (RG_UNLIKELY(type->primitive != PrimitiveKind::Prototype)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+
+    const FunctionInfo *proto = type->ref.proto;
+
+    return proto->variadic ? TranslateVariadicCall(proto, ptr, info)
+                           : TranslateNormalCall(proto, ptr, info);
+}
+
 void LibraryHolder::Unload()
 {
 #ifdef _WIN32
@@ -1754,6 +1893,45 @@ void LibraryHolder::Unref() const
     if (!--refcount) {
         delete this;
     }
+}
+
+FunctionInfo::~FunctionInfo()
+{
+    if (lib) {
+        lib->Unref();
+    }
+}
+
+const FunctionInfo *FunctionInfo::Ref() const
+{
+    refcount++;
+    return this;
+}
+
+void FunctionInfo::Unref() const
+{
+    if (!--refcount) {
+        delete this;
+    }
+}
+
+InstanceMemory::~InstanceMemory()
+{
+#ifdef _WIN32
+    if (stack.ptr) {
+        VirtualFree(stack.ptr, 0, MEM_RELEASE);
+    }
+    if (heap.ptr) {
+        VirtualFree(heap.ptr, 0, MEM_RELEASE);
+    }
+#else
+    if (stack.ptr) {
+        munmap(stack.ptr, stack.len);
+    }
+    if (heap.ptr) {
+        munmap(heap.ptr, heap.len);
+    }
+#endif
 }
 
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
@@ -1885,51 +2063,15 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     return types;
 }
 
-FunctionInfo::~FunctionInfo()
-{
-    if (lib) {
-        lib->Unref();
-    }
-}
-
-const FunctionInfo *FunctionInfo::Ref() const
-{
-    refcount++;
-    return this;
-}
-
-void FunctionInfo::Unref() const
-{
-    if (!--refcount) {
-        delete this;
-    }
-}
-
-InstanceMemory::~InstanceMemory()
-{
-#ifdef _WIN32
-    if (stack.ptr) {
-        VirtualFree(stack.ptr, 0, MEM_RELEASE);
-    }
-    if (heap.ptr) {
-        VirtualFree(heap.ptr, 0, MEM_RELEASE);
-    }
-#else
-    if (stack.ptr) {
-        munmap(stack.ptr, stack.len);
-    }
-    if (heap.ptr) {
-        munmap(heap.ptr, heap.len);
-    }
-#endif
-}
-
 static InstanceData *CreateInstance(Napi::Env env)
 {
     InstanceData *instance = new InstanceData();
     RG_DEFER_N(err_guard) { delete instance; };
 
     instance->main_thread_id = std::this_thread::get_id();
+
+    instance->debug = GetDebugFlag("DUMP_CALLS");
+    FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
     if (napi_create_threadsafe_function(env, nullptr, nullptr,
                                         Napi::String::New(env, "Koffi Async Callback Broker"),
@@ -1949,6 +2091,81 @@ static InstanceData *CreateInstance(Napi::Env env)
 
     err_guard.Disable();
     return instance;
+}
+
+static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
+{
+    InstanceData *instance = CreateInstance(env);
+    RG_CRITICAL(instance, "Failed to initialize Koffi");
+
+    env.SetInstanceData(instance);
+
+    exports.Set("config", Napi::Function::New(env, GetSetConfig));
+    exports.Set("stats", Napi::Function::New(env, GetStats));
+
+    exports.Set("struct", Napi::Function::New(env, CreatePaddedStructType));
+    exports.Set("pack", Napi::Function::New(env, CreatePackedStructType));
+    exports.Set("union", Napi::Function::New(env, CreateUnionType));
+    exports.Set("Union", Napi::Function::New(env, InstantiateUnion));
+    exports.Set("opaque", Napi::Function::New(env, CreateOpaqueType));
+    exports.Set("pointer", Napi::Function::New(env, CreatePointerType));
+    exports.Set("array", Napi::Function::New(env, CreateArrayType));
+    exports.Set("proto", Napi::Function::New(env, CreateFunctionType));
+    exports.Set("alias", Napi::Function::New(env, CreateTypeAlias));
+
+    exports.Set("sizeof", Napi::Function::New(env, GetTypeSize));
+    exports.Set("alignof", Napi::Function::New(env, GetTypeAlign));
+    exports.Set("offsetof", Napi::Function::New(env, GetMemberOffset));
+    exports.Set("resolve", Napi::Function::New(env, GetResolvedType));
+    exports.Set("introspect", Napi::Function::New(env, GetTypeDefinition));
+
+    exports.Set("load", Napi::Function::New(env, LoadSharedLibrary));
+
+    exports.Set("in", Napi::Function::New(env, MarkIn));
+    exports.Set("out", Napi::Function::New(env, MarkOut));
+    exports.Set("inout", Napi::Function::New(env, MarkInOut));
+
+    exports.Set("disposable", Napi::Function::New(env, CreateDisposableType));
+    exports.Set("free", Napi::Function::New(env, CallFree));
+
+    exports.Set("register", Napi::Function::New(env, RegisterCallback));
+    exports.Set("unregister", Napi::Function::New(env, UnregisterCallback));
+
+    exports.Set("as", Napi::Function::New(env, CastValue));
+    exports.Set("decode", Napi::Function::New(env, DecodeValue));
+    exports.Set("address", Napi::Function::New(env, GetPointerAddress));
+    exports.Set("call", Napi::Function::New(env, CallPointerSync));
+
+    exports.Set("errno", Napi::Function::New(env, GetOrSetErrNo));
+
+    Napi::Object os = Napi::Object::New(env);
+    exports.Set("os", os);
+
+    // Init constants mapping
+    {
+        Napi::Object codes = Napi::Object::New(env);
+
+        for (const ErrnoCodeInfo &info: ErrnoCodes) {
+            codes.Set(info.name, Napi::Number::New(env, info.value));
+        }
+
+        os.Set("errno", codes);
+    }
+
+#if defined(_WIN32)
+    exports.Set("extension", Napi::String::New(env, ".dll"));
+#elif defined(__APPLE__)
+    exports.Set("extension", Napi::String::New(env, ".dylib"));
+#else
+    exports.Set("extension", Napi::String::New(env, ".so"));
+#endif
+
+    Napi::Object types = InitBaseTypes(env);
+    exports.Set("types", types);
+
+    exports.Set("internal", Napi::Boolean::New(env, false));
+
+    return exports;
 }
 
 InstanceData::~InstanceData()
@@ -1977,280 +2194,6 @@ InstanceData::~InstanceData()
     }
 }
 
-static Napi::Value CastValue(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (RG_UNLIKELY(info.Length() < 2)) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
-        return env.Null();
-    }
-
-    Napi::Value value = info[0];
-
-    const TypeInfo *type = ResolveType(info[1]);
-    if (RG_UNLIKELY(!type))
-        return env.Null();
-    if (type->primitive != PrimitiveKind::Pointer &&
-            type->primitive != PrimitiveKind::String &&
-            type->primitive != PrimitiveKind::String16) {
-        ThrowError<Napi::TypeError>(env, "Only pointer or string types can be used for casting");
-        return env.Null();
-    }
-
-    ValueCast *cast = new ValueCast;
-
-    cast->ref.Reset(value, 1);
-    cast->type = type;
-
-    Napi::External<ValueCast> external = Napi::External<ValueCast>::New(env, cast, [](Napi::Env, ValueCast *cast) { delete cast; });
-    SetValueTag(instance, external, &CastMarker);
-
-    return external;
-}
-
-static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
-    bool has_len = (info.Length() >= 3u + has_offset && info[2u + has_offset].IsNumber());
-
-    if (RG_UNLIKELY(info.Length() < 2u + has_offset)) {
-        ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, info.Length());
-        return env.Null();
-    }
-
-    const TypeInfo *type = ResolveType(info[1u + has_offset]);
-    if (RG_UNLIKELY(!type))
-        return env.Null();
-
-    Napi::Value value = info[0];
-    int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
-
-    if (has_len) {
-        Size len = info[2u + has_offset].As<Napi::Number>();
-
-        Napi::Value ret = Decode(value, offset, type, &len);
-        return ret;
-    } else {
-        Napi::Value ret = Decode(value, offset, type);
-        return ret;
-    }
-}
-
-static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
-        return env.Null();
-    }
-
-    void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[0], &ptr))
-        return env.Null();
-
-    uint64_t ptr64 = (uint64_t)(uintptr_t)ptr;
-    Napi::BigInt bigint = Napi::BigInt::New(env, ptr64);
-
-    return bigint;
-}
-
-static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (RG_UNLIKELY(info.Length() < 2)) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
-        return env.Null();
-    }
-
-    void *ptr = nullptr;
-    if (RG_UNLIKELY(!GetExternalPointer(env, info[0], &ptr)))
-        return env.Null();
-
-    const TypeInfo *type = ResolveType(info[1]);
-    if (RG_UNLIKELY(!type))
-        return env.Null();
-    if (RG_UNLIKELY(type->primitive != PrimitiveKind::Prototype)) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
-        return env.Null();
-    }
-
-    const FunctionInfo *proto = type->ref.proto;
-
-    return proto->variadic ? TranslateVariadicCall(proto, ptr, info)
-                           : TranslateNormalCall(proto, ptr, info);
-}
-
-extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
-{
-    if (RG_LIKELY(exec_call)) {
-        exec_call->RelaySafe(idx, own_sp, caller_sp, false, out_reg);
-    } else {
-        // This happens if the callback pointer is called from a different thread
-        // than the one that runs the FFI call (sync or async).
-
-        TrampolineInfo *trampoline = &shared.trampolines[idx];
-
-        Napi::Env env = trampoline->func.Env();
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-        InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
-        if (RG_UNLIKELY(!mem)) {
-            ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
-            return;
-        }
-
-        // Avoid triggering the "use callback beyond FFI" check
-        RG_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
-        trampoline->generation = -1;
-
-        // We set dispose_call to true so that the main thread will dispose of CallData itself
-        CallData call(env, instance, mem);
-        call.RelaySafe(idx, own_sp, caller_sp, true, out_reg);
-    }
-}
-
-template <typename Func>
-static void SetExports(Napi::Env env, Func func)
-{
-    func("config", Napi::Function::New(env, GetSetConfig));
-    func("stats", Napi::Function::New(env, GetStats));
-
-    func("struct", Napi::Function::New(env, CreatePaddedStructType));
-    func("pack", Napi::Function::New(env, CreatePackedStructType));
-    func("union", Napi::Function::New(env, CreateUnionType));
-    func("Union", Napi::Function::New(env, InstantiateUnion));
-    func("opaque", Napi::Function::New(env, CreateOpaqueType));
-    func("pointer", Napi::Function::New(env, CreatePointerType));
-    func("array", Napi::Function::New(env, CreateArrayType));
-    func("proto", Napi::Function::New(env, CreateFunctionType));
-    func("alias", Napi::Function::New(env, CreateTypeAlias));
-
-    func("sizeof", Napi::Function::New(env, GetTypeSize));
-    func("alignof", Napi::Function::New(env, GetTypeAlign));
-    func("offsetof", Napi::Function::New(env, GetMemberOffset));
-    func("resolve", Napi::Function::New(env, GetResolvedType));
-    func("introspect", Napi::Function::New(env, GetTypeDefinition));
-
-    func("load", Napi::Function::New(env, LoadSharedLibrary));
-
-    func("in", Napi::Function::New(env, MarkIn));
-    func("out", Napi::Function::New(env, MarkOut));
-    func("inout", Napi::Function::New(env, MarkInOut));
-
-    func("disposable", Napi::Function::New(env, CreateDisposableType));
-    func("free", Napi::Function::New(env, CallFree));
-
-    func("register", Napi::Function::New(env, RegisterCallback));
-    func("unregister", Napi::Function::New(env, UnregisterCallback));
-
-    func("as", Napi::Function::New(env, CastValue));
-    func("decode", Napi::Function::New(env, DecodeValue));
-    func("address", Napi::Function::New(env, GetPointerAddress));
-    func("call", Napi::Function::New(env, CallPointerSync));
-
-    func("errno", Napi::Function::New(env, GetOrSetErrNo));
-
-    Napi::Object os = Napi::Object::New(env);
-    func("os", os);
-
-    // Init constants mapping
-    {
-        Napi::Object codes = Napi::Object::New(env);
-
-        for (const ErrnoCodeInfo &info: ErrnoCodes) {
-            codes.Set(info.name, Napi::Number::New(env, info.value));
-        }
-
-        os.Set("errno", codes);
-    }
-
-#if defined(_WIN32)
-    func("extension", Napi::String::New(env, ".dll"));
-#elif defined(__APPLE__)
-    func("extension", Napi::String::New(env, ".dylib"));
-#else
-    func("extension", Napi::String::New(env, ".so"));
-#endif
-
-    Napi::Object types = InitBaseTypes(env);
-    func("types", types);
-}
+NODE_API_MODULE(koffi, InitModule);
 
 }
-
-#if NODE_WANT_INTERNALS
-
-static void SetValue(node::Environment *env, v8::Local<v8::Object> target,
-                     const char *name, Napi::Value value)
-{
-    v8::Isolate *isolate = env->isolate();
-    v8::Local<v8::Context> context = isolate->GetCurrentContext();
-
-    v8::NewStringType str_type = v8::NewStringType::kInternalized;
-    v8::Local<v8::String> str = v8::String::NewFromUtf8(isolate, name, str_type).ToLocalChecked();
-
-    target->Set(context, str, v8impl::V8LocalValueFromJsValue(value)).Check();
-}
-
-static void InitInternal(v8::Local<v8::Object> target, v8::Local<v8::Value>,
-                         v8::Local<v8::Context> context, void *)
-{
-    using namespace RG;
-
-    node::Environment *env = node::Environment::GetCurrent(context);
-
-    // Not very clean but I don't know enough about Node and V8 to do better...
-    // ... and it seems to work okay.
-    napi_env env_napi = new napi_env__(context);
-    Napi::Env env_cxx(env_napi);
-    env->AtExit([](void *udata) {
-        napi_env env_napi = (napi_env)udata;
-        delete env_napi;
-    }, env_napi);
-
-    InstanceData *instance = CreateInstance(env_cxx);
-    RG_CRITICAL(instance, "Failed to initialize Koffi");
-
-    env_cxx.SetInstanceData(instance);
-
-    instance->debug = GetDebugFlag("DUMP_CALLS");
-    FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
-
-    SetExports(env_napi, [&](const char *name, Napi::Value value) { SetValue(env, target, name, value); });
-    SetValue(env, target, "internal", Napi::Boolean::New(env_cxx, true));
-}
-
-#else
-
-static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
-{
-    using namespace RG;
-
-    InstanceData *instance = CreateInstance(env);
-    RG_CRITICAL(instance, "Failed to initialize Koffi");
-
-    env.SetInstanceData(instance);
-
-    instance->debug = GetDebugFlag("DUMP_CALLS");
-    FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
-
-    SetExports(env, [&](const char *name, Napi::Value value) { exports.Set(name, value); });
-    exports.Set("internal", Napi::Boolean::New(env, false));
-
-    return exports;
-}
-
-#endif
-
-#if NODE_WANT_INTERNALS
-    NODE_MODULE_CONTEXT_AWARE_INTERNAL(koffi, InitInternal);
-#else
-    NODE_API_MODULE(koffi, InitModule);
-#endif

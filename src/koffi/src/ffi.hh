@@ -273,6 +273,8 @@ struct InstanceData {
     const TypeInfo *char_type;
     const TypeInfo *char16_type;
 
+    Napi::Symbol active_symbol;
+
     std::mutex memories_mutex;
     LocalArray<InstanceMemory *, 9> memories;
     int temporaries = 0;
