@@ -58,6 +58,10 @@ Napi::Function MagicUnion::InitClass(Napi::Env env, const TypeInfo *type)
 MagicUnion::MagicUnion(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<MagicUnion>(info), type((const TypeInfo *)info.Data())
 {
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    active_symbol = instance->active_symbol;
 }
 
 void MagicUnion::SetRaw(const uint8_t *ptr)
@@ -65,8 +69,8 @@ void MagicUnion::SetRaw(const uint8_t *ptr)
     raw.RemoveFrom(0);
     raw.Append(MakeSpan(ptr, type->size));
 
+    Value().Set(active_symbol, Env().Undefined());
     active_idx = -1;
-    Value().Set("__active", Env().Undefined());
 }
 
 Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
@@ -77,7 +81,7 @@ Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
     Napi::Value value;
 
     if (idx == active_idx) {
-        value = Value().Get("__active");
+        value = Value().Get(active_symbol);
     } else {
         Napi::Env env = info.Env();
 
@@ -88,7 +92,7 @@ Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
 
         value = Decode(env, raw.ptr, member.type);
 
-        Value().Set("__active", value);
+        Value().Set(active_symbol, value);
         active_idx = idx;
     }
 
@@ -100,7 +104,7 @@ void MagicUnion::Setter(const Napi::CallbackInfo &info, const Napi::Value &value
 {
     Size idx = (Size)info.Data();
 
-    Value().Set("__active", value);
+    Value().Set(active_symbol, value);
     active_idx = idx;
 
     raw.Clear();

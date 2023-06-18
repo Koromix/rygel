@@ -2058,6 +2058,8 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     instance->char_type = instance->types_map.FindValue("char", nullptr);
     instance->char16_type = instance->types_map.FindValue("char16", nullptr);
 
+    instance->active_symbol = Napi::Symbol::New(env, "active");
+
     types.Freeze();
 
     return types;
