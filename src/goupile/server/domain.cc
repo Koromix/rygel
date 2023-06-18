@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 34;
+const int DomainVersion = 103;
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
 
@@ -1498,6 +1498,14 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
             case 31: {
                 bool success = db->RunMany(R"(
+                    UPDATE dom_permissions SET permissions = permissions & ~8;
+                )");
+                if (!success)
+                    return false;
+            } [[fallthrough]];
+
+            case 100: {
+                bool success = db->RunMany(R"(
                     UPDATE dom_permissions SET permissions = IIF(permissions & 1, 1, 0) |
                                                              IIF(permissions & 2, 2, 0) |
                                                              IIF(permissions & 4, 4, 0) |
@@ -1512,7 +1520,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     return false;
             } [[fallthrough]];
 
-            case 32: {
+            case 101: {
                 bool success = db->RunMany(R"(
                     UPDATE dom_permissions SET permissions = IIF(permissions & 1, 1, 0) |
                                                              IIF(permissions & 2, 2, 0) |
@@ -1528,7 +1536,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     return false;
             } [[fallthrough]];
 
-            case 33: {
+            case 102: {
                 bool success = db->RunMany(R"(
                     UPDATE dom_users SET confirm = 'TOTP' WHERE confirm = 'totp';
                 )");
@@ -1536,7 +1544,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 34);
+            RG_STATIC_ASSERT(DomainVersion == 103);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

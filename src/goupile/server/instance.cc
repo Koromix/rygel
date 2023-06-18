@@ -23,7 +23,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 61;
+const int InstanceVersion = 105;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -307,19 +307,6 @@ bool MigrateInstance(sq_Database *db)
         return false;
     } else if (version == InstanceVersion) {
         return true;
-    }
-
-    // Work around version mismatch caused by goupile2 branch
-    if (version >= 57 && version <= 60) {
-        sq_Statement stmt;
-        if (!db->Prepare("SELECT rowid FROM sqlite_master WHERE name = 'rec_fragments' AND sql LIKE '%tags TEXT%'", &stmt))
-            return false;
-
-        if (stmt.Step()) {
-            version = 56;
-        } else if (!stmt.IsValid()) {
-            return false;
-        }
     }
 
     LogInfo("Migrate instance database '%1': %2 to %3",
@@ -1802,6 +1789,45 @@ bool MigrateInstance(sq_Database *db)
 
             case 56: {
                 bool success = db->RunMany(R"(
+                    ALTER TABLE rec_fragments ADD COLUMN tags TEXT;
+                    UPDATE rec_fragments SET tags = '[]' WHERE type = 'save';
+                )");
+                if (!success)
+                    return false;
+            } [[fallthrough]];
+
+            case 57: {
+                bool success = db->RunMany(R"(
+                    INSERT INTO seq_counters (type, key, counter)
+                        SELECT 'record', form, MAX(sequence) AS sequence FROM rec_entries GROUP BY 2
+                        ON CONFLICT (type, key) DO UPDATE SET counter = excluded.counter;
+                )");
+                if (!success)
+                    return false;
+            } [[fallthrough]];
+
+            case 58: {
+                bool success = db->RunMany(R"(
+                    INSERT INTO seq_counters (type, key, counter)
+                        SELECT 'record', form, MAX(sequence) AS sequence FROM rec_entries GROUP BY 2
+                        ON CONFLICT (type, key) DO UPDATE SET counter = excluded.counter;
+                )");
+                if (!success)
+                    return false;
+            } [[fallthrough]];
+
+            case 59: {
+                bool success = db->RunMany(R"(
+                    INSERT INTO seq_counters (type, key, counter)
+                        SELECT 'record', form, MAX(sequence) AS sequence FROM rec_entries GROUP BY 2
+                        ON CONFLICT (type, key) DO UPDATE SET counter = excluded.counter;
+                )");
+                if (!success)
+                    return false;
+            } [[fallthrough]];
+
+            case 100: {
+                bool success = db->RunMany(R"(
                     DROP INDEX rec_entries_a;
                     DROP INDEX rec_entries_f;
                     DROP INDEX rec_entries_fs;
@@ -1900,7 +1926,7 @@ bool MigrateInstance(sq_Database *db)
                     return false;
             } [[fallthrough]];
 
-            case 57: {
+            case 101: {
                 bool success = db->RunMany(R"(
                     DROP INDEX rec_fragments_t;
                     DROP INDEX rec_fragments_r;
@@ -1930,7 +1956,7 @@ bool MigrateInstance(sq_Database *db)
                     return false;
             } [[fallthrough]];
 
-            case 58: {
+            case 102: {
                 bool success = db->RunMany(R"(
                     DELETE FROM fs_settings WHERE key = 'SharedKey';
                 )");
@@ -1938,7 +1964,7 @@ bool MigrateInstance(sq_Database *db)
                     return false;
             } [[fallthrough]];
 
-            case 59: {
+            case 103: {
                 bool success = db->RunMany(R"(
                     DELETE FROM seq_counters WHERE type = 'record';
                     INSERT INTO seq_counters (type, key, counter)
@@ -1948,7 +1974,7 @@ bool MigrateInstance(sq_Database *db)
                     return false;
             } [[fallthrough]];
 
-            case 60: {
+            case 104: {
                 bool success = db->RunMany(R"(
                     DROP INDEX rec_threads_t;
                     DROP INDEX rec_entries_ts;
@@ -2028,7 +2054,7 @@ bool MigrateInstance(sq_Database *db)
                     return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 61);
+            RG_STATIC_ASSERT(InstanceVersion == 105);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
