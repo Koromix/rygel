@@ -120,7 +120,14 @@ async function test() {
         assert.deepEqual(u.raw, Uint8Array.from([0, 0, 128, 63, 0, 0, 64, 64]));
     }
 
-    // Test simple union passing
+    // Test union passing with objects
+    assert.equal(GetMultiUnsigned({ f2: [5, -4] }), 0xC080000000000140);
+    assert.equal(GetMultiDouble({ d: 450 }), 450);
+    assert.equal(GetMultiUnsigned({ d: 450 }), 0x407C1FFFFFFFFFB0);
+    assert.equal(GetMultiDouble({ u: 18 }), 0);
+    assert.equal(GetMultiUnsigned({ u: 18 }), 18);
+
+    // Test union passing with new Union
     {
         assert.equal(GetMultiUnsigned(make_union('f2', [5, -4])), 0xC080000000000140);
         assert.equal(GetMultiDouble(make_union('d', 450)), 450);

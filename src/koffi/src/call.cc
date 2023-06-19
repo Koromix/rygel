@@ -360,26 +360,41 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     if (type->primitive == PrimitiveKind::Record) {
         members = type->members;
     } else if (type->primitive == PrimitiveKind::Union) {
-        if (RG_UNLIKELY(!CheckValueTag(instance, obj, &MagicUnionMarker))) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
-            return false;
-        }
+        if (CheckValueTag(instance, obj, &MagicUnionMarker)) {
+            MagicUnion *u = MagicUnion::Unwrap(obj);
+            const uint8_t *raw = u->GetRaw();
 
-        MagicUnion *u = MagicUnion::Unwrap(obj);
-        const uint8_t *raw = u->GetRaw();
+            // Fast path: encoded value already exists, just copy!
+            if (raw) {
+                memcpy(origin, raw, type->size);
+                return true;
+            }
 
-        // Fast path: encoded value already exists, just copy!
-        if (raw) {
-            memcpy(origin, raw, type->size);
-            return true;
-        }
+            members.ptr = u->GetMember();
+            members.len = 1;
 
-        members.ptr = u->GetMember();
-        members.len = 1;
+            if (RG_UNLIKELY(!members.ptr)) {
+                ThrowError<Napi::Error>(env, "Cannot use ambiguous empty union");
+                return false;
+            }
+        } else {
+            Napi::Array properties = obj.GetPropertyNames();
 
-        if (RG_UNLIKELY(!members.ptr)) {
-            ThrowError<Napi::Error>(env, "Cannot use ambiguous empty union");
-            return false;
+            if (RG_UNLIKELY(properties.Length() != 1 || !((Napi::Value)properties[0u]).IsString())) {
+                ThrowError<Napi::Error>(env, "Expected object with single property name for union");
+                return false;
+            }
+
+            std::string property = ((Napi::Value)properties[0u]).As<Napi::String>().Utf8Value();
+
+            members.ptr = std::find_if(type->members.begin(), type->members.end(),
+                                       [&](const RecordMember &member) { return TestStr(property.c_str(), member.name); });
+            members.len = 1;
+
+            if (RG_UNLIKELY(members.ptr == type->members.end())) {
+                ThrowError<Napi::Error>(env, "Unknown member %1 in union type %2", property.c_str(), type->name);
+                return false;
+            }
         }
     } else {
         RG_UNREACHABLE();
@@ -1041,16 +1056,16 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
                 ptr = AllocHeap(type->ref.type->size, 16);
 
+                if (RG_UNLIKELY(type->ref.type->primitive == PrimitiveKind::Union &&
+                                (directions & 2) && !CheckValueTag(instance, obj, &MagicUnionMarker))) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
+                    return false;
+                }
+
                 if (directions & 1) {
                     if (!PushObject(obj, type->ref.type, ptr))
                         return false;
                 } else {
-                    if (RG_UNLIKELY(type->ref.type->primitive == PrimitiveKind::Union &&
-                                    !CheckValueTag(instance, obj, &MagicUnionMarker))) {
-                        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
-                        return false;
-                    }
-
                     memset_safe(ptr, 0, type->size);
                 }
 
