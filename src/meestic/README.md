@@ -30,13 +30,22 @@ Use `meestic --help` for a list of available options.
 
 Be careful, color names and most options are **case-sensitive**.
 
-## Configure GUI profiles (Windows only)
+## Configure GUI profiles
+
+### Windows
 
 Create a file named `MeesticGui.ini` to customize the profiles, and put it either:
+
 - Next to `MeesticGui.exe`
 - Or at `<ProfileDir>\AppData\MeesticGui.ini` (e.g. _C:\Users\JohnDoe\AppData\MeesticGui.ini_)
 
 Restart the GUI to apply each change.
+
+### Linux
+
+After installing the self-extracting package, edit `/etc/meestic.ini`. Once done, restart the daemon with `sudo systemctl restart meestic`.
+
+### Example
 
 Here is an example:
 
@@ -63,7 +72,6 @@ Mode = Disabled
 # Colors = list of Colors (only one for Static, 1 to 7 for Breathe or Transition), use name or CSS-like hexadecimal
 # ManualOnly = Yes or No (if Yes, the option must be used from the context menu and won't be used when cycling modes with the function keys)
 ```
-
 
 # Build
 
