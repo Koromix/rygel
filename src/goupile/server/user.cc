@@ -1303,6 +1303,7 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
     }
 
     io->AttachBinary(200, png, "image/png");
+    io->AddHeader("X-TOTP-SecretKey", session->secret);
     io->AddCachingHeaders(0, nullptr);
 }
 

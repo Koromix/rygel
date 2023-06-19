@@ -286,11 +286,19 @@ const goupile = new function() {
         });
     }
 
-    function runConfirmScreen(e, initial, method) {
+    async function runConfirmScreen(e, initial, method) {
         let qrcode;
         if (method === 'qrcode') {
-            qrcode = document.createElement('img');
-            qrcode.src = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
+            let url = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
+
+            let response = await net.fetch(url);
+            let secret = response.headers.get('X-TOTP-SecretKey');
+            let buf = await response.arrayBuffer();
+
+            qrcode = {
+                secret: secret,
+                image: 'data:image/png;base64,' + bytesToBase64(buf)
+            };
         }
 
         let title = initial ? null : 'Confirmation d\'identité';
@@ -311,7 +319,8 @@ const goupile = new function() {
                     pour mobile</b> puis saississez le code donné par cette application.</p>
                     <p><i>Applications : andOTP, FreeOTP, etc.</i></p>
 
-                    <div style="text-align: center; margin-top: 2em;">${qrcode}</div>
+                    <div style="text-align: center; margin-top: 2em;"><img src=${qrcode.image} alt="" /></div>
+                    <p style="text-align: center; font-size: 0.8em">${qrcode.secret}</p>
                 ` : ''}
                 <br/>
             `);
@@ -411,8 +420,19 @@ const goupile = new function() {
     }
 
     this.runResetTOTP = async function(e) {
-        let qrcode = document.createElement('img');
-        qrcode.src = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
+        let qrcode;
+        {
+            let url = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
+
+            let response = await net.fetch(url);
+            let secret = response.headers.get('X-TOTP-SecretKey');
+            let buf = await response.arrayBuffer();
+
+            qrcode = {
+                secret: secret,
+                image: 'data:image/png;base64,' + bytesToBase64(buf)
+            };
+        }
 
         let errors = 0;
 
@@ -422,8 +442,8 @@ const goupile = new function() {
                 pour mobile</b> puis saississez le code donné par cette application.</p>
                 <p><i>Applications : FreeOTP, Authy, etc.</i></p>
 
-                <div style="text-align: center; margin-top: 2em;">${qrcode}</div>
-                <br/>
+                <div style="text-align: center; margin-top: 2em;"><img src="${qrcode.image}" alt="" /></div>
+                <p style="text-align: center; font-size: 0.8em">${qrcode.secret}</p>
             `);
 
             d.text('*code', 'Code secret', { help : '6 chiffres' });

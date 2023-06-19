@@ -70,6 +70,9 @@ function getBase64Code(charCode) {
 }
 
 function bytesToBase64(bytes) {
+  if (bytes instanceof ArrayBuffer)
+    bytes = new Uint8Array(bytes);
+
   var result = '',
       i,
       l = bytes.length;
