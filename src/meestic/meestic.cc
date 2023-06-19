@@ -374,6 +374,11 @@ Options:
         return 1;
     }
 
+#ifdef __linux__
+    if (!NotifySystemd())
+        return 1;
+#endif
+
     if (sandbox && !ApplySandbox())
         return 1;
 
