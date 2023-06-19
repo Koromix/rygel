@@ -2856,15 +2856,6 @@ const char *GetWorkingDirectory()
     return buf;
 }
 
-#ifdef __OpenBSD__
-RG_INIT(ExePathOpenBSD)
-{
-    // This can depend on PATH, which could change during execution
-    // so we want to cache the result as soon as possible.
-    GetApplicationExecutable();
-}
-#endif
-
 const char *GetApplicationExecutable()
 {
 #if defined(_WIN32)
@@ -4068,28 +4059,6 @@ static void DefaultSignalHandler(int signal)
     }
 }
 
-RG_INIT(SetupDefaultHandlers)
-{
-    // Best effort
-    setpgid(0, 0);
-
-    SetSignalHandler(SIGINT, DefaultSignalHandler);
-    SetSignalHandler(SIGTERM, DefaultSignalHandler);
-    SetSignalHandler(SIGHUP, DefaultSignalHandler);
-    SetSignalHandler(SIGPIPE, [](int) {});
-}
-
-RG_EXIT(TerminateChildren)
-{
-    if (interrupt_pfd[1] >= 0) {
-        pid_t pid = getpid();
-        RG_ASSERT(pid > 1);
-
-        SetSignalHandler(SIGTERM, [](int) {});
-        kill(-pid, SIGTERM);
-    }
-}
-
 bool CreatePipe(int pfd[2])
 {
 #ifdef __APPLE__
@@ -4626,6 +4595,42 @@ bool NotifySystemd()
     return true;
 }
 #endif
+
+void InitRG()
+{
+#ifdef _WIN32
+    // Use binary standard I/O
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+    _setmode(_fileno(stderr), _O_BINARY);
+#else
+    // Best effort
+    setpgid(0, 0);
+
+    // Setup default signal handlers
+    SetSignalHandler(SIGINT, DefaultSignalHandler);
+    SetSignalHandler(SIGTERM, DefaultSignalHandler);
+    SetSignalHandler(SIGHUP, DefaultSignalHandler);
+    SetSignalHandler(SIGPIPE, [](int) {});
+
+    // Kill children on exit
+    atexit([]() {
+        if (interrupt_pfd[1] >= 0) {
+            pid_t pid = getpid();
+            RG_ASSERT(pid > 1);
+
+            SetSignalHandler(SIGTERM, [](int) {});
+            kill(-pid, SIGTERM);
+        }
+    });
+#endif
+
+#ifdef __OpenBSD__
+    // This can depend on PATH, which could change during execution
+    // so we want to cache the result as soon as possible.
+    GetApplicationExecutable();
+#endif
+}
 
 // ------------------------------------------------------------------------
 // Standard paths
@@ -5874,15 +5879,6 @@ void Fiber::Toggle(int to, std::unique_lock<std::mutex> *lock)
 // ------------------------------------------------------------------------
 // Streams
 // ------------------------------------------------------------------------
-
-#ifdef _WIN32
-RG_INIT(BinaryStdIO)
-{
-    _setmode(_fileno(stdin), _O_BINARY);
-    _setmode(_fileno(stdout), _O_BINARY);
-    _setmode(_fileno(stderr), _O_BINARY);
-}
-#endif
 
 StreamReader stdin_st(stdin, "<stdin>");
 StreamWriter stdout_st(stdout, "<stdout>");

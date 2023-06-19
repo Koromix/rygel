@@ -650,4 +650,4 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::Main(argc, argv); }
+int main(int argc, char **argv) { return RG::RunApp(argc, argv); }

@@ -4046,6 +4046,15 @@ bool NotifySystemd();
         })()
 #endif
 
+static inline int RunApp(int argc, char **argv)
+{
+    void InitRG();
+    int Main(int argc, char **argv);
+
+    InitRG();
+    return Main(argc, argv);
+}
+
 // ------------------------------------------------------------------------
 // Standard paths
 // ------------------------------------------------------------------------

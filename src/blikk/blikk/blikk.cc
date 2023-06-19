@@ -193,4 +193,4 @@ Options:
 }
 
 // C++ namespaces are stupid
-int main(int argc, char **argv) { return RG::Main(argc, argv); }
+int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
