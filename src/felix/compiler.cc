@@ -635,13 +635,13 @@ public:
 
             default: {
                 Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
+
                 if (platform == HostPlatform::Linux) {
-                    Fmt(&buf, " -ldl -lrt");
+                    Fmt(&buf, "  -static-libgcc -static-libstdc++ -ldl -lrt");
                 }
                 if (link_type == LinkType::Executable) {
                     Fmt(&buf, " -pie");
                 }
-
                 if (architecture == HostArchitecture::ARM32) {
                     Fmt(&buf, " -latomic");
                 }
@@ -1076,13 +1076,14 @@ public:
 
             default: {
                 Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
+                Fmt(&buf, " -static-libgcc -static-libstdc++");
+
                 if (platform == HostPlatform::Linux) {
                     Fmt(&buf, " -ldl -lrt");
                 }
                 if (link_type == LinkType::Executable) {
                     Fmt(&buf, " -pie");
                 }
-
                 if (architecture == HostArchitecture::ARM32) {
                     Fmt(&buf, " -latomic");
                 }
