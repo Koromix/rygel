@@ -24,6 +24,7 @@
     #include <sys/socket.h>
     #include <fcntl.h>
     #include <linux/input.h>
+    #include <unistd.h>
 #endif
 
 // Allows some tests without the MSI Delta 15
