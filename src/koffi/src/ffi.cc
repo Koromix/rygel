@@ -134,7 +134,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
         Napi::Array keys = obj.GetPropertyNames();
 
         for (uint32_t i = 0; i < keys.Length(); i++) {
-            std::string key = ((Napi::Value)keys[i]).As<Napi::String>();
+            std::string key = keys.Get(i).As<Napi::String>();
             Napi::Value value = obj[key];
 
             if (key == "sync_stack_size") {
@@ -243,7 +243,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     for (uint32_t i = 0; i < keys.Length(); i++) {
         RecordMember member = {};
 
-        std::string key = ((Napi::Value)keys[i]).As<Napi::String>();
+        std::string key = keys.Get(i).As<Napi::String>();
         Napi::Value value = obj[key];
         int16_t align = 0;
 
@@ -252,12 +252,12 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         if (value.IsArray()) {
             Napi::Array array = value.As<Napi::Array>();
 
-            if (array.Length() != 2 || !((Napi::Value)array[0u]).IsNumber()) {
+            if (array.Length() != 2 || !array.Get(0u).IsNumber()) {
                 ThrowError<Napi::Error>(env, "Member specifier array must contain alignement value and type");
                 return env.Null();
             }
 
-            int64_t align64 = ((Napi::Value)array[0u]).As<Napi::Number>().Int64Value();
+            int64_t align64 = array.Get(0u).As<Napi::Number>().Int64Value();
 
             if (!CheckAlignment(align64)) {
                 ThrowError<Napi::Error>(env, "Alignment of member '%1' must be 1, 2, 4 or 8", member.name);
@@ -371,7 +371,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     for (uint32_t i = 0; i < keys.Length(); i++) {
         RecordMember member = {};
 
-        std::string key = ((Napi::Value)keys[i]).As<Napi::String>();
+        std::string key = keys.Get(i).As<Napi::String>();
         Napi::Value value = obj[key];
         int16_t align = 0;
 
@@ -380,12 +380,12 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         if (value.IsArray()) {
             Napi::Array array = value.As<Napi::Array>();
 
-            if (array.Length() != 2 || !((Napi::Value)array[0u]).IsNumber()) {
+            if (array.Length() != 2 || !array.Get(0u).IsNumber()) {
                 ThrowError<Napi::Error>(env, "Member specifier array must contain alignement value and type");
                 return env.Null();
             }
 
-            int64_t align64 = ((Napi::Value)array[0u]).As<Napi::Number>().Int64Value();
+            int64_t align64 = array.Get(0u).As<Napi::Number>().Int64Value();
 
             if (!CheckAlignment(align64)) {
                 ThrowError<Napi::Error>(env, "Alignment of member '%1' must be 1, 2, 4 or 8", member.name);
@@ -879,7 +879,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
     uint32_t parameters_len = parameters.Length();
 
     if (parameters_len) {
-        Napi::String str = ((Napi::Value)parameters[parameters_len - 1]).As<Napi::String>();
+        Napi::String str = parameters.Get(parameters_len - 1).As<Napi::String>();
 
         if (str.IsString() && str.Utf8Value() == "...") {
             func->variadic = true;

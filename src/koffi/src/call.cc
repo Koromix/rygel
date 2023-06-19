@@ -385,12 +385,12 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
         } else {
             Napi::Array properties = obj.GetPropertyNames();
 
-            if (RG_UNLIKELY(properties.Length() != 1 || !((Napi::Value)properties[0u]).IsString())) {
+            if (RG_UNLIKELY(properties.Length() != 1 || !properties.Get(0u).IsString())) {
                 ThrowError<Napi::Error>(env, "Expected object with single property name for union");
                 return false;
             }
 
-            std::string property = ((Napi::Value)properties[0u]).As<Napi::String>().Utf8Value();
+            std::string property = properties.Get(0u).As<Napi::String>();
 
             members.ptr = std::find_if(type->members.begin(), type->members.end(),
                                        [&](const RecordMember &member) { return TestStr(property.c_str(), member.name); });
