@@ -4050,8 +4050,9 @@ bool NotifySystemd();
 // Standard paths
 // ------------------------------------------------------------------------
 
-const char *GetUserConfigPath(const char *name, Allocator *alloc);
-const char *GetUserCachePath(const char *name, Allocator *alloc);
+const char *GetUserConfigPath(const char *name, Allocator *alloc); // Can return NULL
+const char *GetUserCachePath(const char *name, Allocator *alloc); // Can return NULL
+const char *GetSystemConfigPath(const char *name, Allocator *alloc);
 const char *GetTemporaryDirectory();
 
 const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const char *, 4> *out_possibilities = nullptr);

@@ -4711,16 +4711,16 @@ const char *GetUserConfigPath(const char *name, Allocator *alloc)
     RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
 
     const char *xdg = getenv("XDG_CONFIG_HOME");
+    const char *home = getenv("HOME");
 
     if (xdg) {
         const char *path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
         return path;
-    } else {
-        const char *home = getenv("HOME");
-        RG_CRITICAL(home, "Failed to get HOME environment variable: %1", strerror(errno));
-
+    } else if (home) {
         const char *path = Fmt(alloc, "%1%/.config/%2", home, name).ptr;
         return path;
+    } else {
+        return nullptr;
     }
 }
 
@@ -4729,20 +4729,20 @@ const char *GetUserCachePath(const char *name, Allocator *alloc)
     RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
 
     const char *xdg = getenv("XDG_CACHE_HOME");
+    const char *home = getenv("HOME");
 
     if (xdg) {
         const char *path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
         return path;
-    } else {
-        const char *home = getenv("HOME");
-        RG_CRITICAL(home, "Failed to get HOME environment variable: %1", strerror(errno));
-
+    } else if (home) {
         const char *path = Fmt(alloc, "%1%/.cache/%2", home, name).ptr;
         return path;
+    } else {
+        return nullptr;
     }
 }
 
-static const char *GetSystemConfigPath(const char *name, Allocator *alloc)
+const char *GetSystemConfigPath(const char *name, Allocator *alloc)
 {
     RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
 
@@ -4793,6 +4793,9 @@ const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const 
 
     for (const auto &func: funcs) {
         const char *path = func(name, alloc);
+
+        if (!path)
+            continue;
 
         if (TestFile(path, FileType::File)) {
             filename = path;

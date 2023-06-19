@@ -3,3 +3,5 @@ Type = Application
 Name = MeesticGui
 Exec = MeesticGui
 Icon = MeesticGui
+Terminal = false
+Categories = Utility

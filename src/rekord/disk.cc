@@ -633,6 +633,10 @@ Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf)
 bool rk_Disk::OpenCache()
 {
     const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
+    if (!cache_dir) {
+        LogError("Cannot find user cache path");
+        return false;
+    }
     if (!MakeDirectory(cache_dir, false))
         return false;
 

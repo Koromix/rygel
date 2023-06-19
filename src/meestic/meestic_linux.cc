@@ -214,7 +214,7 @@ static IconInfo InitIcons()
             if (!i) {
                 const char *filename = GetUserCachePath("meestic/tray.png", &icons_alloc);
 
-                if (EnsureDirectoryExists(filename)) {
+                if (filename && EnsureDirectoryExists(filename)) {
                     HeapArray<uint8_t> png;
                     GeneratePNG(icon, size.x, size.y, &png);
 
