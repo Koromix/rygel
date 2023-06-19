@@ -12,10 +12,10 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 static_deploys:
-  - name: goupile.fr/www
+  - name: goupile.org/www
     repo: https://github.com/Koromix/rygel.git
-    path: web/goupile.fr
-  - name: goupile.fr/files
+    path: web/goupile.org
+  - name: goupile.org/files
 
   - name: koromix.dev/www
     repo: https://github.com/Koromix/rygel.git

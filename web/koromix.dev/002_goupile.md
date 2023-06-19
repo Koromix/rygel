@@ -8,18 +8,18 @@ Goupile is an **open-source electronic data capture** application that strives t
 
 It is currently in development and there are no public builds yet.
 
-Find out more on the official website: [https://goupile.fr/](https://goupile.fr/)
+Find out more on the official website: [https://goupile.org/](https://goupile.org/)
 
 # Screenshots
 
 <p style="text-align: center;">
-    <a href="https://goupile.fr/static/screenshots/editor.webp"><img src="https://goupile.fr/static/screenshots/editor.webp"
+    <a href="https://goupile.org/static/screenshots/editor.webp"><img src="https://goupile.org/static/screenshots/editor.webp"
                                                                      width="180" height="90" style="border: 1px solid #eee;"/></a>
-    <a href="https://goupile.fr/static/screenshots/data.webp"><img src="https://goupile.fr/static/screenshots/data.webp"
+    <a href="https://goupile.org/static/screenshots/data.webp"><img src="https://goupile.org/static/screenshots/data.webp"
                                                                    width="180" height="90" style="border: 1px solid #eee;"/></a>
-    <a href="https://goupile.fr/static/screenshots/overview.webp"><img src="https://goupile.fr/static/screenshots/overview.webp"
+    <a href="https://goupile.org/static/screenshots/overview.webp"><img src="https://goupile.org/static/screenshots/overview.webp"
                                                                        width="180" height="90" style="border: 1px solid #eee;"/></a>
-    <a href="https://goupile.fr/static/screenshots/tablet.webp"><img src="https://goupile.fr/static/screenshots/tablet.webp"
+    <a href="https://goupile.org/static/screenshots/tablet.webp"><img src="https://goupile.org/static/screenshots/tablet.webp"
                                                                      width="180" height="90" style="border: 1px solid #eee;"/></a>
 </p>
 
