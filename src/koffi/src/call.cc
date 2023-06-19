@@ -364,6 +364,11 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             MagicUnion *u = MagicUnion::Unwrap(obj);
             const uint8_t *raw = u->GetRaw();
 
+            if (RG_UNLIKELY(u->GetType() != type)) {
+                ThrowError<Napi::TypeError>(env, "Expected union type %1, got %2", type->name, u->GetType()->name);
+                return false;
+            }
+
             // Fast path: encoded value already exists, just copy!
             if (raw) {
                 memcpy(origin, raw, type->size);
