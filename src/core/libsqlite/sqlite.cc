@@ -76,6 +76,33 @@ void sq_Statement::Reset()
     RG_ASSERT(ret == SQLITE_OK);
 }
 
+bool sq_Statement::GetSingleValue(int *out_value)
+{
+    if (!Step())
+        return false;
+
+    *out_value = sqlite3_column_int(stmt, 0);
+    return true;
+}
+
+bool sq_Statement::GetSingleValue(int64_t *out_value)
+{
+    if (!Step())
+        return false;
+
+    *out_value = sqlite3_column_int64(stmt, 0);
+    return true;
+}
+
+bool sq_Statement::GetSingleValue(double *out_value)
+{
+    if (!Step())
+        return false;
+
+    *out_value = sqlite3_column_double(stmt, 0);
+    return true;
+}
+
 bool sq_Database::Open(const char *filename, const uint8_t key[32], unsigned int flags)
 {
     static const char *const sql = R"(
@@ -388,27 +415,34 @@ inline void sq_Database::WakeUpWaiters()
     wait_cv.notify_all();
 }
 
-bool sq_Database::RunWithBindings(const char *sql, Span<const sq_Binding> bindings)
+bool sq_Database::PrepareWithBindings(const char *sql, Span<const sq_Binding> bindings, sq_Statement *out_stmt)
 {
-    sq_Statement stmt;
-    if (!Prepare(sql, &stmt))
+    if (!Prepare(sql, out_stmt))
         return false;
 
     for (int i = 0; i < (int)bindings.len; i++) {
         const sq_Binding &binding = bindings[i];
 
         switch (binding.type) {
-            case sq_Binding::Type::Null: { sqlite3_bind_null(stmt, i + 1); } break;
-            case sq_Binding::Type::Integer: { sqlite3_bind_int64(stmt, i + 1, binding.u.i); } break;
-            case sq_Binding::Type::Double: { sqlite3_bind_double(stmt, i + 1, binding.u.d); } break;
-            case sq_Binding::Type::String: { sqlite3_bind_text(stmt, i + 1, binding.u.str.ptr,
+            case sq_Binding::Type::Null: { sqlite3_bind_null(*out_stmt, i + 1); } break;
+            case sq_Binding::Type::Integer: { sqlite3_bind_int64(*out_stmt, i + 1, binding.u.i); } break;
+            case sq_Binding::Type::Double: { sqlite3_bind_double(*out_stmt, i + 1, binding.u.d); } break;
+            case sq_Binding::Type::String: { sqlite3_bind_text(*out_stmt, i + 1, binding.u.str.ptr,
                                                                (int)binding.u.str.len, SQLITE_STATIC); } break;
-            case sq_Binding::Type::Blob: { sqlite3_bind_blob64(stmt, i + 1, binding.u.blob.ptr,
+            case sq_Binding::Type::Blob: { sqlite3_bind_blob64(*out_stmt, i + 1, binding.u.blob.ptr,
                                                                binding.u.blob.len, SQLITE_STATIC); } break;
-            case sq_Binding::Type::Zero: { sqlite3_bind_zeroblob64(stmt, i + 1, binding.u.zero_len); } break;
+            case sq_Binding::Type::Zero: { sqlite3_bind_zeroblob64(*out_stmt, i + 1, binding.u.zero_len); } break;
         }
     }
 
+    return true;
+}
+
+bool sq_Database::RunWithBindings(const char *sql, Span<const sq_Binding> bindings)
+{
+    sq_Statement stmt;
+    if (!PrepareWithBindings(sql, bindings, &stmt))
+        return false;
     return stmt.Run();
 }
 

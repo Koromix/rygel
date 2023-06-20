@@ -657,10 +657,14 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
                     sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                 }
 
-                if (!instance->db->Run("INSERT INTO ins_users (key, local_key) VALUES (?1, ?2)", key, local_key))
+                sq_Statement stmt;
+                if (!instance->db->Prepare(R"(INSERT INTO ins_users (key, local_key)
+                                              VALUES (?1, ?2)
+                                              RETURNING userid)",
+                                           &stmt, key, local_key))
                     return false;
-
-                userid = sqlite3_last_insert_rowid(*instance->db);
+                if (!stmt.GetSingleValue(&userid))
+                    return false;
             } else {
                 return false;
             }
@@ -1558,10 +1562,14 @@ RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, Insta
 
     int64_t userid;
     bool success = instance->db->Transaction([&]() {
-        if (!instance->db->Run("INSERT INTO ins_users (key, local_key) VALUES (?1, ?2)", key, local_key))
+        sq_Statement stmt;
+        if (!instance->db->Prepare(R"(INSERT INTO ins_users (key, local_key)
+                                      VALUES (?1, ?2)
+                                      RETURNING userid)",
+                                   &stmt, key, local_key))
             return false;
-
-        userid = sqlite3_last_insert_rowid(*instance->db);
+        if (!stmt.GetSingleValue(&userid))
+            return false;
 
         return true;
     });

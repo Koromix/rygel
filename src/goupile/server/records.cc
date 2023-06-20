@@ -603,43 +603,50 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     }
 
                     // Insert data fragment
-                    if (!instance->db->Run(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username, mtime, fs, data)
-                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
-                                           *anchor_ptr > 0 ? sq_Binding(*anchor_ptr) : sq_Binding(), tid, frag.eid,
-                                           session->userid, session->username, frag.mtime, frag.fs, frag.data))
-                        return false;
-
-                    int64_t new_anchor = sqlite3_last_insert_rowid(*instance->db);
+                    int64_t new_anchor;
+                    {
+                        sq_Statement stmt;
+                        if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username, mtime, fs, data)
+                                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
+                                                      &stmt, *anchor_ptr > 0 ? sq_Binding(*anchor_ptr) : sq_Binding(), tid,
+                                                      frag.eid, session->userid, session->username, frag.mtime, frag.fs, frag.data))
+                            return false;
+                        if (!stmt.GetSingleValue(&new_anchor))
+                            return false;
+                    }
 
                     // Create or update store entry
-                    if (!instance->db->Run(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
-                                                                       store, sequence, deleted, data)
-                                              VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7)
-                                              ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
-                                                                        mtime = excluded.mtime,
-                                                                        deleted = excluded.deleted,
-                                                                        data = json_patch(data, excluded.data))",
-                                           tid, frag.eid, new_anchor, frag.mtime, frag.store, 0 + !frag.data.len, frag.data))
-                        return false;
+                    int64_t e;
+                    {
+                        sq_Statement stmt;
+                        if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
+                                                                               store, sequence, deleted, data)
+                                                      VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7)
+                                                      ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
+                                                                                mtime = excluded.mtime,
+                                                                                deleted = excluded.deleted,
+                                                                                data = json_patch(data, excluded.data))",
+                                                   &stmt, tid, frag.eid, new_anchor, frag.mtime, frag.store,
+                                                   0 + !frag.data.len, frag.data))
+                            return false;
+                        if (!stmt.GetSingleValue(&e))
+                            return false;
+                    }
 
                     // Deal with per-store sequence number
-                    if (sqlite3_changes(*instance->db)) {
-                        int64_t e = sqlite3_last_insert_rowid(*instance->db);
-
-                        sq_Statement stmt;
-                        if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
-                                                      VALUES ('record', ?1, 1)
-                                                      ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
-                                                      RETURNING counter)", &stmt))
-                            return false;
-                        sqlite3_bind_text(stmt, 1, frag.store, -1, SQLITE_STATIC);
-
-                        if (!stmt.Step()) {
-                            RG_ASSERT(!stmt.IsValid());
-                            return false;
+                    if (!anchor_ptr) {
+                        int64_t counter;
+                        {
+                            sq_Statement stmt;
+                            if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
+                                                          VALUES ('record', ?1, 1)
+                                                          ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
+                                                          RETURNING counter)",
+                                                       &stmt, frag.store))
+                                return false;
+                            if (!stmt.GetSingleValue(&counter))
+                                return false;
                         }
-
-                        int64_t counter = sqlite3_column_int64(stmt, 0);
 
                         if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1",
                                                e, counter))

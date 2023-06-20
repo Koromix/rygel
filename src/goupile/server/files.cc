@@ -522,13 +522,18 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
             int64_t mtime = GetUnixTime();
 
-            if (!instance->db->Run(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
-                                      VALUES (?1, ?2, ?3, ?4, ?5))",
-                                  sha256, mtime, CompressionTypeNames[(int)compression_type],
-                                  total_len, sq_Binding::Zeroblob(file_len)))
-                return false;
-
-            int64_t rowid = sqlite3_last_insert_rowid(*instance->db);
+            int64_t rowid;
+            {
+                sq_Statement stmt;
+                if (!instance->db->Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
+                                              VALUES (?1, ?2, ?3, ?4, ?5)
+                                              RETURNING rowid)",
+                                           &stmt, sha256, mtime, CompressionTypeNames[(int)compression_type],
+                                           total_len, sq_Binding::Zeroblob(file_len)))
+                    return false;
+                if (!stmt.GetSingleValue(&rowid))
+                    return false;
+            }
 
             sqlite3_blob *blob;
             if (sqlite3_blob_open(*instance->db, "main", "fs_objects", "blob", rowid, 1, &blob) != SQLITE_OK) {
@@ -934,12 +939,17 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
         bool success = instance->db->Transaction([&]() {
             int64_t mtime = GetUnixTime();
 
-            if (!instance->db->Run(R"(INSERT INTO fs_versions (mtime, userid, username, atomic)
-                                      VALUES (?1, ?2, ?3, 1))",
-                                   mtime, session->userid, session->username))
-                return false;
-
-            version = sqlite3_last_insert_rowid(*instance->db);
+            // Create new version
+            {
+                sq_Statement stmt;
+                if (!instance->db->Prepare(R"(INSERT INTO fs_versions (mtime, userid, username, atomic)
+                                              VALUES (?1, ?2, ?3, 1)
+                                              RETURNING version)",
+                                           &stmt, mtime, session->userid, session->username))
+                    return false;
+                if (!stmt.GetSingleValue(&version))
+                    return false;
+            }
 
             for (const auto &file: files.table) {
                 if (!file.key[0]) {

@@ -98,6 +98,10 @@ public:
     bool Step();
     void Reset();
 
+    bool GetSingleValue(int *out_value);
+    bool GetSingleValue(int64_t *out_value);
+    bool GetSingleValue(double *out_value);
+
     operator sqlite3_stmt *() { return stmt; }
 
     friend class sq_Database;
@@ -163,6 +167,13 @@ public:
     bool Transaction(FunctionRef<bool()> func);
 
     bool Prepare(const char *sql, sq_Statement *out_stmt);
+    template <typename... Args>
+    bool Prepare(const char *sql, sq_Statement *out_stmt, Args... args)
+    {
+        const sq_Binding bindings[] = { sq_Binding(args)... };
+        return PrepareWithBindings(sql, bindings, out_stmt);
+    }
+
     bool Run(const char *sql) { return RunWithBindings(sql, {}); }
     template <typename... Args>
     bool Run(const char *sql, Args... args)
@@ -195,6 +206,7 @@ private:
     inline void Wait(std::unique_lock<std::mutex> *lock, bool shared);
     inline void WakeUpWaiters();
 
+    bool PrepareWithBindings(const char *sql, Span<const sq_Binding> bindings, sq_Statement *out_stmt);
     bool RunWithBindings(const char *sql, Span<const sq_Binding> bindings);
 
     friend class sq_Statement;
