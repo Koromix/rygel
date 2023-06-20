@@ -26,6 +26,7 @@ Table of contents
    functions
    types
    pointers
+   unions
    parameters
    callbacks
    misc

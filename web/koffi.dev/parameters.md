@@ -9,6 +9,7 @@ By default, Koffi will only forward arguments from Javascript to C. However, man
 For simplicity, and because Javascript only has value semantics for primitive types, Koffi can marshal out (or in/out) two types of parameters:
 
 - [Structs](types.md#struct-types) (to/from JS objects)
+- [Unions](unions.md)
 - [Opaque types](types.md#opaque-types)
 - String buffers
 
