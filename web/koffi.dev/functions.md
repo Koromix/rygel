@@ -9,7 +9,7 @@ const koffi = require('koffi');
 const lib = koffi.load('/path/to/shared/library'); // File extension depends on platforms: .so, .dll, .dylib, etc.
 ````
 
-This library will be automatically unloaded once all references to it (including all the functions that use it, as described below).
+This library will be automatically unloaded once all references to it are gone (including all the functions that use it, as described below).
 
 Starting with *Koffi 2.3.20*, you can explicitly unload a library by calling `lib.unload()`. Any attempt to find or call a function from this library after unloading it will crash.
 
