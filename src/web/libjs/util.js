@@ -724,54 +724,58 @@ const net = new function() {
     this.retryHandler = code => false;
 
     this.fetch = async function(url, options = {}) {
-        try {
-            options = Object.assign({}, options);
+        options = Object.assign({}, options);
 
-            if (options.credentials == null)
-                options.credentials = 'same-origin';
-            if (options.headers == null)
-                options.headers = {};
-            if (!options.hasOwnProperty('timeout') && options.signal == null)
-                options.timeout = 6000;
-            if (!options.headers.hasOwnProperty('X-Requested-With'))
-                options.headers['X-Requested-With'] = 'XMLHTTPRequest';
+        if (options.credentials == null)
+            options.credentials = 'same-origin';
+        if (options.headers == null)
+            options.headers = {};
+        if (!options.hasOwnProperty('timeout') && options.signal == null)
+            options.timeout = 6000;
+        if (!options.headers.hasOwnProperty('X-Requested-With'))
+            options.headers['X-Requested-With'] = 'XMLHTTPRequest';
 
-            for (;;) {
-                let timer;
-                if (typeof AbortController !== 'undefined' && options.timeout != null) {
-                    let controller = new AbortController;
-                    options.signal = controller.signal;
+        for (;;) {
+            let timer;
+            let response;
 
-                    timer = setTimeout(() => controller.abort(), options.timeout);
-                }
+            if (typeof AbortController !== 'undefined' && options.timeout != null) {
+                let controller = new AbortController;
+                options.signal = controller.signal;
 
-                let response = await fetch(url, options);
-
-                if (timer != null)
-                    clearTimeout(timer);
-
-                if (!response.ok) {
-                    let text = (await response.text()).trim();
-
-                    let retry = await self.retryHandler(response.status);
-                    if (retry) {
-                        net.setOnline(true);
-                        continue;
-                    }
-
-                    throw new Error(text);
-                }
-
-                return response;
+                timer = setTimeout(() => controller.abort(), options.timeout);
             }
-        } catch (err) {
-            self.setOnline(false);
-            throw new NetworkError;
+
+            try {
+                response = await fetch(url, options);
+            } catch (err) {
+                self.setOnline(false);
+                throw new NetworkError;
+            }
+
+            if (timer != null)
+                clearTimeout(timer);
+
+            if (!response.ok) {
+                let retry = await self.retryHandler(response.status);
+
+                if (retry) {
+                    net.setOnline(true);
+                    continue;
+                }
+            }
+
+            return response;
         }
     };
 
     this.get = async function(url, options = {}) {
         let response = await self.fetch(url, options);
+
+        if (!response.ok) {
+            let text = (await response.text()).trim();
+            throw new Error(text);
+        }
 
         let json = await response.json();
         return json;
@@ -788,6 +792,11 @@ const net = new function() {
         });
 
         let response = await self.fetch(url, options);
+
+        if (!response.ok) {
+            let text = (await response.text()).trim();
+            throw new Error(text);
+        }
 
         let json = await response.json();
         return json;
