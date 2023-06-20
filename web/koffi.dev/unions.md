@@ -104,15 +104,15 @@ const INPUT = koffi.struct('INPUT', {
     })
 });
 
-const SendInput = user32.func('unsigned int __stdcall SendInput(unsigned int cInputs, INPUT *pInputs, int cbSize');
+const SendInput = user32.func('unsigned int __stdcall SendInput(unsigned int cInputs, INPUT *pInputs, int cbSize)');
 
 // Show/hide desktop with Win+D shortcut
 
 let events = [
-    make_keyboard_event(VK_WIN, true),
+    make_keyboard_event(VK_LWIN, true),
     make_keyboard_event(VK_D, true),
     make_keyboard_event(VK_D, false),
-    make_keyboard_event(VK_WIN, false)
+    make_keyboard_event(VK_LWIN, false)
 ];
 
 SendInput(events.length, events, koffi.sizeof(INPUT));
