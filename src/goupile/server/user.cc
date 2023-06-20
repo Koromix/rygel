@@ -297,13 +297,14 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                     RG_ASSERT(!stamp->develop.load());
                 }
 
-                json.Key("admin"); json.Bool(session->admin_until != 0);
+                json.Key("root"); json.Bool(session->admin_root);
             } else {
                 json.Key("authorized"); json.Bool(false);
             }
         } else {
-            json.Key("authorized"); json.Bool(session->IsAdmin());
-            json.Key("admin"); json.Bool(session->admin_until != 0);
+            bool authorized = (session->admin_until && session->admin_until > GetMonotonicTime());
+
+            json.Key("authorized"); json.Bool(authorized);
             json.Key("root"); json.Bool(session->admin_root);
         }
     }
@@ -593,8 +594,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 if (RG_LIKELY(session)) {
                     if (!instance && (root || admin)) {
                         session->admin_until = GetMonotonicTime() + 1200 * 1000;
-                        session->admin_root = root;
                     }
+                    session->admin_root = root;
 
                     sessions.Open(request, io, session);
                     WriteProfileJson(session.GetRaw(), instance, request, io);

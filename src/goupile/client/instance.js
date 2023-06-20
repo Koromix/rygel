@@ -254,7 +254,7 @@ function InstanceController() {
                                     <hr/>
                                 ` : ''}
                             ` : ''}
-                            ${profile.admin || goupile.hasPermission('build_admin') ? html`
+                            ${profile.root || goupile.hasPermission('build_admin') ? html`
                                 <button @click=${e => window.open('/admin/')}>Administration</button>
                                 <hr/>
                             ` : ''}
