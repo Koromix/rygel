@@ -2,6 +2,19 @@
 
 ## Version history
 
+### Koffi 2.5
+
+#### Koffi 2.5.0
+
+**New features:**
+
+- Support [union types](unions.md)
+
+**Other fixes:**
+
+- Fix ABI for single-float aggregate return on i386 BSD systems
+- Don't mess with Node.js signal handling on POSIX systems
+
 ### Koffi 2.4
 
 #### Koffi 2.4.2
