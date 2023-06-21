@@ -110,7 +110,7 @@ nginx_domains:
 
           root /opt/static/live/koromix.dev/www;
 
-          expires 1h;
+          expires 28d;
           add_header Cache-Control "public, no-transform";
 
           gzip on;
@@ -188,7 +188,7 @@ nginx_domains:
 
           root /opt/static/live/demheter.fr/www;
 
-          expires 1h;
+          expires 28d;
           add_header Cache-Control "public, no-transform";
 
           gzip on;
@@ -211,7 +211,7 @@ nginx_domains:
 
           root /opt/static/live/demheter.fr/beta;
 
-          expires 1h;
+          expires 28d;
           add_header Cache-Control "public, no-transform";
 
           gzip on;
