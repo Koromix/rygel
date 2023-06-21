@@ -2,6 +2,8 @@
      Menu: Qui sommes-nous ? / Nos partenaires
      Created: 2023-05-31 -->
 
+# Nos partenaires
+
 <div class="partners">
      <a href="https://www.hauts-de-france.ars.sante.fr/" target="_blank"><img src="/static/partners/arshdf.png" alt="ARS HdF" /></a>
      <a href="https://www.clubhousefrance.org/" target="_blank"><img src="/static/partners/clubhouse.png" alt="Clubhouse France" /></a>
