@@ -45,7 +45,7 @@ nav#top {
     transition: border-bottom-color 0.4s ease;
 }
 nav#top.border { border-bottom-color: #383838; }
-nav#top ul {
+nav#top menu {
     position: sticky;
     top: 0;
     box-sizing: border-box;
@@ -117,7 +117,7 @@ a#logo > img {
 }
 nav#top.border a#logo { filter: saturate(0%) brightness(0); }
 
-nav#side ul {
+nav#side menu {
     margin: 0;
     padding: 8px;
     width: 224px;
@@ -255,7 +255,7 @@ footer {
 }
 
 @media screen and (max-width: 1300px) {
-    nav#side ul {
+    nav#side menu {
         width: auto;
         margin: 16px;
         padding: 16px;
@@ -266,7 +266,7 @@ footer {
 }
 
 @media screen and (max-width: 960px) {
-    nav#top ul {
+    nav#top menu {
         height: 90px;
         padding-left: 60px;
         padding-bottom: 0px;
@@ -278,7 +278,7 @@ footer {
     nav#top li > a { border-bottom: none; }
     nav#top li > a:hover, nav#top li.active > a { margin-bottom: -2px; }
     nav#top li > a { display: none; }
-    nav#top.active ul {
+    nav#top.active menu {
         height: auto;
         gap: 4px;
     }

@@ -30,7 +30,7 @@ nav#top {
     transition: border-bottom-color 0.2s ease;
 }
 nav#top.border { border-bottom-color: #383838; }
-nav#top ul {
+nav#top menu {
     position: sticky;
     top: 0;
     box-sizing: border-box;
@@ -59,7 +59,7 @@ nav#top a:hover {
 }
 nav#top a.active { font-weight: bold; }
 
-nav#side ul {
+nav#side menu {
     margin: 0;
     padding: 8px;
     width: 224px;
@@ -178,7 +178,7 @@ code {
 }
 
 @media screen and (max-width: 1300px) {
-    nav#side ul {
+    nav#side menu {
         width: auto;
         margin: 16px;
         padding: 16px;
@@ -190,7 +190,7 @@ code {
 
 @media screen and (max-width: 960px) {
     nav#top.border { border-bottom: none; }
-    nav#top ul {
+    nav#top menu {
         padding-left: 60px;
         flex-direction: column;
         gap: 0;
@@ -200,7 +200,7 @@ code {
     nav#top a { border-bottom: none; }
     nav#top a:hover { margin-bottom: -2px; }
     .js nav#top a:not(.active) { display: none; }
-    nav#top.active ul {
+    nav#top.active menu {
         height: auto;
         gap: 4px;
     }
