@@ -144,7 +144,7 @@ nav#side a.lv4 { padding-left: 57px; }
 nav#side a.lv5 { padding-left: 72px; }
 nav#side a.lv6 { padding-left: 87px; }
 
-a#deploy { display: none; }
+div#deploy { display: none; }
 
 main {
     flex: 1;
@@ -292,7 +292,7 @@ footer {
     }
     nav#top.active a#logo { display: none; }
 
-    a#deploy {
+    div#deploy {
         display: block !important;
         position: fixed;
         width: 42px;
@@ -304,6 +304,7 @@ footer {
         background-repeat: no-repeat;
         background-position: center;
         z-index: 3;
+        cursor: pointer;
     }
 
     .columns { display: block; }

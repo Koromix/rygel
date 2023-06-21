@@ -85,7 +85,7 @@ nav#side a.lv4 { padding-left: 57px; }
 nav#side a.lv5 { padding-left: 72px; }
 nav#side a.lv6 { padding-left: 87px; }
 
-a#deploy { display: none; }
+div#deploy { display: none; }
 
 main {
     max-width: 1200px;
@@ -206,7 +206,7 @@ code {
     }
     nav#top.active a { display: block !important; }
 
-    .js a#deploy {
+    .js div#deploy {
         display: block !important;
         position: fixed;
         width: 42px;
@@ -218,6 +218,7 @@ code {
         background-repeat: no-repeat;
         background-position: center;
         z-index: 2;
+        cursor: pointer;
     }
 
     pre { margin: 1em 0; }
