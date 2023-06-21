@@ -7,8 +7,27 @@
 extern "C" {
     #include "vendor/libsoldout/soldout.h"
 }
+#include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
 namespace RG {
+
+enum class UrlFormat {
+    Pretty,
+    PrettySub,
+    Ugly
+};
+static const char *const UrlFormatNames[] = {
+    "Pretty",
+    "PrettySub",
+    "Ugly"
+};
+
+struct FileHash {
+    const char *path;
+    uint8_t sha256[32];
+
+    RG_HASHTABLE_HANDLER(FileHash, path);
+};
 
 struct PageSection {
     const char *id;
@@ -29,17 +48,6 @@ struct PageData {
 
     const char *name;
     const char *url;
-};
-
-enum class UrlFormat {
-    Pretty,
-    PrettySub,
-    Ugly
-};
-static const char *const UrlFormatNames[] = {
-    "Pretty",
-    "PrettySub",
-    "Ugly"
 };
 
 static int32_t DecodeUtf8Unsafe(const char *str);
@@ -178,24 +186,73 @@ static const char *TextToID(Span<const char> text, Allocator *alloc)
     return id.ptr;
 }
 
+static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8_t out_hash[32])
+{
+    if (!reader->IsValid())
+        return false;
+
+    crypto_hash_sha256_state state;
+    crypto_hash_sha256_init(&state);
+
+    do {
+        LocalArray<uint8_t, 16384> buf;
+        buf.len = reader->Read(buf.data);
+        if (buf.len < 0)
+            return false;
+
+        if (!writer->Write(buf))
+            return false;
+        crypto_hash_sha256_update(&state, buf.data, buf.len);
+    } while (!reader->IsEOF());
+
+    if (!writer->Close())
+        return false;
+    crypto_hash_sha256_final(&state, out_hash);
+
+    return true;
+}
+
 // XXX: Resolve page links in content
-static bool RenderPageContent(PageData *page, Allocator *alloc)
+static bool RenderPageContent(PageData *page, const HashTable<const char *, const FileHash *> &assets, Allocator *alloc)
 {
     buf *ib = bufnew(1024);
     RG_DEFER { bufrelease(ib); };
 
     // Load the file, struct buf is used by libsoldout
     {
-        StreamReader st(page->src_filename);
+        const auto write = [&](Span<const uint8_t> buf) {
+            bufgrow(ib, ib->size + (size_t)buf.len);
 
-        Size bytes_read;
-        bufgrow(ib, 1024);
-        while ((bytes_read = st.Read(ib->asize - ib->size, ib->data + ib->size)) > 0) {
-            ib->size += bytes_read;
-            bufgrow(ib, ib->size + 1024);
-        }
+            memcpy(ib->data + ib->size, buf.ptr, (size_t)buf.len);
+            ib->size += (size_t)buf.len;
 
-        if (!st.IsValid())
+            return true;
+        };
+
+        StreamReader reader(page->src_filename);
+        StreamWriter writer(write, "<buffer>");
+
+        bool success = PatchFile(&reader, &writer, [&](Span<const char> key, StreamWriter *writer) {
+            if (key == "RANDOM") {
+                Print(writer, "%1", FmtRandom(8));
+            } else if (StartsWith(key, "ASSET:")) {
+                Span<const char> path = key.Take(6, key.len - 6);
+                const FileHash *hash = assets.FindValue(path, nullptr);
+
+                if (hash) {
+                    FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
+                    Print(writer, "/static/%1?%2", path, suffix);
+                } else {
+                    Print(writer, "/static/%1", path);
+                }
+            } else {
+                Print(writer, "{%1}", key);
+            }
+        });
+
+        if (!success)
+            return false;
+        if (!writer.Close())
             return false;
     }
 
@@ -318,20 +375,31 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
     return true;
 }
 
-static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
-                           Size page_idx, const char *dest_filename)
+static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages, Size page_idx,
+                           const HashTable<const char *, const FileHash *> &assets,
+                           const char *dest_filename)
 {
     StreamWriter st(dest_filename, (int)StreamWriterFlag::Atomic);
 
     const PageData &page = pages[page_idx];
 
     bool success = PatchFile(html, &st, [&](Span<const char> key, StreamWriter *writer) {
-        if (key == "BUSTER") {
-            Print(writer, "%1", FmtRandom(8));
-        } else if (key == "TITLE") {
+        if (key == "TITLE") {
             writer->Write(page.title);
         } else if (key == "DESCRIPTION") {
             writer->Write(page.description);
+        } else if (key == "RANDOM") {
+            Print(writer, "%1", FmtRandom(8));
+        } else if (StartsWith(key, "ASSET:")) {
+            Span<const char> path = key.Take(6, key.len - 6);
+            const FileHash *hash = assets.FindValue(path, nullptr);
+
+            if (hash) {
+                FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
+                Print(writer, "/static/%1?%2", path, suffix);
+            } else {
+                Print(writer, "/static/%1", path);
+            }
         } else if (key == "LINKS") {
             for (Size i = 0; i < pages.len; i++) {
                 const PageData *menu_page = &pages[i];
@@ -402,6 +470,85 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
 {
     BlockAllocator temp_alloc;
 
+    // Output directory
+    if (!MakeDirectory(output_dir, false))
+        return false;
+    LogInfo("Template: %!..+%1%!0", template_dir);
+    LogInfo("Output directory: %!..+%1%!0", output_dir);
+
+    const char *static_directories[] = {
+        Fmt(&temp_alloc, "%1%/static", input_dir).ptr,
+        Fmt(&temp_alloc, "%1%/static", template_dir).ptr
+    };
+
+    // Copy template assets
+    BucketArray<FileHash> hashes;
+    HashTable<const char *, const FileHash *> hashes_map;
+    {
+        Async async;
+
+        for (const char *static_directory: static_directories) {
+            if (TestFile(static_directory, FileType::Directory)) {
+                HeapArray<const char *> static_filenames;
+                if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &static_filenames))
+                    return false;
+
+                Size prefix_len = strlen(static_directory);
+
+                for (const char *src_filename: static_filenames) {
+                    const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
+
+                    const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
+                    const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
+
+                    FileHash *hash = hashes.AppendDefault();
+                    hash->path = basename;
+
+                    async.Run([=]() {
+                        if (!EnsureDirectoryExists(dest_filename))
+                            return false;
+
+                        // Open ahead of time because src_filename won't stay valid
+                        StreamReader reader(src_filename);
+
+                        // Copy raw file
+                        {
+                            StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
+
+                            if (!SpliceWithChecksum(&reader, &writer, hash->sha256))
+                                return false;
+                            if (!writer.Close())
+                                return false;
+                        }
+
+                        // Create gzipped version
+                        if (gzip && http_ShouldCompressFile(dest_filename)) {
+                            reader.Rewind();
+
+                            StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+
+                            if (!SpliceStream(&reader, -1, &writer))
+                                return false;
+                            if (!writer.Close())
+                                return false;
+                        } else {
+                            UnlinkFile(gzip_filename);
+                        }
+
+                        return true;
+                    });
+                }
+            }
+        }
+
+        if (!async.Sync())
+            return false;
+
+        for (const FileHash &hash: hashes) {
+            hashes_map.Set(&hash);
+        }
+    }
+
     // List input files
     HeapArray<const char *> page_filenames;
     if (!EnumerateFiles(input_dir, "*.md", 0, 1024, &temp_alloc, &page_filenames))
@@ -418,7 +565,7 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
             PageData page = {};
 
             page.src_filename = filename;
-            if (!RenderPageContent(&page, &temp_alloc))
+            if (!RenderPageContent(&page, hashes_map, &temp_alloc))
                 return false;
             page.name = FileNameToPageName(filename, &temp_alloc);
 
@@ -454,17 +601,7 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
         }
     }
 
-    // Output directory
-    if (!MakeDirectory(output_dir, false))
-        return false;
-    LogInfo("Template: %!..+%1%!0", template_dir);
-    LogInfo("Output directory: %!..+%1%!0", output_dir);
-
-    const char *static_directories[] = {
-        Fmt(&temp_alloc, "%1%/static", input_dir).ptr,
-        Fmt(&temp_alloc, "%1%/static", template_dir).ptr
-    };
-
+    // Load HTML templates
     HeapArray<uint8_t> page_html;
     HeapArray<uint8_t> index_html;
     {
@@ -481,98 +618,51 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
         }
     }
 
-    Async async;
-
     // Output fully-formed pages
-    for (Size i = 0; i < pages.len; i++) {
-        const PageData &page = pages[i];
+    {
+        Async async;
 
-        const char *dest_filename;
-        if (urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
-            dest_filename = Fmt(&temp_alloc, "%1%/%2%/index.html", output_dir, page.name).ptr;
-            if (!EnsureDirectoryExists(dest_filename))
-                return false;
-        } else {
-            dest_filename = Fmt(&temp_alloc, "%1%/%2.html", output_dir, page.name).ptr;
-        }
+        for (Size i = 0; i < pages.len; i++) {
+            const PageData &page = pages[i];
 
-        const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
-
-        async.Run([=, &pages]() {
-            Span<const uint8_t> html = TestStr(pages[i].name, "index") ? index_html : page_html;
-
-            if (!RenderFullPage(html, pages, i, dest_filename))
-                return false;
-
-            if (gzip) {
-                StreamReader reader(dest_filename);
-                StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
-
-                if (!SpliceStream(&reader, Megabytes(4), &writer))
-                    return false;
-                if (!writer.Close())
+            const char *dest_filename;
+            if (urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
+                dest_filename = Fmt(&temp_alloc, "%1%/%2%/index.html", output_dir, page.name).ptr;
+                if (!EnsureDirectoryExists(dest_filename))
                     return false;
             } else {
-                UnlinkFile(gzip_filename);
+                dest_filename = Fmt(&temp_alloc, "%1%/%2.html", output_dir, page.name).ptr;
             }
 
-            return true;
-        });
-    }
+            const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
-    // Copy template assets
-    for (const char *static_directory: static_directories) {
-        if (TestFile(static_directory, FileType::Directory)) {
-            HeapArray<const char *> static_filenames;
-            if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &static_filenames))
-                return false;
+            async.Run([=, &pages]() {
+                Span<const uint8_t> html = TestStr(pages[i].name, "index") ? index_html : page_html;
 
-            Size prefix_len = strlen(static_directory);
+                if (!RenderFullPage(html, pages, i, hashes_map, dest_filename))
+                    return false;
 
-            for (const char *src_filename: static_filenames) {
-                const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
+                if (gzip) {
+                    StreamReader reader(dest_filename);
+                    StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
 
-                const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
-                const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
-
-                async.Run([=]() {
-                    if (!EnsureDirectoryExists(dest_filename))
+                    if (!SpliceStream(&reader, Megabytes(4), &writer))
                         return false;
+                    if (!writer.Close())
+                        return false;
+                } else {
+                    UnlinkFile(gzip_filename);
+                }
 
-                    // Open ahead of time because src_filename won't stay valid
-                    StreamReader reader(src_filename);
-
-                    // Copy raw file
-                    {
-                        StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
-
-                        if (!SpliceStream(&reader, Megabytes(4), &writer))
-                            return false;
-                        if (!writer.Close())
-                            return false;
-                    }
-
-                    // Create gzipped version
-                    if (gzip && http_ShouldCompressFile(dest_filename)) {
-                        reader.Rewind();
-
-                        StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
-
-                        if (!SpliceStream(&reader, Megabytes(4), &writer))
-                            return false;
-                        if (!writer.Close())
-                            return false;
-                    } else {
-                        UnlinkFile(gzip_filename);
-                    }
-
-                    return true;
-                });
-            }
+                return true;
+            });
         }
+
+        if (!async.Sync())
+            return false;
     }
 
-    return async.Sync();
+    return true;
 }
 
 int Main(int argc, char *argv[])
