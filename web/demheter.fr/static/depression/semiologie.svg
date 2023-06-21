@@ -2,7 +2,7 @@
 <svg
    version="1.1"
    class="slides-canvas"
-   viewBox="0 0 661.5 313.71573"
+   viewBox="0 0 695.22949 323.26126"
    preserveAspectRatio="xMidYMid meet"
    id="svg147"
    sodipodi:docname="semiologie.svg"
@@ -26,12 +26,12 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="0.94722221"
-     inkscape:cx="372.14077"
-     inkscape:cy="6.8621702"
+     inkscape:cx="410.67449"
+     inkscape:cy="101.34897"
      inkscape:window-width="1920"
-     inkscape:window-height="1025"
+     inkscape:window-height="1007"
      inkscape:window-x="1920"
-     inkscape:window-y="0"
+     inkscape:window-y="120"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg147"
      showguides="false" />
@@ -76,7 +76,7 @@
      stroke-width="0.75"
      stroke="#808080"
      fill="none"
-     d="m 83.52,18.15662 485.29,0.08"
+     d="m 83.52,17.705892 485.29,0.08"
      id="path19"
      style="text-rendering:geometricPrecision" />
   <path
@@ -84,16 +84,16 @@
      stroke-width="0.75"
      stroke="#808080"
      fill="none"
-     d="m 83.52,17.77662 v 23.01 0.38"
+     d="m 83.52,17.325892 v 23.01 0.38"
      id="path21"
      style="text-rendering:geometricPrecision" />
   <path
      fill="#e88c17"
-     d="m 239.01,48.14662 h 175.4 v 29.400007 h -175.4 z"
+     d="m 239.01,47.695892 h 175.4 v 29.400007 h -175.4 z"
      id="path23"
-     style="fill:#ec9d36;fill-opacity:1;text-rendering:geometricPrecision" />
+     style="fill:#4d7992;fill-opacity:1;text-rendering:geometricPrecision" />
   <g
-     transform="translate(253.60993,53.760242)"
+     transform="translate(253.60993,53.309514)"
      id="g29"
      style="text-rendering:geometricPrecision">
     <text
@@ -112,11 +112,11 @@
   </g>
   <path
      fill="#e88c17"
-     d="M 0,48.31662 H 167.9 V 77.276627 H 0 Z"
+     d="M 0,47.865892 H 167.9 V 76.825899 H 0 Z"
      id="path31"
      style="fill:#4d9290;fill-opacity:1;text-rendering:geometricPrecision" />
   <g
-     transform="translate(18.410085,54.221352)"
+     transform="translate(18.410085,53.770624)"
      id="g37"
      style="text-rendering:geometricPrecision">
     <text
@@ -138,7 +138,7 @@
      stroke-width="0.75"
      stroke="#808080"
      fill="none"
-     d="m 568.81,17.77662 v 23.01 0.38"
+     d="m 568.81,17.325892 v 23.01 0.38"
      id="path39"
      style="text-rendering:geometricPrecision" />
   <path
@@ -146,16 +146,16 @@
      stroke-width="0.75"
      stroke="#808080"
      fill="none"
-     d="m 326.44688,18.706908 v 23.01 0.38"
+     d="m 326.44688,18.25618 v 23.01 0.38"
      id="path39-7"
      style="marker-end:url(#ah1-3);text-rendering:geometricPrecision" />
   <path
      fill="#e88c17"
-     d="M 478.86,47.97662 H 661.5 V 75.516627 H 478.86 Z"
+     d="M 478.86,47.525892 H 661.5 V 75.065899 H 478.86 Z"
      id="path55"
-     style="fill:#f8ca00;fill-opacity:1;text-rendering:geometricPrecision" />
+     style="fill:#4d6692;fill-opacity:1;text-rendering:geometricPrecision" />
   <g
-     transform="translate(496.8959,52.878122)"
+     transform="translate(496.8959,52.427394)"
      id="g61"
      style="text-rendering:geometricPrecision">
     <text
@@ -173,7 +173,7 @@
          id="tspan57">PHYSIOLOGIQUE</tspan></text>
   </g>
   <g
-     transform="translate(0.12071,93.175527)"
+     transform="translate(2.5854321,98.7248)"
      id="g87"
      style="text-rendering:geometricPrecision">
     <text
@@ -186,55 +186,47 @@
        x="0"
        y="164.38582"
        id="text85"
-       style="fill:#4d9290;fill-opacity:1"><tspan
-         x="0"
-         y="13.185802"
-         id="tspan63"
-         style="fill:#4d9290;fill-opacity:1">Humeur triste quasi-</tspan><tspan
-         xml:space="preserve"
-         x="140.875"
-         y="13.185802"
-         id="tspan65"
-         style="fill:#4d9290;fill-opacity:1"> </tspan><tspan
-         x="0"
-         y="29.985804"
-         id="tspan67"
-         style="fill:#4d9290;fill-opacity:1">constante</tspan><tspan
-         x="0"
-         y="46.785805"
-         id="tspan69"
-         style="fill:#4d9290;fill-opacity:1">Anhédonie</tspan><tspan
-         x="0"
-         y="63.585808"
-         id="tspan71"
-         style="fill:#4d9290;fill-opacity:1">Anesthésie affective</tspan><tspan
-         x="0"
-         y="80.385803"
-         id="tspan73"
-         style="fill:#4d9290;fill-opacity:1">Anxiété</tspan><tspan
-         x="0"
-         y="97.185806"
-         id="tspan75"
-         style="fill:#4d9290;fill-opacity:1">Angoisses</tspan><tspan
-         x="0"
-         y="113.98581"
-         id="tspan77"
-         style="fill:#4d9290;fill-opacity:1">Culpabilité</tspan><tspan
-         x="0"
-         y="130.78581"
-         id="tspan79"
-         style="fill:#4d9290;fill-opacity:1">Dévalorisation</tspan><tspan
-         x="0"
-         y="147.58582"
-         id="tspan81"
-         style="fill:#4d9290;fill-opacity:1">Idées d’incurabilité</tspan><tspan
+       style="line-height:1.25;white-space:pre;inline-size:300.366;fill:#4d9290;fill-opacity:1"
+       transform="translate(-2.5854321,-151.52202)"
+       xml:space="preserve"><tspan
          x="0"
          y="164.38582"
-         id="tspan83"
-         style="fill:#4d9290;fill-opacity:1">Idées suicidaires</tspan></text>
+         id="tspan65377">Humeur triste quasi-constante
+</tspan><tspan
+         x="0"
+         y="181.88582"
+         id="tspan65379">Anhédonie
+</tspan><tspan
+         x="0"
+         y="199.38582"
+         id="tspan65381">Anesthésie affective
+</tspan><tspan
+         x="0"
+         y="216.88582"
+         id="tspan65383">Anxiété
+</tspan><tspan
+         x="0"
+         y="234.38582"
+         id="tspan65385">Angoisses
+</tspan><tspan
+         x="0"
+         y="251.88582"
+         id="tspan65387">Culpabilité
+</tspan><tspan
+         x="0"
+         y="269.38584"
+         id="tspan65389">Dévalorisation
+</tspan><tspan
+         x="0"
+         y="286.88584"
+         id="tspan65391">Idées d’incurabilité
+</tspan><tspan
+         x="0"
+         y="304.38584"
+         id="tspan65393">Idées suicidaires</tspan></text>
   </g>
   <g
-     transform="translate(238.59763,93.175527)"
+     transform="translate(239.01,-18.875215)"
      id="g109"
      style="text-rendering:geometricPrecision">
     <text
@@ -247,47 +239,38 @@
        x="0"
        y="130.78581"
        id="text107"
-       style="fill:#ec9d36;fill-opacity:1"><tspan
-         x="0"
-         y="13.185802"
-         id="tspan89"
-         style="fill:#ec9d36;fill-opacity:1">Bradypsychie</tspan><tspan
-         x="0"
-         y="29.985804"
-         id="tspan91"
-         style="fill:#ec9d36;fill-opacity:1">Ruminations</tspan><tspan
-         x="0"
-         y="46.785805"
-         id="tspan93"
-         style="fill:#ec9d36;fill-opacity:1">Monodéïsme</tspan><tspan
-         x="0"
-         y="63.585808"
-         id="tspan95"
-         style="fill:#ec9d36;fill-opacity:1">Altération de la</tspan><tspan
-         xml:space="preserve"
-         x="108.36328"
-         y="63.585808"
-         id="tspan97"
-         style="fill:#ec9d36;fill-opacity:1"> </tspan><tspan
-         x="0"
-         y="80.385803"
-         id="tspan99"
-         style="fill:#ec9d36;fill-opacity:1">concentration</tspan><tspan
-         x="0"
-         y="97.185806"
-         id="tspan101"
-         style="fill:#ec9d36;fill-opacity:1">Altération de la mémoire</tspan><tspan
-         x="0"
-         y="113.98581"
-         id="tspan103"
-         style="fill:#ec9d36;fill-opacity:1">Déficit de l’attention</tspan><tspan
+       style="white-space:pre;inline-size:212.201;fill:#4d7992;fill-opacity:1"
+       xml:space="preserve"><tspan
          x="0"
          y="130.78581"
-         id="tspan105"
-         style="fill:#ec9d36;fill-opacity:1">Indécision</tspan></text>
+         id="tspan65395">Bradypsychie
+</tspan><tspan
+         x="0"
+         y="148.28581"
+         id="tspan65397">Ruminations
+</tspan><tspan
+         x="0"
+         y="165.78581"
+         id="tspan65399">Monodéïsme
+</tspan><tspan
+         x="0"
+         y="183.28581"
+         id="tspan65401">Altération de la concentration
+</tspan><tspan
+         x="0"
+         y="200.78581"
+         id="tspan65403">Altération de la mémoire
+</tspan><tspan
+         x="0"
+         y="218.28581"
+         id="tspan65405">Déficit de l’attention
+</tspan><tspan
+         x="0"
+         y="235.78581"
+         id="tspan65407">Indécision</tspan></text>
   </g>
   <g
-     transform="translate(479.19086,93.175527)"
+     transform="translate(477.502,-2.0752118)"
      id="g129"
      style="text-rendering:geometricPrecision">
     <text
@@ -300,46 +283,47 @@
        x="0"
        y="113.98581"
        id="text127"
-       style="fill:#f8ca00;fill-opacity:1"><tspan
-         x="0"
-         y="13.185802"
-         id="tspan111"
-         style="fill:#f8ca00;fill-opacity:1">Perturbations du sommeil</tspan><tspan
-         x="0"
-         y="29.985804"
-         id="tspan113"
-         style="fill:#f8ca00;fill-opacity:1">Perturbation du rythme</tspan><tspan
-         xml:space="preserve"
-         x="167.875"
-         y="29.985804"
-         id="tspan115"
-         style="fill:#f8ca00;fill-opacity:1"> </tspan><tspan
-         x="0"
-         y="46.785805"
-         id="tspan117"
-         style="fill:#f8ca00;fill-opacity:1">circadien</tspan><tspan
-         x="0"
-         y="63.585808"
-         id="tspan119"
-         style="fill:#f8ca00;fill-opacity:1">Fatigue</tspan><tspan
-         x="0"
-         y="80.385803"
-         id="tspan121"
-         style="fill:#f8ca00;fill-opacity:1">Perte d’énergie</tspan><tspan
-         x="0"
-         y="97.185806"
-         id="tspan123"
-         style="fill:#f8ca00;fill-opacity:1">Perte ou gain d’appétit</tspan><tspan
+       style="white-space:pre;inline-size:233.023;fill:#4d6692;fill-opacity:1"
+       xml:space="preserve"><tspan
          x="0"
          y="113.98581"
-         id="tspan125"
-         style="fill:#f8ca00;fill-opacity:1">Diminution du désir sexuel</tspan></text>
+         id="tspan65409">Perturbations du sommeil
+</tspan><tspan
+         x="0"
+         y="131.48581"
+         id="tspan65411">Perturbation du rythme circadien
+</tspan><tspan
+         x="0"
+         y="148.98581"
+         id="tspan65413">Fatigue
+</tspan><tspan
+         x="0"
+         y="166.48581"
+         id="tspan65415">Perte d’énergie
+</tspan><tspan
+         x="0"
+         y="183.98581"
+         id="tspan65417">Perte ou gain d’appétit
+</tspan><tspan
+         x="0"
+         y="201.48581"
+         id="tspan65419">Diminution du désir sexuel</tspan></text>
   </g>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:13.3333px;line-height:1.25;font-family:sans-serif;fill:#383838;fill-opacity:1;stroke:none"
+     x="100.74471"
+     y="10.213307"
+     id="text37407"><tspan
+       sodipodi:role="line"
+       id="tspan37405"
+       x="100.74471"
+       y="10.213307">La plupart de la journée + Presque tous les jours + Plus de 15 jours</tspan></text>
   <g
-     id="g34193"
-     transform="translate(-9.6851472,11.77662)">
+     id="g44648"
+     transform="translate(-2.0428766,9.5492719)">
     <g
-       transform="translate(90.706945,271.99938)"
+       transform="translate(81.021798,283.776)"
        id="g139"
        style="text-rendering:geometricPrecision">
       <text
@@ -357,25 +341,20 @@
          xml:space="preserve"><tspan
            x="0"
            y="38.553177"
-           id="tspan59353">Altération marquée du fonctionnement professionnel, des activités </tspan><tspan
+           id="tspan65421">Altération marquée du fonctionnement professionnel, des activités </tspan><tspan
            x="0"
            y="58.553177"
-           id="tspan59355">sociales ou des relations interpersonnelles</tspan></text>
+           id="tspan65423">sociales ou des relations interpersonnelles</tspan></text>
     </g>
-    <path
-       fill="#db4239"
-       d="m 70.512525,278.55535 h 8.99 v -8.99 h 8.47 v 8.99 h 8.999995 v 8.47 h -8.999995 v 8.99 h -8.47 v -8.99 h -8.99 z"
-       id="path141"
-       style="fill:#777777;fill-opacity:1;text-rendering:geometricPrecision" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:24px;line-height:1.25;font-family:sans-serif;fill:#777777;fill-opacity:1;stroke:none"
+       x="59.324055"
+       y="301.71786"
+       id="text35164"><tspan
+         sodipodi:role="line"
+         id="tspan35162"
+         x="59.324055"
+         y="301.71786">ET</tspan></text>
   </g>
-  <text
-     xml:space="preserve"
-     style="font-style:normal;font-weight:normal;font-size:13.3333px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none"
-     x="100.74471"
-     y="10.664036"
-     id="text37407"><tspan
-       sodipodi:role="line"
-       id="tspan37405"
-       x="100.74471"
-       y="10.664036">La plupart de la journée + Presque tous les jours + Plus de 15 jours</tspan></text>
 </svg>
