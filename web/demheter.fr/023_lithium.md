@@ -17,7 +17,7 @@
 
 # Mise en place
 
-<object class="schema" type="image/svg+xml" data="{ASSET:medical/lithium.svg}"></object>
+<object class="schema" type="image/svg+xml" data="{ASSET:lithium/instauration.svg}"></object>
 
 # Surveillance
 
