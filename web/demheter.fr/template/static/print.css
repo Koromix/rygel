@@ -1,5 +1,5 @@
-nav#top { display: none; }
-nav#side { display: none; }
+#top { display: none; }
+#side { display: none; }
 
 main { padding-right: 16px !important; }
 footer { display: none; }
