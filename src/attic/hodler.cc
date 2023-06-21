@@ -223,7 +223,7 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
         const auto write = [&](Span<const uint8_t> buf) {
             bufgrow(ib, ib->size + (size_t)buf.len);
 
-            memcpy(ib->data + ib->size, buf.ptr, (size_t)buf.len);
+            memcpy_safe(ib->data + ib->size, buf.ptr, (size_t)buf.len);
             ib->size += (size_t)buf.len;
 
             return true;
