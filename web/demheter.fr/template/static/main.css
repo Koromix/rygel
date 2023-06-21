@@ -217,7 +217,7 @@ table + div.legend {
 
 .schema {
     display: block;
-    margin: 0 auto;
+    margin: 2em auto;
     width: min(100%, 800px);
 }
 
