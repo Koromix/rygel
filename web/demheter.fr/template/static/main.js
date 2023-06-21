@@ -18,15 +18,21 @@ function initMenu() {
         if (e.target.tagName == 'DIV' && findParent(e.target, el => el.id == 'top'))
             return;
 
-        let target = findParent(e.target, el => el.tagName == 'LI');
+        // Expand top menu categories
+        {
+            let target = findParent(e.target, el => el.tagName == 'LI');
 
-        for (let item of items) {
-            if (item == target) {
-                item.classList.toggle('active');
-            } else {
-                item.classList.remove('active');
+            for (let item of items) {
+                if (item == target) {
+                    item.classList.toggle('active');
+                } else {
+                    item.classList.remove('active');
+                }
             }
         }
+
+        if (e.target.tagName == 'A' && e.target.getAttribute('href') == '#')
+            e.preventDefault();
     });
 }
 

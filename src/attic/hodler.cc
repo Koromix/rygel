@@ -420,7 +420,7 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
                     }
 
                     bool active = (page_idx >= i && page_idx < j);
-                    PrintLn(writer, "<li><a%1>%2</a><div>", active ? " class=\"active\"" : "", category);
+                    PrintLn(writer, "<li><a href=\"#\"%1>%2</a><div>", active ? " class=\"active\"" : "", category);
 
                     for (; i < j; i++) {
                         menu_page = &pages[i];
