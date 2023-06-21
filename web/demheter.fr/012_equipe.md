@@ -13,7 +13,7 @@
     </div>
     <div>
         <div class="name">Dr Mathilde HORN</div>
-        <img src="/static/equipe/avatar.png" alt="" />
+        <img src="/static/equipe/mathilde_horn.jpg" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Référente médicale</div>
     </div>
