@@ -15,6 +15,7 @@
 
         <style>
             #news {
+                display: grid;
                 background: #112a2c;
                 height: 256px;
                 margin: 64px 0 1em 0;
@@ -29,7 +30,8 @@
                 z-index: 2;
             }
             #news > div {
-                position: absolute;
+                grid-column: 1;
+                grid-row: 1;
                 display: flex;
                 padding-left: calc((100% - 1200px) / 2 + 16px);
                 padding-right: calc((100% - 1200px) / 2 + 16px);
@@ -82,14 +84,13 @@
 
             @media screen and (max-width: 960px) {
                 #news {
-                    height: 320px;
-                    margin: 1em 0 0 0;
+                    height: auto;
+                    margin: 1em 0;
                     padding: 0;
                     background: none;
                     position: relative;
                 }
-                #news > img { top: calc(100% - 32px); }
-                #news > div { height: 304px; }
+                #news > img { top: calc(100% - 16px); }
                 #news > div > img {
                     position: absolute;
                     width: 100%;
