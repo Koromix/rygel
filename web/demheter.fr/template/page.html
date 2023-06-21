@@ -4,34 +4,34 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{TITLE}</title>
-        <meta name="description" content="{DESCRIPTION}">
-        <link rel="icon" href="{ASSET:favicon.png}">
+        <title>{{ TITLE }}</title>
+        <meta name="description" content="{{ DESCRIPTION }}">
+        <link rel="icon" href="{{ ASSET:favicon.png }}">
 
-        <link rel="stylesheet" href="{ASSET:main.css}">
-        <link rel="stylesheet" href="{ASSET:print.css}" media="print">
-        <link rel="stylesheet" href="{ASSET:opensans/OpenSans.css}">
+        <link rel="stylesheet" href="{{ ASSET:main.css }}">
+        <link rel="stylesheet" href="{{ ASSET:print.css }}" media="print">
+        <link rel="stylesheet" href="{{ ASSET:opensans/OpenSans.css }}">
 
-        <script type="text/javascript" src="{ASSET:main.js}" async></script>
+        <script type="text/javascript" src="{{ ASSET:main.js }}" async></script>
     </head>
     <body class="nojs">
         <div id="deploy" onclick="deploy(); return false;"></div>
 
         <nav id="top">
             <menu>
-                <a id="logo" href="/"><img src="{ASSET:logo.webp}" alt="Logo DEMHETER" /></a>
+                <a id="logo" href="/"><img src="{{ ASSET:logo.webp }}" alt="Logo DEMHETER" /></a>
 
-{LINKS}
+{{ LINKS }}
             </menu>
         </nav>
 
-        {TOC}
+        {{ TOC }}
 
-        <main>{CONTENT}</main>
+        <main>{{ CONTENT }}</main>
 
         <footer>
             <div>DEMHETER © 2022</div>
-            <img src="{ASSET:logo.webp}" alt="" width="300" height="64">
+            <img src="{{ ASSET:logo.webp }}" alt="" width="300" height="64">
             <div style="font-size: 0.8em;">
                 CHU de Lille, 59037 Lille CEDEX<br>
                 <a href="mailto:demheter@chu-lille.fr" style="font-weight: bold; color: inherit;">demheter@chu-lille.fr</a>

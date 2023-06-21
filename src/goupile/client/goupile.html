@@ -19,25 +19,25 @@
         <meta name="robots" content="noindex"/>
         <meta name="googlebot" content="noindex"/>
 
-        <link rel="icon" href="{BASE_URL}favicon.png"/>
-        <title>{TITLE}</title>
+        <link rel="icon" href="{{ BASE_URL }}favicon.png"/>
+        <title>{{ TITLE }}</title>
 
         <script>
             // Goupile
             // https://goupile.fr/
 
-            // Version: {VERSION}
-            // Compiler: {COMPILER}
+            // Version: {{ VERSION }}
+            // Compiler: {{ COMPILER }}
 
-            var ENV = {ENV_JSON};
+            var ENV = {{ ENV_JSON }};
         </script>
-        <script src="{STATIC_URL}goupile.pk.js" async></script>
-        <link rel="stylesheet" href="{STATIC_URL}goupile.pk.css" async/>
+        <script src="{{ STATIC_URL }}goupile.pk.js" async></script>
+        <link rel="stylesheet" href="{{ STATIC_URL }}goupile.pk.css" async/>
 
-        <link rel="preload" href="{STATIC_URL}OpenSans_v17_Latin_Regular.woff2" as="font" type="font/woff2" />
-        <link rel="preload" href="{STATIC_URL}OpenSans_v17_Latin_Bold.woff2" as="font" type="font/woff2" />
-        <link rel="preload" href="{STATIC_URL}OpenSans_v17_Latin_Italic.woff2" as="font" type="font/woff2" />
-        <link rel="preload" href="{STATIC_URL}OpenSans_v17_Latin_BoldItalic.woff2" as="font" type="font/woff2" />
+        <link rel="preload" href="{{ STATIC_URL }}OpenSans_v17_Latin_Regular.woff2" as="font" type="font/woff2" />
+        <link rel="preload" href="{{ STATIC_URL }}OpenSans_v17_Latin_Bold.woff2" as="font" type="font/woff2" />
+        <link rel="preload" href="{{ STATIC_URL }}OpenSans_v17_Latin_Italic.woff2" as="font" type="font/woff2" />
+        <link rel="preload" href="{{ STATIC_URL }}OpenSans_v17_Latin_BoldItalic.woff2" as="font" type="font/woff2" />
 
         <style>
             .gp_loading {
@@ -89,7 +89,7 @@
             }
         </style>
 
-        {HEAD_TAGS}
+        {{ HEAD_TAGS }}
     </head>
 
     <body>

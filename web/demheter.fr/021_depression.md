@@ -17,23 +17,23 @@ Source : [https://www.la-depression.org/comprendre-la-depression/la-depression-e
 
 ## Sémiologie
 
-<object class="schema" type="image/svg+xml" data="{ASSET:depression/semiologie.svg}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET:depression/semiologie.svg }}"></object>
 
 ## Diagnostic différentiel
 
-<object class="schema" type="image/svg+xml" data="{ASSET:depression/differentiel.svg}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET:depression/differentiel.svg }}"></object>
 
 # Traitement
 
 ## Traitement initial
 
-<object class="schema" type="image/svg+xml" data="{ASSET:depression/traitement.svg}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET:depression/traitement.svg }}"></object>
 
 Cet item est établi à partir des [recommandations de la CANMAT](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4994790/).
 
 ## Règles hygiéno-diététiques
 
-<object class="schema" type="image/svg+xml" data="{ASSET:depression/RHD.svg}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET:depression/RHD.svg }}"></object>
 
 Cet item est établi à partir des [recommandations autraliennes RANZCP 2020](https://www.ranzcp.org/files/resources/college_statements/clinician/cpg/mood-disorders-cpg-2020.aspx).
 

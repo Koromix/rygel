@@ -4,19 +4,19 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{TITLE}</title>
+        <title>{{ TITLE }}</title>
 
-        <link rel="stylesheet" href="{ASSET:main.css}">
-        <link rel="stylesheet" href="{ASSET:opensans/OpenSans.css}">
+        <link rel="stylesheet" href="{{ ASSET:main.css }}">
+        <link rel="stylesheet" href="{{ ASSET:opensans/OpenSans.css }}">
 
-        <script type="text/javascript" src="{ASSET:main.js}" async></script>
+        <script type="text/javascript" src="{{ ASSET:main.js }}" async></script>
     </head>
     <body class="nojs">
         <div id="deploy" onclick="deploy(); return false;"></div>
 
         <nav id="top">
             <menu>
-{LINKS}
+{{ LINKS }}
 
                 <div style="flex: 1;"></div>
                 <li><a href="https://github.com/Koromix">GitHub</a></li>
@@ -25,8 +25,8 @@
             </menu>
         </nav>
 
-        {TOC}
+        {{ TOC }}
 
-        <main>{CONTENT}</main>
+        <main>{{ CONTENT }}</main>
     </body>
 </html>

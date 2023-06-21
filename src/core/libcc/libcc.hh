@@ -3436,6 +3436,53 @@ static inline Span<const char> SplitStr(Span<const char> str, char split_char, S
 static inline Span<const char> SplitStr(const char *str, char split_char, const char **out_remainder = nullptr)
     { return SplitStr((char *)str, split_char, (char **)out_remainder); }
 
+static inline Span<char> SplitStr(Span<char> str, const char *split_str, Span<char> *out_remainder = nullptr)
+{
+    RG_ASSERT(split_str[0]);
+
+    Size part_len = 0;
+    while (part_len < str.len) {
+        if (StartsWith(str.Take(part_len, str.len - part_len), split_str)) {
+            if (out_remainder) {
+                Size split_len = strlen(split_str);
+                *out_remainder = str.Take(part_len + split_len, str.len - part_len - split_len);
+            }
+            return str.Take(0, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(str.len, 0);
+    }
+    return str;
+}
+static inline Span<char> SplitStr(char *str, const char *split_str, char **out_remainder = nullptr)
+{
+    RG_ASSERT(split_str[0]);
+
+    Size part_len = 0;
+    while (str[part_len]) {
+        if (StartsWith(str + part_len, split_str)) {
+            if (out_remainder) {
+                Size split_len = strlen(split_str);
+                *out_remainder = str + part_len + split_len;
+            }
+            return MakeSpan(str, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str + part_len;
+    }
+    return MakeSpan(str, part_len);
+}
+static inline Span<const char> SplitStr(Span<const char> str, const char *split_str, Span<const char> *out_remainder = nullptr)
+    { return SplitStr(MakeSpan((char *)str.ptr, str.len), split_str, (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStr(const char *str, const char *split_str, const char **out_remainder = nullptr)
+    { return SplitStr((char *)str, split_str, (char **)out_remainder); }
+
 static inline Span<char> SplitStrLine(Span<char> str, Span<char> *out_remainder = nullptr)
 {
     Span<char> part = SplitStr(str, '\n', out_remainder);

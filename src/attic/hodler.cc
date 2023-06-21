@@ -232,7 +232,9 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
         StreamReader reader(page->src_filename);
         StreamWriter writer(write, "<buffer>");
 
-        bool success = PatchFile(&reader, &writer, [&](Span<const char> key, StreamWriter *writer) {
+        bool success = PatchFile(&reader, &writer, [&](Span<const char> expr, StreamWriter *writer) {
+            Span<const char> key = TrimStr(expr);
+
             if (key == "RANDOM") {
                 Print(writer, "%1", FmtRandom(8));
             } else if (StartsWith(key, "ASSET:")) {
@@ -246,7 +248,7 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
                     Print(writer, "/static/%1", path);
                 }
             } else {
-                Print(writer, "{%1}", key);
+                Print(writer, "{{%1}}", expr);
             }
         });
 
@@ -383,7 +385,9 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
 
     const PageData &page = pages[page_idx];
 
-    bool success = PatchFile(html, &st, [&](Span<const char> key, StreamWriter *writer) {
+    bool success = PatchFile(html, &st, [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
         if (key == "TITLE") {
             writer->Write(page.title);
         } else if (key == "DESCRIPTION") {
@@ -453,7 +457,7 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
         } else if (key == "CONTENT") {
             writer->Write(page.html);
         } else {
-            Print(writer, "{%1}", key);
+            Print(writer, "{{%1}}", expr);
         }
     });
 

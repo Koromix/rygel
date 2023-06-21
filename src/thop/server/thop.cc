@@ -287,7 +287,9 @@ static void InitRoutes()
     RG_ASSERT(html.name);
 
     // Patch HTML
-    html.data = PatchFile(html, &routes_alloc, [](Span<const char> key, StreamWriter *writer) {
+    html.data = PatchFile(html, &routes_alloc, [](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
         if (key == "VERSION") {
             writer->Write(FelixVersion);
         } else if (key == "COMPILER") {
@@ -297,7 +299,7 @@ static void InitRoutes()
         } else if (key == "HAS_USERS") {
             writer->Write(thop_has_casemix ? "true" : "false");
         } else {
-            Print(writer, "{%1}", key);
+            Print(writer, "{{%1}}", expr);
         }
     });
 

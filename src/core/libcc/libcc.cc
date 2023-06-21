@@ -6938,10 +6938,10 @@ bool PatchFile(StreamReader *reader, StreamWriter *writer,
     Span<const char> line;
     while (splitter.Next(&line)) {
         while (line.len) {
-            Span<const char> before = SplitStr(line, '{', &line);
+            Span<const char> before = SplitStr(line, "{{", &line);
 
             if (before.end() < line.ptr) {
-                Span<const char> expr = SplitStr(line, '}', &line);
+                Span<const char> expr = SplitStr(line, "}}", &line);
 
                 if (before.len && !writer->Write(before))
                     return false;
@@ -6949,7 +6949,7 @@ bool PatchFile(StreamReader *reader, StreamWriter *writer,
                 if (line.ptr > expr.end()) {
                     func(expr, writer);
                 } else {
-                    writer->Write('{');
+                    writer->Write("{{");
                     writer->Write(expr);
                 }
             } else {

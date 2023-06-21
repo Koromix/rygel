@@ -16,18 +16,18 @@
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1"/>
 
-        <link rel="icon" href="{BASE_URL}favicon.png" />
+        <link rel="icon" href="{{ BASE_URL }}favicon.png" />
         <title>THOP</title>
 
         <script>
             var ENV = {
-                base_url: '{BASE_URL}',
-                has_users: {HAS_USERS}
+                base_url: '{{ BASE_URL }}',
+                has_users: {{ HAS_USERS }}
             };
         </script>
 
-        <script src="{BASE_URL}static/thop.pk.js" async></script>
-        <link rel="stylesheet" href="{BASE_URL}static/thop.pk.css" async/>
+        <script src="{{ BASE_URL }}static/thop.pk.js" async></script>
+        <link rel="stylesheet" href="{{ BASE_URL }}static/thop.pk.css" async/>
 
         <style>
             .th_loading {
@@ -82,7 +82,7 @@
 
     <body>
         <div id="th_side">
-            <img id="th_logo" src="{BASE_URL}static/thop_logo.svg" width="150" height="54" alt="THOP logo"/>
+            <img id="th_logo" src="{{ BASE_URL }}static/thop_logo.svg" width="150" height="54" alt="THOP logo"/>
 
             <div id="th_bar">
                 <img class="th_deploy" data-target="#th_menu" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEwAAABMCAYAAADHl1ErAAAAcElEQVR4nO3XQQ3AMBDAsPInvWGI1FOrzYaQX9YCAAAA7vJ8jGCRYJFgkWCRYJFgkWCRYNF4MAAAAKhOz/JugkWCRYJFgkWCRYJFgkWCRePBAAAAoDo9y7sJFgkWCRYJFgkWCRYJFgkWjQcDAADg916cEdtMjXAbxgAAAABJRU5ErkJggg=="/>
@@ -90,8 +90,8 @@
                 <img class="th_deploy" data-target="#th_header" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEwAAABMCAYAAADHl1ErAAAA5UlEQVR4nO3QuQ0CURAE0RVREAcBYGEAPuGRJ15jtbRCHAv8Y/5sPakSqGkCAAAAAAAAAAAAUIOkvaRD4Y6SLoHalhx2knRTXldJm2LDkk8rPyvxtHqzEk6rPyvRtHazEkxrP2vgaf1mDTit/yxT/GlxZpniTos3yxRvWtxZpjjT4s8y9Z82zizrOG28WdZh2rizTNK50bTxZ1mDaXlmWcVp+WZZhWl5Z1nBaflnWYFp65llf0xb3yz7Ydp6Z9kX05hlC6Yx69Gbacx65ck0Zn0ym8aspSTtmAUAAAAAAAAAAACkcQc06w1NmNTXdQAAAABJRU5ErkJggg=="/>
             </div>
 
-            <div id="th_version">{VERSION}</div>
-            <!-- Compiler: {COMPILER} -->
+            <div id="th_version">{{ VERSION }}</div>
+            <!-- Compiler: {{ COMPILER }} -->
         </div>
 
         <main>

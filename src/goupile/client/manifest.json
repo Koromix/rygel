@@ -1,6 +1,6 @@
 {
-    "short_name": "{TITLE}",
-    "name": "{TITLE}",
+    "short_name": "{{ TITLE }}",
+    "name": "{{ TITLE }}",
     "icons": [
         {
             "src": "favicon.png",
@@ -8,9 +8,9 @@
             "sizes": "16x16 24x24 32x32 48x48 64x64 128x128 192x192 512x512"
         }
     ],
-    "start_url": "{BASE_URL}",
+    "start_url": "{{ BASE_URL }}",
     "display": "standalone",
-    "scope": "{BASE_URL}",
+    "scope": "{{ BASE_URL }}",
     "background_color": "white",
     "theme_color": "black"
 }

@@ -380,7 +380,9 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
             RG_ASSERT(asset);
 
             const AssetInfo *render = RenderTemplate(request.url, *asset,
-                                                     [&](Span<const char> key, StreamWriter *writer) {
+                                                     [&](Span<const char> expr, StreamWriter *writer) {
+                Span<const char> key = TrimStr(expr);
+
                 if (key == "VERSION") {
                     writer->Write(FelixVersion);
                 } else if (key == "COMPILER") {
@@ -413,7 +415,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
                 } else if (key == "HEAD_TAGS") {
                     // Nothing to add
                 } else {
-                    Print(writer, "{%1}", key);
+                    Print(writer, "{{%1}}", expr);
                 }
             });
             AttachStatic(*render, 0, shared_etag, request, io);
@@ -592,7 +594,9 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
             Fmt(master_etag, "%1_%2_%3_%4", shared_etag, (const void *)asset, master->unique, fs_version);
 
             const AssetInfo *render = RenderTemplate(master_etag, *asset,
-                                                     [&](Span<const char> key, StreamWriter *writer) {
+                                                     [&](Span<const char> expr, StreamWriter *writer) {
+                Span<const char> key = TrimStr(expr);
+
                 if (key == "VERSION") {
                     writer->Write(FelixVersion);
                 } else if (key == "COMPILER") {
@@ -628,7 +632,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                         Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", master->key);
                     }
                 } else {
-                    Print(writer, "{%1}", key);
+                    Print(writer, "{{%1}}", expr);
                 }
             });
             AttachStatic(*render, 0, master_etag, request, io);
