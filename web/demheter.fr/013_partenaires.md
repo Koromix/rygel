@@ -1,6 +1,6 @@
 <!-- Title: Nos partenaires
      Menu: Qui sommes-nous ? / Nos partenaires
-     Created: 2023-05-31 -->
+     Description: Partenaires affiliés au projet DEMHETER -->
 
 # Nos partenaires
 

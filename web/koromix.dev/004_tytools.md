@@ -1,6 +1,5 @@
 <!-- Title: koromix.dev — TyTools
-     Menu: TyTools
-     Created: 2017-01-13 -->
+     Menu: TyTools -->
 
 # Overview
 

@@ -21,8 +21,7 @@ struct PageData {
 
     const char *title;
     const char *menu;
-    const char *created;
-    const char *modified;
+    const char *description;
     HeapArray<PageSection> sections;
 
     std::shared_ptr<const char> html_buf;
@@ -234,8 +233,7 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
         }
     };
 
-    // We use HTML comments for metadata (creation date, etc.),
-    // for example '<!-- Title: foobar -->' or '<!-- Created: 2016-01-12 -->'.
+    // We use HTML comments for metadata (creation date, etc.), such as '<!-- Title: foobar -->'
     renderer.blockhtml = [](buf *ob, buf *text, void *udata) {
         RenderContext *ctx = (RenderContext *)udata;
 
@@ -262,10 +260,8 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
                     attr_ptr = &ctx->page->title;
                 } else if (name == "Menu") {
                     attr_ptr = &ctx->page->menu;
-                } else if (name == "Created") {
-                    attr_ptr = &ctx->page->created;
-                } else if (name == "Modified") {
-                    attr_ptr = &ctx->page->modified;
+                } else if (name == "Description") {
+                    attr_ptr = &ctx->page->description;
                 } else {
                     LogError("%1: Unknown attribute '%2'", ctx->page->src_filename, name);
                     continue;
@@ -334,6 +330,8 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
             Print(writer, "%1", FmtRandom(8));
         } else if (key == "TITLE") {
             writer->Write(page.title);
+        } else if (key == "DESCRIPTION") {
+            writer->Write(page.description);
         } else if (key == "LINKS") {
             for (Size i = 0; i < pages.len; i++) {
                 const PageData *menu_page = &pages[i];
@@ -442,9 +440,6 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
             if (!page.title) {
                 LogError("%1: Ignoring page without title", page.src_filename);
                 valid = false;
-            }
-            if (!page.created) {
-                LogError("%1: Missing creation date", page.src_filename);
             }
             if (Size prev_idx = pages_map.FindValue(page.name, -1); prev_idx >= 0) {
                 LogError("%1: Ignoring duplicate of '%2'",

@@ -1,6 +1,6 @@
 <!-- Title: Psycho-éducation de la dépression
      Menu: Pour les psychologues / Psycho-éducation
-     Created: 2023-05-30 -->
+     Description: Fiche sur la psycho-éducation dans la dépression -->
 
 # Psycho-éducation de la dépression
 

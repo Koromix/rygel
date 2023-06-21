@@ -1,6 +1,6 @@
 <!-- Title: Luminothérapie
      Menu: Pour les médecins / Luminothérapie
-     Created: 2023-05-30 -->
+     Description: Fiche d'information sur la luminothérapie -->
 
 # Indications
 

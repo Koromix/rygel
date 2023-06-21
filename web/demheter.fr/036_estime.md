@@ -1,6 +1,6 @@
 <!-- Title: Estime de soi
      Menu: Pour les psychologues / Estime de soi
-     Created: 2023-05-30 -->
+     Description: Fiche sur l'estime de soi -->
 
 # Estime de soi
 

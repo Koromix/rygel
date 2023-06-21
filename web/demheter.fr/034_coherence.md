@@ -1,6 +1,6 @@
 <!-- Title: Cohérence cardiaque
      Menu: Pour les psychologues / Cohérence cardiaque
-     Created: 2023-05-30 -->
+     Description: Fiche sur la cohérence cardiaque -->
 
 # Cohérence cardiaque
 

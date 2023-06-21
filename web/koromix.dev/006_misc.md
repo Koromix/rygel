@@ -1,6 +1,5 @@
 <!-- Title: koromix.dev — Misc
-     Menu: Other
-     Created: 2022-05-16 -->
+     Menu: Other -->
 
 # Rekord
 

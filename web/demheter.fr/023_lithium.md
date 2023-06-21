@@ -1,6 +1,6 @@
 <!-- Title: Traitement au lithium
      Menu: Pour les médecins / Lithium
-     Created: 2023-05-30 -->
+     Description: Fiche d'information sur le traitement par le lithium -->
 
 # Indications
 

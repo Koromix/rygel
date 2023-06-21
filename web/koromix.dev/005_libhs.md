@@ -1,6 +1,5 @@
 <!-- Title: koromix.dev — libhs
-     Menu: libhs
-     Created: 2017-01-13 -->
+     Menu: libhs -->
 
 # Overview
 

@@ -1,6 +1,5 @@
 <!-- Title: koromix.dev — Goupile
-     Menu: Goupile
-     Created: 2022-05-16 -->
+     Menu: Goupile -->
 
 # Overview
 

@@ -1,6 +1,6 @@
 <!-- Title: Affirmation de soi
      Menu: Pour les psychologues / Affirmation de soi
-     Created: 2023-05-30 -->
+     Description: Fiche sur l'affirmation de soi -->
 
 # Affirmation de soi
 

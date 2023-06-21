@@ -1,6 +1,6 @@
 <!-- Title: Dépression
      Menu: Pour les médecins / Dépression
-     Created: 2023-05-30 -->
+     Description: Fiche d'information sur la dépression -->
 
 # Épidémiologie
 

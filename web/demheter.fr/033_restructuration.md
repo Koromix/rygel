@@ -1,6 +1,6 @@
 <!-- Title: Restructuration cognitive
      Menu: Pour les psychologues / Restructuration cognitive
-     Created: 2023-05-30 -->
+     Description: Fiche sur la restructuration cognitive -->
 
 # Restructuration cognitive
 

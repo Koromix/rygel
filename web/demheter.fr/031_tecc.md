@@ -1,6 +1,6 @@
 <!-- Title: Thérapies Émotionnelles, Comportementales et Cognitives
      Menu: Pour les psychologues / TECC
-     Created: 2023-05-30 -->
+     Description: Fiche sur les thérapies émotionnelles, comportementales et cognitives -->
 
 # Thérapies Émotionnelles, Comportementales et Cognitives
 

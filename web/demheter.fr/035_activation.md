@@ -1,6 +1,6 @@
 <!-- Title: Activation comportementale
      Menu: Pour les psychologues / Activation comportementale
-     Created: 2023-05-30 -->
+     Description: Fiche sur l'activation comportementale -->
 
 # Activation comportementale
 

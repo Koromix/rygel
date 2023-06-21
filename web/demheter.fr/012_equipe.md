@@ -1,6 +1,6 @@
 <!-- Title: Équipe DEMHETER
      Menu: Qui sommes-nous ? / Notre équipe
-     Created: 2023-05-30 -->
+     Description: Membres de l'équipe DEMHETER -->
 
 # L'équipe DEMHETER
 

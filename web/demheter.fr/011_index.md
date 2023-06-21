@@ -1,6 +1,6 @@
 <!-- Title: DEMHETER
      Menu: Qui sommes-nous ? / Missions et objectifs
-     Created: 2023-05-30 -->
+     Description: Présentation du projet DEMHETER -->
 
 # Dispositif DEMHETER
 

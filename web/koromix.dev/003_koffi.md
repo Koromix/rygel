@@ -1,6 +1,5 @@
 <!-- Title: koromix.dev — Koffi
-     Menu: Koffi
-     Created: 2022-05-16 -->
+     Menu: Koffi -->
 
 # Overview
 
