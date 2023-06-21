@@ -6933,39 +6933,31 @@ void InitPackedMap(Span<const AssetInfo> assets)
 bool PatchFile(StreamReader *reader, StreamWriter *writer,
                FunctionRef<void(Span<const char>, StreamWriter *)> func)
 {
-    char c;
-    while (reader->Read(1, &c) == 1) {
-        if (c == '{') {
-            char name[33] = {};
-            Size name_len = reader->Read(1, &name[0]);
-            RG_ASSERT(name_len >= 0);
+    LineReader splitter(reader);
 
-            if (IsAsciiAlpha(name[0]) || name[0] == '_') {
-                do {
-                    Size read_len = reader->Read(1, &name[name_len]);
-                    RG_ASSERT(read_len >= 0);
+    Span<const char> line;
+    while (splitter.Next(&line)) {
+        while (line.len) {
+            Span<const char> before = SplitStr(line, '{', &line);
 
-                    if (name[name_len] == '}') {
-                        name[name_len] = 0;
+            if (before.end() < line.ptr) {
+                Span<const char> expr = SplitStr(line, '}', &line);
 
-                        Span<const char> key = MakeSpan(name, name_len);
-                        func(key, writer);
+                if (before.len && !writer->Write(before))
+                    return false;
 
-                        break;
-                    } else if (!IsAsciiAlphaOrDigit(name[name_len]) && name[name_len] != '_') {
-                        writer->Write('{');
-                        writer->Write(name, name_len + 1);
-
-                        break;
-                    }
-                } while (++name_len < RG_SIZE(name));
+                if (line.ptr > expr.end()) {
+                    func(expr, writer);
+                } else {
+                    writer->Write('{');
+                    writer->Write(expr);
+                }
             } else {
-                writer->Write('{');
-                writer->Write(name[0]);
+                writer->Write(before);
             }
-        } else {
-            writer->Write(c);
         }
+
+        writer->Write('\n');
     }
 
     if (!reader->IsValid())
