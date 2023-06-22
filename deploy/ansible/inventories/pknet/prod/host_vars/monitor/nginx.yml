@@ -110,15 +110,19 @@ nginx_domains:
 
           root /opt/static/live/koromix.dev/www;
 
-          expires 28d;
+          expires 1h;
           add_header Cache-Control "public, no-transform";
 
-          gzip on;
-          gzip_vary on;
-          gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
-          gzip_proxied no-cache no-store private expired auth;
-          gzip_min_length 1000;
-          gzip_static on;
+          location /static/ {
+              expires 28d;
+
+              gzip on;
+              gzip_vary on;
+              gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
+              gzip_proxied no-cache no-store private expired auth;
+              gzip_min_length 1000;
+              gzip_static on;
+          }
       }
 
       location /files/ {
@@ -171,7 +175,7 @@ nginx_domains:
           gzip_min_length 1000;
 
           location /_static/ {
-              expires 1d;
+              expires 28d;
           }
       }
 
@@ -188,15 +192,19 @@ nginx_domains:
 
           root /opt/static/live/demheter.fr/www;
 
-          expires 28d;
+          expires 1h;
           add_header Cache-Control "public, no-transform";
 
-          gzip on;
-          gzip_vary on;
-          gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
-          gzip_proxied no-cache no-store private expired auth;
-          gzip_min_length 1000;
-          gzip_static on;
+          location /static/ {
+              expires 28d;
+
+              gzip on;
+              gzip_vary on;
+              gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
+              gzip_proxied no-cache no-store private expired auth;
+              gzip_min_length 1000;
+              gzip_static on;
+          }
       }
   - name: beta.demheter.fr
     ssl_certbot_email: niels.martignene@protonmail.com
@@ -211,15 +219,19 @@ nginx_domains:
 
           root /opt/static/live/demheter.fr/beta;
 
-          expires 28d;
+          expires 1h;
           add_header Cache-Control "public, no-transform";
 
-          gzip on;
-          gzip_vary on;
-          gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
-          gzip_proxied no-cache no-store private expired auth;
-          gzip_min_length 1000;
-          gzip_static on;
+          location /static/ {
+              expires 28d;
+
+              gzip on;
+              gzip_vary on;
+              gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
+              gzip_proxied no-cache no-store private expired auth;
+              gzip_min_length 1000;
+              gzip_static on;
+          }
       }
 
   - name: carto.cn2r.fr
