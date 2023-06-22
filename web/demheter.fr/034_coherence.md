@@ -4,7 +4,7 @@
 
 # Cohérence cardiaque
 
-<object class="schema" type="image/svg+xml" data="{{ ASSET:psycho/coherence.svg }}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET psycho/coherence.svg }}"></object>
 
 # Exercices pratiques
 

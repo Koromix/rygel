@@ -237,8 +237,8 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
 
             if (key == "RANDOM") {
                 Print(writer, "%1", FmtRandom(8));
-            } else if (StartsWith(key, "ASSET:")) {
-                Span<const char> path = key.Take(6, key.len - 6);
+            } else if (StartsWith(key, "ASSET ")) {
+                Span<const char> path = TrimStr(key.Take(6, key.len - 6));
                 const FileHash *hash = assets.FindValue(path, nullptr);
 
                 if (hash) {
@@ -394,8 +394,8 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
             writer->Write(page.description);
         } else if (key == "RANDOM") {
             Print(writer, "%1", FmtRandom(8));
-        } else if (StartsWith(key, "ASSET:")) {
-            Span<const char> path = key.Take(6, key.len - 6);
+        } else if (StartsWith(key, "ASSET ")) {
+            Span<const char> path = TrimStr(key.Take(6, key.len - 6));
             const FileHash *hash = assets.FindValue(path, nullptr);
 
             if (hash) {
