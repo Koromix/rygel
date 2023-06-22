@@ -185,7 +185,7 @@ code {
         position: static;
     }
 
-    main { padding-right: 16px; }
+    main { padding-right: 16px !important; }
 }
 
 @media screen and (max-width: 960px) {
