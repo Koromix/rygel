@@ -11,6 +11,8 @@
    You should have received a copy of the GNU Affero General Public License
    along with this program. If not, see https://www.gnu.org/licenses/. */
 
+html { scroll-padding-top: 80px; }
+
 body {
     margin: 0;
     padding: 0;

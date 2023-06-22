@@ -11,7 +11,10 @@
    You should have received a copy of the GNU Affero General Public License
    along with this program. If not, see https://www.gnu.org/licenses/. */
 
-html { height: 100%; }
+html {
+    height: 100%;
+    scroll-padding-top: 130px;
+}
 
 body {
     min-height: 100%;
@@ -266,6 +269,8 @@ footer {
 }
 
 @media screen and (max-width: 960px) {
+    html { scroll-padding-top: 100px; }
+
     #top menu {
         height: 90px;
         padding-left: 60px;
