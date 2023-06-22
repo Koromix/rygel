@@ -179,8 +179,9 @@ function PeriodPicker() {
     }
 
     function positionToDate(main_el, pos) {
-        let delta_days = Math.floor(limit_dates[1].diff(limit_dates[0]) *
-                         ((pos - main_el.offsetLeft) / main_el.offsetWidth));
+        let rect = main_el.getBoundingClientRect();
+
+        let delta_days = Math.floor(limit_dates[1].diff(limit_dates[0]) * ((pos - rect.left) / rect.width));
         let date = limit_dates[0].plus(delta_days);
 
         return date;
