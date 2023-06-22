@@ -34,6 +34,9 @@
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg4821" />
+  <style>
+    @import url(&quot;/static/opensans/OpenSans.css&quot;);
+  </style>
   <defs
      id="defs39">
     <filter

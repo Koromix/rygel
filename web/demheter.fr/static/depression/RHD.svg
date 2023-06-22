@@ -12,10 +12,6 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <style
-     id="style2">
-    @import url(&quot;/static/opensans/OpenSans.css&quot;);
-  </style>
   <sodipodi:namedview
      id="namedview69"
      pagecolor="#ffffff"
@@ -39,6 +35,9 @@
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg67" />
+  <style>
+    @import url(&quot;/static/opensans/OpenSans.css&quot;);
+  </style>
   <defs
      id="defs11">
     <symbol
