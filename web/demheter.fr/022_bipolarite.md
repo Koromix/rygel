@@ -9,7 +9,7 @@ Le trouble bipolaire se caractérise par des changements pathologiques de l’hu
 Environ **1 à 2,5% de la population générale** souffre de bipolarité en France :
 
 - *Type 1* (au moins 1 épisode maniaque ou mixte) : 0,6%
-- *Type 2* (au moins 1 épisode hypomaniauque associé à au moins un épisode dépressif majeur) : 0,4%
+- *Type 2* (au moins 1 épisode hypomaniaque associé à au moins un épisode dépressif majeur) : 0,4%
 - *Formes subsyndromiques* : 1,4%
 
 L'âge moyen d’apparition des symptômes se situe **entre 15 et 25 ans**.
