@@ -6,7 +6,7 @@
    preserveAspectRatio="xMidYMid meet"
    id="svg147"
    sodipodi:docname="semiologie.svg"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -25,16 +25,18 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:zoom="0.94722221"
-     inkscape:cx="410.67449"
-     inkscape:cy="101.34897"
+     inkscape:zoom="1.8944444"
+     inkscape:cx="402.22874"
+     inkscape:cy="70.733139"
      inkscape:window-width="1920"
-     inkscape:window-height="1007"
-     inkscape:window-x="1920"
-     inkscape:window-y="120"
+     inkscape:window-height="1017"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg147"
-     showguides="false" />
+     showguides="false"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1" />
   <style
      id="style3">
     @import url(&quot;/static/opensans/OpenSans.css&quot;);
@@ -191,39 +193,39 @@
        xml:space="preserve"><tspan
          x="0"
          y="164.38582"
-         id="tspan65377">Humeur triste quasi-constante
+         id="tspan1626">Humeur triste quasi-constante
 </tspan><tspan
          x="0"
          y="181.88582"
-         id="tspan65379">Anhédonie
+         id="tspan1628">Anhédonie
 </tspan><tspan
          x="0"
          y="199.38582"
-         id="tspan65381">Anesthésie affective
+         id="tspan1630">Anesthésie affective
 </tspan><tspan
          x="0"
          y="216.88582"
-         id="tspan65383">Anxiété
+         id="tspan1632">Anxiété
 </tspan><tspan
          x="0"
          y="234.38582"
-         id="tspan65385">Angoisses
+         id="tspan1634">Angoisses
 </tspan><tspan
          x="0"
          y="251.88582"
-         id="tspan65387">Culpabilité
+         id="tspan1636">Culpabilité
 </tspan><tspan
          x="0"
          y="269.38584"
-         id="tspan65389">Dévalorisation
+         id="tspan1638">Dévalorisation
 </tspan><tspan
          x="0"
          y="286.88584"
-         id="tspan65391">Idées d’incurabilité
+         id="tspan1640">Idées d’incurabilité
 </tspan><tspan
          x="0"
          y="304.38584"
-         id="tspan65393">Idées suicidaires</tspan></text>
+         id="tspan1642">Idées suicidaires</tspan></text>
   </g>
   <g
      transform="translate(239.01,-18.875215)"
@@ -243,31 +245,31 @@
        xml:space="preserve"><tspan
          x="0"
          y="130.78581"
-         id="tspan65395">Bradypsychie
+         id="tspan1644">Bradypsychie
 </tspan><tspan
          x="0"
          y="148.28581"
-         id="tspan65397">Ruminations
+         id="tspan1646">Ruminations
 </tspan><tspan
          x="0"
          y="165.78581"
-         id="tspan65399">Monodéïsme
+         id="tspan1648">Monodéïsme
 </tspan><tspan
          x="0"
          y="183.28581"
-         id="tspan65401">Altération de la concentration
+         id="tspan1650">Altération de la concentration
 </tspan><tspan
          x="0"
          y="200.78581"
-         id="tspan65403">Altération de la mémoire
+         id="tspan1652">Altération de la mémoire
 </tspan><tspan
          x="0"
          y="218.28581"
-         id="tspan65405">Déficit de l’attention
+         id="tspan1654">Déficit de l’attention
 </tspan><tspan
          x="0"
          y="235.78581"
-         id="tspan65407">Indécision</tspan></text>
+         id="tspan1656">Indécision</tspan></text>
   </g>
   <g
      transform="translate(477.502,-2.0752118)"
@@ -287,38 +289,38 @@
        xml:space="preserve"><tspan
          x="0"
          y="113.98581"
-         id="tspan65409">Perturbations du sommeil
+         id="tspan1658">Perturbations du sommeil
 </tspan><tspan
          x="0"
          y="131.48581"
-         id="tspan65411">Perturbation du rythme circadien
+         id="tspan1660">Perturbation du rythme circadien
 </tspan><tspan
          x="0"
          y="148.98581"
-         id="tspan65413">Fatigue
+         id="tspan1662">Fatigue
 </tspan><tspan
          x="0"
          y="166.48581"
-         id="tspan65415">Perte d’énergie
+         id="tspan1664">Perte d’énergie
 </tspan><tspan
          x="0"
          y="183.98581"
-         id="tspan65417">Perte ou gain d’appétit
+         id="tspan1666">Perte ou gain d’appétit
 </tspan><tspan
          x="0"
          y="201.48581"
-         id="tspan65419">Diminution du désir sexuel</tspan></text>
+         id="tspan1668">Diminution du désir sexuel</tspan></text>
   </g>
   <text
      xml:space="preserve"
-     style="font-style:normal;font-weight:normal;font-size:13.3333px;line-height:1.25;font-family:sans-serif;fill:#383838;fill-opacity:1;stroke:none"
+     style="font-style:normal;font-weight:normal;font-size:13.3333px;line-height:1.25;font-family:sans-serif;white-space:pre;inline-size:493.004;fill:#383838;fill-opacity:1;stroke:none"
      x="100.74471"
      y="10.213307"
-     id="text37407"><tspan
-       sodipodi:role="line"
-       id="tspan37405"
+     id="text37407"
+     transform="translate(19.530792,1.0557185)"><tspan
        x="100.74471"
-       y="10.213307">La plupart de la journée + Presque tous les jours + Plus de 15 jours</tspan></text>
+       y="10.213307"
+       id="tspan1670">La plupart de la journée + Presque tous les jours + Plus de 15 jours</tspan></text>
   <g
      id="g44648"
      transform="translate(-2.0428766,9.5492719)">
@@ -341,10 +343,10 @@
          xml:space="preserve"><tspan
            x="0"
            y="38.553177"
-           id="tspan65421">Altération marquée du fonctionnement professionnel, des activités </tspan><tspan
+           id="tspan1672">Altération marquée du fonctionnement professionnel, des activités </tspan><tspan
            x="0"
            y="58.553177"
-           id="tspan65423">sociales ou des relations interpersonnelles</tspan></text>
+           id="tspan1674">sociales ou des relations interpersonnelles</tspan></text>
     </g>
     <text
        xml:space="preserve"

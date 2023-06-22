@@ -6,7 +6,7 @@
    preserveAspectRatio="xMidYMid meet"
    id="svg145"
    sodipodi:docname="differentiel.svg"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -26,14 +26,16 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="0.94722222"
-     inkscape:cx="333.07918"
-     inkscape:cy="210.61584"
+     inkscape:cx="400.1173"
+     inkscape:cy="242.81525"
      inkscape:window-width="1920"
-     inkscape:window-height="1025"
-     inkscape:window-x="1920"
-     inkscape:window-y="0"
+     inkscape:window-height="1017"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg145" />
+     inkscape:current-layer="svg145"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1" />
   <style
      id="style3">
     @import url(&quot;/static/opensans/OpenSans.css&quot;);
@@ -139,27 +141,38 @@
        x="0"
        y="80.805534"
        id="text51"
-       style="fill:#ec9d36;fill-opacity:1"><tspan
-         x="0"
-         y="13.605533"
-         id="tspan33"
-         style="fill:#ec9d36;fill-opacity:1">Toxique</tspan><tspan
-         x="0"
-         y="30.405533"
-         id="tspan35"
-         style="fill:#ec9d36;fill-opacity:1">Neurologique</tspan><tspan
-         x="0"
-         y="47.205536"
-         id="tspan37"
-         style="fill:#ec9d36;fill-opacity:1">Endocrinien</tspan><tspan
-         x="0"
-         y="64.005539"
-         id="tspan39"
-         style="fill:#ec9d36;fill-opacity:1">Métabolique</tspan><tspan
+       style="white-space:pre;inline-size:169.921;fill:#ec9d36;fill-opacity:1"
+       transform="translate(0,-67.489162)"
+       xml:space="preserve"><tspan
          x="0"
          y="80.805534"
-         id="tspan45"
-         style="fill:#ec9d36;fill-opacity:1">Iatrogénique</tspan></text>
+         id="tspan1749"><tspan
+   style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
+   id="tspan1747">Toxique</tspan>
+</tspan><tspan
+         x="0"
+         y="98.305536"
+         id="tspan1753"><tspan
+   style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
+   id="tspan1751">Neurologique</tspan>
+</tspan><tspan
+         x="0"
+         y="115.80554"
+         id="tspan1757"><tspan
+           style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
+           id="tspan1755">Endocrinien
+</tspan></tspan><tspan
+         x="0"
+         y="133.30554"
+         id="tspan1761"><tspan
+           style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
+           id="tspan1759">Métabolique
+</tspan></tspan><tspan
+         x="0"
+         y="150.80554"
+         id="tspan1765"><tspan
+           style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
+           id="tspan1763">Iatrogénique</tspan></tspan></text>
   </g>
   <g
      transform="translate(455.2502,61.75342)"
@@ -174,28 +187,36 @@
        fill="#db4239"
        x="0"
        y="114.40553"
-       id="text71"><tspan
+       id="text71"
+       style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"><tspan
          x="0"
          y="13.605533"
-         id="tspan55">Trouble bipolaire</tspan><tspan
+         id="tspan55"
+         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble bipolaire</tspan><tspan
          x="0"
          y="30.405533"
-         id="tspan57">Trouble psychotique</tspan><tspan
+         id="tspan57"
+         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble psychotique</tspan><tspan
          x="0"
          y="47.205536"
-         id="tspan59">Trouble de la personnalité</tspan><tspan
+         id="tspan59"
+         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble de la personnalité</tspan><tspan
          x="0"
          y="64.005539"
-         id="tspan63">Trouble anxieux</tspan><tspan
+         id="tspan63"
+         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble anxieux</tspan><tspan
          x="0"
          y="80.805534"
-         id="tspan65">Trouble de stress post-</tspan><tspan
+         id="tspan65"
+         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble de stress post-</tspan><tspan
          x="0"
          y="97.60553"
-         id="tspan67">traumatique</tspan><tspan
+         id="tspan67"
+         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">traumatique</tspan><tspan
          x="0"
          y="114.40553"
-         id="tspan69">Addictions</tspan></text>
+         id="tspan69"
+         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Addictions</tspan></text>
   </g>
   <g
      transform="translate(69.81253,194.72156)"
