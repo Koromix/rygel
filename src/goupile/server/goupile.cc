@@ -563,14 +563,6 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         io->AddHeader("Cross-Origin-Embedder-Policy", "require-corp");
     }
 
-    // Handle sessions triggered by query parameters
-    if (request.method == http_RequestMethod::Get) {
-        if (instance->config.auto_key && !HandleSessionKey(instance, request, io))
-            return;
-        if (!HandleSessionToken(instance, request, io))
-            return;
-    }
-
     // Try application files
     if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))
         return;
@@ -623,6 +615,9 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     json.Key("buster"); json.String(master_etag);
                     json.Key("cache_offline"); json.Bool(master->config.use_offline);
                     json.Key("sync_mode"); json.String(json_ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf).ptr);
+                    if (master->config.auto_key) {
+                        json.Key("auto_key"); json.String(master->config.auto_key);
+                    }
                     if (master->config.backup_key) {
                         json.Key("backup_key"); json.String(master->config.backup_key);
                     }
@@ -657,6 +652,8 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleSessionProfile(instance, request, io);
     } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
         HandleSessionLogin(instance, request, io);
+    } else if (TestStr(instance_url, "/api/session/token") && request.method == http_RequestMethod::Post) {
+        HandleSessionToken(instance, request, io);
     } else if (TestStr(instance_url, "/api/session/key") && request.method == http_RequestMethod::Post) {
         HandleSessionKey(instance, request, io);
     } else if (TestStr(instance_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {

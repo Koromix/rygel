@@ -63,6 +63,24 @@ const goupile = new function() {
             self.syncHistory(url.pathname, false);
             url = new URL(window.location.href);
         } else {
+            if (url.searchParams.has('token')) {
+                let query = new URLSearchParams;
+                query.set('token', url.searchParams.get('token'));
+
+                await net.fetch(`${ENV.urls.instance}api/session/token`, {
+                    method: 'POST',
+                    body: query
+                });
+            } else if (ENV.auto_key && url.searchParams.has(ENV.auto_key)) {
+                let query = new URLSearchParams;
+                query.set('key', url.searchParams.get(ENV.auto_key));
+
+                await net.fetch(`${ENV.urls.instance}api/session/key`, {
+                    method: 'POST',
+                    body: query
+                });
+            }
+
             await syncProfile();
         }
 
