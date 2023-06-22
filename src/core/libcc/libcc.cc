@@ -6936,24 +6936,20 @@ bool PatchFile(StreamReader *reader, StreamWriter *writer,
     LineReader splitter(reader);
 
     Span<const char> line;
-    while (splitter.Next(&line)) {
+    while (splitter.Next(&line) && writer->IsValid()) {
         while (line.len) {
             Span<const char> before = SplitStr(line, "{{", &line);
+
+            writer->Write(before);
 
             if (before.end() < line.ptr) {
                 Span<const char> expr = SplitStr(line, "}}", &line);
 
-                if (before.len && !writer->Write(before))
-                    return false;
-
-                if (line.ptr > expr.end()) {
+                if (expr.end() < line.ptr) {
                     func(expr, writer);
                 } else {
-                    writer->Write("{{");
-                    writer->Write(expr);
+                    Print(writer, "{{%1", expr);
                 }
-            } else {
-                writer->Write(before);
             }
         }
 
