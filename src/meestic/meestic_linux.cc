@@ -633,72 +633,77 @@ Options:
         }
     }
 
-    // Open Meestic socket
-    meestic_fd = ConnectToUnixSocket(socket_filename);
-    if (meestic_fd < 0)
-        return 1;
-    RG_DEFER { close(meestic_fd); };
-
-    // Read config from server
-    {
-        auto read = [&](Span<uint8_t> out_buf) { return recv(meestic_fd, out_buf.ptr, out_buf.len, 0); };
-        StreamReader reader(read, "<meestic>");
-
-        if (!LoadConfig(&reader, &config))
-            return 1;
-    }
-
-    // Open D-Bus connections
-    RG_DEFER {
-        sd_bus_flush_close_unref(bus_sys);
-        sd_bus_flush_close_unref(bus_user);
-    };
-    CALL_SDBUS(sd_bus_open_system_with_description(&bus_sys, FelixTarget), "Failed to connect to system D-Bus bus", 1);
-    CALL_SDBUS(sd_bus_open_user_with_description(&bus_user, FelixTarget), "Failed to connect to session D-Bus bus", 1);
-
-    // Register the tray icon
-    if (!RegisterTrayIcon())
-        return 1;
-    if (!RegisterTrayMenu())
-        return 1;
-
-    // From here on, don't quit abruptly
-    WaitForInterrupt(0);
-
-    // React to main service and D-Bus events
     while (run) {
-        struct pollfd pfds[3] = {
-            { meestic_fd, 0, 0 },
-            { sd_bus_get_fd(bus_sys), (short)sd_bus_get_events(bus_sys), 0 },
-            { sd_bus_get_fd(bus_user), (short)sd_bus_get_events(bus_user), 0 }
-        };
-
-        int timeout = std::min(GetBusTimeout(bus_sys), GetBusTimeout(bus_user));
-        if (timeout < 0)
+        // Open Meestic socket
+        meestic_fd = ConnectToUnixSocket(socket_filename);
+        if (meestic_fd < 0)
             return 1;
-        if (timeout == INT_MAX)
-            timeout = -1;
+        RG_DEFER { close(meestic_fd); };
 
-        if (poll(pfds, RG_LEN(pfds), timeout) < 0) {
-            if (errno == EINTR) {
-                if (WaitForResult(0) == WaitForResult::Interrupt) {
-                    break;
-                } else {
-                    continue;
+        // Read config from server
+        {
+            auto read = [&](Span<uint8_t> out_buf) { return recv(meestic_fd, out_buf.ptr, out_buf.len, 0); };
+            StreamReader reader(read, "<meestic>");
+
+            if (!LoadConfig(&reader, &config))
+                return 1;
+        }
+
+        // Open D-Bus connections
+        RG_DEFER {
+            sd_bus_flush_close_unref(bus_sys);
+            sd_bus_flush_close_unref(bus_user);
+        };
+        CALL_SDBUS(sd_bus_open_system_with_description(&bus_sys, FelixTarget), "Failed to connect to system D-Bus bus", 1);
+        CALL_SDBUS(sd_bus_open_user_with_description(&bus_user, FelixTarget), "Failed to connect to session D-Bus bus", 1);
+
+        // Register the tray icon
+        if (!RegisterTrayIcon())
+            return 1;
+        if (!RegisterTrayMenu())
+            return 1;
+
+        // From here on, don't quit abruptly
+        WaitForInterrupt(0);
+
+        // React to main service and D-Bus events
+        while (run) {
+            struct pollfd pfds[3] = {
+                { meestic_fd, 0, 0 },
+                { sd_bus_get_fd(bus_sys), (short)sd_bus_get_events(bus_sys), 0 },
+                { sd_bus_get_fd(bus_user), (short)sd_bus_get_events(bus_user), 0 }
+            };
+
+            int timeout = std::min(GetBusTimeout(bus_sys), GetBusTimeout(bus_user));
+            if (timeout < 0)
+                return 1;
+            if (timeout == INT_MAX)
+                timeout = -1;
+
+            if (poll(pfds, RG_LEN(pfds), timeout) < 0) {
+                if (errno == EINTR) {
+                    if (WaitForResult(0) == WaitForResult::Interrupt) {
+                        break;
+                    } else {
+                        continue;
+                    }
                 }
+
+                LogError("Failed to poll I/O descriptors: %1", strerror(errno));
+                return 1;
             }
 
-            LogError("Failed to poll I/O descriptors: %1", strerror(errno));
-            return 1;
-        }
+            // Wait and and try to reconnect to server when it restarts
+            if (pfds[0].revents & (POLLERR | POLLHUP)) {
+                LogError("Lost connection to server");
 
-        if (pfds[0].revents & (POLLERR | POLLHUP)) {
-            LogError("Lost connection to server");
-            return 1;
-        }
+                WaitDelay(3000);
+                break;
+            }
 
-        CALL_SDBUS(sd_bus_process(bus_sys, nullptr), "Failed to process system D-Bus messages", 1);
-        CALL_SDBUS(sd_bus_process(bus_user, nullptr), "Failed to process session D-Bus messages", 1);
+            CALL_SDBUS(sd_bus_process(bus_sys, nullptr), "Failed to process system D-Bus messages", 1);
+            CALL_SDBUS(sd_bus_process(bus_user, nullptr), "Failed to process session D-Bus messages", 1);
+        }
     }
 
     return 0;
