@@ -2,8 +2,8 @@
 
 cd "$(dirname $0)/../../../.."
 
-./bootstrap.sh
-./felix -pFast meestic MeesticGui
+docker build -t rygel/debian10 deploy/docker/debian10
+docker run -t -i --rm -v $(pwd):/io rygel/debian10 /io/src/meestic/dist/debian/build.sh
 
 VERSION=$(./felix --version | awk '/^felix/ {print $2}' | sed -e 's/_.*//')
 DATE=$(echo $VERSION | sed 's/\./ /' | LANG=C xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
