@@ -2,7 +2,7 @@
 
 Meestic is a small tool to control the keyboard lights of MSI Delta 15 laptops. It was made by looking at the HID packets sent by the Windows tool with Wireshark. It is provided "as is", I don't make any guarantee about this tool.
 
-You can use the command-line version (Windows and Linux) or the Windows-only GUI version.
+You can use the command-line or the GUI version.
 
 For ease of use, pre-built x64 binaries (built statically with musl-libc) are available here: https://koromix.dev/files/meestic/
 
@@ -43,7 +43,7 @@ Restart the GUI to apply each change.
 
 ### Linux
 
-After installing the self-extracting package, edit `/etc/meestic.ini`. Once done, restart the daemon with `sudo systemctl restart meestic`.
+After installing the Debian package, edit `/etc/meestic.ini`. Once done, restart the daemon with `sudo systemctl restart meestic`.
 
 ### Example
 
