@@ -12,6 +12,7 @@ Most projects are licensed under the [AGPL 3.0 license](https://www.gnu.org/lice
 | *goupile*  | Programmable electronic data capture application                           | Felix      | **WIP**  | AGPL 3   |
 | *hodler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)               | Felix      | **Good** | AGPL 3   |
 | *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js             | Node.js    | **Good** | *MIT*    |
+| *meestic*  | Control the keyboard lighting on MSI Delta 15 laptops                      | Felix      | **Good** | AGPL 3   |
 | *napka*    | List and map of mental healthcare resources in France                      | Node.js    | **WIP**  | AGPL 3   |
 | *rekord*   | Backup tool with deduplication and asymmetric encryption                   | Felix      | **WIP**  | AGPL 3   |
 | *snaplite* | Support tool for SQLite snapshots made from core/libsqlite                 | Felix      | **Good** | AGPL 3   |

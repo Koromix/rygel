@@ -57,9 +57,9 @@ The projects on this page are provided as-is, and are in **various states of com
 Project | Description | Language
 ------- | ----------- | --------
 [Rekord](https://github.com/Koromix/rygel/tree/master/src/rekord) | Backup tool with deduplication and asymmetric encryption | C++
-[Blikk](https://github.com/Koromix/rygel/tree/master/src/blikk)   | Embeddable beginner-friendly programming language with static types, fast compilation                                                       | C++
-[CNoke](https://www.npmjs.com/package/cnoke)   | Simple alternative to CMake.js, without any dependency, designed to build native Node addons based on CMake                                 | Javascript
-[SeatSH](https://github.com/Koromix/rygel/tree/master/src/seatsh)  | SeatSH is a Windows service that enables you to launch graphical programs from an SSH connection on Windows 10, for automated test systems. | C++
-[DRD](https://github.com/Koromix/rygel/tree/master/src/drd)     | Alternative french PMSI MCO classifier<br>*Library (libdrd), command-line tool (drdc) and R package (drdR)*                                 | C++
-[SaneBB](https://github.com/Koromix/libraries/blob/master/SaneBB.java)  | Small (single-file) and fast BBCode parser in Java                                                                                          | Java
-[Meestic](https://github.com/Koromix/rygel/tree/master/src/meestic) | Small command-line utility to control MSI Delta 15 keyboard lighting (and other models?). Provided "as is", no guarantee.                   | C++
+[Blikk](https://github.com/Koromix/rygel/tree/master/src/blikk) | Embeddable beginner-friendly programming language with static types, fast compilation | C++
+[CNoke](https://www.npmjs.com/package/cnoke) | Simple alternative to CMake.js, without any dependency, designed to build native Node addons based on CMake | Javascript
+[SeatSH](https://github.com/Koromix/rygel/tree/master/src/seatsh) | SeatSH is a Windows service that enables you to launch graphical programs from an SSH connection on Windows 10, for automated test systems. | C++
+[DRD](https://github.com/Koromix/rygel/tree/master/src/drd) | Alternative french PMSI MCO classifier<br>*Library (libdrd), command-line tool (drdc) and R package (drdR)* | C++
+[SaneBB](https://github.com/Koromix/libraries/blob/master/SaneBB.java) | Small (single-file) and fast BBCode parser in Java | Java
+[Meestic](https://github.com/Koromix/rygel/tree/master/src/meestic) | CLI and GUI tools to control MSI Delta 15 keyboard lighting. Provided "as is", no guarantee. | C++
