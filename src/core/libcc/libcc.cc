@@ -2292,7 +2292,7 @@ static FileType FileModeToType(mode_t mode)
 
 StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
 {
-#if defined(__linux__) && !defined(LIBCC_NO_STATX)
+#if defined(__linux__) && defined(STATX_TYPE) && !defined(LIBCC_NO_STATX)
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
     int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
 
