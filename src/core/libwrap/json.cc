@@ -321,7 +321,8 @@ bool json_Parser::PassThrough(StreamWriter *writer)
     bool empty = true;
 
     if (handler.token == json_TokenType::Invalid) {
-        empty &= !reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, copier);
+        const unsigned int flags = rapidjson::kParseNumbersAsStringsFlag | rapidjson::kParseStopWhenDoneFlag;
+        empty &= !reader.IterativeParseNext<flags>(st, copier);
     } else {
         switch (handler.token) {
             case json_TokenType::Invalid: { RG_UNREACHABLE(); } break;
@@ -342,7 +343,9 @@ bool json_Parser::PassThrough(StreamWriter *writer)
         handler.token = json_TokenType::Invalid;
         empty = false;
     }
-    while (copier.GetDepth() && reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, copier));
+
+    const unsigned int flags = rapidjson::kParseNumbersAsStringsFlag | rapidjson::kParseStopWhenDoneFlag;
+    while (copier.GetDepth() && reader.IterativeParseNext<flags>(st, copier));
 
     if (reader.HasParseError()) {
         rapidjson::ParseErrorCode err = reader.GetParseErrorCode();
@@ -389,16 +392,18 @@ json_TokenType json_Parser::PeekToken()
     if (RG_UNLIKELY(error))
         return json_TokenType::Invalid;
 
-    if (handler.token == json_TokenType::Invalid &&
-            !reader.IterativeParseNext<rapidjson::kParseNumbersAsStringsFlag>(st, handler)) {
-        if (reader.HasParseError()) {
-            if (!error) {
-                rapidjson::ParseErrorCode err = reader.GetParseErrorCode();
-                LogError("%1", GetParseError_En(err));
+    if (handler.token == json_TokenType::Invalid) {
+        const unsigned int flags = rapidjson::kParseNumbersAsStringsFlag | rapidjson::kParseStopWhenDoneFlag;
+        if (!reader.IterativeParseNext<flags>(st, handler)) {
+            if (reader.HasParseError()) {
+                if (!error) {
+                    rapidjson::ParseErrorCode err = reader.GetParseErrorCode();
+                    LogError("%1", GetParseError_En(err));
+                }
+                error = true;
+            } else {
+                eof = true;
             }
-            error = true;
-        } else {
-            eof = true;
         }
     }
 
