@@ -15,6 +15,7 @@
 #include "config.hh"
 #include "lights.hh"
 #include "src/core/libsandbox/libsandbox.hh"
+#include "src/core/libwrap/json.hh"
 #include "vendor/libhs/libhs.h"
 
 #ifdef __linux__
@@ -37,6 +38,7 @@ namespace RG {
 
 static Config config;
 static Size profile_idx = 0;
+static bool transmit_info = false;
 
 static hs_port *port = nullptr;
 
@@ -150,6 +152,8 @@ static bool ApplyProfile(Size idx)
 #endif
 
     profile_idx = idx;
+    transmit_info = true;
+
     return true;
 }
 
@@ -194,7 +198,7 @@ static bool HandleInputEvent(int fd)
     return true;
 }
 
-static bool HandleClientConnect(int fd)
+static bool SendInfo(int fd, bool profiles)
 {
     const auto write = [&](Span<const uint8_t> buf) {
         while (buf.len) {
@@ -212,65 +216,105 @@ static bool HandleClientConnect(int fd)
     };
 
     StreamWriter writer(write, "<client>");
+    json_Writer json(&writer);
 
-    for (const ConfigProfile &profile: config.profiles) {
-        PrintLn(&writer, "[%1]", profile.name);
+    json.StartObject();
 
-        PrintLn(&writer, "Mode = %1", LightModeOptions[(int)profile.settings.mode].name);
-        PrintLn(&writer, "Speed = %1", profile.settings.speed);
-        PrintLn(&writer, "Intensity = %1", profile.settings.intensity);
-
-        Print(&writer, "Colors =");
-        for (RgbColor color: profile.settings.colors) {
-            Print(&writer, " #%1%2%3", FmtHex(color.red).Pad0(-2), FmtHex(color.blue).Pad0(-2), FmtHex(color.green).Pad0(-2));
+    if (profiles) {
+        json.Key("profiles"); json.StartArray();
+        for (const ConfigProfile &profile: config.profiles) {
+            json.String(profile.name);
         }
-        PrintLn(&writer);
-
-        PrintLn(&writer);
+        json.EndArray();
     }
+    json.Key("active"); json.Int(profile_idx);
 
-    // Signal EOF (full config)
-    shutdown(fd, SHUT_WR);
+    json.EndObject();
 
-    return writer.IsValid();
-}
-
-static bool HandleClientMessage(int fd)
-{
-    uint8_t payload;
-    Size received = recv(fd, &payload, RG_SIZE(payload), 0);
-
-    if (received < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return true;
-
-        LogError("Failed to read client data");
+    if (!writer.Write('\n'))
         return false;
-    } else if (!received) {
-        return false;
-    }
-
-    if (payload < 0x80) {
-        Size idx = payload;
-
-        if (idx >= config.profiles.len) {
-            LogError("Client asked for invalid profile");
-            return false;
-        }
-        if (!ApplyProfile(idx))
-            return false;
-    } else if (payload == 0x80) {
-        if (!ToggleProfile(-1))
-            return false;
-    } else if (payload == 0x81) {
-        if (!ToggleProfile(1))
-            return false;
-    } else {
-        LogError("Invalid command 0x%1 from client", FmtHex(payload));
-        return false;
-    }
 
     return true;
+}
+
+static bool HandleClientData(int fd)
+{
+    BlockAllocator temp_alloc;
+
+    const auto read = [&](Span<uint8_t> out_buf) {
+        struct pollfd pfd = { fd, POLLIN, 0 };
+        int ret = poll(&pfd, 1, 1000);
+
+        if (!ret) {
+            LogError("Client has timed out");
+            return (Size)-1;
+        } else if (ret < 0) {
+            LogError("poll() failed: %1", strerror(errno));
+            return (Size)-1;
+        }
+
+        Size received = recv(fd, out_buf.ptr, out_buf.len, 0);
+        if (received < 0) {
+            LogError("Failed to receive data from client: %1", strerror(errno));
+        }
+        return received;
+    };
+
+    StreamReader reader(read, "<client>");
+    json_Parser parser(&reader, &temp_alloc);
+
+    parser.ParseObject();
+    while (parser.InObject()) {
+        Span<const char> key = {};
+        parser.ParseKey(&key);
+
+        if (key == "apply") {
+            int64_t idx;
+            if (!parser.ParseInt(&idx))
+                return false;
+            if (idx < 0 || idx >= config.profiles.len) {
+                LogError("Client asked for invalid profile");
+                return false;
+            }
+            ApplyProfile(idx);
+        } else if (key == "toggle") {
+            Span<const char> type = {};
+            if (!parser.ParseString(&type))
+                return false;
+
+            if (type == "previous") {
+                ToggleProfile(-1);
+            } else if (type == "next") {
+                ToggleProfile(1);
+            } else {
+                LogError("Invalid value '%1' for toggle command", type);
+                return false;
+            }
+        } else if (parser.IsValid()) {
+            LogError("Unexpected key '%1'", key);
+            return false;
+        }
+    }
+    if (!parser.IsValid())
+        return false;
+
+    return true;
+}
+
+static Size DoForClients(Span<struct pollfd> pfds, FunctionRef<bool(int fd, int revents)> func)
+{
+    Size j = 2;
+    for (Size i = 2; i < pfds.len; i++) {
+        pfds[j] = pfds[i];
+
+        if (!func(pfds[i].fd, pfds[i].revents)) {
+            close(pfds[i].fd);
+            continue;
+        }
+
+        j++;
+    }
+    return j;
 }
 
 static int RunDaemon(Span<const char *> arguments)
@@ -386,6 +430,7 @@ Options:
     // Check that it works once, at least
     if (!ApplyProfile(config.default_idx))
         return 1;
+    transmit_info = false;
 
     // From here on, don't quit abruptly
     WaitForInterrupt(0);
@@ -421,7 +466,7 @@ Options:
                 int fd = accept4(listen_fd, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
 
                 if (fd >= 0) {
-                    if (HandleClientConnect(fd)) {
+                    if (SendInfo(fd, true)) {
                         pfds.Append({ fd, POLLIN, 0 });
                     } else {
                         close(fd);
@@ -431,24 +476,21 @@ Options:
                 }
             }
 
-            // Handle existing clients
-            {
-                Size j = 2;
-                for (Size i = 2; i < pfds.len; i++) {
-                    pfds[j] = pfds[i];
-
-                    bool keep = true;
-                    if (pfds[i].revents & POLLIN) {
-                        keep &= HandleClientMessage(pfds[i].fd);
-                    }
-                    if (!keep) {
-                        close(pfds[i].fd);
-                        continue;
-                    }
-
-                    j++;
+            // Handle client data
+            pfds.len = DoForClients(pfds, [&](int fd, int revents) {
+                if (revents & (POLLERR | POLLHUP)) {
+                    return false;
+                } else if (revents & POLLIN) {
+                    return HandleClientData(fd);
+                } else {
+                    return true;
                 }
-                pfds.len = j;
+            });
+
+            // Send updates
+            if (transmit_info) {
+                pfds.len = DoForClients(pfds, [&](int fd, int) { return SendInfo(fd, false); });
+                transmit_info = false;
             }
         }
     }

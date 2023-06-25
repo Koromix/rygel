@@ -15,7 +15,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "config.hh"
-#include "src/core/libsandbox/libsandbox.hh"
+#include "src/core/libwrap/json.hh"
 #include "vendor/basu/src/systemd/sd-bus.h"
 #include "vendor/stb/stb_image.h"
 #include "vendor/stb/stb_image_resize.h"
@@ -56,7 +56,10 @@ static const Vec2<int> IconSizes[] = {
 static int meestic_fd = -1;
 static bool run = true;
 
-static Config config;
+static HeapArray<const char *> profiles;
+static BlockAllocator profiles_alloc;
+static unsigned int profiles_revision = 0;
+static Size profile_idx = -1;
 
 static char bus_name[512];
 static sd_bus *bus_user;
@@ -65,9 +68,10 @@ static bool ApplyProfile(Size idx)
 {
     LogInfo("Applying profile %1", idx);
 
-    uint8_t payload = (uint8_t)idx;
+    LocalArray<char, 128> buf;
+    buf.len = Fmt(buf.data, "{\"apply\": %1}\n", idx).len;
 
-    if (send(meestic_fd, &payload, 1, 0) < 0) {
+    if (send(meestic_fd, buf.data, (size_t)buf.len, 0) < 0) {
         LogError("Failed to send message to server: %1", strerror(errno));
         return false;
     }
@@ -80,9 +84,10 @@ static bool ToggleProfile(int delta)
     if (!delta)
         return true;
 
-    uint8_t payload = delta > 0 ? 0x81 : 0x80;
+    LocalArray<char, 128> buf;
+    buf.len = Fmt(buf.data, "{\"toggle\": \"%1\"}\n", delta > 0 ? "next" : "previous").len;
 
-    if (send(meestic_fd, &payload, 1, 0) < 0) {
+    if (send(meestic_fd, buf.data, (size_t)buf.len, 0) < 0) {
         LogError("Failed to send message to server: %1", strerror(errno));
         return false;
     }
@@ -415,21 +420,21 @@ static int GetMenuComplexProperty(sd_bus *, const char *, const char *, const ch
     RG_UNREACHABLE();
 }
 
-static bool DumpMenuItems(FunctionRef<bool(int, const char *)> func)
+static bool DumpMenuItems(FunctionRef<bool(int, const char *, int)> func)
 {
-#define ITEM(Id, Label) \
+#define ITEM(Id, Label, Check) \
         do { \
-            if (!func((Id), (Label))) \
+            if (!func((Id), (Label), (Check))) \
                 return false; \
         } while (false)
 
-    for (Size i = 0; i < config.profiles.len; i++) {
-        const ConfigProfile &profile = config.profiles[i];
-        ITEM(100 + i, profile.name);
+    for (Size i = 0; i < profiles.len; i++) {
+        const char *name = profiles[i];
+        ITEM(100 + i, name, i == profile_idx);
     }
 
-    ITEM(-1, "-");
-    ITEM(1, "_Exit");
+    ITEM(-1, "-", -1);
+    ITEM(1, "_Exit", -1);
 
 #undef ITEM
 
@@ -474,21 +479,23 @@ static bool RegisterTrayMenu()
             int root;
             CALL_SDBUS(sd_bus_message_read(m, "i", &root), ParseError, -1);
 
-            CALL_SDBUS(sd_bus_message_append(reply, "u", 1), ReplyError, -1);
+            CALL_SDBUS(sd_bus_message_append(reply, "u", profiles_revision), ReplyError, -1);
             CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "ia{sv}av"), ReplyError, -1);
             CALL_SDBUS(sd_bus_message_append(reply, "ia{sv}", 0, 1,
                 "children-display", "s", "submenu"
             ), ReplyError, -1);
             CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "v"), ReplyError, -1);
-            DumpMenuItems([&](int id, const char *label) {
+            DumpMenuItems([&](int id, const char *label, int check) {
                 if (root != 0)
                     return true;
 
-                CALL_SDBUS(sd_bus_message_append(reply, "v", "(ia{sv}av)", id, 4,
+                CALL_SDBUS(sd_bus_message_append(reply, "v", "(ia{sv}av)", id, 6,
                     "type", "s", TestStr(label, "-") ? "separator" : "standard",
                     "label", "s", TestStr(label, "-") ? "" : label,
                     "enabled", "b", true,
                     "visible", "b", true,
+                    "toggle-type", "s", (check >= 0) ? "radio" : "",
+                    "toggle-state", "i", check,
                 0), ReplyError, false);
 
                 return true;
@@ -513,15 +520,17 @@ static bool RegisterTrayMenu()
             CALL_SDBUS(sd_bus_message_exit_container(m), ParseError, -1);
 
             CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(ia{sv})"), "Failed to prepare sd-bus reply A", -1);
-            DumpMenuItems([&](int id, const char *label) {
+            DumpMenuItems([&](int id, const char *label, int check) {
                 if (!items.Find(id))
                     return true;
 
-                CALL_SDBUS(sd_bus_message_append(reply, "(ia{sv})", id, 4,
+                CALL_SDBUS(sd_bus_message_append(reply, "(ia{sv})", id, 6,
                     "type", "s", TestStr(label, "-") ? "separator" : "standard",
                     "label", "s", label,
                     "enabled", "b", true,
-                    "visible", "b", true
+                    "visible", "b", true,
+                    "toggle-type", "s", (check >= 0) ? "radio" : "",
+                    "toggle-state", "i", check
                 ), "Failed to prepare sd-bus reply X", false);
 
                 return true;
@@ -592,6 +601,62 @@ static int GetBusTimeout(sd_bus *bus)
     return timeout;
 }
 
+static bool HandleServerData()
+{
+    BlockAllocator temp_alloc;
+
+    const auto read = [&](Span<uint8_t> out_buf) {
+        Size received = recv(meestic_fd, out_buf.ptr, out_buf.len, 0);
+        if (received < 0) {
+            LogError("Failed to receive data from server: %1", strerror(errno));
+        }
+        return received;
+    };
+
+    StreamReader reader(read, "<server>");
+    json_Parser parser(&reader, &temp_alloc);
+
+    parser.ParseObject();
+    while (parser.InObject()) {
+        Span<const char> key = {};
+        parser.ParseKey(&key);
+
+        if (key == "profiles") {
+            profiles.Clear();
+            profiles_alloc.ReleaseAll();
+
+            parser.ParseArray();
+            while (parser.InArray()) {
+                Span<const char> name = {};
+                if (!parser.ParseString(&name))
+                    return false;
+                profiles.Append(DuplicateString(name, &profiles_alloc).ptr);
+            }
+        } else if (key == "active") {
+            int64_t idx = 0;
+            if (!parser.ParseInt(&idx))
+                return false;
+            if (idx < 0 || idx > profiles.len) {
+                LogError("Server sent invalid profile index");
+                return false;
+            }
+            profile_idx = (Size)idx;
+        } else if (parser.IsValid()) {
+            LogError("Unexpected key '%1'", key);
+            return false;
+        }
+    }
+    if (!parser.IsValid())
+        return false;
+
+    profiles_revision++;
+    CALL_SDBUS(sd_bus_emit_signal(bus_user, "/MenuBar", "com.canonical.dbusmenu",
+                                  "LayoutUpdated", "ui", profiles_revision, 0),
+               "Failed to emit D-bus signal", false);
+
+    return true;
+}
+
 int Main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
@@ -639,15 +704,6 @@ Options:
             return 1;
         RG_DEFER { close(meestic_fd); };
 
-        // Read config from server
-        {
-            auto read = [&](Span<uint8_t> out_buf) { return recv(meestic_fd, out_buf.ptr, out_buf.len, 0); };
-            StreamReader reader(read, "<meestic>");
-
-            if (!LoadConfig(&reader, &config))
-                return 1;
-        }
-
         // Open D-Bus connections
         CALL_SDBUS(sd_bus_open_user_with_description(&bus_user, FelixTarget), "Failed to connect to session D-Bus bus", 1);
         RG_DEFER { sd_bus_flush_close_unref(bus_user); };
@@ -664,7 +720,7 @@ Options:
         // React to main service and D-Bus events
         while (run) {
             struct pollfd pfds[3] = {
-                { meestic_fd, 0, 0 },
+                { meestic_fd, POLLIN, 0 },
                 { sd_bus_get_fd(bus_user), (short)sd_bus_get_events(bus_user), 0 }
             };
 
@@ -694,6 +750,10 @@ Options:
 
                 WaitDelay(3000);
                 break;
+            }
+            if (pfds[0].revents & POLLIN) {
+                if (!HandleServerData())
+                    break;
             }
 
             CALL_SDBUS(sd_bus_process(bus_user, nullptr), "Failed to process session D-Bus messages", 1);
