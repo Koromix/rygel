@@ -59,7 +59,6 @@ static bool run = true;
 static Config config;
 
 static char bus_name[512];
-static sd_bus *bus_sys;
 static sd_bus *bus_user;
 
 static bool ApplyProfile(Size idx)
@@ -649,12 +648,8 @@ Options:
         }
 
         // Open D-Bus connections
-        RG_DEFER {
-            sd_bus_flush_close_unref(bus_sys);
-            sd_bus_flush_close_unref(bus_user);
-        };
-        CALL_SDBUS(sd_bus_open_system_with_description(&bus_sys, FelixTarget), "Failed to connect to system D-Bus bus", 1);
         CALL_SDBUS(sd_bus_open_user_with_description(&bus_user, FelixTarget), "Failed to connect to session D-Bus bus", 1);
+        RG_DEFER { sd_bus_flush_close_unref(bus_user); };
 
         // Register the tray icon
         if (!RegisterTrayIcon())
@@ -669,11 +664,10 @@ Options:
         while (run) {
             struct pollfd pfds[3] = {
                 { meestic_fd, 0, 0 },
-                { sd_bus_get_fd(bus_sys), (short)sd_bus_get_events(bus_sys), 0 },
                 { sd_bus_get_fd(bus_user), (short)sd_bus_get_events(bus_user), 0 }
             };
 
-            int timeout = std::min(GetBusTimeout(bus_sys), GetBusTimeout(bus_user));
+            int timeout = GetBusTimeout(bus_user);
             if (timeout < 0)
                 return 1;
             if (timeout == INT_MAX)
@@ -700,7 +694,6 @@ Options:
                 break;
             }
 
-            CALL_SDBUS(sd_bus_process(bus_sys, nullptr), "Failed to process system D-Bus messages", 1);
             CALL_SDBUS(sd_bus_process(bus_user, nullptr), "Failed to process session D-Bus messages", 1);
         }
     }
