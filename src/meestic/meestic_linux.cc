@@ -318,7 +318,6 @@ static int HandleMatch(sd_bus_message *m, void *, sd_bus_error *)
 
 static bool RegisterTrayIcon()
 {
-    RG_ASSERT(!bus_name[0]);
     Fmt(bus_name, "org.kde.StatusNotifierItem-%1-1", getpid());
 
     CALL_SDBUS(sd_bus_request_name(bus_user, bus_name, 0), "Failed to acquire tray icon name", false);
