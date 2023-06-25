@@ -517,7 +517,8 @@ static bool RegisterTrayMenu()
                 if (!items.Find(id))
                     return true;
 
-                CALL_SDBUS(sd_bus_message_append(reply, "(ia{sv})", id, 3,
+                CALL_SDBUS(sd_bus_message_append(reply, "(ia{sv})", id, 4,
+                    "type", "s", TestStr(label, "-") ? "separator" : "standard",
                     "label", "s", label,
                     "enabled", "b", true,
                     "visible", "b", true
