@@ -697,25 +697,25 @@ Options:
         }
     }
 
+    // Open D-Bus connections
+    CALL_SDBUS(sd_bus_open_user_with_description(&bus_user, FelixTarget), "Failed to connect to session D-Bus bus", 1);
+    RG_DEFER { sd_bus_flush_close_unref(bus_user); };
+
+    // Register the tray icon
+    if (!RegisterTrayIcon())
+        return 1;
+    if (!RegisterTrayMenu())
+        return 1;
+
+    // From here on, don't quit abruptly
+    WaitForInterrupt(0);
+
     while (run) {
         // Open Meestic socket
         meestic_fd = ConnectToUnixSocket(socket_filename);
         if (meestic_fd < 0)
             return 1;
         RG_DEFER { close(meestic_fd); };
-
-        // Open D-Bus connections
-        CALL_SDBUS(sd_bus_open_user_with_description(&bus_user, FelixTarget), "Failed to connect to session D-Bus bus", 1);
-        RG_DEFER { sd_bus_flush_close_unref(bus_user); };
-
-        // Register the tray icon
-        if (!RegisterTrayIcon())
-            return 1;
-        if (!RegisterTrayMenu())
-            return 1;
-
-        // From here on, don't quit abruptly
-        WaitForInterrupt(0);
 
         // React to main service and D-Bus events
         while (run) {
