@@ -559,11 +559,11 @@ static bool RegisterTrayMenu()
             CALL_SDBUS(sd_bus_reply_method_return(m, "ai", 0), ReplyError, -1);
 
             return 1;
-        }, SD_BUS_VTABLE_UNPRIVILEGED),
+        }, 0),
         SD_BUS_METHOD("AboutToShow", "i", "b", [](sd_bus_message *m, void *, sd_bus_error *) {
             CALL_SDBUS(sd_bus_reply_method_return(m, "b", false), ReplyError, -1);
             return 1;
-        }, SD_BUS_VTABLE_UNPRIVILEGED),
+        }, 0),
         SD_BUS_METHOD("AboutToShowGroup", "ai", "abab", [](sd_bus_message *m, void *, sd_bus_error *) {
             CALL_SDBUS(sd_bus_reply_method_return(m, "abab", 0, 0), ReplyError, -1);
             return 1;
