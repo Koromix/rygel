@@ -676,6 +676,7 @@ Options:
             if (poll(pfds, RG_LEN(pfds), timeout) < 0) {
                 if (errno == EINTR) {
                     if (WaitForResult(0) == WaitForResult::Interrupt) {
+                        run = false;
                         break;
                     } else {
                         continue;
