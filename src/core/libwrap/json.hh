@@ -49,6 +49,8 @@ public:
 
     json_StreamReader(StreamReader *st);
 
+    bool IsValid() const { return st->IsValid(); }
+
     char Peek() const { return buf[buf_offset]; }
     char Take();
     size_t Tell() const { return (size_t)(file_offset + buf_offset); }
@@ -142,7 +144,7 @@ public:
     json_Parser(StreamReader *st, Allocator *alloc);
 
     const char *GetFileName() const { return st.GetFileName(); }
-    bool IsValid() const { return !error; }
+    bool IsValid() const { return !error && st.IsValid(); }
     bool IsEOF() const { return eof; }
 
     bool ParseKey(Span<const char> *out_key);
