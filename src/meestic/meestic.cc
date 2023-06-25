@@ -458,13 +458,13 @@ Options:
 
 #endif
 
-static int RunChange(Span<const char *> arguments)
+static int RunSet(Span<const char *> arguments)
 {
     // Options
     LightSettings settings;
 
     const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 change [options...] [colors...]%!0
+        PrintLn(fp, R"(Usage: %!..+%1 set [options...] [colors...]%!0
 
 Options:
     %!..+-m, --mode <mode>%!0            Set light mode (see below)
@@ -578,7 +578,7 @@ int Main(int argc, char **argv)
                 argv[2] = const_cast<char *>("--help");
             } else {
                 const char *args[] = {"--help"};
-                return RunChange(args);
+                return RunSet(args);
             }
         } else if (TestStr(argv[1], "--version")) {
             PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
@@ -595,17 +595,17 @@ int Main(int argc, char **argv)
         cmd = argv[1];
 
         if (cmd[0] == '-') {
-            cmd = "change";
+            cmd = "set";
             arguments = MakeSpan((const char **)argv + 1, argc - 1);
         } else {
             arguments = MakeSpan((const char **)argv + 2, argc - 2);
         }
     } else {
-        cmd = "change";
+        cmd = "set";
     }
 
-    if (TestStr(cmd, "change")) {
-        return RunChange(arguments);
+    if (TestStr(cmd, "set")) {
+        return RunSet(arguments);
 #ifdef __linux__
     } else if (TestStr(cmd, "daemon")) {
         return RunDaemon(arguments);
