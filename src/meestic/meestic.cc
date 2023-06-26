@@ -28,10 +28,6 @@
     #include <unistd.h>
 #endif
 
-// Allows some tests without the MSI Delta 15
-// #define FAKE_KEYBOARD
-// #define FAKE_LIGHTS
-
 namespace RG {
 
 #ifdef __linux__
@@ -146,10 +142,8 @@ static bool ApplyProfile(Size idx)
 {
     LogInfo("Applying profile %1", idx);
 
-#ifndef FAKE_LIGHTS
-    if (!ApplyLight(port, config.profiles[idx].settings))
+    if (port && !ApplyLight(port, config.profiles[idx].settings))
         return false;
-#endif
 
     profile_idx = idx;
     transmit_info = true;
@@ -381,31 +375,30 @@ Options:
     }
 
     // Open the keyboard for Fn keys
-#ifdef FAKE_KEYBOARD
-    int pipe_fd[2];
-    if (pipe2(pipe_fd, O_CLOEXEC) < 0) {
-        LogError("pipe2() failed: %1", strerror(errno));
-        return 1;
-    }
-    RG_DEFER {
-        close(pipe_fd[1]);
-        close(pipe_fd[0]);
-    };
+    int input_fd = -1;
+    if (GetDebugFlag("FAKE_KEYBOARD")) {
+        static int pipe_fd[2];
+        if (pipe2(pipe_fd, O_CLOEXEC) < 0) {
+            LogError("pipe2() failed: %1", strerror(errno));
+            return 1;
+        }
+        atexit([]() { close(pipe_fd[1]); });
 
-    int input_fd = pipe_fd[0];
-#else
-    int input_fd = OpenInputDevice("AT Translated Set 2 keyboard", O_NONBLOCK);
-    if (input_fd < 0)
-        return 1;
-#endif
+        input_fd = pipe_fd[0];
+    } else {
+        input_fd = OpenInputDevice("AT Translated Set 2 keyboard", O_NONBLOCK);
+        if (input_fd < 0)
+            return 1;
+    }
+    RG_DEFER { close(input_fd); };
 
     // Open the light MSI HID device ahead of time
-#ifndef FAKE_LIGHTS
-    port = OpenLightDevice();
-    if (!port)
-        return 1;
+    if (!GetDebugFlag("FAKE_LIGHTS")) {
+        port = OpenLightDevice();
+        if (!port)
+            return 1;
+    }
     RG_DEFER { CloseLightDevice(port); };
-#endif
 
     // Open control socket
     int listen_fd = OpenUnixSocket(socket_filename);
@@ -599,10 +592,8 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTar
         }
     }
 
-#ifndef FAKE_LIGHTS
-    if (!ApplyLight(settings))
+    if (port && !ApplyLight(settings))
         return 1;
-#endif
 
     LogInfo("Done!");
     return 0;
