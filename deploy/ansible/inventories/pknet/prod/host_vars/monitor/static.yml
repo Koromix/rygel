@@ -62,3 +62,5 @@ static_deploys:
         chdir: '{{ static_root_path }}/repo/demheter.fr/beta'
       - cmd: '{{ static_root_path }}/repo/demheter.fr/beta/felix -pFast --run_here hodler . -O dist --gzip'
         chdir: '{{ static_root_path }}/repo/demheter.fr/beta/web/demheter.fr'
+
+  - name: cn2r.fr/test
