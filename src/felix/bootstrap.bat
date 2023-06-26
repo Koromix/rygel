@@ -4,12 +4,14 @@ setlocal enableDelayedExpansion
 cd %~dp0
 
 set SRC=*.cc ..\core\libcc\libcc.cc ..\core\libwrap\json.cc ..\..\vendor\pugixml\src\pugixml.cpp
-set BINARY=..\..\felix.exe
+
 set TEMP=..\..\bin\BootstrapFelix
 set BUILD=..\..\bin\Fast
+set BINARY=..\..\felix.exe
 
 if EXIST %BINARY% (
     %BINARY% -pFast felix && copy %BUILD%\felix.exe %BINARY% && exit /B
+    if EXIST %BINARY% del %BINARY%
 )
 
 where /q cl

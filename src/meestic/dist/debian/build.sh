@@ -8,4 +8,4 @@ apt install -y libudev-dev
 git config --global safe.directory '*'
 
 ./bootstrap.sh
-./felix -pFast meestic MeesticGui
+./felix -pFast -O bin/Packages/meestic/debian/bin meestic MeesticGui
