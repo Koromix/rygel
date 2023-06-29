@@ -261,6 +261,7 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
     struct RenderContext {
         Allocator *alloc;
         PageData *page;
+        bool has_main = false;
     };
 
     mkd_renderer renderer = discount_html;
@@ -272,6 +273,11 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
     // Get page sections from the parser
     renderer.header = [](buf *ob, buf *text, int level, void *udata) {
         RenderContext *ctx = (RenderContext *)udata;
+
+        if (!ctx->has_main) {
+            BUFPUTSL(ob, "<main>");
+            ctx->has_main = true;
+        }
 
         if (level < 3) {
             PageSection sec = {};
@@ -370,6 +376,8 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
         RG_DEFER { free(ob); };
 
         markdown(ob, ib, &renderer);
+        bufprintf(ob, ctx.has_main ? "</main>" : "");
+
         page->html_buf.reset(ob->data, free);
         page->html = MakeSpan(ob->data, ob->size);
     }
