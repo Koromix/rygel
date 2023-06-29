@@ -43,7 +43,7 @@ a:hover { color: var(--color, black); }
     position: sticky;
     top: 0;
     background: white;
-    z-index: 2;
+    z-index: 9;
     border-bottom: 2px solid white;
     transition: border-bottom-color 0.4s ease;
 }
