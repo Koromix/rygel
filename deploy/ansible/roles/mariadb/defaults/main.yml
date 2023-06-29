@@ -11,9 +11,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-all:
-  hosts:
-    host1:
-    monitor:
-    tools:
-    wordpress:
+mariadb_backup_path: /opt/mariadb
+mariadb_backup_schedule: '*-*-* 03:00'
+mariadb_backup_randomize: 20m
+
+# mariadb_databases:

@@ -11,9 +11,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-all:
-  hosts:
-    host1:
-    monitor:
-    tools:
-    wordpress:
+ansible_host: 192.168.192.18
+ansible_port: 22
+ansible_user: debian
+ansible_python_interpreter: /usr/bin/python3
+
+ovh_ipv6_addr: 2001:41d0:305:2100::a094
+ovh_ipv6_netmask: 128
+ovh_ipv6_gateway: 2001:41d0:305:2100::1
+
+ufw_rules:
+  - rule: allow
+    to: '{{ ansible_host }}'
+    port: 22
+    proto: tcp
+  - rule: allow
+    port: 80
+    proto: tcp
+  - rule: allow
+    port: 443
+    proto: tcp
+  - rule: allow
+    port: 9993
+    proto: udp

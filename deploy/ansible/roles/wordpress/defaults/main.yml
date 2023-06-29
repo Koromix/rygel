@@ -11,9 +11,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-all:
-  hosts:
-    host1:
-    monitor:
-    tools:
-    wordpress:
+wordpress_url: https://wordpress.org/wordpress-6.2.2.tar.gz
+wordpress_checksum: 'sha256:d2aa6f3dab866de3f530b1e6cfa808b497fcd04aedb3b13bc76f1333d02600f9'
+
+wordpress_root_path: /opt/wordpress
+
+# wordpress_name: blog
+# wordpress_database:

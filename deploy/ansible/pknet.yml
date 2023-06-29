@@ -23,6 +23,10 @@
       when: 'nginx_domains is defined'
       tags:
         - nginx
+    - name: mariadb
+      when: 'mariadb_databases is defined'
+      tags:
+        - mariadb
     - name: gitea
       when: 'gitea_name is defined'
       tags:
@@ -51,3 +55,7 @@
       when: 'napka_name is defined'
       tags:
         - napka
+    - name: wordpress
+      when: 'wordpress_name is defined'
+      tags:
+        - wordpress

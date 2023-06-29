@@ -1,0 +1,13 @@
+[wordpress]
+user = www-data
+group = www-data
+
+listen = /run/php/wordpress-fpm.sock
+
+listen.owner = www-data
+listen.group = www-data
+
+pm = static
+pm.max_children = 32
+
+php_admin_value[memory_limit] = 128M
