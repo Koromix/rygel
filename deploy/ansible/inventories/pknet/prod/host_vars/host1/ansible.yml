@@ -16,6 +16,7 @@ ansible_port: 22
 ansible_user: debian
 ansible_python_interpreter: /usr/bin/python3
 
+ovh_ipv6_iface: eth0
 ovh_ipv6_addr: 2001:41d0:304:200::11e8
 ovh_ipv6_netmask: 128
 ovh_ipv6_gateway: 2001:41d0:304:200::1

@@ -60,12 +60,12 @@
 - name: Configure IPv6 (OVH)
   template:
     src: ovh_ipv6.cfg.j2
-    dest: /etc/network/interfaces.d/51-cloud-init-ipv6.cfg
+    dest: /etc/network/interfaces.d/51-cloud-init-ipv6
     owner: root
     group: root
     mode: '0644'
   register: ovh_ipv6_config
-  when: 'ovh_ipv6_addr is defined'
+  when: 'ovh_ipv6_iface is defined'
   become: yes
 
 - name: Enable IPv6 (OVH)

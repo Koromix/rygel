@@ -28,6 +28,7 @@ ufw_rules:
 
 # Use these variables to set up IPv6 on OVH VPS
 # Documentation here: https://docs.ovh.com/fr/vps/configurer-ipv6/
+# ovh_ipv6_iface:
 # ovh_ipv6_addr:
 # ovh_ipv6_netmask:
 # ovh_ipv6_gateway:
