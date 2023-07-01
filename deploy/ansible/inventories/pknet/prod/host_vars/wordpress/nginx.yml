@@ -34,7 +34,7 @@ nginx_domains:
       {% endfor %}
 
   - name: cn2r.fr
-    # ssl_certbot_email: niels.martignene@protonmail.com
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       root /opt/wordpress/cn2r/wordpress;
 
@@ -49,7 +49,7 @@ nginx_domains:
           fastcgi_pass unix:/run/php/wordpress-fpm.sock;
       }
   - name: www.cn2r.fr
-    # ssl_certbot_email: niels.martignene@protonmail.com
+    ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
           return 301 https://cn2r.fr$request_uri;
