@@ -4,6 +4,13 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.1
+
+**Main changes:**
+
+- Fix crash with some struct types in System V 64 ABI
+- Always use direct passthrough for buffer arguments
+
 #### Koffi 2.5.0
 
 **New features:**
