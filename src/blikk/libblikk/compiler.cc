@@ -888,18 +888,6 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         return;
     }
 
-    if (RG_UNLIKELY(current_func)) {
-        if (record) {
-            MarkError(func_pos, "Record types cannot be defined inside functions");
-            Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
-        } else {
-            MarkError(func_pos, "Nested functions are not supported");
-            Hint(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
-        }
-    } else if (RG_UNLIKELY(depth)) {
-        MarkError(func_pos, "%1 must be defined in top-level scope", record ? "Records" : "Functions");
-    }
-
     bk_FunctionInfo *func = program->functions.AppendDefault();
     definitions_map.Set(func, pos);
 
