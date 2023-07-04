@@ -133,10 +133,11 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
             }
 
             for (const RecordMember &member: type->members) {
-                Size start = offset / 8;
-                ClassifyType(member.type, offset % 8, classes.Take(start, classes.len - start));
-                offset += member.type->size;
+                Size member_offset = offset + member.offset;
+                Size start = member_offset / 8;
+                ClassifyType(member.type, member_offset % 8, classes.Take(start, classes.len - start));
             }
+            offset += type->size;
 
             return (offset + 7) / 8;
         } break;
