@@ -1186,7 +1186,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
 
     bool temporary = (instance->memories.len > instance->config.resident_async_pools);
 
-    if (RG_UNLIKELY(temporary && instance->temporaries >= instance->config.max_temporaries))
+    if (temporary && instance->temporaries >= instance->config.max_temporaries) [[unlikely]]
         return nullptr;
 
     InstanceMemory *mem = new InstanceMemory();
@@ -1243,7 +1243,7 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (RG_UNLIKELY(info.Length() < (uint32_t)func->required_parameters)) {
+    if (info.Length() < (uint32_t)func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
         return env.Null();
     }
@@ -1251,7 +1251,7 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-    if (!RG_UNLIKELY(call.Prepare(func, info)))
+    if (!call.Prepare(func, info)) [[unlikely]]
         return env.Null();
 
     if (instance->debug) {
@@ -1291,11 +1291,11 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
         copy.parameters.Leak();
     };
 
-    if (RG_UNLIKELY(info.Length() < (uint32_t)copy.required_parameters)) {
+    if (info.Length() < (uint32_t)copy.required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", copy.parameters.len, info.Length());
         return env.Null();
     }
-    if (RG_UNLIKELY((info.Length() - copy.required_parameters) % 2)) {
+    if ((info.Length() - copy.required_parameters) % 2) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
         return env.Null();
     }
@@ -1305,17 +1305,17 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
 
         param.type = ResolveType(info[(uint32_t)i], &param.directions);
 
-        if (RG_UNLIKELY(!param.type))
+        if (!param.type) [[unlikely]]
             return env.Null();
-        if (RG_UNLIKELY(!CanPassType(param.type, param.directions))) {
+        if (!CanPassType(param.type, param.directions)) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
             return env.Null();
         }
-        if (RG_UNLIKELY(copy.parameters.len >= MaxParameters)) {
+        if (copy.parameters.len >= MaxParameters) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
             return env.Null();
         }
-        if (RG_UNLIKELY((param.directions & 2) && ++copy.out_parameters >= MaxOutParameters)) {
+        if ((param.directions & 2) && ++copy.out_parameters >= MaxOutParameters) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 output parameters", MaxOutParameters);
             return env.Null();
         }
@@ -1326,13 +1326,13 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
         copy.parameters.Append(param);
     }
 
-    if (RG_UNLIKELY(!AnalyseFunction(env, instance, &copy)))
+    if (!AnalyseFunction(env, instance, &copy)) [[unlikely]]
         return env.Null();
 
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-    if (!RG_UNLIKELY(call.Prepare(&copy, info)))
+    if (!call.Prepare(&copy, info)) [[unlikely]]
         return env.Null();
 
     if (instance->debug) {
@@ -1434,7 +1434,7 @@ static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native,
     }
 
     InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
-    if (RG_UNLIKELY(!mem)) {
+    if (!mem) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
         return env.Null();
     }
@@ -1456,7 +1456,7 @@ Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
 
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
-    if (RG_LIKELY(exec_call)) {
+    if (exec_call) [[likely]] {
         exec_call->RelaySafe(idx, own_sp, caller_sp, false, out_reg);
     } else {
         // This happens if the callback pointer is called from a different thread
@@ -1468,7 +1468,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
         InstanceData *instance = env.GetInstanceData<InstanceData>();
 
         InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
-        if (RG_UNLIKELY(!mem)) {
+        if (!mem) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
             return;
         }
@@ -1680,7 +1680,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     {
         std::lock_guard<std::mutex> lock(shared.mutex);
 
-        if (RG_UNLIKELY(!shared.available.len)) {
+        if (!shared.available.len) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
             return env.Null();
         }
@@ -1732,7 +1732,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     {
         int16_t *it = instance->trampolines_map.Find(ptr);
 
-        if (RG_UNLIKELY(!it)) {
+        if (!it) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Could not find matching registered callback");
             return env.Null();
         }
@@ -1762,7 +1762,7 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (RG_UNLIKELY(info.Length() < 2)) {
+    if (info.Length() < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
         return env.Null();
     }
@@ -1770,7 +1770,7 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     Napi::Value value = info[0];
 
     const TypeInfo *type = ResolveType(info[1]);
-    if (RG_UNLIKELY(!type))
+    if (!type) [[unlikely]]
         return env.Null();
     if (type->primitive != PrimitiveKind::Pointer &&
             type->primitive != PrimitiveKind::String &&
@@ -1797,13 +1797,13 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
     bool has_len = (info.Length() >= 3u + has_offset && info[2u + has_offset].IsNumber());
 
-    if (RG_UNLIKELY(info.Length() < 2u + has_offset)) {
+    if (info.Length() < 2u + has_offset) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, info.Length());
         return env.Null();
     }
 
     const TypeInfo *type = ResolveType(info[1u + has_offset]);
-    if (RG_UNLIKELY(!type))
+    if (!type) [[unlikely]]
         return env.Null();
 
     Napi::Value value = info[0];
@@ -1844,19 +1844,19 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (RG_UNLIKELY(info.Length() < 2)) {
+    if (info.Length() < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
         return env.Null();
     }
 
     void *ptr = nullptr;
-    if (RG_UNLIKELY(!GetExternalPointer(env, info[0], &ptr)))
+    if (!GetExternalPointer(env, info[0], &ptr)) [[unlikely]]
         return env.Null();
 
     const TypeInfo *type = ResolveType(info[1]);
-    if (RG_UNLIKELY(!type))
+    if (!type) [[unlikely]]
         return env.Null();
-    if (RG_UNLIKELY(type->primitive != PrimitiveKind::Prototype)) {
+    if (type->primitive != PrimitiveKind::Prototype) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
         return env.Null();
     }

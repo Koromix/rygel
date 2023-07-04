@@ -182,7 +182,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             if (digit < 2) {
                                 overflow |= (value > ((uint64_t)INT64_MAX - digit) / 2);
                                 value = (value * 2) + digit;
-                            } else if (RG_UNLIKELY(digit < 10)) {
+                            } else if (digit < 10) [[unlikely]] {
                                 MarkUnexpected(next, "Invalid binary digit");
                                 return false;
                             } else {
@@ -190,7 +190,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             }
                         }
 
-                        if (RG_UNLIKELY(overflow)) {
+                        if (overflow) [[unlikely]] {
                             MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
                             return false;
                         }
@@ -209,7 +209,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             if (digit < 8) {
                                 overflow |= (value > ((uint64_t)INT64_MAX - digit) / 8);
                                 value = (value * 8) + digit;
-                            } else if (RG_UNLIKELY(digit < 10)) {
+                            } else if (digit < 10) [[unlikely]] {
                                 MarkUnexpected(next, "Invalid octal digit");
                                 return false;
                             } else {
@@ -217,7 +217,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             }
                         }
 
-                        if (RG_UNLIKELY(overflow)) {
+                        if (overflow) [[unlikely]] {
                             MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
                             return false;
                         }
@@ -246,7 +246,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             value = (value * 16) + digit;
                         }
 
-                        if (RG_UNLIKELY(overflow)) {
+                        if (overflow) [[unlikely]] {
                             MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
                             return false;
                         }
@@ -293,7 +293,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 if (fp) {
                     TokenizeFloat();
                 } else {
-                    if (RG_UNLIKELY(overflow)) {
+                    if (overflow) [[unlikely]] {
                         MarkError(offset, "Number literal is too big (max = %1)", INT64_MAX);
                         return false;
                     }
@@ -306,11 +306,11 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 str_buf.RemoveFrom(0);
 
                 for (;;) {
-                    if (RG_UNLIKELY(next >= code.len || code[next] == '\n')) {
+                    if (next >= code.len || code[next] == '\n') [[unlikely]] {
                         MarkError(offset, "Unfinished string literal");
                         return false;
                     }
-                    if (RG_UNLIKELY(code[next] == '\r')) {
+                    if (code[next] == '\r') [[unlikely]] {
                         MarkError(next, "Carriage return is not allowed in string literals, use \\r");
                         return false;
                     }
@@ -330,7 +330,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                                 case 'b': { str_buf.Append('\b'); } break;
                                 case 'e': { str_buf.Append('\x1B'); } break;
                                 case 'x': {
-                                    if (RG_UNLIKELY(next > code.len - 3)) {
+                                    if (next > code.len - 3) [[unlikely]] {
                                         MarkError(next + 1, "Truncated escape sequence");
                                         return false;
                                     }
@@ -338,7 +338,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                                     int c = 0;
                                     for (Size i = 0; i < 2; i++) {
                                         unsigned int digit = ConvertHexaDigit(++next);
-                                        if (RG_UNLIKELY(digit >= 16)) {
+                                        if (digit >= 16) [[unlikely]] {
                                             MarkError(next, "Invalid hexadecimal digit");
                                             return false;
                                         }
@@ -351,7 +351,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                                 case 'U': {
                                     Size consume = (code[next] == 'U') ? 6 : 4;
 
-                                    if (RG_UNLIKELY(next > code.len - consume - 1)) {
+                                    if (next > code.len - consume - 1) [[unlikely]] {
                                         MarkError(next + 1, "Truncated escape sequence (expected %1 hexadecimal digits)", consume);
                                         return false;
                                     }
@@ -359,7 +359,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                                     int32_t uc = 0;
                                     for (Size i = 0; i < consume; i++) {
                                         unsigned int digit = ConvertHexaDigit(++next);
-                                        if (RG_UNLIKELY(digit >= 16)) {
+                                        if (digit >= 16) [[unlikely]] {
                                             MarkError(next, "Invalid hexadecimal digit");
                                             return false;
                                         }
@@ -368,7 +368,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
 
                                     str_buf.Grow(4);
                                     Size bytes = EncodeUtf8(uc, str_buf.end());
-                                    if (RG_UNLIKELY(!bytes)) {
+                                    if (!bytes) [[unlikely]] {
                                         MarkError(next - consume, "Invalid UTF-8 codepoint");
                                         return false;
                                     }
@@ -394,7 +394,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                         int32_t uc;
                         Size bytes = DecodeUtf8(code, next, &uc);
 
-                        if (RG_UNLIKELY(!bytes)) {
+                        if (!bytes) [[unlikely]] {
                             MarkError(next, "Invalid UTF-8 sequence");
                             return false;
                         }
@@ -451,13 +451,13 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
             case ';': { Token1(bk_TokenKind::Semicolon); } break;
 
             default: {
-                if (RG_LIKELY(IsAsciiAlpha(code[offset]) || code[offset] == '_')) {
+                if (IsAsciiAlpha(code[offset]) || code[offset] == '_') [[likely]] {
                     // Go on!
                 } else if ((uint8_t)code[offset] >= 128) {
                     int32_t uc = 0;
                     Size bytes = DecodeUtf8(code, offset, &uc);
 
-                    if (RG_UNLIKELY(!TestUnicodeTable(bk_UnicodeIdStartTable, uc))) {
+                    if (!TestUnicodeTable(bk_UnicodeIdStartTable, uc)) [[unlikely]] {
                         MarkUnexpected(offset, "Identifiers cannot start with");
                         return false;
                     }
@@ -471,7 +471,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 while (next < code.len) {
                     if (IsAsciiAlphaOrDigit(code[next]) || code[next] == '_') {
                         next++;
-                    } else if (RG_UNLIKELY((uint8_t)code[next] >= 128)) {
+                    } else if ((uint8_t)code[next] >= 128) [[unlikely]] {
                         int32_t uc = 0;
                         Size bytes = DecodeUtf8(code, next, &uc);
 
@@ -589,17 +589,17 @@ void bk_Lexer::TokenizeFloat()
     double d;
 
     fast_float::from_chars_result ret = fast_float::from_chars(code.ptr + offset, code.end(), d);
-    if (RG_UNLIKELY(ret.ec != std::errc())) {
+    if (ret.ec != std::errc()) [[unlikely]] {
         MarkError(offset, "Malformed float number");
         return;
     }
     next = ret.ptr - code.ptr;
 
-    if (RG_UNLIKELY(code[next - 1] == '.')) {
+    if (code[next - 1] == '.') [[unlikely]] {
         MarkError(offset, "Malformed float number");
         return;
     }
-    if (RG_UNLIKELY(next < code.len && IsAsciiAlpha(code[next]))) {
+    if (next < code.len && IsAsciiAlpha(code[next])) [[unlikely]] {
         MarkError(offset, "Malformed float number");
         return;
     }

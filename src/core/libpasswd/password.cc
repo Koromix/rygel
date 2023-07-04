@@ -134,7 +134,7 @@ static Size SimplifyText(Span<const char> password, Span<char> out_buf)
         Size bytes = DecodeUtf8(password, offset, &uc);
 
         if (bytes == 1) {
-            if (RG_UNLIKELY(len >= out_buf.len - 2)) {
+            if (len >= out_buf.len - 2) [[unlikely]] {
                 LogError("Excessive password length");
                 return -1;
             }
@@ -152,7 +152,7 @@ static Size SimplifyText(Span<const char> password, Span<char> out_buf)
                 ptr = password.ptr + offset;
             }
 
-            if (RG_UNLIKELY(len >= out_buf.len - expand - 1)) {
+            if (len >= out_buf.len - expand - 1) [[unlikely]] {
                 LogError("Excessive password length");
                 return -1;
             }
@@ -234,7 +234,7 @@ static bool CheckComplexity(Span<const char> password)
                          (diff < -1 || diff > 1) && !strchr(spatial_sequences[c - 'a'], next) ? 2 : 1;
                 c = next;
 
-                if (RG_LIKELY(word_buf.Available() > 1)) {
+                if (word_buf.Available() > 1) [[likely]] {
                     word_buf.Append((char)c);
                     reverse_buf[RG_SIZE(reverse_buf) - word_buf.len - 1] = (char)c;
                 }

@@ -47,7 +47,7 @@ union drd_DiagnosisCode {
                                            str.len < 7 || str[end] == ' ')) &&
                          IsAsciiAlpha(code.str[0]) && IsAsciiDigit(code.str[1]) &&
                          IsAsciiDigit(code.str[2]);
-            if (RG_LIKELY(valid)) {
+            if (valid) [[likely]] {
                 Size real_end = 3;
                 while (code.str[real_end]) {
                     valid &= IsAsciiDigit(code.str[real_end]) ||
@@ -59,7 +59,7 @@ union drd_DiagnosisCode {
                 }
             }
 
-            if (RG_UNLIKELY(!valid)) {
+            if (!valid) [[unlikely]] {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed diagnosis code '%1'", str);
                 }
@@ -119,7 +119,7 @@ union drd_ProcedureCode {
                          IsAsciiAlpha(code.str[2]) && IsAsciiAlpha(code.str[3]) &&
                          IsAsciiDigit(code.str[4]) && IsAsciiDigit(code.str[5]) &&
                          IsAsciiDigit(code.str[6]);
-            if (RG_UNLIKELY(!valid)) {
+            if (!valid) [[unlikely]] {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed procedure code '%1'", str);
                 }

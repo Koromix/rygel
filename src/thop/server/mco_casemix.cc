@@ -636,7 +636,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
             const mco_GhmRootInfo *ghm_root_info = nullptr;
             const mco_DiagnosisInfo *main_diag_info = nullptr;
             const mco_DiagnosisInfo *linked_diag_info = nullptr;
-            if (RG_LIKELY(result.index)) {
+            if (result.index) [[likely]] {
                 const mco_Stay &main_stay = result.stays[result.main_stay_idx];
 
                 ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
@@ -648,7 +648,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
 
             json.Key("admin_id"); json.Int(result.stays[0].admin_id);
             json.Key("bill_id"); json.Int(result.stays[0].bill_id);
-            if (RG_LIKELY(result.index)) {
+            if (result.index) [[likely]] {
                 json.Key("index_date"); json.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
             }
             if (result.duration >= 0) {
@@ -724,7 +724,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
                         json.Key("dip_count"); json.Int(stay.dip_count);
                     }
 
-                    if (RG_LIKELY(stay.main_diagnosis.IsValid())) {
+                    if (stay.main_diagnosis.IsValid()) [[likely]] {
                         json.Key("main_diagnosis"); json.String(stay.main_diagnosis.str);
                     }
                     if (stay.linked_diagnosis.IsValid()) {
@@ -734,7 +734,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
                     json.Key("other_diagnoses"); json.StartArray();
                     for (drd_DiagnosisCode diag: stay.other_diagnoses) {
                         const mco_DiagnosisInfo *diag_info =
-                            RG_LIKELY(result.index) ? result.index->FindDiagnosis(diag, stay.sex) : nullptr;
+                            result.index ? result.index->FindDiagnosis(diag, stay.sex) : nullptr;
 
                         json.StartObject();
                         json.Key("diag"); json.String(diag.str);

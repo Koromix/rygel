@@ -488,7 +488,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
 
     // Do the actual parsing!
     src->lines.Append({ IR.len, 0 });
-    while (RG_LIKELY(pos < tokens.len)) {
+    while (pos < tokens.len) [[likely]] {
         ParseStatement();
     }
 
@@ -722,20 +722,20 @@ bool bk_Parser::ParseBlock(bool end_with_else)
     bool has_return = false;
     bool issued_unreachable = false;
 
-    while (RG_LIKELY(pos < tokens.len)) {
+    while (pos < tokens.len) [[likely]] {
         if (tokens[pos].kind == bk_TokenKind::End)
             break;
         if (end_with_else && tokens[pos].kind == bk_TokenKind::Else)
             break;
 
-        if (RG_UNLIKELY(has_return && !issued_unreachable)) {
+        if (has_return && !issued_unreachable) [[unlikely]] {
             MarkError(pos, "Unreachable statement");
             Hint(-1, "Code after return statement can never run");
 
             issued_unreachable = true;
         }
 
-        if (RG_LIKELY(recurse)) {
+        if (recurse) [[likely]] {
             has_return |= ParseStatement();
         } else {
             if (!has_return) {
@@ -768,7 +768,7 @@ bool bk_Parser::ParseStatement()
         case bk_TokenKind::Begin: {
             pos++;
 
-            if (RG_LIKELY(EndStatement())) {
+            if (EndStatement()) [[likely]] {
                 has_return = ParseBlock(false);
                 ConsumeToken(bk_TokenKind::End);
 
@@ -871,7 +871,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 {
     Size func_pos = ++pos;
 
-    if (RG_UNLIKELY(current_func)) {
+    if (current_func) [[unlikely]] {
         if (record) {
             MarkError(func_pos, "Record types cannot be defined inside functions");
             Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
@@ -879,7 +879,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
             MarkError(func_pos, "Nested functions are not supported");
             Hint(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
         }
-    } else if (RG_UNLIKELY(depth)) {
+    } else if (depth) [[unlikely]] {
         MarkError(func_pos, "%1 must be defined in top-level scope", record ? "Records" : "Functions");
     }
 
@@ -917,7 +917,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
             ConsumeToken(bk_TokenKind::Colon);
             param.type = ParseType();
 
-            if (RG_LIKELY(func->params.Available())) {
+            if (func->params.Available()) [[likely]] {
                 bk_FunctionInfo::Parameter *ptr = func->params.Append(param);
                 definitions_map.Set(ptr, param_pos);
 
@@ -964,7 +964,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
             record_type->size += param.type->size;
 
             // Evaluate each time, so that overflow is not a problem
-            if (RG_UNLIKELY(record_type->size > UINT16_MAX)) {
+            if (record_type->size > UINT16_MAX) [[unlikely]] {
                 MarkError(func_pos, "Record size is too big");
             }
 
@@ -975,7 +975,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         bool inserted;
         program->types_map.TrySet(record_type, &inserted);
 
-        if (RG_UNLIKELY(!inserted)) {
+        if (!inserted) [[unlikely]] {
             MarkError(func_pos, "Duplicate type name '%1'", record_type->signature);
         }
 
@@ -1062,7 +1062,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
     }
 
     // Expressions involving this prototype (function or record) won't issue (visible) errors
-    if (RG_UNLIKELY(!show_errors)) {
+    if (!show_errors) [[unlikely]] {
         poisoned_set.Set(var);
     }
 
@@ -1111,7 +1111,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
             MapVariable(var, param_pos);
 
-            if (RG_UNLIKELY(poisoned_set.Find(&param))) {
+            if (poisoned_set.Find(&param)) [[unlikely]] {
                 poisoned_set.Set(var);
             }
         }
@@ -1123,7 +1123,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         bool has_return = false;
         if (PeekToken(bk_TokenKind::Do)) {
             has_return = ParseDo();
-        } else if (RG_LIKELY(EndStatement())) {
+        } else if (EndStatement()) [[likely]] {
             has_return = ParseBlock(false);
             ConsumeToken(bk_TokenKind::End);
         }
@@ -1164,7 +1164,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
             bool inserted;
             const bk_FunctionInfo::Parameter **ptr = names.TrySet(param.name, &param, &inserted);
 
-            if (RG_UNLIKELY(!inserted)) {
+            if (!inserted) [[unlikely]] {
                 Size param_pos = definitions_map.FindValue(&param, -1);
                 Size previous_pos = definitions_map.FindValue(*ptr, -1); 
 
@@ -1185,10 +1185,10 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
 {
     Size enum_pos = ++pos;
 
-    if (RG_UNLIKELY(current_func)) {
+    if (current_func) [[unlikely]] {
         MarkError(pos, "Enum types cannot be defined inside functions");
         Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
-    } else if (RG_UNLIKELY(depth)) {
+    } else if (depth) [[unlikely]] {
         MarkError(pos, "Enums must be defined in top-level scope");
     }
 
@@ -1205,7 +1205,7 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
     enum_type->size = 1;
 
     ConsumeToken(bk_TokenKind::LeftParenthesis);
-    if (RG_LIKELY(!MatchToken(bk_TokenKind::RightParenthesis))) {
+    if (!MatchToken(bk_TokenKind::RightParenthesis)) [[likely]] {
         do {
             SkipNewLines();
 
@@ -1217,7 +1217,7 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
             bool inserted;
             enum_type->labels_map.TrySet(label, &inserted);
 
-            if (RG_UNLIKELY(!inserted)) {
+            if (!inserted) [[unlikely]] {
                 MarkError(pos - 1, "Label '%1' is already used", label->name);
             }
         } while (MatchToken(bk_TokenKind::Comma));
@@ -1242,7 +1242,7 @@ void bk_Parser::ParseEnum(ForwardInfo *fwd)
         MapVariable(var, enum_pos);
 
         // Expressions involving this prototype (function or record) won't issue (visible) errors
-        if (RG_UNLIKELY(!show_errors)) {
+        if (!show_errors) [[unlikely]] {
             poisoned_set.Set(var);
         }
     }
@@ -1255,7 +1255,7 @@ void bk_Parser::ParseReturn()
 {
     Size return_pos = ++pos;
 
-    if (RG_UNLIKELY(!current_func)) {
+    if (!current_func) [[unlikely]] {
         MarkError(pos - 1, "Return statement cannot be used outside function");
         return;
     }
@@ -1267,8 +1267,8 @@ void bk_Parser::ParseReturn()
         slot = ParseExpression();
     }
 
-    if (RG_UNLIKELY(slot.type != current_func->type->ret_type)) {
-        if (RG_LIKELY(!current_func->type->ret_type)) {
+    if (slot.type != current_func->type->ret_type) [[unlikely]] {
+        if (!current_func->type->ret_type) [[likely]] {
             bk_FunctionTypeInfo *type = (bk_FunctionTypeInfo *)current_func->type;
             type->ret_type = slot.type;
         } else {
@@ -1311,12 +1311,12 @@ void bk_Parser::ParseLet()
             Size expr_pos = pos;
             slot = ParseExpression(0, type);
 
-            if (RG_UNLIKELY(slot.type != type)) {
+            if (slot.type != type) [[unlikely]] {
                 MarkError(expr_pos - 1, "Cannot assign '%1' value to variable '%2' (defined as '%3')",
                           slot.type->signature, var->name, type->signature);
             }
         } else {
-            if (RG_UNLIKELY(!type->init0)) {
+            if (!type->init0) [[unlikely]] {
                  MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitly initialized",
                            var->name, type->signature);
             }
@@ -1374,7 +1374,7 @@ void bk_Parser::ParseLet()
 
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
-    if (RG_UNLIKELY(!show_errors)) {
+    if (!show_errors) [[unlikely]] {
         poisoned_set.Set(var);
     }
 }
@@ -1410,7 +1410,7 @@ bool bk_Parser::ParseIf()
         } else {
             IR[branch_addr].u2.i = IR.len - branch_addr;
         }
-    } else if (RG_LIKELY(EndStatement())) {
+    } else if (EndStatement()) [[likely]] {
         has_return &= ParseBlock(true);
 
         if (MatchToken(bk_TokenKind::Else)) {
@@ -1438,7 +1438,7 @@ bool bk_Parser::ParseIf()
                     fold_test = fold && !fold_skip && IR[IR.len - 1].u2.b;
                     TrimInstructions(fold ? test_addr : IR.len);
 
-                    if (RG_LIKELY(EndStatement())) {
+                    if (EndStatement()) [[likely]] {
                         branch_addr = IR.len;
                         if (!fold) {
                             Emit(bk_Opcode::BranchIfFalse);
@@ -1461,7 +1461,7 @@ bool bk_Parser::ParseIf()
                         }
                         fold_skip |= fold && fold_test;
                     }
-                } else if (RG_LIKELY(EndStatement())) {
+                } else if (EndStatement()) [[likely]] {
                     Size else_addr = IR.len;
                     bool block_return = ParseBlock(false);
 
@@ -1524,7 +1524,7 @@ void bk_Parser::ParseWhile()
     // Parse body
     if (PeekToken(bk_TokenKind::Do)) {
         ParseDo();
-    } else if (RG_LIKELY(EndStatement())) {
+    } else if (EndStatement()) [[likely]] {
         ParseBlock(false);
         ConsumeToken(bk_TokenKind::End);
     }
@@ -1599,7 +1599,7 @@ void bk_Parser::ParseFor()
     // Parse body
     if (PeekToken(bk_TokenKind::Do)) {
         ParseDo();
-    } else if (RG_LIKELY(EndStatement())) {
+    } else if (EndStatement()) [[likely]] {
         ParseBlock(false);
         ConsumeToken(bk_TokenKind::End);
     }
@@ -1629,7 +1629,7 @@ void bk_Parser::ParseBreak()
 {
     Size break_pos = ++pos;
 
-    if (RG_UNLIKELY(!loop)) {
+    if (!loop) [[unlikely]] {
         MarkError(break_pos - 1, "Break statement outside of loop");
         return;
     }
@@ -1644,7 +1644,7 @@ void bk_Parser::ParseContinue()
 {
     Size continue_pos = ++pos;
 
-    if (RG_UNLIKELY(!loop)) {
+    if (!loop) [[unlikely]] {
         MarkError(continue_pos - 1, "Continue statement outside of loop");
         return;
     }
@@ -1726,19 +1726,19 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
     bool recurse = RecurseInc();
     RG_DEFER { RecurseDec(); };
 
-    if (RG_UNLIKELY(!recurse)) {
+    if (!recurse) [[unlikely]] {
         MarkError(pos, "Excessive parsing depth (compiler limit)");
         Hint(-1, "Simplify surrounding code");
 
         goto error;
     }
 
-    while (RG_LIKELY(pos < tokens.len)) {
+    while (pos < tokens.len) [[likely]] {
         const bk_Token &tok = tokens[pos++];
 
         switch (tok.kind) {
             case bk_TokenKind::LeftParenthesis: {
-                if (RG_UNLIKELY(!expect_value)) {
+                if (!expect_value) [[unlikely]] {
                     if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Function) {
                         const bk_FunctionTypeInfo *func_type = stack[stack.len - 1].type->AsFunctionType();
 
@@ -1757,12 +1757,12 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                 }
             } break;
             case bk_TokenKind::RightParenthesis: {
-                if (RG_UNLIKELY(expect_value))
+                if (expect_value) [[unlikely]]
                     goto unexpected;
                 expect_value = false;
 
                 if (!parentheses) {
-                    if (RG_UNLIKELY(pos == prev_offset + 1)) {
+                    if (pos == prev_offset + 1) [[unlikely]] {
                         MarkError(pos - 1, "Unexpected token ')', expected value or expression");
                         goto error;
                     } else {
@@ -1786,14 +1786,14 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
             } break;
 
             case bk_TokenKind::Null: {
-                if (RG_UNLIKELY(!expect_value))
+                if (!expect_value) [[unlikely]]
                     goto unexpected;
                 expect_value = false;
 
                 stack.Append({ bk_NullType });
             } break;
             case bk_TokenKind::Boolean: {
-                if (RG_UNLIKELY(!expect_value))
+                if (!expect_value) [[unlikely]]
                     goto unexpected;
                 expect_value = false;
 
@@ -1801,7 +1801,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                 stack.Append({ bk_BoolType });
             } break;
             case bk_TokenKind::Integer: {
-                if (RG_UNLIKELY(!expect_value))
+                if (!expect_value) [[unlikely]]
                     goto unexpected;
                 expect_value = false;
 
@@ -1809,7 +1809,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                 stack.Append({ bk_IntType });
             } break;
             case bk_TokenKind::Float: {
-                if (RG_UNLIKELY(!expect_value))
+                if (!expect_value) [[unlikely]]
                     goto unexpected;
                 expect_value = false;
 
@@ -1817,7 +1817,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                 stack.Append({ bk_FloatType });
             } break;
             case bk_TokenKind::String: {
-                if (RG_UNLIKELY(!expect_value))
+                if (!expect_value) [[unlikely]]
                     goto unexpected;
                 expect_value = false;
 
@@ -1829,7 +1829,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
             } break;
 
             case bk_TokenKind::Func: {
-                if (RG_UNLIKELY(!expect_value))
+                if (!expect_value) [[unlikely]]
                     goto unexpected;
                 expect_value = false;
 
@@ -1876,7 +1876,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
             } break;
 
             case bk_TokenKind::Identifier: {
-                if (RG_UNLIKELY(!expect_value))
+                if (!expect_value) [[unlikely]]
                     goto unexpected;
                 expect_value = false;
 
@@ -1886,7 +1886,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
 
                 bk_VariableInfo *var = FindVariable(name);
 
-                if (RG_UNLIKELY(!var)) {
+                if (!var) [[unlikely]] {
                     MarkError(var_pos, "Reference to unknown identifier '%1'", name);
                     HintSuggestions(name, program->variables);
 
@@ -1921,7 +1921,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
 
                             const bk_TypeInfo *type = IR[IR.len - 1].u2.type;
 
-                            if (RG_LIKELY(type->primitive == bk_PrimitiveKind::Record)) {
+                            if (type->primitive == bk_PrimitiveKind::Record) [[likely]] {
                                 const bk_RecordTypeInfo *record_type = type->AsRecordType();
                                 bk_FunctionInfo *func = (bk_FunctionInfo *)record_type->func;
 
@@ -1978,7 +1978,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
 
                             goto error;
                         }
-                    } else if (RG_UNLIKELY(func->mode == bk_FunctionInfo::Mode::Intrinsic)) {
+                    } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) [[unlikely]] {
                         MarkError(var_pos, "Intrinsic functions can only be called directly");
                         goto error;
                     }
@@ -1996,13 +1996,13 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                 // Not an operator? There's a few cases to deal with, including a perfectly
                 // valid one: end of expression!
                 if (op.prec < 0) {
-                    if (RG_UNLIKELY(pos == prev_offset + 1)) {
+                    if (pos == prev_offset + 1) [[unlikely]] {
                         MarkError(pos - 1, "Unexpected token '%1', expected value or expression",
                                   bk_TokenKindNames[(int)tokens[pos - 1].kind]);
                         goto error;
-                    } else if (RG_UNLIKELY(expect_value || parentheses)) {
+                    } else if (expect_value || parentheses) [[unlikely]] {
                         pos--;
-                        if (RG_LIKELY(SkipNewLines())) {
+                        if (SkipNewLines()) [[likely]] {
                             continue;
                         } else {
                             pos++;
@@ -2050,7 +2050,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
                     Emit(bk_Opcode::SkipIfTrue);
                 }
 
-                if (RG_UNLIKELY(!operators.Available())) {
+                if (!operators.Available()) [[unlikely]] {
                     MarkError(pos - 1, "Too many operators on the stack (compiler limitation)");
                     goto error;
                 }
@@ -2058,7 +2058,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
             } break;
         }
 
-        if (RG_UNLIKELY(stack.len >= 64)) {
+        if (stack.len >= 64) [[unlikely]] {
             MarkError(pos, "Excessive complexity while parsing expression (compiler limit)");
             Hint(-1, "Simplify expression");
             goto error;
@@ -2066,7 +2066,7 @@ StackSlot bk_Parser::ParseExpression(unsigned int flags, const bk_TypeInfo *hint
     }
 
 end:
-    if (RG_UNLIKELY(expect_value || parentheses)) {
+    if (expect_value || parentheses) [[unlikely]] {
         if (valid) {
             if (out_report) {
                 out_report->unexpected_eof = true;
@@ -2109,7 +2109,7 @@ error:
     // e.g. if expressions). This way, the parent can differenciate single-line constructs
     // and block constructs, and prevent generation of garbage errors (such as "functions
     // must be defined in top-level scope") caused by undetected block and/or do statement.
-    while (RG_LIKELY(pos < tokens.len)) {
+    while (pos < tokens.len) [[likely]] {
         if (tokens[pos].kind == bk_TokenKind::Do)
             break;
         if (tokens[pos].kind == bk_TokenKind::EndOfLine)
@@ -2133,7 +2133,7 @@ bool bk_Parser::ParseExpression(const bk_TypeInfo *expected_type)
 
     const bk_TypeInfo *type = ParseExpression().type;
 
-    if (RG_UNLIKELY(type != expected_type)) {
+    if (type != expected_type) [[unlikely]] {
         MarkError(expr_pos, "Expected expression result type to be '%1', not '%2'",
                   expected_type->signature, type->signature);
         return false;
@@ -2152,17 +2152,17 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
         StackSlot dest = stack[stack.len - 2];
         const StackSlot &expr = stack[stack.len - 1];
 
-        if (RG_UNLIKELY(!dest.var)) {
+        if (!dest.var) [[unlikely]] {
             MarkError(op.pos, "Cannot assign result to temporary value; left operand should be a variable");
             return;
         }
-        if (RG_UNLIKELY(!dest.var->mut)) {
+        if (!dest.var->mut) [[unlikely]] {
             MarkError(op.pos, "Cannot assign result to non-mutable variable '%1'", dest.var->name);
             Hint(definitions_map.FindValue(dest.var, -1), "Variable '%1' is defined without 'mut' qualifier", dest.var->name);
 
             return;
         }
-        if (RG_UNLIKELY(dest.type != expr.type)) {
+        if (dest.type != expr.type) [[unlikely]] {
             if (!dest.indirect_addr) {
                 MarkError(op.pos, "Cannot assign '%1' value to variable '%2'", expr.type->signature, dest.var->name);
             } else {
@@ -2371,7 +2371,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
         }
     }
 
-    if (RG_UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         if (op.unary) {
             MarkError(op.pos, "Cannot use '%1' operator on '%2' value",
                       bk_TokenKindNames[(int)op.kind], stack[stack.len - 1].type->signature);
@@ -2426,7 +2426,7 @@ bk_VariableInfo *bk_Parser::FindVariable(const char *name)
     if (!var) {
         ForwardInfo **ptr = forwards_map.Find(name);
 
-        if (RG_UNLIKELY(!ptr))
+        if (!ptr) [[unlikely]]
             return nullptr;
 
         ForwardInfo *fwd0 = *ptr;
@@ -2498,7 +2498,7 @@ const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
 
             const bk_TypeInfo *type = ParseType();
 
-            if (RG_LIKELY(type_buf.params.Available())) {
+            if (type_buf.params.Available()) [[likely]] {
                 type_buf.params.Append(type);
             } else {
                 MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
@@ -2558,10 +2558,10 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
             multi = false;
         }
 
-        if (RG_LIKELY(type == bk_IntType)) {
+        if (type == bk_IntType) [[likely]] {
             // Once we start to implement constant folding and CTFE, more complex expressions
             // should work without any change here.
-            if (RG_LIKELY(IR[IR.len - 1].code == bk_Opcode::Push)) {
+            if (IR[IR.len - 1].code == bk_Opcode::Push) [[likely]] {
                 type_buf.len = IR[IR.len - 1].u2.i;
                 TrimInstructions(IR.len - 1);
             } else {
@@ -2579,7 +2579,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
         bool recurse = RecurseInc();
         RG_DEFER { RecurseDec(); };
 
-        if (RG_LIKELY(recurse)) {
+        if (recurse) [[likely]] {
             type_buf.unit_type = ParseArrayType();
         } else {
             MarkError(pos, "Excessive parsing depth (compiler limit)");
@@ -2594,11 +2594,12 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
     type_buf.size = type_buf.len * type_buf.unit_type->size;
 
     // Safety checks
-    if (RG_UNLIKELY(type_buf.len < 0)) {
+    if (type_buf.len < 0) [[unlikely]] {
         MarkError(def_pos, "Negative array size is not valid");
     }
-    if (RG_UNLIKELY(type_buf.len > UINT16_MAX || type_buf.unit_type->size > UINT16_MAX ||
-                    type_buf.size > UINT16_MAX)) {
+    if (type_buf.len > UINT16_MAX ||
+            type_buf.unit_type->size > UINT16_MAX ||
+            type_buf.size > UINT16_MAX) [[unlikely]] {
         MarkError(def_pos, "Fixed array size is too big");
     }
 
@@ -2641,7 +2642,7 @@ void bk_Parser::ParseArraySubscript()
         {
             const bk_TypeInfo *type = ParseExpression().type;
 
-            if (RG_UNLIKELY(type != bk_IntType)) {
+            if (type != bk_IntType) [[unlikely]] {
                 MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
             }
         }
@@ -2722,7 +2723,7 @@ void bk_Parser::ParseRecordDot()
         std::find_if(record_type->members.begin(), record_type->members.end(), 
                      [&](const bk_RecordTypeInfo::Member &member) { return TestStr(member.name, name); });
 
-    if (RG_UNLIKELY(member == record_type->members.end())) {
+    if (member == record_type->members.end()) [[unlikely]] {
         MarkError(member_pos, "Record '%1' does not contain member called '%2'", record_type->signature, name);
         HintSuggestions(name, record_type->members);
 
@@ -2768,7 +2769,7 @@ void bk_Parser::ParseEnumDot()
     const char *name = ConsumeIdentifier();
     const bk_EnumTypeInfo::Label *label = enum_type->labels_map.FindValue(name, nullptr);
 
-    if (RG_UNLIKELY(!label)) {
+    if (!label) [[unlikely]] {
         MarkError(label_pos, "Enum '%1' does not contain label called '%2'", enum_type->signature, name);
         HintSuggestions(name, enum_type->labels);
 
@@ -2795,7 +2796,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         do {
             SkipNewLines();
 
-            if (RG_UNLIKELY(!args.Available())) {
+            if (!args.Available()) [[unlikely]] {
                 MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(args.data));
                 return false;
             }
@@ -2832,7 +2833,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         while (!TestOverload(*func->type, args)) {
             func = func->overload_next;
 
-            if (RG_UNLIKELY(func == func0)) {
+            if (func == func0) [[unlikely]] {
                 LocalArray<char, 1024> buf;
                 for (Size i = 0; i < args.len; i++) {
                     buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
@@ -2910,7 +2911,7 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
     } else if (TestStr(name, "typeOf")) {
         // XXX: We can change the signature from typeOf(...) to typeOf(Any) after Any
         // is implemented, and remove this check.
-        if (RG_UNLIKELY(args.len != 1)) {
+        if (args.len != 1) [[unlikely]] {
             MarkError(call_pos, "Intrinsic function typeOf() takes one argument");
             return;
         }
@@ -2921,11 +2922,11 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 
         stack.Append({ bk_TypeType });
     } else if (TestStr(name, "iif")) {
-        if (RG_UNLIKELY(args.len != 3)) {
+        if (args.len != 3) [[unlikely]] {
             MarkError(call_pos, "Intrinsic function iif() takes three arguments");
             return;
         }
-        if (RG_UNLIKELY(args[1] != args[2])) {
+        if (args[1] != args[2]) [[unlikely]] {
             MarkError(call_pos, "Type mismatch between arguments 2 and 3");
             return;
         }
@@ -2978,13 +2979,13 @@ const bk_TypeInfo *bk_Parser::ParseType()
     {
         const bk_TypeInfo *type = ParseExpression((int)ExpressionFlag::StopOperator).type;
 
-        if (RG_UNLIKELY(type != bk_TypeType)) {
+        if (type != bk_TypeType) [[unlikely]] {
             MarkError(type_pos, "Expected a 'Type' expression, not '%1'", type->signature);
             return bk_NullType;
         }
     }
 
-    if (RG_UNLIKELY(IR[IR.len - 1].code != bk_Opcode::Push)) {
+    if (IR[IR.len - 1].code != bk_Opcode::Push) [[unlikely]] {
         MarkError(type_pos, "Complex 'Type' expression cannot be resolved statically");
         return bk_NullType;
     }
@@ -3025,7 +3026,7 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
                 return;
             }
 
-            if (RG_UNLIKELY(addr <= 1))
+            if (addr <= 1) [[unlikely]]
                 return;
         }
     }
@@ -3262,7 +3263,7 @@ bool bk_Parser::MapVariable(bk_VariableInfo *var, Size var_pos)
 
     bool duplicate = it && (var->local ? var->ir == it->ir : !it->local);
 
-    if (RG_UNLIKELY(duplicate)) {
+    if (duplicate) [[unlikely]] {
         Size it_pos = definitions_map.FindValue(it, -1);
 
         if (var_pos < it_pos) {
@@ -3299,7 +3300,7 @@ void bk_Parser::DestroyVariables(Size first_idx)
         const bk_VariableInfo &var = program->variables[i];
         bk_VariableInfo **ptr = program->variables_map.Find(var.name);
 
-        if (RG_LIKELY(ptr)) {
+        if (ptr) [[likely]] {
             if (*ptr == &var && !var.shadow) {
                 program->variables_map.Remove(ptr);
             } else {
@@ -3344,7 +3345,7 @@ void bk_Parser::TrimInstructions(Size trim_addr)
     Size min_addr = current_func ? 0 : prev_main_len;
 
     // Don't trim previously compiled code
-    if (RG_UNLIKELY(trim_addr < min_addr)) {
+    if (trim_addr < min_addr) [[unlikely]] {
         RG_ASSERT(!valid);
         return;
     }
@@ -3394,7 +3395,7 @@ bool bk_Parser::TestOverload(const bk_FunctionTypeInfo &func_type, Span<const bk
 
 bool bk_Parser::ConsumeToken(bk_TokenKind kind)
 {
-    if (RG_UNLIKELY(pos >= tokens.len)) {
+    if (pos >= tokens.len) [[unlikely]] {
         if (valid) {
             if (out_report) {
                 out_report->unexpected_eof = true;
@@ -3405,7 +3406,7 @@ bool bk_Parser::ConsumeToken(bk_TokenKind kind)
         return false;
     }
 
-    if (RG_UNLIKELY(tokens[pos].kind != kind)) {
+    if (tokens[pos].kind != kind) [[unlikely]] {
         MarkError(pos, "Unexpected token '%1', expected '%2'",
                   bk_TokenKindNames[(int)tokens[pos].kind], bk_TokenKindNames[(int)kind]);
         return false;
@@ -3417,7 +3418,7 @@ bool bk_Parser::ConsumeToken(bk_TokenKind kind)
 
 const char *bk_Parser::ConsumeIdentifier()
 {
-    if (RG_LIKELY(ConsumeToken(bk_TokenKind::Identifier))) {
+    if (ConsumeToken(bk_TokenKind::Identifier)) [[likely]] {
         return InternString(tokens[pos - 1].u.str);
     } else {
         return "";
@@ -3440,7 +3441,7 @@ bool bk_Parser::PeekToken(bk_TokenKind kind)
 
 bool bk_Parser::EndStatement()
 {
-    if (RG_UNLIKELY(pos >= tokens.len)) {
+    if (pos >= tokens.len) [[unlikely]] {
         if (valid) {
             if (out_report) {
                 out_report->unexpected_eof = true;
@@ -3451,8 +3452,8 @@ bool bk_Parser::EndStatement()
         return false;
     }
 
-    if (RG_UNLIKELY(tokens[pos].kind != bk_TokenKind::EndOfLine &&
-                    tokens[pos].kind != bk_TokenKind::Semicolon)) {
+    if (tokens[pos].kind != bk_TokenKind::EndOfLine &&
+            tokens[pos].kind != bk_TokenKind::Semicolon) [[unlikely]] {
         MarkError(pos, "Unexpected token '%1', expected end of statement",
                   bk_TokenKindNames[(int)tokens[pos].kind]);
 
@@ -3474,7 +3475,7 @@ bool bk_Parser::SkipNewLines()
     if (MatchToken(bk_TokenKind::EndOfLine)) {
         while (MatchToken(bk_TokenKind::EndOfLine));
 
-        if (RG_LIKELY(pos < tokens.len)) {
+        if (pos < tokens.len) [[likely]] {
             src->lines.Append({ IR.len, tokens[pos].line });
         }
 

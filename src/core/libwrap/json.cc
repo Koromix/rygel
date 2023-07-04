@@ -209,7 +209,7 @@ bool json_Parser::ParseDouble(double *out_d)
     if (ConsumeToken(json_TokenType::Number)) {
         fast_float::from_chars_result ret = fast_float::from_chars(handler.u.num.data, handler.u.num.end(), *out_d);
 
-        if (RG_UNLIKELY(ret.ec != std::errc())) {
+        if (ret.ec != std::errc()) [[unlikely]] {
             LogError("Malformed float number");
             error = true;
         }
@@ -314,7 +314,7 @@ public:
 
 bool json_Parser::PassThrough(StreamWriter *writer)
 {
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return false;
 
     CopyHandler copier(writer);
@@ -389,7 +389,7 @@ void json_Parser::PushLogFilter()
 
 json_TokenType json_Parser::PeekToken()
 {
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return json_TokenType::Invalid;
 
     if (handler.token == json_TokenType::Invalid) {
@@ -424,7 +424,7 @@ bool json_Parser::ConsumeToken(json_TokenType token)
 
 bool json_Parser::IncreaseDepth()
 {
-    if (RG_UNLIKELY(depth >= 8)) {
+    if (depth >= 8) [[unlikely]] {
         LogError("Excessive depth for JSON object or array");
         error = true;
         return false;

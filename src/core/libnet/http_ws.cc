@@ -348,7 +348,7 @@ pump:
         }
 #endif
 
-        if (RG_UNLIKELY(!daemon->running)) {
+        if (!daemon->running) [[unlikely]] {
             LogError("Server is shutting down");
             return -1;
         }

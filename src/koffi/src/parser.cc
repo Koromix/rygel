@@ -172,7 +172,7 @@ const TypeInfo *PrototypeParser::ParseType()
             offset++;
             return type;
         }
-        if (RG_UNLIKELY(env.IsExceptionPending()))
+        if (env.IsExceptionPending()) [[unlikely]]
             return instance->void_type;
 
         offset--;

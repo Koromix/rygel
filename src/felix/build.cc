@@ -107,7 +107,7 @@ static bool AssembleResourceFile(const pugi::xml_document *doc, const char *icon
         void Append(Span<const char> str)
         {
             error |= (str.len > out_buf->Available());
-            if (RG_UNLIKELY(error))
+            if (error) [[unlikely]]
                 return;
 
             out_buf->Append(str);
@@ -127,7 +127,7 @@ static bool AssembleResourceFile(const pugi::xml_document *doc, const char *icon
                     default: {
                         if (c < 32 || c >= 128) {
                             error |= (out_buf->Available() < 4);
-                            if (RG_UNLIKELY(error))
+                            if (error) [[unlikely]]
                                 return;
 
                             Fmt(out_buf->TakeAvailable(), "\\x%1", FmtHex(c).Pad0(-2));

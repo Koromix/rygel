@@ -196,7 +196,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
         for (const Span<const mco_Stay> &group: groups) {
             LocalDate exit_date = group[group.len - 1].exit.date;
 
-            if (RG_LIKELY(exit_date.IsValid())) {
+            if (exit_date.IsValid()) [[likely]] {
                 mco_stay_set_dates[0] = exit_date;
                 break;
             }
@@ -205,7 +205,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
             const Span<const mco_Stay> &group = groups[i];
             LocalDate exit_date = group[group.len - 1].exit.date;
 
-            if (RG_LIKELY(exit_date.IsValid())) {
+            if (exit_date.IsValid()) [[likely]] {
                 mco_stay_set_dates[1] = exit_date + 1;
                 break;
             }

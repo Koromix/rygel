@@ -187,7 +187,7 @@ bool bk_VirtualMachine::Run()
         }
         CASE(CheckIndex): {
             Size idx = stack[stack.len - 1].i;
-            if (RG_UNLIKELY(idx < 0 || idx >= inst->u2.i)) {
+            if (idx < 0 || idx >= inst->u2.i) [[unlikely]] {
                 frame->pc = pc;
                 FatalError("Index is out of range: %1 (array length %2)", idx, inst->u2.i);
                 return false;
@@ -221,7 +221,7 @@ bool bk_VirtualMachine::Run()
         CASE(DivideInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
-            if (RG_UNLIKELY(i2 == 0)) {
+            if (i2 == 0) [[unlikely]] {
                 frame->pc = pc;
                 FatalError("Integer division by 0 is illegal");
                 return false;
@@ -232,7 +232,7 @@ bool bk_VirtualMachine::Run()
         CASE(ModuloInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
-            if (RG_UNLIKELY(i2 == 0)) {
+            if (i2 == 0) [[unlikely]] {
                 frame->pc = pc;
                 FatalError("Integer division by 0 is illegal");
                 return false;
@@ -302,9 +302,9 @@ bool bk_VirtualMachine::Run()
         CASE(LeftShiftInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
-            if (RG_UNLIKELY(i2 >= 64)) {
+            if (i2 >= 64) [[unlikely]] {
                 stack[--stack.len - 1].i = 0;
-            } else if (RG_LIKELY(i2 >= 0)) {
+            } else if (i2 >= 0) [[likely]] {
                 stack[--stack.len - 1].i = (int64_t)((uint64_t)i1 << i2);
             } else {
                 frame->pc = pc;
@@ -316,9 +316,9 @@ bool bk_VirtualMachine::Run()
         CASE(RightShiftInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
-            if (RG_UNLIKELY(i2 >= 64)) {
+            if (i2 >= 64) [[unlikely]] {
                 stack[--stack.len - 1].i = 0;
-            } else if (RG_LIKELY(i2 >= 0)) {
+            } else if (i2 >= 0) [[likely]] {
                 stack[--stack.len - 1].i = (int64_t)((uint64_t)i1 >> i2);
             } else {
                 frame->pc = pc;
@@ -330,7 +330,7 @@ bool bk_VirtualMachine::Run()
         CASE(LeftRotateInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i % 64;
-            if (RG_UNLIKELY(i2 < 0)) {
+            if (i2 < 0) [[unlikely]] {
                 frame->pc = pc;
                 FatalError("Left-rotate by negative value is illegal");
                 return false;
@@ -341,7 +341,7 @@ bool bk_VirtualMachine::Run()
         CASE(RightRotateInt): {
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i % 64;
-            if (RG_UNLIKELY(i2 < 0)) {
+            if (i2 < 0) [[unlikely]] {
                 frame->pc = pc;
                 FatalError("Right-rotate by negative value is illegal");
                 return false;
@@ -525,7 +525,7 @@ bool bk_VirtualMachine::Run()
             const bk_FunctionTypeInfo *func_type = func->type;
             const bk_TypeInfo *ret_type = func_type->ret_type;
 
-            if (RG_UNLIKELY(!func->valid)) {
+            if (!func->valid) [[unlikely]] {
                 frame->pc = pc;
                 FatalError("Calling invalid function '%1'", func->prototype);
                 return false;
@@ -581,7 +581,7 @@ bool bk_VirtualMachine::Run()
                     frames.RemoveLast(1);
                     frame = &frames[frames.len - 1];
 
-                    if (RG_UNLIKELY(!run))
+                    if (!run) [[unlikely]]
                         return !error;
 
                     DISPATCH(++pc);
@@ -593,7 +593,7 @@ bool bk_VirtualMachine::Run()
             const bk_FunctionTypeInfo *func_type = func->type;
             const bk_TypeInfo *ret_type = func_type->ret_type;
 
-            if (RG_UNLIKELY(!func->valid)) {
+            if (!func->valid) [[unlikely]] {
                 frame->pc = pc;
                 FatalError("Calling invalid function '%1'", func->prototype);
                 return false;
@@ -643,7 +643,7 @@ bool bk_VirtualMachine::Run()
                 frames.RemoveLast(1);
                 frame = &frames[frames.len - 1];
 
-                if (RG_UNLIKELY(!run))
+                if (!run) [[unlikely]]
                     return !error;
 
                 DISPATCH(++pc);

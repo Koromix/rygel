@@ -165,7 +165,7 @@ bool gui_Window::Create(const char *application_name)
     glfwSetCharCallback(window, [](GLFWwindow *window, unsigned int c) {
         gui_Window *self = (gui_Window *)glfwGetWindowUserPointer(window);
 
-        if (RG_LIKELY(self->priv.input.text.Available() >= 5)) {
+        if (self->priv.input.text.Available() >= 5) [[likely]] {
             self->priv.input.text.len += EncodeUtf8(c, self->priv.input.text.end());
             self->priv.input.text.data[self->priv.input.text.len] = 0;
         } else {

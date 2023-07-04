@@ -162,8 +162,6 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
     #else
         #define RG_THREAD_LOCAL __thread
     #endif
-    #define RG_LIKELY(Cond) __builtin_expect(!!(Cond), 1)
-    #define RG_UNLIKELY(Cond) __builtin_expect(!!(Cond), 0)
 
     #ifndef SCNd8
         #define SCNd8 "hhd"
@@ -179,8 +177,6 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
     #define RG_POP_NO_WARNINGS __pragma(warning(pop))
 
     #define RG_THREAD_LOCAL thread_local
-    #define RG_LIKELY(Cond) (Cond)
-    #define RG_UNLIKELY(Cond) (Cond)
 #else
     #error Compiler not supported
 #endif
@@ -217,7 +213,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
 
 #define RG_CRITICAL(Cond, ...) \
     do { \
-        if (RG_UNLIKELY(!(Cond))) { \
+        if (!(Cond)) [[unlikely]] { \
             PrintLn(stderr, __VA_ARGS__); \
             abort(); \
         } \
@@ -225,7 +221,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
 #ifdef RG_DEBUG
     #define RG_ASSERT(Cond) \
         do { \
-            if (RG_UNLIKELY(!(Cond))) { \
+            if (!(Cond)) [[unlikely]] { \
                 RG::AssertMessage(__FILE__, __LINE__, RG_STRINGIFY(Cond)); \
                 RG_DEBUG_BREAK(); \
                 abort(); \
@@ -3650,7 +3646,7 @@ template <typename T>
 bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
               Span<const char> *out_remaining = nullptr)
 {
-    if (RG_UNLIKELY(!str.len)) {
+    if (!str.len) [[unlikely]] {
         if (flags & (int)ParseFlag::Log) {
             LogError("Cannot convert empty string to integer");
         }
@@ -3672,7 +3668,7 @@ bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = RG_DEFAUL
 
     for (; pos < str.len; pos++) {
         unsigned int digit = (unsigned int)(str[pos] - '0');
-        if (RG_UNLIKELY(digit > 9)) {
+        if (digit > 9) [[unlikely]] {
             if (!pos || flags & (int)ParseFlag::End) {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed integer number '%1'", str);
@@ -3684,11 +3680,11 @@ bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = RG_DEFAUL
         }
 
         uint64_t new_value = (value * 10) + digit;
-        if (RG_UNLIKELY(new_value < value))
+        if (new_value < value) [[unlikely]]
             goto overflow;
         value = new_value;
     }
-    if (RG_UNLIKELY(value > (uint64_t)std::numeric_limits<T>::max()))
+    if (value > (uint64_t)std::numeric_limits<T>::max()) [[unlikely]]
         goto overflow;
     value = ((value ^ neg) - neg);
 
@@ -3751,18 +3747,18 @@ static inline Size DecodeUtf8(const char *str, int32_t *out_c)
     if (ptr[0] < 0x80) {
         *out_c = ptr[0];
         return 1;
-    } else if (RG_UNLIKELY(ptr[0] - 0xC2 > 0xF4 - 0xC2)) {
+    } else if (ptr[0] - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
         return 0;
-    } else if (RG_LIKELY(ptr[1])) {
+    } else if (ptr[1]) [[likely]] {
         if (ptr[0] < 0xE0 && (ptr[1] & 0xC0) == 0x80) {
             *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
             return 2;
-        } else if (RG_LIKELY(ptr[2])) {
+        } else if (ptr[2]) [[likely]] {
             if (ptr[0] < 0xF0 && (ptr[1] & 0xC0) == 0x80 &&
                                  (ptr[2] & 0xC0) == 0x80) {
                 *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
                 return 3;
-            } else if (RG_LIKELY(ptr[3])) {
+            } else if (ptr[3]) [[likely]] {
                 if ((ptr[1] & 0xC0) == 0x80 &&
                         (ptr[2] & 0xC0) == 0x80 &&
                         (ptr[3] & 0xC0) == 0x80) {
@@ -3786,20 +3782,18 @@ static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
     if (ptr[0] < 0x80) {
         *out_c = ptr[0];
         return 1;
-    } else if (RG_UNLIKELY(ptr[0] - 0xC2 > 0xF4 - 0xC2)) {
+    } else if (ptr[0] - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
         return 0;
-    } else if (ptr[0] < 0xE0 &&
-               RG_LIKELY(available >= 2 && (ptr[1] & 0xC0) == 0x80)) {
+    } else if (ptr[0] < 0xE0 && available >= 2 && (ptr[1] & 0xC0) == 0x80) {
         *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
         return 2;
-    } else if (ptr[0] < 0xF0 &&
-               RG_LIKELY(available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
-                                           (ptr[2] & 0xC0) == 0x80)) {
+    } else if (ptr[0] < 0xF0 && available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
+                                                  (ptr[2] & 0xC0) == 0x80) {
         *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
         return 3;
-    } else if (RG_LIKELY(available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
-                                           (ptr[2] & 0xC0) == 0x80 &&
-                                           (ptr[3] & 0xC0) == 0x80)) {
+    } else if (available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
+                                 (ptr[2] & 0xC0) == 0x80 &&
+                                 (ptr[3] & 0xC0) == 0x80) {
         *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
         return 4;
     } else {

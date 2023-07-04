@@ -445,13 +445,13 @@ LocalDate LocalDate::Parse(Span<const char> date_str, unsigned int flags,
             int digit = c - '0';
             if ((unsigned int)digit < 10) {
                 parts[i] = (parts[i] * 10) + digit;
-                if (RG_UNLIKELY(++lengths[i] > 5))
+                if (++lengths[i] > 5) [[unlikely]]
                     goto malformed;
             } else if (!lengths[i] && c == '-' && mult == 1 && i != 1) {
                 mult = -1;
-            } else if (RG_UNLIKELY(i == 2 && !(flags & (int)ParseFlag::End) && c != '/' && c != '-')) {
+            } else if (i == 2 && !(flags & (int)ParseFlag::End) && c != '/' && c != '-') [[unlikely]] {
                 break;
-            } else if (RG_UNLIKELY(!lengths[i] || (c != '/' && c != '-'))) {
+            } else if (!lengths[i] || (c != '/' && c != '-')) [[unlikely]] {
                 goto malformed;
             } else {
                 offset++;
@@ -464,9 +464,9 @@ LocalDate LocalDate::Parse(Span<const char> date_str, unsigned int flags,
     if ((flags & (int)ParseFlag::End) && offset < date_str.len)
         goto malformed;
 
-    if (RG_UNLIKELY((unsigned int)lengths[1] > 2))
+    if ((unsigned int)lengths[1] > 2) [[unlikely]]
         goto malformed;
-    if (RG_UNLIKELY((lengths[0] > 2) == (lengths[2] > 2))) {
+    if ((lengths[0] > 2) == (lengths[2] > 2)) [[unlikely]] {
         if (flags & (int)ParseFlag::Log) {
             LogError("Ambiguous date string '%1'", date_str);
         }
@@ -474,7 +474,7 @@ LocalDate LocalDate::Parse(Span<const char> date_str, unsigned int flags,
     } else if (lengths[2] > 2) {
         std::swap(parts[0], parts[2]);
     }
-    if (RG_UNLIKELY(parts[0] < -INT16_MAX || parts[0] > INT16_MAX || (unsigned int)parts[2] > 99))
+    if (parts[0] < -INT16_MAX || parts[0] > INT16_MAX || (unsigned int)parts[2] > 99) [[unlikely]]
         goto malformed;
 
     date.st.year = (int16_t)parts[0];
@@ -722,13 +722,13 @@ bool CopyString(const char *str, Span<char> buf)
 #ifdef RG_DEBUG
     RG_ASSERT(buf.len > 0);
 #else
-    if (RG_UNLIKELY(!buf.len))
+    if (!buf.len) [[unlikely]]
         return false;
 #endif
 
     Size i = 0;
     for (; str[i]; i++) {
-        if (RG_UNLIKELY(i >= buf.len - 1)) {
+        if (i >= buf.len - 1) [[unlikely]] {
             buf[buf.len - 1] = 0;
             return false;
         }
@@ -744,11 +744,11 @@ bool CopyString(Span<const char> str, Span<char> buf)
 #ifdef RG_DEBUG
     RG_ASSERT(buf.len > 0);
 #else
-    if (RG_UNLIKELY(!buf.len))
+    if (!buf.len) [[unlikely]]
         return false;
 #endif
 
-    if (RG_UNLIKELY(str.len > buf.len - 1))
+    if (str.len > buf.len - 1) [[unlikely]]
         return false;
 
     memcpy_safe(buf.ptr, str.ptr, str.len);
@@ -1684,7 +1684,7 @@ static void WriteStdComplete(Span<const char> buf, FILE *fp)
 {
     while (buf.len) {
         Size write_len = (Size)fwrite(buf.ptr, 1, (size_t)buf.len, fp);
-        if (RG_UNLIKELY(!write_len))
+        if (!write_len) [[unlikely]]
             break;
         buf = buf.Take(write_len, buf.len - write_len);
     }
@@ -1965,7 +1965,7 @@ Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w)
 {
     RG_ASSERT(out_str_w.len >= 2);
 
-    if (RG_UNLIKELY(!str.len)) {
+    if (!str.len) [[unlikely]] {
         out_str_w[0] = 0;
         return 0;
     }
@@ -2230,7 +2230,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
                 (find_data.cFileName[0] == '.' && find_data.cFileName[1] == '.' && !find_data.cFileName[2]))
             continue;
 
-        if (RG_UNLIKELY(count++ >= max_files && max_files >= 0)) {
+        if (count++ >= max_files && max_files >= 0) [[unlikely]] {
             LogError("Partial enumation of directory '%1'", dirname);
             return EnumResult::PartialEnum;
         }
@@ -2468,7 +2468,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
             continue;
 
         if (!filter || !fnmatch(filter, dent->d_name, FNM_PERIOD)) {
-            if (RG_UNLIKELY(count++ >= max_files && max_files >= 0)) {
+            if (count++ >= max_files && max_files >= 0) [[unlikely]] {
                 LogError("Partial enumation of directory '%1'", dirname);
                 return EnumResult::PartialEnum;
             }
@@ -2738,7 +2738,7 @@ bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *a
         static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
 
         for (Span<const char> ext: extensions) {
-            if (RG_LIKELY(ext.len < buf.Available() - 1)) {
+            if (ext.len < buf.Available() - 1) [[likely]] {
                 memcpy_safe(buf.end(), ext.ptr, ext.len + 1);
 
                 if (TestFile(buf.data)) {
@@ -2750,7 +2750,7 @@ bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *a
             }
         }
 #else
-        if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data)) {
+        if (buf.len < RG_SIZE(buf.data) - 1 && TestFile(buf.data)) {
             if (out_path) {
                 *out_path = DuplicateString(buf.data, alloc).ptr;
             }
@@ -3643,7 +3643,7 @@ bool MakeDirectory(const char *directory, bool error_if_exists)
 bool MakeDirectoryRec(Span<const char> directory)
 {
     char buf[4096];
-    if (RG_UNLIKELY(directory.len >= RG_SIZE(buf))) {
+    if (directory.len >= RG_SIZE(buf)) [[unlikely]] {
         LogError("Path '%1' is too large", directory);
         return false;
     }
@@ -4321,7 +4321,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size m
     {
         Size memory_max = RG_SIZE_MAX - out_buf->len - 1;
 
-        if (RG_UNLIKELY(memory_max <= 0)) {
+        if (memory_max <= 0) [[unlikely]] {
             LogError("Exhausted memory limit");
             return false;
         }
@@ -4830,7 +4830,7 @@ static const char *CreateUniquePath(Span<const char> directory, const char *pref
 
     for (Size i = 0; i < 1000; i++) {
         // We want to show an error on last try
-        if (RG_UNLIKELY(i == 999)) {
+        if (i == 999) [[unlikely]] {
             PopLogFilter();
             log_guard.Disable();
         }
@@ -5664,7 +5664,7 @@ Fiber::~Fiber()
 
 void Fiber::SwitchTo()
 {
-    if (RG_UNLIKELY(!fiber))
+    if (!fiber) [[unlikely]]
         return;
 
     if (!done) {
@@ -5675,7 +5675,7 @@ void Fiber::SwitchTo()
 
 bool Fiber::Finalize()
 {
-    if (RG_UNLIKELY(!fiber))
+    if (!fiber) [[unlikely]]
         return false;
 
     if (!done) {
@@ -5746,7 +5746,7 @@ Fiber::~Fiber()
 
 void Fiber::SwitchTo()
 {
-    if (RG_UNLIKELY(!ucp.uc_stack.ss_sp))
+    if (!ucp.uc_stack.ss_sp) [[unlikely]]
         return;
 
     if (!done) {
@@ -5757,7 +5757,7 @@ void Fiber::SwitchTo()
 
 bool Fiber::Finalize()
 {
-    if (RG_UNLIKELY(!ucp.uc_stack.ss_sp))
+    if (!ucp.uc_stack.ss_sp) [[unlikely]]
         return false;
 
     if (!done) {
@@ -6025,7 +6025,7 @@ bool StreamReader::Close(bool implicit)
 
 bool StreamReader::Rewind()
 {
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return false;
 
     switch (source.type) {
@@ -6077,7 +6077,7 @@ int StreamReader::GetDescriptor() const
 
 Size StreamReader::Read(Span<uint8_t> out_buf)
 {
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return -1;
 
     Size read_len = 0;
@@ -6093,7 +6093,7 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
         eof = source.eof;
     }
 
-    if (RG_UNLIKELY(!error && read_max >= 0 && read_len > read_max - read_total)) {
+    if (!error && read_max >= 0 && read_len > read_max - read_total) [[unlikely]] {
         LogError("Exceeded max stream size of %1", FmtDiskSize(read_max));
         error = true;
         return -1;
@@ -6105,7 +6105,7 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
 
 Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
 {
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return -1;
 
     RG_DEFER_NC(buf_guard, buf_len = out_buf->len) { out_buf->RemoveFrom(buf_len); };
@@ -6114,7 +6114,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     {
         Size memory_max = RG_SIZE_MAX - out_buf->len - 1;
 
-        if (RG_UNLIKELY(memory_max <= 0)) {
+        if (memory_max <= 0) [[unlikely]] {
             LogError("Exhausted memory limit reading file '%1'", filename);
             return -1;
         }
@@ -6154,7 +6154,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
             if (read_len < 0)
                 return -1;
 
-            if (RG_UNLIKELY(read_len > max_len - total_len)) {
+            if (read_len > max_len - total_len) [[unlikely]] {
                 LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
                 return -1;
             }
@@ -6170,7 +6170,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
 
 int64_t StreamReader::ComputeRawLen()
 {
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return -1;
     if (raw_read || raw_len >= 0)
         return raw_len;
@@ -6289,7 +6289,7 @@ bool LineReader::Next(Span<char> *out_line)
         line_number = 0;
         return false;
     }
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return false;
 
     for (;;) {
@@ -6466,7 +6466,7 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 
 bool StreamWriter::Flush()
 {
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return false;
 
     switch (dest.type) {
@@ -6504,7 +6504,7 @@ int StreamWriter::GetDescriptor() const
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
 {
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return false;
 
     if (compressor) {
@@ -6688,7 +6688,7 @@ bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)
         if (buf.len < 0)
             return false;
 
-        if (RG_UNLIKELY(max_len >= 0 && buf.len > max_len - total_len)) {
+        if (max_len >= 0 && buf.len > max_len - total_len) [[unlikely]] {
             LogError("File '%1' is too large (limit = %2)", reader->GetFileName(), FmtDiskSize(max_len));
             return false;
         }
@@ -6724,7 +6724,7 @@ static bool CheckIniKey(Span<const char> key)
 
 IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
 {
-    if (RG_UNLIKELY(error))
+    if (error) [[unlikely]]
         return LineType::Exit;
 
     RG_DEFER_N(err_guard) { error = true; };
@@ -6921,7 +6921,7 @@ static bool assets_ready;
 
 void InitPackedMap(Span<const AssetInfo> assets)
 {
-    if (RG_LIKELY(!assets_ready)) {
+    if (!assets_ready) [[likely]] {
         for (const AssetInfo &asset: assets) {
             PackedAssets_map.Set(&asset);
         }

@@ -167,7 +167,7 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
             OpenResult ret = OpenFile(tmp.data, (int)OpenFlag::Write | (int)OpenFlag::Exclusive,
                                                 (int)OpenResult::FileExists, &fp);
 
-            if (RG_LIKELY(ret == OpenResult::Success)) {
+            if (ret == OpenResult::Success) [[likely]] {
                 tmp.len += len;
                 break;
             } else if (ret != OpenResult::FileExists) {
@@ -175,7 +175,7 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
             }
         }
 
-        if (RG_UNLIKELY(!fp)) {
+        if (!fp) [[unlikely]] {
             LogError("Failed to create temporary file in '%1'", tmp);
             return -1;
         }

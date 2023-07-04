@@ -174,25 +174,25 @@ static bool RunClassifier(const ClassifierInstance &classifier,
     for (Size i = stays_offset; i < stays_end; i++) {
         mco_Stay stay = {};
 
-        if (RG_UNLIKELY(i && (stays.id[i] < stays.id[i - 1] ||
-                              (j < diagnoses_end && diagnoses.id[j] < stays.id[i - 1]) ||
-                              (k < procedures_end && procedures.id[k] < stays.id[i - 1]))))
+        if (i && (stays.id[i] < stays.id[i - 1] ||
+              (j < diagnoses_end && diagnoses.id[j] < stays.id[i - 1]) ||
+              (k < procedures_end && procedures.id[k] < stays.id[i - 1]))) [[unlikely]]
             return false;
 
         stay.admin_id = rcc_GetOptional(stays.admin_id, i, 0);
         stay.bill_id = stays.bill_id[i];
         stay.birthdate = stays.birthdate[i];
-        if (RG_UNLIKELY(stay.birthdate.value && !stay.birthdate.IsValid())) {
+        if (stay.birthdate.value && !stay.birthdate.IsValid()) [[unlikely]] {
             stay.errors |= (int)mco_Stay::Error::MalformedBirthdate;
         }
         if (stays.sex[i] != NA_INTEGER) {
             stay.sex = (int8_t)stays.sex[i];
-            if (RG_UNLIKELY(stay.sex != stays.sex[i])) {
+            if (stay.sex != stays.sex[i]) [[unlikely]] {
                 stay.errors |= (int)mco_Stay::Error::MalformedSex;
             }
         }
         stay.entry.date = stays.entry_date[i];
-        if (RG_UNLIKELY(stay.entry.date.value && !stay.entry.date.IsValid())) {
+        if (stay.entry.date.value && !stay.entry.date.IsValid()) [[unlikely]] {
             stay.errors |= (int)mco_Stay::Error::MalformedEntryDate;
         }
         stay.entry.mode = (char)('0' + stays.entry_mode[i]);
@@ -205,7 +205,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             }
         }
         stay.exit.date = stays.exit_date[i];
-        if (RG_UNLIKELY(stay.exit.date.value && !stay.exit.date.IsValid())) {
+        if (stay.exit.date.value && !stay.exit.date.IsValid()) [[unlikely]] {
             stay.errors |= (int)mco_Stay::Error::MalformedExitDate;
         }
         stay.exit.mode = (char)('0' + stays.exit_mode[i]);
@@ -256,36 +256,36 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 
         stay.other_diagnoses.ptr = other_diagnoses2.end();
         if (diagnoses.type.Len()) {
-            while (RG_UNLIKELY(j < diagnoses_end && diagnoses.id[j] < stays.id[i])) {
+            while (j < diagnoses_end && diagnoses.id[j] < stays.id[i]) [[unlikely]] {
                 j++;
             }
             for (; j < diagnoses_end && diagnoses.id[j] == stays.id[i]; j++) {
-                if (RG_UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
+                if (diagnoses.diag[j] == CHAR(NA_STRING)) [[unlikely]]
                     continue;
 
                 drd_DiagnosisCode diag =
                     drd_DiagnosisCode::Parse(diagnoses.diag[j], (int)ParseFlag::End);
                 const char *type_str = diagnoses.type[j].ptr;
 
-                if (RG_LIKELY(type_str[0] && !type_str[1])) {
+                if (type_str[0] && !type_str[1]) [[likely]] {
                     switch (type_str[0]) {
                         case 'p':
                         case 'P': {
                             stay.main_diagnosis = diag;
-                            if (RG_UNLIKELY(!stay.main_diagnosis.IsValid())) {
+                            if (!stay.main_diagnosis.IsValid()) [[unlikely]] {
                                 stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
                             }
                         } break;
                         case 'r':
                         case 'R': {
                             stay.linked_diagnosis = diag;
-                            if (RG_UNLIKELY(!stay.linked_diagnosis.IsValid())) {
+                            if (!stay.linked_diagnosis.IsValid()) [[unlikely]] {
                                 stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
                             }
                         } break;
                         case 's':
                         case 'S': {
-                            if (RG_LIKELY(diag.IsValid())) {
+                            if (diag.IsValid()) [[likely]] {
                                 other_diagnoses2.Append(diag);
                             } else {
                                 stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
@@ -303,31 +303,31 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 }
             }
         } else {
-            if (RG_LIKELY(stays.main_diagnosis[i] != CHAR(NA_STRING))) {
+            if (stays.main_diagnosis[i] != CHAR(NA_STRING)) [[likely]] {
                 stay.main_diagnosis =
                     drd_DiagnosisCode::Parse(stays.main_diagnosis[i], (int)ParseFlag::End);
-                if (RG_UNLIKELY(!stay.main_diagnosis.IsValid())) {
+                if (!stay.main_diagnosis.IsValid()) [[unlikely]] {
                     stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
                 }
             }
             if (stays.linked_diagnosis[i] != CHAR(NA_STRING)) {
                 stay.linked_diagnosis =
                     drd_DiagnosisCode::Parse(stays.linked_diagnosis[i], (int)ParseFlag::End);
-                if (RG_UNLIKELY(!stay.linked_diagnosis.IsValid())) {
+                if (!stay.linked_diagnosis.IsValid()) [[unlikely]] {
                     stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
                 }
             }
 
-            while (RG_UNLIKELY(j < diagnoses_end && diagnoses.id[j] < stays.id[i])) {
+            while (j < diagnoses_end && diagnoses.id[j] < stays.id[i]) [[unlikely]] {
                 j++;
             }
             for (; j < diagnoses_end && diagnoses.id[j] == stays.id[i]; j++) {
-                if (RG_UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
+                if (diagnoses.diag[j] == CHAR(NA_STRING)) [[unlikely]]
                     continue;
 
                 drd_DiagnosisCode diag =
                     drd_DiagnosisCode::Parse(diagnoses.diag[j], (int)ParseFlag::End);
-                if (RG_UNLIKELY(!diag.IsValid())) {
+                if (!diag.IsValid()) [[unlikely]] {
                     stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                 }
 
@@ -337,11 +337,11 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         stay.other_diagnoses.len = other_diagnoses2.end() - stay.other_diagnoses.ptr;
 
         stay.procedures.ptr = procedures2.end();
-        while (RG_UNLIKELY(k < procedures_end && procedures.id[k] < stays.id[i])) {
+        while (k < procedures_end && procedures.id[k] < stays.id[i]) [[unlikely]] {
             k++;
         }
         for (; k < procedures_end && procedures.id[k] == stays.id[i]; k++) {
-            if (RG_UNLIKELY(procedures.proc[k] == CHAR(NA_STRING)))
+            if (procedures.proc[k] == CHAR(NA_STRING)) [[unlikely]]
                 continue;
 
             mco_ProcedureRealisation proc = {};
@@ -349,7 +349,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             proc.proc = drd_ProcedureCode::Parse(procedures.proc[k], (int)ParseFlag::End);
             if (procedures.extension.Len() && procedures.extension[k] != NA_INTEGER) {
                 int extension = procedures.extension[k];
-                if (RG_LIKELY(extension >= 0 && extension < 100)) {
+                if (extension >= 0 && extension < 100) [[likely]] {
                     proc.extension = (int8_t)extension;
                 } else {
                     stay.errors |= (int)mco_Stay::Error::MalformedProcedureExtension;
@@ -369,7 +369,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 }
             }
 
-            if (RG_LIKELY(proc.proc.IsValid())) {
+            if (proc.proc.IsValid()) [[likely]] {
                 procedures2.Append(proc);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedProcedureCode;
@@ -1326,28 +1326,28 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
             const mco_Stay &stay = stay_set.stays[i];
 
             stays_id[i] = (int)(i + 1);
-            stays_admin_id[i] = RG_LIKELY(stay.admin_id) ? stay.admin_id : NA_INTEGER;
-            stays_bill_id[i] = RG_LIKELY(stay.bill_id) ? stay.bill_id : NA_INTEGER;
-            stays_sex[i] = RG_LIKELY(stay.sex) ? stay.sex : NA_INTEGER;
+            stays_admin_id[i] = stay.admin_id ? stay.admin_id : NA_INTEGER;
+            stays_bill_id[i] = stay.bill_id ? stay.bill_id : NA_INTEGER;
+            stays_sex[i] = stay.sex ? stay.sex : NA_INTEGER;
             stays_birthdate.Set(i, stay.birthdate);
             stays_entry_date.Set(i, stay.entry.date);
-            stays_entry_mode[i] = RG_LIKELY(stay.entry.mode) ? stay.entry.mode - '0' : NA_INTEGER;
+            stays_entry_mode[i] = stay.entry.mode ? stay.entry.mode - '0' : NA_INTEGER;
             if (stay.entry.origin) {
                 stays_entry_origin.Set(i, stay.entry.origin);
             } else {
                 stays_entry_origin.Set(i, nullptr);
             }
             stays_exit_date.Set(i, stay.exit.date);
-            stays_exit_mode[i] = RG_LIKELY(stay.exit.mode) ? stay.exit.mode - '0' : NA_INTEGER;
+            stays_exit_mode[i] = stay.exit.mode ? stay.exit.mode - '0' : NA_INTEGER;
             stays_exit_destination[i] = stay.exit.destination ? stay.exit.destination - '0' : NA_INTEGER;
-            stays_unit[i] = RG_LIKELY(stay.unit.number) ? stay.unit.number : NA_INTEGER;
+            stays_unit[i] = stay.unit.number ? stay.unit.number : NA_INTEGER;
             stays_bed_authorization[i] = stay.bed_authorization ? stay.bed_authorization : NA_INTEGER;
             stays_session_count[i] = stay.session_count;
             stays_igs2[i] = stay.igs2 ? stay.igs2 : NA_INTEGER;
             stays_last_menstrual_period.Set(i, stay.last_menstrual_period);
             stays_gestational_age[i] = stay.gestational_age ? stay.gestational_age : NA_INTEGER;
             stays_newborn_weight[i] = stay.newborn_weight ? stay.newborn_weight : NA_INTEGER;
-            if (RG_LIKELY(stay.main_diagnosis.IsValid())) {
+            if (stay.main_diagnosis.IsValid()) [[likely]] {
                 stays_main_diagnosis.Set(i, stay.main_diagnosis.str);
             } else {
                 stays_main_diagnosis.Set(i, nullptr);
@@ -1391,7 +1391,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
                 procedures_phase[k] = proc.phase;
                 procedures_activity[k] = proc.activity;
                 procedures_date.Set(k, proc.date);
-                procedures_count[k] = RG_LIKELY(proc.count) ? proc.count : NA_INTEGER;
+                procedures_count[k] = proc.count ? proc.count : NA_INTEGER;
                 if (proc.doc) {
                     procedures_doc.Set(k, proc.doc);
                 } else {
@@ -1439,7 +1439,7 @@ RcppExport SEXP drdR_mco_CleanDiagnoses(SEXP diagnoses_xp)
         Span<const char> str = diagnoses[i];
         if (!diagnoses.IsNA(str)) {
             drd_DiagnosisCode diag = drd_DiagnosisCode::Parse(diagnoses[i]);
-            if (RG_LIKELY(diag.IsValid())) {
+            if (diag.IsValid()) [[likely]] {
                 diagnoses2.Set(i, diag.str);
             } else {
                 diagnoses2.Set(i, nullptr);
@@ -1461,7 +1461,7 @@ RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
         Span<const char> str = procedures[i];
         if (!procedures.IsNA(str)) {
             drd_ProcedureCode proc = drd_ProcedureCode::Parse(procedures[i]);
-            if (RG_LIKELY(proc.IsValid())) {
+            if (proc.IsValid()) [[likely]] {
                 procedures2.Set(i, proc.str);
             } else {
                 procedures2.Set(i, nullptr);

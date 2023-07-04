@@ -198,7 +198,7 @@ private:
             bool inserted;
             sessions_map.TrySet(handle, &inserted);
 
-            if (RG_LIKELY(inserted))
+            if (inserted) [[likely]]
                 break;
         }
 

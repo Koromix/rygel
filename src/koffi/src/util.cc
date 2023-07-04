@@ -85,7 +85,7 @@ Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
     } else {
         Napi::Env env = info.Env();
 
-        if (RG_UNLIKELY(!raw.len)) {
+        if (!raw.len) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Cannont convert %1 union value", active_idx < 0 ? "empty" : "assigned");
             return env.Null();
         }
@@ -190,7 +190,7 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
             remain = remain.Take(1, remain.len - 1);
             indirect++;
 
-            if (RG_UNLIKELY(indirect) >= RG_SIZE(disposables) * 8) {
+            if (indirect >= RG_SIZE(disposables) * 8) [[unlikely]] {
                 ThrowError<Napi::Error>(env, "Too many pointer indirections");
                 return nullptr;
             }
@@ -233,9 +233,9 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
 
     for (int i = 0;; i++) {
         if (disposables & (1u << i)) {
-            if (RG_UNLIKELY(type->primitive != PrimitiveKind::Pointer &&
-                            type->primitive != PrimitiveKind::String &&
-                            type->primitive != PrimitiveKind::String16)) {
+            if (type->primitive != PrimitiveKind::Pointer &&
+                    type->primitive != PrimitiveKind::String &&
+                    type->primitive != PrimitiveKind::String16) [[unlikely]] {
                 ThrowError<Napi::Error>(env, "Cannot create disposable type for non-pointer");
                 return nullptr;
             }
@@ -1035,7 +1035,7 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
     } else if (IsRawBuffer(value)) {
         Span<uint8_t> buffer = GetRawBuffer(value);
 
-        if (RG_UNLIKELY(buffer.len - offset < type->size)) {
+        if (buffer.len - offset < type->size) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
                                     type->name, type->size + offset);
             return env.Null();
@@ -1065,7 +1065,7 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
         if (*len >= 0) {
             type = MakeArrayType(instance, type, *len);
         } else {
-            if (RG_UNLIKELY(!(type->flags & (int)TypeFlag::IsCharLike))) {
+            if (!(type->flags & (int)TypeFlag::IsCharLike)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Only char-like types can find their length automatically", type->name);
                 return env.Null();
             }

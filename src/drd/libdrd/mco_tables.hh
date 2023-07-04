@@ -452,12 +452,12 @@ public:
             case Type::All: { return true; } break;
 
             case Type::Mask: {
-                return RG_LIKELY(u.mask.offset < values.len) &&
-                       values[u.mask.offset] & u.mask.mask;
+                return u.mask.offset < values.len &&
+                       (values[u.mask.offset] & u.mask.mask);
             } break;
 
             case Type::ReverseMask: {
-                return RG_LIKELY(u.mask.offset < values.len) &&
+                return u.mask.offset < values.len &&
                        !(values[u.mask.offset] & u.mask.mask);
             } break;
 

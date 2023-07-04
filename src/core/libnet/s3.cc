@@ -374,7 +374,7 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *ke
         for (const pugi::xpath_node &node: contents) {
             const char *key = node.node().child("Key").text().get();
 
-            if (RG_LIKELY(key && key[0])) {
+            if (key && key[0]) [[likely]] {
                 if (!func(key))
                     return false;
                 after_node = &node;
@@ -384,7 +384,7 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *ke
         if (!truncated)
             break;
 
-        if (RG_UNLIKELY(!after_node)) {
+        if (!after_node) [[unlikely]] {
             LogError("Unexpected XML content");
             return false;
         }

@@ -154,7 +154,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 }
             }
 
-            if (RG_LIKELY(thread_info->input.text.Available() >= 5)) {
+            if (thread_info->input.text.Available() >= 5) [[likely]] {
                 thread_info->input.text.len += EncodeUtf8(uc, thread_info->input.text.end());
                 thread_info->input.text.data[thread_info->input.text.len] = 0;
             } else {

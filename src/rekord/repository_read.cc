@@ -259,7 +259,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 {
     // XXX: Make sure each path does not clobber a previous one
 
-    if (RG_UNLIKELY(entries.len < RG_SIZE(int64_t))) {
+    if (entries.len < RG_SIZE(int64_t)) [[unlikely]] {
         LogError("Malformed directory object");
         return false;
     }
@@ -467,11 +467,11 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
                     if (!disk->ReadObject(entry.id, &type, &buf))
                         return false;
 
-                    if (RG_UNLIKELY(type != rk_ObjectType::Chunk)) {
+                    if (type != rk_ObjectType::Chunk) [[unlikely]] {
                         LogError("Object '%1' is not a chunk", entry.id);
                         return false;
                     }
-                    if (RG_UNLIKELY(buf.len != entry.len)) {
+                    if (buf.len != entry.len) [[unlikely]] {
                         LogError("Chunk size mismatch for '%1'", entry.id);
                         return false;
                     }
@@ -492,7 +492,7 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
                 const rk_ChunkEntry *entry = (const rk_ChunkEntry *)(file_obj.end() - RG_SIZE(rk_ChunkEntry));
                 int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
-                if (RG_UNLIKELY(len != file_len)) {
+                if (len != file_len) [[unlikely]] {
                     LogError("File size mismatch for '%1'", entry->id);
                     return -1;
                 }

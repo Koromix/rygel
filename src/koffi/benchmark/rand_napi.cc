@@ -38,11 +38,11 @@ static Napi::Value RunSrand(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    if (RG_UNLIKELY(info.Length() < 1)) {
+    if (info.Length() < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-    if (RG_UNLIKELY(!info[0].IsNumber())) {
+    if (!info[0].IsNumber()) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected type for seed, expected number");
         return env.Null();
     }

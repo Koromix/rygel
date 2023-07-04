@@ -130,7 +130,7 @@ const LocalDate rcc_Vector<LocalDate>::operator[](Size idx) const
 
 LocalDate rcc_Vector<LocalDate>::Value() const
 {
-    if (RG_UNLIKELY(Len() != 1))
+    if (Len() != 1) [[unlikely]]
         Rcpp::stop("Date or date-like vector must have one value (no more, no less)");
 
     return (*this)[0];

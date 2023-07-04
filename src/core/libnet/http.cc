@@ -298,11 +298,11 @@ static bool GetClientAddress(MHD_Connection *conn, http_ClientAddressMode addr_m
 
             Span<const char> addr = TrimStr(SplitStr(str, ','));
 
-            if (RG_UNLIKELY(!addr.len)) {
+            if (!addr.len) [[unlikely]] {
                 LogError("Empty client address in X-Forwarded-For header");
                 return false;
             }
-            if (RG_UNLIKELY(!CopyString(addr, out_address))) {
+            if (!CopyString(addr, out_address)) [[unlikely]] {
                 LogError("Excessively long client address in X-Forwarded-For header");
                 return false;
             }
@@ -319,11 +319,11 @@ static bool GetClientAddress(MHD_Connection *conn, http_ClientAddressMode addr_m
 
             Span<const char> addr = TrimStr(str);
 
-            if (RG_UNLIKELY(!addr.len)) {
+            if (!addr.len) [[unlikely]] {
                 LogError("Empty client address in X-Forwarded-For header");
                 return false;
             }
-            if (RG_UNLIKELY(!CopyString(addr, out_address))) {
+            if (!CopyString(addr, out_address)) [[unlikely]] {
                 LogError("Excessively long client address in X-Forwarded-For header");
                 return false;
             }
@@ -342,7 +342,7 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
     http_Daemon *daemon = (http_Daemon *)cls;
     http_IO *io = *(http_IO **)con_cls;
 
-    if (RG_UNLIKELY(!daemon->running)) {
+    if (!daemon->running) [[unlikely]] {
         const char *msg = "Server is shutting down";
 
         MHD_Response *response = MHD_create_response_from_buffer(strlen(msg), (void *)msg, MHD_RESPMEM_PERSISTENT);
@@ -363,7 +363,7 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
         io->request.url = url;
 
         // Is that even possible? Dunno, but make sure it never happens!
-        if (RG_UNLIKELY(url[0] != '/')) {
+        if (url[0] != '/') [[unlikely]] {
             io->AttachError(400);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
         }
@@ -486,7 +486,7 @@ void http_Daemon::RunNextAsync(http_IO *io)
             io->PushLogFilter();
             RG_DEFER { PopLogFilter(); };
 
-            if (RG_LIKELY(running)) {
+            if (running) [[likely]] {
                 func();
             }
 
@@ -803,11 +803,11 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     if (max_len >= 0) {
         if (const char *str = request.GetHeaderValue("Content-Length"); str) {
             Size len;
-            if (RG_UNLIKELY(!ParseInt(str, &len))) {
+            if (!ParseInt(str, &len)) [[unlikely]] {
                 AttachError(400);
                 return false;
             }
-            if (RG_UNLIKELY(len < 0)) {
+            if (len < 0) [[unlikely]] {
                 LogError("Refusing negative Content-Length");
                 AttachError(400);
                 return  false;

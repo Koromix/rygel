@@ -69,7 +69,7 @@ void mco_Price(const mco_Result &result, bool apply_coefficient, mco_Pricing *ou
     if (!apply_coefficient)
         ghs_coefficient = 1.0;
 
-    if (RG_LIKELY(price_info)) {
+    if (price_info) [[likely]] {
         int64_t price_cents = mco_PriceGhs(*price_info, ghs_coefficient, result.ghs_duration,
                                            result.stays[result.stays.len - 1].exit.mode == '9',
                                            result.stays[0].flags & (int)mco_Stay::Flag::UCD,
@@ -228,7 +228,7 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono
                 double coefficients_total = ComputeCoefficients(pricing, sub_mono_pricings,
                                                                 dispense_mode, &coefficients);
 
-                if (RG_UNLIKELY(!coefficients_total)) {
+                if (!coefficients_total) [[unlikely]] {
                     coefficients.RemoveFrom(0);
                     coefficients_total = ComputeCoefficients(pricing, sub_mono_pricings,
                                                              mco_DispenseMode::J, &coefficients);

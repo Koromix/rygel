@@ -148,7 +148,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
             const bk_EnumTypeInfo *enum_type = type->AsEnumType();
             int64_t value = vm->stack[offset++].i;
 
-            if (RG_LIKELY(value >= 0 && value < enum_type->labels.len)) {
+            if (value >= 0 && value < enum_type->labels.len) [[likely]] {
                 const bk_EnumTypeInfo::Label &label = enum_type->labels[value];
                 fputs(label.name, stdout);
             } else {

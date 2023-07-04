@@ -101,7 +101,7 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
     }
 
     do {
-        if (RG_UNLIKELY(!out_ranges->Available())) {
+        if (!out_ranges->Available()) [[unlikely]] {
             LogError("Excessive number of range fragments");
             return false;
         }

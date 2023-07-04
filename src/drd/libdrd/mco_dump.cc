@@ -55,7 +55,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
                     ctx.cmd = (int8_t)i;
                     ctx.out_nodes[child_idx].header = Fmt(ctx.str_alloc, "D-%1",
                                                           FmtArg(ctx.cmd).Pad0(-2)).ptr;
-                    if (RG_UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
+                    if (!ProcessGhmNode(ctx, child_idx)) [[unlikely]]
                         return -1;
                 }
                 ctx.cmd = prev_cmd;
@@ -70,7 +70,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
                     ctx.out_nodes[child_idx].header = Fmt(ctx.str_alloc, "D-%1%2",
                                                           FmtArg(ctx.cmd).Pad0(-2),
                                                           FmtArg(i).Pad0(-2)).ptr;
-                    if (RG_UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
+                    if (!ProcessGhmNode(ctx, child_idx)) [[unlikely]]
                         return -1;
                 }
 
@@ -135,7 +135,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
                     Size child_idx = ghm_node.u.test.children_idx + i;
 
                     ctx.cmd = ghm_node.u.test.params[1];
-                    if (RG_UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
+                    if (!ProcessGhmNode(ctx, child_idx)) [[unlikely]]
                         return -1;
                 }
                 ctx.cmd = prev_cmd;
@@ -273,7 +273,7 @@ static Size ProcessGhmTest(BuildReadableTreeContext &ctx, const mco_GhmDecisionN
 
     for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
         Size child_idx = ghm_node.u.test.children_idx + i;
-        if (RG_UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
+        if (!ProcessGhmNode(ctx, child_idx)) [[unlikely]]
             return -1;
     }
 
@@ -291,7 +291,7 @@ static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size node_idx)
 
         if (ghm_node.function != 12) {
             node_idx = ProcessGhmTest(ctx, ghm_node, out_node);
-            if (RG_UNLIKELY(node_idx < 0))
+            if (node_idx < 0) [[unlikely]]
                 return false;
 
             // GOTO is special

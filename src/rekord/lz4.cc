@@ -44,7 +44,7 @@ bool DecodeLZ4::Flush(bool complete, FunctionRef<bool(Span<const uint8_t>)> func
     Size treshold = complete ? 1 : in_hint;
 
     while (in_buf.len >= treshold) {
-        if (RG_UNLIKELY(done)) {
+        if (done) [[unlikely]] {
             LogError("Unknown data past end of LZ4 frame");
             return false;
         }

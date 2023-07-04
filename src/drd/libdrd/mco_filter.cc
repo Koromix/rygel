@@ -230,14 +230,14 @@ static void TriggerError(WrenVM *vm, Args... args)
 template <typename T>
 static inline T GetSlotIntegerSafe(WrenVM *vm, int slot)
 {
-    if (RG_UNLIKELY(wrenGetSlotType(vm, slot) != WREN_TYPE_NUM)) {
+    if (wrenGetSlotType(vm, slot) != WREN_TYPE_NUM) [[unlikely]] {
         TriggerError(vm, "Expected numeric value");
         return 0;
     }
 
     double value = wrenGetSlotDouble(vm, slot);
-    if (RG_UNLIKELY(value < (double)std::numeric_limits<T>::min() ||
-                    value > (double)std::numeric_limits<T>::max())) {
+    if (value < (double)std::numeric_limits<T>::min() ||
+            value > (double)std::numeric_limits<T>::max()) [[unlikely]] {
         TriggerError(vm, "Expected integer value between %1 and %2",
                      std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
         return 0;
@@ -248,7 +248,7 @@ static inline T GetSlotIntegerSafe(WrenVM *vm, int slot)
 
 static inline const char *GetSlotStringSafe(WrenVM *vm, int slot)
 {
-    if (RG_UNLIKELY(wrenGetSlotType(vm, slot) != WREN_TYPE_STRING)) {
+    if (wrenGetSlotType(vm, slot) != WREN_TYPE_STRING) [[unlikely]] {
         TriggerError(vm, "Expected string value");
         return nullptr;
     }
@@ -276,7 +276,7 @@ static inline LocalDate GetSlotDateSafe(WrenVM *vm, int slot)
         case WREN_TYPE_FOREIGN: {
             const mco_WrenRunner &runner = *(mco_WrenRunner *)wrenGetUserData(vm);
 
-            if (RG_UNLIKELY(!wrenForeignIsClass(vm, slot, runner.date_class))) {
+            if (!wrenForeignIsClass(vm, slot, runner.date_class)) [[unlikely]] {
                 TriggerError(vm, "Expected Date or null");
                 return {};
             }
@@ -297,7 +297,7 @@ static inline char GetSlotModeSafe(WrenVM *vm, int slot)
     switch (wrenGetSlotType(vm, slot)) {
         case WREN_TYPE_NUM: {
             double value = wrenGetSlotDouble(vm, slot);
-            if (RG_UNLIKELY(value < 0.0 || value >= 10.0)) {
+            if (value < 0.0 || value >= 10.0) [[unlikely]] {
                 TriggerError(vm, "Mode must be between 0 and 9");
                 return 0;
             }
@@ -306,7 +306,7 @@ static inline char GetSlotModeSafe(WrenVM *vm, int slot)
         } break;
         case WREN_TYPE_STRING: {
             const char *value = wrenGetSlotString(vm, slot);
-            if (RG_UNLIKELY(!value[0] || value[1])) {
+            if (!value[0] || value[1]) [[unlikely]] {
                 TriggerError(vm, "Mode must be one character");
                 return 0;
             }
@@ -433,7 +433,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
 
         LocalDate date1 = *(LocalDate *)wrenGetSlotForeign(vm, 0);
-        if (RG_UNLIKELY(!date1.IsValid())) {
+        if (!date1.IsValid()) [[unlikely]] {
             TriggerError(vm, "Cannot compute on invalid date");
             return;
         }
@@ -441,7 +441,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         switch (wrenGetSlotType(vm, 1)) {
             case WREN_TYPE_FOREIGN: {
                 LocalDate date2 = GetSlotDateSafe(vm, 1);
-                if (RG_UNLIKELY(!date2.IsValid())) {
+                if (!date2.IsValid()) [[unlikely]] {
                     TriggerError(vm, "Cannot compute days between invalid dates");
                     return;
                 }
@@ -466,7 +466,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
 
         LocalDate date = *(LocalDate *)wrenGetSlotForeign(vm, 0);
-        if (RG_UNLIKELY(!date.IsValid())) {
+        if (!date.IsValid()) [[unlikely]] {
             TriggerError(vm, "Cannot compute on invalid date");
             return;
         }
@@ -552,7 +552,7 @@ static WrenForeignMethodFn BindStayArrayMethod(const char *signature)
         ProxyArray<mco_Stay> *arr = (ProxyArray<mco_Stay> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr->values.len);
 
-        if (RG_LIKELY(idx >= 0)) {
+        if (idx >= 0) [[likely]] {
             wrenSetSlotHandle(vm, 0, arr->vars[idx]);
         }
     };
@@ -573,7 +573,7 @@ static WrenForeignMethodFn BindDiagnosisArrayMethod(const char *signature)
             *(const ProxyArray<drd_DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr.values.len);
 
-        if (RG_LIKELY(idx >= 0)) {
+        if (idx >= 0) [[likely]] {
             wrenSetSlotString(vm, 0, arr.values[idx].str);
         }
     };
@@ -636,7 +636,7 @@ static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
             *(const ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr.values.len);
 
-        if (RG_LIKELY(idx >= 0)) {
+        if (idx >= 0) [[likely]] {
             wrenSetSlotString(vm, 0, arr.values[idx].proc.str);
         }
     };
@@ -900,7 +900,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
 
         const char *new_value = GetSlotStringSafe(vm, 1);
         drd_DiagnosisCode new_diag = drd_DiagnosisCode::Parse(new_value, (int)ParseFlag::End);
-        if (RG_UNLIKELY(!new_diag.IsValid())) {
+        if (!new_diag.IsValid()) [[unlikely]] {
             TriggerError(vm, "Invalid diagnosis code");
             return;
         }
@@ -916,7 +916,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
 
         const char *new_value = GetSlotStringSafe(vm, 1);
         drd_DiagnosisCode new_diag = drd_DiagnosisCode::Parse(new_value, (int)ParseFlag::End);
-        if (RG_UNLIKELY(!new_diag.IsValid())) {
+        if (!new_diag.IsValid()) [[unlikely]] {
             TriggerError(vm, "Invalid diagnosis code");
             return;
         }
@@ -1209,7 +1209,7 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
 
         if (wrenGetSlotType(vm, 0) != WREN_TYPE_BOOL || wrenGetSlotBool(vm, 0)) {
             if (stays_arr->copies.len) {
-                if (RG_UNLIKELY(!out_stay_set)) {
+                if (!out_stay_set) [[unlikely]] {
                     LogError("Cannot mutate stays");
                     return -1;
                 }

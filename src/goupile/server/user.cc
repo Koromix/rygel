@@ -591,7 +591,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 }
                 session->change_password = change_password;
 
-                if (RG_LIKELY(session)) {
+                if (session) [[likely]] {
                     if (!instance && (root || admin)) {
                         session->admin_until = GetMonotonicTime() + 1200 * 1000;
                     }
@@ -682,7 +682,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
     RetainPtr<SessionInfo> session;
     if (email) {
-        if (RG_UNLIKELY(!gp_domain.config.smtp.url)) {
+        if (!gp_domain.config.smtp.url) [[unlikely]] {
             LogError("This instance is not configured to send mails");
             return nullptr;
         }
@@ -712,7 +712,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         if (!SendMail(email, content))
             return nullptr;
     } else if (sms) {
-        if (RG_UNLIKELY(gp_domain.config.sms.provider == sms_Provider::None)) {
+        if (gp_domain.config.sms.provider == sms_Provider::None) [[unlikely]] {
             LogError("This instance is not configured to send SMS messages");
             return nullptr;
         }

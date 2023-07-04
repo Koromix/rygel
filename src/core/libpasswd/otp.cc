@@ -62,7 +62,7 @@ static Size DecodeBase32(Span<const char> b32, Span<uint8_t> out_buf)
     for (Size i = 0, j = 0; i < b32.len && b32[i] != '='; i++, j = (j + 1) & 0x7) {
         uint8_t value = DecodeBase32Char(b32[i]);
 
-        if (RG_UNLIKELY(value == 0xFF)) {
+        if (value == 0xFF) [[unlikely]] {
             LogError("Unexpected Base32 character '%1'", b32[i]);
             return -1;
         }

@@ -38,7 +38,7 @@ void *rcc_GetPointerSafe(SEXP xp);
 template <typename T, typename U>
 U rcc_GetOptional(T &vec, Size idx, U default_value)
 {
-    if (RG_UNLIKELY(idx >= vec.Len()))
+    if (idx >= vec.Len()) [[unlikely]]
         return default_value;
     auto value = vec[idx];
     if (vec.IsNA(value))

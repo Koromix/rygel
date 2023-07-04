@@ -36,7 +36,7 @@ struct ProcedureAdditionInfo {
 
 #define FAIL_PARSE_IF(Filename, Cond) \
     do { \
-        if (RG_UNLIKELY(Cond)) { \
+        if (Cond) [[unlikely]] { \
             LogError("Malformed binary table file '%1': %2", \
                      (Filename) ? (Filename) : "?", RG_STRINGIFY(Cond)); \
             return false; \
@@ -46,7 +46,7 @@ struct ProcedureAdditionInfo {
 Span<const char> mco_ProcedureInfo::ActivitiesToStr(Span<char> out_buf) const
 {
     Size offset = 0;
-    if (RG_LIKELY(out_buf.len)) {
+    if (out_buf.len) [[unlikely]] {
         uint8_t value = activities;
 
         for (int i = 0; value && offset < out_buf.len - 1; i++) {
@@ -196,7 +196,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
             bool weird_section = false;
 
             memcpy_safe(&raw_table_header, file_data.ptr + raw_table_ptr.raw_offset, RG_SIZE(PackedHeader1111));
-            if (RG_UNLIKELY(!memcmp(raw_table_header.signature, "GESTCOMP", 8))) {
+            if (!memcmp(raw_table_header.signature, "GESTCOMP", 8)) [[unlikely]] {
                 weird_section = true;
 
                 memmove_safe(&raw_table_header.pad1, raw_table_header.name,
@@ -213,7 +213,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
             for (int j = 0; j < raw_table_header.sections_count; j++) {
                 memcpy_safe(&raw_table_sections[j], file_data.ptr + raw_table_ptr.raw_offset + RG_SIZE(PackedHeader1111) +
                                                                     j * RG_SIZE(PackedSection1111), RG_SIZE(PackedSection1111));
-                if (RG_UNLIKELY(weird_section)) {
+                if (weird_section) [[unlikely]] {
                     memmove_safe((uint8_t *)&raw_table_sections[j] + 8, &raw_table_sections[j],
                                  RG_SIZE(PackedSection1111) - 8);
                 }
@@ -1550,12 +1550,12 @@ static void BuildAdditionLists(const mco_TableIndex &index,
     int16_t next_addition_idx = 1;
     for (const ProcedureAdditionInfo &addition_info: additions) {
         int16_t addition_idx = 0;
-        if (RG_LIKELY(addition_info.activity2 >= 0 &&
-                      addition_info.activity2 < RG_LEN(mco_ProcedureInfo::additions))) {
+        if (addition_info.activity2 >= 0 &&
+                addition_info.activity2 < RG_LEN(mco_ProcedureInfo::additions)) [[likely]] {
             mco_ProcedureInfo *proc_info =
                 (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc2, nullptr);
 
-            if (RG_LIKELY(proc_info)) {
+            if (proc_info) [[likely]] {
                 bool new_match = false;
                 do {
                     if (proc_info->phase == addition_info.phase2) {
@@ -1576,7 +1576,7 @@ static void BuildAdditionLists(const mco_TableIndex &index,
             mco_ProcedureInfo *proc_info =
                 (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc1, nullptr);
 
-            if (RG_LIKELY(proc_info)) {
+            if (proc_info) [[likely]] {
                 bool match = false;
                 int16_t offset = (int16_t)out_links->len;
                 do {
@@ -1724,7 +1724,7 @@ bool mco_TableSetBuilder::CommitIndex(LocalDate start_date, LocalDate end_date,
 
                         mco_ProcedureInfo *proc_info =
                             (mco_ProcedureInfo *)index.procedures_map->FindValue(ext_info.proc, nullptr);
-                        if (RG_LIKELY(proc_info)) {
+                        if (proc_info) [[likely]] {
                             do {
                                 if (proc_info->phase == ext_info.phase) {
                                     proc_info->extensions |= 1ull << ext_info.extension;
@@ -1812,7 +1812,7 @@ bool mco_TableSetBuilder::CommitIndex(LocalDate start_date, LocalDate end_date,
                         for (mco_GhsCode ghs: minored_ghs) {
                             mco_GhsPriceInfo *price_info =
                                 (mco_GhsPriceInfo *)index.ghs_prices_map[j]->FindValue(ghs, nullptr);
-                            if (RG_LIKELY(price_info)) {
+                            if (price_info) [[likely]] {
                                 price_info->flags |= (int)mco_GhsPriceInfo::Flag::Minoration;
                             }
                         }

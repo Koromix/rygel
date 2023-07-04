@@ -51,7 +51,7 @@ union mco_GhmRootCode {
             bool valid = (flags & (int)ParseFlag::End ? str.len == 5 : str.len >= 5) &&
                          IsAsciiDigit(str[0]) && IsAsciiDigit(str[1]) && IsAsciiAlpha(str[2]) &&
                          IsAsciiDigit(str[3]) && IsAsciiDigit(str[4]);
-            if (RG_UNLIKELY(!valid)) {
+            if (!valid) [[unlikely]] {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed GHM root code '%1'", str);
                 }
@@ -85,7 +85,7 @@ union mco_GhmRootCode {
     {
         RG_STATIC_ASSERT(N >= 6);
 
-        if (RG_LIKELY(IsValid())) {
+        if (IsValid()) [[likely]] {
             // We need to be fast here (at least for drdR), sprintf is too slow
             buf[0] = (char)('0' + (parts.cmd / 10));
             buf[1] = (char)('0' + (parts.cmd % 10));
@@ -147,7 +147,7 @@ union mco_GhmCode {
                          IsAsciiDigit(str[0]) && IsAsciiDigit(str[1]) && IsAsciiAlpha(str[2]) &&
                          IsAsciiDigit(str[3]) && IsAsciiDigit(str[4]) &&
                          (str.len == 5 || str[5] == ' ' || IsAsciiAlphaOrDigit(str[5]));
-            if (RG_UNLIKELY(!valid)) {
+            if (!valid) [[unlikely]] {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed GHM code '%1'", str);
                 }
@@ -195,7 +195,7 @@ union mco_GhmCode {
     {
         RG_STATIC_ASSERT(N >= 6);
 
-        if (RG_LIKELY(IsValid())) {
+        if (IsValid()) [[likely]] {
             // We need to be fast here (at least for drdR), sprintf is too slow
             buf[0] = (char)('0' + (parts.cmd / 10));
             buf[1] = (char)('0' + (parts.cmd % 10));

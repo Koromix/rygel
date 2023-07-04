@@ -142,7 +142,7 @@ inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
     Size delta = mem->stack.end() - ptr;
 
     // Keep 512 bytes for redzone (required in some ABIs)
-    if (RG_UNLIKELY(mem->stack.len - 512 < delta)) {
+    if (mem->stack.len - 512 < delta) [[unlikely]] {
         ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
         return false;
     }
@@ -163,7 +163,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
     uint8_t *ptr = AlignUp(mem->heap.ptr, align);
     Size delta = size + (ptr - mem->heap.ptr);
 
-    if (RG_LIKELY(size < 4096 && delta <= mem->heap.len)) {
+    if (size < 4096 && delta <= mem->heap.len) [[likely]] {
 #ifdef RG_DEBUG
         memset(mem->heap.ptr, 0, (size_t)delta);
 #endif
