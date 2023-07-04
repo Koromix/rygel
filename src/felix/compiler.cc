@@ -283,7 +283,6 @@ public:
         if (platform == HostPlatform::Linux) {
             supported |= (int)CompileFeature::SafeStack;
         }
-        supported |= (int)CompileFeature::Cxx17;
         if (platform == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
@@ -383,10 +382,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: {
-                const char *std = (features & (int)CompileFeature::Cxx17) ? "17" : "2a";
-                Fmt(&buf, "\"%1\" -std=gnu++%2", cxx, std);
-            } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -772,7 +768,6 @@ public:
         if (gcc_ver >= 90000) {
             supported |= (int)CompileFeature::CFI;
         }
-        supported |= (int)CompileFeature::Cxx17;
         if (platform == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
@@ -864,10 +859,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: {
-                const char *std = (features & (int)CompileFeature::Cxx17) ? "17" : "2a";
-                Fmt(&buf, "\"%1\" -std=gnu++%2", cxx, std);
-            } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -1171,7 +1163,6 @@ public:
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::CFI;
-        supported |= (int)CompileFeature::Cxx17;
         if (platform == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
@@ -1255,10 +1246,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" /nologo", cl); } break;
-            case SourceType::CXX: {
-                const char *std = (features & (int)CompileFeature::Cxx17) ? "17" : "latest";
-                Fmt(&buf, "\"%1\" /nologo /std:c++%2 /Zc:__cplusplus", cl, std);
-            } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" /nologo /std:c++latest /Zc:__cplusplus", cl); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " \"/Fo%1\"", dest_filename);
@@ -1829,7 +1817,6 @@ public:
         supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
-        supported |= (int)CompileFeature::Cxx17;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -1900,10 +1887,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: {
-                const char *std = (features & (int)CompileFeature::Cxx17) ? "17" : "2a";
-                Fmt(&buf, "\"%1\" -std=gnu++%2", cxx, std);
-            } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
         }
         RG_ASSERT(dest_filename); // No PCH
         Fmt(&buf, " -o \"%1\"", dest_filename);

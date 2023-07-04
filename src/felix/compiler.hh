@@ -126,7 +126,6 @@ enum class CompileFeature {
     ZeroInit = 1 << 13,
     CFI = 1 << 14,
     ShuffleCode = 1 << 15,
-    Cxx17 = 1 << 16,
     NoConsole = 1 << 17,
 
     SSE41 = 1 << 18,
@@ -152,7 +151,6 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"ZeroInit",      "Zero-init all undefined variables (Clang)"},
     {"CFI",           "Enable forward-edge CFI protection (Clang LTO)"},
     {"ShuffleCode",   "Randomize ordering of data and functions (Clang)"},
-    {"C++17",         "Use C++17 standard instead of C++20"},
     {"NoConsole",     "Link with /subsystem:windows (only for Windows)"},
 
     {"SSE41",         "Enable SSE4.1 generation and instrinsics (x86_64)"},
