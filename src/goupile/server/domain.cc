@@ -109,7 +109,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                     } else if (prop.key == "SnapshotDirectory") {
                         config.snapshot_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "ArchiveKey" || prop.key == "BackupKey") {
-                        RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
+                        static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                         LogError("Setting Data.ArchiveKey should be moved to Archives.PublicKey");
 
@@ -135,7 +135,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
             } else if (prop.section == "Archives") {
                 do {
                     if (prop.key == "PublicKey") {
-                        RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
+                        static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                         size_t key_len;
                         int ret = sodium_base642bin(config.archive_key, RG_SIZE(config.archive_key),
@@ -1544,7 +1544,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 103);
+            static_assert(DomainVersion == 103);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

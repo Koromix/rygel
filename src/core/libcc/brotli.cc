@@ -130,7 +130,7 @@ bool BrotliCompressor::Init(CompressionType, CompressionSpeed speed)
     if (!state)
         throw std::bad_alloc();
 
-    RG_STATIC_ASSERT(BROTLI_MIN_QUALITY == 0 && BROTLI_MAX_QUALITY == 11);
+    static_assert(BROTLI_MIN_QUALITY == 0 && BROTLI_MAX_QUALITY == 11);
 
     switch (speed) {
         case CompressionSpeed::Default: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 6); } break;

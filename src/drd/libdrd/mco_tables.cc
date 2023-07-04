@@ -136,7 +136,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
         uint8_t sections_count;
         uint8_t pad2[4];
 	};
-    RG_STATIC_ASSERT(RG_SIZE(mco_TableInfo::raw_type) > RG_SIZE(PackedHeader1111::name));
+    static_assert(RG_SIZE(mco_TableInfo::raw_type) > RG_SIZE(PackedHeader1111::name));
     struct PackedSection1111 {
         uint8_t pad1[18];
         uint16_t values_count;
@@ -941,7 +941,7 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
             uint16_t low_duration_threshold;
         } sectors[2];
 	};
-    RG_STATIC_ASSERT(RG_LEN(PackedGhsNode().sectors) == RG_LEN(mco_GhmToGhsInfo().ghs));
+    static_assert(RG_LEN(PackedGhsNode().sectors) == RG_LEN(mco_GhmToGhsInfo().ghs));
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 1);
@@ -1678,8 +1678,7 @@ bool mco_TableSetBuilder::CommitIndex(LocalDate start_date, LocalDate end_date,
                 BUILD_MAP(procedures, procedures_map, procedures);
             } break;
             case mco_TableType::ProcedureAdditionTable: {
-                RG_STATIC_ASSERT((int)mco_TableType::ProcedureAdditionTable >
-                             (int)mco_TableType::ProcedureTable);
+                static_assert((int)mco_TableType::ProcedureAdditionTable > (int)mco_TableType::ProcedureTable);
 
                 if (load_info->prev_index_idx < 0) {
                     HeapArray<mco_ProcedureLink> *links = set.store.procedure_links.AppendDefault();
@@ -1706,8 +1705,7 @@ bool mco_TableSetBuilder::CommitIndex(LocalDate start_date, LocalDate end_date,
                 }
             } break;
             case mco_TableType::ProcedureExtensionTable: {
-                RG_STATIC_ASSERT((int)mco_TableType::ProcedureExtensionTable >
-                             (int)mco_TableType::ProcedureTable);
+                static_assert((int)mco_TableType::ProcedureExtensionTable > (int)mco_TableType::ProcedureTable);
 
                 if (table_info && load_info->prev_index_idx < 0) {
                     HeapArray<ProcedureExtensionInfo> extensions;

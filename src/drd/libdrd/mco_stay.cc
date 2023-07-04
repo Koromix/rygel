@@ -32,10 +32,10 @@ struct PackHeader {
 #define PACK_SIGNATURE "DRD_MCO_PACK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
-RG_STATIC_ASSERT(RG_SIZE(PackHeader::signature) == RG_SIZE(PACK_SIGNATURE));
-RG_STATIC_ASSERT(RG_SIZE(mco_Stay) == 112);
-RG_STATIC_ASSERT(RG_SIZE(drd_DiagnosisCode) == 8);
-RG_STATIC_ASSERT(RG_SIZE(mco_ProcedureRealisation) == 24);
+static_assert(RG_SIZE(PackHeader::signature) == RG_SIZE(PACK_SIGNATURE));
+static_assert(RG_SIZE(mco_Stay) == 112);
+static_assert(RG_SIZE(drd_DiagnosisCode) == 8);
+static_assert(RG_SIZE(mco_ProcedureRealisation) == 24);
 
 bool mco_StaySet::SavePack(StreamWriter *st) const
 {

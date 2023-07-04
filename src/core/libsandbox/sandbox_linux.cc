@@ -211,8 +211,8 @@ bool sb_SandboxBuilder::Apply()
     if (!uid) {
         int random_id = GetRandomIntSafe(58000, 60000);
 
-        RG_STATIC_ASSERT(RG_SIZE(uid_t) >= RG_SIZE(int));
-        RG_STATIC_ASSERT(RG_SIZE(gid_t) >= RG_SIZE(int));
+        static_assert(RG_SIZE(uid_t) >= RG_SIZE(int));
+        static_assert(RG_SIZE(gid_t) >= RG_SIZE(int));
 
         uid = random_id;
         gid = random_id;

@@ -92,8 +92,8 @@ static FmtArg FormatZigzagVLQ64(int value)
 
     static const char literals[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    RG_STATIC_ASSERT(RG_SIZE(literals) - 1 == 64);
-    RG_STATIC_ASSERT((RG_SIZE(FmtArg::u.buf) - 1) * 6 - 2 >= RG_SIZE(value) * 16);
+    static_assert(RG_SIZE(literals) - 1 == 64);
+    static_assert((RG_SIZE(FmtArg::u.buf) - 1) * 6 - 2 >= RG_SIZE(value) * 16);
 
     FmtArg arg;
     arg.type = FmtType::Buffer;

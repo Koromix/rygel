@@ -18,10 +18,10 @@
 
 namespace RG {
 
-RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
-RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
-RG_STATIC_ASSERT(crypto_secretbox_KEYBYTES == 32);
-RG_STATIC_ASSERT(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
+static_assert(crypto_box_PUBLICKEYBYTES == 32);
+static_assert(crypto_box_SECRETKEYBYTES == 32);
+static_assert(crypto_secretbox_KEYBYTES == 32);
+static_assert(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
 
 #pragma pack(push, 1)
 struct KeyData {
@@ -505,7 +505,7 @@ bool rk_Disk::PutCache(const char *key)
 
 static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
 {
-    RG_STATIC_ASSERT(crypto_pwhash_SALTBYTES == 16);
+    static_assert(crypto_pwhash_SALTBYTES == 16);
 
     if (crypto_pwhash(out_key, 32, pwd, strlen(pwd), salt, crypto_pwhash_OPSLIMIT_INTERACTIVE,
                       crypto_pwhash_MEMLIMIT_INTERACTIVE, crypto_pwhash_ALG_ARGON2ID13) != 0) {
@@ -684,7 +684,7 @@ bool rk_Disk::OpenCache()
                         return false;
                 } // [[fallthrough]];
 
-                RG_STATIC_ASSERT(CacheVersion == 2);
+                static_assert(CacheVersion == 2);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))

@@ -439,7 +439,7 @@ Options:
             } else if (opt.Test("--totp")) {
                 totp = true;
             } else if (opt.Test("--archive_key", OptionType::Value)) {
-                RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
+                static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                 uint8_t key[32];
                 size_t key_len;
@@ -555,8 +555,8 @@ retry_pwd:
 
     // Create archive key pair
     if (!archive_key[0]) {
-        RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
-        RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
+        static_assert(crypto_box_PUBLICKEYBYTES == 32);
+        static_assert(crypto_box_SECRETKEYBYTES == 32);
 
         uint8_t pk[crypto_box_PUBLICKEYBYTES];
         uint8_t sk[crypto_box_SECRETKEYBYTES];
@@ -742,8 +742,8 @@ static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, co
     uint8_t askey[crypto_box_SECRETKEYBYTES];
     uint8_t apkey[crypto_box_PUBLICKEYBYTES];
     {
-        RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
-        RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
+        static_assert(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
+        static_assert(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
 
         size_t key_len;
         int ret = sodium_base642bin(askey, RG_SIZE(askey),

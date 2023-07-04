@@ -464,7 +464,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
             Size len_w = ConvertUtf8ToWin32Wide(arg, arg_w);
             if (len_w < 0)
                 return false;
-            RG_STATIC_ASSERT(sizeof(wchar_t) == 2);
+            static_assert(sizeof(wchar_t) == 2);
 
             buf.Append(WideToSpan(quote ? L"\"" : L""));
             for (Size i = 0; i < len_w; i++) {

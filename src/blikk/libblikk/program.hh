@@ -170,7 +170,7 @@ struct bk_Instruction {
     } u1;
     bk_PrimitiveValue u2;
 };
-RG_STATIC_ASSERT(RG_SIZE(bk_Instruction) == 16);
+static_assert(RG_SIZE(bk_Instruction) == 16);
 
 struct bk_SourceMap {
     struct Line {

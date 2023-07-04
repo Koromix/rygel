@@ -305,9 +305,9 @@ struct InstanceData {
         int64_t disposed = 0;
     } stats;
 };
-RG_STATIC_ASSERT(DefaultResidentAsyncPools <= RG_LEN(InstanceData::memories.data) - 1);
-RG_STATIC_ASSERT(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
-RG_STATIC_ASSERT(MaxAsyncCalls >= DefaultMaxAsyncCalls);
+static_assert(DefaultResidentAsyncPools <= RG_LEN(InstanceData::memories.data) - 1);
+static_assert(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
+static_assert(MaxAsyncCalls >= DefaultMaxAsyncCalls);
 
 struct TrampolineInfo {
     InstanceData *instance;
@@ -334,7 +334,7 @@ struct SharedData {
         }
     }
 };
-RG_STATIC_ASSERT(MaxTrampolines <= INT16_MAX);
+static_assert(MaxTrampolines <= INT16_MAX);
 
 extern SharedData shared;
 

@@ -236,7 +236,7 @@ static FmtArg FormatYYYYMMDD(const TimeSpec &date)
 
 s3_Session::s3_Session()
 {
-    RG_STATIC_ASSERT(CURL_LOCK_DATA_LAST <= RG_LEN(share_mutexes));
+    static_assert(CURL_LOCK_DATA_LAST <= RG_LEN(share_mutexes));
 
     share = curl_share_init();
 
@@ -859,7 +859,7 @@ Size s3_Session::PrepareHeaders(const char *method, const char *path, const char
 
 static void HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[32])
 {
-    RG_STATIC_ASSERT(crypto_hash_sha256_BYTES == 32);
+    static_assert(crypto_hash_sha256_BYTES == 32);
 
     uint8_t padded_key[64];
 

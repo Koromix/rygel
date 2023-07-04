@@ -202,7 +202,8 @@ static bool CheckComplexity(Span<const char> password)
     Bitset<256> chars;
     uint32_t classes = 0;
 
-    RG_STATIC_ASSERT(MinLength > 2);
+    static_assert(MinLength > 2);
+
     if (password[0] == ' ' || password[password.len - 1] == ' ') {
         LogError("Password must not start or end with space");
         return false;

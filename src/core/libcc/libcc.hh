@@ -233,8 +233,6 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
             (void)sizeof(Cond); \
         } while (false)
 #endif
-#define RG_STATIC_ASSERT(Cond) \
-    static_assert((Cond), RG_STRINGIFY(Cond))
 
 #if defined(RG_DEBUG)
     #define RG_UNREACHABLE() \
@@ -2100,7 +2098,7 @@ public:
 
     void RemoveAll()
     {
-        RG_STATIC_ASSERT(!std::is_pointer<ValueType>::value);
+        static_assert(!std::is_pointer<ValueType>::value);
 
         for (Size i = 0; i < capacity; i++) {
             if (!IsEmpty(i)) {
@@ -4133,8 +4131,8 @@ private:
 
 template <int Min = 0, int Max = INT_MAX>
 class FastRandomInt {
-    RG_STATIC_ASSERT(Min >= 0);
-    RG_STATIC_ASSERT(Max > Min);
+    static_assert(Min >= 0);
+    static_assert(Max > Min);
 
     FastRandom rng;
 

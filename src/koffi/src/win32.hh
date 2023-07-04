@@ -38,8 +38,8 @@ struct TEB {
     char _pad2[712];
     uint32_t GuaranteedStackBytes;
 };
-RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, DeallocationStack) == 0x1478);
-RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x1748);
+static_assert(RG_OFFSET_OF(TEB, DeallocationStack) == 0x1478);
+static_assert(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x1748);
 
 #else
 
@@ -52,8 +52,8 @@ struct TEB {
     char _pad2[360];
     uint32_t GuaranteedStackBytes;
 };
-RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, DeallocationStack) == 0xE0C);
-RG_STATIC_ASSERT(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x0F78);
+static_assert(RG_OFFSET_OF(TEB, DeallocationStack) == 0xE0C);
+static_assert(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x0F78);
 
 #endif
 

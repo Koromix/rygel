@@ -40,9 +40,9 @@ struct FrameData {
 #define SNAPSHOT_SIGNATURE "SQLITESNAPSHOT"
 
 // This should warn us in most cases when we break the file format
-RG_STATIC_ASSERT(RG_SIZE(SnapshotHeader::signature) == RG_SIZE(SNAPSHOT_SIGNATURE));
-RG_STATIC_ASSERT(RG_SIZE(SnapshotHeader) == 20);
-RG_STATIC_ASSERT(RG_SIZE(FrameData) == 40);
+static_assert(RG_SIZE(SnapshotHeader::signature) == RG_SIZE(SNAPSHOT_SIGNATURE));
+static_assert(RG_SIZE(SnapshotHeader) == 20);
+static_assert(RG_SIZE(FrameData) == 40);
 
 bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay)
 {

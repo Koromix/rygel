@@ -107,7 +107,7 @@ public:
 
             // Regenerate session if needed
             if (now - handle->register_time >= RegenerateDelay) {
-                RG_STATIC_ASSERT(RG_SIZE(handle->session_rnd) == 33);
+                static_assert(RG_SIZE(handle->session_rnd) == 33);
 
                 char session_rnd[33];
                 CopyString(handle->session_rnd, session_rnd);
@@ -185,7 +185,7 @@ private:
 
         // Register handle with unique key
         for (;;) {
-            RG_STATIC_ASSERT(RG_SIZE(SessionHandle::session_key) == 65);
+            static_assert(RG_SIZE(SessionHandle::session_key) == 65);
 
             {
                 uint64_t buf[4];
@@ -207,7 +207,7 @@ private:
             RG_ASSERT(strlen(session_rnd) + 1 == RG_SIZE(handle->session_rnd));
             CopyString(session_rnd, handle->session_rnd);
         } else {
-            RG_STATIC_ASSERT(RG_SIZE(handle->session_rnd) == 33);
+            static_assert(RG_SIZE(handle->session_rnd) == 33);
 
             uint64_t buf[2];
             FillRandomSafe(&buf, RG_SIZE(buf));

@@ -433,7 +433,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     // requires activity 1. Combined with a pointer-based sort this allows
                     // us to trivially detect when activity 1 is missing for a given procedure
                     // in the deduplication phase below (error 167).
-                    RG_STATIC_ASSERT(std::alignment_of<mco_ProcedureInfo>::value >= 2);
+                    static_assert(std::alignment_of<mco_ProcedureInfo>::value >= 2);
                     if (proc.activity != 1 && !(proc_info->bytes[42] & 0x2)) {
                         global_ptr_mask = 0x1;
                     }
@@ -441,7 +441,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
 
                 uintptr_t mono_ptr_mask = 0;
                 if (!(flags & (int)mco_ClassifyFlag::IgnoreProcedureAddition)) {
-                    RG_STATIC_ASSERT(std::alignment_of<mco_ProcedureInfo>::value >= 8);
+                    static_assert(std::alignment_of<mco_ProcedureInfo>::value >= 8);
 
                     if ((proc_info->bytes[32] & 0x8) &&
                             proc.activity >= 0 && proc.activity < RG_LEN(proc_info->additions) &&

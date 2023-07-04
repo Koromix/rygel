@@ -316,7 +316,7 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
 
 static Size HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[32])
 {
-    RG_STATIC_ASSERT(crypto_hash_sha256_BYTES == 32);
+    static_assert(crypto_hash_sha256_BYTES == 32);
 
     uint8_t padded_key[64];
 
@@ -364,7 +364,7 @@ static Size HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uin
 
 static Size HmacSha512(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[64])
 {
-    RG_STATIC_ASSERT(crypto_hash_sha512_BYTES == 64);
+    static_assert(crypto_hash_sha512_BYTES == 64);
 
     uint8_t padded_key[128];
 

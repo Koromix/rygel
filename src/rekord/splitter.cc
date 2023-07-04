@@ -80,7 +80,7 @@ static const uint32_t GearTable[] = {
     0x0DC82C11u, 0x23FFE354u, 0x2EAC53A6u, 0x16139E09u, 0x0AFD0DBCu, 0x2A4D4237u,
     0x56A368C7u, 0x234325E4u, 0x2DCE9187u, 0x32E8EA7Eu
 };
-RG_STATIC_ASSERT(RG_LEN(GearTable) == 256);
+static_assert(RG_LEN(GearTable) == 256);
 
 template <typename T>
 T CeilingDivide(T x, T y)
@@ -122,8 +122,8 @@ rk_Splitter::rk_Splitter(Size avg, Size min, Size max, uint64_t salt64)
             uint64_t salt64;
             uint8_t salt[8];
         } u;
-        RG_STATIC_ASSERT(RG_SIZE(salt) == RG_SIZE(u.salt));
-        RG_STATIC_ASSERT(RG_SIZE(u.salt) == RG_SIZE(salt64));
+        static_assert(RG_SIZE(salt) == RG_SIZE(u.salt));
+        static_assert(RG_SIZE(u.salt) == RG_SIZE(salt64));
 
         u.salt64 = LittleEndian(salt64);
         memcpy(salt, u.salt, RG_SIZE(salt));

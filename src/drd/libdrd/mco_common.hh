@@ -83,7 +83,7 @@ union mco_GhmRootCode {
     template <Size N>
     Span<char> ToString(char (&buf)[N]) const
     {
-        RG_STATIC_ASSERT(N >= 6);
+        static_assert(N >= 6);
 
         if (IsValid()) [[likely]] {
             // We need to be fast here (at least for drdR), sprintf is too slow
@@ -193,7 +193,7 @@ union mco_GhmCode {
     template <Size N>
     Span<char> ToString(char (&buf)[N]) const
     {
-        RG_STATIC_ASSERT(N >= 6);
+        static_assert(N >= 6);
 
         if (IsValid()) [[likely]] {
             // We need to be fast here (at least for drdR), sprintf is too slow
@@ -336,7 +336,7 @@ union mco_SupplementCounters {
         T ent3;
         T sdc;
     } st;
-    RG_STATIC_ASSERT(RG_SIZE(mco_SupplementCounters::values) == RG_SIZE(mco_SupplementCounters::st));
+    static_assert(RG_SIZE(mco_SupplementCounters::values) == RG_SIZE(mco_SupplementCounters::st));
 
     template <typename U>
     mco_SupplementCounters &operator+=(const mco_SupplementCounters<U> &other)

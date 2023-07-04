@@ -23,7 +23,7 @@
 
 namespace RG {
 
-RG_STATIC_ASSERT(PasswordHashBytes == crypto_pwhash_STRBYTES);
+static_assert(PasswordHashBytes == crypto_pwhash_STRBYTES);
 
 static const int BanThreshold = 6;
 static const int64_t BanTime = 1800 * 1000;
@@ -689,7 +689,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
         char code[9];
         {
-            RG_STATIC_ASSERT(RG_SIZE(code) <= RG_SIZE(SessionInfo::secret));
+            static_assert(RG_SIZE(code) <= RG_SIZE(SessionInfo::secret));
 
             uint32_t rnd = randombytes_uniform(100000000); // 8 digits
             Fmt(code, "%1", FmtArg(rnd).Pad0(-8));
@@ -719,7 +719,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
         char code[9];
         {
-            RG_STATIC_ASSERT(RG_SIZE(code) <= RG_SIZE(SessionInfo::secret));
+            static_assert(RG_SIZE(code) <= RG_SIZE(SessionInfo::secret));
 
             uint32_t rnd = randombytes_uniform(1000000); // 6 digits
             Fmt(code, "%1", FmtArg(rnd).Pad0(-6));

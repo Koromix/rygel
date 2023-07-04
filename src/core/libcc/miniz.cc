@@ -54,7 +54,7 @@ public:
 
 bool MinizDecompressor::Init(CompressionType type)
 {
-    RG_STATIC_ASSERT(RG_SIZE(out_buf) >= TINFL_LZ_DICT_SIZE);
+    static_assert(RG_SIZE(out_buf) >= TINFL_LZ_DICT_SIZE);
 
     tinfl_init(&inflator);
     is_gzip = (type == CompressionType::Gzip);
@@ -177,7 +177,7 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
                     // Gzip footer (CRC and size check)
                     if (is_gzip) {
                         uint32_t footer[2];
-                        RG_STATIC_ASSERT(RG_SIZE(footer) == 8);
+                        static_assert(RG_SIZE(footer) == 8);
 
                         if (in_len < RG_SIZE(footer)) {
                             memcpy_safe(footer, in_ptr, (size_t)in_len);

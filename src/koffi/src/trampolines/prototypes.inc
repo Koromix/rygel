@@ -16406,4 +16406,4 @@ static void *const Trampolines[][2] = {
     { &Trampoline8190, &TrampolineX8190 },
     { &Trampoline8191, &TrampolineX8191 }
 };
-RG_STATIC_ASSERT(RG_LEN(Trampolines) == MaxTrampolines);
+static_assert(RG_LEN(Trampolines) == MaxTrampolines);

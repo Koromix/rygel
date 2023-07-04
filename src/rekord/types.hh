@@ -21,7 +21,7 @@ struct rk_ID {
     uint8_t hash[32];
     operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
 };
-RG_STATIC_ASSERT(RG_SIZE(rk_ID) == 32);
+static_assert(RG_SIZE(rk_ID) == 32);
 
 #pragma pack(push, 1)
 struct rk_SnapshotHeader {
@@ -31,7 +31,7 @@ struct rk_SnapshotHeader {
     int64_t stored; // Little Endian
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(rk_SnapshotHeader) == 536);
+static_assert(RG_SIZE(rk_SnapshotHeader) == 536);
 
 #pragma pack(push, 1)
 struct rk_FileEntry {
@@ -65,7 +65,7 @@ struct rk_FileEntry {
     inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(rk_FileEntry), name_len); }
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(rk_FileEntry) == 76);
+static_assert(RG_SIZE(rk_FileEntry) == 76);
 
 #pragma pack(push, 1)
 struct rk_ChunkEntry {
@@ -74,7 +74,7 @@ struct rk_ChunkEntry {
     rk_ID id;
 };
 #pragma pack(pop)
-RG_STATIC_ASSERT(RG_SIZE(rk_ChunkEntry) == 44);
+static_assert(RG_SIZE(rk_ChunkEntry) == 44);
 
 bool rk_ParseID(const char *str, rk_ID *out_id);
 

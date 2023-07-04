@@ -29,7 +29,7 @@ struct ControlPacket {
     RgbColor colors[7];
     char _pad2[38];
 };
-RG_STATIC_ASSERT(RG_SIZE(ControlPacket) == 65);
+static_assert(RG_SIZE(ControlPacket) == 65);
 #pragma pack(pop)
 
 static void DumpPacket(Span<const uint8_t> bytes)

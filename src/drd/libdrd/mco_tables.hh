@@ -223,7 +223,7 @@ struct mco_GhmToGhsInfo {
 
     mco_GhsCode Ghs(drd_Sector sector) const
     {
-        RG_STATIC_ASSERT((int)drd_Sector::Public == 0);
+        static_assert((int)drd_Sector::Public == 0);
         return ghs[(int)sector];
     }
 

@@ -86,7 +86,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                                                 value, strlen(value), nullptr, &key_len,
                                                 nullptr, sodium_base64_VARIANT_ORIGINAL);
                     if (!ret && key_len == 32) {
-                        RG_STATIC_ASSERT(RG_SIZE(config.token_pkey) == crypto_scalarmult_BYTES);
+                        static_assert(RG_SIZE(config.token_pkey) == crypto_scalarmult_BYTES);
                         crypto_scalarmult_base(config.token_pkey, config.token_skey);
 
                         config.token_key = DuplicateString(value, &str_alloc).ptr;
@@ -2054,7 +2054,7 @@ bool MigrateInstance(sq_Database *db)
                     return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 105);
+            static_assert(InstanceVersion == 105);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
