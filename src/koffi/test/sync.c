@@ -178,6 +178,11 @@ typedef struct Vec2 {
     double y;
 } Vec2;
 
+typedef struct BufferInfo {
+    int len;
+    uint8_t *ptr;
+} BufferInfo;
+
 EXPORT int8_t GetMinusOne1(void)
 {
     return -1;
@@ -887,4 +892,14 @@ EXPORT VariadicIntFunc *GetVariadicIntFunction(const char *type)
     } else {
         return NULL;
     }
+}
+
+EXPORT void FillBufferDirect(BufferInfo buf, int c)
+{
+    memset(buf.ptr, c, buf.len);
+}
+
+EXPORT void FillBufferIndirect(const BufferInfo *buf, int c)
+{
+    memset(buf->ptr, c, buf->len);
 }

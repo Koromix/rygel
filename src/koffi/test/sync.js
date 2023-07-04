@@ -145,6 +145,11 @@ const BigText = koffi.struct('BigText', {
     text: koffi.array('uint8_t', 262145)
 });
 
+const BufferInfo = koffi.struct('BufferInfo', {
+    len: 'int',
+    ptr: 'uint8_t *'
+});
+
 const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
 const VariadicIntFunc = koffi.proto('int VariadicIntFunc(int n, ...)');
 
@@ -254,6 +259,8 @@ async function test() {
     const ReverseString16Void = lib.func('void ReverseString16Void(_Inout_ void *ptr)');
     const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
     const GetVariadicIntFunction = lib.func('VariadicIntFunc *GetVariadicIntFunction(const char *name)');
+    const FillBufferDirect = lib.func('void FillBufferDirect(BufferInfo info, int c)');
+    const FillBufferIndirect = lib.func('void FillBufferIndirect(const BufferInfo *info, int c)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -710,6 +717,18 @@ async function test() {
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 1, 'int', 2, 'int', 21), 2);
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 2, 'int', 2, 'int', 21), 42);
     assert.equal(GetBinaryIntFunction('missing'), null);
+
+    // Communicatre through raw buffers
+    {
+        let buf1 = { len: 6, ptr: new Uint8Array(8) };
+        let buf2 = { len: 10, ptr: new Uint8Array(10) };
+
+        FillBufferDirect(buf1, 42);
+        FillBufferIndirect(buf2, 24);
+
+        assert.deepEqual(buf1.ptr, Uint8Array.from([42, 42, 42, 42, 42, 42, 0, 0]));
+        assert.deepEqual(buf2.ptr, Uint8Array.from([24, 24, 24, 24, 24, 24, 24, 24, 24, 24]));
+    }
 
     lib.unload();
 }
