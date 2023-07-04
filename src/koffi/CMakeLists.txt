@@ -28,11 +28,7 @@ include(CheckCXXCompilerFlag)
 
 find_package(CNoke)
 
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.8.0")
-    set(CMAKE_CXX_STANDARD 17)
-else()
-    set(CMAKE_CXX_STANDARD 14)
-endif()
+set(CMAKE_CXX_STANDARD 17)
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
