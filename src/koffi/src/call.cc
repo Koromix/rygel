@@ -1036,16 +1036,9 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             } else if (IsRawBuffer(value)) {
                 Span<uint8_t> buffer = GetRawBuffer(value);
 
-                if (directions == 1) {
-                    ptr = AllocHeap(buffer.len, 16);
-
-                    if (!PushBuffer(buffer, buffer.len, type, ptr))
-                        return false;
-                } else {
-                    // Fast no-copy path
-                    ptr = buffer.ptr;
-                    directions = 1;
-                }
+                // We can fast path
+                ptr = buffer.ptr;
+                directions = 1;
 
                 out_kind = OutArgument::Kind::Buffer;
             } else if (type->ref.type->primitive == PrimitiveKind::Record ||
