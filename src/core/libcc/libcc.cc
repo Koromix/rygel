@@ -21,7 +21,7 @@
 
 #include "libcc.hh"
 
-#if __has_include("vendor/dragonbox/include/dragonbox/dragonbox.h") && __cplusplus >= 201703L
+#if __has_include("vendor/dragonbox/include/dragonbox/dragonbox.h")
     #include "vendor/dragonbox/include/dragonbox/dragonbox.h"
 #endif
 
