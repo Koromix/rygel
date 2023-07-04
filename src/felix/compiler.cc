@@ -382,7 +382,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++20", cxx); } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -859,7 +859,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++20", cxx); } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -1887,7 +1887,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++20", cxx); } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
         }
         RG_ASSERT(dest_filename); // No PCH
         Fmt(&buf, " -o \"%1\"", dest_filename);
