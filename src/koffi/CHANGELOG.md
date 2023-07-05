@@ -4,6 +4,12 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.2
+
+**Main changes:**
+
+- Default initialize unset object/struct members
+
 #### Koffi 2.5.1
 
 **Main changes:**
