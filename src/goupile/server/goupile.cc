@@ -752,7 +752,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // to forbid the instance key.
     if (TestStr(request.url, "/")) {
         const AssetInfo *render = RenderTemplate("/", *assets_root,
-                                                 [&](Span<const char> key, StreamWriter *writer) {
+                                                 [&](Span<const char> expr, StreamWriter *writer) {
+            Span<const char> key = TrimStr(expr);
+
             if (key == "STATIC_URL") {
                 Print(writer, "/admin/static/%1/", shared_etag);
             } else if (key == "VERSION") {
@@ -760,7 +762,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             } else if (key == "COMPILER") {
                 writer->Write(FelixCompiler);
             } else {
-                Print(writer, "{%1}", key);
+                Print(writer, "{{%1}}", expr);
             }
         });
         AttachStatic(*render, 0, shared_etag, request, io);
