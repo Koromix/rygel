@@ -969,12 +969,6 @@ function InstanceController() {
             let path = url.pathname.substr(ENV.urls.instance.length);
             let [key, what] = path.split('/').map(str => str.trim());
 
-            // Follow lock sequence
-            if (profile.lock != null) {
-                if (!profile.lock.pages.includes(key))
-                    key = profile.lock.pages[0];
-            }
-
             // Find page information
             new_route.page = app.pages.get(key);
             if (new_route.page == null) {
