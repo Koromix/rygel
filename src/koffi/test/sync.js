@@ -730,5 +730,30 @@ async function test() {
         assert.deepEqual(buf2.ptr, Uint8Array.from([24, 24, 24, 24, 24, 24, 24, 24, 24, 24]));
     }
 
+    // Allow users to skip members
+    {
+        let ints = {
+            i16le: 0x7BCD,
+            i16be: 0x7BCD,
+            i32le: 0x4EADBEEF,
+            i32be: 0x4EADBEEF,
+            i64le: 0x0123456789ABCDEFn,
+            i64be: 0x0123456789ABCDEFn
+        };
+
+        let out = new Uint8Array(56);
+
+        CopyEndianInts1(ints, out);
+
+        assert.deepEqual(out, Uint8Array.from([
+            0xCD, 0x7B, 0x7B, 0xCD,
+            0, 0, 0, 0,
+            0xEF, 0xBE, 0xAD, 0x4E, 0x4E, 0xAD, 0xBE, 0xEF,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]));
+    }
+
     lib.unload();
 }
