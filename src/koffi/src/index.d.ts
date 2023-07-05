@@ -101,12 +101,12 @@ declare module 'koffi' {
     /** @deprecated */ export function handle(name: string): IKoffiCType;
     /** @deprecated */ export function handle(): IKoffiCType;
 
-    export function pointer(value: TypeSpec): IKoffiCType;
-    export function pointer(value: TypeSpec, asteriskCount: number): IKoffiCType;
-    export function pointer(name: string, value: TypeSpec, asteriskCount: number): IKoffiCType;
+    export function pointer(ref: TypeSpec): IKoffiCType;
+    export function pointer(ref: TypeSpec, asteriskCount: number): IKoffiCType;
+    export function pointer(name: string, ref: TypeSpec, asteriskCount: number): IKoffiCType;
 
-    export function out(value: TypeSpec): IKoffiCType;
-    export function inout(value: TypeSpec): IKoffiCType;
+    export function out(type: TypeSpec): IKoffiCType;
+    export function inout(type: TypeSpec): IKoffiCType;
 
     export function disposable(type: TypeSpec): IKoffiCType;
     export function disposable(name: string, type: TypeSpec): IKoffiCType;
