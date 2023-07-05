@@ -4,6 +4,13 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.3
+
+**Main changes:**
+
+- Add missing union exports in TS definition file
+- Fix some parameter names in TS definition file
+
 #### Koffi 2.5.2
 
 **Main changes:**
