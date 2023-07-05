@@ -86,8 +86,13 @@ declare module 'koffi' {
     export function pack(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
     export function pack(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
 
-    // export function union(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
-    // export function union(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    export function union(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    export function union(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+
+    export class Union {
+        constructor(type: TypeSpec);
+        [s: string]: any;
+    }
 
     export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null): IKoffiCType;
 
