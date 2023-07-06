@@ -697,7 +697,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         sq_Statement stmt;
                         if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
                                                                                  mtime, fs, data, notes)
-                                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9))",
+                                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                                                      RETURNING anchor)",
                                                       &stmt, *anchor_ptr > 0 ? sq_Binding(*anchor_ptr) : sq_Binding(), tid,
                                                       frag.eid, session->userid, session->username, frag.mtime, frag.fs,
                                                       frag.values, frag.notes))
@@ -717,7 +718,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                                                                 mtime = excluded.mtime,
                                                                                 deleted = excluded.deleted,
                                                                                 data = json_patch(data, excluded.data),
-                                                                                notes = excluded.notes)",
+                                                                                notes = excluded.notes
+                                                      RETURNING rowid)",
                                                    &stmt, tid, frag.eid, new_anchor, frag.mtime, frag.store,
                                                    0 + !frag.values.len, frag.values, frag.notes))
                             return false;
@@ -726,7 +728,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     }
 
                     // Deal with per-store sequence number
-                    if (!anchor_ptr) {
+                    if (!*anchor_ptr) {
                         int64_t counter;
                         {
                             sq_Statement stmt;
