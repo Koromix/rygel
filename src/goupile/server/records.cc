@@ -31,7 +31,8 @@ struct RecordFragment {
     const char *store;
     int64_t mtime;
     bool has_data;
-    Span<const char> data;
+    Span<const char> values;
+    Span<const char> notes;
 };
 
 static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const SessionStamp &stamp,
@@ -41,8 +42,9 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
         LocalArray<char, 2048> sql;
 
         sql.len += Fmt(sql.TakeAvailable(), R"(SELECT t.rowid AS t, t.tid,
-                                                      e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
-                                                      e.store, e.sequence, IIF(?1 IS NOT NULL, e.data, NULL) AS data
+                                                      e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence,
+                                                      IIF(?1 IS NOT NULL, e.data, NULL) AS data,
+                                                      IIF(?1 IS NOT NULL, e.notes, NULL) AS notes
                                                FROM rec_threads t
                                                INNER JOIN rec_entries e ON (e.tid = t.tid)
                                                WHERE 1+1)").len;
@@ -66,14 +68,15 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
         RG_ASSERT(stamp.HasPermission(UserPermission::DataAudit));
 
         if (!instance->db->Prepare(R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data) AS (
-                                          SELECT 1, eid, anchor, mtime, data
+                                          SELECT 1, eid, anchor, mtime, data, notes
                                               FROM rec_fragments
                                               WHERE (tid = ?1 OR ?1 IS NULL) AND
                                                     anchor <= ?2 AND previous IS NULL AND
                                                     data IS NOT NULL
                                           UNION ALL
                                           SELECT rec.idx + 1, f.eid, f.anchor, f.mtime,
-                                              IIF(?1 IS NOT NULL, json_patch(rec.data, f.data), NULL) AS data
+                                              IIF(?1 IS NOT NULL, json_patch(rec.data, f.data), NULL) AS data,
+                                              IIF(?1 IS NOT NULL, json_patch(rec.notes, f.notes), NULL) AS notes
                                               FROM rec_fragments f, rec
                                               WHERE f.anchor <= ?2 AND f.previous = rec.anchor AND
                                                                        f.data IS NOT NULL
@@ -81,7 +84,7 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                                       )
                                       SELECT t.rowid AS t, t.tid,
                                              e.rowid AS e, e.eid, e.deleted, rec.anchor, e.ctime, rec.mtime,
-                                             e.store, e.sequence, rec.data
+                                             e.store, e.sequence, rec.data, rec.notes
                                           FROM rec
                                           INNER JOIN rec_entries e ON (e.eid = rec.eid)
                                           INNER JOIN rec_threads t ON (t.tid = e.tid)
@@ -284,7 +287,8 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
             json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
             json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
-            json.Key("data"); json.Raw((const char *)sqlite3_column_text(stmt, 10));
+            json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 10));
+            json.Key("notes"); json.Raw((const char *)sqlite3_column_text(stmt, 11));
 
             json.EndObject();
         } while (stmt.Step());
@@ -463,19 +467,30 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                 parser.ParseString(&frag->store);
                             } else if (key == "mtime") {
                                 parser.ParseInt(&frag->mtime);
-                            } else if (key == "data") {
+                            } else if (key == "values") {
                                 switch (parser.PeekToken()) {
                                     case json_TokenType::Null: {
-                                        frag->data = {};
+                                        frag->values = {};
                                         frag->has_data = true;
                                     } break;
                                     case json_TokenType::StartObject: {
-                                        parser.PassThrough(&frag->data);
+                                        parser.PassThrough(&frag->values);
                                         frag->has_data = true;
                                     } break;
 
                                     default: {
-                                        LogError("Unexpected value type for fragment data");
+                                        LogError("Unexpected value type for fragment values");
+                                        io->AttachError(422);
+                                        return;
+                                    } break;
+                                }
+                            } else if (key == "notes") {
+                                switch (parser.PeekToken()) {
+                                    case json_TokenType::Null: { frag->notes = {}; } break;
+                                    case json_TokenType::StartObject: { parser.PassThrough(&frag->notes); } break;
+
+                                    default: {
+                                        LogError("Unexpected value type for fragment notes");
                                         io->AttachError(422);
                                         return;
                                     } break;
@@ -487,7 +502,10 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                             }
                         }
 
-                        has_deletes |= !frag->has_data;
+                        if (!frag->has_data) {
+                            has_deletes = true;
+                            frag->notes = {};
+                        }
                     }
                 } else if (parser.IsValid()) {
                     LogError("Unexpected key '%1'", key);
@@ -511,7 +529,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             }
 
             if (!fragments.len) {
-                LogError("Missing data fragments");
+                LogError("Missing entry fragments");
                 valid = false;
             }
             for (const RecordFragment &frag: fragments) {
@@ -570,7 +588,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 return false;
             }
 
-            // Write new data fragments
+            // Write new entry fragments
             {
                 HashMap<const char *, int64_t> anchors;
 
@@ -602,14 +620,16 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         }
                     }
 
-                    // Insert data fragment
+                    // Insert entry fragment
                     int64_t new_anchor;
                     {
                         sq_Statement stmt;
-                        if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username, mtime, fs, data)
-                                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
+                        if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
+                                                                                 mtime, fs, data, notes)
+                                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9))",
                                                       &stmt, *anchor_ptr > 0 ? sq_Binding(*anchor_ptr) : sq_Binding(), tid,
-                                                      frag.eid, session->userid, session->username, frag.mtime, frag.fs, frag.data))
+                                                      frag.eid, session->userid, session->username, frag.mtime, frag.fs,
+                                                      frag.values, frag.notes))
                             return false;
                         if (!stmt.GetSingleValue(&new_anchor))
                             return false;
@@ -620,14 +640,15 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     {
                         sq_Statement stmt;
                         if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
-                                                                               store, sequence, deleted, data)
-                                                      VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7)
+                                                                               store, sequence, deleted, data, notes)
+                                                      VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8)
                                                       ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
                                                                                 mtime = excluded.mtime,
                                                                                 deleted = excluded.deleted,
-                                                                                data = json_patch(data, excluded.data))",
+                                                                                data = json_patch(data, excluded.data),
+                                                                                notes = excluded.notes)",
                                                    &stmt, tid, frag.eid, new_anchor, frag.mtime, frag.store,
-                                                   0 + !frag.data.len, frag.data))
+                                                   0 + !frag.values.len, frag.values, frag.notes))
                             return false;
                         if (!stmt.GetSingleValue(&e))
                             return false;
@@ -656,7 +677,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     // Create thread if needed
                     if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, stores) VALUES (?1, json_object(?2, ?3))
                                               ON CONFLICT DO UPDATE SET stores = json_patch(stores, excluded.stores))",
-                                           tid, frag.store, !frag.data.len))
+                                           tid, frag.store, !frag.values.len))
                         return false;
 
                     *anchor_ptr = new_anchor;
