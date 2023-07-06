@@ -33,21 +33,41 @@ struct RecordFragment {
     bool has_data;
     Span<const char> values;
     Span<const char> notes;
+    HeapArray<const char *> tags;
 };
 
-static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const SessionStamp &stamp,
-                                const char *tid, int64_t anchor, sq_Statement *out_stmt)
+static bool CheckTag(Span<const char> tag)
 {
-    if (anchor < 0) {
-        LocalArray<char, 2048> sql;
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
 
-        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT t.rowid AS t, t.tid,
-                                                      e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence,
-                                                      IIF(?1 IS NOT NULL, e.data, NULL) AS data,
-                                                      IIF(?1 IS NOT NULL, e.notes, NULL) AS notes
-                                               FROM rec_threads t
-                                               INNER JOIN rec_entries e ON (e.tid = t.tid)
-                                               WHERE 1+1)").len;
+    if (!tag.len) {
+        LogError("Tag name cannot be empty");
+        return false;
+    }
+    if (!std::all_of(tag.begin(),tag.end(), test_char)) {
+        LogError("Tag names must only contain alphanumeric or '_' characters");
+        return false;
+    }
+
+    return true;
+}
+
+// Make sure tags are safe and can't lead to SQL injection before calling this function
+static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const SessionStamp &stamp,
+                                const char *tid, Span<const Span<const char>> tags, int64_t anchor, sq_Statement *out_stmt)
+{
+    LocalArray<char, 2048> sql;
+
+    if (anchor < 0) {
+        sql.len += Fmt(sql.TakeAvailable(),
+                       R"(SELECT t.rowid AS t, t.tid,
+                                 e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence,
+                                 IIF(?1 IS NOT NULL, e.data, NULL) AS data,
+                                 IIF(?1 IS NOT NULL, e.notes, NULL) AS notes
+                          FROM rec_threads t
+                          INNER JOIN rec_entries e ON (e.tid = t.tid)
+                          WHERE 1+1)").len;
+
         if (tid) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid = ?1").len;
         }
@@ -57,44 +77,63 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
         if (!stamp.HasPermission(UserPermission::DataLoad)) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
         }
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store").len;
+        if (tags.len) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_tags WHERE name IN (").len;
 
-        if (!instance->db->Prepare(sql.data, out_stmt))
-            return false;
-        sqlite3_bind_text(*out_stmt, 1, tid, -1, SQLITE_STATIC);
-        sqlite3_bind_int64(*out_stmt, 2, userid);
+            for (Span<const char> tag: tags) {
+                RG_ASSERT(CheckTag(tag));
+                sql.len += Fmt(sql.TakeAvailable(), "'%1', ", tag).len;
+            }
+            sql.len -= 2;
+
+            sql.len += Fmt(sql.TakeAvailable(), ")").len;
+        }
+
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store").len;
     } else {
         RG_ASSERT(stamp.HasPermission(UserPermission::DataLoad));
         RG_ASSERT(stamp.HasPermission(UserPermission::DataAudit));
 
-        if (!instance->db->Prepare(R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data) AS (
-                                          SELECT 1, eid, anchor, mtime, data, notes
-                                              FROM rec_fragments
-                                              WHERE (tid = ?1 OR ?1 IS NULL) AND
-                                                    anchor <= ?2 AND previous IS NULL AND
-                                                    data IS NOT NULL
-                                          UNION ALL
-                                          SELECT rec.idx + 1, f.eid, f.anchor, f.mtime,
-                                              IIF(?1 IS NOT NULL, json_patch(rec.data, f.data), NULL) AS data,
-                                              IIF(?1 IS NOT NULL, json_patch(rec.notes, f.notes), NULL) AS notes
-                                              FROM rec_fragments f, rec
-                                              WHERE f.anchor <= ?2 AND f.previous = rec.anchor AND
-                                                                       f.data IS NOT NULL
-                                          ORDER BY anchor
-                                      )
-                                      SELECT t.rowid AS t, t.tid,
-                                             e.rowid AS e, e.eid, e.deleted, rec.anchor, e.ctime, rec.mtime,
-                                             e.store, e.sequence, rec.data, rec.notes
-                                          FROM rec
-                                          INNER JOIN rec_entries e ON (e.eid = rec.eid)
-                                          INNER JOIN rec_threads t ON (t.tid = e.tid)
-                                          ORDER BY t.rowid, e.store, rec.idx DESC)", out_stmt))
-            return false;
-        sqlite3_bind_text(*out_stmt, 1, tid, -1, SQLITE_STATIC);
-        sqlite3_bind_int64(*out_stmt, 2, anchor);
+        sql.len += Fmt(sql.TakeAvailable(),
+                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data) AS (
+                              SELECT 1, eid, anchor, mtime, data, notes
+                                  FROM rec_fragments
+                                  WHERE (tid = ?1 OR ?1 IS NULL) AND
+                                        anchor <= ?3 AND previous IS NULL AND
+                                        data IS NOT NULL
+                              UNION ALL
+                              SELECT rec.idx + 1, f.eid, f.anchor, f.mtime,
+                                  IIF(?1 IS NOT NULL, json_patch(rec.data, f.data), NULL) AS data,
+                                  IIF(?1 IS NOT NULL, json_patch(rec.notes, f.notes), NULL) AS notes
+                                  FROM rec_fragments f, rec
+                                  WHERE f.anchor <= ?3 AND f.previous = rec.anchor AND
+                                                           f.data IS NOT NULL
+                              ORDER BY anchor
+                          )
+                          SELECT t.rowid AS t, t.tid,
+                                 e.rowid AS e, e.eid, e.deleted, rec.anchor, e.ctime, rec.mtime,
+                                 e.store, e.sequence, rec.data, rec.notes
+                              FROM rec
+                              INNER JOIN rec_entries e ON (e.eid = rec.eid)
+                              INNER JOIN rec_threads t ON (t.tid = e.tid)
+                              WHERE 1+1)", out_stmt).len;
+
+        if (tags.len) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_tags WHERE name IN (").len;
+
+            for (Span<const char> tag: tags) {
+                RG_ASSERT(CheckTag(tag));
+                sql.len += Fmt(sql.TakeAvailable(), "'%1', ", tag).len;
+            }
+            sql.len -= 2;
+
+            sql.len += Fmt(sql.TakeAvailable(), ")").len;
+        }
+
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store, rec.idx DESC").len;
     }
 
-    return true;
+    return instance->db->Prepare(sql.data, out_stmt, tid, userid, anchor);
 }
 
 void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -119,6 +158,24 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
+    HeapArray<Span<const char>> tags;
+    if (const char *str = request.GetQueryValue("tags"); str) {
+        Span<const char> remain = TrimStr(str);
+
+        while (remain.len) {
+            Span<const char> tag = SplitStr(remain, ',', &remain);
+
+            if (tag.len) {
+                if (!CheckTag(tag)) {
+                    io->AttachError(422);
+                    return;
+                }
+
+                tags.Append(tag);
+            }
+        }
+    }
+
     int64_t anchor = -1;
     if (const char *str = request.GetQueryValue("anchor"); str) {
         if (!stamp->HasPermission(UserPermission::DataAudit)) {
@@ -139,7 +196,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     sq_Statement stmt;
-    if (!PrepareRecordSelect(instance, session->userid, *stamp, nullptr, anchor, &stmt))
+    if (!PrepareRecordSelect(instance, session->userid, *stamp, nullptr, tags, anchor, &stmt))
         return;
 
     // Export data
@@ -244,7 +301,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
     }
 
     sq_Statement stmt;
-    if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, anchor, &stmt))
+    if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, {}, anchor, &stmt))
         return;
 
     if (!stmt.Step()) {
@@ -495,6 +552,20 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                         return;
                                     } break;
                                 }
+                            } else if (key == "tags") {
+                                parser.ParseArray();
+                                while (parser.InArray()) {
+                                    Span<const char> tag = {};
+
+                                    if (parser.ParseString(&tag)) {
+                                        if (!CheckTag(tag)) {
+                                            io->AttachError(422);
+                                            return;
+                                        }
+
+                                        frag->tags.Append(tag.ptr);
+                                    }
+                                }
                             } else if (parser.IsValid()) {
                                 LogError("Unexpected key '%1'", key);
                                 io->AttachError(422);
@@ -551,7 +622,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             int64_t anchor;
             {
                 sq_Statement stmt;
-                if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, -1, &stmt))
+                if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, {}, -1, &stmt))
                     return false;
 
                 if (stmt.Step()) {
@@ -679,6 +750,15 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                               ON CONFLICT DO UPDATE SET stores = json_patch(stores, excluded.stores))",
                                            tid, frag.store, !frag.values.len))
                         return false;
+
+                    // Update entry tags
+                    if (!instance->db->Run("DELETE FROM rec_tags WHERE eid = ?1", frag.eid))
+                        return false;
+                    for (const char *tag: frag.tags) {
+                        if (!instance->db->Run(R"(INSERT INTO rec_tags (tid, eid, name) VALUES (?1, ?2, ?3)
+                                                  ON CONFLICT (eid, name) DO NOTHING)", tid, frag.eid, tag))
+                            return false;
+                    }
 
                     *anchor_ptr = new_anchor;
                 }
