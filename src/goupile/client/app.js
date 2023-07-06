@@ -38,6 +38,10 @@ function ApplicationBuilder(app) {
         }
     ];
 
+    Object.defineProperties(this, {
+        head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true }
+    });
+
     this.panel = function(panel, enable) {
         if (panel.startsWith('_') || !app.hasOwnProperty(panel))
             throw new Error(`Invalid panel key '${panel}'`);
@@ -55,8 +59,6 @@ function ApplicationBuilder(app) {
 
         options_stack.pop();
     };
-
-    this.head = function(head) { app.head = head; };
 
     this.page = function(key, title, options = null) {
         checkKeySyntax(key);
