@@ -19,7 +19,6 @@ function FormState(data = null) {
     // Hook functions
     this.changeHandler = () => {};
     this.annotateHandler = null;
-    this.optionHandler = options => {};
 
     // Internal widget state
     this.meta_objects = new WeakMap;
@@ -511,6 +510,7 @@ function FormBuilder(state, model) {
     this.enum = function(key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
+
         props = normalizePropositions(props);
 
         let value = readValue(key, options, value => {
@@ -573,6 +573,7 @@ function FormBuilder(state, model) {
     this.enumDrop = function(key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
+
         props = normalizePropositions(props);
 
         let value = readValue(key, options, value => {
@@ -616,6 +617,7 @@ function FormBuilder(state, model) {
     this.enumRadio = function(key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
+
         props = normalizePropositions(props);
 
         let value = readValue(key, options, value => {
@@ -672,6 +674,7 @@ function FormBuilder(state, model) {
     this.multi = function(key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
+
         props = normalizePropositions(props);
 
         let value = readValue(key, options, value => {
@@ -752,6 +755,7 @@ function FormBuilder(state, model) {
     this.multiCheck = function(key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
+
         props = normalizePropositions(props);
 
         let value = readValue(key, options, value => {
@@ -1618,6 +1622,7 @@ instead of:
         // Decode option shortcuts
         for (;;) {
             if (name[0] == '*') {
+                options = Object.assign({}, options);
                 options.mandatory = true;
             } else {
                 break;
@@ -1657,18 +1662,19 @@ instead of:
             state.meta_objects.set(root, meta);
         }
 
-        return {
+        key = {
             root: root,
             meta: meta,
             name: name,
             toString: () => name
         };
+
+        return key;
     }
 
     function expandOptions(options) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
 
-        state.optionHandler(options);
         if (state.annotateHandler == null)
             options.annotate = false;
 
@@ -1878,16 +1884,25 @@ instead of:
             return '';
 
         return html`
-            <label for=${intf.id}>
-                ${intf.label}
-                ${intf.options.annotate ? html`<span style="font-weight: normal;">(<a @click=${e => annotate(e, intf)}>annoter</a>)</span>` : ''}
-            </label>
+            <div class="fm_label">
+                <label for=${intf.id}>
+                    ${intf.label}
+                    ${intf.options.annotate ? html`<span style="font-weight: normal;">(<a @click=${e => annotate(e, intf)}>annoter</a>)</span>` : ''}
+                </label>
+
+                <div class="fm_tags">
+                    ${Array.isArray(intf.options.tags) ? intf.options.tags.map(tag =>
+                        html` <span class="ui_tag" style=${'background: ' + tag.color + ';'}>${tag.label}</span>`) : ''}
+                </div>
+            </div>
         `;
     }
 
-    function annotate(e, intf) {
+    async function annotate(e, intf) {
         e.preventDefault();
-        return state.annotateHandler(e, intf);
+
+        await state.annotateHandler(e, intf);
+        self.restart();
     }
 
     function makePrefixOrSuffix(cls, text, value) {

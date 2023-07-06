@@ -24,6 +24,14 @@ function ApplicationInfo() {
         data: profile.userid > 0 && profile.lock == null,
         view: true
     };
+
+    this.tags = [
+        { key: 'error', label: 'Erreur', color: '#db0a0a' },
+        { key: 'incomplete', label: 'Incomplet', color: '#ef6e30' },
+        { key: 'wait', label: 'En attente', color: '#24579d' },
+        { key: 'check', label: 'Vérifier', color: '#ef6e30' },
+        { key: 'locked', label: 'Verrouillé', color: '#d921e8' }
+    ];
 }
 
 function ApplicationBuilder(app) {
@@ -39,7 +47,8 @@ function ApplicationBuilder(app) {
     ];
 
     Object.defineProperties(this, {
-        head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true }
+        head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true },
+        tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true }
     });
 
     this.panel = function(panel, enable) {

@@ -105,20 +105,22 @@ html.mobile .fm_section {
 /* -------------------- Widgets -------------------- */
 
 .fm_widget { position: relative; }
-.fm_widget > label {
-    display: block;
-    margin-bottom: 6px;
-    padding-top: 4px;
-    font-weight: bold;
-}
-.fm_widget > label:empty::before { content: '\200b'; }
-.fm_widget.mandatory > label:not(:empty)::after {
-    content: ' *';
-    color: red;
-}
 .fm_widget.error {
     background: #ffe9e9;
     outline: 3px solid #ffe9e9;
+    color: red;
+}
+.fm_label {
+    display: flex;
+    margin-bottom: 6px;
+    padding-top: 4px;
+    font-weight: bold;
+    column-gap: 16px;
+    flex-wrap: wrap;
+}
+.fm_label > label:empty::before { content: '\200b'; }
+.fm_widget.mandatory > .fm_label > label:not(:empty)::after {
+    content: ' *';
     color: red;
 }
 .fm_widget.error::before {
@@ -156,7 +158,7 @@ html:not(.small) .fm_widget.compact {
     display: flex;
     align-items: start;
 }
-html:not(.small) .fm_widget.compact > label {
+html:not(.small) .fm_widget.compact > .fm_label {
     width: 270px;
     min-width: 270px;
     margin-bottom: 0;

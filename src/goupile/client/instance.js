@@ -485,6 +485,8 @@ function InstanceController() {
             if (model.hasErrors())
                 builder.errorList();
 
+            addAutomaticTags(model.variables);
+
             render(model.renderWidgets(), page_div);
             page_div.classList.remove('disabled');
 
@@ -555,6 +557,30 @@ function InstanceController() {
                 ` : ''}
             </div>
         `;
+    }
+
+    function addAutomaticTags(variables) {
+        for (let intf of variables) {
+            let tags = [];
+
+            let note = form_data.getNote(intf.key.root, 'status', {});
+            let status = note[intf.key.name] ?? {};
+
+            if (status.filling == 'check') {
+                tags.push('check');
+            } if (status.filling == 'wait') {
+                tags.push('wait');
+            } else if (intf.missing && intf.options.mandatory && status.filling == null) {
+                tags.push('incomplete');
+            } else if (intf.errors.length) {
+                tags.push('error');
+            }
+
+            if (Array.isArray(intf.options.tags))
+                tags.push(...intf.options.tags);
+
+            intf.options.tags = app.tags.filter(tag => tags.includes(tag.key));
+        }
     }
 
     function renderPageMenu(menu) {
@@ -1075,7 +1101,6 @@ function InstanceController() {
             form_state.annotateHandler = (e, intf) => {
                 return ui.runDialog(e, intf.label, {}, (d, resolve, reject) => {
                     let note = form_data.getNote(intf.key.root, 'status', {});
-
                     let status = note[intf.key.name];
 
                     if (status == null) {
