@@ -28,6 +28,7 @@ function InstanceController() {
     let head_length = Number.MAX_SAFE_INTEGER;
     let page_div = document.createElement('div');
 
+    let form_data = null;
     let form_state = null;
 
     let code_buffers = new LruMap(32);
@@ -145,7 +146,7 @@ function InstanceController() {
         if (!route.page.options.warn_unsaved)
             return false;
 
-        return form_state.hasChanged();
+        return form_data.hasChanged;
     };
 
     this.runTasks = async function(online) {
@@ -479,7 +480,7 @@ function InstanceController() {
             await func({
                 app: app,
                 form: builder,
-                values: form_state.values
+                values: form_state.data
             });
             if (model.hasErrors())
                 builder.errorList();
@@ -1058,7 +1059,8 @@ function InstanceController() {
 
     function updateContext(new_route) {
         if (new_route.page != route.page) {
-            form_state = new FormState();
+            form_data = new MagicData;
+            form_state = new FormState(form_data);
 
             // Run after each change
             form_state.changeHandler = async () => {

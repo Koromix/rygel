@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-function FormState(values = {}) {
+function FormState(data = null) {
     let self = this;
 
     this.changeHandler = model => {};
@@ -32,66 +32,16 @@ function FormState(values = {}) {
     this.state_tabs = {};
     this.state_sections = {};
 
-    let proxies = new WeakMap;
-    let changes = new Set;
-
     // Stored values
-    this.values = proxyObject(values);
-
-    this.hasChanged = function() { return !!changes.size && self.explicitly_changed; };
-    this.markInteraction = function() { self.explicitly_changed = true; };
-
-    function proxyObject(obj) {
-        if (obj == null)
-            return undefined;
-        if (typeof obj !== 'object')
-            return obj;
-        if (Object.prototype.toString.call(obj) !== '[object Object]') // Don't mess with "special" objects
-            return obj;
-
-        let proxy = proxies.get(obj);
-
-        if (proxy == null) {
-            let obj_cache = {};
-            let obj_changes = new Set;
-
-            proxy = new Proxy(obj, {
-                set: function(obj, key, value) {
-                    value = proxyObject(value);
-                    obj[key] = value;
-
-                    let json1 = JSON.stringify(obj_cache[key]) || '{}';
-                    let json2 = JSON.stringify(value) || '{}';
-
-                    if (json2 !== json1) {
-                        obj_changes.add(key);
-                    } else {
-                        obj_changes.delete(key);
-                    }
-
-                    if (obj_changes.size) {
-                        changes.add(obj);
-                    } else {
-                        changes.delete(obj);
-                    }
-
-                    return true;
-                }
-            });
-
-            for (let key in obj) {
-                let value = proxyObject(obj[key]);
-
-                obj[key] = value;
-                obj_cache[key] = value;
-            }
-
-            proxies.set(proxy, proxy);
-            self.obj_caches.set(proxy, obj_cache);
-        }
-
-        return proxy;
+    if (!(data instanceof MagicData)) {
+        if (data == null)
+            data = {};
+        data = new MagicData(data);
     }
+    this.values = data.values;
+
+    this.hasChanged = function() { return data.hasChanged && self.explicitly_changed; };
+    this.markInteraction = function() { self.explicitly_changed = true; };
 }
 FormState.next_unique_id = 0;
 
@@ -100,8 +50,8 @@ function FormModel() {
 
     this.widgets = [];
     this.widgets0 = [];
-    this.actions = [];
     this.variables = [];
+    this.actions = [];
 
     this.errors = 0;
     this.valid = true;
@@ -162,11 +112,14 @@ function FormBuilder(state, model, readonly = false) {
 
     let restart = false;
 
-    this.widgets = model.widgets;
-    this.widgets0 = model.widgets0;
-    this.variables = model.variables;
-    this.state = state;
-    this.values = state.values;
+    Object.defineProperties(this, {
+        widgets: { get: () => model.widgets, enumerable: true },
+        widgets0: { get: () => model.widgets0, enumerable: true },
+        variables: { get: () => model.variables, enumerable: true },
+
+        state: { get: () => state, enumerable: true },
+        values: { get: () => state.values, enumerable: true }
+    });
 
     this.hasChanged = function() { return state.hasChanged(); };
     this.markInteraction = function() { state.markInteraction(); };
