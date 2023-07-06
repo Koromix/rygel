@@ -32,7 +32,7 @@ function AdminController() {
 
         ui.setPanelState('instances', true);
         if (ui.allowTwoPanels())
-            ui.setPanelState('users', true);
+            ui.setPanelState('users', true, true);
     }
 
     this.hasUnsavedData = function() {
