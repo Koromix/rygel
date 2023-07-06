@@ -16,21 +16,17 @@ function FormState(data = null) {
 
     this.changeHandler = model => {};
 
-    // Mostly internal state
     this.unique_id = FormState.next_unique_id++;
-    this.file_lists = new Map;
+
+    // Internal widget state
+    this.meta_objects = new WeakMap;
     this.click_events = new Set;
-    this.invalid_numbers = new Set;
-    this.take_delayed = new Set;
-    this.follow_default = new Set;
-    this.just_changed = new Set;
-    this.obj_caches = new WeakMap;
-    this.explicitly_changed = false;
 
     // Semi-public UI state
     this.just_triggered = false;
     this.state_tabs = {};
     this.state_sections = {};
+    this.explicitly_changed = false;
 
     // Stored values
     if (!(data instanceof MagicData)) {
@@ -95,6 +91,8 @@ function FormBuilder(state, model, readonly = false) {
         }
     })();
 
+    let root_ptr = state.values;
+
     let variables_map = {};
     let options_stack = [{
         deploy: true,
@@ -129,7 +127,18 @@ function FormBuilder(state, model, readonly = false) {
 
     this.triggerErrors = function() {
         if (!self.isValid()) {
-            state.take_delayed = new Set(model.variables.map(variable => variable.key.toString()));
+            let cleared_set = new Set;
+
+            for (let variable of model.variables) {
+                let key = variable.key;
+
+                if (!cleared_set.has(key.meta)) {
+                    key.meta.take_delayed.clear();
+                    cleared_set.add(key.meta);
+                }
+
+                key.meta.take_delayed.add(key.name);
+            }
 
             self.restart();
             state.just_triggered = true;
@@ -315,7 +324,7 @@ function FormBuilder(state, model, readonly = false) {
 
         validateMinMax(intf);
 
-        if (state.invalid_numbers.has(key.toString()))
+        if (key.meta.invalid_numbers.has(key.name))
             intf.error('Nombre invalide (décimales ?)');
 
         return intf;
@@ -328,11 +337,11 @@ function FormBuilder(state, model, readonly = false) {
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
         // in which case we don't want to clear the field immediately.
         if (e.target.validity && !e.target.validity.valid) {
-            state.invalid_numbers.add(key.toString());
+            key.meta.invalid_numbers.add(key.name);
             self.restart();
             return;
         }
-        if (state.invalid_numbers.delete(key.toString()))
+        if (key.meta.invalid_numbers.delete(key.name))
             self.restart();
 
         let value = parseFloat(e.target.value);
@@ -1070,7 +1079,7 @@ function FormBuilder(state, model, readonly = false) {
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleFileInput(e, key)}
-                   ${set_files(state.file_lists.get(key.toString()))} />
+                   ${set_files(key.meta.file_lists.get(key.name))} />
         `);
 
         let intf = makeWidget('file', label, render, options);
@@ -1084,7 +1093,7 @@ function FormBuilder(state, model, readonly = false) {
         if (!isModifiable(variables_map[key]))
             return;
 
-        state.file_lists.set(key.toString(), e.target.files);
+        key.meta.file_lists.set(key.name, e.target.files);
         updateValue(key, e.target.files[0] || undefined);
     }
 
@@ -1417,8 +1426,10 @@ instead of:
     page.repeat("var", () => { /* Do stuff here */ });`);
         }
 
-        let path = [...key.path, key.name];
-        let values = walkPath(state.values, path);
+        if (!util.isPodObject(key.root[key.name]))
+            key.root[key.name] = {};
+
+        let values = key.root[key.name];
 
         let widgets = [];
         let render = intf => widgets.map(intf => intf.render());
@@ -1442,10 +1453,14 @@ instead of:
                 break;
             }
 
-            options.path = [...path, i];
+            try {
+                root_ptr = values[i];
 
-            let remove = intf.remove ? (() => intf.remove(i)) : null;
-            captureWidgets(widgets, 'repeat', () => func(values[i], i, remove), options);
+                let remove = intf.remove ? (() => intf.remove(i)) : null;
+                captureWidgets(widgets, 'repeat', () => func(values[i], i, remove), options);
+            } finally {
+                root_ptr = values;
+            }
         }
 
         return intf;
@@ -1598,52 +1613,61 @@ instead of:
     function decodeKey(key, options) {
         // Normalize key
         if (!Array.isArray(key))
-            key = [key];
-        if (Array.isArray(options.path)) {
-            key = [...options.path, ...key];
-        } else if (options.path != null) {
-            key = [options.path, ...key];
-        }
-        if (!key.length)
-            throw new Error('Empty keys are not allowed');
+            key = [null, key];
+        if (key[0] == null)
+            key[0] = root_ptr;
+        if (key.length != 2)
+            throw new Error('Invalid key type');
+
+        let [root, name] = key;
 
         // Decode option shortcuts
-        let name = key[key.length - 1];
         for (;;) {
-            if (name[0] === '*') {
+            if (name[0] == '*') {
                 options.mandatory = true;
             } else {
                 break;
             }
             name = name.substr(1);
-            key[key.length - 1] = name;
         }
 
-        // Check key parts
-        for (let i = 0; i < key.length; i++) {
-            let part = key[i];
+        // Check key name
+        if (typeof name == 'number') {
+            if (name < 0 || !Number.isInteger(name))
+                throw new Error('Number keys must be positive integers');
 
-            if (typeof part === 'number') {
-                if (part < 0 || !Number.isInteger(part))
-                    throw new Error('Number keys must be positive integers');
+            key[i] = name.toString();
+        } else if (typeof name == 'string') {
+            if (name === '')
+                throw new Error('Empty keys are not allowed');
+            if (!name.match(/^[a-zA-Z0-9_]*$/))
+                throw new Error('Allowed key characters: a-z, 0-9 and _');
+            if (name.startsWith('__'))
+                throw new Error('Keys must not start with \'__\'');
+        } else {
+            throw new Error('foobar');
+        }
 
-                key[i] = part.toString();
-            } else if (typeof part === 'string') {
-                if (part === '')
-                    throw new Error('Empty keys are not allowed');
-                if (!part.match(/^[a-zA-Z0-9_]*$/))
-                    throw new Error('Allowed key characters: a-z, 0-9 and _');
-                if (part.startsWith('__'))
-                    throw new Error('Keys must not start with \'__\'');
-            } else {
-                throw new Error('foobar');
-            }
+        let meta = state.meta_objects.get(root);
+
+        // Prepare state objects
+        if (meta == null) {
+            meta = {
+                file_lists: new Map,
+                invalid_numbers: new Set,
+                take_delayed: new Set,
+                follow_default: new Set,
+                just_changed: new Set
+            };
+
+            state.meta_objects.set(root, meta);
         }
 
         return {
-            path: key.slice(0, key.length - 1),
+            root: root,
+            meta: meta,
             name: name,
-            toString: () => key.join('.')
+            toString: () => name
         };
     }
 
@@ -1778,10 +1802,10 @@ instead of:
             value: value,
 
             missing: !intf.options.disabled && value == null,
-            changed: state.just_changed.has(key.toString()),
+            changed: key.meta.just_changed.has(key.name),
 
             error: (msg, delay = false) => {
-                if (!delay || state.take_delayed.has(key.toString())) {
+                if (!delay || key.meta.take_delayed.has(key.name)) {
                     intf.errors.push(msg || '');
                     model.errors++;
                 }
@@ -1792,7 +1816,7 @@ instead of:
             }
         });
 
-        state.just_changed.delete(key.toString());
+        key.meta.just_changed.delete(key.name);
 
         if (props != null) {
             intf.props = props;
@@ -1845,25 +1869,18 @@ instead of:
     }
 
     function readValue(key, options, func) {
-        let ptr = walkPath(state.values, key.path);
+        let ptr = key.root;
 
         if (!ptr.hasOwnProperty(key.name)) {
             let value = normalizeValue(func, options.value);
-            let cache = state.obj_caches.get(ptr);
 
-            if (cache != null)
-                cache[key.name] = value;
             ptr[key.name] = value;
-
-            state.follow_default.add(key.toString());
+            key.meta.follow_default.add(key.name);
 
             return value;
-        } else if (options.value != null && state.follow_default.has(key.toString())) {
+        } else if (options.value != null && key.meta.follow_default.has(key.name)) {
             let value = normalizeValue(func, options.value);
-            let cache = state.obj_caches.get(ptr);
 
-            if (cache != null)
-                cache[key.name] = value;
             ptr[key.name] = value;
 
             return value;
@@ -1886,29 +1903,19 @@ instead of:
     }
 
     function updateValue(key, value, refresh = true) {
-        let ptr = walkPath(state.values, key.path);
+        let ptr = key.root;
         if (value === ptr[key.name])
             return;
         ptr[key.name] = value;
 
-        state.take_delayed.delete(key.toString());
-        state.follow_default.delete(key.toString());
-        state.just_changed.add(key.toString());
+        key.meta.take_delayed.delete(key.name);
+        key.meta.follow_default.delete(key.name);
+        key.meta.just_changed.add(key.name);
 
         if (refresh) {
             state.markInteraction();
             self.restart();
         }
-    }
-
-    function walkPath(values, path) {
-        for (let key of path) {
-            if (!values.hasOwnProperty(key))
-                values[key] = {};
-            values = values[key];
-        }
-
-        return values;
     }
 
     function isModifiable(intf) {
