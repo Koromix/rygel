@@ -14,9 +14,11 @@
 function FormState(data = null) {
     let self = this;
 
-    this.changeHandler = model => {};
-
     this.unique_id = FormState.next_unique_id++;
+
+    // Change handlers
+    this.changeHandler = () => {};
+    this.annotateHandler = null;
 
     // Internal widget state
     this.meta_objects = new WeakMap;
@@ -28,12 +30,14 @@ function FormState(data = null) {
     this.state_sections = {};
     this.explicitly_changed = false;
 
-    // Stored values
     if (!(data instanceof MagicData)) {
         if (data == null)
             data = {};
         data = new MagicData(data);
     }
+
+    // Stored values
+    this.data = data;
     this.values = data.values;
 
     this.hasChanged = function() { return data.hasChanged && self.explicitly_changed; };
@@ -66,7 +70,7 @@ function FormModel() {
     this.renderActions = function() { return self.actions.map(intf => intf.render()); };
 }
 
-function FormBuilder(state, model, readonly = false) {
+function FormBuilder(state, model, config = {}) {
     let self = this;
 
     // Workaround for lack of some date inputs (Firefox, Safari)
@@ -91,13 +95,18 @@ function FormBuilder(state, model, readonly = false) {
         }
     })();
 
+    let data = state.data;
     let root_ptr = state.values;
+
+    data.clearNotes('errors');
+    data.clearNotes('variables');
 
     let variables_map = {};
     let options_stack = [{
         deploy: true,
         untoggle: true,
-        wrap: true
+        wrap: true,
+        annotate: false
     }];
     let widgets_ref = model.widgets0;
 
@@ -125,6 +134,17 @@ function FormBuilder(state, model, readonly = false) {
     this.isValid = function() { return model.isValid(); };
     this.hasErrors = function() { return model.hasErrors(); };
 
+    this.pushOptions = function(options = {}) {
+        options = expandOptions(options);
+        options_stack.push(options);
+    };
+    this.popOptions = function() {
+        if (options_stack.length < 2)
+            throw new Error('Too many popOptions() operations');
+
+        options_stack.pop();
+    }
+
     this.triggerErrors = function() {
         if (!self.isValid()) {
             let cleared_set = new Set;
@@ -147,17 +167,6 @@ function FormBuilder(state, model, readonly = false) {
         }
     };
 
-    this.pushOptions = function(options = {}) {
-        options = expandOptions(options);
-        options_stack.push(options);
-    };
-    this.popOptions = function() {
-        if (options_stack.length < 2)
-            throw new Error('Too many popOptions() operations');
-
-        options_stack.pop();
-    }
-
     this.find = key => variables_map[key];
     this.value = (key, default_value = undefined) => {
         let intf = variables_map[key];
@@ -172,9 +181,8 @@ function FormBuilder(state, model, readonly = false) {
 
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="text" class="fm_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
@@ -184,7 +192,7 @@ function FormBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
-        let intf = makeWidget('text', label, render, options);
+        let intf = makeWidget('text', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -197,9 +205,8 @@ function FormBuilder(state, model, readonly = false) {
 
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             <textarea id=${id} class="fm_input" style=${makeInputStyle(options)}
                    rows=${options.rows || 3} cols=${options.cols || 30}
                    placeholder=${options.placeholder || ''}
@@ -208,7 +215,7 @@ function FormBuilder(state, model, readonly = false) {
                    @input=${e => handleTextInput(e, key)}></textarea>
         `);
 
-        let intf = makeWidget('text', label, render, options);
+        let intf = makeWidget('text', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -221,9 +228,8 @@ function FormBuilder(state, model, readonly = false) {
 
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
@@ -233,7 +239,7 @@ function FormBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
-        let intf = makeWidget('password', label, render, options);
+        let intf = makeWidget('password', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -253,9 +259,8 @@ function FormBuilder(state, model, readonly = false) {
 
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
                    inputmode="none" autocomplete="new-password" .value=${value || ''}
@@ -277,7 +282,7 @@ function FormBuilder(state, model, readonly = false) {
             `: ''}
         `);
 
-        let intf = makeWidget('pin', label, render, options);
+        let intf = makeWidget('password', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -306,9 +311,8 @@ function FormBuilder(state, model, readonly = false) {
             return value;
         });
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="number" class="fm_input" style=${makeInputStyle(options)}
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
@@ -318,7 +322,7 @@ function FormBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
-        let intf = makeWidget('number', label, render, options);
+        let intf = makeWidget('number', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -417,9 +421,8 @@ function FormBuilder(state, model, readonly = false) {
         // Yeah, the generated HTML is not very pretty, it is the result of trial-and-error
         // with seemingly random px and em offsets. If you want to do better, be my guest :)
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             <div class=${'fm_slider' + (value == null ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
                  style=${makeInputStyle(options)}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
@@ -458,7 +461,7 @@ function FormBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = makeWidget('slider', label, render, options);
+        let intf = makeWidget('number', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -516,9 +519,8 @@ function FormBuilder(state, model, readonly = false) {
             return value;
         });
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
@@ -531,7 +533,7 @@ function FormBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = makeWidget('enum', label, render, options);
+        let intf = makeWidget('enum', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value, props, false);
         addWidget(intf);
 
@@ -579,9 +581,8 @@ function FormBuilder(state, model, readonly = false) {
             return value;
         });
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             <div style=${'display: inline-block; max-width: 100%; ' + makeInputStyle(options)}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 <select id=${id} class="fm_select" ?disabled=${options.disabled}
@@ -597,7 +598,7 @@ function FormBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = makeWidget('enumDrop', label, render, options);
+        let intf = makeWidget('enum', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value, props, false);
         addWidget(intf);
 
@@ -626,9 +627,8 @@ function FormBuilder(state, model, readonly = false) {
         let tab0 = !props.some(p => value === p.value);
         let tabbed = false;
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             <div class=${options.readonly ? 'fm_radio readonly' : 'fm_radio'}
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) => {
@@ -649,7 +649,7 @@ function FormBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = makeWidget('enumRadio', label, render, options);
+        let intf = makeWidget('enum', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value, props, false);
         addWidget(intf);
 
@@ -686,9 +686,8 @@ function FormBuilder(state, model, readonly = false) {
             return value;
         });
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
@@ -701,7 +700,7 @@ function FormBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = makeWidget('multi', label, render, options);
+        let intf = makeWidget('multi', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value, props, true);
         addWidget(intf);
 
@@ -770,9 +769,8 @@ function FormBuilder(state, model, readonly = false) {
             return value;
         });
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             <div class=${options.readonly ? 'fm_check readonly' : 'fm_check'}
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) =>
@@ -784,7 +782,7 @@ function FormBuilder(state, model, readonly = false) {
             </div>
         `);
 
-        let intf = makeWidget('multiCheck', label, render, options);
+        let intf = makeWidget('multi', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value, props, true);
         addWidget(intf);
 
@@ -877,9 +875,8 @@ function FormBuilder(state, model, readonly = false) {
             return value;
         });
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_date ? 'date' : 'text'}
                    class="fm_input" style=${makeInputStyle(options)}
@@ -890,7 +887,7 @@ function FormBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
-        let intf = makeWidget('date', label, render, options);
+        let intf = makeWidget('date', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -937,9 +934,8 @@ function FormBuilder(state, model, readonly = false) {
         if (value != null)
             value.day = null;
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_month ? 'month' : 'text'}
                    class="fm_input" style=${makeInputStyle(options)}
@@ -950,7 +946,7 @@ function FormBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
-        let intf = makeWidget('date', label, render, options);
+        let intf = makeWidget('month', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -995,9 +991,8 @@ function FormBuilder(state, model, readonly = false) {
             return value;
         });
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_date ? 'time' : 'text'} step
                    class="fm_input" style=${makeInputStyle(options)}
@@ -1009,7 +1004,7 @@ function FormBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
-        let intf = makeWidget('date', label, render, options);
+        let intf = makeWidget('time', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -1072,9 +1067,8 @@ function FormBuilder(state, model, readonly = false) {
         }
         let set_files = lithtml.directive(SetFiles);
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             <input id=${id} type="file" size="${options.size || 30}"
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
@@ -1082,7 +1076,7 @@ function FormBuilder(state, model, readonly = false) {
                    ${set_files(key.meta.file_lists.get(key.name))} />
         `);
 
-        let intf = makeWidget('file', label, render, options);
+        let intf = makeWidget('file', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -1131,15 +1125,14 @@ function FormBuilder(state, model, readonly = false) {
             text = value;
         }
 
-        let id = makeID(key);
-        let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+        let render = (intf, id) => renderWrappedWidget(intf, html`
+            ${makeLabel(intf, id)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <span id="${id}" class="fm_calc">${text}</span>
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
-        let intf = makeWidget('calc', label, render, options);
+        let intf = makeWidget('calc', makeID(key), label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
@@ -1165,7 +1158,7 @@ function FormBuilder(state, model, readonly = false) {
                 }
             };
 
-            let intf = makeWidget('output', null, render, options);
+            let intf = makeWidget('output', null, null, render, options);
             addWidget(intf);
 
             return intf;
@@ -1178,7 +1171,7 @@ function FormBuilder(state, model, readonly = false) {
         let widgets = [];
         let render = intf => widgets.map(intf => intf.render());
 
-        let intf = makeWidget('block', '', render, options);
+        let intf = makeWidget('block', null, '', render, options);
         addWidget(intf);
 
         captureWidgets(widgets, 'block', func, options);
@@ -1236,8 +1229,8 @@ function FormBuilder(state, model, readonly = false) {
         }
 
         let widgets = [];
-        let render = intf => html`
-            <fieldset class="fm_container fm_section" id=${intf.options.anchor || ''}>
+        let render = (intf, id) => html`
+            <fieldset class="fm_container fm_section" id=${id || ''}>
                 ${label ? html`<div class="fm_legend" style=${makeLegendStyle(options)}>
                                    <span @click=${e => handleSectionClick(e, label)}>${label}</span></div>` : ''}
                 ${deploy ? widgets.map(intf => intf.render()) : ''}
@@ -1246,7 +1239,7 @@ function FormBuilder(state, model, readonly = false) {
             </fieldset>
         `;
 
-        let intf = makeWidget('section', label, render, options);
+        let intf = makeWidget('section', options.anchor, label, render, options);
         addWidget(intf);
 
         options = Object.assign({}, options);
@@ -1285,7 +1278,7 @@ function FormBuilder(state, model, readonly = false) {
             </fieldset>
         `;
 
-        let intf = makeWidget('errorList', null, render, options);
+        let intf = makeWidget('errorList', null, null, render, options);
         addWidget(intf);
 
         return intf;
@@ -1317,7 +1310,7 @@ function FormBuilder(state, model, readonly = false) {
             </div>
         ` : '';
 
-        let intf = makeWidget('tabs', null, render, options);
+        let intf = makeWidget('tabs', null, null, render, options);
         addWidget(intf);
 
         // Capture tabs and widgets
@@ -1407,7 +1400,7 @@ function FormBuilder(state, model, readonly = false) {
         tab.actions = model.actions.slice(prev_actions_len);
         model.actions.length = prev_actions_len;
 
-        let intf = makeWidget('tab', null, render, options);
+        let intf = makeWidget('tab', null, null, render, options);
         addWidget(intf);
 
         return intf;
@@ -1434,7 +1427,7 @@ instead of:
         let widgets = [];
         let render = intf => widgets.map(intf => intf.render());
 
-        let intf = makeWidget('repeat', undefined, render, options);
+        let intf = makeWidget('repeat', null, null, render, options);
         Object.assign(intf, {
             length: null,
             add: () => handleRepeatAdd(values, intf.length),
@@ -1498,7 +1491,7 @@ instead of:
             </div>
         `;
 
-        let intf = makeWidget('columns', undefined, render, options);
+        let intf = makeWidget('columns', null, null, render, options);
         addWidget(intf);
 
         options.compact = false;
@@ -1588,7 +1581,7 @@ instead of:
                 options.always = false;
         }
 
-        let intf = makeWidget('action', label, render, options);
+        let intf = makeWidget('action', null, label, render, options);
         intf.clicked = clicked;
         model.actions.push(intf);
 
@@ -1604,7 +1597,7 @@ instead of:
         if (!restart) {
             state.just_triggered = false;
 
-            setTimeout(() => state.changeHandler(model), 0);
+            setTimeout(() => state.changeHandler(), 0);
             restart = true;
         }
     };
@@ -1673,8 +1666,10 @@ instead of:
 
     function expandOptions(options) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
-        if (readonly)
+        if (config.readonly)
             options.readonly = true;
+        if (state.annotateHandler == null)
+            options.annotate = false;
         return options;
     }
 
@@ -1737,7 +1732,7 @@ instead of:
         return style;
     }
 
-    function makeWidget(type, label, func, options = {}) {
+    function makeWidget(type, id, label, func, options = {}) {
         if (label != null) {
             // Users are allowed to use complex HTML as label. Turn it into text for storage!
             if (typeof label === 'string' || typeof label === 'number') {
@@ -1757,7 +1752,9 @@ instead of:
         }
 
         let intf = {
+            id: id,
             type: type,
+
             label: label,
             options: options,
             line: util.parseEvalErrorLine(new Error()),
@@ -1766,7 +1763,7 @@ instead of:
 
             render: () => {
                 if (!intf.options.hidden) {
-                    return func(intf);
+                    return func(intf, intf.id);
                 } else {
                     return '';
                 }
@@ -1797,6 +1794,8 @@ instead of:
         if (variables_map[key])
             throw new Error(`Variable '${key}' already exists`);
 
+        key.meta.just_changed.delete(key.name);
+
         Object.assign(intf, {
             key: key,
             value: value,
@@ -1806,8 +1805,13 @@ instead of:
 
             error: (msg, delay = false) => {
                 if (!delay || key.meta.take_delayed.has(key.name)) {
-                    intf.errors.push(msg || '');
+                    msg = msg || '';
+
+                    intf.errors.push(msg);
                     model.errors++;
+
+                    let note = data.getNote(key.root, 'errors', []);
+                    note.push({ key: key.name, message: msg });
                 }
 
                 model.valid = false;
@@ -1816,12 +1820,18 @@ instead of:
             }
         });
 
-        key.meta.just_changed.delete(key.name);
+        let variable = {
+            label: intf.label,
+            mandatory: intf.options.mandatory,
+            type: intf.type
+        };
 
         if (props != null) {
             intf.props = props;
             intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
             intf.multi = multi;
+
+            variable.props = props;
         }
 
         if (intf.options.mandatory && intf.missing) {
@@ -1833,6 +1843,9 @@ instead of:
 
         model.variables.push(intf);
         variables_map[key] = intf;
+
+        let note = data.getNote(key.root, 'variables', {});
+        note[key.name] = variable;
 
         return intf;
     }
@@ -1856,6 +1869,23 @@ instead of:
                 }
             }
         }
+    }
+
+    function makeLabel(intf) {
+        if (intf.label == null)
+            return '';
+
+        return html`
+            <label for=${intf.id}>
+                ${intf.label}
+                ${intf.options.annotate ? html`<span style="font-weight: normal;">(<a @click=${e => annotate(e, intf)}>annoter</a>)</span>` : ''}
+            </label>
+        `;
+    }
+
+    function annotate(e, intf) {
+        e.preventDefault();
+        return state.annotateHandler(e, intf);
     }
 
     function makePrefixOrSuffix(cls, text, value) {

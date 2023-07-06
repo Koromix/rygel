@@ -468,8 +468,12 @@ function InstanceController() {
     async function renderPage() {
         let buffer = code_buffers.get(route.page.filename);
 
+        let config = {
+            readonly: false
+        };
+
         let model = new FormModel;
-        let builder = new FormBuilder(form_state, model);
+        let builder = new FormBuilder(form_state, model, config);
 
         try {
             let func = code_builds.get(buffer.sha256);
@@ -1070,6 +1074,32 @@ function InstanceController() {
                 if (ui.isPanelActive('editor'))
                     syncFormHighlight(false);
             };
+
+            // Annotations
+            form_state.annotateHandler = (e, intf) => {
+                return ui.runDialog(e, intf.label, {}, (d, resolve, reject) => {
+                    let note = form_data.getNote(intf.key.root, 'status', {});
+
+                    let status = note[intf.key.name];
+
+                    if (status == null) {
+                        status = {};
+                        note[intf.key.name] = status;
+                    }
+
+                    let statuses = getFillingStatuses(intf);
+
+                    d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling });
+                    d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment });
+
+                    d.action('Appliquer', { disabled: !d.isValid() }, async () => {
+                        status.filling = d.values.filling;
+                        status.comment = d.values.comment;
+
+                        resolve();
+                    });
+                });
+            };
         }
 
         route = new_route;
@@ -1158,6 +1188,23 @@ function InstanceController() {
         } else {
             return false;
         }
+    }
+
+    function getFillingStatuses(intf) {
+        let statuses = [];
+
+        statuses.push(['wait', 'En attente']);
+        statuses.push(['check', 'Vérifier']);
+        if (intf.missing) {
+            statuses.push(
+                ['na', 'Non applicable'],
+                ['nd', 'Non disponible']
+            );
+        } else {
+            statuses.push(['complete', 'Complet']);
+        }
+
+        return statuses;
     }
 
     async function buildScript(code, variables) {

@@ -16,10 +16,8 @@ function MagicData(raw = {}, annotations = null) {
 
     let meta_map = new WeakMap;
     let raw_map = MagicData.raw_map;
-    let all_changes = new Set;
 
-    let flat_notes = [];
-    let next_note_id = 0;
+    let all_changes = new Set;
     let clear_markers = {};
 
     raw = raw_map.get(raw) ?? raw;
@@ -28,12 +26,7 @@ function MagicData(raw = {}, annotations = null) {
 
     if (annotations != null) {
         importAnnotations(raw, annotations);
-
-        flat_notes.sort((note1, note2) => note1.id - note2.id);
-        next_note_id = Math.max(-1, ...flat_notes.map(note => note.id)) + 1;
-
-        for (let note of flat_notes)
-            clear_markers[note.kind] = 0;
+        next_note_id++;
     }
 
     function importAnnotations(obj, annotations) {
@@ -42,8 +35,14 @@ function MagicData(raw = {}, annotations = null) {
 
         let meta = findMeta(obj);
 
-        meta.notes = annotations.notes.slice();
-        flat_notes.push(...annotations.notes);
+        for (let kind in annotations.notes) {
+            meta.notes[kind] = {
+                clear: 0,
+                data: annotations.notes[kind]
+            };
+
+            clear_markers[kind] = 0;
+        }
 
         for (let key in annotations.children) {
             let target = obj[key];
@@ -72,7 +71,7 @@ function MagicData(raw = {}, annotations = null) {
 
         if (meta == null) {
             meta = {
-                notes: [],
+                notes: {},
                 proxy: null
             };
 
@@ -117,82 +116,54 @@ function MagicData(raw = {}, annotations = null) {
         return meta.proxy;
     }
 
-    this.annotate = function(obj, kind, value) {
-        if (typeof obj == 'string')
-            [obj, kind, value] = [root, obj, kind];
-
-        let meta = findMeta(obj);
-
-        let note = {
-            id: next_note_id++,
-            kind: kind,
-            value: value
-        };
-
-        if (clear_markers[kind] == null)
-            clear_markers[kind] = 0;
-
-        meta.notes.push(note);
-        flat_notes.push(note);
-    };
-
-    this.getAllNotes = function(kind) {
-        let notes = flat_notes;
-
-        if (kind != null)
-            notes = notes.filter(note => note.kind == kind);
-
-        return notes;
-    };
-
-    this.getObjectNotes = function(obj, kind) {
-        if (obj == null || typeof obj == 'string')
+    this.getNote = function(obj, kind, default_value) {
+        if (obj == null)
             [obj, kind] = [root, obj];
 
         let meta = findMeta(obj);
-        let notes = meta.notes;
+        let note = meta.notes[kind];
 
-        if (kind != null)
-            notes = notes.filter(note => note.kind == kind);
+        if (note == null) {
+            if (clear_markers[kind] == null)
+                clear_markers[kind] = 0;
 
-        return notes;
+            note = {
+                clear: clear_markers[kind],
+                data: default_value
+            };
+
+            meta.notes[kind] = note;
+        }
+
+        return note.data;
     };
 
     this.clearNotes = function(kind) {
-        if (kind != null) {
-            clear_markers[kind] = next_note_id;
-            flat_notes = flat_notes.filter(note => note.kind != kind);
-        } else {
-            for (let key in clear_markers)
-                clear_markers[kind] = next_note_id;
-            flat_notes = [];
-        }
+        if (clear_markers[kind] != null)
+            clear_markers[kind]++;
     };
 
-    this.exportWithNotes = function() {
-        let min_note_id = flat_notes.length ? Math.min(...flat_notes.map(note => note.id)) : 0;
-        let [annotations] = exportAnnotations(raw, min_note_id);
-
-        let ret = {
-            annotations: annotations,
-            values: raw
-        };
-
-        return ret;
+    this.exportNotes = function() {
+        let [annotations] = exportAnnotations(raw);
+        return annotations;
     };
 
-    function exportAnnotations(obj, min_note_id) {
+    function exportAnnotations(obj) {
         let annotations = {
-            notes: [],
+            notes: {},
             children: {}
         };
         let empty = true;
 
         let meta = findMeta(obj);
 
-        if (meta.notes.length) {
-            annotations.notes = meta.notes.slice();
-            empty = false;
+        for (let kind in meta.notes) {
+            let note = meta.notes[kind];
+
+            if (!isEmpty(note.data)) {
+                annotations.notes[kind] = note.data;
+                empty = false;
+            }
         }
 
         for (let key in obj) {
@@ -215,14 +186,24 @@ function MagicData(raw = {}, annotations = null) {
         obj = raw_map.get(obj) ?? obj;
 
         let meta = meta_map.get(obj);
-
         if (meta == null)
             throw new Error('Cannot annotate object outside of managed values');
 
-        // Drop outdated notes
-        meta.notes = meta.notes.filter(note => note.id >= clear_markers[note.kind]);
+        // Clean up cleared notes
+        for (let kind in meta.notes) {
+            let note = meta.notes[kind];
+
+            if (note.clear < clear_markers[kind]) {
+                note.clear = clear_markers[kind];
+                note.data = Array.isArray(note.data) ? [] : {};
+            }
+        }
 
         return meta;
+    }
+
+    function isEmpty(notes) {
+        return !Object.keys(notes).length;
     }
 }
 MagicData.raw_map = new WeakMap;
