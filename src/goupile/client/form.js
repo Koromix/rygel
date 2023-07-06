@@ -16,9 +16,10 @@ function FormState(data = null) {
 
     this.unique_id = FormState.next_unique_id++;
 
-    // Change handlers
+    // Hook functions
     this.changeHandler = () => {};
     this.annotateHandler = null;
+    this.optionHandler = options => {};
 
     // Internal widget state
     this.meta_objects = new WeakMap;
@@ -70,7 +71,7 @@ function FormModel() {
     this.renderActions = function() { return self.actions.map(intf => intf.render()); };
 }
 
-function FormBuilder(state, model, config = {}) {
+function FormBuilder(state, model) {
     let self = this;
 
     // Workaround for lack of some date inputs (Firefox, Safari)
@@ -1666,10 +1667,11 @@ instead of:
 
     function expandOptions(options) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
-        if (config.readonly)
-            options.readonly = true;
+
+        state.optionHandler(options);
         if (state.annotateHandler == null)
             options.annotate = false;
+
         return options;
     }
 

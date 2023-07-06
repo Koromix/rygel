@@ -468,12 +468,8 @@ function InstanceController() {
     async function renderPage() {
         let buffer = code_buffers.get(route.page.filename);
 
-        let config = {
-            readonly: false
-        };
-
         let model = new FormModel;
-        let builder = new FormBuilder(form_state, model, config);
+        let builder = new FormBuilder(form_state, model);
 
         try {
             let func = code_builds.get(buffer.sha256);
