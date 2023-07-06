@@ -33,9 +33,9 @@ body {
 
 a {
     color: var(--anchor_color);
-    text-decoration: none;
+    text-decoration: underline;
 }
-a:hover { text-decoration: underline; }
+a:hover { color: var(--anchor_color_n1); }
 
 *:focus, *:focus + label {
     outline: 2px solid #cdcdcd;
@@ -248,7 +248,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     background-position: center calc(-52px + 1.2em);
 }
 .ui_pin:hover, .ui_pin.active {
-    background-color: var(--anchor_color);
+    background-color: var(--active_color);
     background-position-y: calc(-624px + 1.2em);
 }
 
@@ -344,10 +344,13 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
 }
 .ui_table td { border: 1px solid #dfdfdf; }
 .ui_table tbody tr.active > td, .ui_table tbody tr td.active {
-    background: var(--anchor_color);
+    background: var(--active_color);
     color: white;
 }
-.ui_table tbody tr.active td a, .ui_table tbody td.active a { color: inherit; }
+.ui_table tbody a:not(:hover) { text-decoration: none; }
+.ui_table tbody tr.active td a, .ui_table tbody td.active a {
+    color: inherit;
+}
 .ui_table .ui_table:not(:first-child) td { border-top: 0; }
 
 .ui_table td.child::before {
