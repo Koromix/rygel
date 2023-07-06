@@ -129,7 +129,7 @@ const goupile = new function() {
                     let reload = util.pasteURL(url.pathname, { fallback: 1 });
 
                     window.onbeforeunload = null;
-                    document.location.href = reload;
+                    window.location.href = reload;
 
                     return;
                 }
@@ -159,7 +159,7 @@ const goupile = new function() {
                                 registration.installing.addEventListener('statechange', e => {
                                     if (e.target.state === 'installed') {
                                         progress.success('Mise à jour effectuée, l\'application va redémarrer');
-                                        setTimeout(() => document.location.reload(), 3000);
+                                        setTimeout(() => { window.location.href = window.location.href; }, 3000);
                                     }
                                 });
                             }
@@ -176,7 +176,7 @@ const goupile = new function() {
                         await registration.unregister();
 
                         progress.success('Nettoyage effectué, l\'application va redémarrer');
-                        setTimeout(() => document.location.reload(), 3000);
+                        setTimeout(() => { window.location.href = window.location.href; }, 3000);
                     }
                 }
             }
@@ -547,7 +547,7 @@ const goupile = new function() {
         window.addEventListener('storage', e => {
             if (e.key === ENV.urls.instance + 'lock' && !!e.newValue !== !!e.oldValue) {
                 window.onbeforeunload = null;
-                document.location.reload();
+                window.location.href = window.location.href;
             }
         });
     }
@@ -773,7 +773,7 @@ const goupile = new function() {
             let reload = util.pasteURL(url.pathname, { login: 1 });
 
             window.onbeforeunload = null;
-            document.location.href = reload;
+            window.location.href = reload;
         } catch (err) {
             progress.close();
             throw err;
@@ -787,7 +787,7 @@ const goupile = new function() {
         let reload = util.pasteURL(url.pathname, { login: 1 });
 
         window.onbeforeunload = null;
-        document.location.href = reload;
+        window.location.href = reload;
     }
 
     this.changeDevelopMode = async function(enable) {
@@ -797,7 +797,7 @@ const goupile = new function() {
         await net.post(`${ENV.urls.instance}api/change/mode`, { develop: enable });
 
         // We want to reload no matter what, because the mode has changed
-        document.location.reload();
+        window.location.href = window.location.href;
     }
 
     this.runLockDialog = function(e, ctx) {
@@ -853,7 +853,7 @@ const goupile = new function() {
         util.deleteCookie('session_rnd', '/');
 
         window.onbeforeunload = null;
-        document.location.href = ENV.urls.instance;
+        window.location.href = ENV.urls.instance;
         await util.waitFor(2000);
     };
 
@@ -888,7 +888,7 @@ const goupile = new function() {
 
                 setTimeout(() => {
                     window.onbeforeunload = null;
-                    document.location.reload();
+                    window.location.href = window.location.href;
                 }, 3000);
             } else {
                 log.error('Déverrouillage refusé');
@@ -899,7 +899,7 @@ const goupile = new function() {
         }
 
         window.onbeforeunload = null;
-        document.location.reload();
+        window.location.href = window.location.href;
         await util.waitFor(2000);
     };
 

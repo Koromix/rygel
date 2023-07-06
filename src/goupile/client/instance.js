@@ -334,7 +334,7 @@ function InstanceController() {
                     <div style="flex: 1;"></div>
                     ${editor_filename === 'main.js' ? html`
                         <button ?disabled=${!main_works || !fileHasChanged('main.js')}
-                                @click=${e => document.location.reload()}>Appliquer</button>
+                                @click=${e => { window.location.href = window.location.href; }}>Appliquer</button>
                     ` : ''}
                     <button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>
                 </div>
