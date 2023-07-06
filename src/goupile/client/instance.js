@@ -408,7 +408,7 @@ function InstanceController() {
                 </table>
             `);
 
-            d.action('Restaurer', { disabled: !d.isValid() }, async () => {
+            d.action('Restaurer', { disabled: !d.isValid() || buffer.version == 0 }, async () => {
                 await restoreFile(filename, buffer.sha256);
                 resolve();
             });
