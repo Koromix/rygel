@@ -1243,6 +1243,12 @@ function InstanceController() {
             await loadThread(new_route);
         }
 
+        // Show form automatically
+        if (url != null && !explicit_panels && !ui.isPanelActive('view') && app.panels.view) {
+            ui.togglePanel('data', false);
+            ui.togglePanel('view', true);
+        }
+
         // We're set!
         route = new_route;
 
