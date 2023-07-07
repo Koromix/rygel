@@ -332,7 +332,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     display: inline-block;
     position: absolute;
     left: 2px;
-    top: 1px;
+    top: 0.2em;
     width: 1.18em;
     height: 1.18em;
     box-sizing: border-box;
@@ -347,7 +347,7 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
     display: inline-block;
     position: absolute;
     left: 0.4em;
-    top: 0.24em;
+    top: 0.35em;
     width: 0.6em;
     height: 0.4em;
     border-left: 1px solid black;

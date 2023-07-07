@@ -37,6 +37,7 @@ function InstanceController() {
     let form_model = null;
     let form_builder = null;
 
+    let data_tags = null;
     let data_threads = null;
     let data_columns = null;
     let data_rows = null;
@@ -515,6 +516,26 @@ function InstanceController() {
         return html`
             <div class="padded">
                 <div class="ui_quick" style="margin-right: 2.2em;">
+                    <div style="flex: 1;"></div>
+                    <div style="display: flex; gap: 8px; padding-bottom: 4px;">
+                        <div class="fm_check">
+                            <input id="ins_tags" type="checkbox" .checked=${data_tags != null}
+                                   @change=${ui.wrapAction(e => toggleTagFilter(null))} />
+                            <label for="ins_tags">Filtrer les tags :</label>
+                        </div>
+                        ${app.tags.map(tag => {
+                            let id = 'ins_tag_' + tag.key;
+
+                            return html`
+                                <div  class=${data_tags == null ? 'fm_check disabled' : 'fm_check'} style="padding-top: 0;">
+                                    <input id=${id} type="checkbox"
+                                           .checked=${data_tags == null || data_tags.has(tag.key)}
+                                           @change=${ui.wrapAction(e => toggleTagFilter(tag.key))} />
+                                    <label for=${id}><span class="ui_tag" style=${'background: ' + tag.color + ';'}>${tag.label}</label>
+                                </div>
+                            `;
+                        })}
+                    </div>
                 </div>
 
                 <table class="ui_table fixed" id="ins_data"
@@ -594,6 +615,21 @@ function InstanceController() {
                 </table>
             </div>
         `;
+    }
+
+    function toggleTagFilter(tag) {
+        if (tag == null) {
+            if (data_tags == null) {
+                data_tags = new Set(app.tags.map(tag => tag.key));
+            } else {
+                data_tags = null;
+            }
+        } else if (data_tags != null) {
+            if (!data_tags.delete(tag))
+                data_tags.add(tag);
+        }
+
+         return self.go();
     }
 
     async function renderPage() {
@@ -1313,47 +1349,60 @@ function InstanceController() {
         }
 
         // Load data rows (if needed)
-        if (ui.isPanelActive('data') && data_threads == null) {
-            let new_threads = await net.get(`${ENV.urls.instance}api/records/list`);
-
-            data_threads = new_threads;
-
+        if (ui.isPanelActive('data')) {
             let stores = Array.from(app.stores.values());
             let store0 = stores.shift();
 
-            for (let thread of data_threads) {
-                let min_ctime = Number.MAX_SAFE_INTEGER;
-                let max_mtime = 0;
+            if (data_threads == null) {
+                let threads = await net.get(`${ENV.urls.instance}api/records/list`);
 
-                for (let store in thread.entries) {
-                    let entry = thread.entries[store];
+                data_threads = threads.map(thread => {
+                    let sequence = null;
+                    let min_ctime = Number.MAX_SAFE_INTEGER;
+                    let max_mtime = 0;
+                    let tags = new Set;
 
-                    if (thread.sequence == null)
-                        thread.sequence = entry.sequence;
+                    for (let store in thread.entries) {
+                        let entry = thread.entries[store];
 
-                    min_ctime = Math.min(min_ctime, entry.ctime);
-                    max_mtime = Math.max(max_mtime, entry.mtime);
+                        if (sequence == null)
+                            sequence = entry.sequence;
 
-                    entry.ctime = new Date(entry.ctime);
-                    entry.mtime = new Date(entry.mtime);
-                }
+                        for (let tag of entry.tags)
+                            tags.add(tag);
 
-                thread.ctime = new Date(min_ctime);
-                thread.mtime = new Date(max_mtime);
+                        min_ctime = Math.min(min_ctime, entry.ctime);
+                        max_mtime = Math.max(max_mtime, entry.mtime);
+
+                        entry.ctime = new Date(entry.ctime);
+                        entry.mtime = new Date(entry.mtime);
+                    }
+
+                    return {
+                        tid: thread.tid,
+                        sequence: sequence,
+                        ctime: new Date(min_ctime),
+                        mtime: new Date(max_mtime),
+                        entries: thread.entries,
+                        tags: Array.from(tags)
+                    };
+                });
             }
+
+            data_rows = data_threads;
+            if (data_tags != null)
+                data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
 
             data_columns = stores.map(store => {
                 let col = {
                     store: store.key,
                     title: store.title,
                     url: store.url,
-                    count: data_threads.reduce((acc, thread) => acc + (thread.entries[store.key] != null), 0)
+                    count: data_rows.reduce((acc, row) => acc + (row.entries[store.key] != null), 0)
                 };
 
                 return col;
             });
-
-            data_rows = data_threads;
         }
 
         // Update URL and title
