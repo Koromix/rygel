@@ -422,7 +422,7 @@ function AdminController() {
 
             if (!explicit_panels && (selected_instance == null ||
                                      new_selected.key !== selected_instance.key))
-                ui.setPanelState('users', true, true);
+                ui.togglePanel('users', true);
         } else {
             new_permissions = null;
         }
