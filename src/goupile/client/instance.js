@@ -592,7 +592,7 @@ function InstanceController() {
         }
     }
 
-    async function saveEntry(force) {
+    async function saveEntry(force = false) {
         await mutex.run(async () => {
             if (!force)
                 form_builder.triggerErrors();
@@ -1114,8 +1114,40 @@ function InstanceController() {
                               new_route.page != route.page);
 
         if (context_change) {
-            if (self.hasUnsavedData())
-                await ui.runConfirm(e, 'Si vous continuer vous allez perdre les modifications non enregistrées, voulez-vous continuer ?', 'Oublier');
+            if (self.hasUnsavedData()) {
+                try {
+                    await ui.runDialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
+                        d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
+
+                        d.enumRadio('save', 'Que souhaitez-vous faire avant de continuer ?', [
+                            [true, "Enregistrer mes modifications"],
+                            [false, "Oublier mes modifications"]
+                        ], { value: true, untoggle: false });
+
+                        if (d.values.save) {
+                            d.action('Enregistrer', {}, async e => {
+                                try {
+                                    await mutex.chain(saveEntry);
+                                } catch (err) {
+                                    reject(err);
+                                }
+
+                                resolve();
+                            });
+                        } else {
+                            d.action('Oublier', {}, resolve);
+                        }
+                    });
+                } catch (err) {
+                    if (err != null)
+                        log.error(err);
+
+                    // If we're popping state, this will fuck up navigation history but we can't
+                    // refuse popstate events. History mess is better than data loss.
+                    await mutex.chain(self.run);
+                    return;
+                }
+            }
 
             await loadThread(new_route);
         }
