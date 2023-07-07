@@ -86,7 +86,7 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
             }
             sql.len -= 2;
 
-            sql.len += Fmt(sql.TakeAvailable(), ")").len;
+            sql.len += Fmt(sql.TakeAvailable(), "))").len;
         }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store").len;
@@ -127,7 +127,7 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
             }
             sql.len -= 2;
 
-            sql.len += Fmt(sql.TakeAvailable(), ")").len;
+            sql.len += Fmt(sql.TakeAvailable(), "))").len;
         }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store, rec.idx DESC").len;
