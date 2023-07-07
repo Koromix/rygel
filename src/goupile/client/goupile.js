@@ -797,7 +797,8 @@ const goupile = new function() {
         await net.post(`${ENV.urls.instance}api/change/mode`, { develop: enable });
 
         // We want to reload no matter what, because the mode has changed
-        window.location.href = window.location.href;
+        let url = new URL(window.location.href);
+        window.location.href = url.pathname;
     }
 
     this.runLockDialog = function(e, ctx) {
