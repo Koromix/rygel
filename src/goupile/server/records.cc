@@ -77,7 +77,7 @@ static void JsonRawOrNull(sq_Statement *stmt, int column, json_Writer *json)
 
 // Make sure tags are safe and can't lead to SQL injection before calling this function
 static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const SessionStamp &stamp,
-                                const char *tid, Span<const Span<const char>> tags, int64_t anchor, sq_Statement *out_stmt)
+                                const char *tid, int64_t anchor, sq_Statement *out_stmt)
 {
     LocalArray<char, 2048> sql;
 
@@ -100,17 +100,6 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
         }
         if (!stamp.HasPermission(UserPermission::DataLoad)) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
-        }
-        if (tags.len) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_tags WHERE name IN (").len;
-
-            for (Span<const char> tag: tags) {
-                RG_ASSERT(CheckTag(tag));
-                sql.len += Fmt(sql.TakeAvailable(), "'%1', ", tag).len;
-            }
-            sql.len -= 2;
-
-            sql.len += Fmt(sql.TakeAvailable(), "))").len;
         }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store").len;
@@ -143,18 +132,6 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                               INNER JOIN rec_threads t ON (t.tid = e.tid)
                               WHERE 1+1)", out_stmt).len;
 
-        if (tags.len) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM rec_tags WHERE name IN (").len;
-
-            for (Span<const char> tag: tags) {
-                RG_ASSERT(CheckTag(tag));
-                sql.len += Fmt(sql.TakeAvailable(), "'%1', ", tag).len;
-            }
-            sql.len -= 2;
-
-            sql.len += Fmt(sql.TakeAvailable(), "))").len;
-        }
-
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store, rec.idx DESC").len;
     }
 
@@ -183,24 +160,6 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
-    HeapArray<Span<const char>> tags;
-    if (const char *str = request.GetQueryValue("tags"); str) {
-        Span<const char> remain = TrimStr(str);
-
-        while (remain.len) {
-            Span<const char> tag = SplitStr(remain, ',', &remain);
-
-            if (tag.len) {
-                if (!CheckTag(tag)) {
-                    io->AttachError(422);
-                    return;
-                }
-
-                tags.Append(tag);
-            }
-        }
-    }
-
     int64_t anchor = -1;
     if (const char *str = request.GetQueryValue("anchor"); str) {
         if (!stamp->HasPermission(UserPermission::DataAudit)) {
@@ -221,7 +180,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     sq_Statement stmt;
-    if (!PrepareRecordSelect(instance, session->userid, *stamp, nullptr, tags, anchor, &stmt))
+    if (!PrepareRecordSelect(instance, session->userid, *stamp, nullptr, anchor, &stmt))
         return;
 
     // Export data
@@ -337,7 +296,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
     }
 
     sq_Statement stmt;
-    if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, {}, anchor, &stmt))
+    if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, anchor, &stmt))
         return;
 
     if (!stmt.Step()) {
@@ -675,7 +634,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             int64_t anchor;
             {
                 sq_Statement stmt;
-                if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, {}, -1, &stmt))
+                if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, -1, &stmt))
                     return false;
 
                 if (stmt.Step()) {
