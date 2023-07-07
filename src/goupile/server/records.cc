@@ -31,8 +31,8 @@ struct RecordFragment {
     const char *store;
     int64_t mtime;
     bool has_data;
-    Span<const char> values;
-    Span<const char> notes;
+    Span<const char> data;
+    Span<const char> meta;
     HeapArray<const char *> tags;
 };
 
@@ -86,7 +86,7 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                        R"(SELECT t.rowid AS t, t.tid,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence,
                                  IIF(?1 IS NOT NULL, e.data, NULL) AS data,
-                                 IIF(?1 IS NOT NULL, e.notes, NULL) AS notes,
+                                 IIF(?1 IS NOT NULL, e.meta, NULL) AS meta,
                                  e.tags AS tags
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
@@ -108,8 +108,8 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
         RG_ASSERT(stamp.HasPermission(UserPermission::DataAudit));
 
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data, notes, tags) AS (
-                              SELECT 1, eid, anchor, mtime, data, notes, tags
+                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data, meta, tags) AS (
+                              SELECT 1, eid, anchor, mtime, data, meta, tags
                                   FROM rec_fragments
                                   WHERE (tid = ?1 OR ?1 IS NULL) AND
                                         anchor <= ?3 AND previous IS NULL AND
@@ -117,7 +117,7 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                               UNION ALL
                               SELECT rec.idx + 1, f.eid, f.anchor, f.mtime,
                                   IIF(?1 IS NOT NULL, json_patch(rec.data, f.data), NULL) AS data,
-                                  IIF(?1 IS NOT NULL, json_patch(rec.notes, f.notes), NULL) AS notes,
+                                  IIF(?1 IS NOT NULL, json_patch(rec.meta, f.meta), NULL) AS meta,
                                   f.tags
                                   FROM rec_fragments f, rec
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor AND
@@ -126,7 +126,7 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                           )
                           SELECT t.rowid AS t, t.tid,
                                  e.rowid AS e, e.eid, e.deleted, rec.anchor, e.ctime, rec.mtime,
-                                 e.store, e.sequence, rec.data, rec.notes, rec.tags
+                                 e.store, e.sequence, rec.data, rec.meta, rec.tags
                               FROM rec
                               INNER JOIN rec_entries e ON (e.eid = rec.eid)
                               INNER JOIN rec_threads t ON (t.tid = e.tid)
@@ -345,8 +345,8 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
             json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
             json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
-            json.Key("values"); JsonRawOrNull(&stmt, 10, &json);
-            json.Key("notes"); JsonRawOrNull(&stmt, 11, &json);
+            json.Key("data"); JsonRawOrNull(&stmt, 10, &json);
+            json.Key("meta"); JsonRawOrNull(&stmt, 11, &json);
             json.Key("tags"); JsonRawOrNull(&stmt, 12, &json);
 
             json.EndObject();
@@ -534,27 +534,27 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                 parser.ParseString(&frag->store);
                             } else if (key == "mtime") {
                                 parser.ParseInt(&frag->mtime);
-                            } else if (key == "values") {
+                            } else if (key == "data") {
                                 switch (parser.PeekToken()) {
                                     case json_TokenType::Null: {
-                                        frag->values = {};
+                                        frag->data = {};
                                         frag->has_data = true;
                                     } break;
                                     case json_TokenType::StartObject: {
-                                        parser.PassThrough(&frag->values);
+                                        parser.PassThrough(&frag->data);
                                         frag->has_data = true;
                                     } break;
 
                                     default: {
-                                        LogError("Unexpected value type for fragment values");
+                                        LogError("Unexpected value type for fragment data");
                                         io->AttachError(422);
                                         return;
                                     } break;
                                 }
-                            } else if (key == "notes") {
+                            } else if (key == "meta") {
                                 switch (parser.PeekToken()) {
-                                    case json_TokenType::Null: { frag->notes = {}; } break;
-                                    case json_TokenType::StartObject: { parser.PassThrough(&frag->notes); } break;
+                                    case json_TokenType::Null: { frag->meta = {}; } break;
+                                    case json_TokenType::StartObject: { parser.PassThrough(&frag->meta); } break;
 
                                     default: {
                                         LogError("Unexpected value type for fragment notes");
@@ -586,7 +586,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         if (!frag->has_data) {
                             has_deletes = true;
 
-                            frag->notes = {};
+                            frag->meta = {};
                             frag->tags.len = 0;
                         }
                     }
@@ -708,12 +708,12 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     {
                         sq_Statement stmt;
                         if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
-                                                                                 mtime, fs, data, notes, tags)
+                                                                                 mtime, fs, data, meta, tags)
                                                       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
                                                       RETURNING anchor)",
                                                       &stmt, *anchor_ptr > 0 ? sq_Binding(*anchor_ptr) : sq_Binding(), tid,
                                                       frag.eid, session->userid, session->username, frag.mtime, frag.fs,
-                                                      frag.values, frag.notes, TagsToJson(frag.tags, &io->allocator)))
+                                                      frag.data, frag.meta, TagsToJson(frag.tags, &io->allocator)))
                             return false;
                         if (!stmt.GetSingleValue(&new_anchor))
                             return false;
@@ -724,17 +724,17 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     {
                         sq_Statement stmt;
                         if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
-                                                                               store, sequence, deleted, data, notes, tags)
+                                                                               store, sequence, deleted, data, meta, tags)
                                                       VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8, ?9)
                                                       ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
                                                                                 mtime = excluded.mtime,
                                                                                 deleted = excluded.deleted,
                                                                                 data = json_patch(data, excluded.data),
-                                                                                notes = excluded.notes,
+                                                                                meta = excluded.meta,
                                                                                 tags = excluded.tags
                                                       RETURNING rowid)",
                                                    &stmt, tid, frag.eid, new_anchor, frag.mtime, frag.store,
-                                                   0 + !frag.values.len, frag.values, frag.notes, TagsToJson(frag.tags, &io->allocator)))
+                                                   0 + !frag.data.len, frag.data, frag.meta, TagsToJson(frag.tags, &io->allocator)))
                             return false;
                         if (!stmt.GetSingleValue(&e))
                             return false;
@@ -763,7 +763,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     // Create thread if needed
                     if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, stores) VALUES (?1, json_object(?2, ?3))
                                               ON CONFLICT DO UPDATE SET stores = json_patch(stores, excluded.stores))",
-                                           tid, frag.store, !frag.values.len))
+                                           tid, frag.store, !frag.data.len))
                         return false;
 
                     // Update entry and fragment tags

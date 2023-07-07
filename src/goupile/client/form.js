@@ -39,7 +39,7 @@ function FormState(data = null) {
 
     // Stored values
     this.data = data;
-    this.values = data.values;
+    this.values = data.proxy;
 
     this.hasChanged = function() {
         if (!data.hasChanged() && !self.force_changed)

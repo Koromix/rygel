@@ -1371,7 +1371,7 @@ function InstanceController() {
                 new_thread.entries[new_route.page.store] = new_entry;
             }
 
-            new_data = new MagicData(new_entry.values, new_entry.notes);
+            new_data = new MagicData(new_entry.data, new_entry.meta);
             new_state = new FormState(new_data);
         } else {
             new_data = new MagicData;
@@ -1452,7 +1452,7 @@ function InstanceController() {
             tags = Array.from(tags);
 
             // Transform undefined into null
-            let values = JSON.parse(JSON.stringify(form_data.rawValues, (k, v) => v != null ? v : null));
+            let data = JSON.parse(JSON.stringify(form_data.raw, (k, v) => v != null ? v : null));
 
             await net.post(ENV.urls.instance + 'api/records/save', {
                 tid: form_thread.tid,
@@ -1462,8 +1462,8 @@ function InstanceController() {
                     eid: form_entry.eid,
                     store: form_entry.store,
                     mtime: (new Date).valueOf(),
-                    values: values,
-                    notes: form_data.exportNotes(),
+                    data: data,
+                    meta: form_data.exportNotes(),
                     tags: tags
                 }]
             });

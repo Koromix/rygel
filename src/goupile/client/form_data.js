@@ -51,8 +51,8 @@ function MagicData(raw = {}, annotations = null) {
     }
 
     Object.defineProperties(this, {
-        values: { get: () => root, enumerable: true },
-        rawValues: { get: () => raw, enumerable: true },
+        proxy: { get: () => root, enumerable: true },
+        raw: { get: () => raw, enumerable: true },
     });
 
     this.hasChanged = function() { return all_changes.size > 0; };
