@@ -154,7 +154,7 @@ function InstanceController() {
         if (!route.page.options.warn_unsaved)
             return false;
 
-        return form_data.hasChanged;
+        return form_state.hasChanged();
     };
 
     this.runTasks = async function(online) {
@@ -580,7 +580,7 @@ function InstanceController() {
             let label = force ? '+Forcer l\'enregistrement' : '+Enregistrer';
             let color = force ? null : '#2d8261';
 
-            form.action(label, { disabled: !form_data.hasChanged, color: color }, async () => {
+            form.action(label, { disabled: !form_state.hasChanged(), color: color }, async () => {
                 await saveEntry(force);
 
                 // Reload thread
