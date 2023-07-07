@@ -787,7 +787,7 @@ function InstanceController() {
                 intf.options.readonly = true;
             } else if (status.filling == 'check') {
                 tags.push('check');
-            } if (status.filling == 'wait') {
+            } else if (status.filling == 'wait') {
                 tags.push('wait');
             } else if (status.filling != null) {
                 // Do nothing but skip following tags
