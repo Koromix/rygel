@@ -1407,10 +1407,11 @@ function InstanceController() {
                     note[intf.key.name] = status;
                 }
 
+                let locked = d.values.hasOwnProperty('locked') ? d.values.locked : status.locked;
                 let statuses = getFillingStatuses(intf);
 
-                d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: status.locked });
-                d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: status.locked });
+                d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: locked });
+                d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: locked });
 
                 if (goupile.hasPermission('data_audit'))
                     d.binary('locked', 'Validation finale', { value: status.locked });
