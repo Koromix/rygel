@@ -613,6 +613,12 @@ function InstanceController() {
                         ${!data_rows.length && !recording_new ? html`<tr><td colspan=${2 + data_columns.length}>Aucune ligne à afficher</td></tr>` : ''}
                     </tbody>
                 </table>
+
+                ${goupile.hasPermission('data_export') ? html`
+                    <div class="ui_actions">
+                        <button @click=${ui.wrapAction(e => exportRecords(Array.from(app.stores.values()).map(store => store.key)))}>Exporter les données</button>
+                    </div>
+                ` : ''}
             </div>
         `;
     }
