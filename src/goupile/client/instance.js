@@ -1484,7 +1484,7 @@ function InstanceController() {
         let statuses = [];
 
         statuses.push(['wait', 'En attente']);
-        statuses.push(['check', 'Vérifier']);
+        statuses.push(['check', 'À vérifier']);
         if (intf.missing) {
             statuses.push(
                 ['na', 'Non applicable'],

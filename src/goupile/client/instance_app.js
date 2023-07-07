@@ -26,11 +26,11 @@ function ApplicationInfo() {
     };
 
     this.tags = [
-        { key: 'error', label: 'Erreur', color: '#db0a0a' },
         { key: 'incomplete', label: 'Incomplet', color: '#ef6e30' },
+        { key: 'control', label: 'Contrôles', color: '#d9ab46' },
         { key: 'wait', label: 'En attente', color: '#3b96c8' },
-        { key: 'check', label: 'Vérifier', color: '#ef6e30' },
-        { key: 'locked', label: 'Validé', color: '#d921e8' }
+        { key: 'check', label: 'À vérifier', color: '#44997c' },
+        { key: 'locked', label: 'Terminé', color: '#d921e8' }
     ];
 }
 
