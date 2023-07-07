@@ -24,10 +24,8 @@ function MagicData(raw = {}, annotations = null) {
 
     let root = proxyObject(raw);
 
-    if (annotations != null) {
+    if (annotations != null)
         importAnnotations(raw, annotations);
-        next_note_id++;
-    }
 
     function importAnnotations(obj, annotations) {
         if (annotations == null)
