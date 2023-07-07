@@ -172,9 +172,18 @@ function InstanceController() {
         return html`
             <nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'} id="ui_top" style="z-index: 999999;">
                 ${goupile.hasPermission('build_code') ? html`
-                    <button class=${'icon' + (profile.develop ? ' active' : '')}
-                            style="background-position-y: calc(-230px + 1.2em);"
-                            @click=${ui.wrapAction(e => goupile.changeDevelopMode(!profile.develop))}>Conception</button>
+                    <div class="drop">
+                        <button class=${'icon' + (profile.develop ? ' active' : '')}
+                                style="background-position-y: calc(-230px + 1.2em);"
+                                @click=${ui.deployMenu}>Conception</button>
+                        <div>
+                            <button class=${profile.develop ? 'active' : ''}
+                                    @click=${ui.wrapAction(e => goupile.changeDevelopMode(!profile.develop))}>
+                                <div style="flex: 1;">Mode conception</div>
+                                ${profile.develop ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                            </button>
+                        </div>
+                    </div>
                 ` : ''}
                 ${profile.lock != null ? html`
                     <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
