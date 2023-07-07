@@ -203,9 +203,16 @@ function InstanceController() {
 
                 ${app.panels.editor || app.panels.data ? html`
                     <div style="width: 8px;"></div>
-                    <button class=${!ui.hasTwoPanels() && ui.isPanelActive(0) ? 'icon active' : 'icon'}
-                            style="background-position-y: calc(-230px + 1.2em);"
-                            @click=${ui.wrapAction(e => togglePanels(true, false))}></button>
+                    ${app.panels.editor ? html`
+                        <button class=${!ui.hasTwoPanels() && ui.isPanelActive(0) ? 'icon active' : 'icon'}
+                                style="background-position-y: calc(-230px + 1.2em);"
+                                @click=${ui.wrapAction(e => togglePanels(true, false))}></button>
+                    ` : ''}
+                    ${app.panels.data ? html`
+                        <button class=${!ui.hasTwoPanels() && ui.isPanelActive(0) ? 'icon active' : 'icon'}
+                                style="background-position-y: calc(-274px + 1.2em);"
+                                @click=${ui.wrapAction(e => togglePanels(true, false))}></button>
+                    ` : ''}
                     ${ui.allowTwoPanels() ? html`
                         <button class=${ui.hasTwoPanels() ? 'icon active' : 'icon'}
                                 style="background-position-y: calc(-626px + 1.2em);"
