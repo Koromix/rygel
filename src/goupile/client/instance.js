@@ -566,7 +566,10 @@ function InstanceController() {
             let note = form_data.getNote(intf.key.root, 'status', {});
             let status = note[intf.key.name] ?? {};
 
-            if (status.filling == 'check') {
+            if (status.locked) {
+                tags.push('locked');
+                intf.options.readonly = true;
+            } else if (status.filling == 'check') {
                 tags.push('check');
             } if (status.filling == 'wait') {
                 tags.push('wait');
@@ -1110,12 +1113,16 @@ function InstanceController() {
 
                     let statuses = getFillingStatuses(intf);
 
-                    d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling });
-                    d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment });
+                    d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: status.locked });
+                    d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: status.locked });
+
+                    if (goupile.hasPermission('data_audit'))
+                        d.binary('locked', 'Validation finale', { value: status.locked });
 
                     d.action('Appliquer', { disabled: !d.isValid() }, async () => {
                         status.filling = d.values.filling;
                         status.comment = d.values.comment;
+                        status.locked = d.values.locked;
 
                         resolve();
                     });
