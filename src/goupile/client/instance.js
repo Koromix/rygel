@@ -702,8 +702,9 @@ function InstanceController() {
                 data_threads = null;
 
                 // Reload thread
-                let new_route = Object.assign({}, route, { tid: form_thread.tid });
-                await loadThread(new_route);
+                await loadRecord(form_thread.tid, null, route.page);
+                route.tid = form_thread.tid;
+                route.anchor = null;
 
                 self.go();
             });
@@ -715,7 +716,7 @@ function InstanceController() {
                                            'Oublier', () => {});
 
                     // Reload thread
-                    await loadThread(route);
+                    await loadRecord(route.tid, null, route.page);
 
                     self.go();
                 });
@@ -1248,7 +1249,7 @@ function InstanceController() {
                 }
             }
 
-            await loadThread(new_route);
+            await loadRecord(new_route.tid, new_route.anchor, new_route.page);
         }
 
         // Show form automatically
@@ -1497,17 +1498,17 @@ function InstanceController() {
         throw new Error(msg);
     }
 
-    async function loadThread(new_route) {
+    async function loadRecord(tid, anchor, page) {
         let new_thread = null;
         let new_entry = null;
         let new_data = null;
         let new_state = null;
 
         // Load or create thread
-        if (new_route.tid != null) {
+        if (tid != null) {
             let url = util.pasteURL(`${ENV.urls.instance}api/records/get`, {
-                tid: new_route.tid,
-                anchor: new_route.anchor
+                tid: tid,
+                anchor: anchor
             });
 
             new_thread = await net.get(url);
@@ -1520,14 +1521,14 @@ function InstanceController() {
         }
 
         // Initialize entry data
-        if (new_route.page.store != null) {
-            new_entry = new_thread.entries[new_route.page.store];
+        if (page.store != null) {
+            new_entry = new_thread.entries[page.store];
 
             if (new_entry == null) {
                 let now = (new Date).valueOf();
 
                 new_entry = {
-                    store: new_route.page.store,
+                    store: page.store,
                     eid: util.makeULID(),
                     deleted: false,
                     anchor: -1,
@@ -1537,7 +1538,7 @@ function InstanceController() {
                     tags: []
                 };
 
-                new_thread.entries[new_route.page.store] = new_entry;
+                new_thread.entries[page.store] = new_entry;
             }
 
             new_data = new MagicData(new_entry.data, new_entry.meta);
@@ -1548,7 +1549,7 @@ function InstanceController() {
         }
 
         // Copy UI state if needed
-        if (form_state != null && new_route.page == route.page) {
+        if (form_state != null && page == route.page) {
             new_state.state_tabs = form_state.state_tabs;
             new_state.state_sections = form_state.state_sections;
 
