@@ -93,6 +93,7 @@ const goupile = new function() {
             let instance = profile.instances.find(instance => url.pathname.startsWith(instance.url)) ||
                            profile.instances[0];
 
+            ENV.key = instance.key;
             ENV.title = instance.title;
             ENV.urls.instance = instance.url;
 

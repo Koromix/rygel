@@ -398,6 +398,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
                     char buf[128];
 
                     json.StartObject();
+                    json.Key("key"); json.String("admin");
                     json.Key("urls"); json.StartObject();
                         json.Key("base"); json.String("/admin/");
                         json.Key("instance"); json.String("/admin/");
@@ -604,6 +605,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     char buf[512];
 
                     json.StartObject();
+                    json.Key("key"); json.String(master->key.ptr);
                     json.Key("urls"); json.StartObject();
                         json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
                         json.Key("instance"); json.String(Fmt(buf, "/%1/", instance->key).ptr);

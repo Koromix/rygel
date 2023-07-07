@@ -275,6 +275,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                     for (const InstanceHolder *slave: master->slaves) {
                         if (session->GetStamp(slave)) {
                             json.StartObject();
+                            json.Key("key"); json.String(slave->key.ptr);
                             json.Key("title"); json.String(slave->title);
                             json.Key("name"); json.String(slave->config.name);
                             json.Key("url"); json.String(Fmt(buf, "/%1/", slave->key).ptr);
