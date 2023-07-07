@@ -124,10 +124,12 @@ const ui = new function() {
                 enable = (active_panels[key] == null);
 
             if (enable) {
-                for (let panel of panels.values()) {
-                    if (panel.position === key) {
-                        active_panels[key] = panel;
-                        break;
+                if (active_panels[key] == null) {
+                    for (let panel of panels.values()) {
+                        if (panel.position === key) {
+                            active_panels[key] = panel;
+                            break;
+                        }
                     }
                 }
             } else {

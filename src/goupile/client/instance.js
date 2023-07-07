@@ -205,12 +205,12 @@ function InstanceController() {
                 ${app.panels.editor || app.panels.data ? html`
                     <div style="width: 8px;"></div>
                     ${app.panels.editor ? html`
-                        <button class=${!ui.hasTwoPanels() && ui.isPanelActive(0) ? 'icon active' : 'icon'}
+                        <button class=${!ui.hasTwoPanels() && ui.isPanelActive('editor') ? 'icon active' : 'icon'}
                                 style="background-position-y: calc(-230px + 1.2em);"
                                 @click=${ui.wrapAction(e => togglePanels(true, false))}></button>
                     ` : ''}
-                    ${app.panels.data ? html`
-                        <button class=${!ui.hasTwoPanels() && ui.isPanelActive(0) ? 'icon active' : 'icon'}
+                    ${app.panels.data && !app.panels.editor ? html`
+                        <button class=${!ui.hasTwoPanels() && ui.isPanelActive('data') ? 'icon active' : 'icon'}
                                 style="background-position-y: calc(-274px + 1.2em);"
                                 @click=${ui.wrapAction(e => togglePanels(true, false))}></button>
                     ` : ''}
@@ -335,23 +335,23 @@ function InstanceController() {
         `;
     }
 
-    async function togglePanels(primary, view) {
-        ui.togglePanel(0, primary);
+    async function togglePanels(left, right) {
+        ui.togglePanel(0, left);
 
-        if (typeof view == 'string') {
-            ui.togglePanel(view, true);
-        } else if (view != null) {
-            ui.togglePanel(1, view);
+        if (typeof right == 'string') {
+            ui.togglePanel(right, true);
+        } else if (right != null) {
+            ui.togglePanel(1, right);
         }
 
         await self.run();
 
         // Special behavior for some panels
-        if (primary) {
+        if (left) {
             syncFormScroll();
             syncFormHighlight(true);
         }
-        if (view) {
+        if (right) {
             syncEditorScroll();
             syncFormHighlight(false);
         }
