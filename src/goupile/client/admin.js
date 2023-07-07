@@ -25,14 +25,12 @@ function AdminController() {
     this.init = async function(fallback) {
         ui.setMenu(renderMenu);
 
-        ui.createPanel('instances', ['users', 'archives'], 'users', renderInstances);
-        ui.createPanel('users', [], null, renderUsers);
+        ui.createPanel('instances', 0, renderInstances);
+        ui.createPanel('users', 1, renderUsers);
         if (profile.root)
-            ui.createPanel('archives', [], null, renderArchives);
+            ui.createPanel('archives', 1, renderArchives);
 
-        ui.setPanelState('instances', true);
-        if (ui.allowTwoPanels())
-            ui.setPanelState('users', true, true);
+        ui.setPanels(['instances','users']);
     }
 
     this.hasUnsavedData = function() {
@@ -69,8 +67,8 @@ function AdminController() {
         `;
     }
 
-    function togglePanel(key) {
-        ui.setPanelState(key, !ui.isPanelActive(key), key !== 'instances');
+    function togglePanel(key, enable = null) {
+        ui.togglePanel(key, enable);
         return self.go();
     }
 
@@ -105,7 +103,7 @@ function AdminController() {
                                     html`<td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a></td>` : ''}
                                 ${profile.root && instance.master != null ? html`<td></td>` : ''}
                                 <td><a role="button" tabindex="0" href=${util.pasteURL('/admin/', { select: instance.key })} 
-                                       @click=${ui.wrapAction(instance != selected_instance ? (e => ui.setPanelState('users', true, true))
+                                       @click=${ui.wrapAction(instance != selected_instance ? (e => togglePanel('users', true))
                                                                                             : (e => { self.go(e, '/admin/'); e.preventDefault(); }))}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
                                 ${profile.root ? html`<td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runDeleteInstanceDialog(e, instance))}>Supprimer</a></td>` : ''}
@@ -379,10 +377,12 @@ function AdminController() {
 
             let panels = url.searchParams.get('p');
             if (panels) {
-                panels = panels.split('|');
+                panels = panels.split('|').filter(panel => panel);
 
-                ui.restorePanels(panels);
-                explicit_panels = true;
+                if (panels.length) {
+                    ui.setPanels(panels);
+                    explicit_panels = true;
+                }
             }
 
             if (url.searchParams.has('select')) {
@@ -442,7 +442,7 @@ function AdminController() {
             if (selected_instance != null)
                 params.select = selected_instance.key;
             params.all = 0 + all_users;
-            params.p = ui.getActivePanels().join('|') || null;
+            params.p = ui.getPanels().join('|') || null;
 
             let url = util.pasteURL('/admin/', params);
             goupile.syncHistory(url, options.push_history);

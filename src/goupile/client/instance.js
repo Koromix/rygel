@@ -133,13 +133,13 @@ function InstanceController() {
         ui.setMenu(renderMenu);
 
         if (app.panels.editor)
-            ui.createPanel('editor', ['view'], 'view', renderEditor);
-        ui.createPanel('view', [], null, renderPage);
+            ui.createPanel('editor', 0, renderEditor);
+        ui.createPanel('view', 1, renderPage);
 
         if (app.panels.editor) {
-            ui.setPanelState('editor', true);
-        } else if (app.panels.view) {
-            ui.setPanelState('view', true);
+            ui.setPanels(['editor', 'view']);
+        } else {
+            ui.setPanels(['view']);
         }
     };
 
@@ -313,9 +313,9 @@ function InstanceController() {
 
     async function togglePanels(primary, view) {
         if (primary != null)
-            ui.setPanelState('editor', true);
+            ui.togglePanel(0, primary);
         if (view != null)
-            ui.setPanelState('view', view, primary !== false);
+            ui.togglePanel(1, view);
 
         await self.run();
 
@@ -1090,10 +1090,10 @@ function InstanceController() {
                 panels = panels.split('|');
                 panels = panels.filter(key => app.panels[key]);
 
-                if (panels.length)
-                    ui.restorePanels(panels);
-
-                explicit_panels = true;
+                if (panels.length) {
+                    ui.setPanels(panels);
+                    explicit_panels = true;
+                }
             }
         }
 
@@ -1191,7 +1191,7 @@ function InstanceController() {
         // Update URL and title
         {
             let url = contextualizeURL(route.page.url, form_thread);
-            let panels = ui.getActivePanels().join('|');
+            let panels = ui.getPanels().join('|');
 
             if (!profile.develop && panels == 'view')
                 panels = null;
