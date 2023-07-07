@@ -729,7 +729,9 @@ function InstanceController() {
                 tags.push('check');
             } if (status.filling == 'wait') {
                 tags.push('wait');
-            } else if (intf.missing && intf.options.mandatory && status.filling == null) {
+            } else if (status.filling != null) {
+                // Do nothing but skip following tags
+            } else if (intf.missing && intf.options.mandatory) {
                 if (form_entry.anchor >= 0 || intf.errors.length)
                     tags.push('incomplete');
             } else if (intf.errors.length) {
