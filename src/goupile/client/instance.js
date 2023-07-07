@@ -20,6 +20,8 @@ function InstanceController() {
     let mutex = new Mutex;
 
     let route = {
+        tid: null,
+        anchor: null,
         page: null,
         menu: null
     };
@@ -28,8 +30,12 @@ function InstanceController() {
     let head_length = Number.MAX_SAFE_INTEGER;
     let page_div = document.createElement('div');
 
+    let form_thread = null;
+    let form_entry = null;
     let form_data = null;
     let form_state = null;
+    let form_model = null;
+    let form_builder = null;
 
     let code_buffers = new LruMap(32);
     let code_builds = new LruMap(4);
@@ -142,6 +148,8 @@ function InstanceController() {
             return true;
 
         if (form_state == null)
+            return false;
+        if (route.page.store == null)
             return false;
         if (!route.page.options.warn_unsaved)
             return false;
@@ -284,10 +292,11 @@ function InstanceController() {
 
     function renderDropItem(item) {
         let active = route.menu.chain.includes(item);
+        let url = contextualizeURL(item.url, form_thread);
 
         return html`
             <button class=${active ? 'active' : ''}
-                    @click=${ui.wrapAction(e => active ? togglePanels(null, true) : self.go(e, item.url))}>
+                    @click=${ui.wrapAction(e => active ? togglePanels(null, true) : self.go(e, url))}>
                 <div style="flex: 1;">${item.title}</div>
            </button>
         `;
@@ -469,7 +478,7 @@ function InstanceController() {
         let buffer = code_buffers.get(route.page.filename);
 
         let model = new FormModel;
-        let builder = new FormBuilder(form_state, model);
+        let form = new FormBuilder(form_state, model);
 
         try {
             let func = code_builds.get(buffer.sha256);
@@ -479,16 +488,18 @@ function InstanceController() {
 
             await func({
                 app: app,
-                form: builder,
+                form: form,
                 values: form_state.data
             });
-            if (model.hasErrors())
-                builder.errorList();
 
+            addAutomaticActions(form, model);
             addAutomaticTags(model.variables);
 
             render(model.renderWidgets(), page_div);
             page_div.classList.remove('disabled');
+
+            form_model = model;
+            form_builder = form;
 
             error_entries.page.close();
         } catch (err) {
@@ -559,6 +570,62 @@ function InstanceController() {
         `;
     }
 
+    function addAutomaticActions(form, model) {
+        if (form.hasErrors())
+            form.errorList();
+
+        if (route.page.store != null) {
+            let force = form.justTriggered();
+
+            let label = force ? '+Forcer l\'enregistrement' : '+Enregistrer';
+            let color = force ? null : '#2d8261';
+
+            form.action(label, { disabled: !form_data.hasChanged, color: color }, async () => {
+                await saveEntry(force);
+
+                // Reload thread
+                let new_route = Object.assign({}, route, { tid: form_thread.tid });
+                await loadThread(new_route);
+
+                self.go();
+            });
+        }
+    }
+
+    async function saveEntry(force) {
+        await mutex.run(async () => {
+            if (!force)
+                form_builder.triggerErrors();
+
+            // Gather global list of tags for this record entry
+            let tags = new Set;
+            for (let intf of form_model.variables) {
+                if (Array.isArray(intf.options.tags)) {
+                    for (let tag of intf.options.tags)
+                        tags.add(tag.key);
+                }
+            }
+            tags = Array.from(tags);
+
+            // Transform undefined into null
+            let values = JSON.parse(JSON.stringify(form_data.rawValues, (k, v) => v != null ? v : null));
+
+            await net.post(ENV.urls.instance + 'api/records/save', {
+                tid: form_thread.tid,
+                anchor: form_thread.anchor,
+                fragments: [{
+                    fs: ENV.version,
+                    eid: form_entry.eid,
+                    store: form_entry.store,
+                    mtime: (new Date).valueOf(),
+                    values: values,
+                    notes: form_data.exportNotes(),
+                    tags: tags
+                }]
+            });
+        });
+    }
+
     function addAutomaticTags(variables) {
         for (let intf of variables) {
             let tags = [];
@@ -574,7 +641,8 @@ function InstanceController() {
             } if (status.filling == 'wait') {
                 tags.push('wait');
             } else if (intf.missing && intf.options.mandatory && status.filling == null) {
-                tags.push('incomplete');
+                if (form_entry.anchor >= 0 || intf.errors.length)
+                    tags.push('incomplete');
             } else if (intf.errors.length) {
                 tags.push('error');
             }
@@ -595,9 +663,10 @@ function InstanceController() {
             <ul>
                 ${util.map(menu.children, item => {
                     let active = route.menu.chain.includes(item);
+                    let url = contextualizeURL(item.url, form_thread);
 
                     return html`
-                        <li><a class=${active ? 'active' : ''} href=${item.url}>
+                        <li><a class=${active ? 'active' : ''} href=${url}>
                             <div style="flex: 1;">${item.title}</div>
                         </a></li>
                     `;
@@ -620,7 +689,7 @@ function InstanceController() {
 
                     <tbody>
                         <tr class=${route.version == null ? 'active' : ''}>
-                            <td><a href=${route.page.url + `/${route.ulid}@`}>🔍\uFE0E</a></td>
+                            <td><a href=${route.page.url + `/${route.tid}@`}>🔍\uFE0E</a></td>
                             <td colspan="2">Version actuelle</td>
                         </tr>
 
@@ -629,7 +698,7 @@ function InstanceController() {
                             let frag = fragments[version - 1];
 
                             let page = app.pages.get(frag.page) || route.page;
-                            let url = page.url + `/${route.ulid}@${version}`;
+                            let url = page.url + `/${route.tid}@${version}`;
 
                             return html`
                                 <tr class=${version === route.version ? 'active' : ''}>
@@ -1007,6 +1076,26 @@ function InstanceController() {
             }
             new_route.menu = new_route.page.menu;
 
+            let [tid, anchor] = what ? what.split('@') : [null, null];
+
+            // Deal with TID and anchor
+            if (tid && tid != new_route.tid) {
+                new_route.tid = tid;
+                new_route.anchor = null;
+            }
+            if (anchor != null) {
+                anchor = anchor.trim();
+
+                if (anchor.match(/^[0-9]+$/)) {
+                    new_route.anchor = parseInt(anchor, 10);
+                } else if (!anchor.length) {
+                    new_route.anchor = null;
+                } else {
+                    log.error('L\'indicateur de version n\'est pas un nombre');
+                    new_route.anchor = null;
+                }
+            }
+
             // Restore explicit panels (if any)
             let panels = url.searchParams.get('p');
             if (panels) {
@@ -1020,22 +1109,141 @@ function InstanceController() {
             }
         }
 
-        // Confirm dangerous actions
-        if (self.hasUnsavedData() && new_route.page != route.page)
-            await ui.runConfirm(e, 'Si vous continuer vous allez perdre les modifications non enregistrées, voulez-vous continuer ?', 'Oublier');
+        let context_change = (new_route.tid != route.tid ||
+                              new_route.anchor != route.anchor ||
+                              new_route.page != route.page);
 
-        // Fetch and cache page code for page panel
-        {
-            let filename = new_route.page.filename;
-            await fetchCode(filename);
+        if (context_change) {
+            if (self.hasUnsavedData())
+                await ui.runConfirm(e, 'Si vous continuer vous allez perdre les modifications non enregistrées, voulez-vous continuer ?', 'Oublier');
+
+            await loadThread(new_route);
         }
 
-        // Commit!
-        updateContext(new_route);
+        // If we reach here, everything went smoothly!
+        route = new_route;
 
         await mutex.chain(() => self.run(options.push_history));
     };
     this.go = util.serialize(this.go, mutex);
+
+    async function loadThread(new_route) {
+        let new_thread = null;
+        let new_entry = null;
+        let new_data = null;
+        let new_state = null;
+
+        // Load or create thread
+        if (new_route.tid != null) {
+            let url = util.pasteURL(`${ENV.urls.instance}api/records/get`, {
+                tid: new_route.tid,
+                anchor: new_route.anchor
+            });
+
+            new_thread = await net.get(url);
+        } else {
+            new_thread = {
+                tid: util.makeULID(),
+                anchor: -1,
+                entries: {}
+            };
+        }
+
+        // Initialize entry data
+        if (new_route.page.store != null) {
+            new_entry = new_thread.entries[new_route.page.store];
+
+            if (new_entry == null) {
+                let now = (new Date).valueOf();
+
+                new_entry = {
+                    store: new_route.page.store,
+                    eid: util.makeULID(),
+                    deleted: false,
+                    anchor: -1,
+                    ctime: now,
+                    mtime: now,
+                    sequence: null,
+                    tags: []
+                };
+
+                new_thread.entries[new_route.page.store] = new_entry;
+            }
+
+            new_data = new MagicData(new_entry.values, new_entry.notes);
+            new_state = new FormState(new_data);
+        } else {
+            new_data = new MagicData;
+            new_state = new FormState(new_data);
+        }
+
+        // Copy UI state if needed
+        if (form_state != null && new_route.page == route.page) {
+            new_state.state_tabs = form_state.state_tabs;
+            new_state.state_sections = form_state.state_sections;
+
+            /* XXX if (new_record.saved && new_record.ulid == form_record.ulid)
+                new_state.take_delayed = form_state.take_delayed; */
+        }
+
+        // Run after each change
+        new_state.changeHandler = async () => {
+            await self.run();
+
+            // Highlight might need to change (conditions, etc.)
+            if (ui.isPanelActive('editor'))
+                syncFormHighlight(false);
+        };
+
+        // Handle annotation form
+        new_state.annotateHandler = (e, intf) => {
+            return ui.runDialog(e, intf.label, {}, (d, resolve, reject) => {
+                let note = form_data.getNote(intf.key.root, 'status', {});
+                let status = note[intf.key.name];
+
+                if (status == null) {
+                    status = {};
+                    note[intf.key.name] = status;
+                }
+
+                let statuses = getFillingStatuses(intf);
+
+                d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: status.locked });
+                d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: status.locked });
+
+                if (goupile.hasPermission('data_audit'))
+                    d.binary('locked', 'Validation finale', { value: status.locked });
+
+                d.action('Appliquer', { disabled: !d.isValid() }, async () => {
+                    status.filling = d.values.filling;
+                    status.comment = d.values.comment;
+                    status.locked = d.values.locked;
+
+                    resolve();
+                });
+            });
+        };
+
+        form_thread = new_thread;
+        form_entry = new_entry;
+        form_data = new_data;
+        form_state = new_state;
+
+        form_model = null;
+        form_builder = null;
+    }
+
+    function contextualizeURL(url, thread) {
+        if (thread != null && thread.anchor >= 0) {
+            url += `/${thread.tid}`;
+
+            if (thread == form_thread && route.anchor != null)
+                url += `@${route.anchor}`;
+        }
+
+        return url;
+    }
+
 
     this.run = async function(push_history = true) {
         let filename = route.page.filename;
@@ -1068,7 +1276,7 @@ function InstanceController() {
 
         // Update URL and title
         {
-            let url = route.page.url;
+            let url = contextualizeURL(route.page.url, form_thread);
             let panels = ui.getActivePanels().join('|');
 
             if (!profile.develop && panels == 'view')
@@ -1085,53 +1293,6 @@ function InstanceController() {
         ui.render();
     };
     this.run = util.serialize(this.run, mutex);
-
-    function updateContext(new_route) {
-        if (new_route.page != route.page) {
-            form_data = new MagicData;
-            form_state = new FormState(form_data);
-
-            // Run after each change
-            form_state.changeHandler = async () => {
-                await self.run();
-
-                // Highlight might need to change (conditions, etc.)
-                if (ui.isPanelActive('editor'))
-                    syncFormHighlight(false);
-            };
-
-            // Annotations
-            form_state.annotateHandler = (e, intf) => {
-                return ui.runDialog(e, intf.label, {}, (d, resolve, reject) => {
-                    let note = form_data.getNote(intf.key.root, 'status', {});
-                    let status = note[intf.key.name];
-
-                    if (status == null) {
-                        status = {};
-                        note[intf.key.name] = status;
-                    }
-
-                    let statuses = getFillingStatuses(intf);
-
-                    d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: status.locked });
-                    d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: status.locked });
-
-                    if (goupile.hasPermission('data_audit'))
-                        d.binary('locked', 'Validation finale', { value: status.locked });
-
-                    d.action('Appliquer', { disabled: !d.isValid() }, async () => {
-                        status.filling = d.values.filling;
-                        status.comment = d.values.comment;
-                        status.locked = d.values.locked;
-
-                        resolve();
-                    });
-                });
-            };
-        }
-
-        route = new_route;
-    }
 
     async function fetchCode(filename) {
         // Anything in cache

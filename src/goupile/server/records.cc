@@ -234,6 +234,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
         do {
             int64_t t = sqlite3_column_int64(stmt, 0);
             int64_t prev_e = -1;
+            int64_t max_anchor = -1;
 
             json.StartObject();
 
@@ -249,20 +250,29 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
                     continue;
                 prev_e = e;
 
+                int64_t anchor = sqlite3_column_int64(stmt, 5);
+                max_anchor = std::max(max_anchor, anchor);
+
                 json.Key(store); json.StartObject();
-                    json.Key("eid"); json.String((const char *)sqlite3_column_text(stmt, 3));
-                    if (stamp->HasPermission(UserPermission::DataAudit)) {
-                        json.Key("deleted"); json.Bool(sqlite3_column_int(stmt, 4));
-                    } else {
-                        RG_ASSERT(!sqlite3_column_int(stmt, 4));
-                    }
-                    json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
-                    json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
-                    json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
-                    json.Key("tags"); JsonRawOrNull(&stmt, 12, &json);
+
+                json.Key("store"); json.String(store);
+                json.Key("eid"); json.String((const char *)sqlite3_column_text(stmt, 3));
+                if (stamp->HasPermission(UserPermission::DataAudit)) {
+                    json.Key("deleted"); json.Bool(sqlite3_column_int(stmt, 4));
+                } else {
+                    RG_ASSERT(!sqlite3_column_int(stmt, 4));
+                }
+                json.Key("anchor"); json.Int64(anchor);
+                json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
+                json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
+                json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
+                json.Key("tags"); JsonRawOrNull(&stmt, 12, &json);
+
                 json.EndObject();
             } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == t);
             json.EndObject();
+
+            json.Key("anchor"); json.Int64(max_anchor);
 
             json.EndObject();
         } while (stmt.IsRow());
@@ -346,6 +356,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
     json.StartObject();
     {
         int64_t prev_e = -1;
+        int64_t max_anchor = -1;
 
         json.Key("tid"); json.String(tid);
 
@@ -359,14 +370,19 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
                 continue;
             prev_e = e;
 
+            int64_t anchor = sqlite3_column_int64(stmt, 5);
+            max_anchor = std::max(max_anchor, anchor);
+
             json.Key(store); json.StartObject();
 
+            json.Key("store"); json.String(store);
             json.Key("eid"); json.String((const char *)sqlite3_column_text(stmt, 3));
             if (stamp->HasPermission(UserPermission::DataAudit)) {
                 json.Key("deleted"); json.Bool(sqlite3_column_int(stmt, 4));
             } else {
                 RG_ASSERT(!sqlite3_column_int(stmt, 4));
             }
+            json.Key("anchor"); json.Int64(anchor);
             json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
             json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
             json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
@@ -377,6 +393,8 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             json.EndObject();
         } while (stmt.Step());
         json.EndObject();
+
+        json.Key("anchor"); json.Int64(max_anchor);
     }
     if (!stmt.IsValid())
         return;
@@ -640,7 +658,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             }
             for (const RecordFragment &frag: fragments) {
                 if (frag.fs < 0 || !frag.eid[0] || !frag.store || !frag.mtime || !frag.has_data) {
-                    LogError("Missing fragment values");
+                    LogError("Missing fragment fields");
                     valid = false;
                     break;
                 }

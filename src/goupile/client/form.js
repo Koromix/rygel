@@ -42,6 +42,7 @@ function FormState(data = null) {
 
     this.hasChanged = function() { return data.hasChanged && self.explicitly_changed; };
     this.markInteraction = function() { self.explicitly_changed = true; };
+    this.justTriggered = function() { return self.just_triggered; };
 }
 FormState.next_unique_id = 0;
 
@@ -130,6 +131,7 @@ function FormBuilder(state, model) {
 
     this.hasChanged = function() { return state.hasChanged(); };
     this.markInteraction = function() { state.markInteraction(); };
+    this.justTriggered = function() { return state.justTriggered(); };
 
     this.isValid = function() { return model.isValid(); };
     this.hasErrors = function() { return model.hasErrors(); };
