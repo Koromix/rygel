@@ -691,7 +691,7 @@ function InstanceController() {
             let color = force ? null : '#2d8261';
 
             form.action(label, { disabled: !form_state.hasChanged(), color: color }, async () => {
-                await saveEntry(force);
+                await saveRecord(force);
 
                 // Reload list
                 data_threads = null;
@@ -1221,7 +1221,7 @@ function InstanceController() {
                         if (d.values.save) {
                             d.action('Enregistrer', {}, async e => {
                                 try {
-                                    await mutex.chain(saveEntry);
+                                    await mutex.chain(saveRecord);
                                 } catch (err) {
                                     reject(err);
                                 }
@@ -1601,7 +1601,7 @@ function InstanceController() {
         form_builder = null;
     }
 
-    async function saveEntry(force = false) {
+    async function saveRecord(force = false) {
         await mutex.run(async () => {
             if (!force)
                 form_builder.triggerErrors();
