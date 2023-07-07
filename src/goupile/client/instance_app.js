@@ -30,7 +30,7 @@ function ApplicationInfo() {
         { key: 'incomplete', label: 'Incomplet', color: '#ef6e30' },
         { key: 'wait', label: 'En attente', color: '#3b96c8' },
         { key: 'check', label: 'Vérifier', color: '#ef6e30' },
-        { key: 'locked', label: 'Verrouillé', color: '#d921e8' }
+        { key: 'locked', label: 'Validé', color: '#d921e8' }
     ];
 }
 
