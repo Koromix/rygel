@@ -824,45 +824,6 @@ function InstanceController() {
         `;
     }
 
-    async function runTrailDialog(e, tid) {
-        let fragments = [];
-
-        return ui.runDialog(e, 'Journal des modifications', {}, (d, resolve, reject) => {
-            d.output(html`
-                <table class="ui_table">
-                    <colgroup>
-                        <col/>
-                        <col/>
-                        <col style="min-width: 12em;"/>
-                    </colgroup>
-
-                    <tbody>
-                        <tr class=${route.version == null ? 'active' : ''}>
-                            <td><a href=${route.page.url + `/${route.tid}@`}>🔍\uFE0E</a></td>
-                            <td colspan="2">Version actuelle</td>
-                        </tr>
-
-                        ${util.mapRange(0, fragments.length, idx => {
-                            let version = fragments.length - idx;
-                            let frag = fragments[version - 1];
-
-                            let page = app.pages.get(frag.page) || route.page;
-                            let url = page.url + `/${route.tid}@${version}`;
-
-                            return html`
-                                <tr class=${version === route.version ? 'active' : ''}>
-                                    <td><a href=${url}>🔍\uFE0E</a></td>
-                                    <td>${frag.user}</td>
-                                    <td>${frag.mtime.toLocaleString()}</td>
-                                </tr>
-                            `;
-                        })}
-                    </tbody>
-                </table>
-            `);
-        });
-    }
-
     async function syncEditor() {
         if (editor_el == null) {
             if (typeof ace === 'undefined')
