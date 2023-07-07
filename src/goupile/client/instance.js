@@ -693,6 +693,9 @@ function InstanceController() {
             form.action(label, { disabled: !form_state.hasChanged(), color: color }, async () => {
                 await saveEntry(force);
 
+                // Reload list
+                data_threads = null;
+
                 // Reload thread
                 let new_route = Object.assign({}, route, { tid: form_thread.tid });
                 await loadThread(new_route);
