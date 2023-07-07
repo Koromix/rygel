@@ -745,7 +745,9 @@ function InstanceController() {
             let color = force ? null : '#2d8261';
 
             form.action(label, { disabled: !form_state.hasChanged(), color: color }, async () => {
-                await saveRecord(force);
+                if (!force)
+                    form_builder.triggerErrors();
+                await saveRecord();
 
                 // Reload list
                 data_threads = null;
@@ -1237,6 +1239,7 @@ function InstanceController() {
                         if (d.values.save) {
                             d.action('Enregistrer', {}, async e => {
                                 try {
+                                    form_builder.triggerErrors();
                                     await mutex.chain(saveRecord);
                                 } catch (err) {
                                     reject(err);
@@ -1630,11 +1633,8 @@ function InstanceController() {
         form_builder = null;
     }
 
-    async function saveRecord(force = false) {
+    async function saveRecord() {
         await mutex.run(async () => {
-            if (!force)
-                form_builder.triggerErrors();
-
             // Gather global list of tags for this record entry
             let tags = new Set;
             for (let intf of form_model.variables) {
