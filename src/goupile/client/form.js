@@ -1848,7 +1848,6 @@ instead of:
 
         let variable = {
             label: intf.label,
-            mandatory: intf.options.mandatory,
             type: intf.type
         };
 

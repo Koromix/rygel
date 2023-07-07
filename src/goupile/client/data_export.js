@@ -26,10 +26,23 @@ async function exportRecords(stores) {
         threads.push(thread);
     }
 
+    let definitions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'label', 'type']]);
+    let propositions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'prop', 'label']]);
+
     // Create data worksheets
     let worksheets = stores.map(store => {
         let variables = orderVariables(store, threads);
         let columns = expandColumns(variables);
+
+        for (let variable of variables) {
+            let info = [store, variable.key, variable.label, variable.type];
+            XLSX.utils.sheet_add_aoa(definitions, [info], { origin: -1 });
+
+            if (variable.props != null) {
+                let props = variable.props.map(prop => [store, variable.key, prop.value, prop.label]);
+                XLSX.utils.sheet_add_aoa(propositions, props, { origin: -1 });
+            }
+        }
 
         let header = [
             '__tid', '__sequence',
@@ -53,7 +66,7 @@ async function exportRecords(stores) {
                     return result;
                 })
             ];
-            XLSX.utils.sheet_add_aoa(ws, [row], {origin: -1});
+            XLSX.utils.sheet_add_aoa(ws, [row], { origin: -1 });
         }
 
         return [store, ws];
@@ -62,9 +75,10 @@ async function exportRecords(stores) {
     // Create workbook...
     let wb = XLSX.utils.book_new();
     let wb_name = `export_${ENV.key}_${dates.today()}`;
-    for (let [store, ws] of worksheets) {
+    for (let [store, ws] of worksheets)
         XLSX.utils.book_append_sheet(wb, ws, store);
-    }
+    XLSX.utils.book_append_sheet(wb, definitions, '@definitions');
+    XLSX.utils.book_append_sheet(wb, propositions, '@propositions');
 
     // ... and export it!
     let filename = `${ENV.key}_${wb_name}.xlsx`;
