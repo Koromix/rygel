@@ -17,7 +17,7 @@ function ApplicationInfo() {
     this.pages = new Map;
     this.homepage = null;
 
-    this.stores = new Set;
+    this.stores = new Map;
 
     this.panels = {
         editor: profile.develop,
@@ -151,6 +151,14 @@ function ApplicationBuilder(app) {
 
             options_stack = [expandOptions(options)];
 
+            let store = {
+                key: key,
+                title: title,
+                url: null
+            };
+
+            app.stores.set(key, store);
+
             if (typeof func == 'function') {
                 func();
             } else {
@@ -167,7 +175,7 @@ function ApplicationBuilder(app) {
                 }
             }
 
-            app.stores.add(key);
+            store.url = current_menu.url;
         } finally {
             current_menu = prev_menu;
             current_store = prev_store;
