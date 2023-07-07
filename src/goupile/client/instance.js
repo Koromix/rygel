@@ -76,7 +76,7 @@ function InstanceController() {
         try {
             let new_app = await runMainScript();
 
-            new_app.homepage = new_app.pages.values().next().value;
+            new_app.homepage = new_app.pages[0];
             app = util.deepFreeze(new_app);
         } catch (err) {
             if (fallback) {
@@ -86,7 +86,7 @@ function InstanceController() {
                 // For simplicity, a lot of code assumes at least one page exists
                 builder.form('default', 'Défaut', 'Page par défaut');
 
-                new_app.homepage = new_app.pages.values().next().value;
+                new_app.homepage = new_app.pages[0];
                 app = util.deepFreeze(new_app);
 
                 error_entries.app.error(err, -1);
@@ -121,7 +121,7 @@ function InstanceController() {
             await func({
                 app: builder
             });
-            if (!new_app.pages.size)
+            if (!new_app.pages.length)
                 throw new Error('Main script does not define any page');
 
             error_entries.app.close();
@@ -616,7 +616,7 @@ function InstanceController() {
 
                 ${goupile.hasPermission('data_export') ? html`
                     <div class="ui_actions">
-                        <button @click=${ui.wrapAction(e => exportRecords(Array.from(app.stores.values()).map(store => store.key)))}>Exporter les données</button>
+                        <button @click=${ui.wrapAction(e => exportRecords(app.stores.slice(1).map(store => store.key)))}>Exporter les données</button>
                     </div>
                 ` : ''}
             </div>
@@ -1178,7 +1178,7 @@ function InstanceController() {
             let [key, what] = path.split('/').map(str => str.trim());
 
             // Find page information
-            new_route.page = app.pages.get(key);
+            new_route.page = app.pages.find(page => page.key == key);
             if (new_route.page == null) {
                 log.error(`La page '${key}' n'existe pas`);
                 new_route.page = app.homepage;
@@ -1317,7 +1317,7 @@ function InstanceController() {
 
         // Load data rows (if needed)
         if (ui.isPanelActive('data')) {
-            let stores = Array.from(app.stores.values());
+            let stores = app.stores.slice();
             let store0 = stores.shift();
 
             if (data_threads == null) {

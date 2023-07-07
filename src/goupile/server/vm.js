@@ -27,7 +27,7 @@ function VmApi(native, main) {
                 profile: JSON.parse(profile)
             });
 
-            if (!app.pages.size)
+            if (!app.pages.length)
                 throw new Error('Main script does not define any page');
         } catch (err) {
             throw err;

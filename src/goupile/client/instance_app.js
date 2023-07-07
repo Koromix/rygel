@@ -14,10 +14,10 @@
 function ApplicationInfo() {
     this.head = null;
 
-    this.pages = new Map;
+    this.pages = [];
     this.homepage = null;
 
-    this.stores = new Map;
+    this.stores = [];
 
     this.panels = {
         editor: profile.develop,
@@ -71,7 +71,7 @@ function ApplicationBuilder(app) {
 
     this.page = function(key, title, options = null) {
         checkKeySyntax(key);
-        if (app.pages.has(key))
+        if (app.pages.some(page => page.key == key))
             throw new Error(`Page key '${key}' is already used`);
 
         title = title || key;
@@ -100,6 +100,8 @@ function ApplicationBuilder(app) {
             page: page
         };
 
+        app.pages.push(page);
+
         if (current_menu != null) {
             item.chain = [...current_menu.chain, item];
 
@@ -114,14 +116,12 @@ function ApplicationBuilder(app) {
         }
         page.menu = item;
 
-        app.pages.set(key, page);
-
         return page;
     };
 
     this.form = function(key, title, func = null, options = null) {
         checkKeySyntax(key);
-        if (app.stores.has(key))
+        if (app.stores.some(store => store.key == key))
             throw new Error(`Store key '${key}' is already used`);
 
         title = title || key;
@@ -157,7 +157,7 @@ function ApplicationBuilder(app) {
                 url: null
             };
 
-            app.stores.set(key, store);
+            app.stores.push(store);
 
             if (typeof func == 'function') {
                 func();
