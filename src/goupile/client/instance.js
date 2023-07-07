@@ -572,8 +572,8 @@ function InstanceController() {
                         })}
                         ${recording_new ? html`
                             <tr>
-                                <td class="missing">NA</td>
-                                <td class="missing">NA</td>
+                                <td class="active missing">NA</td>
+                                <td class="active missing">NA</td>
                                 <td class="missing" colspan=${data_columns.length}><a @click=${e => togglePanels(null, 'view')}>Nouvel enregistrement</a></td>
                             </tr>
                         ` : ''}
