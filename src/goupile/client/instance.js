@@ -592,40 +592,6 @@ function InstanceController() {
         }
     }
 
-    async function saveEntry(force = false) {
-        await mutex.run(async () => {
-            if (!force)
-                form_builder.triggerErrors();
-
-            // Gather global list of tags for this record entry
-            let tags = new Set;
-            for (let intf of form_model.variables) {
-                if (Array.isArray(intf.options.tags)) {
-                    for (let tag of intf.options.tags)
-                        tags.add(tag.key);
-                }
-            }
-            tags = Array.from(tags);
-
-            // Transform undefined into null
-            let values = JSON.parse(JSON.stringify(form_data.rawValues, (k, v) => v != null ? v : null));
-
-            await net.post(ENV.urls.instance + 'api/records/save', {
-                tid: form_thread.tid,
-                anchor: form_thread.anchor,
-                fragments: [{
-                    fs: ENV.version,
-                    eid: form_entry.eid,
-                    store: form_entry.store,
-                    mtime: (new Date).valueOf(),
-                    values: values,
-                    notes: form_data.exportNotes(),
-                    tags: tags
-                }]
-            });
-        });
-    }
-
     function addAutomaticTags(variables) {
         for (let intf of variables) {
             let tags = [];
@@ -1159,112 +1125,6 @@ function InstanceController() {
     };
     this.go = util.serialize(this.go, mutex);
 
-    async function loadThread(new_route) {
-        let new_thread = null;
-        let new_entry = null;
-        let new_data = null;
-        let new_state = null;
-
-        // Load or create thread
-        if (new_route.tid != null) {
-            let url = util.pasteURL(`${ENV.urls.instance}api/records/get`, {
-                tid: new_route.tid,
-                anchor: new_route.anchor
-            });
-
-            new_thread = await net.get(url);
-        } else {
-            new_thread = {
-                tid: util.makeULID(),
-                anchor: -1,
-                entries: {}
-            };
-        }
-
-        // Initialize entry data
-        if (new_route.page.store != null) {
-            new_entry = new_thread.entries[new_route.page.store];
-
-            if (new_entry == null) {
-                let now = (new Date).valueOf();
-
-                new_entry = {
-                    store: new_route.page.store,
-                    eid: util.makeULID(),
-                    deleted: false,
-                    anchor: -1,
-                    ctime: now,
-                    mtime: now,
-                    sequence: null,
-                    tags: []
-                };
-
-                new_thread.entries[new_route.page.store] = new_entry;
-            }
-
-            new_data = new MagicData(new_entry.values, new_entry.notes);
-            new_state = new FormState(new_data);
-        } else {
-            new_data = new MagicData;
-            new_state = new FormState(new_data);
-        }
-
-        // Copy UI state if needed
-        if (form_state != null && new_route.page == route.page) {
-            new_state.state_tabs = form_state.state_tabs;
-            new_state.state_sections = form_state.state_sections;
-
-            /* XXX if (new_record.saved && new_record.ulid == form_record.ulid)
-                new_state.take_delayed = form_state.take_delayed; */
-        }
-
-        // Run after each change
-        new_state.changeHandler = async () => {
-            await self.run();
-
-            // Highlight might need to change (conditions, etc.)
-            if (ui.isPanelActive('editor'))
-                syncFormHighlight(false);
-        };
-
-        // Handle annotation form
-        new_state.annotateHandler = (e, intf) => {
-            return ui.runDialog(e, intf.label, {}, (d, resolve, reject) => {
-                let note = form_data.getNote(intf.key.root, 'status', {});
-                let status = note[intf.key.name];
-
-                if (status == null) {
-                    status = {};
-                    note[intf.key.name] = status;
-                }
-
-                let statuses = getFillingStatuses(intf);
-
-                d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: status.locked });
-                d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: status.locked });
-
-                if (goupile.hasPermission('data_audit'))
-                    d.binary('locked', 'Validation finale', { value: status.locked });
-
-                d.action('Appliquer', { disabled: !d.isValid() }, async () => {
-                    status.filling = d.values.filling;
-                    status.comment = d.values.comment;
-                    status.locked = d.values.locked;
-
-                    resolve();
-                });
-            });
-        };
-
-        form_thread = new_thread;
-        form_entry = new_entry;
-        form_data = new_data;
-        form_state = new_state;
-
-        form_model = null;
-        form_builder = null;
-    }
-
     function contextualizeURL(url, thread) {
         if (thread != null && thread.anchor >= 0) {
             url += `/${thread.tid}`;
@@ -1453,5 +1313,145 @@ function InstanceController() {
         let msg = `Erreur de script\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
 
         throw new Error(msg);
+    }
+
+    async function loadThread(new_route) {
+        let new_thread = null;
+        let new_entry = null;
+        let new_data = null;
+        let new_state = null;
+
+        // Load or create thread
+        if (new_route.tid != null) {
+            let url = util.pasteURL(`${ENV.urls.instance}api/records/get`, {
+                tid: new_route.tid,
+                anchor: new_route.anchor
+            });
+
+            new_thread = await net.get(url);
+        } else {
+            new_thread = {
+                tid: util.makeULID(),
+                anchor: -1,
+                entries: {}
+            };
+        }
+
+        // Initialize entry data
+        if (new_route.page.store != null) {
+            new_entry = new_thread.entries[new_route.page.store];
+
+            if (new_entry == null) {
+                let now = (new Date).valueOf();
+
+                new_entry = {
+                    store: new_route.page.store,
+                    eid: util.makeULID(),
+                    deleted: false,
+                    anchor: -1,
+                    ctime: now,
+                    mtime: now,
+                    sequence: null,
+                    tags: []
+                };
+
+                new_thread.entries[new_route.page.store] = new_entry;
+            }
+
+            new_data = new MagicData(new_entry.values, new_entry.notes);
+            new_state = new FormState(new_data);
+        } else {
+            new_data = new MagicData;
+            new_state = new FormState(new_data);
+        }
+
+        // Copy UI state if needed
+        if (form_state != null && new_route.page == route.page) {
+            new_state.state_tabs = form_state.state_tabs;
+            new_state.state_sections = form_state.state_sections;
+
+            /* XXX if (new_record.saved && new_record.ulid == form_record.ulid)
+                new_state.take_delayed = form_state.take_delayed; */
+        }
+
+        // Run after each change
+        new_state.changeHandler = async () => {
+            await self.run();
+
+            // Highlight might need to change (conditions, etc.)
+            if (ui.isPanelActive('editor'))
+                syncFormHighlight(false);
+        };
+
+        // Handle annotation form
+        new_state.annotateHandler = (e, intf) => {
+            return ui.runDialog(e, intf.label, {}, (d, resolve, reject) => {
+                let note = form_data.getNote(intf.key.root, 'status', {});
+                let status = note[intf.key.name];
+
+                if (status == null) {
+                    status = {};
+                    note[intf.key.name] = status;
+                }
+
+                let statuses = getFillingStatuses(intf);
+
+                d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: status.locked });
+                d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: status.locked });
+
+                if (goupile.hasPermission('data_audit'))
+                    d.binary('locked', 'Validation finale', { value: status.locked });
+
+                d.action('Appliquer', { disabled: !d.isValid() }, async () => {
+                    status.filling = d.values.filling;
+                    status.comment = d.values.comment;
+                    status.locked = d.values.locked;
+
+                    resolve();
+                });
+            });
+        };
+
+        form_thread = new_thread;
+        form_entry = new_entry;
+        form_data = new_data;
+        form_state = new_state;
+
+        form_model = null;
+        form_builder = null;
+    }
+
+    async function saveEntry(force = false) {
+        await mutex.run(async () => {
+            if (!force)
+                form_builder.triggerErrors();
+
+            // Gather global list of tags for this record entry
+            let tags = new Set;
+            for (let intf of form_model.variables) {
+                if (Array.isArray(intf.options.tags)) {
+                    for (let tag of intf.options.tags)
+                        tags.add(tag.key);
+                }
+            }
+            tags = Array.from(tags);
+
+            // Transform undefined into null
+            let values = JSON.parse(JSON.stringify(form_data.rawValues, (k, v) => v != null ? v : null));
+
+            await net.post(ENV.urls.instance + 'api/records/save', {
+                tid: form_thread.tid,
+                anchor: form_thread.anchor,
+                fragments: [{
+                    fs: ENV.version,
+                    eid: form_entry.eid,
+                    store: form_entry.store,
+                    mtime: (new Date).valueOf(),
+                    values: values,
+                    notes: form_data.exportNotes(),
+                    tags: tags
+                }]
+            });
+        });
     }
 };
