@@ -245,6 +245,11 @@ function InstanceController() {
                     }
                 }) : ''}
                 ${show_title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
+                ${app.panels.data && (!ui.isPanelActive('view') || form_thread.anchor >= 0) ? html`
+                    <div style="width: 15px;"></div>
+                    <button class="icon" style="background-position-y: calc(-758px + 1.2em);"
+                            @click=${ui.wrapAction(e => self.go(e, route.page.url))}>Ajouter</button>
+                ` : ''}
                 <div style="flex: 1; min-width: 4px;"></div>
 
                 ${!goupile.isLocked() && profile.instances == null ?
@@ -1172,8 +1177,8 @@ function InstanceController() {
             let [tid, anchor] = what ? what.split('@') : [null, null];
 
             // Deal with TID and anchor
-            if (tid && tid != new_route.tid) {
-                new_route.tid = tid;
+            if (tid != new_route.tid) {
+                new_route.tid = tid || null;
                 new_route.anchor = null;
             }
             if (anchor != null) {
