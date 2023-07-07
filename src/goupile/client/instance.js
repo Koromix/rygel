@@ -37,6 +37,10 @@ function InstanceController() {
     let form_model = null;
     let form_builder = null;
 
+    let data_threads = null;
+    let data_columns = null;
+    let data_rows = null;
+
     let code_buffers = new LruMap(32);
     let code_builds = new LruMap(4);
     let fs_timer = null;
@@ -134,10 +138,14 @@ function InstanceController() {
 
         if (app.panels.editor)
             ui.createPanel('editor', 0, renderEditor);
+        if (app.panels.data)
+            ui.createPanel('data', app.panels.editor ? 1 : 0, renderData);
         ui.createPanel('view', 1, renderPage);
 
         if (app.panels.editor) {
             ui.setPanels(['editor', 'view']);
+        } else if (app.panels.data) {
+            ui.setPanels(['data', 'view']);
         } else {
             ui.setPanels(['view']);
         }
@@ -167,6 +175,9 @@ function InstanceController() {
         let show_title = !show_menu;
         let menu_is_wide = (show_menu && route.menu.chain[0].children.length > 3);
 
+        if (!ui.isPanelActive('editor') && !ui.isPanelActive('view'))
+            show_menu = false;
+
         let user_icon = goupile.isLoggedOnline() ? 450 : 494;
 
         return html`
@@ -190,9 +201,9 @@ function InstanceController() {
                             @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
                 ` : ''}
 
-                ${app.panels.editor ? html`
-                    <div style="width: 4px;"></div>
-                    <button class=${!ui.hasTwoPanels() && ui.isPanelActive('editor') ? 'icon active' : 'icon'}
+                ${app.panels.editor || app.panels.data ? html`
+                    <div style="width: 8px;"></div>
+                    <button class=${!ui.hasTwoPanels() && ui.isPanelActive(0) ? 'icon active' : 'icon'}
                             style="background-position-y: calc(-230px + 1.2em);"
                             @click=${ui.wrapAction(e => togglePanels(true, false))}></button>
                     ${ui.allowTwoPanels() ? html`
@@ -200,7 +211,7 @@ function InstanceController() {
                                 style="background-position-y: calc(-626px + 1.2em);"
                                 @click=${ui.wrapAction(e => togglePanels(true, true))}></button>
                     ` : ''}
-                    <button class=${!ui.hasTwoPanels() && ui.isPanelActive('view') ? 'icon active' : 'icon'}
+                    <button class=${!ui.hasTwoPanels() && ui.isPanelActive(1) ? 'icon active' : 'icon'}
                             style="background-position-y: calc(-318px + 1.2em);"
                             @click=${ui.wrapAction(e => togglePanels(false, true))}></button>
                 ` : ''}
@@ -312,10 +323,13 @@ function InstanceController() {
     }
 
     async function togglePanels(primary, view) {
-        if (primary != null)
-            ui.togglePanel(0, primary);
-        if (view != null)
+        ui.togglePanel(0, primary);
+
+        if (typeof view == 'string') {
+            ui.togglePanel(view, true);
+        } else if (view != null) {
             ui.togglePanel(1, view);
+        }
 
         await self.run();
 
@@ -481,6 +495,93 @@ function InstanceController() {
         code_buffers.delete(filename);
 
         return self.run();
+    }
+
+    function renderData() {
+        let recording_new = (form_thread != null && form_thread.anchor < 0);
+
+        return html`
+            <div class="padded">
+                <div class="ui_quick" style="margin-right: 2.2em;">
+                </div>
+
+                <table class="ui_table fixed" id="ins_data"
+                       style=${'min-width: ' + (5 + 5 * data_columns.length) + 'em;'}>
+                    <colgroup>
+                        <col style="width: 60px;" />
+                        <col style="width: 8em;"/>
+                        ${util.mapRange(0, data_columns.length, () => html`<col/>`)}
+                        <col style="width: 2em;"/>
+                    </colgroup>
+
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Création</th>
+                            ${data_columns.map(col => {
+                                let stats = `${col.count} / ${data_rows.length}`;
+                                let title = `${col.title}\nDisponible : ${stats} ${data_rows.length > 1 ? 'lignes' : 'ligne'}`;
+
+                                return html`
+                                    <th title=${title}>
+                                        ${col.title}<br/>
+                                        <span style="font-size: 0.7em; font-weight: normal;">${stats}</span>
+                                    </th>
+                                `;
+                            })}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        ${data_rows.map(row => {
+                            let active = (row.tid == route.tid);
+                            let cls = (row.sequence == null ? 'missing' : '') + (active ? ' active' : '');
+
+                            return html`
+                                <tr>
+                                    <td class=${cls} title=${row.sequence}>${row.sequence != null ? row.sequence : 'NA'}</td>
+                                    <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
+                                    ${data_columns.map(col => {
+                                        let entry = row.entries[col.store];
+                                        let url = col.url + `/${row.tid}`;
+
+                                        if (entry != null) {
+                                            let tags = app.tags.filter(tag => entry.tags.includes(tag.key));
+
+                                            let tooltip = 'Créé : ' + entry.ctime.toLocaleString() +
+                                                          (entry.mtime.getTime() != entry.ctime.getTime() ? '\nModifié : ' + entry.mtime.toLocaleString() : '');
+
+                                            if (tags.length)
+                                                tooltip += '\n\nTags : ' + tags.map(tag => tag.label).join(', ');
+
+                                            return html`
+                                                <td class=${active && route.page.key == col.store ? 'saved active' : 'saved'} title=${tooltip}>
+                                                    <a href=${url}>${entry.mtime.toLocaleDateString()}</a>
+                                                    ${tags.map(tag => html` <span style=${'color: ' + tag.color + ';'}>⏺\uFE0E</span>`)}
+                                                </td>
+                                            `;
+                                        } else {
+                                            return html`<td class=${active && route.page.key == col.store ? 'missing active' : 'missing'}
+                                                            title=${col.title}><a href=${url}>Afficher</a></td>`;
+                                        }
+                                    })}
+                                    ${goupile.hasPermission('data_delete') ?
+                                        html`<th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
+                                </tr>
+                            `;
+                        })}
+                        ${recording_new ? html`
+                            <tr>
+                                <td class="missing">NA</td>
+                                <td class="missing">NA</td>
+                                <td class="missing" colspan=${data_columns.length}><a @click=${e => togglePanels(null, 'view')}>Nouvel enregistrement</a></td>
+                            </tr>
+                        ` : ''}
+                        ${!data_rows.length && !recording_new ? html`<tr><td colspan=${2 + data_columns.length}>Aucune ligne à afficher</td></tr>` : ''}
+                    </tbody>
+                </table>
+            </div>
+        `;
     }
 
     async function renderPage() {
@@ -1031,7 +1132,6 @@ function InstanceController() {
         let new_route = Object.assign({}, route);
         let explicit_panels = false;
 
-        // Parse new URL
         if (url != null) {
             if (!(url instanceof URL))
                 url = new URL(url, window.location.href);
@@ -1101,6 +1201,7 @@ function InstanceController() {
                               new_route.anchor != route.anchor ||
                               new_route.page != route.page);
 
+        // Warn about data loss before loading new data
         if (context_change) {
             if (self.hasUnsavedData()) {
                 try {
@@ -1140,7 +1241,7 @@ function InstanceController() {
             await loadThread(new_route);
         }
 
-        // If we reach here, everything went smoothly!
+        // We're set!
         route = new_route;
 
         await mutex.chain(() => self.run(options.push_history));
@@ -1157,7 +1258,6 @@ function InstanceController() {
 
         return url;
     }
-
 
     this.run = async function(push_history = true) {
         let filename = route.page.filename;
@@ -1186,6 +1286,50 @@ function InstanceController() {
                 editor_filename = filename;
 
             await syncEditor();
+        }
+
+        // Load data rows (if needed)
+        if (ui.isPanelActive('data') && data_threads == null) {
+            let new_threads = await net.get(`${ENV.urls.instance}api/records/list`);
+
+            data_threads = new_threads;
+
+            let stores = Array.from(app.stores.values());
+            let store0 = stores.shift();
+
+            for (let thread of data_threads) {
+                let min_ctime = Number.MAX_SAFE_INTEGER;
+                let max_mtime = 0;
+
+                for (let store in thread.entries) {
+                    let entry = thread.entries[store];
+
+                    if (thread.sequence == null)
+                        thread.sequence = entry.sequence;
+
+                    min_ctime = Math.min(min_ctime, entry.ctime);
+                    max_mtime = Math.max(max_mtime, entry.mtime);
+
+                    entry.ctime = new Date(entry.ctime);
+                    entry.mtime = new Date(entry.mtime);
+                }
+
+                thread.ctime = new Date(min_ctime);
+                thread.mtime = new Date(max_mtime);
+            }
+
+            data_columns = stores.map(store => {
+                let col = {
+                    store: store.key,
+                    title: store.title,
+                    url: store.url,
+                    count: data_threads.reduce((acc, thread) => acc + (thread.entries[store.key] != null), 0)
+                };
+
+                return col;
+            });
+
+            data_rows = data_threads;
         }
 
         // Update URL and title
