@@ -589,6 +589,19 @@ function InstanceController() {
 
                 self.go();
             });
+
+            if (form_state.hasChanged()) {
+                form.action('-');
+                form.action('Oublier', { color: '#db0a0a', always: form_entry.anchor >= 0 }, async e => {
+                    await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
+                                           'Oublier', () => {});
+
+                    // Reload thread
+                    await loadThread(route);
+
+                    self.go();
+                });
+            }
         }
     }
 
