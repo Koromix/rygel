@@ -52,6 +52,29 @@ static bool CheckTag(Span<const char> tag)
     return true;
 }
 
+static bool CheckULID(Span<const char> str)
+{
+    const auto test_char = [](char c) { return IsAsciiDigit(c) || (c >= 'A' && c <= 'Z'); };
+
+    if (str.len != 26 || !std::all_of(str.begin(), str.end(), test_char)) {
+        LogError("Malformed ULID value '%1'", str);
+        return false;
+    }
+
+    return true;
+}
+
+static void JsonRawOrNull(sq_Statement *stmt, int column, json_Writer *json)
+{
+    const char *text = (const char *)sqlite3_column_text(*stmt, column);
+
+    if (text) {
+        json->Raw(text);
+    } else {
+        json->Null();
+    }
+}
+
 // Make sure tags are safe and can't lead to SQL injection before calling this function
 static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const SessionStamp &stamp,
                                 const char *tid, Span<const Span<const char>> tags, int64_t anchor, sq_Statement *out_stmt)
@@ -63,7 +86,8 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                        R"(SELECT t.rowid AS t, t.tid,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence,
                                  IIF(?1 IS NOT NULL, e.data, NULL) AS data,
-                                 IIF(?1 IS NOT NULL, e.notes, NULL) AS notes
+                                 IIF(?1 IS NOT NULL, e.notes, NULL) AS notes,
+                                 e.tags AS tags
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
                           WHERE 1+1)").len;
@@ -95,8 +119,8 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
         RG_ASSERT(stamp.HasPermission(UserPermission::DataAudit));
 
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data) AS (
-                              SELECT 1, eid, anchor, mtime, data, notes
+                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data, notes, tags) AS (
+                              SELECT 1, eid, anchor, mtime, data, notes, tags
                                   FROM rec_fragments
                                   WHERE (tid = ?1 OR ?1 IS NULL) AND
                                         anchor <= ?3 AND previous IS NULL AND
@@ -104,7 +128,8 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                               UNION ALL
                               SELECT rec.idx + 1, f.eid, f.anchor, f.mtime,
                                   IIF(?1 IS NOT NULL, json_patch(rec.data, f.data), NULL) AS data,
-                                  IIF(?1 IS NOT NULL, json_patch(rec.notes, f.notes), NULL) AS notes
+                                  IIF(?1 IS NOT NULL, json_patch(rec.notes, f.notes), NULL) AS notes,
+                                  f.tags
                                   FROM rec_fragments f, rec
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor AND
                                                            f.data IS NOT NULL
@@ -112,7 +137,7 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                           )
                           SELECT t.rowid AS t, t.tid,
                                  e.rowid AS e, e.eid, e.deleted, rec.anchor, e.ctime, rec.mtime,
-                                 e.store, e.sequence, rec.data, rec.notes
+                                 e.store, e.sequence, rec.data, rec.notes, rec.tags
                               FROM rec
                               INNER JOIN rec_entries e ON (e.eid = rec.eid)
                               INNER JOIN rec_threads t ON (t.tid = e.tid)
@@ -234,6 +259,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
                     json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
                     json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
                     json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
+                    json.Key("tags"); JsonRawOrNull(&stmt, 12, &json);
                 json.EndObject();
             } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == t);
             json.EndObject();
@@ -246,17 +272,6 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
     json.EndArray();
 
     json.Finish();
-}
-
-static void JsonRawOrNull(sq_Statement *stmt, int column, json_Writer *json)
-{
-    const char *text = (const char *)sqlite3_column_text(*stmt, column);
-
-    if (text) {
-        json->Raw(text);
-    } else {
-        json->Null();
-    }
 }
 
 void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -357,6 +372,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
             json.Key("values"); JsonRawOrNull(&stmt, 10, &json);
             json.Key("notes"); JsonRawOrNull(&stmt, 11, &json);
+            json.Key("tags"); JsonRawOrNull(&stmt, 12, &json);
 
             json.EndObject();
         } while (stmt.Step());
@@ -441,16 +457,22 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
     json.Finish();
 }
 
-static bool CheckULID(Span<const char> str)
+static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
 {
-    const auto test_char = [](char c) { return IsAsciiDigit(c) || (c >= 'A' && c <= 'Z'); };
+    HeapArray<char> buf(alloc);
 
-    if (str.len != 26 || !std::all_of(str.begin(), str.end(), test_char)) {
-        LogError("Malformed ULID value '%1'", str);
-        return false;
+    if (!tags.len)
+        return "[]";
+
+    Fmt(&buf, "[");
+    for (const char *tag: tags) {
+        RG_ASSERT(CheckTag(tag));
+        Fmt(&buf, "\"%1\", ", tag);
     }
+    buf.len -= 2;
+    Fmt(&buf, "]");
 
-    return true;
+    return buf.Leak().ptr;
 }
 
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -586,7 +608,9 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                         if (!frag->has_data) {
                             has_deletes = true;
+
                             frag->notes = {};
+                            frag->tags.len = 0;
                         }
                     }
                 } else if (parser.IsValid()) {
@@ -707,12 +731,12 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     {
                         sq_Statement stmt;
                         if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
-                                                                                 mtime, fs, data, notes)
-                                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                                                                                 mtime, fs, data, notes, tags)
+                                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
                                                       RETURNING anchor)",
                                                       &stmt, *anchor_ptr > 0 ? sq_Binding(*anchor_ptr) : sq_Binding(), tid,
                                                       frag.eid, session->userid, session->username, frag.mtime, frag.fs,
-                                                      frag.values, frag.notes))
+                                                      frag.values, frag.notes, TagsToJson(frag.tags, &io->allocator)))
                             return false;
                         if (!stmt.GetSingleValue(&new_anchor))
                             return false;
@@ -723,16 +747,17 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     {
                         sq_Statement stmt;
                         if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
-                                                                               store, sequence, deleted, data, notes)
-                                                      VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8)
+                                                                               store, sequence, deleted, data, notes, tags)
+                                                      VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8, ?9)
                                                       ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
                                                                                 mtime = excluded.mtime,
                                                                                 deleted = excluded.deleted,
                                                                                 data = json_patch(data, excluded.data),
-                                                                                notes = excluded.notes
+                                                                                notes = excluded.notes,
+                                                                                tags = excluded.tags
                                                       RETURNING rowid)",
                                                    &stmt, tid, frag.eid, new_anchor, frag.mtime, frag.store,
-                                                   0 + !frag.values.len, frag.values, frag.notes))
+                                                   0 + !frag.values.len, frag.values, frag.notes, TagsToJson(frag.tags, &io->allocator)))
                             return false;
                         if (!stmt.GetSingleValue(&e))
                             return false;
@@ -764,7 +789,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                            tid, frag.store, !frag.values.len))
                         return false;
 
-                    // Update entry tags
+                    // Update entry and fragment tags
                     if (!instance->db->Run("DELETE FROM rec_tags WHERE eid = ?1", frag.eid))
                         return false;
                     for (const char *tag: frag.tags) {
