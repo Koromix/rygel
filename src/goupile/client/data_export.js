@@ -31,7 +31,12 @@ async function exportRecords(stores) {
         let variables = orderVariables(store, threads);
         let columns = expandColumns(variables);
 
-        let ws = XLSX.utils.aoa_to_sheet([columns.map(column => column.name)]);
+        let header = [
+            '__tid', '__sequence',
+            ...columns.map(column => column.name)
+        ];
+
+        let ws = XLSX.utils.aoa_to_sheet([header]);
 
         for (let thread of threads) {
             let entry = thread.entries[store];
@@ -39,12 +44,15 @@ async function exportRecords(stores) {
             if (entry == null)
                 continue;
 
-            let row = columns.map(column => {
-                let result = column.read(entry.data);
-                if (result == null)
-                    return 'NA';
-                return result;
-            });
+            let row = [
+                thread.tid, findSequence(thread),
+                ...columns.map(column => {
+                    let result = column.read(entry.data);
+                    if (result == null)
+                        return 'NA';
+                    return result;
+                })
+            ];
             XLSX.utils.sheet_add_aoa(ws, [row], {origin: -1});
         }
 
@@ -53,7 +61,7 @@ async function exportRecords(stores) {
 
     // Create workbook...
     let wb = XLSX.utils.book_new();
-    let wb_name = `export_${dates.today()}`;
+    let wb_name = `export_${ENV.key}_${dates.today()}`;
     for (let [store, ws] of worksheets) {
         XLSX.utils.book_append_sheet(wb, ws, store);
     }
@@ -148,4 +156,15 @@ function expandColumns(variables) {
     }
 
     return columns;
+}
+
+function findSequence(thread) {
+    for (let store in thread.entries) {
+        let entry = thread.entries[store];
+
+        if (entry.sequence != null)
+            return entry.sequence;
+    }
+
+    return null;
 }
