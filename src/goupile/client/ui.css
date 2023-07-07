@@ -308,6 +308,8 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     width: 100%;
     border-collapse: collapse;
     border-radius: var(--widget_rounding);
+    --anchor_color: var(--active_color);
+    --anchor_color_n1: var(--active_color_n1);
 }
 .ui_table.fixed { table-layout: fixed; }
 .ui_table thead th { background: #f8f8f8; }
