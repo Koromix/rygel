@@ -1420,6 +1420,8 @@ function InstanceController() {
                     status.comment = d.values.comment;
                     status.locked = d.values.locked;
 
+                    form_state.markChange();
+
                     resolve();
                 });
             });

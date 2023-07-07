@@ -28,7 +28,8 @@ function FormState(data = null) {
     this.just_triggered = false;
     this.state_tabs = {};
     this.state_sections = {};
-    this.explicitly_changed = false;
+    this.force_changed = false;
+    this.has_interaction = false;
 
     if (!(data instanceof MagicData)) {
         if (data == null)
@@ -40,8 +41,21 @@ function FormState(data = null) {
     this.data = data;
     this.values = data.values;
 
-    this.hasChanged = function() { return data.hasChanged && self.explicitly_changed; };
-    this.markInteraction = function() { self.explicitly_changed = true; };
+    this.hasChanged = function() {
+        if (!data.hasChanged() && !self.force_changed)
+            return false;
+        if (!self.has_interaction)
+            return false;
+
+        return true;
+    };
+
+    this.markInteraction = function() { self.has_interaction = true; };
+    this.markChange = function() {
+        self.force_changed = true;
+        self.has_interaction = true;
+    };
+
     this.justTriggered = function() { return self.just_triggered; };
 }
 FormState.next_unique_id = 0;
@@ -131,6 +145,8 @@ function FormBuilder(state, model) {
 
     this.hasChanged = function() { return state.hasChanged(); };
     this.markInteraction = function() { state.markInteraction(); };
+    this.markChange = function() { state.markChange(); };
+
     this.justTriggered = function() { return state.justTriggered(); };
 
     this.isValid = function() { return model.isValid(); };
