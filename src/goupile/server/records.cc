@@ -248,6 +248,17 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
     json.Finish();
 }
 
+static void JsonRawOrNull(sq_Statement *stmt, int column, json_Writer *json)
+{
+    const char *text = (const char *)sqlite3_column_text(*stmt, column);
+
+    if (text) {
+        json->Raw(text);
+    } else {
+        json->Null();
+    }
+}
+
 void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     if (instance->config.sync_mode == SyncMode::Offline) {
@@ -344,8 +355,8 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
             json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
             json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
-            json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 10));
-            json.Key("notes"); json.Raw((const char *)sqlite3_column_text(stmt, 11));
+            json.Key("values"); JsonRawOrNull(&stmt, 10, &json);
+            json.Key("notes"); JsonRawOrNull(&stmt, 11, &json);
 
             json.EndObject();
         } while (stmt.Step());
