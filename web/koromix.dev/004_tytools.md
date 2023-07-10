@@ -3,8 +3,7 @@
 
 # Overview
 
-TyTools is a collection of **independent tools** and you only need one executable to use
-any of them. The Qt-based GUI tools are statically compiled to make that possible.
+TyTools is a collection of independent tools to manage, flash and communicate with **[Teensy](https://www.pjrc.com/teensy/) microcontrollers**.
 
 Tool        | Type                      | Description
 ------------| ------------------------- | ----------------------------------------------------
