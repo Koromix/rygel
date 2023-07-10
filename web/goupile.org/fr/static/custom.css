@@ -28,9 +28,7 @@ aside.footnote > p {
     margin-left: 1rem;
 }
 
-.toctree-l1 > a {
-    font-size: 1.1em;
-}
+.toctree-l1 > a { font-size: 1.1em; }
 
 h1 {
     font-size: 2rem;
@@ -38,7 +36,6 @@ h1 {
     font-weight: normal;
     margin-bottom: 1.2rem;
 }
-
 h2 {
     display: table;
     margin-left: 0;
@@ -58,7 +55,6 @@ h2 > a {
     position: absolute;
     left: calc(100% - 32px);
 }
-
 h3 {
     font-size: 1.4rem;
     font-weight: normal;
@@ -66,5 +62,18 @@ h3 {
     font-style: italic;
     padding-left: 50px;
 }
-
 :target > h1, :target > h3 { background: none !important; }
+
+.screenshot {
+    max-width: 100%;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+.screenshot > img {
+    max-width: 100%;
+    vertical-align: top;
+    cursor: pointer;
+    border: 4px solid #ebebeb;
+}

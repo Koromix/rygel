@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "koffi.dev"
+name = "goupile.org"
 version = "0.1.0"
 description = ""
 authors = ["Niels Martignène <niels.martignene@protonmail.com>"]

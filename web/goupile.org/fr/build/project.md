@@ -1,0 +1,3 @@
+# Structure globale
+
+*XXX*

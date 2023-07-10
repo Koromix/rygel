@@ -19,7 +19,7 @@ FelixBuild.ini.user
 node_modules
 package-lock.json
 
-/web/*/dist/
+/web/**/dist/
 
 /src/napka/data/*
 !/src/napka/data/.gitkeep
