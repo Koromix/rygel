@@ -33,12 +33,6 @@ amalgamated header file is automatically produced by CMake scripts.
 Look at [Sean Barrett's excellent stb libraries](https://github.com/nothings/stb) for the
 reasoning behind this mode of distribution.
 
-# License
-
-libhs is in the public domain, or the equivalent where that is not possible. You can and should
-do anything you want with it. You have no legal obligation to do anything else, although I
-appreciate attribution.
-
 # Contribute
 
 You can clone the code and report bugs on the [TyTools GitHub
@@ -99,3 +93,8 @@ The following code uses libhs to enumerate serial and HID devices:
 
         return 0;
     }
+
+# License
+
+All the code related to these programs is under **public domain**, you can do whatever you want
+with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) more more information.

@@ -13,9 +13,6 @@ tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boa
 
 Download the [latest release from GitHub](https://github.com/Koromix/tytools/releases).
 
-All the code related to these programs is under **public domain**, you can do whatever you want
-with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) more more information.
-
 # Using tycmd
 
 You can manage multiple devices connected simultaneously, tycmd (and the other TyTools) uniquely
@@ -186,3 +183,8 @@ Open the project directory in a terminal and execute:
 If you want to build debug binaries instead, you should specify the build type:
 
     cmake -DCMAKE_BUILD_TYPE=Debug ../..
+
+# License
+
+All the code related to these programs is under **public domain**, you can do whatever you want
+with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) more more information.
