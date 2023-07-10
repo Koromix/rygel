@@ -50,6 +50,12 @@ It is distributed as a **single-file header**. Drop the file in your project, ad
 
 Find out more on the [page dedicated to libhs](libhs).
 
+## Meestic
+
+Meestic is a small utility made to control **the lights of MSI Delta 15 laptop keyboards** on Windows and Linux. It provides both a CLI and a system-tray GUI, and can fully replace the official MSI tool (which is not even available for Linux).
+
+Find out more on the [page dedicated to Meestic](meestic).
+
 # Other projects
 
 The projects on this page are provided as-is, and are in **various states of completion**.
@@ -62,4 +68,3 @@ Project | Description | Language
 [SeatSH](https://github.com/Koromix/rygel/tree/master/src/seatsh) | SeatSH is a Windows service that enables you to launch graphical programs from an SSH connection on Windows 10, for automated test systems. | C++
 [DRD](https://github.com/Koromix/rygel/tree/master/src/drd) | Alternative french PMSI MCO classifier<br>*Library (libdrd), command-line tool (drdc) and R package (drdR)* | C++
 [SaneBB](https://github.com/Koromix/libraries/blob/master/SaneBB.java) | Small (single-file) and fast BBCode parser in Java | Java
-[Meestic](https://github.com/Koromix/rygel/tree/master/src/meestic) | CLI and GUI tools to control MSI Delta 15 keyboard lighting. Provided "as is", no guarantee. | C++

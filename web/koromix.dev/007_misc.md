@@ -76,9 +76,3 @@ SaneBB is a **small and fast BBCode parser in Java**, which I made as an alterna
 It's a single Java file, the documentation is included at the top of the file.
 
 You can find it here [on GitHub](https://github.com/Koromix/libraries/blob/master/SaneBB.java).
-
-# Meestic
-
-Meestic is a suite of tools to **control the keyboard lighting on MSI Delta 15 laptops**, which may or may not support any other device.
-
-You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/meestic).
