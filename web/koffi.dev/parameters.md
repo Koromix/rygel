@@ -28,7 +28,9 @@ The same can be done when declaring a function with a C-like prototype string, w
 This Windows example enumerate all Chrome windows along with their PID and their title. The `GetWindowThreadProcessId()` function illustrates how to get a primitive value from an output argument.
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const user32 = koffi.load('user32.dll');
 
 const DWORD = koffi.alias('DWORD', 'uint32_t');
@@ -82,7 +84,9 @@ for (let hwnd = null;;) {
 This example calls the POSIX function `gettimeofday()`, and uses the prototype-like syntax.
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const lib = koffi.load('libc.so.6');
 
 const timeval = koffi.struct('timeval', {
@@ -108,7 +112,9 @@ console.log(tv);
 This example opens an in-memory SQLite database, and uses the node-ffi-style function declaration syntax.
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const lib = koffi.load('sqlite3.so');
 
 const sqlite3 = koffi.opaque('sqlite3');
@@ -182,7 +188,9 @@ Koffi provides two features to deal with this:
 The example below shows the use of `koffi.as()` to read the header of a PNG file with `fread()`.
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const lib = koffi.load('libc.so.6');
 
 const FILE = koffi.opaque('FILE');
@@ -238,7 +246,9 @@ You can use buffers and typed arrays for output (and input/output) pointer param
 Once the native function returns, you can decode the content with `koffi.decode(value, type)` as in the following example:
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const lib = koffi.load('libc.so.6');
 
 const Vec3 = koffi.struct('Vec3', {
@@ -292,7 +302,9 @@ const ExplicitFree = koffi.disposable('HeapStr16', 'str16', koffi.free); // You 
 The following example illustrates the use of a disposable type derived from *str*.
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const lib = koffi.load('libc.so.6');
 
 const HeapStr = koffi.disposable('str');
@@ -305,7 +317,9 @@ console.log(copy); // Prints Hello!
 When you declare functions with the [prototype-like syntax](functions.md#definition-syntax), you can either use named disposable types or use the '!' shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls `koffi.free(ptr)`.
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const lib = koffi.load('libc.so.6');
 
 // You can also use: const strdup = lib.func('const char *! strdup(const char *str)')

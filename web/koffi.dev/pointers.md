@@ -16,7 +16,9 @@ In C, pointer arguments are used for differenty purposes. It is important to dis
 The following Win32 example uses `GetCursorPos()` (with an output parameter) to retrieve and show the current cursor position.
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const lib = koffi.load('kernel32.dll');
 
 // Type declarations
@@ -115,7 +117,9 @@ int64_t ComputeTotalLength(const char **strings)
 ```
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const lib = koffi.load('./length.so');
 
 const ComputeTotalLength = lib.func('int64_t ComputeTotalLength(const char **strings)');

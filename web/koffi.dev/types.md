@@ -278,7 +278,9 @@ const char *ConcatBuild(Concat *c)
 ```
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
+
 const lib = koffi.load('./handles.so');
 
 const Concat = koffi.opaque('Concat');
@@ -344,6 +346,7 @@ Koffi applies the following conversion rules when passing arrays to/from C:
 See the example below:
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
 
 // Those two structs are exactly the same, only the array conversion hint is different

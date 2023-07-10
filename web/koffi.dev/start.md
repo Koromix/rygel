@@ -8,10 +8,14 @@ You can install Koffi with npm:
 npm install koffi
 ```
 
-Once you have installed Koffi, you can start by loading it this way:
+Once you have installed Koffi, you can start by loading it:
 
 ```js
+// CommonJS syntax
 const koffi = require('koffi');
+
+// ES6 modules
+import koffi from 'koffi';
 ```
 
 Below you can find three examples:
@@ -26,6 +30,7 @@ This is a small example for Linux systems, which uses `gettimeofday()`, `localti
 It illustrates the use of output parameters.
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
 
 // Load the shared library
@@ -76,6 +81,7 @@ This is a small example targeting the Win32 API, using `MessageBox()` to show a 
 It illustrates the use of the x86 stdcall calling convention, and the use of UTF-8 and UTF-16 string arguments.
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
 
 // Load the shared library

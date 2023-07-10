@@ -58,6 +58,7 @@ DoSomething('string', { .str = 'Hello!' });
 The following example uses the [SendInput](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput) Win32 API to emit the Win+D shortcut and hide windows (show the desktop).
 
 ```js
+// ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
 
 // Win32 type and functions
