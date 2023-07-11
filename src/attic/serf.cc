@@ -191,8 +191,8 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     // Default config filename
-    LocalArray<const char *, 4> config_filenames;
-    const char *config_filename = FindConfigFile("serf.ini", &temp_alloc, &config_filenames);
+    const char *config_filename = Fmt(&temp_alloc, "%1%/serf.ini", GetApplicationDirectory()).ptr;
+    bool explicit_config = false;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp, 
@@ -206,7 +206,7 @@ Options:
                                  %!D..(default: %3)%!0
         %!..+--port <port>%!0            Change web server port
                                  %!D..(default: %4)%!0)",
-                FelixTarget, FmtSpan(config_filenames.As()), config.root_directory, config.http.port);
+                FelixTarget, config_filename, config.root_directory, config.http.port);
     };
 
     // Find config filename
@@ -219,12 +219,17 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
+                explicit_config = true;
             } else if (opt.TestHasFailed()) {
                 return 1;
             }
         }
     }
 
+    // Load config
+    if (!explicit_config && !TestFile(config_filename)) {
+        config_filename = nullptr;
+    }
     if (config_filename && !LoadConfig(config_filename, &config))
         return 1;
 
