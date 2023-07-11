@@ -744,7 +744,7 @@ void http_IO::AttachError(int code, const char *details)
     AddHeader("Content-Type", "text/plain");
 }
 
-bool http_IO::AttachFile(int code, const char *filename)
+bool http_IO::AttachFile(int code, const char *filename, const char *mime_type)
 {
     FileInfo file_info;
     if (StatFile(filename, &file_info) != StatResult::Success)
@@ -756,6 +756,10 @@ bool http_IO::AttachFile(int code, const char *filename)
 
     MHD_Response *response = MHD_create_response_from_fd((uint64_t)file_info.size, fd);
     AttachResponse(code, response);
+
+    if (mime_type) {
+        AddHeader("Content-Type", mime_type);
+    }
 
     return true;
 }

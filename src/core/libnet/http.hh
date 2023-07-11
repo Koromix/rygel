@@ -224,7 +224,7 @@ public:
     bool AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
                       CompressionType compression_type = CompressionType::None);
     void AttachError(int code, const char *details = nullptr);
-    bool AttachFile(int code, const char *filename);
+    bool AttachFile(int code, const char *filename, const char *mime_type = nullptr);
     void AttachNothing(int code);
 
     void ResetResponse();

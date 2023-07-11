@@ -20,6 +20,10 @@ It will transparently forward standard streams (stdin, stdout, stderr) and repor
 
 It is mainly useful for automated test systems, **do not install it** on production machines because it is a security risk. SeatSH only makes sure that the user connected to the SSH matches the one on the active console session, nothing more.
 
+# Serf
+
+Small HTTP server made for localhost testing, with support for custom HTTP headers.
+
 ## Build and installation
 
 In order to build SeatSH on Windows, clone the repository and run these commands from the root directory:
