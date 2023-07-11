@@ -25,6 +25,7 @@ struct Config {
     http_Config http { 80 };
 
     const char *root_directory = ".";
+    bool auto_index = false;
     HeapArray<HttpHeader> headers;
 
     bool set_etag = true;
@@ -73,6 +74,8 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                 do {
                     if (prop.key == "RootDirectory") {
                         config.root_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    } else if (prop.key == "AutoIndex") {
+                        valid &= ParseBool(prop.value, &config.auto_index);
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseInt(prop.value, &config.max_age);
                     } else if (prop.key == "ETag") {
@@ -115,6 +118,140 @@ static bool LoadConfig(const char *filename, Config *out_config)
     return LoadConfig(&st, out_config);
 }
 
+static void ServeFile(const char *filename, const FileInfo &file_info, const http_RequestInfo &request, http_IO *io)
+{
+    const char *etag = config.set_etag ? Fmt(&io->allocator, "%1-%2", file_info.mtime, file_info.size).ptr : nullptr;
+
+    // Handle ETag caching
+    if (etag) {
+        const char *client_etag = request.GetHeaderValue("If-None-Match");
+
+        if (client_etag && TestStr(client_etag, etag)) {
+            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            io->AttachResponse(304, response);
+            return;
+        }
+    }
+
+    // Send the file
+    const char *mimetype = http_GetMimeType(GetPathExtension(filename));
+    io->AttachFile(200, filename, mimetype);
+    io->AddCachingHeaders(config.max_age, etag);
+}
+
+static void WriteContent(Span<const char> str, StreamWriter *writer) {
+    for (char c: str) {
+        if (c == '&') {
+            writer->Write("&amp;");
+        } else if (c == '<') {
+            writer->Write("&lt;");
+        } else if (c == '>') {
+            writer->Write("&gt;");
+        } else if ((uint8_t)c < 32) {
+            Print(writer, "<0x%1>", FmtHex((uint8_t)c).Pad0(-2));
+        } else {
+            writer->Write(c);
+        }
+    }
+}
+
+static void WriteURL(Span<const char> str, StreamWriter *writer) {
+    for (char c: str) {
+        if (IsAsciiAlphaOrDigit(c) || c == '/' || c == '-' || c == '.' || c == '_' || c == '~') {
+            writer->Write((char)c);
+        } else {
+            Print(writer, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
+        }
+    }
+}
+
+static void ServeIndex(const char *dirname, const http_RequestInfo &request, http_IO *io)
+{
+    static Span<const char> IndexTemplate =
+R"(<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8"/>
+        <title>{{ TITLE }}</title>
+    </head>
+    <body>
+{{ CONTENT }}
+    </body>
+</html>
+)";
+
+    io->RunAsync([=]() {
+        HeapArray<Span<const char>> names;
+        {
+            EnumResult ret = EnumerateDirectory(dirname, nullptr, 4096,
+                                                [&](const char *basename, FileType file_type) {
+                Span<const char> filename = Fmt(&io->allocator, "%1%2", basename, file_type == FileType::Directory ? "/" : "");
+                names.Append(filename);
+
+                return true;
+            });
+
+            if (ret != EnumResult::Success) {
+                switch (ret) {
+                    case EnumResult::Success: { RG_UNREACHABLE(); } break;
+
+                    case EnumResult::MissingPath: { io->AttachError(404); } break;
+                    case EnumResult::AccessDenied: { io->AttachError(403); } break;
+                    case EnumResult::PartialEnum: {
+                        LogError("Too many files");
+                        io->AttachError(413);
+                    } break;
+                    case EnumResult::CallbackFail:
+                    case EnumResult::OtherError: { /* 500 */ } break;
+                }
+
+                return;
+            }
+        }
+
+        std::sort(names.begin(), names.end(), [](Span<const char> name1, Span<const char> name2) {
+            bool is_directory1 = EndsWith(name1, "/");
+            bool is_directory2 = EndsWith(name2, "/");
+
+            if (is_directory1 != is_directory2) {
+                return is_directory1;
+            } else {
+                return CmpStr(name1, name2) < 0;
+            }
+        });
+
+        StreamWriter st;
+        if (!io->OpenForWrite(200, -1, &st))
+            return;
+
+        PatchFile(IndexTemplate.As<const uint8_t>(), &st, [&](Span<const char> expr, StreamWriter *writer) {
+            Span<const char> key = TrimStr(expr);
+
+            if (key == "TITLE") {
+                Span<const char> title = Fmt(&io->allocator, "%1/", SplitStrReverseAny(dirname, RG_PATH_SEPARATORS));
+                WriteContent(title, writer);
+            } else if (key == "CONTENT") {
+                if (!TestStr(request.url, "/")) {
+                    writer->Write("        <a href=\"..\">Go back</a>");
+                }
+
+                if (names.len) {
+                    writer->Write("        <ul>\n");
+                    for (Span<const char> name: names) {
+                        writer->Write("            <li><a href=\""); WriteURL(name, writer); writer->Write("\">");
+                        WriteContent(name, writer); writer->Write("</a></li>\n");
+                    }
+                    writer->Write("        </ul>");
+                } else {
+                    writer->Write("<p>Empty directory</p>");
+                }
+            } else {
+                Print(writer, "{{%1}}", expr);
+            }
+        });
+    });
+}
+
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
     RG_ASSERT(StartsWith(request.url, "/"));
@@ -151,10 +288,26 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
     }
 
-    if (file_info.type == FileType::Directory) {
-        filename = Fmt(&io->allocator, "%1/index.html", filename).ptr;
+    if (file_info.type == FileType::File) {
+        ServeFile(filename, file_info, request, io);
+    } else if (file_info.type == FileType::Directory) {
+        if (!EndsWith(request.url, "/")) {
+            const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
+            io->AddHeader("Location", redirect);
+            io->AttachNothing(302);
+            return;
+        }
 
-        if (StatFile(filename, &file_info) != StatResult::Success) {
+        const char *index_filename = Fmt(&io->allocator, "%1/index.html", filename).ptr;
+
+        FileInfo index_info;
+
+        if (StatFile(index_filename, (int)StatFlag::IgnoreMissing, &index_info) == StatResult::Success &&
+                file_info.type == FileType::File) {
+            ServeFile(index_filename, index_info, request, io);
+        } else if (config.auto_index) {
+            ServeIndex(filename, request, io);
+        } else {
             LogError("Cannot access directory without index.html");
             io->AttachError(403);
             return;
@@ -163,24 +316,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         io->AttachError(403);
         return;
     }
-
-    const char *etag = config.set_etag ? Fmt(&io->allocator, "%1-%2", file_info.mtime, file_info.size).ptr : nullptr;
-
-    // Handle ETag caching
-    if (etag) {
-        const char *client_etag = request.GetHeaderValue("If-None-Match");
-
-        if (client_etag && TestStr(client_etag, etag)) {
-            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            io->AttachResponse(304, response);
-            return;
-        }
-    }
-
-    // Send the file
-    const char *mimetype = http_GetMimeType(GetPathExtension(filename));
-    io->AttachFile(200, filename, mimetype);
-    io->AddCachingHeaders(config.max_age, etag);
 }
 
 
