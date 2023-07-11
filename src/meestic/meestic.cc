@@ -327,12 +327,19 @@ R"(Usage: %!..+%1 daemon [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: %2)%!0
+                                 %!D..(default: see below)%!0
     %!..+-S, --socket_file <socket>%!0   Change control socket
-                                 %!D..(default: %3)%!0
+                                 %!D..(default: %2)%!0
 
-        %!..+--no_sandbox%!0             Disable use of sandboxing)",
-                FelixTarget, FmtSpan(config_filenames.As()), socket_filename);
+        %!..+--no_sandbox%!0             Disable use of sandboxing
+
+By default, the first of the following config files will be used:
+)",
+                FelixTarget, socket_filename);
+
+        for (const char *filename: config_filenames) {
+            PrintLn(fp, "    %!..+%1%!0", filename);
+        }
     };
 
     // Parse options

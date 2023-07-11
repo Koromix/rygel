@@ -277,8 +277,15 @@ R"(Usage: %!..+%1 [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: %2)%!0)",
-                FelixTarget, FmtSpan(config_filenames.As()));
+                                 %!D..(default: see below)%!0
+
+By default, the first of the following config files will be used:
+)",
+                FelixTarget);
+
+        for (const char *filename: config_filenames) {
+            PrintLn(fp, "    %!..+%1%!0", filename);
+        }
     };
 
     // Handle version
