@@ -126,13 +126,13 @@ enum class CompileFeature {
     ZeroInit = 1 << 13,
     CFI = 1 << 14,
     ShuffleCode = 1 << 15,
-    NoConsole = 1 << 17,
+    NoConsole = 1 << 16,
 
-    SSE41 = 1 << 18,
-    SSE42 = 1 << 19,
-    AVX2 = 1 << 20,
-    AVX512 = 1 << 21,
-    AESNI = 1 << 22
+    SSE41 = 1 << 17,
+    SSE42 = 1 << 18,
+    AVX2 = 1 << 19,
+    AVX512 = 1 << 20,
+    AESNI = 1 << 21
 };
 static const OptionDesc CompileFeatureOptions[] = {
     {"PCH",           "Use precompiled headers for faster compilation"},
