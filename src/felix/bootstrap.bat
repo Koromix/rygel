@@ -22,7 +22,7 @@ if NOT ERRORLEVEL 1 (
         mkdir %TEMP%
         clang-cl /nologo /std:c++20 /I../.. /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%TEMP%\
         lld-link /nologo %TEMP%\*.obj ws2_32.lib advapi32.lib shell32.lib ole32.lib /out:%TEMP%\felix.exe
-        %TEMP%\felix.exe -pFast felix
+        %TEMP%\felix.exe -pFast felix %*
         copy %BUILD%\felix.exe %BINARY% >NUL
 
         echo Cleaning up...
@@ -37,7 +37,7 @@ if NOT ERRORLEVEL 1 (
     mkdir %TEMP%
     cl /nologo /std:c++20 /I../.. /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%TEMP%\
     link /nologo %TEMP%\*.obj ws2_32.lib advapi32.lib shell32.lib ole32.lib /out:%TEMP%\felix.exe
-    %TEMP%\felix.exe -pFast felix
+    %TEMP%\felix.exe -pFast felix %*
     copy %BUILD%\felix.exe %BINARY% >NUL
 
     echo Cleaning up...
@@ -53,7 +53,7 @@ if NOT ERRORLEVEL 1 (
     echo Bootstrapping felix with GCC...
     mkdir %TEMP%
     g++ -std=gnu++2a -O0 -I../.. -DNDEBUG -DNOMINMAX  -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE %SRC% -lws2_32 -ladvapi32 -lshell32 -lole32 -luuid -w -o%TEMP%\felix.exe
-    %TEMP%\felix.exe -pFast felix
+    %TEMP%\felix.exe -pFast felix %*
     copy %BUILD%\felix.exe %BINARY% >NUL
 
     echo Cleaning up...

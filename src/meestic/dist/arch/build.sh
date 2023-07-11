@@ -5,5 +5,5 @@ cd /io
 # Fix git error about dubious repository ownership
 git config --global safe.directory '*'
 
-./bootstrap.sh
-./felix -pFast -O bin/Packages/meestic/arch/bin meestic MeesticGui
+./bootstrap.sh --no_user
+./felix -pFast --no_user -O bin/Packages/meestic/arch/bin meestic MeesticGui

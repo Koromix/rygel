@@ -2,4 +2,4 @@
 setlocal
 
 cd %~dp0
-src\felix\bootstrap.bat
+src\felix\bootstrap.bat %*
