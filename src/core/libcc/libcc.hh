@@ -3906,8 +3906,6 @@ enum class StatResult {
 
     MissingPath,
     AccessDenied,
-    PartialEnum,
-    CallbackFail,
     OtherError
 };
 
