@@ -599,8 +599,10 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTar
         }
     }
 
-    if (port && !ApplyLight(settings))
-        return 1;
+    if (!GetDebugFlag("FAKE_LIGHTS")) {
+        if (!ApplyLight(settings))
+            return 1;
+    }
 
     LogInfo("Done!");
     return 0;
