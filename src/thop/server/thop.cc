@@ -592,10 +592,6 @@ Options:
 
             if (ret == WaitForResult::Interrupt) {
                 LogInfo("Exit requested");
-
-                LogDebug("Stop HTTP server");
-                daemon.Stop();
-
                 run = false;
             }
 
@@ -603,6 +599,9 @@ Options:
             PruneSessions();
         }
     }
+
+    LogDebug("Stop HTTP server");
+    daemon.Stop();
 
     return 0;
 }

@@ -1060,10 +1060,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
             if (ret == WaitForResult::Interrupt) {
                 LogInfo("Exit requested");
-
-                LogDebug("Stop HTTP server");
-                daemon.Stop();
-
                 run = false;
             } else if (ret == WaitForResult::Message) {
                 LogDebug("Syncing instances");
@@ -1086,6 +1082,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             first = false;
         }
     }
+
+    LogDebug("Stop HTTP server");
+    daemon.Stop();
 
     return 0;
 }
