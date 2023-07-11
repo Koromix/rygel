@@ -277,7 +277,7 @@ R"(Usage: %!..+%1 [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: %2)%!0%!0)",
+                                 %!D..(default: %2)%!0)",
                 FelixTarget, FmtSpan(config_filenames.As()));
     };
 
