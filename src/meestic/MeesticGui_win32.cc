@@ -46,7 +46,7 @@ static HANDLE toggle;
 
 static hs_port *port = nullptr;
 
-static void ShowAboutDialog()
+static void ShowDialog(const char *text)
 {
     HINSTANCE module = GetModuleHandle(nullptr);
 
@@ -54,7 +54,7 @@ static void ShowAboutDialog()
 
     wchar_t title[1024]; ConvertUtf8ToWin32Wide(FelixTarget, title);
     wchar_t main[1024]; swprintf(main, RG_LEN(main), L"%hs %hs", FelixTarget, FelixVersion);
-    const wchar_t *content = LR"(<a href="https://koromix.dev/misc#meestic">https://koromix.dev/</a>)";
+    wchar_t content[2048]; ConvertUtf8ToWin32Wide(text, content);
 
     dialog.cbSize = RG_SIZE(dialog);
     dialog.hwndParent = main_hwnd;
@@ -79,6 +79,12 @@ static void ShowAboutDialog()
     };
 
     TaskDialogIndirect(&dialog, nullptr, nullptr, nullptr);
+}
+
+static void ShowAboutDialog()
+{
+    const char *text = R"(<a href="https://koromix.dev/misc#meestic">https://koromix.dev/</a>)";
+    ShowDialog(text);
 }
 
 static bool ApplyProfile(Size idx)
@@ -271,27 +277,35 @@ int Main(int argc, char **argv)
     LocalArray<const char *, 4> config_filenames;
     const char *config_filename = FindConfigFile("MeesticGui.ini", &temp_alloc, &config_filenames);
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=]() {
+        HeapArray<char> help;
+
+        Fmt(&help,
 R"(Usage: %!..+%1 [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: see below)%!0
 
 By default, the first of the following config files will be used:
+
 )",
                 FelixTarget);
 
         for (const char *filename: config_filenames) {
-            PrintLn(fp, "    %!..+%1%!0", filename);
+            Fmt(&help, "    %!..+%1%!0\n", filename);
         }
+
+        ShowDialog(help.ptr);
     };
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
-        PrintLn("Compiler: %1", FelixCompiler);
+        HeapArray<char> version;
+
+        Fmt(&version, "%!R..%1%!0 %!..+%2%!0\n", FelixTarget, FelixVersion);
+        Fmt(&version, "Compiler: %1", FelixCompiler);
+
+        ShowDialog(version.ptr);
         return 0;
     }
 
@@ -301,7 +315,7 @@ By default, the first of the following config files will be used:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage();
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
