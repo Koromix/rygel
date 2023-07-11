@@ -318,6 +318,7 @@ int RunBuild(Span<const char *> arguments)
     HeapArray<const char *> selectors;
     const char *config_filename = nullptr;
     bool load_presets = true;
+    bool load_user = true;
     const char *preset_name = nullptr;
     HostSpecifier host_spec = {};
     BuildSettings build = {};
@@ -340,8 +341,10 @@ Options:
     %!..+-O, --output_dir <dir>%!0       Set output directory
                                  %!D..(default: bin/<preset>)%!0
 
-        %!..+--no_presets%!0             Ignore presets
+        %!..+--no_presets%!0             Ignore all presets
                                  %!D..(FelixBuild.ini.presets, FelixBuild.ini.user)%!0
+        %!..+--no_user%!0                Ignore user presets
+                                 %!D..(FelixBuild.ini.user)%!0
     %!..+-p, --preset <preset>%!0        Select specific preset
 
     %!..+-h, --host <host>%!0            Override platform, compiler and/or linker
@@ -419,6 +422,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 }
             } else if (opt.Test("--no_presets")) {
                 load_presets = false;
+                load_user = false;
+            } else if (opt.Test("--no_user")) {
+                load_user = false;
             } else if (opt.Test("-p", "--preset", OptionType::Value)) {
                 preset_name = opt.current_value;
             } else if (opt.Test("--run") || opt.Test("--run_here")) {
@@ -463,20 +469,23 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
     // Load customized presets
     HeapArray<BuildPreset> presets;
-    if (load_presets) {
-        const char *presets_filename = Fmt(&temp_alloc, "%1.presets", config_filename).ptr;
-        const char *user_filename = Fmt(&temp_alloc, "%1.user", config_filename).ptr;
-
+    {
         const char *default_preset = nullptr;
 
-        if (TestFile(presets_filename) && !LoadPresetFile(presets_filename, &temp_alloc,
-                                                          &default_preset, &host_spec,
-                                                          &jobs, &presets))
-            return 1;
-        if (TestFile(user_filename) && !LoadPresetFile(user_filename, &temp_alloc,
-                                                       &default_preset, &host_spec,
-                                                       &jobs, &presets))
-            return 1;
+        if (load_presets) {
+            const char *filename = Fmt(&temp_alloc, "%1.presets", config_filename).ptr;
+
+            if (TestFile(filename) && !LoadPresetFile(filename, &temp_alloc, &default_preset,
+                                                      &host_spec, &jobs, &presets))
+                return 1;
+        }
+        if (load_user) {
+            const char *filename = Fmt(&temp_alloc, "%1.user", config_filename).ptr;
+
+            if (TestFile(filename) && !LoadPresetFile(filename, &temp_alloc, &default_preset,
+                                                      &host_spec, &jobs, &presets))
+                return 1;
+        }
 
         preset_name = preset_name ? preset_name : default_preset;
     }
@@ -524,6 +533,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--no_presets")) {
+                // Already handled
+            } else if (opt.Test("--no_user")) {
                 // Already handled
             } else if (opt.Test("-p", "--preset", OptionType::Value)) {
                 // Already handled
