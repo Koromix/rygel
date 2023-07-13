@@ -221,11 +221,11 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
         do {
             int64_t t = sqlite3_column_int64(stmt, 0);
             int64_t prev_e = -1;
-            int64_t max_anchor = -1;
 
             json.StartObject();
 
             json.Key("tid"); json.String((const char *)sqlite3_column_text(stmt, 1));
+            json.Key("saved"); json.Bool(true);
 
             json.Key("entries"); json.StartObject();
             do {
@@ -238,7 +238,6 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
                 prev_e = e;
 
                 int64_t anchor = sqlite3_column_int64(stmt, 5);
-                max_anchor = std::max(max_anchor, anchor);
 
                 json.Key(store); json.StartObject();
 
@@ -258,8 +257,6 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
                 json.EndObject();
             } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == t);
             json.EndObject();
-
-            json.Key("anchor"); json.Int64(max_anchor);
 
             json.EndObject();
         } while (stmt.IsRow());
@@ -343,9 +340,9 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
     json.StartObject();
     {
         int64_t prev_e = -1;
-        int64_t max_anchor = -1;
 
         json.Key("tid"); json.String(tid);
+        json.Key("saved"); json.Bool(true);
 
         json.Key("entries"); json.StartObject();
         do {
@@ -358,7 +355,6 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             prev_e = e;
 
             int64_t anchor = sqlite3_column_int64(stmt, 5);
-            max_anchor = std::max(max_anchor, anchor);
 
             json.Key(store); json.StartObject();
 
@@ -380,8 +376,6 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             json.EndObject();
         } while (stmt.Step());
         json.EndObject();
-
-        json.Key("anchor"); json.Int64(max_anchor);
     }
     if (!stmt.IsValid())
         return;

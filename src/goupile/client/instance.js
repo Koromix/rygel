@@ -253,7 +253,7 @@ function InstanceController() {
                     }
                 }) : ''}
                 ${show_title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
-                ${app.panels.data && (!ui.isPanelActive('view') || form_thread.anchor >= 0) ? html`
+                ${app.panels.data && (!ui.isPanelActive('view') || form_thread.saved) ? html`
                     <div style="width: 15px;"></div>
                     <button class="icon" style="background-position-y: calc(-758px + 1.2em);"
                             @click=${ui.wrapAction(e => self.go(e, route.page.url))}>Ajouter</button>
@@ -511,7 +511,7 @@ function InstanceController() {
     }
 
     function renderData() {
-        let recording_new = (form_thread != null && form_thread.anchor < 0);
+        let recording_new = (form_thread != null && !form_thread.saved);
 
         return html`
             <div class="padded">
@@ -1282,7 +1282,7 @@ function InstanceController() {
     this.go = util.serialize(this.go, mutex);
 
     function contextualizeURL(url, thread) {
-        if (thread != null && thread.anchor >= 0) {
+        if (thread != null && thread.saved) {
             url += `/${thread.tid}`;
 
             if (thread == form_thread && route.anchor != null)
@@ -1544,7 +1544,7 @@ function InstanceController() {
         } else {
             new_thread = {
                 tid: util.makeULID(),
-                anchor: -1,
+                saved: false,
                 entries: {}
             };
         }
@@ -1658,7 +1658,7 @@ function InstanceController() {
                     fs: ENV.version,
                     eid: form_entry.eid,
                     store: form_entry.store,
-                    anchor: form_thread.anchor,
+                    anchor: form_entry.anchor,
                     mtime: (new Date).valueOf(),
                     data: data,
                     meta: form_data.exportNotes(),
