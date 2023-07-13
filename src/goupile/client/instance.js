@@ -516,12 +516,11 @@ function InstanceController() {
         return html`
             <div class="padded">
                 <div class="ui_quick" style="margin-right: 2.2em;">
-                    <div style="flex: 1;"></div>
                     <div style="display: flex; gap: 8px; padding-bottom: 4px;">
                         <div class="fm_check">
                             <input id="ins_tags" type="checkbox" .checked=${data_tags != null}
                                    @change=${ui.wrapAction(e => toggleTagFilter(null))} />
-                            <label for="ins_tags">Filtrer les tags :</label>
+                            <label for="ins_tags">Filtrer :</label>
                         </div>
                         ${app.tags.map(tag => {
                             let id = 'ins_tag_' + tag.key;
