@@ -25,6 +25,12 @@
 
 namespace RG {
 
+struct DataConstraint {
+    const char *key;
+    bool exists;
+    bool unique;
+};
+
 struct RecordFragment {
     int64_t fs;
     char eid[27];
@@ -34,6 +40,7 @@ struct RecordFragment {
     Span<const char> data;
     Span<const char> meta;
     HeapArray<const char *> tags;
+    HeapArray<DataConstraint> constraints;
 };
 
 static bool CheckTag(Span<const char> tag)
@@ -44,7 +51,7 @@ static bool CheckTag(Span<const char> tag)
         LogError("Tag name cannot be empty");
         return false;
     }
-    if (!std::all_of(tag.begin(),tag.end(), test_char)) {
+    if (!std::all_of(tag.begin(), tag.end(), test_char)) {
         LogError("Tag names must only contain alphanumeric or '_' characters");
         return false;
     }
@@ -58,6 +65,26 @@ static bool CheckULID(Span<const char> str)
 
     if (str.len != 26 || !std::all_of(str.begin(), str.end(), test_char)) {
         LogError("Malformed ULID value '%1'", str);
+        return false;
+    }
+
+    return true;
+}
+
+static bool CheckKey(Span<const char> key)
+{
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
+
+    if (!key.len) {
+        LogError("Empty key is not allowed");
+        return false;
+    }
+    if (!std::all_of(key.begin(), key.end(), test_char)) {
+        LogError("Invalid key characters");
+        return false;
+    }
+    if (StartsWith(key, "__")) {
+        LogError("Keys must not start with '__'");
         return false;
     }
 
@@ -397,9 +424,8 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
                                   INNER JOIN rec_fragments f ON (f.tid = t.tid)
                                   INNER JOIN rec_entries e ON (e.eid = f.eid)
                                   WHERE t.tid = ?1
-                                  ORDER BY f.anchor)", &stmt))
+                                  ORDER BY f.anchor)", &stmt, tid))
         return;
-    sqlite3_bind_text(stmt, 1, tid, -1, SQLITE_STATIC);
 
     if (!stmt.Step()) {
         if (stmt.IsValid()) {
@@ -576,6 +602,37 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                         frag->tags.Append(tag.ptr);
                                     }
                                 }
+                            } else if (key == "constraints") {
+                                parser.ParseObject();
+                                while (parser.InObject()) {
+                                    DataConstraint constraint = {};
+
+                                    parser.ParseKey(&constraint.key);
+                                    parser.ParseObject();
+                                    while (parser.InObject()) {
+                                        Span<const char> type = {};
+                                        parser.ParseKey(&type);
+
+                                        if (type == "exists") {
+                                            parser.ParseBool(&constraint.exists);
+                                        } else if (type == "unique") {
+                                            parser.ParseBool(&constraint.unique);
+                                        } else {
+                                            if (parser.IsValid()) {
+                                                LogError("Unknown constraint type '%1'", type);
+                                            }
+                                            io->AttachError(422);
+                                            return;
+                                        }
+                                    }
+
+                                    if (!CheckKey(constraint.key)) {
+                                        io->AttachError(422);
+                                        return;
+                                    }
+
+                                    frag->constraints.Append(constraint);
+                                }
                             } else if (parser.IsValid()) {
                                 LogError("Unexpected key '%1'", key);
                                 io->AttachError(422);
@@ -671,112 +728,126 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 return false;
             }
 
+            HashMap<const char *, int64_t> anchors;
+
             // Write new entry fragments
-            {
-                HashMap<const char *, int64_t> anchors;
+            for (const RecordFragment &frag: fragments) {
+                int64_t *anchor_ptr = anchors.Find(frag.store);
 
-                for (const RecordFragment &frag: fragments) {
-                    int64_t *anchor_ptr = anchors.Find(frag.store);
+                if (!instance->db->Run("DELETE FROM rec_constraints WHERE eid = ?1", frag.eid))
+                    return false;
 
-                    // Get current record entry anchor
-                    if (!anchor_ptr) {
-                        anchor_ptr = anchors.Set(frag.store, 0);
+                // Apply constraints
+                for (const DataConstraint &constraint: frag.constraints) {
+                    bool success = instance->db->Run(R"(INSERT INTO rec_constraints (eid, store, key, mandatory, value)
+                                                        VALUES (?1, ?2, ?3, ?4, json_extract(?5, '$.' || ?3)))",
+                                                     frag.eid, frag.store, constraint.key, 0 + constraint.exists, frag.data);
 
-                        sq_Statement stmt;
-                        if (!instance->db->Prepare("SELECT store, anchor FROM rec_entries WHERE eid = ?1", &stmt))
-                            return false;
-                        sqlite3_bind_text(stmt, 1, frag.eid, -1, SQLITE_STATIC);
-
-                        if (stmt.Step()) {
-                            const char *store = (const char *)sqlite3_column_text(stmt, 0);
-                            int64_t anchor = sqlite3_column_int64(stmt, 1);
-
-                            if (!TestStr(store, frag.store)) {
-                                LogError("Record entry store mismatch");
-                                io->AttachError(409);
-                                return false;
-                            }
-
-                            *anchor_ptr = anchor;
-                        } else if (!stmt.IsValid()) {
-                            return false;
-                        }
-                    }
-
-                    // Insert entry fragment
-                    int64_t new_anchor;
-                    {
-                        sq_Statement stmt;
-                        if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
-                                                                                 mtime, fs, data, meta, tags)
-                                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-                                                      RETURNING anchor)",
-                                                      &stmt, *anchor_ptr > 0 ? sq_Binding(*anchor_ptr) : sq_Binding(), tid,
-                                                      frag.eid, session->userid, session->username, frag.mtime, frag.fs,
-                                                      frag.data, frag.meta, TagsToJson(frag.tags, &io->allocator)))
-                            return false;
-                        if (!stmt.GetSingleValue(&new_anchor))
-                            return false;
-                    }
-
-                    // Create or update store entry
-                    int64_t e;
-                    {
-                        sq_Statement stmt;
-                        if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
-                                                                               store, sequence, deleted, data, meta, tags)
-                                                      VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8, ?9)
-                                                      ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
-                                                                                mtime = excluded.mtime,
-                                                                                deleted = excluded.deleted,
-                                                                                data = json_patch(data, excluded.data),
-                                                                                meta = excluded.meta,
-                                                                                tags = excluded.tags
-                                                      RETURNING rowid)",
-                                                   &stmt, tid, frag.eid, new_anchor, frag.mtime, frag.store,
-                                                   0 + !frag.data.len, frag.data, frag.meta, TagsToJson(frag.tags, &io->allocator)))
-                            return false;
-                        if (!stmt.GetSingleValue(&e))
-                            return false;
-                    }
-
-                    // Deal with per-store sequence number
-                    if (!*anchor_ptr) {
-                        int64_t counter;
-                        {
-                            sq_Statement stmt;
-                            if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
-                                                          VALUES ('record', ?1, 1)
-                                                          ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
-                                                          RETURNING counter)",
-                                                       &stmt, frag.store))
-                                return false;
-                            if (!stmt.GetSingleValue(&counter))
-                                return false;
-                        }
-
-                        if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1",
-                                               e, counter))
-                            return false;
-                    }
-
-                    // Create thread if needed
-                    if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, stores) VALUES (?1, json_object(?2, ?3))
-                                              ON CONFLICT DO UPDATE SET stores = json_patch(stores, excluded.stores))",
-                                           tid, frag.store, !frag.data.len))
+                    if (!success) {
+                        LogError("Empty or non-unique value for '%1'", constraint.key);
+                        io->AttachError(409);
                         return false;
-
-                    // Update entry and fragment tags
-                    if (!instance->db->Run("DELETE FROM rec_tags WHERE eid = ?1", frag.eid))
-                        return false;
-                    for (const char *tag: frag.tags) {
-                        if (!instance->db->Run(R"(INSERT INTO rec_tags (tid, eid, name) VALUES (?1, ?2, ?3)
-                                                  ON CONFLICT (eid, name) DO NOTHING)", tid, frag.eid, tag))
-                            return false;
                     }
-
-                    *anchor_ptr = new_anchor;
                 }
+
+                // Get current record entry anchor
+                if (!anchor_ptr) {
+                    anchor_ptr = anchors.Set(frag.store, 0);
+
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare("SELECT store, anchor FROM rec_entries WHERE eid = ?1",
+                                               &stmt, frag.eid))
+                        return false;
+
+                    if (stmt.Step()) {
+                        const char *store = (const char *)sqlite3_column_text(stmt, 0);
+                        int64_t anchor = sqlite3_column_int64(stmt, 1);
+
+                        if (!TestStr(store, frag.store)) {
+                            LogError("Record entry store mismatch");
+                            io->AttachError(409);
+                            return false;
+                        }
+
+                        *anchor_ptr = anchor;
+                    } else if (!stmt.IsValid()) {
+                        return false;
+                    }
+                }
+
+                // Insert entry fragment
+                int64_t new_anchor;
+                {
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
+                                                                             mtime, fs, data, meta, tags)
+                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                                                  RETURNING anchor)",
+                                                  &stmt, *anchor_ptr > 0 ? sq_Binding(*anchor_ptr) : sq_Binding(), tid,
+                                                  frag.eid, session->userid, session->username, frag.mtime, frag.fs,
+                                                  frag.data, frag.meta, TagsToJson(frag.tags, &io->allocator)))
+                        return false;
+                    if (!stmt.GetSingleValue(&new_anchor))
+                        return false;
+                }
+
+                // Create or update store entry
+                int64_t e;
+                {
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
+                                                                           store, sequence, deleted, data, meta, tags)
+                                                  VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8, ?9)
+                                                  ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
+                                                                            mtime = excluded.mtime,
+                                                                            deleted = excluded.deleted,
+                                                                            data = json_patch(data, excluded.data),
+                                                                            meta = excluded.meta,
+                                                                            tags = excluded.tags
+                                                  RETURNING rowid)",
+                                               &stmt, tid, frag.eid, new_anchor, frag.mtime, frag.store,
+                                               0 + !frag.data.len, frag.data, frag.meta, TagsToJson(frag.tags, &io->allocator)))
+                        return false;
+                    if (!stmt.GetSingleValue(&e))
+                        return false;
+                }
+
+                // Deal with per-store sequence number
+                if (!*anchor_ptr) {
+                    int64_t counter;
+                    {
+                        sq_Statement stmt;
+                        if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
+                                                      VALUES ('record', ?1, 1)
+                                                      ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
+                                                      RETURNING counter)",
+                                                   &stmt, frag.store))
+                            return false;
+                        if (!stmt.GetSingleValue(&counter))
+                            return false;
+                    }
+
+                    if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1",
+                                           e, counter))
+                        return false;
+                }
+
+                // Create thread if needed
+                if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, stores) VALUES (?1, json_object(?2, ?3))
+                                          ON CONFLICT DO UPDATE SET stores = json_patch(stores, excluded.stores))",
+                                       tid, frag.store, !frag.data.len))
+                    return false;
+
+                // Update entry and fragment tags
+                if (!instance->db->Run("DELETE FROM rec_tags WHERE eid = ?1", frag.eid))
+                    return false;
+                for (const char *tag: frag.tags) {
+                    if (!instance->db->Run(R"(INSERT INTO rec_tags (tid, eid, name) VALUES (?1, ?2, ?3)
+                                              ON CONFLICT (eid, name) DO NOTHING)", tid, frag.eid, tag))
+                        return false;
+                }
+
+                *anchor_ptr = new_anchor;
             }
 
             return true;

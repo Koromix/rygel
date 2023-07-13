@@ -642,7 +642,8 @@ function InstanceController() {
         let buffer = code_buffers.get(route.page.filename);
 
         let model = new FormModel;
-        let form = new FormBuilder(form_state, model);
+        let builder = new FormBuilder(form_state, model);
+        let meta = new MetaModel;
 
         try {
             let func = code_builds.get(buffer.sha256);
@@ -652,18 +653,20 @@ function InstanceController() {
 
             await func({
                 app: app,
-                form: form,
+                form: builder,
+                meta: new MetaInterface(form_data, meta),
                 values: form_state.data
             });
 
-            addAutomaticActions(form, model);
+            addAutomaticActions(builder, model);
             addAutomaticTags(model.variables);
 
             render(model.renderWidgets(), page_div);
             page_div.classList.remove('disabled');
 
             form_model = model;
-            form_builder = form;
+            form_builder = builder;
+            form_meta = meta;
 
             error_entries.page.close();
         } catch (err) {
@@ -734,17 +737,17 @@ function InstanceController() {
         `;
     }
 
-    function addAutomaticActions(form, model) {
-        if (form.hasErrors())
-            form.errorList();
+    function addAutomaticActions(builder, model) {
+        if (builder.hasErrors())
+            builder.errorList();
 
         if (route.page.store != null) {
-            let force = form.justTriggered();
+            let force = builder.justTriggered();
 
             let label = force ? '+Forcer l\'enregistrement' : '+Enregistrer';
             let color = force ? null : '#2d8261';
 
-            form.action(label, { disabled: !form_state.hasChanged(), color: color }, async () => {
+            builder.action(label, { disabled: !form_state.hasChanged(), color: color }, async () => {
                 if (!force)
                     form_builder.triggerErrors();
                 await saveRecord();
@@ -761,8 +764,8 @@ function InstanceController() {
             });
 
             if (form_state.hasChanged()) {
-                form.action('-');
-                form.action('Oublier', { color: '#db0a0a', always: form_entry.anchor >= 0 }, async e => {
+                builder.action('-');
+                builder.action('Oublier', { color: '#db0a0a', always: form_entry.anchor >= 0 }, async e => {
                     await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                            'Oublier', () => {});
 
@@ -909,7 +912,7 @@ function InstanceController() {
         buffer.sha256 = sha256;
 
         try {
-            func = await buildScript(buffer.code, ['app', 'form', 'values']);
+            func = await buildScript(buffer.code, ['app', 'form', 'meta', 'values']);
             code_builds.set(buffer.sha256, func);
         } catch (err) {
             error_entries.page.error(err, profile.develop ? -1 : log.defaultTimeout);
@@ -1299,7 +1302,7 @@ function InstanceController() {
 
             if (func == null) {
                 try {
-                    func = await buildScript(buffer.code, ['app', 'form', 'values']);
+                    func = await buildScript(buffer.code, ['app', 'form', 'meta', 'values']);
                     code_builds.set(buffer.sha256, func);
                 } catch (err) {
                     if (!profile.develop)
@@ -1631,6 +1634,7 @@ function InstanceController() {
 
         form_model = null;
         form_builder = null;
+        form_meta = null;
     }
 
     async function saveRecord() {
@@ -1658,7 +1662,8 @@ function InstanceController() {
                     mtime: (new Date).valueOf(),
                     data: data,
                     meta: form_data.exportNotes(),
-                    tags: tags
+                    tags: tags,
+                    constraints: form_meta.constraints
                 }]
             });
         });
