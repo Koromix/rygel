@@ -39,7 +39,7 @@ async function exportRecords(stores) {
             XLSX.utils.sheet_add_aoa(definitions, [info], { origin: -1 });
 
             if (variable.props != null) {
-                let props = variable.props.map(prop => [store, variable.key, prop.value, prop.label]);
+                let props = variable.props.filter(prop => prop.value != null).map(prop => [store, variable.key, prop.value, prop.label]);
                 XLSX.utils.sheet_add_aoa(propositions, props, { origin: -1 });
             }
         }
