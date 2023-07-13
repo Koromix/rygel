@@ -1640,7 +1640,6 @@ instead of:
         // Decode option shortcuts
         for (;;) {
             if (name[0] == '*') {
-                options = Object.assign({}, options);
                 options.mandatory = true;
             } else {
                 break;
