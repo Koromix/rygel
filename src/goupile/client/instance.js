@@ -146,7 +146,7 @@ function InstanceController() {
         if (app.panels.editor) {
             ui.setPanels(['editor', 'view']);
         } else if (app.panels.data) {
-            ui.setPanels(['data', 'view']);
+            ui.setPanels(['data']);
         } else {
             ui.setPanels(['view']);
         }
@@ -511,7 +511,7 @@ function InstanceController() {
     }
 
     function renderData() {
-        let recording_new = (form_thread != null && !form_thread.saved);
+        let recording_new = !form_thread.saved && form_state.hasChanged();
 
         return html`
             <div class="padded">
@@ -1212,9 +1212,10 @@ function InstanceController() {
 
             // Restore explicit panels (if any)
             let panels = url.searchParams.get('p');
+
             if (panels) {
                 panels = panels.split('|');
-                panels = panels.filter(key => app.panels[key]);
+                panels = panels.filter(key => app.panels.hasOwnProperty(key) || key == 'view');
 
                 if (panels.length) {
                     ui.setPanels(panels);
@@ -1268,10 +1269,17 @@ function InstanceController() {
             await loadRecord(new_route.tid, new_route.anchor, new_route.page);
         }
 
-        // Show form automatically
-        if (url != null && !explicit_panels && !ui.isPanelActive('view') && app.panels.view) {
-            ui.togglePanel('data', false);
-            ui.togglePanel('view', true);
+        // Show form automatically?
+        if (url != null && !ui.isPanelActive('view') && !explicit_panels) {
+            let show_view = true;
+
+            if (ui.isPanelActive('data') && !form_thread.saved && route.page == null)
+                show_view = false;
+
+            if (show_view) {
+                ui.togglePanel('data', false);
+                ui.togglePanel('view', true);
+            }
         }
 
         // We're set!

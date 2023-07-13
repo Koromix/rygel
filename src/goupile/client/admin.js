@@ -376,6 +376,7 @@ function AdminController() {
             goupile.setCurrentHash(url.hash);
 
             let panels = url.searchParams.get('p');
+
             if (panels) {
                 panels = panels.split('|').filter(panel => panel);
 
