@@ -331,7 +331,7 @@ bool MigrateInstance(sq_Database *db)
                         page TEXT,
                         username TEXT NOT NULL,
                         mtime TEXT NOT NULL,
-                        complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
+                        complete INTEGER CHECK (complete IN (0, 1)) NOT NULL,
                         json TEXT
                     );
                     CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
@@ -394,7 +394,7 @@ bool MigrateInstance(sq_Database *db)
                         page TEXT,
                         username TEXT NOT NULL,
                         mtime TEXT NOT NULL,
-                        complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
+                        complete INTEGER CHECK (complete IN (0, 1)) NOT NULL,
                         json TEXT,
                         anchor INTEGER PRIMARY KEY AUTOINCREMENT
                     );
@@ -827,7 +827,7 @@ bool MigrateInstance(sq_Database *db)
 
                     CREATE TABLE fs_files (
                         path TEXT NOT NULL,
-                        active INTEGER CHECK(active IN (0, 1)) NOT NULL,
+                        active INTEGER CHECK (active IN (0, 1)) NOT NULL,
                         mtime INTEGER NOT NULL,
                         blob BLOB NOT NULL,
                         compression TEXT NOT NULL,
@@ -1377,7 +1377,7 @@ bool MigrateInstance(sq_Database *db)
                         mtime INTEGER NOT NULL,
                         userid INTEGER NOT NULL,
                         username TEXT NOT NULL,
-                        atomic CHECK(atomic IN (0, 1)) NOT NULL
+                        atomic CHECK (atomic IN (0, 1)) NOT NULL
                     );
 
                     CREATE TABLE fs_objects (
@@ -1485,7 +1485,7 @@ bool MigrateInstance(sq_Database *db)
                         parent_version INTEGER,
                         anchor INTEGER NOT NULL,
                         root_ulid TEXT NOT NULL,
-                        deleted INTEGER CHECK(deleted IN (0, 1)) NOT NULL
+                        deleted INTEGER CHECK (deleted IN (0, 1)) NOT NULL
                     );
                     CREATE INDEX rec_entries_f ON rec_entries (form);
                     CREATE UNIQUE INDEX rec_entries_u ON rec_entries (ulid);
@@ -1667,7 +1667,7 @@ bool MigrateInstance(sq_Database *db)
                         parent_version INTEGER,
                         anchor INTEGER NOT NULL,
                         root_ulid TEXT NOT NULL,
-                        deleted INTEGER CHECK(deleted IN (0, 1)) NOT NULL
+                        deleted INTEGER CHECK (deleted IN (0, 1)) NOT NULL
                     );
                     CREATE INDEX rec_entries_f ON rec_entries (form);
                     CREATE UNIQUE INDEX rec_entries_fs ON rec_entries (form, sequence);
@@ -1841,7 +1841,7 @@ bool MigrateInstance(sq_Database *db)
 
                     CREATE TABLE rec_threads (
                         tid TEXT NOT NULL,
-                        deleted INTEGER CHECK(deleted IN (0, 1)) NOT NULL
+                        deleted INTEGER CHECK (deleted IN (0, 1)) NOT NULL
                     );
                     CREATE UNIQUE INDEX rec_threads_t ON rec_threads (tid);
 
@@ -2003,7 +2003,7 @@ bool MigrateInstance(sq_Database *db)
                         mtime INTEGER NOT NULL,
                         store TEXT NOT NULL,
                         sequence INTEGER NOT NULL,
-                        deleted INTEGER CHECK(deleted IN (0, 1)) NOT NULL,
+                        deleted INTEGER CHECK (deleted IN (0, 1)) NOT NULL,
                         data BLOB
                     );
                     CREATE UNIQUE INDEX rec_entries_ts ON rec_entries (tid, store);

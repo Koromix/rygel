@@ -766,7 +766,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     CREATE TABLE dom_users (
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL
+                        admin INTEGER CHECK (admin IN (0, 1)) NOT NULL
                     );
                     CREATE UNIQUE INDEX dom_users_u ON dom_users (username);
                 )");
@@ -854,7 +854,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     CREATE TABLE dom_users (
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        admin INTEGER CHECK (admin IN (0, 1)) NOT NULL,
                         passport TEXT NOT NULL
                     );
                     CREATE UNIQUE INDEX dom_users_u ON dom_users (username);
@@ -911,7 +911,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         userid INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        admin INTEGER CHECK (admin IN (0, 1)) NOT NULL,
                         passport TEXT NOT NULL
                     );
                     CREATE UNIQUE INDEX dom_users_u ON dom_users (username);
@@ -964,7 +964,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         userid INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        admin INTEGER CHECK (admin IN (0, 1)) NOT NULL,
                         local_key TEXT NOT NULL
                     );
                     CREATE UNIQUE INDEX dom_users_u ON dom_users (username);
@@ -1258,9 +1258,9 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         userid INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        admin INTEGER CHECK (admin IN (0, 1)) NOT NULL,
                         local_key TEXT NOT NULL,
-                        totp_required INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        totp_required INTEGER CHECK (admin IN (0, 1)) NOT NULL,
                         totp_secret TEXT,
                         email TEXT,
                         phone TEXT
@@ -1320,7 +1320,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         userid INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        admin INTEGER CHECK (admin IN (0, 1)) NOT NULL,
                         local_key TEXT NOT NULL,
                         confirm TEXT,
                         secret TEXT,
@@ -1360,7 +1360,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         userid INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        admin INTEGER CHECK (admin IN (0, 1)) NOT NULL,
                         local_key TEXT NOT NULL,
                         confirm TEXT,
                         secret TEXT,
@@ -1399,8 +1399,8 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         userid INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        change_password INTEGER CHECK(change_password IN (0, 1)) NOT NULL,
-                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        change_password INTEGER CHECK (change_password IN (0, 1)) NOT NULL,
+                        admin INTEGER CHECK (admin IN (0, 1)) NOT NULL,
                         local_key TEXT NOT NULL,
                         confirm TEXT,
                         secret TEXT,
@@ -1449,8 +1449,8 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         userid INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        change_password INTEGER CHECK(change_password IN (0, 1)) NOT NULL,
-                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        change_password INTEGER CHECK (change_password IN (0, 1)) NOT NULL,
+                        admin INTEGER CHECK (admin IN (0, 1)) NOT NULL,
                         local_key TEXT NOT NULL,
                         confirm TEXT,
                         secret TEXT,
