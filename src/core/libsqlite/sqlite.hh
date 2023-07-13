@@ -101,6 +101,7 @@ public:
     bool GetSingleValue(int *out_value);
     bool GetSingleValue(int64_t *out_value);
     bool GetSingleValue(double *out_value);
+    bool GetSingleValue(const char **out_value);
 
     operator sqlite3_stmt *() { return stmt; }
 

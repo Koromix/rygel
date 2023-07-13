@@ -115,6 +115,19 @@ bool sq_Statement::GetSingleValue(double *out_value)
     return true;
 }
 
+bool sq_Statement::GetSingleValue(const char **out_value)
+{
+    if (!Step()) {
+        if (rc == SQLITE_DONE) {
+            LogError("Missing expected SQLite single value");
+        }
+        return false;
+    }
+
+    *out_value = (const char *)sqlite3_column_text(stmt, 0);
+    return true;
+}
+
 bool sq_Database::Open(const char *filename, const uint8_t key[32], unsigned int flags)
 {
     static const char *const sql = R"(
