@@ -1654,17 +1654,17 @@ function InstanceController() {
 
             await net.post(ENV.urls.instance + 'api/records/save', {
                 tid: form_thread.tid,
-                anchor: form_thread.anchor,
-                fragments: [{
+                fragment: {
                     fs: ENV.version,
                     eid: form_entry.eid,
                     store: form_entry.store,
+                    anchor: form_thread.anchor,
                     mtime: (new Date).valueOf(),
                     data: data,
                     meta: form_data.exportNotes(),
                     tags: tags,
                     constraints: form_meta.constraints
-                }]
+                }
             });
         });
     }

@@ -26,19 +26,20 @@
 namespace RG {
 
 struct DataConstraint {
-    const char *key;
-    bool exists;
-    bool unique;
+    const char *key = nullptr;
+    bool exists = false;
+    bool unique = false;
 };
 
 struct RecordFragment {
-    int64_t fs;
-    char eid[27];
-    const char *store;
-    int64_t mtime;
-    bool has_data;
-    Span<const char> data;
-    Span<const char> meta;
+    int64_t fs = -1;
+    char eid[27] = {};
+    const char *store = nullptr;
+    int64_t anchor = -1;
+    int64_t mtime = -1;
+    bool has_data = false;
+    Span<const char> data = {};
+    Span<const char> meta = {};
     HeapArray<const char *> tags;
     HeapArray<DataConstraint> constraints;
 };
@@ -504,8 +505,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
     io->RunAsync([=]() {
         char tid[27];
-        int64_t base = -1;
-        HeapArray<RecordFragment> fragments;
+        RecordFragment fragment = {};
         bool has_deletes = false;
         {
             StreamReader st;
@@ -529,123 +529,116 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                         CopyString(str, tid);
                     }
-                } else if (key == "anchor") {
-                    parser.SkipNull() || parser.ParseInt(&base);
-                    base = std::max(base, (int64_t)-1);
-                } else if (key == "fragments") {
-                    parser.ParseArray();
-                    while (parser.InArray()) {
-                        RecordFragment *frag = fragments.AppendDefault();
-                        frag->fs = -1;
+                } else if (key == "fragment") {
+                    parser.ParseObject();
+                    while (parser.InObject()) {
+                        Span<const char> key = {};
+                        parser.ParseKey(&key);
 
-                        parser.ParseObject();
-                        while (parser.InObject()) {
-                            Span<const char> key = {};
-                            parser.ParseKey(&key);
+                        if (key == "fs") {
+                            parser.ParseInt(&fragment.fs);
+                        } else if (key == "eid") {
+                            Span<const char> str = nullptr;
 
-                            if (key == "fs") {
-                                parser.ParseInt(&frag->fs);
-                            } else if (key == "eid") {
-                                Span<const char> str = nullptr;
+                            if (parser.ParseString(&str)) {
+                                if (!CheckULID(str)) {
+                                    io->AttachError(422);
+                                    return;
+                                }
 
-                                if (parser.ParseString(&str)) {
-                                    if (!CheckULID(str)) {
+                                CopyString(str, fragment.eid);
+                            }
+                        } else if (key == "store") {
+                            parser.ParseString(&fragment.store);
+                        } else if (key == "anchor") {
+                            parser.ParseInt(&fragment.anchor);
+                        } else if (key == "mtime") {
+                            parser.ParseInt(&fragment.mtime);
+                        } else if (key == "data") {
+                            switch (parser.PeekToken()) {
+                                case json_TokenType::Null: {
+                                    fragment.data = {};
+                                    fragment.has_data = true;
+                                } break;
+                                case json_TokenType::StartObject: {
+                                    parser.PassThrough(&fragment.data);
+                                    fragment.has_data = true;
+                                } break;
+
+                                default: {
+                                    LogError("Unexpected value type for fragment data");
+                                    io->AttachError(422);
+                                    return;
+                                } break;
+                            }
+                        } else if (key == "meta") {
+                            switch (parser.PeekToken()) {
+                                case json_TokenType::Null: { fragment.meta = {}; } break;
+                                case json_TokenType::StartObject: { parser.PassThrough(&fragment.meta); } break;
+
+                                default: {
+                                    LogError("Unexpected value type for fragment notes");
+                                    io->AttachError(422);
+                                    return;
+                                } break;
+                            }
+                        } else if (key == "tags") {
+                            parser.ParseArray();
+                            while (parser.InArray()) {
+                                Span<const char> tag = {};
+
+                                if (parser.ParseString(&tag)) {
+                                    if (!CheckTag(tag)) {
                                         io->AttachError(422);
                                         return;
                                     }
 
-                                    CopyString(str, frag->eid);
+                                    fragment.tags.Append(tag.ptr);
                                 }
-                            } else if (key == "store") {
-                                parser.ParseString(&frag->store);
-                            } else if (key == "mtime") {
-                                parser.ParseInt(&frag->mtime);
-                            } else if (key == "data") {
-                                switch (parser.PeekToken()) {
-                                    case json_TokenType::Null: {
-                                        frag->data = {};
-                                        frag->has_data = true;
-                                    } break;
-                                    case json_TokenType::StartObject: {
-                                        parser.PassThrough(&frag->data);
-                                        frag->has_data = true;
-                                    } break;
+                            }
+                        } else if (key == "constraints") {
+                            parser.ParseObject();
+                            while (parser.InObject()) {
+                                DataConstraint constraint = {};
 
-                                    default: {
-                                        LogError("Unexpected value type for fragment data");
-                                        io->AttachError(422);
-                                        return;
-                                    } break;
-                                }
-                            } else if (key == "meta") {
-                                switch (parser.PeekToken()) {
-                                    case json_TokenType::Null: { frag->meta = {}; } break;
-                                    case json_TokenType::StartObject: { parser.PassThrough(&frag->meta); } break;
-
-                                    default: {
-                                        LogError("Unexpected value type for fragment notes");
-                                        io->AttachError(422);
-                                        return;
-                                    } break;
-                                }
-                            } else if (key == "tags") {
-                                parser.ParseArray();
-                                while (parser.InArray()) {
-                                    Span<const char> tag = {};
-
-                                    if (parser.ParseString(&tag)) {
-                                        if (!CheckTag(tag)) {
-                                            io->AttachError(422);
-                                            return;
-                                        }
-
-                                        frag->tags.Append(tag.ptr);
-                                    }
-                                }
-                            } else if (key == "constraints") {
+                                parser.ParseKey(&constraint.key);
                                 parser.ParseObject();
                                 while (parser.InObject()) {
-                                    DataConstraint constraint = {};
+                                    Span<const char> type = {};
+                                    parser.ParseKey(&type);
 
-                                    parser.ParseKey(&constraint.key);
-                                    parser.ParseObject();
-                                    while (parser.InObject()) {
-                                        Span<const char> type = {};
-                                        parser.ParseKey(&type);
-
-                                        if (type == "exists") {
-                                            parser.ParseBool(&constraint.exists);
-                                        } else if (type == "unique") {
-                                            parser.ParseBool(&constraint.unique);
-                                        } else {
-                                            if (parser.IsValid()) {
-                                                LogError("Unknown constraint type '%1'", type);
-                                            }
-                                            io->AttachError(422);
-                                            return;
+                                    if (type == "exists") {
+                                        parser.ParseBool(&constraint.exists);
+                                    } else if (type == "unique") {
+                                        parser.ParseBool(&constraint.unique);
+                                    } else {
+                                        if (parser.IsValid()) {
+                                            LogError("Unknown constraint type '%1'", type);
                                         }
-                                    }
-
-                                    if (!CheckKey(constraint.key)) {
                                         io->AttachError(422);
                                         return;
                                     }
-
-                                    frag->constraints.Append(constraint);
                                 }
-                            } else if (parser.IsValid()) {
-                                LogError("Unexpected key '%1'", key);
-                                io->AttachError(422);
-                                return;
+
+                                if (!CheckKey(constraint.key)) {
+                                    io->AttachError(422);
+                                    return;
+                                }
+
+                                fragment.constraints.Append(constraint);
                             }
+                        } else if (parser.IsValid()) {
+                            LogError("Unexpected key '%1'", key);
+                            io->AttachError(422);
+                            return;
                         }
+                    }
 
-                        if (!frag->has_data) {
-                            has_deletes = true;
+                    if (!fragment.has_data) {
+                        has_deletes = true;
 
-                            frag->meta = {};
-                            frag->tags.len = 0;
-                        }
+                        fragment.meta = {};
+                        fragment.tags.len = 0;
                     }
                 } else if (parser.IsValid()) {
                     LogError("Unexpected key '%1'", key);
@@ -667,17 +660,9 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 LogError("Missing or empty 'tid' value");
                 valid = false;
             }
-
-            if (!fragments.len) {
-                LogError("Missing entry fragments");
+            if (fragment.fs < 0 || !fragment.eid[0] || !fragment.store || fragment.mtime < 0 || !fragment.has_data) {
+                LogError("Missing fragment fields");
                 valid = false;
-            }
-            for (const RecordFragment &frag: fragments) {
-                if (frag.fs < 0 || !frag.eid[0] || !frag.store || !frag.mtime || !frag.has_data) {
-                    LogError("Missing fragment fields");
-                    valid = false;
-                    break;
-                }
             }
 
             if (!valid) {
@@ -687,29 +672,45 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         }
 
         bool success = instance->db->Transaction([&]() {
-            // Get existing record
-            int64_t anchor;
+            // Get existing entry and check for mismatch
+            int64_t prev_anchor;
             {
                 sq_Statement stmt;
-                if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, -1, &stmt))
+                if (!instance->db->Prepare("SELECT tid, store, anchor FROM rec_entries WHERE eid = ?1",
+                                           &stmt, fragment.eid))
                     return false;
 
                 if (stmt.Step()) {
-                    anchor = sqlite3_column_int64(stmt, 5);
+                    const char *prev_tid = (const char *)sqlite3_column_text(stmt, 0);
+                    const char *prev_store = (const char *)sqlite3_column_text(stmt, 1);
+
+                    if (prev_tid && !TestStr(tid, prev_tid)) {
+                        LogError("Record entry thread mismatch");
+                        io->AttachError(409);
+                        return false;
+                    }
+                    if (prev_store && !TestStr(fragment.store, prev_store)) {
+                        LogError("Record entry store mismatch");
+                        io->AttachError(409);
+                        return false;
+                    }
+
+                    prev_anchor = sqlite3_column_int64(stmt, 2);
                 } else if (stmt.IsValid()) {
-                    anchor = -1;
+                    prev_anchor = -1;
                 } else {
+                    return false;
+                }
+
+                if (fragment.anchor != prev_anchor) {
+                    LogError("Record entry version mismatch");
+                    io->AttachError(409);
                     return false;
                 }
             }
 
             // Check permissions
-            if (base != anchor) {
-                LogError("Thread version mismatch");
-                io->AttachError(409);
-                return false;
-            }
-            if (anchor < 0) {
+            if (prev_anchor < 0) {
                 if (!stamp->HasPermission(UserPermission::DataNew)) {
                     LogError("You are not allowed to create new records");
                     io->AttachError(403);
@@ -728,126 +729,92 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 return false;
             }
 
-            HashMap<const char *, int64_t> anchors;
+            // Apply constraints
+            if (!instance->db->Run("DELETE FROM rec_constraints WHERE eid = ?1", fragment.eid))
+                return false;
+            for (const DataConstraint &constraint: fragment.constraints) {
+                bool success = instance->db->Run(R"(INSERT INTO rec_constraints (eid, store, key, mandatory, value)
+                                                    VALUES (?1, ?2, ?3, ?4, json_extract(?5, '$.' || ?3)))",
+                                                 fragment.eid, fragment.store, constraint.key, 0 + constraint.exists, fragment.data);
 
-            // Write new entry fragments
-            for (const RecordFragment &frag: fragments) {
-                int64_t *anchor_ptr = anchors.Find(frag.store);
-
-                if (!instance->db->Run("DELETE FROM rec_constraints WHERE eid = ?1", frag.eid))
+                if (!success) {
+                    LogError("Empty or non-unique value for '%1'", constraint.key);
+                    io->AttachError(409);
                     return false;
-
-                // Apply constraints
-                for (const DataConstraint &constraint: frag.constraints) {
-                    bool success = instance->db->Run(R"(INSERT INTO rec_constraints (eid, store, key, mandatory, value)
-                                                        VALUES (?1, ?2, ?3, ?4, json_extract(?5, '$.' || ?3)))",
-                                                     frag.eid, frag.store, constraint.key, 0 + constraint.exists, frag.data);
-
-                    if (!success) {
-                        LogError("Empty or non-unique value for '%1'", constraint.key);
-                        io->AttachError(409);
-                        return false;
-                    }
                 }
+            }
 
-                // Get current record entry anchor
-                if (!anchor_ptr) {
-                    anchor_ptr = anchors.Set(frag.store, 0);
+            // Insert entry fragment
+            int64_t new_anchor;
+            {
+                sq_Statement stmt;
+                if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
+                                                                         mtime, fs, data, meta, tags)
+                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                                              RETURNING anchor)",
+                                              &stmt, prev_anchor > 0 ? sq_Binding(prev_anchor) : sq_Binding(), tid,
+                                              fragment.eid, session->userid, session->username, fragment.mtime, fragment.fs,
+                                              fragment.data, fragment.meta, TagsToJson(fragment.tags, &io->allocator)))
+                    return false;
+                if (!stmt.GetSingleValue(&new_anchor))
+                    return false;
+            }
 
-                    sq_Statement stmt;
-                    if (!instance->db->Prepare("SELECT store, anchor FROM rec_entries WHERE eid = ?1",
-                                               &stmt, frag.eid))
-                        return false;
+            // Create or update store entry
+            int64_t e;
+            {
+                sq_Statement stmt;
+                if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
+                                                                       store, sequence, deleted, data, meta, tags)
+                                              VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8, ?9)
+                                              ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
+                                                                        mtime = excluded.mtime,
+                                                                        deleted = excluded.deleted,
+                                                                        data = json_patch(data, excluded.data),
+                                                                        meta = excluded.meta,
+                                                                        tags = excluded.tags
+                                              RETURNING rowid)",
+                                           &stmt, tid, fragment.eid, new_anchor, fragment.mtime, fragment.store,
+                                           0 + !fragment.data.len, fragment.data, fragment.meta,
+                                           TagsToJson(fragment.tags, &io->allocator)))
+                    return false;
+                if (!stmt.GetSingleValue(&e))
+                    return false;
+            }
 
-                    if (stmt.Step()) {
-                        const char *store = (const char *)sqlite3_column_text(stmt, 0);
-                        int64_t anchor = sqlite3_column_int64(stmt, 1);
-
-                        if (!TestStr(store, frag.store)) {
-                            LogError("Record entry store mismatch");
-                            io->AttachError(409);
-                            return false;
-                        }
-
-                        *anchor_ptr = anchor;
-                    } else if (!stmt.IsValid()) {
-                        return false;
-                    }
-                }
-
-                // Insert entry fragment
-                int64_t new_anchor;
+            // Deal with per-store sequence number
+            if (prev_anchor < 0) {
+                int64_t counter;
                 {
                     sq_Statement stmt;
-                    if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
-                                                                             mtime, fs, data, meta, tags)
-                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-                                                  RETURNING anchor)",
-                                                  &stmt, *anchor_ptr > 0 ? sq_Binding(*anchor_ptr) : sq_Binding(), tid,
-                                                  frag.eid, session->userid, session->username, frag.mtime, frag.fs,
-                                                  frag.data, frag.meta, TagsToJson(frag.tags, &io->allocator)))
+                    if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
+                                                  VALUES ('record', ?1, 1)
+                                                  ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
+                                                  RETURNING counter)",
+                                               &stmt, fragment.store))
                         return false;
-                    if (!stmt.GetSingleValue(&new_anchor))
+                    if (!stmt.GetSingleValue(&counter))
                         return false;
                 }
 
-                // Create or update store entry
-                int64_t e;
-                {
-                    sq_Statement stmt;
-                    if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
-                                                                           store, sequence, deleted, data, meta, tags)
-                                                  VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8, ?9)
-                                                  ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
-                                                                            mtime = excluded.mtime,
-                                                                            deleted = excluded.deleted,
-                                                                            data = json_patch(data, excluded.data),
-                                                                            meta = excluded.meta,
-                                                                            tags = excluded.tags
-                                                  RETURNING rowid)",
-                                               &stmt, tid, frag.eid, new_anchor, frag.mtime, frag.store,
-                                               0 + !frag.data.len, frag.data, frag.meta, TagsToJson(frag.tags, &io->allocator)))
-                        return false;
-                    if (!stmt.GetSingleValue(&e))
-                        return false;
-                }
-
-                // Deal with per-store sequence number
-                if (!*anchor_ptr) {
-                    int64_t counter;
-                    {
-                        sq_Statement stmt;
-                        if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
-                                                      VALUES ('record', ?1, 1)
-                                                      ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
-                                                      RETURNING counter)",
-                                                   &stmt, frag.store))
-                            return false;
-                        if (!stmt.GetSingleValue(&counter))
-                            return false;
-                    }
-
-                    if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1",
-                                           e, counter))
-                        return false;
-                }
-
-                // Create thread if needed
-                if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, stores) VALUES (?1, json_object(?2, ?3))
-                                          ON CONFLICT DO UPDATE SET stores = json_patch(stores, excluded.stores))",
-                                       tid, frag.store, !frag.data.len))
+                if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1",
+                                       e, counter))
                     return false;
+            }
 
-                // Update entry and fragment tags
-                if (!instance->db->Run("DELETE FROM rec_tags WHERE eid = ?1", frag.eid))
+            // Create thread if needed
+            if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, stores) VALUES (?1, json_object(?2, ?3))
+                                      ON CONFLICT DO UPDATE SET stores = json_patch(stores, excluded.stores))",
+                                   tid, fragment.store, !fragment.data.len))
+                return false;
+
+            // Update entry and fragment tags
+            if (!instance->db->Run("DELETE FROM rec_tags WHERE eid = ?1", fragment.eid))
+                return false;
+            for (const char *tag: fragment.tags) {
+                if (!instance->db->Run(R"(INSERT INTO rec_tags (tid, eid, name) VALUES (?1, ?2, ?3)
+                                          ON CONFLICT (eid, name) DO NOTHING)", tid, fragment.eid, tag))
                     return false;
-                for (const char *tag: frag.tags) {
-                    if (!instance->db->Run(R"(INSERT INTO rec_tags (tid, eid, name) VALUES (?1, ?2, ?3)
-                                              ON CONFLICT (eid, name) DO NOTHING)", tid, frag.eid, tag))
-                        return false;
-                }
-
-                *anchor_ptr = new_anchor;
             }
 
             return true;
