@@ -79,7 +79,9 @@ void sq_Statement::Reset()
 bool sq_Statement::GetSingleValue(int *out_value)
 {
     if (!Step()) {
-        LogError("Missing expected SQLite single value");
+        if (rc == SQLITE_DONE) {
+            LogError("Missing expected SQLite single value");
+        }
         return false;
     }
 
@@ -90,7 +92,9 @@ bool sq_Statement::GetSingleValue(int *out_value)
 bool sq_Statement::GetSingleValue(int64_t *out_value)
 {
     if (!Step()) {
-        LogError("Missing expected SQLite single value");
+        if (rc == SQLITE_DONE) {
+            LogError("Missing expected SQLite single value");
+        }
         return false;
     }
 
@@ -101,7 +105,9 @@ bool sq_Statement::GetSingleValue(int64_t *out_value)
 bool sq_Statement::GetSingleValue(double *out_value)
 {
     if (!Step()) {
-        LogError("Missing expected SQLite single value");
+        if (rc == SQLITE_DONE) {
+            LogError("Missing expected SQLite single value");
+        }
         return false;
     }
 
