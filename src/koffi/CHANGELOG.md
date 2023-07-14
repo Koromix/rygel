@@ -4,6 +4,16 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.4
+
+**Main changes:**
+
+- Fix koffi.pointer() not accepting disposable types
+
+**Other changes:**
+
+- Fix potential issues when making pointer to anonymous types
+
 #### Koffi 2.5.3
 
 **Main changes:**
