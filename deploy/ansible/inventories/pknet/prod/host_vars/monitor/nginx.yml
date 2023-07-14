@@ -205,6 +205,10 @@ nginx_domains:
               gzip_min_length 1000;
               gzip_static on;
           }
+
+          location /courier {
+            return 301 https://demheter.fr/courrier;
+          }
       }
   - name: beta.demheter.fr
     ssl_certbot_email: niels.martignene@protonmail.com
