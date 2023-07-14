@@ -206,7 +206,8 @@ async function test() {
                             lib.func('const char *! __stdcall ReturnBigString(const char *str)');
     const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
     const Concat16 = lib.func('const char16_t *! Concat16(const char16_t *str1, const char16_t *str2)');
-    const Concat16Out = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const char16_t *!*)');
+    const Concat16Out1 = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const char16_t *!*)');
+    const Concat16Out2 = lib.func('Concat16Out', 'void', [koffi.pointer('char16_t'), koffi.pointer('char16_t'), koffi.out(koffi.pointer(Str16Free))]);
     const ReturnFixedStr = lib.func('FixedString ReturnFixedStr(FixedString str)');
     const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
     const ReturnFixedWide = lib.func('FixedWide ReturnFixedWide(FixedWide str)');
@@ -420,15 +421,15 @@ async function test() {
     // Test output disposable type parsed with '!'
     {
         let disposed = koffi.stats().disposed;
-
-        let arg2 = koffi.introspect(Concat16Out.info.arguments[2]);
-        let ref = koffi.introspect(arg2.ref);
-
         let ptr = [null];
-        Concat16Out('Hello ', 'World...', ptr);
+
+        Concat16Out1('Hello ', 'World...', ptr);
         assert.equal(ptr[0], 'Hello World...');
 
-        assert.equal(koffi.stats().disposed, disposed + 1);
+        Concat16Out2('Hello ', 'World...', ptr);
+        assert.equal(ptr[0], 'Hello World...');
+
+        assert.equal(koffi.stats().disposed, disposed + 2);
     }
 
     // String to/from fixed-size buffers
