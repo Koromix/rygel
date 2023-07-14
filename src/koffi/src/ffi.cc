@@ -228,11 +228,12 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     TypeInfo *type = instance->types.AppendDefault();
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
-    std::string name = named ? info[0].As<Napi::String>() : std::string("<anonymous>");
+    Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[named].As<Napi::Object>();
     Napi::Array keys = obj.GetPropertyNames();
 
-    type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+    type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
+                       : Fmt(&instance->str_alloc, "<type_%1>", instance->types.len).ptr;
 
     type->primitive = PrimitiveKind::Record;
     type->align = 1;
@@ -356,11 +357,12 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     TypeInfo *type = instance->types.AppendDefault();
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
-    std::string name = named ? info[0].As<Napi::String>() : std::string("<anonymous>");
+    Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[named].As<Napi::Object>();
     Napi::Array keys = obj.GetPropertyNames();
 
-    type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+    type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
+                       : Fmt(&instance->str_alloc, "<type_%1>", instance->types.len).ptr;
 
     type->primitive = PrimitiveKind::Union;
     type->align = 1;
@@ -485,12 +487,13 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    std::string name = named ? info[0].As<Napi::String>() : std::string("<anonymous>");
+    Napi::String name = info[0].As<Napi::String>();    
 
     TypeInfo *type = instance->types.AppendDefault();
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
-    type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+    type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
+                       : Fmt(&instance->str_alloc, "<type_%1>", instance->types.len).ptr;
 
     type->primitive = PrimitiveKind::Void;
     type->size = 0;
@@ -642,7 +645,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    std::string name = named ? info[0].As<Napi::String>() : std::string("<anonymous>");
+    Napi::String name = info[0].As<Napi::String>();
 
     const TypeInfo *src = ResolveType(info[named]);
     if (!src)
@@ -697,8 +700,11 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     memcpy((void *)type, (const void *)src, RG_SIZE(*src));
-    type->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
     type->members.allocator = GetNullAllocator();
+
+    type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
+                       : Fmt(&instance->str_alloc, "<type_%1>", instance->types.len).ptr;
+
     type->dispose = dispose;
     type->dispose_ref = Napi::Persistent(dispose_func);
 
