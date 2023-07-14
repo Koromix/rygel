@@ -44,9 +44,9 @@ Find out more on the [page dedicated to TyTools](tytools).
 
 ## libhs
 
-libhs is a cross-platform C library to enumerate **HID and serial devices** and interact with them.
+libhs is a cross-platform C library to **enumerate HID and serial devices** and interact with them.
 
-It is distributed as a **single-file header**. Drop the file in your project, add one define for the implementation and start to code without messing around with an arcane build system.
+It is distributed as a *single-file header*. Drop the file in your project, add one define for the implementation and start to code without messing around with an arcane build system.
 
 Find out more on the [page dedicated to libhs](libhs).
 
