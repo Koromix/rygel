@@ -724,10 +724,10 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             }
 
             // Apply constraints
-            if (!instance->db->Run("DELETE FROM rec_constraints WHERE eid = ?1", fragment.eid))
+            if (!instance->db->Run("DELETE FROM seq_constraints WHERE eid = ?1", fragment.eid))
                 return false;
             for (const DataConstraint &constraint: fragment.constraints) {
-                bool success = instance->db->Run(R"(INSERT INTO rec_constraints (eid, store, key, mandatory, value)
+                bool success = instance->db->Run(R"(INSERT INTO seq_constraints (eid, store, key, mandatory, value)
                                                     VALUES (?1, ?2, ?3, ?4, json_extract(?5, '$.' || ?3)))",
                                                  fragment.eid, fragment.store, constraint.key, 0 + constraint.exists, fragment.data);
 
