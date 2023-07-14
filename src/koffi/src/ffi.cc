@@ -536,10 +536,6 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     const TypeInfo *type = ResolveType(info[named]);
     if (!type)
         return env.Null();
-    if (type->dispose) {
-        ThrowError<Napi::TypeError>(env, "Cannot create pointer to disposable type '%1'", type->name);
-        return env.Null();
-    }
 
     int count = 0;
     if (info.Length() >= 2u + named) {
