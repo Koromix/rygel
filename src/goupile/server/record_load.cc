@@ -24,7 +24,7 @@ namespace RG {
 struct RecordFilter {
     const char *single_tid = nullptr;
 
-    int64_t max_anchor = -1;
+    int64_t audit_anchor = -1;
     bool allow_deleted = false;
     bool use_claims = false;
 
@@ -75,7 +75,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
 {
     LocalArray<char, 2048> sql;
 
-    if (filter.max_anchor < 0) {
+    if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
                        R"(SELECT t.rowid AS t, t.tid,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence, e.tags AS tags,
@@ -128,7 +128,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store, rec.idx DESC").len;
     }
 
-    if (!instance->db->Prepare(sql.data, &stmt, filter.single_tid, userid, filter.max_anchor, 0 + filter.read_data))
+    if (!instance->db->Prepare(sql.data, &stmt, filter.single_tid, userid, filter.audit_anchor, 0 + filter.read_data))
         return false;
 
     data = filter.read_data;
@@ -257,11 +257,9 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
     {
         RecordFilter filter = {};
 
-        filter.single_tid = nullptr;
-        filter.max_anchor = anchor;
+        filter.audit_anchor = anchor;
         filter.allow_deleted = stamp->HasPermission(UserPermission::DataAudit);
         filter.use_claims = !stamp->HasPermission(UserPermission::DataLoad);
-        filter.read_data = false;
 
         if (!walker.Prepare(instance, session->userid, filter))
             return;
@@ -363,7 +361,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
         RecordFilter filter = {};
 
         filter.single_tid = tid;
-        filter.max_anchor = anchor;
+        filter.audit_anchor = anchor;
         filter.allow_deleted = stamp->HasPermission(UserPermission::DataAudit);
         filter.use_claims = !stamp->HasPermission(UserPermission::DataLoad);
         filter.read_data = true;
@@ -541,10 +539,6 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
     {
         RecordFilter filter = {};
 
-        filter.single_tid = nullptr;
-        filter.max_anchor = -1;
-        filter.allow_deleted = false;
-        filter.use_claims = false;
         filter.read_data = true;
 
         if (!walker.Prepare(instance, session->userid, filter))
