@@ -8,23 +8,26 @@
 
 **Main changes:**
 
-- Support decoding non-char NUL-terminated arrays
+- Support decoding non-char null-terminated arrays
 
 #### Koffi 2.5.4
 
 **Main changes:**
 
-- Fix koffi.pointer() not accepting disposable types
+- Fix `koffi.pointer()` not accepting disposable types
 
 **Other changes:**
 
-- Fix potential issues when making pointer to anonymous types
+- Fix potential issues when making pointers to anonymous types
 
 #### Koffi 2.5.3
 
 **Main changes:**
 
 - Add missing union exports in TS definition file
+
+**Other changes:**
+
 - Fix some parameter names in TS definition file
 
 #### Koffi 2.5.2
