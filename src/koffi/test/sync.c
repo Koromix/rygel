@@ -903,3 +903,9 @@ EXPORT void FillBufferIndirect(const BufferInfo *buf, int c)
 {
     memset(buf->ptr, c, buf->len);
 }
+
+EXPORT const char *GetLatin1String()
+{
+    // ®²
+    return "Microsoft\xAE\xB2";
+}

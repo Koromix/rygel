@@ -262,6 +262,7 @@ async function test() {
     const GetVariadicIntFunction = lib.func('VariadicIntFunc *GetVariadicIntFunction(const char *name)');
     const FillBufferDirect = lib.func('void FillBufferDirect(BufferInfo info, int c)');
     const FillBufferIndirect = lib.func('void FillBufferIndirect(const BufferInfo *info, int c)');
+    const GetLatin1String = lib.func('const uint8_t *GetLatin1String()');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -754,6 +755,15 @@ async function test() {
             0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         ]));
+    }
+
+    // Decode non-UTF-8 string
+    {
+        let ptr = GetLatin1String();
+        let array = koffi.decode(ptr, 'uint8_t', -1);
+        let str = Buffer.from(array.buffer).toString('latin1');
+
+        assert.equal(str, 'Microsoft®²');
     }
 
     lib.unload();
