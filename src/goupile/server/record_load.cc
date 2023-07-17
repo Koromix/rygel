@@ -27,6 +27,7 @@ struct RecordFilter {
     int64_t audit_anchor = -1;
     bool allow_deleted = false;
     bool use_claims = false;
+    int64_t start_t = -1;
 
     bool read_data = false;
 };
@@ -94,6 +95,9 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         if (filter.use_claims) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
         }
+        if (filter.start_t >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid >= ?5").len;
+        }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store").len;
     } else {
@@ -125,11 +129,21 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                               INNER JOIN rec_threads t ON (t.tid = e.tid)
                               WHERE 1+1)").len;
 
+        if (filter.start_t >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid >= ?5").len;
+        }
+
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store, rec.idx DESC").len;
     }
 
-    if (!instance->db->Prepare(sql.data, &stmt, filter.single_tid, userid, filter.audit_anchor, 0 + filter.read_data))
+    if (!instance->db->Prepare(sql.data, &stmt))
         return false;
+
+    sqlite3_bind_text(stmt, 1, filter.single_tid, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 2, userid);
+    sqlite3_bind_int64(stmt, 3, filter.audit_anchor);
+    sqlite3_bind_int(stmt, 4, 0 + filter.read_data);
+    sqlite3_bind_int64(stmt, 5, filter.start_t);
 
     data = filter.read_data;
     step = true;
@@ -535,25 +549,41 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
         }
     }
 
+    int64_t from = 0;
+    if (const char *str = request.GetQueryValue("from"); str) {
+        if (!ParseInt(str, &from)) {
+            io->AttachError(422);
+            return;
+        }
+        if (from < 0) {
+            LogError("From must be 0 or a positive number");
+            io->AttachError(422);
+            return;
+        }
+    }
+
     RecordWalker walker;
     {
         RecordFilter filter = {};
 
         filter.read_data = true;
+        filter.start_t = from;
 
         if (!walker.Prepare(instance, session->userid, filter))
             return;
     }
+
+    const RecordInfo *cursor = walker.GetCursor();
 
     // Export data
     http_JsonPageBuilder json;
     if (!json.Init(io))
         return;
 
-    json.StartArray();
-    while (walker.Next()) {
-        const RecordInfo *cursor = walker.GetCursor();
+    json.StartObject();
 
+    json.Key("threads"); json.StartArray();
+    for (int i = 0; walker.Next() && i < 100; i++) {
         json.StartObject();
 
         json.Key("tid"); json.String(cursor->tid);
@@ -583,6 +613,14 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
     if (!walker.IsValid())
         return;
     json.EndArray();
+
+    if (cursor->t > 0) {
+        json.Key("next"); json.Int64(cursor->t + 1);
+    } else {
+        json.Key("next"); json.Null();
+    }
+
+    json.EndObject();
 
     json.Finish();
 }

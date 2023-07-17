@@ -15,7 +15,19 @@ async function exportRecords(stores) {
     if (typeof XSLX === 'undefined')
         await net.loadScript(`${ENV.urls.static}sheetjs/xlsx.mini.min.js`);
 
-    let threads = await net.get(`${ENV.urls.instance}api/records/export`);
+    let threads = [];
+    {
+        let from = 0;
+
+        do {
+            let url = util.pasteURL(`${ENV.urls.instance}api/records/export`, { from: from });
+            let json = await net.get(url);
+
+            threads.push(...json.threads);
+
+            from = json.next;
+        } while (from != null);
+    }
 
     let definitions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'label', 'type']]);
     let propositions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'prop', 'label']]);
