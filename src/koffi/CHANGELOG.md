@@ -4,6 +4,12 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.5
+
+**Main changes:**
+
+- Support decoding non-char NUL-terminated arrays
+
 #### Koffi 2.5.4
 
 **Main changes:**
