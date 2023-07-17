@@ -15,7 +15,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "common.hh"
-#include "mco_tables.hh"
+#include "mco_table.hh"
 
 namespace RG {
 

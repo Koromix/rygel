@@ -14,7 +14,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "admin.hh"
 #include "domain.hh"
-#include "files.hh"
+#include "file.hh"
 #include "goupile.hh"
 #include "instance.hh"
 #include "user.hh"

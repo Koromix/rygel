@@ -14,7 +14,7 @@
 #pragma once
 
 #include "src/core/libcc/libcc.hh"
-#include "lights.hh"
+#include "light.hh"
 
 namespace RG {
 

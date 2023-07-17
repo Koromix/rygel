@@ -12,7 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/libcc/libcc.hh"
-#include "lights.hh"
+#include "light.hh"
 #include "vendor/libhs/libhs.h"
 
 namespace RG {

@@ -12,7 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/libcc/libcc.hh"
-#include "mco_tables.hh"
+#include "mco_table.hh"
 
 namespace RG {
 

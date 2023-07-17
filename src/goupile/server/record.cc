@@ -15,6 +15,7 @@
 #include "domain.hh"
 #include "goupile.hh"
 #include "instance.hh"
+#include "record.hh"
 #include "user.hh"
 #include "src/core/libwrap/json.hh"
 #ifdef _WIN32

@@ -13,7 +13,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "mco_authorization.hh"
-#include "mco_tables.hh"
+#include "mco_table.hh"
 
 namespace RG {
 

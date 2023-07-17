@@ -15,7 +15,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "config.hh"
-#include "lights.hh"
+#include "light.hh"
 
 #ifndef NOMINMAX
     #define NOMINMAX

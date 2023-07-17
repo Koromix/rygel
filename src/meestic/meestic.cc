@@ -13,7 +13,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "config.hh"
-#include "lights.hh"
+#include "light.hh"
 #include "src/core/libsandbox/libsandbox.hh"
 #include "src/core/libwrap/json.hh"
 #include "vendor/libhs/libhs.h"

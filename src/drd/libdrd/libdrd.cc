@@ -12,7 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "mco_authorization.cc"
-#include "mco_tables.cc"
+#include "mco_table.cc"
 #include "mco_stay.cc"
 #include "mco_classifier.cc"
 #include "mco_mapper.cc"

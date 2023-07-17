@@ -15,7 +15,7 @@
 #include "domain.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "messages.hh"
+#include "message.hh"
 #include "user.hh"
 #include "src/core/libnet/libnet.hh"
 #include "src/core/libpasswd/libpasswd.hh"

@@ -14,7 +14,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "domain.hh"
 #include "goupile.hh"
-#include "messages.hh"
+#include "message.hh"
 #include "src/core/libnet/libnet.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 

@@ -13,7 +13,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "domain.hh"
-#include "files.hh"
+#include "file.hh"
 #include "instance.hh"
 #include "goupile.hh"
 #include "user.hh"

@@ -13,7 +13,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "domain.hh"
-#include "files.hh"
+#include "file.hh"
 #include "goupile.hh"
 #include "instance.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
