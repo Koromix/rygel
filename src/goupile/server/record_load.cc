@@ -12,6 +12,8 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/libcc/libcc.hh"
+#include "domain.hh"
+#include "goupile.hh"
 #include "instance.hh"
 #include "record.hh"
 #include "user.hh"
@@ -494,7 +496,101 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
 
 void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RG_UNREACHABLE();
+    if (instance->config.sync_mode == SyncMode::Offline) {
+        LogError("Records API is disabled in Offline mode");
+        io->AttachError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+
+    if (session) {
+        if (!session->HasPermission(instance, UserPermission::DataExport)) {
+            LogError("User is not allowed to export data");
+            io->AttachError(403);
+            return;
+        }
+    } else if (!instance->slaves.len) {
+        const char *export_key = request.GetHeaderValue("X-Export-Key");
+
+        if (!export_key) {
+            LogError("User is not logged in");
+            io->AttachError(401);
+            return;
+        }
+
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                     WHERE instance = ?1 AND export_key = ?2)", &stmt))
+            return;
+        sqlite3_bind_text(stmt, 1, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
+
+        uint32_t permissions = stmt.Step() ? (uint32_t)sqlite3_column_int(stmt, 0) : 0;
+
+        if (!stmt.IsValid())
+            return;
+        if (!(permissions & (int)UserPermission::DataExport)) {
+            LogError("Export key is not valid");
+            io->AttachError(403);
+            return;
+        }
+    }
+
+    RecordWalker walker;
+    {
+        RecordFilter filter = {};
+
+        filter.single_tid = nullptr;
+        filter.max_anchor = -1;
+        filter.allow_deleted = false;
+        filter.use_claims = false;
+        filter.read_data = true;
+
+        if (!walker.Prepare(instance, session->userid, filter))
+            return;
+    }
+
+    // Export data
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartArray();
+    while (walker.Next()) {
+        const RecordInfo *cursor = walker.GetCursor();
+
+        json.StartObject();
+
+        json.Key("tid"); json.String(cursor->tid);
+        json.Key("saved"); json.Bool(true);
+
+        json.Key("entries"); json.StartObject();
+        do {
+            json.Key(cursor->store); json.StartObject();
+
+            json.Key("store"); json.String(cursor->store);
+            json.Key("eid"); json.String(cursor->eid);
+            json.Key("anchor"); json.Int64(cursor->anchor);
+            json.Key("ctime"); json.Int64(cursor->ctime);
+            json.Key("mtime"); json.Int64(cursor->mtime);
+            json.Key("sequence"); json.Int64(cursor->sequence);
+            json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
+
+            json.Key("data"); JsonRawOrNull(cursor->data, &json);
+            json.Key("meta"); JsonRawOrNull(cursor->meta, &json);
+
+            json.EndObject();
+        } while (walker.NextInThread());
+        json.EndObject();
+
+        json.EndObject();
+    }
+    if (!walker.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish();
 }
 
 }
