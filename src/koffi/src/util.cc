@@ -1065,26 +1065,24 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
         if (*len >= 0) {
             type = MakeArrayType(instance, type, *len);
         } else {
-            if (!(type->flags & (int)TypeFlag::IsCharLike)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Only char-like types can find their length automatically", type->name);
-                return env.Null();
-            }
-
             switch (type->primitive) {
-                case PrimitiveKind::Int8: {
+                case PrimitiveKind::Int8: 
+                case PrimitiveKind::UInt8: {
                     Size count = strlen((const char *)ptr);
                     type = MakeArrayType(instance, type, count);
                 } break;
-                case PrimitiveKind::Int16: {
+                case PrimitiveKind::Int16: 
+                case PrimitiveKind::UInt16: {
                     Size count = WideStringLength((const char16_t *)ptr, RG_SIZE_MAX);
                     type = MakeArrayType(instance, type, count);
                 } break;
 
-                default: { RG_UNREACHABLE(); } break;
+                default: {
+                    ThrowError<Napi::TypeError>(env, "Cannot determine null-terminated length for type %1", type->name);
+                    return env.Null();
+                } break;
             }
-
         }
-
     }
 
 #define RETURN_INT(Type, NewCall) \
