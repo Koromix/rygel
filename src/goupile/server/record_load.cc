@@ -19,48 +19,84 @@
 
 namespace RG {
 
-static void JsonRawOrNull(sq_Statement *stmt, int column, json_Writer *json)
-{
-    const char *text = (const char *)sqlite3_column_text(*stmt, column);
+struct RecordFilter {
+    const char *single_tid = nullptr;
 
-    if (text) {
-        json->Raw(text);
-    } else {
-        json->Null();
-    }
-}
+    int64_t max_anchor = -1;
+    bool allow_deleted = false;
+    bool use_claims = false;
 
-// Make sure tags are safe and can't lead to SQL injection before calling this function
-static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const SessionStamp &stamp,
-                                const char *tid, int64_t anchor, sq_Statement *out_stmt)
+    bool read_data = false;
+};
+
+struct RecordInfo {
+    int64_t t = -1;
+    const char *tid = nullptr;
+
+    int64_t e = -1;
+    const char *eid = nullptr;
+    bool deleted = false;
+    int64_t anchor = -1;
+    int64_t ctime = -1;
+    int64_t mtime = -1;
+    const char *store = nullptr;
+    int64_t sequence = -1;
+    Span<const char> tags = {};
+
+    Span<const char> data = {};
+    Span<const char> meta = {};
+};
+
+class RecordWalker {
+    sq_Statement stmt;
+
+    bool data = false;
+
+    bool step = false;
+    RecordInfo cursor;
+
+public:
+    // Make sure tags are safe and can't lead to SQL injection before calling this function
+    bool Prepare(InstanceHolder *instance, int64_t userid, const RecordFilter &filter);
+
+    bool Next();
+    bool NextInThread();
+
+    const RecordInfo *GetCursor() const { return &cursor; }
+    bool IsValid() const { return stmt.IsValid(); }
+
+private:
+    bool Step();
+};
+
+bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const RecordFilter &filter)
 {
     LocalArray<char, 2048> sql;
 
-    if (anchor < 0) {
+    if (filter.max_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
                        R"(SELECT t.rowid AS t, t.tid,
-                                 e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence,
-                                 IIF(?1 IS NOT NULL, e.data, NULL) AS data,
-                                 IIF(?1 IS NOT NULL, e.meta, NULL) AS meta,
-                                 e.tags AS tags
+                                 e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence, e.tags AS tags,
+                                 IIF(?4 = 1, e.data, NULL) AS data,
+                                 IIF(?4 = 1, e.meta, NULL) AS meta
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
                           WHERE 1+1)").len;
 
-        if (tid) {
+        if (filter.single_tid) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid = ?1").len;
         }
-        if (!stamp.HasPermission(UserPermission::DataAudit)) {
+        if (!filter.allow_deleted) {
             sql.len += Fmt(sql.TakeAvailable(), " AND e.deleted = 0").len;
         }
-        if (!stamp.HasPermission(UserPermission::DataLoad)) {
+        if (filter.use_claims) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
         }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store").len;
     } else {
-        RG_ASSERT(stamp.HasPermission(UserPermission::DataLoad));
-        RG_ASSERT(stamp.HasPermission(UserPermission::DataAudit));
+        RG_ASSERT(!filter.use_claims);
+        RG_ASSERT(filter.allow_deleted);
 
         sql.len += Fmt(sql.TakeAvailable(),
                        R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data, meta, tags) AS (
@@ -71,8 +107,8 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                                         data IS NOT NULL
                               UNION ALL
                               SELECT rec.idx + 1, f.eid, f.anchor, f.mtime,
-                                  IIF(?1 IS NOT NULL, json_patch(rec.data, f.data), NULL) AS data,
-                                  IIF(?1 IS NOT NULL, json_patch(rec.meta, f.meta), NULL) AS meta,
+                                  IIF(?4 = 1, json_patch(rec.data, f.data), NULL) AS data,
+                                  IIF(?4 = 1, json_patch(rec.meta, f.meta), NULL) AS meta,
                                   f.tags
                                   FROM rec_fragments f, rec
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor AND
@@ -81,16 +117,91 @@ static bool PrepareRecordSelect(InstanceHolder *instance, int64_t userid, const 
                           )
                           SELECT t.rowid AS t, t.tid,
                                  e.rowid AS e, e.eid, e.deleted, rec.anchor, e.ctime, rec.mtime,
-                                 e.store, e.sequence, rec.data, rec.meta, rec.tags
+                                 e.store, e.sequence, rec.tags, rec.data, rec.meta
                               FROM rec
                               INNER JOIN rec_entries e ON (e.eid = rec.eid)
                               INNER JOIN rec_threads t ON (t.tid = e.tid)
-                              WHERE 1+1)", out_stmt).len;
+                              WHERE 1+1)").len;
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store, rec.idx DESC").len;
     }
 
-    return instance->db->Prepare(sql.data, out_stmt, tid, userid, anchor);
+    if (!instance->db->Prepare(sql.data, &stmt, filter.single_tid, userid, filter.max_anchor, 0 + filter.read_data))
+        return false;
+
+    data = filter.read_data;
+    step = true;
+    cursor = {};
+
+    return true;
+}
+
+bool RecordWalker::Next()
+{
+    if (!Step())
+        return false;
+
+    step = true;
+    return true;
+}
+
+bool RecordWalker::NextInThread()
+{
+    int64_t t = cursor.t;
+
+    if (!Step())
+        return false;
+    if (cursor.t != t)
+        return false;
+
+    step = true;
+    return true;
+}
+
+bool RecordWalker::Step()
+{
+    if (!step)
+        return true;
+
+again:
+    if (!stmt.Step())
+        return false;
+
+    int64_t t = sqlite3_column_int64(stmt, 0);
+    int64_t e = sqlite3_column_int64(stmt, 2);
+
+    // This can happen with the recursive CTE is used for historical data
+    if (e == cursor.e)
+        goto again;
+
+    cursor.t = t;
+    cursor.tid = (const char *)sqlite3_column_text(stmt, 1);
+
+    cursor.e = e;
+    cursor.eid = (const char *)sqlite3_column_text(stmt, 3);
+    cursor.deleted = !!sqlite3_column_int(stmt, 4);
+    cursor.anchor = sqlite3_column_int64(stmt, 5);
+    cursor.ctime = sqlite3_column_int64(stmt, 6);
+    cursor.mtime = sqlite3_column_int64(stmt, 7);
+    cursor.store = (const char *)sqlite3_column_text(stmt, 8);
+    cursor.sequence = sqlite3_column_int64(stmt, 9);
+    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 10), sqlite3_column_bytes(stmt, 10));
+
+    if (data) {
+        cursor.data = MakeSpan((const char*)sqlite3_column_text(stmt, 11), sqlite3_column_bytes(stmt, 11));
+        cursor.meta = MakeSpan((const char*)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12));
+    }
+
+    return true;
+}
+
+static void JsonRawOrNull(Span<const char> str, json_Writer *json)
+{
+    if (str.ptr) {
+        json->Raw(str);
+    } else {
+        json->Null();
+    }
 }
 
 void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -117,7 +228,8 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
 
     int64_t anchor = -1;
     if (const char *str = request.GetQueryValue("anchor"); str) {
-        if (!stamp->HasPermission(UserPermission::DataAudit)) {
+        if (!stamp->HasPermission(UserPermission::DataLoad) ||
+                    !stamp->HasPermission(UserPermission::DataAudit)) {
             LogError("User is not allowed to access historical data");
             io->AttachError(403);
             return;
@@ -134,61 +246,58 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
         }
     }
 
-    sq_Statement stmt;
-    if (!PrepareRecordSelect(instance, session->userid, *stamp, nullptr, anchor, &stmt))
-        return;
-
     // Export data
     http_JsonPageBuilder json;
     if (!json.Init(io))
         return;
 
-    json.StartArray();
-    if (stmt.Step()) {
-        do {
-            int64_t t = sqlite3_column_int64(stmt, 0);
-            int64_t prev_e = -1;
+    RecordWalker walker;
+    {
+        RecordFilter filter = {};
 
-            json.StartObject();
+        filter.single_tid = nullptr;
+        filter.max_anchor = anchor;
+        filter.allow_deleted = stamp->HasPermission(UserPermission::DataAudit);
+        filter.use_claims = !stamp->HasPermission(UserPermission::DataLoad);
+        filter.read_data = false;
 
-            json.Key("tid"); json.String((const char *)sqlite3_column_text(stmt, 1));
-            json.Key("saved"); json.Bool(true);
-
-            json.Key("entries"); json.StartObject();
-            do {
-                int64_t e = sqlite3_column_int64(stmt, 2);
-                const char *store = (const char *)sqlite3_column_text(stmt, 8);
-
-                // This can happen when the recursive CTE is used for historical data
-                if (e == prev_e)
-                    continue;
-                prev_e = e;
-
-                int64_t anchor = sqlite3_column_int64(stmt, 5);
-
-                json.Key(store); json.StartObject();
-
-                json.Key("store"); json.String(store);
-                json.Key("eid"); json.String((const char *)sqlite3_column_text(stmt, 3));
-                if (stamp->HasPermission(UserPermission::DataAudit)) {
-                    json.Key("deleted"); json.Bool(sqlite3_column_int(stmt, 4));
-                } else {
-                    RG_ASSERT(!sqlite3_column_int(stmt, 4));
-                }
-                json.Key("anchor"); json.Int64(anchor);
-                json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
-                json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
-                json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
-                json.Key("tags"); JsonRawOrNull(&stmt, 12, &json);
-
-                json.EndObject();
-            } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == t);
-            json.EndObject();
-
-            json.EndObject();
-        } while (stmt.IsRow());
+        if (!walker.Prepare(instance, session->userid, filter))
+            return;
     }
-    if (!stmt.IsValid())
+
+    json.StartArray();
+    while (walker.Next()) {
+        const RecordInfo *cursor = walker.GetCursor();
+
+        json.StartObject();
+
+        json.Key("tid"); json.String(cursor->tid);
+        json.Key("saved"); json.Bool(true);
+
+        json.Key("entries"); json.StartObject();
+        do {
+            json.Key(cursor->store); json.StartObject();
+
+            json.Key("store"); json.String(cursor->store);
+            json.Key("eid"); json.String(cursor->eid);
+            if (stamp->HasPermission(UserPermission::DataAudit)) {
+                json.Key("deleted"); json.Bool(cursor->deleted);
+            } else {
+                RG_ASSERT(!cursor->deleted);
+            }
+            json.Key("anchor"); json.Int64(cursor->anchor);
+            json.Key("ctime"); json.Int64(cursor->ctime);
+            json.Key("mtime"); json.Int64(cursor->mtime);
+            json.Key("sequence"); json.Int64(cursor->sequence);
+            json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
+
+            json.EndObject();
+        } while (walker.NextInThread());
+        json.EndObject();
+
+        json.EndObject();
+    }
+    if (!walker.IsValid())
         return;
     json.EndArray();
 
@@ -247,12 +356,22 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
         }
     }
 
-    sq_Statement stmt;
-    if (!PrepareRecordSelect(instance, session->userid, *stamp, tid, anchor, &stmt))
-        return;
+    RecordWalker walker;
+    {
+        RecordFilter filter = {};
 
-    if (!stmt.Step()) {
-        if (stmt.IsValid()) {
+        filter.single_tid = tid;
+        filter.max_anchor = anchor;
+        filter.allow_deleted = stamp->HasPermission(UserPermission::DataAudit);
+        filter.use_claims = !stamp->HasPermission(UserPermission::DataLoad);
+        filter.read_data = true;
+
+        if (!walker.Prepare(instance, session->userid, filter))
+            return;
+    }
+
+    if (!walker.Next()) {
+        if (walker.IsValid()) {
             LogError("Thread '%1' does not exist", tid);
             io->AttachError(404);
         }
@@ -266,45 +385,36 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
 
     json.StartObject();
     {
-        int64_t prev_e = -1;
+        const RecordInfo *cursor = walker.GetCursor();
 
-        json.Key("tid"); json.String(tid);
+        json.Key("tid"); json.String(cursor->tid);
         json.Key("saved"); json.Bool(true);
 
         json.Key("entries"); json.StartObject();
         do {
-            int64_t e = sqlite3_column_int64(stmt, 2);
-            const char *store = (const char *)sqlite3_column_text(stmt, 8);
+            json.Key(cursor->store); json.StartObject();
 
-            // This can happen with the recursive CTE is used for historical data
-            if (e == prev_e)
-                continue;
-            prev_e = e;
-
-            int64_t anchor = sqlite3_column_int64(stmt, 5);
-
-            json.Key(store); json.StartObject();
-
-            json.Key("store"); json.String(store);
-            json.Key("eid"); json.String((const char *)sqlite3_column_text(stmt, 3));
+            json.Key("store"); json.String(cursor->store);
+            json.Key("eid"); json.String(cursor->eid);
             if (stamp->HasPermission(UserPermission::DataAudit)) {
-                json.Key("deleted"); json.Bool(sqlite3_column_int(stmt, 4));
+                json.Key("deleted"); json.Bool(cursor->deleted);
             } else {
-                RG_ASSERT(!sqlite3_column_int(stmt, 4));
+                RG_ASSERT(!cursor->deleted);
             }
-            json.Key("anchor"); json.Int64(anchor);
-            json.Key("ctime"); json.Int64(sqlite3_column_int64(stmt, 6));
-            json.Key("mtime"); json.Int64(sqlite3_column_int64(stmt, 7));
-            json.Key("sequence"); json.Int64(sqlite3_column_int64(stmt, 9));
-            json.Key("data"); JsonRawOrNull(&stmt, 10, &json);
-            json.Key("meta"); JsonRawOrNull(&stmt, 11, &json);
-            json.Key("tags"); JsonRawOrNull(&stmt, 12, &json);
+            json.Key("anchor"); json.Int64(cursor->anchor);
+            json.Key("ctime"); json.Int64(cursor->ctime);
+            json.Key("mtime"); json.Int64(cursor->mtime);
+            json.Key("sequence"); json.Int64(cursor->sequence);
+            json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
+
+            json.Key("data"); JsonRawOrNull(cursor->data, &json);
+            json.Key("meta"); JsonRawOrNull(cursor->meta, &json);
 
             json.EndObject();
-        } while (stmt.Step());
+        } while (walker.NextInThread());
         json.EndObject();
     }
-    if (!stmt.IsValid())
+    if (!walker.IsValid())
         return;
     json.EndObject();
 
