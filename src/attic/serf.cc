@@ -344,6 +344,13 @@ Options:
                 FelixTarget, config_filename, config.root_directory, config.http.port);
     };
 
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+        PrintLn("Compiler: %1", FelixCompiler);
+        return 0;
+    }
+
     // Find config filename
     {
         OptionParser opt(argc, argv, OptionMode::Skip);

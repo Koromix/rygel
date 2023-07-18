@@ -32,6 +32,13 @@ Options:
     %!..+-c, --command%!0                Run code directly from argument)", FelixTarget);
     };
 
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+        PrintLn("Compiler: %1", FelixCompiler);
+        return 0;
+    }
+
     // Parse arguments
     {
         OptionParser opt(argc, argv);
