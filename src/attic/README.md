@@ -22,7 +22,33 @@ It is mainly useful for automated test systems, **do not install it** on product
 
 # Serf
 
-Small HTTP server made for localhost testing, with support for custom HTTP headers.
+Small HTTP server made for localhost testing. It can serve static files and you can customize the headers with a simple config file.
+
+Here is an example configuration file:
+
+```ini
+[HTTP]
+# Set SocketType to Dual (IPv4 + IPv6), IPv4, IPv6 or Unix
+SocketType = Dual
+Port = 80
+# UnixPath is ignored unless SocketType is set to Unix
+UnixPath = /run/serf.sock
+
+[Files]
+# Set directory to serve, relative to the location of the INI file
+RootDirectory = .
+# Enable AutoIndex to list content of directories without index.html
+AutoIndex = On
+# Maximum cache time in seconds
+MaxAge = 0
+# Generate E-tag based on file modification time and size
+ETag = On
+
+[Headers]
+# List headers you want to add to all server responses
+Cross-Origin-Embedder-Policy = require-corp
+Cross-Origin-Opener-Policy = same-origin
+```
 
 ## Build and installation
 
