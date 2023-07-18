@@ -696,8 +696,10 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleRecordAudit(instance, request, io);
     } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
         HandleRecordSave(instance, request, io);
-    } else if (TestStr(instance_url, "/api/records/export") && request.method == http_RequestMethod::Get) {
-        HandleRecordExport(instance, request, io);
+    } else if (TestStr(instance_url, "/api/export/data") && request.method == http_RequestMethod::Get) {
+        HandleExportData(instance, request, io);
+    } else if (TestStr(instance_url, "/api/export/meta") && request.method == http_RequestMethod::Get) {
+        HandleExportMeta(instance, request, io);
     } else if (TestStr(instance_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
         HandleSendMail(instance, request, io);
     } else if (TestStr(instance_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {

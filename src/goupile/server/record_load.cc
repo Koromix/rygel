@@ -27,9 +27,12 @@ struct RecordFilter {
     int64_t audit_anchor = -1;
     bool allow_deleted = false;
     bool use_claims = false;
+
     int64_t start_t = -1;
+    int64_t end_t = -1;
 
     bool read_data = false;
+    bool read_meta = false;
 };
 
 struct RecordInfo {
@@ -53,7 +56,8 @@ struct RecordInfo {
 class RecordWalker {
     sq_Statement stmt;
 
-    bool data = false;
+    bool read_data = false;
+    bool read_meta = false;
 
     bool step = false;
     RecordInfo cursor;
@@ -80,8 +84,8 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         sql.len += Fmt(sql.TakeAvailable(),
                        R"(SELECT t.rowid AS t, t.tid,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence, e.tags AS tags,
-                                 IIF(?4 = 1, e.data, NULL) AS data,
-                                 IIF(?4 = 1, e.meta, NULL) AS meta
+                                 IIF(?6 = 1, e.data, NULL) AS data,
+                                 IIF(?7 = 1, e.meta, NULL) AS meta
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
                           WHERE 1+1)").len;
@@ -96,7 +100,10 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid IN (SELECT tid FROM ins_claims WHERE userid = ?2)").len;
         }
         if (filter.start_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid >= ?5").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid >= ?4").len;
+        }
+        if (filter.end_t >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid < ?5").len;
         }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store").len;
@@ -113,8 +120,8 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                         data IS NOT NULL
                               UNION ALL
                               SELECT rec.idx + 1, f.eid, f.anchor, f.mtime,
-                                  IIF(?4 = 1, json_patch(rec.data, f.data), NULL) AS data,
-                                  IIF(?4 = 1, json_patch(rec.meta, f.meta), NULL) AS meta,
+                                  IIF(?6 = 1, json_patch(rec.data, f.data), NULL) AS data,
+                                  IIF(?7 = 1, json_patch(rec.meta, f.meta), NULL) AS meta,
                                   f.tags
                                   FROM rec_fragments f, rec
                                   WHERE f.anchor <= ?3 AND f.previous = rec.anchor AND
@@ -130,7 +137,10 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                               WHERE 1+1)").len;
 
         if (filter.start_t >= 0) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid >= ?5").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid >= ?4").len;
+        }
+        if (filter.end_t >= 0) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid < ?5").len;
         }
 
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store, rec.idx DESC").len;
@@ -142,10 +152,14 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
     sqlite3_bind_text(stmt, 1, filter.single_tid, -1, SQLITE_STATIC);
     sqlite3_bind_int64(stmt, 2, userid);
     sqlite3_bind_int64(stmt, 3, filter.audit_anchor);
-    sqlite3_bind_int(stmt, 4, 0 + filter.read_data);
-    sqlite3_bind_int64(stmt, 5, filter.start_t);
+    sqlite3_bind_int64(stmt, 4, filter.start_t);
+    sqlite3_bind_int64(stmt, 5, filter.end_t);
+    sqlite3_bind_int(stmt, 6, 0 + filter.read_data);
+    sqlite3_bind_int(stmt, 7, 0 + filter.read_meta);
 
-    data = filter.read_data;
+    read_data = filter.read_data;
+    read_meta = filter.read_meta;
+
     step = true;
     cursor = {};
 
@@ -203,10 +217,10 @@ again:
     cursor.sequence = sqlite3_column_int64(stmt, 9);
     cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 10), sqlite3_column_bytes(stmt, 10));
 
-    if (data) {
-        cursor.data = MakeSpan((const char*)sqlite3_column_text(stmt, 11), sqlite3_column_bytes(stmt, 11));
-        cursor.meta = MakeSpan((const char*)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12));
-    }
+    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 11), sqlite3_column_bytes(stmt, 11))
+                            : MakeSpan((const char *)nullptr, 0);
+    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12))
+                            : MakeSpan((const char *)nullptr, 0);
 
     return true;
 }
@@ -379,6 +393,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
         filter.allow_deleted = stamp->HasPermission(UserPermission::DataAudit);
         filter.use_claims = !stamp->HasPermission(UserPermission::DataLoad);
         filter.read_data = true;
+        filter.read_meta = true;
 
         if (!walker.Prepare(instance, session->userid, filter))
             return;
@@ -506,7 +521,7 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
     json.Finish();
 }
 
-void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void RunExport(InstanceHolder *instance, bool data, bool meta, const http_RequestInfo &request, http_IO *io)
 {
     if (instance->config.sync_mode == SyncMode::Offline) {
         LogError("Records API is disabled in Offline mode");
@@ -550,15 +565,30 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
     }
 
     int64_t from = 0;
-    if (const char *str = request.GetQueryValue("from"); str) {
-        if (!ParseInt(str, &from)) {
-            io->AttachError(422);
-            return;
+    int64_t to = -1;
+    {
+        if (const char *str = request.GetQueryValue("from"); str) {
+            if (!ParseInt(str, &from)) {
+                io->AttachError(422);
+                return;
+            }
+            if (from < 0) {
+                LogError("From must be 0 or a positive number");
+                io->AttachError(422);
+                return;
+            }
         }
-        if (from < 0) {
-            LogError("From must be 0 or a positive number");
-            io->AttachError(422);
-            return;
+
+        if (const char *str = request.GetQueryValue("to"); str) {
+            if (!ParseInt(str, &to)) {
+                io->AttachError(422);
+                return;
+            }
+            if (to <= from) {
+                LogError("To must be greater than from");
+                io->AttachError(422);
+                return;
+            }
         }
     }
 
@@ -566,8 +596,10 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
     {
         RecordFilter filter = {};
 
-        filter.read_data = true;
         filter.start_t = from;
+        filter.end_t = to;
+        filter.read_data = data;
+        filter.read_meta = meta;
 
         if (!walker.Prepare(instance, session->userid, filter))
             return;
@@ -601,8 +633,12 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
             json.Key("sequence"); json.Int64(cursor->sequence);
             json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
 
-            json.Key("data"); JsonRawOrNull(cursor->data, &json);
-            json.Key("meta"); JsonRawOrNull(cursor->meta, &json);
+            if (data) {
+                json.Key("data"); JsonRawOrNull(cursor->data, &json);
+            }
+            if (meta) {
+                json.Key("meta"); JsonRawOrNull(cursor->meta, &json);
+            }
 
             json.EndObject();
         } while (walker.NextInThread());
@@ -623,6 +659,16 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
     json.EndObject();
 
     json.Finish();
+}
+
+void HandleExportData(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RunExport(instance, true, false, request, io);
+}
+
+void HandleExportMeta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RunExport(instance, false, true, request, io);
 }
 
 }

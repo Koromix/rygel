@@ -15,29 +15,21 @@ async function exportRecords(stores) {
     if (typeof XSLX === 'undefined')
         await net.loadScript(`${ENV.urls.static}sheetjs/xlsx.mini.min.js`);
 
-    let threads = [];
-    {
-        let from = 0;
-
-        do {
-            let url = util.pasteURL(`${ENV.urls.instance}api/records/export`, { from: from });
-            let json = await net.get(url);
-
-            threads.push(...json.threads);
-
-            from = json.next;
-        } while (from != null);
-    }
-
     let definitions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'label', 'type']]);
     let propositions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'prop', 'label']]);
 
-    // Create data worksheets
-    let worksheets = stores.map(store => {
-        let variables = orderVariables(store, threads);
-        let columns = expandColumns(variables);
+    // Assemble information about tables and columns
+    let tables = await structureTables();
 
-        for (let variable of variables) {
+    // Create base worksheets
+    let worksheets = stores.map(store => {
+        let table = tables[store];
+
+        if (table == null)
+            return null;
+
+        // Definitions and propositions
+        for (let variable of table.variables) {
             let info = [store, variable.key, variable.label, variable.type];
             XLSX.utils.sheet_add_aoa(definitions, [info], { origin: -1 });
 
@@ -47,39 +39,55 @@ async function exportRecords(stores) {
             }
         }
 
+        // Create worksheet
         let header = [
             '__tid', '__sequence',
-            ...columns.map(column => column.name)
+            ...table.columns.map(column => column.name)
         ];
-
         let ws = XLSX.utils.aoa_to_sheet([header]);
 
-        for (let thread of threads) {
+        return ws;
+    });
+
+    // Export data
+    await walkThreads('data', thread => {
+        for (let i = 0; i < stores.length; i++) {
+            let store = stores[i];
+            let ws = worksheets[i];
+
+            let table = tables[store];
             let entry = thread.entries[store];
 
-            if (entry == null)
+            if (table == null || entry == null)
                 continue;
 
             let row = [
                 thread.tid, findSequence(thread),
-                ...columns.map(column => {
+                ...table.columns.map(column => {
                     let result = column.read(entry.data);
                     if (result == null)
                         return 'NA';
                     return result;
                 })
             ];
-            XLSX.utils.sheet_add_aoa(ws, [row], { origin: -1 });
-        }
 
-        return [store, ws];
+            XLSX.utils.sheet_add_aoa(ws, [row], { origin: -1 });
+            table.length++;
+        }
     });
 
     // Create workbook...
     let wb = XLSX.utils.book_new();
     let wb_name = `export_${ENV.key}_${dates.today()}`;
-    for (let [store, ws] of worksheets)
+    for (let i = 0; i < stores.length; i++) {
+        let store = stores[i];
+        let ws = worksheets[i];
+
+        if (ws == null)
+            continue;
+
         XLSX.utils.book_append_sheet(wb, ws, store);
+    }
     XLSX.utils.book_append_sheet(wb, definitions, '@definitions');
     XLSX.utils.book_append_sheet(wb, propositions, '@propositions');
 
@@ -88,57 +96,74 @@ async function exportRecords(stores) {
     XLSX.writeFile(wb, filename);
 }
 
-function orderVariables(store, threads) {
-    let variables = [];
-
-    // Use linked list and map for fast inserts and to avoid potential O^2 behavior
-    let first_head = null;
-    let last_head = null;
-    let heads_map = new Map;
+async function structureTables() {
+    let tables = {};
 
     // Reconstitute logical order
-    for (let thread of threads) {
-        let entry = thread.entries[store];
+    await walkThreads('meta', thread => {
+        for (let store in thread.entries) {
+            let entry = thread.entries[store];
 
-        if (entry == null)
-            continue;
-        if (entry.meta.notes.variables == null)
-            continue;
+            if (entry.meta.notes.variables == null)
+                continue;
 
-        let notes = entry.meta.notes;
-        let keys = Object.keys(notes.variables);
+            let table = tables[store];
 
-        for (let i = 0; i < keys.length; i++) {
-            let key = keys[i];
-
-            if (!heads_map.has(key)) {
-                let previous = heads_map.get(keys[i - 1]);
-
-                let head = {
-                    variable: { key: key, ...notes.variables[key] },
-                    previous: previous,
-                    next: null
+            if (table == null) {
+                table = {
+                    first_head: null,
+                    last_head: null,
+                    heads_map: new Map
                 };
+                tables[store] = table;
+            }
 
-                if (previous == null) {
-                    first_head = head;
-                } else {
-                    head.next = previous.next;
+            let notes = entry.meta.notes;
+            let keys = Object.keys(notes.variables);
+
+            for (let i = 0; i < keys.length; i++) {
+                let key = keys[i];
+
+                if (!table.heads_map.has(key)) {
+                    let previous = table.heads_map.get(keys[i - 1]);
+
+                    let head = {
+                        variable: { key: key, ...notes.variables[key] },
+                        previous: previous,
+                        next: null
+                    };
+
+                    if (previous == null) {
+                        table.first_head = head;
+                    } else {
+                        head.next = previous.next;
+                    }
+                    if (table.last_head != null)
+                        table.last_head.next = head;
+                    table.last_head = head;
+
+                    table.heads_map.set(key, head);
                 }
-                if (last_head != null)
-                    last_head.next = head;
-                last_head = head;
-
-                heads_map.set(key, head);
             }
         }
+    });
+
+    // Expand linked list to proper arrays
+    for (let store in tables) {
+        let variables = [];
+
+        for (let head = tables[store].first_head; head != null; head = head.next)
+            variables.push(head.variable);
+
+        tables[store] = {
+            store: store,
+            variables: variables,
+            columns: expandColumns(variables),
+            length: 0
+        };
     }
 
-    // Transform linked list to simple array
-    for (let head = first_head; head != null; head = head.next)
-        variables.push(head.variable);
-
-    return variables;
+    return tables;
 }
 
 function expandColumns(variables) {
@@ -173,6 +198,20 @@ function expandColumns(variables) {
     }
 
     return columns;
+}
+
+async function walkThreads(method, func) {
+    let from = 0;
+
+    do {
+        let url = util.pasteURL(`${ENV.urls.instance}api/export/${method}`, { from: from });
+        let json = await net.get(url);
+
+        for (let thread of json.threads)
+            func(thread);
+
+        from = json.next;
+    } while (from != null);
 }
 
 function findSequence(thread) {

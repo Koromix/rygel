@@ -23,8 +23,11 @@ class InstanceHolder;
 void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+
+void HandleExportData(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleExportMeta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 }
+
