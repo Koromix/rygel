@@ -1,14 +1,16 @@
 # Authool
 
-Authtool can generate and check passwords, and can also create and check TOTP secrets and codes. It can also generate a valid QR code PNG file with a TOTP secret.
+Authtool can **generate and check passwords**, and can also **create and check TOTP secrets and codes**. It can also generate a valid QR code PNG file with a TOTP secret.
 
 # Empress
 
-Empress uses the compression algorithms implemented in libcc to provide simple single-file compression and decompression, and so far supports Zlib, Gzip, Brotli and LZ4.
+Empress uses the compression algorithms implemented in libcc to provide simple **single-file compression and decompression**, and so far supports Zlib, Gzip, Brotli and LZ4.
+
+Its main purpose is to be test the compression and decompression implementations against official tools.
 
 # Hodler
 
-Hodler is a simple and limited static-site builder that I use to generate the pages on [koromix.dev](https://koromix.dev/) and [goupile.fr](https://goupile.fr/) from Markdown files.
+Hodler is a simple and **limited static-site builder** that I use to generate the pages on [koromix.dev](https://koromix.dev/) and [demheter.fr](https://demheter.fr/) from Markdown files.
 
 # SeatSH
 
@@ -22,7 +24,7 @@ It is mainly useful for automated test systems, **do not install it** on product
 
 # Serf
 
-Small HTTP server made for localhost testing. It can serve static files and you can customize the headers with a simple config file.
+Serf is a **small HTTP server made for local testing**. It can serve static files and you can customize the headers with a simple config file.
 
 Here is an example configuration file:
 
