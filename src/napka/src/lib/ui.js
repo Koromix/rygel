@@ -13,7 +13,7 @@
 
 import { render, html, noChange } from '../../node_modules/lit/html.js';
 import { directive, Directive } from '../../node_modules/lit/directive.js';
-import { util, log } from '../../../web/libjs/util.js';
+import { util, log } from '../../../web/libjs/common.js';
 
 let T = {};
 

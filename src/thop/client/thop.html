@@ -26,8 +26,8 @@
             };
         </script>
 
-        <script src="{{ BASE_URL }}static/thop.pk.js" async></script>
-        <link rel="stylesheet" href="{{ BASE_URL }}static/thop.pk.css" async/>
+        <script src="{{ BASE_URL }}static/thop.js" async></script>
+        <link rel="stylesheet" href="{{ BASE_URL }}static/thop.css" async/>
 
         <style>
             .th_loading {
@@ -119,8 +119,8 @@
 
                 document.body.classList.add('th_loading');
                 window.addEventListener('load', function(e) {
-                    if (typeof thop !== 'undefined') {
-                        var p = thop.start();
+                    if (typeof app !== 'undefined') {
+                        var p = app.start();
 
                         p.catch(function(err) {
                             document.body.innerHTML =

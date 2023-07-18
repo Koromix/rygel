@@ -43,3 +43,8 @@ function MetaInterface(data, model) {
         model.constraints[key] = constraint;
     };
 }
+
+export {
+    MetaModel,
+    MetaInterface
+}

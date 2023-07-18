@@ -31,8 +31,8 @@
 
             var ENV = {{ ENV_JSON }};
         </script>
-        <script src="{{ STATIC_URL }}goupile.pk.js" async></script>
-        <link rel="stylesheet" href="{{ STATIC_URL }}goupile.pk.css" async/>
+        <script src="{{ STATIC_URL }}goupile.js" async></script>
+        <link rel="stylesheet" href="{{ STATIC_URL }}goupile.css" async/>
 
         <link rel="preload" href="{{ STATIC_URL }}OpenSans_v17_Latin_Regular.woff2" as="font" type="font/woff2" />
         <link rel="preload" href="{{ STATIC_URL }}OpenSans_v17_Latin_Bold.woff2" as="font" type="font/woff2" />
@@ -125,8 +125,8 @@
 
                 document.body.classList.add('gp_loading');
                 window.addEventListener('load', function(e) {
-                    if (typeof goupile !== 'undefined') {
-                        var p = goupile.start();
+                    if (typeof app !== 'undefined') {
+                        var p = app.start();
 
                         p.catch(function(err) {
                             document.querySelector('#ui_main').innerHTML =

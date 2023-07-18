@@ -11,6 +11,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../web/libjs/common.js';
+import { profile } from './goupile.js';
+import * as UI from './ui.js';
+import { MagicData } from './form_data.js';
+
+import './form.css';
+
 function FormState(data = null) {
     let self = this;
 
@@ -398,7 +406,7 @@ function FormBuilder(state, model) {
             return value;
         });
 
-        let fix_value = (value != null) ? util.clamp(value, options.min, options.max)
+        let fix_value = (value != null) ? Util.clamp(value, options.min, options.max)
                                         : ((options.min + options.max) / 2);
         let fake_progress = (value != null) ? ((fix_value - options.min) / range) : -1;
         if (options.floating)
@@ -407,8 +415,8 @@ function FormBuilder(state, model) {
         let ticks = [];
         if (options.ticks != null && options.ticks !== false) {
             if (options.ticks === true) {
-                ticks = Array.from(util.mapRange(options.min, options.max + 1, i => i));
-            } else if (util.isPodObject(options.ticks)) {
+                ticks = Array.from(Util.mapRange(options.min, options.max + 1, i => i));
+            } else if (Util.isPodObject(options.ticks)) {
                 for (let key in options.ticks) {
                     let pos = parseFloat(key);
                     if (Number.isNaN(pos))
@@ -515,7 +523,7 @@ function FormBuilder(state, model) {
         if (!isModifiable(variables_map[key]))
             return;
 
-        return ui.runDialog(e, null, {}, (d, resolve, reject) => {
+        return UI.runDialog(e, null, {}, (d, resolve, reject) => {
             let number = d.number('number', 'Valeur :', { min: min, max: max, value: value });
 
             d.action('Modifier', { disabled: !d.isValid() }, () => {
@@ -543,7 +551,7 @@ function FormBuilder(state, model) {
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
-                    html`<button type="button" data-value=${util.valueToStr(p.value)}
+                    html`<button type="button" data-value=${Util.valueToStr(p.value)}
                                  .className=${value === p.value ? 'active' : ''}
                                  ?disabled=${options.disabled}
                                  @click=${e => handleEnumChange(e, key, options.untoggle)}
@@ -574,7 +582,7 @@ function FormBuilder(state, model) {
                 el.classList.toggle('active', el.dataset.value === json && activate);
 
             if (activate) {
-                updateValue(key, util.strToValue(json));
+                updateValue(key, Util.strToValue(json));
             } else {
                 updateValue(key, undefined);
             }
@@ -611,7 +619,7 @@ function FormBuilder(state, model) {
                         html`<option value="undefined" .selected=${value == null}
                                      ?disabled=${options.readonly && value != null}>-- Valeur non renseignée --</option>` : ''}
                     ${props.map(p =>
-                        html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}
+                        html`<option value=${Util.valueToStr(p.value)} .selected=${value === p.value}
                                      ?disabled=${options.readonly && value !== p.value}>${p.label}</option>`)}
                 </select>
                 ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
@@ -629,7 +637,7 @@ function FormBuilder(state, model) {
         if (!isModifiable(variables_map[key]))
             return;
 
-        updateValue(key, util.strToValue(e.target.value));
+        updateValue(key, Util.strToValue(e.target.value));
     }
 
     this.enumRadio = function(key, label, props = [], options = {}) {
@@ -660,7 +668,7 @@ function FormBuilder(state, model) {
                     // the form with a new FormState on the same page, a previously checked radio button
                     // can unset a previous one when it's name is updated but the checked value is
                     // still true, meaning '.checked=false' hasn't run yet.
-                    return html`<input type="radio" value=${util.valueToStr(p.value)}
+                    return html`<input type="radio" value=${Util.valueToStr(p.value)}
                                        ?disabled=${options.disabled || false} .checked=${value === p.value}
                                        name=${id} id=${`${id}.${i}`}
                                        @click=${e => handleEnumRadioChange(e, key, options.untoggle && value === p.value)}
@@ -685,7 +693,7 @@ function FormBuilder(state, model) {
             e.target.checked = false;
             updateValue(key, undefined);
         } else {
-            updateValue(key, util.strToValue(e.target.value));
+            updateValue(key, Util.strToValue(e.target.value));
         }
     }
 
@@ -713,7 +721,7 @@ function FormBuilder(state, model) {
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
-                    html`<button type="button" data-value=${util.valueToStr(p.value)}
+                    html`<button type="button" data-value=${Util.valueToStr(p.value)}
                                  .className=${value != null && value.includes(p.value) ? 'active' : ''}
                                  ?disabled=${options.disabled}
                                  @click=${e => handleMultiChange(e, key)}
@@ -743,7 +751,7 @@ function FormBuilder(state, model) {
             if ((el.dataset.value === 'null') != nullify)
                 el.classList.remove('active');
             if (el.classList.contains('active'))
-                value.push(util.strToValue(el.dataset.value));
+                value.push(Util.strToValue(el.dataset.value));
         }
 
         updateValue(key, value);
@@ -797,7 +805,7 @@ function FormBuilder(state, model) {
             <div class=${options.readonly ? 'fm_check readonly' : 'fm_check'}
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) =>
-                    html`<input type="checkbox" id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
+                    html`<input type="checkbox" id=${`${id}.${i}`} value=${Util.valueToStr(p.value)}
                                 ?disabled=${options.disabled} .checked=${value != null && value.includes(p.value)}
                                 @click=${e => handleMultiCheckChange(e, key)}
                                 @keydown=${handleRadioOrCheckKey} tabindex=${i ? -1 : 0} />
@@ -824,7 +832,7 @@ function FormBuilder(state, model) {
             if ((el.value === 'null') != nullify)
                 el.checked = false;
             if (el.checked)
-                value.push(util.strToValue(el.value));
+                value.push(Util.strToValue(el.value));
         }
 
         updateValue(key, value);
@@ -890,8 +898,12 @@ function FormBuilder(state, model) {
 
         let value = readValue(key, options, value => {
             if (typeof value === 'string') {
-                value = dates.parseSafe(value);
-            } else if (value != null && value.constructor.name !== 'LocalDate') {
+                try {
+                    value = LocalDate.parse(value);
+                } catch (err) {
+                    value = undefined;
+                }
+            } else if (!(value instanceof LocalDate)) {
                 value = undefined;
             }
 
@@ -914,7 +926,7 @@ function FormBuilder(state, model) {
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
-        validateMinMax(intf, dates.parse);
+        validateMinMax(intf, LocalDate.parse);
 
         return intf;
     };
@@ -924,11 +936,11 @@ function FormBuilder(state, model) {
             return;
 
         if (has_input_date) {
-            let date = dates.parse(e.target.value || null);
+            let date = LocalDate.parse(e.target.value || null);
             updateValue(key, date || undefined);
         } else {
             try {
-                let date = dates.parse(e.target.value || null);
+                let date = LocalDate.parse(e.target.value || null);
 
                 e.target.setCustomValidity('');
                 updateValue(key, date || undefined);
@@ -947,8 +959,12 @@ function FormBuilder(state, model) {
 
         let value = readValue(key, options, value => {
             if (typeof value === 'string') {
-                value = dates.parseSafe(value);
-            } else if (value != null && value.constructor.name !== 'LocalDate') {
+                try {
+                    value = LocalDate.parse(value);
+                } catch (err) {
+                    value = undefined;
+                }
+            } else if (!(value instanceof LocalDate)) {
                 value = undefined;
             }
 
@@ -973,7 +989,7 @@ function FormBuilder(state, model) {
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
-        validateMinMax(intf, dates.parse);
+        validateMinMax(intf, LocalDate.parse);
 
         return intf;
     };
@@ -983,11 +999,11 @@ function FormBuilder(state, model) {
             return;
 
         if (has_input_month) {
-            let date = dates.parse(e.target.value || null);
+            let date = LocalDate.parse(e.target.value || null);
             updateValue(key, date || undefined);
         } else {
             try {
-                let date = dates.parse(e.target.value || null);
+                let date = LocalDate.parse(e.target.value || null);
 
                 e.target.setCustomValidity('');
                 updateValue(key, date || undefined);
@@ -1006,8 +1022,12 @@ function FormBuilder(state, model) {
 
         let value = readValue(key, options, value => {
             if (typeof value === 'string') {
-                value = times.parseSafe(value);
-            } else if (value != null && value.constructor.name !== 'LocalTime') {
+                try {
+                    value = LocalTime.parse(value);
+                } catch (err) {
+                    value = undefined;
+                }
+            } else if (!(value instanceof LocalTime)) {
                 value = undefined;
             }
 
@@ -1031,7 +1051,7 @@ function FormBuilder(state, model) {
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
-        validateMinMax(intf, times.parse);
+        validateMinMax(intf, LocalTime.parse);
 
         return intf;
     };
@@ -1041,11 +1061,11 @@ function FormBuilder(state, model) {
             return;
 
         if (has_input_date) {
-            let time = times.parse(e.target.value || null);
+            let time = LocalTime.parse(e.target.value || null);
             updateValue(key, time || undefined);
         } else {
             try {
-                let time = times.parse(e.target.value || null);
+                let time = LocalTime.parse(e.target.value || null);
 
                 e.target.setCustomValidity('');
                 updateValue(key, time || undefined);
@@ -1122,8 +1142,8 @@ function FormBuilder(state, model) {
             value = undefined;
         if (value != null && typeof value !== 'string' &&
                              typeof value !== 'number' &&
-                             value.constructor.name !== 'LocalDate' &&
-                             value.constructor.name !== 'LocalTime')
+                             !(value instanceof LocalDate) &&
+                             !(value instanceof LocalTime))
             throw new Error('Calculated value must be a string, a number, a date or a time');
 
         let text;
@@ -1442,7 +1462,7 @@ instead of:
     page.repeat("var", () => { /* Do stuff here */ });`);
         }
 
-        if (!util.isPodObject(key.root[key.name]))
+        if (!Util.isPodObject(key.root[key.name]))
             key.root[key.name] = {};
 
         let values = key.root[key.name];
@@ -1598,7 +1618,7 @@ instead of:
                                           class=${options.color ? 'color' : ''}
                                           style=${options.color ? `--color: ${options.color};` : ''}
                                           title=${options.tooltip || ''}
-                                          @click=${ui.wrapAction(func)}>${label}</button>`;
+                                          @click=${UI.wrap(func)}>${label}</button>`;
 
             if (options.always == null)
                 options.always = false;
@@ -1782,7 +1802,7 @@ instead of:
 
             label: label,
             options: options,
-            line: util.parseEvalErrorLine(new Error()),
+            line: Util.parseEvalErrorLine(new Error()),
 
             errors: [],
 
@@ -1852,7 +1872,7 @@ instead of:
 
         if (props != null) {
             intf.props = props;
-            intf.props_map = util.arrayToObject(props, prop => prop.value, prop => prop.label);
+            intf.props_map = Util.arrayToObject(props, prop => prop.value, prop => prop.label);
             intf.multi = multi;
 
             variable.props = props;
@@ -1989,4 +2009,10 @@ instead of:
 
         return true;
     }
+}
+
+export {
+    FormState,
+    FormModel,
+    FormBuilder
 }

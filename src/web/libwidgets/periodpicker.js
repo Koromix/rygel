@@ -11,12 +11,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { Util, Log } from '../libjs/common.js';
+import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+
+import './periodpicker.css';
+
 function PeriodPicker() {
     let self = this;
 
     this.clickHandler = (e, start, end) => {};
 
-    let limit_dates = [dates.create(1900, 1, 1), dates.today()];
+    let limit_dates = [new LocalDate(1900, 1, 1), LocalDate.today()];
     let current_dates = limit_dates;
 
     let grab_target;
@@ -216,9 +221,11 @@ function PeriodPicker() {
     }
 
     function forceDay(date, day) {
-        day = Math.min(dates.daysInMonth(date.year, date.month), day);
-        date = dates.create(date.year, date.month, day);
+        day = Math.min(LocalDate.daysInMonth(date.year, date.month), day);
+        date = new LocalDate(date.year, date.month, day);
 
         return date;
     }
 }
+
+export { PeriodPicker }

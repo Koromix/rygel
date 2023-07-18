@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-function ApplicationInfo() {
+function ApplicationInfo(profile) {
     this.head = null;
 
     this.pages = [];
@@ -195,4 +195,9 @@ function ApplicationBuilder(app) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
         return options;
     }
+}
+
+export {
+    ApplicationInfo,
+    ApplicationBuilder
 }

@@ -11,30 +11,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { Util, Log, Net, LruMap, LocalDate } from '../../web/libjs/common.js';
+
 // ------------------------------------------------------------------------
 // Data
 // ------------------------------------------------------------------------
 
-const data = new function() {
-    let self = this;
-
+const DataCache = new function() {
     let json_cache = new LruMap(4);
     let dict_cache = new LruMap(4);
 
-    this.fetchJson = async function(url) {
-        return fetchAndCache(json_cache, url, url, json => json); };
+    this.fetchJson = async function(url) { return fetchAndCache(json_cache, url, url, json => json); };
 
     this.fetchDictionary = async function(name) {
         let url = `${ENV.base_url}dictionaries/${name}.json`;
         return fetchAndCache(dict_cache, name, url, parseDictionary);
     };
-    this.fetchCachedDictionary = function(name) { return dict_cache.get(name); }
+
+    this.getCacheDictionary = function(name) { return dict_cache.get(name); };
 
     async function fetchAndCache(cache, key, url, func) {
         let resource = cache.get(key);
 
         if (!resource) {
-            let json = await net.get(url);
+            let json = await Net.get(url);
 
             resource = func(json);
             cache.set(key, resource);
@@ -55,8 +55,6 @@ const data = new function() {
     }
 
     function DictionaryChapter(chapter, dict) {
-        let self = this;
-
         let map = {};
         for (let defn of chapter.definitions) {
             map[defn.code] = defn;
@@ -98,7 +96,7 @@ const data = new function() {
         function describeParent(type) { return dict[type].describe(this.parents[type]); }
     }
 
-    this.clearCache = function() {
+    this.clear = function() {
         json_cache.clear();
         dict_cache.clear();
     };
@@ -108,54 +106,42 @@ const data = new function() {
 // Format
 // ------------------------------------------------------------------------
 
-const format = new function() {
-    this.number = function(n, show_plus = false) {
-        return (show_plus && n > 0 ? '+' : '') +
-               n.toLocaleString('fr-FR');
-    };
-
-    this.percent = function(value, show_plus = false) {
+function formatPrice(price_cents, format_cents = true, show_plus = false) {
+    if (price_cents != null && !isNaN(price_cents)) {
         let parameters = {
-            style: 'percent',
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1
+            minimumFractionDigits: format_cents ? 2 : 0,
+            maximumFractionDigits: format_cents ? 2 : 0
         };
 
-        if (value != null && !isNaN(value)) {
-            return (show_plus && fraction > 0 ? '+' : '') +
-                   value.toLocaleString('fr-FR', parameters);
-        } else {
-            return '-';
-        }
-    };
+        return (show_plus && price_cents > 0 ? '+' : '') +
+               (price_cents / 100.0).toLocaleString('fr-FR', parameters);
+    } else {
+        return '';
+    }
+}
 
-    this.price = function(price_cents, format_cents = true, show_plus = false) {
-        if (price_cents != null && !isNaN(price_cents)) {
-            let parameters = {
-                minimumFractionDigits: format_cents ? 2 : 0,
-                maximumFractionDigits: format_cents ? 2 : 0
-            };
+function formatDuration(duration) {
+    if (duration != null && !isNaN(duration)) {
+        return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
+    } else {
+        return '';
+    }
+}
 
-            return (show_plus && price_cents > 0 ? '+' : '') +
-                   (price_cents / 100.0).toLocaleString('fr-FR', parameters);
-        } else {
-            return '';
-        }
-    };
+function parseDate(value) {
+    try {
+        return LocalDate.parse(value || null);
+    } catch (err) {
+        Log.error(err);
+        return null;
+    }
+}
 
-    this.duration = function(duration) {
-        if (duration != null && !isNaN(duration)) {
-            return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
-        } else {
-            return '';
-        }
-    };
+export {
+    DataCache,
 
-    this.age = function(age) {
-        if (age != null && !isNaN(age)) {
-            return age.toString() + (age >= 2 ? ' ans' : ' an');
-        } else {
-            return '';
-        }
-    };
-};
+    formatPrice,
+    formatDuration,
+
+    parseDate
+}

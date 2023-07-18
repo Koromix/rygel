@@ -8,10 +8,10 @@ form.output(html`
 
 form.section("Conditions", () => {
     form.date("date_inclusion", "Date d'inclusion", {
-        value: dates.today(),
+        value: LocalDate.today(),
         help: "On peut tester la validité d'une ou plusieurs valeurs à l'aide de la fonction à l'aide du code. Ici, une valeur postérieure à la date actuelle entraine une erreur. Des conditions très complexes peuvent être programmées en cas de besoin."
     })
-    if (form.value("date_inclusion") > dates.today()) {
+    if (form.value("date_inclusion") > LocalDate.today()) {
         form.error("date_inclusion", "La date d'inclusion ne peut pas être postérieure à la date actuelle")
     }
 

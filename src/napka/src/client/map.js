@@ -14,7 +14,7 @@
 import { render, html } from '../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../node_modules/lit/directives/unsafe-html.js';
 import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
-import { util, log, net } from '../../../web/libjs/util.js';
+import { util, log, net } from '../../../web/libjs/common.js';
 import { ui } from '../lib/ui.js';
 import parse from '../lib/parse.js';
 import { AppRunner } from '../../../web/libjs/runner.js';

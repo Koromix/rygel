@@ -11,6 +11,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { Util, Log } from '../libjs/common.js';
+import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+
+import './treeselector.css';
+
+let close_func = null;
+
+document.addEventListener('click', e => {
+    if (close_func != null)
+        close_func();
+});
+
 function TreeSelector() {
     let self = this;
 
@@ -22,6 +34,7 @@ function TreeSelector() {
     let groups = [];
 
     let current_tab = {
+        key: null,
         title: null,
         options: []
     };
@@ -29,8 +42,12 @@ function TreeSelector() {
 
     let root_el;
 
-    this.setPrefix = function(str) { prefix = str; };
-    this.getPrefix = function() { return prefix; };
+    Object.defineProperties(this, {
+        prefix: { get: () => prefix, set: str => { prefix = str; }, enumerable: true },
+
+        currentTab: { get: () => current_tab.key, set: setCurrentTab, enumerable: true },
+        values: { get: () => current_values, set: setValues, enumerable: true }
+    })
 
     this.addTab = function(key, title = undefined) {
         let tab = {
@@ -83,22 +100,20 @@ function TreeSelector() {
             current_values.add(value);
     };
 
-    this.setCurrentTab = function(key) {
+    function setCurrentTab(key) {
         let new_tab = tabs.find(tab => tab.key === key);
         if (!new_tab)
             throw new Error(`Tab '${key}' does not exist`);
         current_tab = new_tab;
-    };
-    this.getCurrentTab = function() { return current_tab.key; };
+    }
 
-    this.setValues = function(values) {
+    function setValues(values) {
         if (values instanceof Set) {
             current_values = values;
         } else {
             current_values = new Set(values);
         }
-    };
-    this.getValues = function() { return current_values; };
+    }
 
     this.render = function() {
         if (!root_el) {
@@ -149,7 +164,7 @@ function TreeSelector() {
                             return html`
                                 <label class=${'tsel_option' + (opt.disabled ? ' disabled' : '')}
                                        style=${'padding-left: ' + opt.depth + 'em;'} data-depth=${opt.depth}>
-                                    <input type="checkbox" data-value=${util.valueToStr(opt.value)}
+                                    <input type="checkbox" data-value=${Util.valueToStr(opt.value)}
                                            ?disabled=${opt.disabled} @click=${handleOptionClick}/>
                                     ${opt.title}
                                 </label>
@@ -171,7 +186,7 @@ function TreeSelector() {
 
             return html`${prefix}
                 ${sorted_values.map(value => html`<a @click=${handleSummaryClick}
-                                                     data-value=${util.valueToStr(value)}>${value}</a>`)}
+                                                     data-value=${Util.valueToStr(value)}>${value}</a>`)}
             `;
         } else {
             return html`${prefix}${current_values.size} / ${values.size}`;
@@ -181,15 +196,14 @@ function TreeSelector() {
     function handleSummaryClick(e) {
         let summary_el = root_el.querySelector('.tsel_summary');
 
-        let value = util.strToValue(e.target.dataset.value);
+        let value = Util.strToValue(e.target.dataset.value);
         updateValue(value, false);
 
         render(renderSummary(), summary_el);
         syncCheckboxes(root_el);
 
-        if (!TreeSelector.close_func)
-            self.clickHandler.call(self, e, current_values,
-                                   current_tab ? current_tab.key : undefined);
+        if (close_func == null)
+            self.clickHandler.call(self, e, current_values, current_tab ? current_tab.key : undefined);
 
         e.preventDefault();
         e.stopPropagation();
@@ -221,7 +235,7 @@ function TreeSelector() {
         while (sibling && sibling.dataset.depth > group.dataset.depth) {
             if (sibling.classList.contains('tsel_option')) {
                 let input = sibling.querySelector('input[type=checkbox]');
-                let value = util.strToValue(input.dataset.value);
+                let value = Util.strToValue(input.dataset.value);
 
                 updateValue(value, e.target.checked);
             }
@@ -235,7 +249,7 @@ function TreeSelector() {
     function handleOptionClick(e) {
         let summary_el = root_el.querySelector('.tsel_summary');
 
-        let value = util.strToValue(e.target.dataset.value);
+        let value = Util.strToValue(e.target.dataset.value);
         updateValue(value, e.target.checked);
 
         render(renderSummary(), summary_el);
@@ -246,12 +260,12 @@ function TreeSelector() {
         let view_el = root_el.querySelector('.tsel_view');
 
         if (!view_el.classList.contains('active')) {
-            if (TreeSelector.close_func)
-                TreeSelector.close_func();
+            if (close_func != null)
+                close_func();
 
-            TreeSelector.close_func = () => {
+            close_func = () => {
                 view_el.classList.remove('active');
-                TreeSelector.close_func = null;
+                close_func = null;
 
                 self.clickHandler.call(self, e, current_values,
                                        current_tab ? current_tab.key : undefined);
@@ -261,7 +275,7 @@ function TreeSelector() {
             view_el.classList.add('active');
         } else {
             // Only one selector can be open at the same time: this must be it!
-            TreeSelector.close_func();
+            close_func();
         }
     }
 
@@ -290,7 +304,7 @@ function TreeSelector() {
                 input.indeterminate = check && !(and_state & (1 << (depth + 1)));
                 input.checked = check && !input.indeterminate;
             } else {
-                let value = util.strToValue(input.dataset.value);
+                let value = Util.strToValue(input.dataset.value);
                 input.checked = current_values.has(value);
             }
 
@@ -303,9 +317,5 @@ function TreeSelector() {
         }
     }
 }
-TreeSelector.close_func = null;
 
-document.addEventListener('click', e => {
-    if (TreeSelector.close_func)
-        TreeSelector.close_func();
-});
+export { TreeSelector }

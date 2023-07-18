@@ -13,7 +13,7 @@
 
 const fetch = require('node-fetch');
 const querystring = require('querystring');
-const { util } = require('../../../web/libjs/util.js');
+const { util } = require('../../../web/libjs/common.js');
 
 function FileInfo(filename = null, buffer = null) {
     this.filename = filename;

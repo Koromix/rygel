@@ -11,11 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { Util, Log } from '../../web/libjs/common.js';
+
+// Globally shared between all MagicData instances
+let raw_map = new WeakMap;
+
 function MagicData(raw = {}, annotations = null) {
     let self = this;
 
     let meta_map = new WeakMap;
-    let raw_map = MagicData.raw_map;
 
     let all_changes = new Set;
     let clear_markers = {};
@@ -45,7 +49,7 @@ function MagicData(raw = {}, annotations = null) {
         for (let key in annotations.children) {
             let target = obj[key];
 
-            if (util.isPodObject(target))
+            if (Util.isPodObject(target))
                 importAnnotations(target, annotations.children[key]);
         }
     }
@@ -167,7 +171,7 @@ function MagicData(raw = {}, annotations = null) {
         for (let key in obj) {
             let value = obj[key];
 
-            if (util.isPodObject(value)) {
+            if (Util.isPodObject(value)) {
                 let [ret, valid] = exportAnnotations(value, min_note_id);
 
                 if (valid) {
@@ -204,4 +208,5 @@ function MagicData(raw = {}, annotations = null) {
         return !Object.keys(notes).length;
     }
 }
-MagicData.raw_map = new WeakMap;
+
+export { MagicData }

@@ -78,7 +78,7 @@ async function exportRecords(stores) {
 
     // Create workbook...
     let wb = XLSX.utils.book_new();
-    let wb_name = `export_${ENV.key}_${dates.today()}`;
+    let wb_name = `export_${ENV.key}_${LocalDate.today()}`;
     for (let i = 0; i < stores.length; i++) {
         let store = stores[i];
         let ws = worksheets[i];
@@ -224,3 +224,5 @@ function findSequence(thread) {
 
     return null;
 }
+
+export { exportRecords }

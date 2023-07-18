@@ -11,61 +11,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-if (typeof lithtml !== 'undefined') {
-    window.render = lithtml.render;
-    window.html = lithtml.html;
-    window.svg = lithtml.svg;
-}
+import './common.css';
 
 // ------------------------------------------------------------------------
 // Compatibility
 // ------------------------------------------------------------------------
 
-if (typeof String.prototype.padStart !== 'function') {
-    String.prototype.padStart = function(target_len, pad_str) {
-        if (this.length >= target_len) {
-            return this;
-        } else {
-            let pad_len = target_len - this.length;
-            pad_str += pad_str.repeat(pad_len / pad_str.length);
+if (String.prototype.format == null) {
+    String.prototype.format = function(...args) {
+        let str = this.replace(/{(\d+)}/g, (match, idx) => {
+            idx = parseInt(idx, 10) - 1;
 
-            let str = pad_str.slice(0, pad_len) + this;
-            return str;
-        }
-    };
-}
+            if (idx >= args.length)
+                return match;
 
-if (typeof Array.prototype.flatMap !== 'function') {
-    Array.prototype.flatMap = function(func, this_arg = undefined) {
-        let obj = Object(this);
-        let arr = [];
+            let arg = args[idx];
+            return (arg != null) ? arg : '';
+        });
 
-        flattenIntoArray(arr, obj, 0, 1, func, this_arg);
-
-        return arr;
-    };
-
-    function flattenIntoArray(target, src, start, depth, mapper = null, this_arg = undefined) {
-        let j = start;
-
-        for (let i = 0; i < src.length; i++, j++) {
-            if (i in src) {
-                let elmt = src[i];
-                if (mapper != null)
-                    elmt = mapper.call(this_arg, elmt, i, target);
-
-                let spreadable = Object.getOwnPropertySymbols(elmt).includes(Symbol.isConcatSpreadable) ||
-                                 Array.isArray(elmt);
-
-                if (spreadable && depth > 0) {
-                    j = flattenIntoArray(target, elmt, j, depth - 1) - 1;
-                } else {
-                    target[j] = elmt;
-                }
-            }
-        }
-
-        return j;
+        return str;
     }
 }
 
@@ -82,23 +46,11 @@ if (typeof Blob !== 'undefined' && !Blob.prototype.text) {
     };
 }
 
-if (String.prototype.format == null) {
-    String.prototype.format = function(...args) {
-        let str = this.replace(/{(\d+)}/g, (match, idx) => {
-            idx = parseInt(idx, 10) - 1;
-
-            let arg = args[idx];
-            return (arg !== undefined) ? arg : match;
-        });
-        return str;
-    }
-}
-
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
 
-const util = new function() {
+const Util = new function() {
     let self = this;
 
     this.clamp = function(value, min, max) {
@@ -618,7 +570,7 @@ function Mutex() {
 // Log
 // ------------------------------------------------------------------------
 
-const log = new function() {
+const Log = new function() {
     let self = this;
 
     let handlers = [];
@@ -676,10 +628,10 @@ const log = new function() {
         this.msg = null;
         this.timer_id = null;
 
-        this.debug = function(msg, timeout = log.defaultTimeout) { return updateEntry(self, 'debug', msg, timeout); };
-        this.info = function(msg, timeout = log.defaultTimeout) { return updateEntry(self, 'info', msg, timeout); };
-        this.success = function(msg, timeout = log.defaultTimeout) { return updateEntry(self, 'success', msg, timeout); };
-        this.error = function(msg, timeout = log.defaultTimeout) { return updateEntry(self, 'error', msg, timeout); };
+        this.debug = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'debug', msg, timeout); };
+        this.info = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'info', msg, timeout); };
+        this.success = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'success', msg, timeout); };
+        this.error = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'error', msg, timeout); };
 
         this.progress = function(action, value = null, max = null) {
             if (value != null) {
@@ -693,10 +645,10 @@ const log = new function() {
         this.close = function() { closeEntry(self); };
     };
 
-    this.debug = function(msg, timeout = log.defaultTimeout) { return (new self.Entry).debug(msg, timeout); };
-    this.info = function(msg, timeout = log.defaultTimeout) { return (new self.Entry).info(msg, timeout); };
-    this.success = function(msg, timeout = log.defaultTimeout) { return (new self.Entry).success(msg, timeout); };
-    this.error = function(msg, timeout = log.defaultTimeout) { return (new self.Entry).error(msg, timeout); };
+    this.debug = function(msg, timeout = Log.defaultTimeout) { return (new self.Entry).debug(msg, timeout); };
+    this.info = function(msg, timeout = Log.defaultTimeout) { return (new self.Entry).info(msg, timeout); };
+    this.success = function(msg, timeout = Log.defaultTimeout) { return (new self.Entry).success(msg, timeout); };
+    this.error = function(msg, timeout = Log.defaultTimeout) { return (new self.Entry).error(msg, timeout); };
     this.progress = function(action, value = null, max = null) { return (new self.Entry).progress(action, value, max); };
 };
 
@@ -715,7 +667,7 @@ function NetworkError() {
 NetworkError.prototype = new Error();
 NetworkError.prototype.name = 'NetworkError';
 
-const net = new function() {
+const Net = new function() {
     let self = this;
 
     let online = true;
@@ -760,7 +712,7 @@ const net = new function() {
                 let retry = await self.retryHandler(response.status);
 
                 if (retry) {
-                    net.setOnline(true);
+                    Net.setOnline(true);
                     continue;
                 }
             }
@@ -868,7 +820,7 @@ const net = new function() {
     };
 
     this.loadSound = async function(url) {
-        let response = await net.fetch(url);
+        let response = await Net.fetch(url);
 
         let buf = await response.arrayBuffer();
         let sound = await audio.decodeAudioData(buf);
@@ -1329,363 +1281,318 @@ function BTree(order = 64) {
 // Date and time
 // ------------------------------------------------------------------------
 
-const dates = new function() {
-    let self = this;
+let fmt_crazy = (new Date(2222, 4, 2)).toLocaleDateString().endsWith('2222');
+let fmt_sep = (new Date(2222, 4, 2)).toLocaleDateString().includes('/') ? '/' : '-';
 
-    let fmt_crazy = (new Date(2222, 4, 2)).toLocaleDateString().endsWith('2222');
-    let fmt_sep = (new Date(2222, 4, 2)).toLocaleDateString().includes('/') ? '/' : '-';
+// I don't usually use prototype-based classes in JS, but this seems to help reduce
+// memory usage when a lot of date objects are generated.
+function LocalDate(year = 0, month = 0, day = 0) {
+    this.year = year;
+    this.month = month;
+    this.day = day;
 
-    this.isLeapYear = function(year) {
-        return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    LocalDate.prototype.clone = function() { return new LocalDate(this.year, this.month, this.day); };
+
+    LocalDate.prototype.isZero = function() { return !this.year && !this.month && !this.day; };
+    LocalDate.prototype.isValid = function() {
+        if (this.year == null || this.year < -4712)
+            return false;
+        if (this.month == null || this.month < 1 || this.month > 12)
+            return false;
+        if (this.day != null && (this.day < 1 || this.day > LocalDate.daysInMonth(this.year, this.month)))
+            return false;
+
+        return true;
+    };
+    LocalDate.prototype.isComplete = function() { return this.isValid() && this.day != null; };
+
+    LocalDate.prototype.equals = function(other) { return +this === +other; };
+
+    LocalDate.prototype.toJulianDays = function() {
+        // Straight from the Web:
+        // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
+
+        let adjust = this.month < 3;
+        let year = this.year + 4800 - adjust;
+        let month = this.month + 12 * adjust - 3;
+
+        let julian_days = (this.day || 1) + Math.floor((153 * month + 2) / 5) + 365 * year - 32045 +
+                          Math.floor(year / 4) - Math.floor(year / 100) + Math.floor(year / 400);
+
+        return julian_days;
     };
 
-    this.daysInMonth = function(year, month) {
-        let days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        return days_per_month[month - 1] + (month == 2 && self.isLeapYear(year));
+    LocalDate.prototype.toJSDate = function(utc = false) {
+        if (utc) {
+            let unix = Date.UTC(this.year, this.month - 1, this.day);
+            return new Date(unix);
+        } else {
+            return new Date(this.year, this.month - 1, this.day);
+        }
     };
 
-    // I don't usually use prototype-based classes in JS, but this seems to help reduce
-    // memory usage when a lot of date objects are generated.
-    function LocalDate(year = 0, month = 0, day = 0) {
-        this.year = year;
-        this.month = month;
-        this.day = day;
+    LocalDate.prototype.getWeekDay = function() {
+        // Zeller's congruence:
+        // https://en.wikipedia.org/wiki/Zeller%27s_congruence
 
-        LocalDate.prototype.clone = function() { return dates.create(this.year, this.month, this.day); };
-
-        LocalDate.prototype.isZero = function() { return !this.year && !this.month && !this.day; };
-        LocalDate.prototype.isValid = function() {
-            if (this.year == null || this.year < -4712)
-                return false;
-            if (this.month == null || this.month < 1 || this.month > 12)
-                return false;
-            if (this.day != null && (this.day < 1 || this.day > dates.daysInMonth(this.year, this.month)))
-                return false;
-
-            return true;
-        };
-        LocalDate.prototype.isComplete = function() { return this.isValid() && this.day != null; };
-
-        LocalDate.prototype.equals = function(other) { return +this === +other; };
-
-        LocalDate.prototype.toJulianDays = function() {
-            // Straight from the Web:
-            // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
-
-            let adjust = this.month < 3;
-            let year = this.year + 4800 - adjust;
-            let month = this.month + 12 * adjust - 3;
-
-            let julian_days = (this.day || 1) + Math.floor((153 * month + 2) / 5) + 365 * year - 32045 +
-                              Math.floor(year / 4) - Math.floor(year / 100) + Math.floor(year / 400);
-
-            return julian_days;
-        };
-
-        LocalDate.prototype.toJSDate = function(utc = false) {
-            if (utc) {
-                let unix = Date.UTC(this.year, this.month - 1, this.day);
-                return new Date(unix);
-            } else {
-                return new Date(this.year, this.month - 1, this.day);
-            }
-        };
-
-        LocalDate.prototype.getWeekDay = function() {
-            // Zeller's congruence:
-            // https://en.wikipedia.org/wiki/Zeller%27s_congruence
-
-            let year = this.year;
-            let month = this.month;
-            if (month < 3) {
-                year--;
-                month += 12;
-            }
-
-            let century = Math.floor(year / 100);
-            year %= 100;
-
-            let week_day = ((this.day || 1) + Math.floor(13 * (month + 1) / 5) + year + Math.floor(year / 4) +
-                            Math.floor(century / 4) + 5 * century + 5) % 7;
-
-            return week_day;
-        };
-
-        LocalDate.prototype.diff = function(other) { return this.toJulianDays() - other.toJulianDays(); };
-
-        LocalDate.prototype.plus = function(days) {
-            let date = dates.fromJulianDays(this.toJulianDays() + days);
-            return date;
-        };
-        LocalDate.prototype.minus = function(days) {
-            let date = dates.fromJulianDays(this.toJulianDays() - days);
-            return date;
-        };
-
-        LocalDate.prototype.plusMonths = function(months) {
-            if (months >= 0) {
-                let m = this.month + months - 1;
-
-                let year = this.year + Math.floor(m / 12);
-                let month = 1 + (m % 12);
-                let day = Math.min(this.day || 1, dates.daysInMonth(year, month));
-
-                return dates.create(year, month, day);
-            } else {
-                let m = 12 - this.month - months;
-
-                let year = this.year - Math.floor(m / 12);
-                let month = 12 - (m % 12);
-                let day = Math.min(this.day || 1, dates.daysInMonth(year, month));
-
-                return dates.create(year, month, day);
-            }
-        };
-        LocalDate.prototype.minusMonths = function(months) { return this.plusMonths(-months); };
-
-        LocalDate.prototype.valueOf = LocalDate.prototype.toJulianDays;
-
-        LocalDate.prototype.toString = function() {
-            if (this.day != null) {
-                let year_str = ('' + this.year).padStart(4, '0');
-                let month_str = ('' + this.month).padStart(2, '0');
-                let day_str = ('' + this.day).padStart(2, '0');
-
-                let str = `${year_str}-${month_str}-${day_str}`;
-                return str;
-            } else {
-                let year_str = ('' + this.year).padStart(4, '0');
-                let month_str = ('' + this.month).padStart(2, '0');
-
-                let str = `${year_str}-${month_str}`;
-                return str;
-            }
-        };
-        LocalDate.prototype.toJSON = LocalDate.prototype.toString;
-
-        LocalDate.prototype.toLocaleString = function() {
-            if (this.day != null) {
-                let js_date = new Date(this.year, this.month - 1, this.day);
-                let str = js_date.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit', year: 'numeric' });
-
-                return str;
-            } else {
-                let year_str = ('' + this.year).padStart(4, '0');
-                let month_str = ('' + this.month).padStart(2, '0');
-
-                let str = fmt_crazy ? `${month_str}${fmt_sep}${year_str}` : `${year_str}${fmt_sep}${month_str}`;
-                return str;
-            }
-        };
-    }
-
-    this.create = function(year = 0, month = 0, day = 0) {
-        let date = new LocalDate(year, month, day);
-        return Object.freeze(date);
-    };
-
-    this.parse = function(str, validate = true) {
-        if (str == null)
-            return null;
-        if (str instanceof LocalDate)
-            return str;
-
-        let date;
-        {
-            let parts = str.split(/[\-\/]/);
-
-            // Support imprecise dates (month and year)
-            if (parts.length === 2) {
-                if (parts[0].length > parts[1].length) {
-                    parts.push('00');
-                } else {
-                    parts.unshift('00');
-                }
-            }
-
-            if (parts.length !== 3) {
-                throw new Error(`Date '${str}' is malformed`);
-            } else if (parts[0].length < 4 && parts[2].length < 4) {
-                throw new Error(`Date '${str}' is ambiguous`);
-            }
-
-            if (parts[2].length >= 4)
-                parts.reverse();
-            parts = parts.map(part => {
-                let value = parseInt(part, 10);
-                if (Number.isNaN(value))
-                    throw new Error(`Date '${str}' is malformed`);
-                return value;
-            });
-            if (!parts[2])
-                parts[2] = null;
-
-            date = dates.create(...parts);
+        let year = this.year;
+        let month = this.month;
+        if (month < 3) {
+            year--;
+            month += 12;
         }
 
-        if (validate && !date.isValid())
-            throw new Error(`Date '${str}' is invalid`);
+        let century = Math.floor(year / 100);
+        year %= 100;
 
+        let week_day = ((this.day || 1) + Math.floor(13 * (month + 1) / 5) + year + Math.floor(year / 4) +
+                        Math.floor(century / 4) + 5 * century + 5) % 7;
+
+        return week_day;
+    };
+
+    LocalDate.prototype.diff = function(other) { return this.toJulianDays() - other.toJulianDays(); };
+
+    LocalDate.prototype.plus = function(days) {
+        let date = LocalDate.fromJulianDays(this.toJulianDays() + days);
+        return date;
+    };
+    LocalDate.prototype.minus = function(days) {
+        let date = LocalDate.fromJulianDays(this.toJulianDays() - days);
         return date;
     };
 
-    this.parseSafe = function(str, validate = true) {
-        try {
-            return self.parse(str, validate);
-        } catch (err) {
-            return null;
+    LocalDate.prototype.plusMonths = function(months) {
+        if (months >= 0) {
+            let m = this.month + months - 1;
+
+            let year = this.year + Math.floor(m / 12);
+            let month = 1 + (m % 12);
+            let day = Math.min(this.day || 1, LocalDate.daysInMonth(year, month));
+
+            return new LocalDate(year, month, day);
+        } else {
+            let m = 12 - this.month - months;
+
+            let year = this.year - Math.floor(m / 12);
+            let month = 12 - (m % 12);
+            let day = Math.min(this.day || 1, LocalDate.daysInMonth(year, month));
+
+            return new LocalDate(year, month, day);
+        }
+    };
+    LocalDate.prototype.minusMonths = function(months) { return this.plusMonths(-months); };
+
+    LocalDate.prototype.valueOf = LocalDate.prototype.toJulianDays;
+
+    LocalDate.prototype.toString = function() {
+        if (this.day != null) {
+            let year_str = ('' + this.year).padStart(4, '0');
+            let month_str = ('' + this.month).padStart(2, '0');
+            let day_str = ('' + this.day).padStart(2, '0');
+
+            let str = `${year_str}-${month_str}-${day_str}`;
+            return str;
+        } else {
+            let year_str = ('' + this.year).padStart(4, '0');
+            let month_str = ('' + this.month).padStart(2, '0');
+
+            let str = `${year_str}-${month_str}`;
+            return str;
+        }
+    };
+    LocalDate.prototype.toJSON = LocalDate.prototype.toString;
+
+    LocalDate.prototype.toLocaleString = function() {
+        if (this.day != null) {
+            let js_date = new Date(this.year, this.month - 1, this.day);
+            let str = js_date.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+            return str;
+        } else {
+            let year_str = ('' + this.year).padStart(4, '0');
+            let month_str = ('' + this.month).padStart(2, '0');
+
+            let str = fmt_crazy ? `${month_str}${fmt_sep}${year_str}` : `${year_str}${fmt_sep}${month_str}`;
+            return str;
         }
     };
 
-    this.parseLog = function(str, validate = true) {
-        try {
-            return self.parse(str, validate);
-        } catch (err) {
-            log.error(err);
-            return null;
-        }
-    };
+    Object.freeze(this);
+}
 
-    this.fromJulianDays = function(days) {
-        // Algorithm from Richards, copied from Wikipedia:
-        // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
-
-        let f = days + 1401 + Math.floor((Math.floor((4 * days + 274277) / 146097) * 3) / 4) - 38;
-        let e = 4 * f + 3;
-        let g = Math.floor(e % 1461 / 4);
-        let h = 5 * g + 2;
-
-        let month = Math.floor(h / 153 + 2) % 12 + 1;
-        let year = Math.floor(e / 1461) - 4716 + (month < 3);
-        let day = Math.floor(h % 153 / 5) + 1;
-
-        return dates.create(year, month, day);
-    };
-
-    this.today = function() {
-        let date = new Date();
-
-        let year = date.getFullYear();
-        let month = date.getMonth() + 1;
-        let day = date.getDate();
-
-        return dates.create(year, month, day);
-    };
+LocalDate.isLeapYear = function(year) {
+    return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
 };
 
-const times = new function() {
-    let self = this;
+LocalDate.daysInMonth = function(year, month) {
+    let days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    return days_per_month[month - 1] + (month == 2 && LocalDate.isLeapYear(year));
+};
 
-    function LocalTime(hour = 0, minute = 0, second = 0) {
-        this.hour = hour;
-        this.minute = minute;
-        this.second = second;
+LocalDate.parse = function(str, validate = true) {
+    if (str == null)
+        return null;
+    if (str instanceof LocalDate)
+        return str;
 
-        LocalTime.prototype.clone = function() { return dates.create(this.hour, this.minute, this.second); };
+    let date;
+    {
+        let parts = str.split(/[\-\/]/);
 
-        LocalTime.prototype.isZero = function() { return !this.hour && !this.minute && !this.second; };
-        LocalTime.prototype.isValid = function() {
-            if (this.hour == null || this.hour < 0 || this.hour > 23)
-                return false;
-            if (this.minute == null || this.minute < 0 || this.minute > 59)
-                return false;
-            if (this.second == null || this.second < 0 || this.second > 59)
-                return false;
+        // Support imprecise dates (month and year)
+        if (parts.length === 2) {
+            if (parts[0].length > parts[1].length) {
+                parts.push('00');
+            } else {
+                parts.unshift('00');
+            }
+        }
 
-            return true;
-        };
+        if (parts.length !== 3) {
+            throw new Error(`Date '${str}' is malformed`);
+        } else if (parts[0].length < 4 && parts[2].length < 4) {
+            throw new Error(`Date '${str}' is ambiguous`);
+        }
 
-        LocalTime.prototype.equals = function(other) { return +this === +other; };
+        if (parts[2].length >= 4)
+            parts.reverse();
+        parts = parts.map(part => {
+            let value = parseInt(part, 10);
+            if (Number.isNaN(value))
+                throw new Error(`Date '${str}' is malformed`);
+            return value;
+        });
+        if (!parts[2])
+            parts[2] = null;
 
-        LocalTime.prototype.toDaySeconds = function() { return (this.hour * 3600) + (this.minute * 60) + this.second; };
-
-        LocalTime.prototype.diff = function(other) { return this.toDaySeconds() - other.toDaySeconds(); };
-
-        LocalTime.prototype.valueOf = LocalTime.prototype.toDaySeconds;
-
-        LocalTime.prototype.toString = function() {
-            let hour_str = ('' + this.hour).padStart(2, '0');
-            let minute_str = ('' + this.minute).padStart(2, '0');
-            let second_str = ('' + this.second).padStart(2, '0');
-
-            let str = `${hour_str}:${minute_str}:${second_str}`;
-            return str;
-        };
-        LocalTime.prototype.toJSON = LocalTime.prototype.toString;
-        LocalTime.prototype.toLocaleString = LocalTime.prototype.toString;
+        date = new LocalDate(...parts);
     }
 
-    this.create = function(hour = 0, minute = 0, second = 0) {
-        let time = new LocalTime(hour, minute, second);
-        return Object.freeze(time);
-    };
+    if (validate && !date.isValid())
+        throw new Error(`Date '${str}' is invalid`);
 
-    this.fromDaySeconds = function(seconds) {
-        let hour = Math.floor(seconds / 3600);
-        seconds = Math.floor(seconds % 3600);
-        let minute = Math.floor(seconds / 60);
-        let second = Math.floor(seconds % 60);
-
-        return times.create(hour, minute, second);
-    };
-
-    this.parse = function(str, validate = true) {
-        if (str == null)
-            return null;
-        if (str instanceof LocalTime)
-            return str;
-
-        let time;
-        {
-            let m = str.match(/^([0-9]{2})[h:]([0-9]{2})(?:m?|[m:](?:([0-9]{2})s?)?)$/);
-            if (m == null)
-                throw new Error(`Time '${str}' is malformed`);
-
-            let [, hour, minute, second] = m.map(part => parseInt(part, 10));
-            time = times.create(hour, minute, second || 0);
-        }
-
-        if (validate && !time.isValid())
-            throw new Error(`Time '${str}' is invalid`);
-
-        return time;
-    };
-
-    this.parseSafe = function(str, validate = true) {
-        try {
-            return self.parse(str, validate);
-        } catch (err) {
-            return null;
-        }
-    };
-
-    this.parseLog = function(str, validate = true) {
-        try {
-            return self.parse(str, validate);
-        } catch (err) {
-            log.error(err);
-            return null;
-        }
-    };
-
-    this.now = function() {
-        let date = new Date();
-
-        let hours = date.getHours();
-        let minutes = date.getMinutes();
-        let seconds = date.getSeconds();
-
-        return times.create(hours, minutes, seconds);
-    };
+    return date;
 };
 
-if (typeof module != 'undefined') {
-    module.exports = {
-        util,
-        log,
-        net,
-        LruMap,
-        dates,
-        times
+LocalDate.fromJulianDays = function(days) {
+    // Algorithm from Richards, copied from Wikipedia:
+    // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
+
+    let f = days + 1401 + Math.floor((Math.floor((4 * days + 274277) / 146097) * 3) / 4) - 38;
+    let e = 4 * f + 3;
+    let g = Math.floor(e % 1461 / 4);
+    let h = 5 * g + 2;
+
+    let month = Math.floor(h / 153 + 2) % 12 + 1;
+    let year = Math.floor(e / 1461) - 4716 + (month < 3);
+    let day = Math.floor(h % 153 / 5) + 1;
+
+    return new LocalDate(year, month, day);
+};
+
+LocalDate.today = function() {
+    let date = new Date();
+
+    let year = date.getFullYear();
+    let month = date.getMonth() + 1;
+    let day = date.getDate();
+
+    return new LocalDate(year, month, day);
+};
+
+function LocalTime(hour = 0, minute = 0, second = 0) {
+    this.hour = hour;
+    this.minute = minute;
+    this.second = second;
+
+    LocalTime.prototype.clone = function() { return new LocalTime(this.hour, this.minute, this.second); };
+
+    LocalTime.prototype.isZero = function() { return !this.hour && !this.minute && !this.second; };
+    LocalTime.prototype.isValid = function() {
+        if (this.hour == null || this.hour < 0 || this.hour > 23)
+            return false;
+        if (this.minute == null || this.minute < 0 || this.minute > 59)
+            return false;
+        if (this.second == null || this.second < 0 || this.second > 59)
+            return false;
+
+        return true;
     };
+
+    LocalTime.prototype.equals = function(other) { return +this === +other; };
+
+    LocalTime.prototype.toDaySeconds = function() { return (this.hour * 3600) + (this.minute * 60) + this.second; };
+
+    LocalTime.prototype.diff = function(other) { return this.toDaySeconds() - other.toDaySeconds(); };
+
+    LocalTime.prototype.valueOf = LocalTime.prototype.toDaySeconds;
+
+    LocalTime.prototype.toString = function() {
+        let hour_str = ('' + this.hour).padStart(2, '0');
+        let minute_str = ('' + this.minute).padStart(2, '0');
+        let second_str = ('' + this.second).padStart(2, '0');
+
+        let str = `${hour_str}:${minute_str}:${second_str}`;
+        return str;
+    };
+    LocalTime.prototype.toJSON = LocalTime.prototype.toString;
+    LocalTime.prototype.toLocaleString = LocalTime.prototype.toString;
+
+    Object.freeze(this);
+}
+
+LocalTime.parse = function(str, validate = true) {
+    if (str == null)
+        return null;
+    if (str instanceof LocalTime)
+        return str;
+
+    let time;
+    {
+        let m = str.match(/^([0-9]{2})[h:]([0-9]{2})(?:m?|[m:](?:([0-9]{2})s?)?)$/);
+        if (m == null)
+            throw new Error(`Time '${str}' is malformed`);
+
+        let [, hour, minute, second] = m.map(part => parseInt(part, 10));
+        time = new LocalTime(hour, minute, second || 0);
+    }
+
+    if (validate && !time.isValid())
+        throw new Error(`Time '${str}' is invalid`);
+
+    return time;
+};
+
+LocalTime.fromDaySeconds = function(seconds) {
+    let hour = Math.floor(seconds / 3600);
+    seconds = Math.floor(seconds % 3600);
+    let minute = Math.floor(seconds / 60);
+    let second = Math.floor(seconds % 60);
+
+    return new LocalTime(hour, minute, second);
+};
+
+LocalTime.now = function() {
+    let date = new Date();
+
+    let hours = date.getHours();
+    let minutes = date.getMinutes();
+    let seconds = date.getSeconds();
+
+    return new LocalTime(hours, minutes, seconds);
+};
+
+export {
+    Util,
+    Log,
+    Net,
+
+    Mutex,
+
+    LruMap,
+    BTree,
+
+    LocalDate,
+    LocalTime
 }

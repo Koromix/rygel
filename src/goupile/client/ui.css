@@ -112,7 +112,7 @@ button:not(:disabled):hover { filter: brightness(80%) contrast(160%); }
 }
 .ui_toolbar button.icon {
     padding-left: 36px;
-    background-image: url('icons.png');
+    background-image: url('images/icons.png');
     background-repeat: no-repeat;
     background-size: 22px 770px;
     background-position-x: 6px;
@@ -145,7 +145,7 @@ html.small .ui_toolbar button.icon {
     top: 9px;
     width: 22px;
     height: 16px;
-    background-image: url('icons.png');
+    background-image: url('images/icons.png');
     background-repeat: no-repeat;
     background-size: 22px 770px;
     background-position: 1px calc(-591px + 1.2em);

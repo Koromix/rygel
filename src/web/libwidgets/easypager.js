@@ -11,22 +11,29 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { Util, Log } from '../libjs/common.js';
+import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+
+import './easypager.css';
+
 function EasyPager() {
     let self = this;
 
-    this.urlBuilder = page => '#';
-    this.clickHandler = (e, page) => {};
+    let url_builder = page => '#';
+    let click_handler = (e, page) => {};
 
     let last_page;
     let current_page;
 
     let root_el;
 
-    this.setLastPage = function(page) { last_page = page; };
-    this.getLastPage = function() { return last_page; };
+    Object.defineProperties(this, {
+        urlBuilder: { get: () => url_builder, set: builder => { url_builder = builder; }, enumerable: true },
+        clickHandler: { get: () => click_handler, set: handler => { click_handler = handler; }, enumerable: true },
 
-    this.setPage = function(page) { current_page = page; };
-    this.getPage = function() { return current_page; };
+        lastPage: { get: () => last_page, set: page => { last_page = page; }, enumerable: true },
+        currentPage: { get: () => current_page, set: page => { current_page = page; }, enumerable: true }
+    });
 
     this.render = function() {
         if (!root_el) {
@@ -62,7 +69,7 @@ function EasyPager() {
                 ${makePageLink('≪', current_page > 1 ? (current_page - 1) : null)}
                 ${start_page > 1 ?
                     html`${makePageLink(1, 1)}<td> … </td>` : ''}
-                ${util.mapRange(start_page, end_page + 1,
+                ${Util.mapRange(start_page, end_page + 1,
                                 page => makePageLink(page, page !== current_page ? page : null))}
                 ${end_page < last_page ?
                     html`<td> … </td>${makePageLink(last_page, last_page)}` : ''}
@@ -73,7 +80,7 @@ function EasyPager() {
 
     function makePageLink(text, page) {
         if (page) {
-            return html`<td><a href=${self.urlBuilder.call(self, page)} @click=${e => handlePageClick(e, page)}>${text}</a></td>`;
+            return html`<td><a href=${url_builder.call(self, page)} @click=${e => handlePageClick(e, page)}>${text}</a></td>`;
         } else {
             return html`<td>${text}</td>`;
         }
@@ -82,7 +89,9 @@ function EasyPager() {
     function handlePageClick(e, page) {
         current_page = page;
 
-        if (!self.clickHandler.call(self, e, page))
+        if (!click_handler.call(self, e, page))
             render(renderWidget(), root_el);
     }
 }
+
+export { EasyPager }

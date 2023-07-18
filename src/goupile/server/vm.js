@@ -11,6 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { ApplicationInfo, ApplicationBuilder } from '../client/instance_app.js';
+
 function VmApi(native, main) {
     let self = this;
 
@@ -18,7 +20,7 @@ function VmApi(native, main) {
     main = buildScript(main, ['app', 'profile']);
 
     this.buildApp = async function(profile) {
-        let app = new ApplicationInfo;
+        let app = new ApplicationInfo(profile);
         let builder = new ApplicationBuilder(app);
 
         try {
@@ -64,5 +66,12 @@ function VmApi(native, main) {
         } catch (err) {
             throwScriptError(err);
         }
+    }
+
+    function throwScriptError(err) {
+        let line = Util.parseEvalErrorLine(err);
+        let msg = `Erreur de script\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
+
+        throw new Error(msg);
     }
 }

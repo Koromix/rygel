@@ -13,8 +13,7 @@
 
 import { render, html } from '../../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
-import { util, log, net } from '../../../../web/libjs/util.js';
-import { ui } from '../../lib/ui.js';
+import { Util, Log, Net } from '../../../../web/libjs/common.js';
 import parse from '../../lib/parse.js';
 import { start, zoom, refreshMap, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
@@ -42,8 +41,8 @@ function PpnpsProvider() {
 
     this.loadMap = async function() {
         let [data, images] = await Promise.all([
-            net.get('api/entries/commun'),
-            Promise.all(Object.values(ICONS).map(url => net.loadImage(url, true)))
+            Net.get('api/entries/commun'),
+            Promise.all(Object.values(ICONS).map(url => Net.loadImage(url, true)))
         ]);
 
         etablissements = data.rows;
@@ -327,10 +326,10 @@ function PpnpsProvider() {
                             <colgroup>
                                 <col style="width: 90px;"/>
                                 <col style="width: 60px;"/>
-                                ${util.mapRange(0, columns, idx => html`<col/>`)}
+                                ${Util.mapRange(0, columns, idx => html`<col/>`)}
                             </colgroup>
 
-                            ${util.mapRange(0, show_we ? 14 : 10, idx => {
+                            ${Util.mapRange(0, show_we ? 14 : 10, idx => {
                                 let type = idx % 2 ? 'libre' : 'rdv';
                                 let day = 1 + Math.floor(idx / 2);
 
@@ -338,11 +337,11 @@ function PpnpsProvider() {
 
                                 return html`
                                     <tr class=${!horaires.length ? 'closed' : ''}>
-                                        ${type === 'rdv' ? html`<td rowspan="2">${util.formatDay(day)}</td>` : ''}
+                                        ${type === 'rdv' ? html`<td rowspan="2">${Util.formatDay(day)}</td>` : ''}
                                         <td style="font-style: italic;">${type.toUpperCase()}</td>
 
                                         ${horaires.map(horaire =>
-                                            html`<td>${util.formatTime(horaire.debut)} à ${util.formatTime(horaire.fin)}</td>`)}
+                                            html`<td>${Util.formatTime(horaire.debut)} à ${Util.formatTime(horaire.fin)}</td>`)}
                                         ${columns > horaires.length ?
                                             html`<td colspan=${columns - horaires.length}>${!horaires.length ? 'Fermé' : ''}</td>` : ''}
                                     </tr>
@@ -386,7 +385,7 @@ function PpnpsProvider() {
             </div>
 
             <div class="info">
-                ${etab.orgaforma ? html`<br/><i>${util.capitalize(etab.orgaforma.trim())}</i>` : ''}
+                ${etab.orgaforma ? html`<br/><i>${Util.capitalize(etab.orgaforma.trim())}</i>` : ''}
             </div>
         `;
 

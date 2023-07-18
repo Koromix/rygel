@@ -11,11 +11,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { Util, Log } from '../libjs/common.js';
+import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { EasyPager } from './easypager.js';
+
+import './easytable.css';
+
 function EasyTable() {
     let self = this;
 
-    this.urlBuilder = page => '#';
-    this.clickHandler = (e, offset, filter, sort_key) => {};
+    let url_builder = page => '#';
+    let click_handler = (e, offset, filter, sort_key) => {};
 
     let page_len = -1;
     let offset = 0;
@@ -39,32 +45,37 @@ function EasyTable() {
 
     let root_el;
 
-    this.setPageLen = function(new_len) { page_len = new_len; };
-    this.getPageLen = function() { return page_len; };
-    this.setOffset = function(new_offset) { offset = new_offset; };
-    this.getOffset = function() { return offset; };
+    Object.defineProperties(this, {
+        urlBuilder: { get: () => url_builder, set: builder => { url_builder = builder; }, enumerable: true },
+        clickHandler: { get: () => click_handler, set: handler => { click_handler = handler; }, enumerable: true },
 
-    this.setFilter = function(new_filter) {
-        filter = new_filter || (value => true);
+        pageLen: { get: () => page_len, set: new_len => { page_len = new_len; }, enumerable: true },
+        offset: { get: () => offset, set: new_offset => { offset = new_offset; }, enumerable: true },
+
+        filter: { get: () => filter, set: setFilter, enumerable: true },
+        sortKey: { get: () => filter, set: setSortKey, enumerable: true },
+        options: { get: () => options, enumerable: true },
+
+        panel: { get: () => panel, set: content => { panel = content; }, enumerable: true }
+    });
+
+    function setFilter(new_filter) {
+        filter = new_filter ?? (value => true);
         ready = false;
-    };
-    this.getFilter = function() { return filter; };
-    this.setSortKey = function(new_key) {
+    }
+
+    function setSortKey(new_key) {
         new_key = new_key || null;
-        if (new_key !== sort_key)
+        if (new_key != sort_key)
             ready = false;
         sort_key = new_key;
-    };
-    this.getSortKey = function() { return sort_key; };
+    }
 
     this.setOptions = function(new_options) {
-        if (('parents' in new_options) && new_options.parents !== options.parents)
+        if (new_options.hasOwnProperty('parents') && new_options.parents != options.parents)
             ready = false;
         Object.assign(options, new_options);
     };
-    this.getOptions = function() { return options; };
-
-    this.setPanel = function(new_panel) { panel = new_panel || ''; };
 
     this.addColumn = function(key, title, options = {}) {
         let column = {
@@ -72,7 +83,7 @@ function EasyTable() {
             key: key,
             title: title,
             render: options.render || (value => value),
-            sort: options.sort || util.makeComparator(null, navigator.language, {
+            sort: options.sort || Util.makeComparator(null, navigator.language, {
                 numeric: true,
                 ignorePunctuation: true,
                 sensitivity: 'base'
@@ -255,7 +266,7 @@ function EasyTable() {
                 })}</tr></thead>
 
                 <tbody>
-                    ${util.mapRange(offset, render_end, idx => {
+                    ${Util.mapRange(offset, render_end, idx => {
                         let row = render_rows[idx];
 
                         let trs = [];
@@ -286,12 +297,12 @@ function EasyTable() {
     function handleHeaderClick(e, col_idx) {
         let key = columns[col_idx].key;
         if (key !== sort_key) {
-            self.setSortKey(key);
+            self.sortKey = key;
         } else {
-            self.setSortKey(`-${key}`);
+            self.sortKey = '-' + key;
         }
 
-        self.clickHandler.call(self, e, offset, sort_key);
+        click_handler.call(self, e, offset, sort_key);
         e.preventDefault();
 
         render(renderWidget(), root_el);
@@ -309,14 +320,14 @@ function EasyTable() {
         if (page_len >= 0 && (offset || render_rows.length > page_len)) {
             let epag = new EasyPager;
 
-            epag.urlBuilder = page => self.urlBuilder.call(self, (page - 1) * page_len, sort_key);
+            epag.urlBuilder = page => url_builder.call(self, (page - 1) * page_len, sort_key);
             epag.clickHandler = handlePageClick;
 
             let last_page = Math.floor((render_rows.length - 1) / page_len + 1);
             let page = Math.ceil(offset / page_len) + 1;
 
-            epag.setLastPage(last_page);
-            epag.setPage(page);
+            epag.lastPage = last_page;
+            epag.currentPage = page;
 
             return epag.render();
         } else {
@@ -327,10 +338,10 @@ function EasyTable() {
     function handlePageClick(e, page) {
         let offset = (page - 1) * page_len;
 
-        if (self.clickHandler.call(self, e, offset, sort_key)) {
+        if (click_handler.call(self, e, offset, sort_key)) {
             return true;
         } else {
-            self.setOffset(offset);
+            self.offset = offset;
             render(renderWidget(), root_el);
             return false;
         }
@@ -338,3 +349,5 @@ function EasyTable() {
 
     self.clear();
 }
+
+export { EasyTable }

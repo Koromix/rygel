@@ -11,7 +11,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-function InstancePublisher(instance) {
+import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net } from '../../web/libjs/common.js';
+import { Sha256 } from '../../web/libjs/crypto.js';
+import * as UI from './ui.js';
+
+function InstancePublisher() {
     let actions;
     let dialog;
 
@@ -20,14 +25,14 @@ function InstancePublisher(instance) {
 
         let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
 
-        return ui.runDialog(e, 'Publication', {}, (d, resolve, reject) => {
+        return UI.runDialog(e, 'Publication', {}, (d, resolve, reject) => {
             dialog = d;
 
             d.output(html`
                 <div class="ui_quick">
                     ${modifications || 'Aucune'} ${modifications > 1 ? 'modifications' : 'modification'} à effectuer
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(refresh)}>Rafraichir</a>
+                    <a @click=${UI.wrap(refresh)}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table ins_deploy">
@@ -59,10 +64,10 @@ function InstancePublisher(instance) {
                             return html`
                                 <tr class=${action.type === 'conflict' ? 'conflict' : ''}>
                                     <td>
-                                        <a @click=${ui.wrapAction(e => runDeleteFileDialog(e, action))}>x</a>
+                                        <a @click=${UI.wrap(e => runDeleteFileDialog(e, action))}>x</a>
                                     </td>
                                     <td class=${local_cls}>${action.filename}</td>
-                                    <td class="size">${action.to_sha256 ? util.formatDiskSize(action.to_size) : ''}</td>
+                                    <td class="size">${action.to_sha256 ? Util.formatDiskSize(action.to_size) : ''}</td>
 
                                     <td class="actions">
                                         <a class=${action.type === 'pull' ? 'active' : (action.to_sha256 == null || action.to_sha256 === action.from_sha256 ? 'disabled' : '')}
@@ -74,7 +79,7 @@ function InstancePublisher(instance) {
                                     <td class=${remote_cls}>${action.filename}</td>
                                     <td class="size">
                                         ${action.type === 'conflict' ? html`<span class="conflict" title="Modifications en conflit">⚠\uFE0E</span>&nbsp;` : ''}
-                                        ${action.from_sha256 ? util.formatDiskSize(action.from_size) : ''}
+                                        ${action.from_sha256 ? Util.formatDiskSize(action.from_size) : ''}
                                     </td>
                                 </tr>
                             `;
@@ -84,7 +89,7 @@ function InstancePublisher(instance) {
 
                 <div class="ui_quick">
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(runAddFileDialog)}>Ajouter un fichier</a>
+                    <a @click=${UI.wrap(runAddFileDialog)}>Ajouter un fichier</a>
                 </div>
             `);
 
@@ -102,7 +107,7 @@ function InstancePublisher(instance) {
 
      // XXX: What about conflicts?
     async function computeActions() {
-        actions = await net.get(`${ENV.urls.base}api/files/delta`);
+        actions = await Net.get(`${ENV.urls.base}api/files/delta`);
 
         for (let action of actions) {
             if (action.to_sha256 === action.from_sha256) {
@@ -114,7 +119,7 @@ function InstancePublisher(instance) {
     }
 
     function runAddFileDialog(e) {
-        return ui.runDialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
+        return UI.runDialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
             d.file('*file', 'Fichier :');
             d.text('*filename', 'Chemin :', { value: d.values.file ? d.values.file.name : null });
 
@@ -126,20 +131,20 @@ function InstancePublisher(instance) {
             }
 
             d.action('Créer', { disabled: !d.isValid() }, async () => {
-                let progress = new log.Entry;
+                let progress = new Log.Entry;
 
                 progress.progress('Enregistrement du fichier');
                 try {
                     let sha256 = await Sha256.async(d.values.file);
-                    let url = util.pasteURL(`${ENV.urls.base}files/${d.values.filename}`, { sha256: sha256 });
+                    let url = Util.pasteURL(`${ENV.urls.base}files/${d.values.filename}`, { sha256: sha256 });
 
-                    let response = await net.fetch(url, {
+                    let response = await Net.fetch(url, {
                         method: 'PUT',
                         body: d.values.file,
                         timeout: null
                     });
                     if (!response.ok) {
-                        let err = await net.readError(response);
+                        let err = await Net.readError(response);
                         throw new Error(err)
                     }
 
@@ -150,7 +155,7 @@ function InstancePublisher(instance) {
                 } catch (err) {
                     progress.close();
 
-                    log.error(err);
+                    Log.error(err);
                     d.refresh();
                 }
             });
@@ -158,13 +163,13 @@ function InstancePublisher(instance) {
     }
 
     function runDeleteFileDialog(e, action) {
-        return ui.runConfirm(e, `Voulez-vous vraiment supprimer le fichier '${action.filename}' ?`,
+        return UI.runConfirm(e, `Voulez-vous vraiment supprimer le fichier '${action.filename}' ?`,
                                 'Supprimer', async () => {
-            let url = util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.to_sha256 });
-            let response = await net.fetch(url, { method: 'DELETE' });
+            let url = Util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.to_sha256 });
+            let response = await Net.fetch(url, { method: 'DELETE' });
 
             if (!response.ok && response.status !== 404) {
-                let err = await net.readError(response);
+                let err = await Net.readError(response);
                 throw new Error(err)
             }
 
@@ -173,7 +178,7 @@ function InstancePublisher(instance) {
     }
 
     async function deploy(actions) {
-        let progress = log.progress('Publication en cours');
+        let progress = Log.progress('Publication en cours');
 
         try {
             if (actions.some(action => action.type == 'conflict'))
@@ -199,7 +204,7 @@ function InstancePublisher(instance) {
             }
 
             // Publish!
-            await net.post(`${ENV.urls.base}api/files/publish`, files);
+            await Net.post(`${ENV.urls.base}api/files/publish`, files);
 
             progress.success('Publication effectuée');
         } catch (err) {
@@ -208,3 +213,5 @@ function InstancePublisher(instance) {
         }
     }
 }
+
+export { InstancePublisher }

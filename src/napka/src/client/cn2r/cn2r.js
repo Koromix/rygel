@@ -13,8 +13,7 @@
 
 import { render, html } from '../../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
-import { util, log, net } from '../../../../web/libjs/util.js';
-import { ui } from '../../lib/ui.js';
+import { Util, Log, Net } from '../../../../web/libjs/common.js';
 import parse from '../../lib/parse.js';
 import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
@@ -31,8 +30,8 @@ function Cn2rProvider() {
 
     this.loadMap = async function() {
         let [data, images] = await Promise.all([
-            net.get('api/entries/etablissements'),
-            Promise.all(Object.values(ICONS).map(url => net.loadImage(url, true)))
+            Net.get('api/entries/etablissements'),
+            Promise.all(Object.values(ICONS).map(url => Net.loadImage(url, true)))
         ]);
 
         etablissements = data.rows;
@@ -199,15 +198,15 @@ function Cn2rProvider() {
                         <div class="planning_tip">Horaires donnés à titre indicatif${makeEdit(etab, 'rdv_horaires')}</div>
                         ${edit_key != 'rdv_horaires' ? html`
                             <table class="planning">
-                                ${util.mapRange(1, show_we ? 8 : 6, day => {
+                                ${Util.mapRange(1, show_we ? 8 : 6, day => {
                                     let horaires = days_map[day] || [];
 
                                     return html`
                                         <tr class=${!horaires.length ? 'closed' : ''}>
-                                            <td>${util.formatDay(day)}</td>
+                                            <td>${Util.formatDay(day)}</td>
                                             ${horaires.map(horaire => html`
-                                                <td>${util.formatTime(horaire.horaires[0])} à
-                                                    ${util.formatTime(horaire.horaires[1])}</td>
+                                                <td>${Util.formatTime(horaire.horaires[0])} à
+                                                    ${Util.formatTime(horaire.horaires[1])}</td>
                                             `)}
                                             ${columns > horaires.length ?
                                                 html`<td colspan=${columns - horaires.length}>${!horaires.length ? 'Fermé' : ''}</td>` : ''}

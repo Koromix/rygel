@@ -26,8 +26,7 @@
 
 import { render, html } from '../../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
-import { util, log, net } from '../../../../web/libjs/util.js';
-import { ui } from '../../lib/ui.js';
+import { Util, Log, Net } from '../../../../web/libjs/common.js';
 import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
 const ICONS = {
@@ -44,8 +43,8 @@ function DemheterProvider() {
 
     this.loadMap = async function() {
         let [data, images] = await Promise.all([
-            net.get('api/entries'),
-            Promise.all(Object.values(ICONS).map(url => net.loadImage(url, true)))
+            Net.get('api/entries'),
+            Promise.all(Object.values(ICONS).map(url => Net.loadImage(url, true)))
         ]);
 
         etablissements = [

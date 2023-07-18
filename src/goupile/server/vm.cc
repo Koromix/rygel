@@ -171,7 +171,7 @@ int RunVM(Span<const char *> arguments)
     // Get packed server script
     Span<const char> vm_js;
     {
-        const AssetInfo *asset = FindPackedAsset("src/goupile/server/vm.pk.js");
+        const AssetInfo *asset = FindPackedAsset("src/goupile/server/vm.js");
 
         RG_ASSERT(asset);
         RG_ASSERT(asset->compression_type == CompressionType::None);

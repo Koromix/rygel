@@ -11,16 +11,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { Util, Log } from '../libjs/common.js';
+import { render, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
+
+import './versionline.css';
+
 function VersionLine() {
     let self = this;
 
-    this.urlBuilder = page => '#';
-    this.clickHandler = (e, version) => {};
+    let url_builder = page => '#';
+    let click_handler = (e, version) => {};
+    let current_date = null;
 
     let versions = [];
-    let current_date;
 
     let root_el;
+
+    Object.defineProperties(this, {
+        urlBuilder: { get: () => url_builder, set: builder => { url_builder = builder; }, enumerable: true },
+        clickHandler: { get: () => click_handler, set: handler => { click_handler = handler; }, enumerable: true },
+        currentDate: { get: () => current_date, set: date => { current_date = date; }, enumerable: true }
+    });
 
     this.addVersion = function(date, label, tooltip, major) {
         versions.push({
@@ -30,9 +41,6 @@ function VersionLine() {
             major: major
         });
     };
-
-    this.setDate = function(date) { current_date = date; };
-    this.getDate = function() { return current_date; };
 
     this.render = function() {
         if (versions.length < 2)
@@ -73,7 +81,7 @@ function VersionLine() {
                 }
 
                 return svg`
-                    <a class=${cls} href=${self.urlBuilder.call(self, version)} @click=${e => handleNodeClick(e, version)}>
+                    <a class=${cls} href=${url_builder.call(self, version)} @click=${e => handleNodeClick(e, version)}>
                         <circle cx=${x} cy="23" r=${radius}>
                             <title>${version.tooltip}</title>
                         </circle>
@@ -87,7 +95,9 @@ function VersionLine() {
     }
 
     function handleNodeClick(e, version) {
-        if (!self.clickHandler.call(self, e, version))
+        if (!click_handler.call(self, e, version))
             render(renderWidget(), root_el);
     }
 }
+
+export { VersionLine }

@@ -3,8 +3,8 @@
 Run the following commands:
 
 ```bash
-npm install lit esbuild
-node_modules/.bin/esbuild --bundle --platform=browser --global-name=lithtml --minify lit-html.js --outfile=lit-html.min.js
+npm install lit
+npx esbuild --bundle --platform=browser --format=esm lit-html.js --outfile=lit-html.bundle.js
 ```
 
-And that's all! You can remove node_modules and all the other Node.js crap.
+And that's it! You can remove node_modules and all :)
