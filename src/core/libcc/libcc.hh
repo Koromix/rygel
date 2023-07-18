@@ -1254,7 +1254,7 @@ public:
         RemoveFrom(len - count);
     }
 
-    Span<T> Take() const { return Span<T>(data, len); }
+    Span<T> Take() const { return Span<T>((T *)data, len); }
     Span<T> Take(Size offset, Size len) const { return Span<T>((T *)data, N).Take(offset, len); }
     Span<T> TakeAvailable() const { return Span<T>((T *)data + len, N - len); }
 
