@@ -103,42 +103,46 @@ static int RunTarget(const char *target_filename, Span<const char *const> argume
 #endif
 }
 
-static const char *BuildGitVersionString(Allocator *alloc)
+static Size BuildGitVersionString(Span<const char> target_name, Span<char> out_version)
 {
-    RG_ASSERT(alloc);
+    LocalArray<char, 2048> output;
 
-    HeapArray<char> output(alloc);
+    const auto append_buf = [&](Span<uint8_t> buf) {
+        Size copy = std::min(output.Available(), buf.len);
 
-    // Describe the current commit
+        memcpy_safe(output.end(), buf.ptr, (size_t)copy);
+        output.len += copy;
+    };
+
+    // Get tag and commit description from git
     {
+        char cmd[512];
+        Fmt(cmd, "git describe --always --match='%1/*' --dirty", target_name);
+
         int exit_code;
-        if (!ExecuteCommandLine("git log -n1 --pretty=format:%cd_%h --date=format:%Y%m%d.%H%M",
-                                {}, Kilobytes(1), &output, &exit_code))
-            return nullptr;
+        if (!ExecuteCommandLine(cmd, MakeSpan<const uint8_t>(nullptr, (Size)0), append_buf, &exit_code))
+            return -1;
         if (exit_code) {
             LogError("Command 'git log' failed");
-            return nullptr;
+            return -1;
         }
 
         output.len = TrimStrRight(output.Take()).len;
     }
 
-    // Is the work tree clean?
-    {
-        HeapArray<char> buf;
-        int exit_code;
-        if (!ExecuteCommandLine("git status --short", {}, Kilobytes(4), &buf, &exit_code))
-            return nullptr;
-        if (exit_code) {
-            LogError("Command 'git status' failed");
-            return nullptr;
-        }
+    // I always prefer '_' to hyphens
+    for (char &c: output)
+        c = (c != '-') ? c : '_';
 
-        buf.len = TrimStrRight(buf.Take()).len;
-        Fmt(&output, buf.len ? "_dirty" : "");
+    if (output.len > target_name.len && StartsWith(output, target_name) && output[target_name.len] == '/') {
+        Span<char> version = TrimStr(output.Take(target_name.len + 1, output.len - target_name.len - 1));
+
+        Size len = Fmt(out_version, "%1", version).len;
+        return len;
+    } else {
+        Size len = Fmt(out_version, "0.0_%1", output).len;
+        return len;
     }
-
-    return output.TrimAndLeak().ptr;
 }
 
 static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifier *out_spec)
@@ -362,9 +366,6 @@ Options:
     %!..+-v, --verbose%!0                Show detailed build commands
     %!..+-n, --dry_run%!0                Fake command execution
 
-        %!..+--version_str <version>%!0  Change version incorporated in binaries
-                                 %!D..(default: made from git commit hash, date and status)%!0
-
         %!..+--run <target>%!0           Run target after successful build
                                  %!D..(all remaining arguments are passed as-is)%!0
         %!..+--run_here <target>%!0      Same thing, but run from current directory
@@ -565,8 +566,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 verbose = true;
             } else if (opt.Test("-n", "--dry_run")) {
                 build.fake = true;
-            } else if (opt.Test("--version_str", OptionType::Value)) {
-                build.version_str = opt.current_value;
             } else if (opt.Test("--run", OptionType::Value)) {
                 run_target_name = opt.current_value;
                 break;
@@ -688,6 +687,36 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
+    // Use git tags for version numbers when possible
+    if (FindExecutableInPath("git")) {
+        Async async;
+
+        HeapArray<LocalArray<char, 128>> versions;
+        versions.AppendDefault(target_set.targets.len);
+
+        for (Size i = 0; i < target_set.targets.len; i++) {
+            const TargetInfo &target = target_set.targets[i];
+
+            if (target.type == TargetType::Executable) {
+                async.Run([=, &versions]() {
+                    versions[i].len = BuildGitVersionString(target.name, versions[i].data);
+                    return true;
+                });
+            }
+        }
+
+        if (!async.Sync())
+            return 1;
+
+        for (Size i = 0; i < target_set.targets.len; i++) {
+            if (versions[i].len > 0) {
+                target_set.targets[i].version_str = DuplicateString(versions[i].Take(), &temp_alloc).ptr;
+            }
+        }
+    } else {
+        LogWarning("Cannot make dynamic version strings (missing git)");
+    }
+
     // Find and check target used with --run
     const TargetInfo *run_target = nullptr;
     if (run_target_name) {
@@ -707,22 +736,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
-    // Build version string from git commit (date, hash)
-    if (!build.version_str) {
-        build.version_str = BuildGitVersionString(&temp_alloc);
-
-        if (!build.version_str) {
-            LogError("Failed to use git to build version string (ignoring)");
-        }
-    }
-
     // We're ready to output stuff
     LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
     LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
     LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)host_spec.platform]);
     LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
     LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
-    LogInfo("  Version string: %!..+%1%!0", build.version_str ? build.version_str : "(unknown version)");
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
         return 1;
 

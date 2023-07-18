@@ -59,7 +59,8 @@ static const char *BuildObjectPath(const char *ns, const char *src_filename, con
     return buf.TrimAndLeak(1).ptr;
 }
 
-static bool UpdateVersionSource(const char *target_name, const BuildSettings &build, const char *dest_filename)
+static bool UpdateVersionSource(const char *target_name, const char *version_str,
+                                const BuildSettings &build, const char *dest_filename)
 {
     if (!build.fake && !EnsureDirectoryExists(dest_filename))
         return false;
@@ -69,7 +70,7 @@ static bool UpdateVersionSource(const char *target_name, const BuildSettings &bu
               "const char *FelixTarget = \"%1\";\n"
               "const char *FelixVersion = \"%2\";\n"
               "const char *FelixCompiler = \"%3 (%4)\";\n",
-        target_name, build.version_str ? build.version_str : "(unknown version)",
+        target_name, version_str ? version_str : "(unknown version)",
         build.compiler->name, FmtFlags(build.features, CompileFeatureOptions));
 
     bool new_version;
@@ -385,7 +386,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
         uint32_t features = target.CombineFeatures(build.features);
 
-        if (!UpdateVersionSource(target.name, build, src_filename))
+        if (!UpdateVersionSource(target.name, target.version_str, build, src_filename))
             return false;
 
         Command cmd = {};

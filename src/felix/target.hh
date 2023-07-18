@@ -59,6 +59,7 @@ struct TargetInfo {
     unsigned int platforms;
     bool enable_by_default;
 
+    const char *version_str = nullptr;
     const char *icon_filename = nullptr;
 
     HeapArray<const TargetInfo *> imports;

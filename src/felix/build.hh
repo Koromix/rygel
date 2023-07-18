@@ -25,7 +25,6 @@ struct BuildSettings {
     const Compiler *compiler = nullptr;
 
     // Optional
-    const char *version_str = nullptr;
     bool rebuild = false;
     bool stop_after_error = false;
     uint32_t features = 0;
