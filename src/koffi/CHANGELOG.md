@@ -4,6 +4,12 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.7
+
+**Main changes:**
+
+- Point package to new repository
+
 #### Koffi 2.5.6
 
 **Main changes:**
