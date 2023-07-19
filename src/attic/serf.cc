@@ -26,6 +26,7 @@ struct Config {
 
     const char *root_directory = ".";
     bool auto_index = true;
+    bool auto_html = true;
     HeapArray<HttpHeader> headers;
 
     bool set_etag = true;
@@ -76,6 +77,8 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                         config.root_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "AutoIndex") {
                         valid &= ParseBool(prop.value, &config.auto_index);
+                    } else if (prop.key == "AutoHtml") {
+                        valid &= ParseBool(prop.value, &config.auto_html);
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseInt(prop.value, &config.max_age);
                     } else if (prop.key == "ETag") {
@@ -268,12 +271,20 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         io->AddHeader(header.key, header.value);
     }
 
-    const char *url = TrimStrLeft(request.url, "/\\").ptr;
-    const char *filename = NormalizePath(url, config.root_directory, &io->allocator).ptr;
+    Span<const char> relative_url = TrimStrLeft(request.url, "/\\").ptr;
+    const char *filename = NormalizePath(relative_url, config.root_directory, &io->allocator).ptr;
 
     FileInfo file_info;
     {
         StatResult stat = StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+
+        if (config.auto_html) {
+            if (stat == StatResult::MissingPath && !EndsWith(relative_url, "/")
+                                                && !GetPathExtension(relative_url).len) {
+                filename = Fmt(&io->allocator, "%1.html", relative_url).ptr;
+                stat = StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+            }
+        }
 
         if (stat != StatResult::Success) {
             switch (stat) {
