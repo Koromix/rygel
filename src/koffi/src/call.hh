@@ -61,9 +61,6 @@ class alignas(8) CallData {
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
 
-    LocalArray<int16_t, 16> used_trampolines;
-    LocalArray<OutArgument, MaxOutParameters> out_arguments;
-
     uint8_t *new_sp;
     uint8_t *old_sp;
 
@@ -82,6 +79,9 @@ class alignas(8) CallData {
         uint8_t buf[32];
     } result;
     uint8_t *return_ptr = nullptr;
+
+    LocalArray<int16_t, 16> used_trampolines;
+    LocalArray<OutArgument, MaxParameters> out_arguments;
 
     BlockAllocator call_alloc;
 

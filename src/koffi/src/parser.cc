@@ -82,8 +82,8 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
                 MarkError("Functions cannot have more than %1 parameters", MaxParameters);
                 return false;
             }
-            if ((param.directions & 2) && ++out_func->out_parameters >= MaxOutParameters) {
-                MarkError("Functions cannot have more than out %1 parameters", MaxOutParameters);
+            if ((param.directions & 2) && ++out_func->out_parameters >= MaxParameters) {
+                MarkError("Functions cannot have more than out %1 parameters", MaxParameters);
                 return false;
             }
 
