@@ -532,7 +532,7 @@ const mco_info = new function() {
 
     async function exportListToXLSX(records, handler) {
         if (typeof XLSX === 'undefined')
-            await net.loadScript(`${ENV.base_url}static/xlsx.core.min.js`);
+            await net.loadScript(`${ENV.base_url}static/xlsx.mini.min.js`);
 
         let ws = XLSX.utils.aoa_to_sheet([
             handler.columns.map(col => col.key),
