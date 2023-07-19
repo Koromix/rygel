@@ -28,6 +28,10 @@ Cross-Origin-Embedder-Policy = require-corp
 Cross-Origin-Opener-Policy = same-origin
 ```
 
+On this file exits, run serf with `serf -C serf.ini`. If you don't specify the file explicitly, serf will try to find one from its application directory (i.e. the directory where the executable resides).
+
+Run `serf --help` for more information.
+
 ## Build on Linux and macOS
 
 ```bat
