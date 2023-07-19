@@ -56,18 +56,25 @@ html_static_path = ['static']
 
 html_theme_options = {
     'light_css_variables': {
-        'color-brand-primary': '#FF6600',
+        'font-stack': 'Open Sans',
+        'color-content-foreground': '#383838',
+        'color-brand-primary': '#383838',
         'color-brand-content': '#FF6600'
     },
     'dark_css_variables': {
-        'color-brand-primary': '#FF6600',
+        'font-stack': 'Open Sans',
+        'color-content-foreground': '#FFFFFFDD',
+        'color-brand-primary': '#FFFFFFDD',
         'color-brand-content': '#FF6600'
     }
 }
 
 html_link_suffix = ''
 
-html_css_files = ['custom.css']
+html_css_files = [
+    'opensans/OpenSans.css'
+    'custom.css'
+]
 
 html_sidebars = {
     "**": [
