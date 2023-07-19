@@ -303,7 +303,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         FileInfo index_info;
 
         if (StatFile(index_filename, (int)StatFlag::IgnoreMissing, &index_info) == StatResult::Success &&
-                file_info.type == FileType::File) {
+                index_info.type == FileType::File) {
             ServeFile(index_filename, index_info, request, io);
         } else if (config.auto_index) {
             ServeIndex(filename, request, io);
