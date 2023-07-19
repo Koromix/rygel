@@ -273,7 +273,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     FileInfo file_info;
     {
-        StatResult stat = StatFile(filename, &file_info);
+        StatResult stat = StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
 
         if (stat != StatResult::Success) {
             switch (stat) {
