@@ -1060,6 +1060,11 @@ public:
                 if (!i686) {
                     Fmt(&buf, " -Wl,--high-entropy-va");
                 }
+
+                Fmt(&buf, " -static-libgcc -static-libstdc++");
+                if (!(features & (int)CompileFeature::StaticLink)) {
+                    Fmt(&buf, " -Wl,-Bstatic -lstdc++ -lpthread -lssp -Wl,-Bdynamic");
+                }
             } break;
 
             case HostPlatform::macOS: {
@@ -1091,9 +1096,6 @@ public:
         }
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
-        }
-        if (platform == HostPlatform::Windows) {
-            Fmt(&buf, " -lssp");
         }
         if (features & (int)CompileFeature::NoConsole) {
             Fmt(&buf, " -mwindows");
