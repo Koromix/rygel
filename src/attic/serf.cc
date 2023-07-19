@@ -25,7 +25,7 @@ struct Config {
     http_Config http { 80 };
 
     const char *root_directory = ".";
-    bool auto_index = false;
+    bool auto_index = true;
     HeapArray<HttpHeader> headers;
 
     bool set_etag = true;
