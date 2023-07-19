@@ -336,7 +336,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                                 target_config.pack_file_set.ignore.Append(copy);
                             }
                         }
-                    } else if (prop.key == "AssetOptions") {
+                    } else if (prop.key == "PackOptions" || prop.key == "AssetOptions") {
                         target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
