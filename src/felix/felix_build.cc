@@ -130,12 +130,18 @@ static Size BuildGitVersionString(Span<const char> target_name, Span<char> out_v
         output.len = TrimStrRight(output.Take()).len;
     }
 
-    // I always prefer '_' to hyphens
-    for (char &c: output)
-        c = (c != '-') ? c : '_';
-
     if (output.len > target_name.len && StartsWith(output, target_name) && output[target_name.len] == '/') {
         Span<char> version = TrimStr(output.Take(target_name.len + 1, output.len - target_name.len - 1));
+
+        // Replace hyphen except for first one after sequence number
+        {
+            bool replace = false;
+
+            for (char &c: version) {
+                c = (replace && c == '-') ? '_' : c;
+                replace |= (c == '-');
+            }
+        }
 
         Size len = Fmt(out_version, "%1", version).len;
         return len;
