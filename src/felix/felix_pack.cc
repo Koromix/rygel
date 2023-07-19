@@ -26,8 +26,6 @@ int RunPack(Span<const char *> arguments)
     const char *output_path = nullptr;
     int strip_count = 0;
     CompressionType compression_type = CompressionType::None;
-    unsigned int merge_flags = 0;
-    const char *merge_file = nullptr;
     HeapArray<const char *> filenames;
 
     const auto print_usage = [=](FILE *fp) {
@@ -35,22 +33,18 @@ int RunPack(Span<const char *> arguments)
 R"(Usage: %!..+%1 pack <filename> ...%!0
 
 Options:
-    %!..+-f, --flags <flags>%!0          Set packing flags
     %!..+-O, --output_file <file>%!0     Redirect output to file or directory
 
+    %!..+-f, --flags <flags>%!0          Set packing flags
     %!..+-s, --strip <count>%!0          Strip first count directory components, or 'All'
                                  %!D..(default: 0)%!0
+
     %!..+-c, --compress <type>%!0        Compress data, see below for available types
                                  %!D..(default: %2)%!0
 
-    %!..+-M, --merge_file <file>%!0      Load merge rules from file
-    %!..+-m, --merge_option <options>%!0 Merge options (see below)
-
 Available packing flags: %!..+%3%!0
-Available compression types: %!..+%4%!0
-Available merge options: %!..+%5%!0)", FelixTarget, CompressionTypeNames[(int)compression_type],
-                                       FmtSpan(PackFlagNames), FmtSpan(CompressionTypeNames),
-                                       FmtSpan(MergeFlagNames));
+Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(int)compression_type],
+                                       FmtSpan(PackFlagNames), FmtSpan(CompressionTypeNames));
     };
 
     // Parse arguments
@@ -85,24 +79,6 @@ Available merge options: %!..+%5%!0)", FelixTarget, CompressionTypeNames[(int)co
                     LogError("Unknown compression type '%1'", opt.current_value);
                     return 1;
                 }
-            } else if (opt.Test("-M", "--merge_file", OptionType::Value)) {
-                merge_file = opt.current_value;
-            } else if (opt.Test("-m", "--merge_option", OptionType::Value)) {
-                const char *flags_str = opt.current_value;
-
-                while (flags_str[0]) {
-                    Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
-
-                    if (part.len) {
-                        MergeFlag flag;
-                        if (!OptionToEnum(MergeFlagNames, part, &flag)) {
-                            LogError("Unknown merge flag '%1'", part);
-                            return 1;
-                        }
-
-                        merge_flags |= 1u << (int)flag;
-                    }
-                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -122,17 +98,16 @@ Available merge options: %!..+%5%!0)", FelixTarget, CompressionTypeNames[(int)co
         }
     }
 
-    // Load merge rules
-    MergeRuleSet merge_rule_set;
-    if (merge_file && !LoadMergeRules(merge_file, merge_flags, &merge_rule_set))
-        return 1;
-
     // Resolve merge rules
     PackAssetSet asset_set;
-    ResolveAssets(filenames, strip_count, merge_rule_set.rules, compression_type, &asset_set);
+    if (!ResolveAssets(filenames, strip_count, compression_type, &asset_set))
+        return 1;
 
     // Generate output
-    return !PackAssets(asset_set.assets, flags, output_path);
+    if (!PackAssets(asset_set.assets, flags, output_path))
+        return 1;
+
+    return 0;
 }
 
 }

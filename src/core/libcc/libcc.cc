@@ -6884,7 +6884,6 @@ bool ReloadAssets()
         asset_copy.data = AllocateSpan<uint8_t>(&assets_alloc, asset.data.len);
         memcpy_safe((void *)asset_copy.data.ptr, asset.data.ptr, (size_t)asset.data.len);
         asset_copy.compression_type = asset.compression_type;
-        asset_copy.source_map = DuplicateString(asset.source_map, &assets_alloc).ptr;
 
         assets.Append(asset_copy);
     }

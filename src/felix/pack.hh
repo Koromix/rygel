@@ -29,6 +29,6 @@ static const char *const PackFlagNames[] = {
     "NoArray"
 };
 
-bool PackAssets(Span<const PackAssetInfo> assets, unsigned int flags, const char *output_path);
+bool PackAssets(Span<const PackAsset> assets, unsigned int flags, const char *output_path);
 
 }

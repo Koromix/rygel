@@ -437,11 +437,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         case Route::Type::Asset: {
             io->AttachBinary(200, route->u.st.asset.data, route->u.st.mime_type,
                              route->u.st.asset.compression_type);
-
             io->AddCachingHeaders(thop_config.max_age, thop_etag);
-            if (route->u.st.asset.source_map) {
-                io->AddHeader("SourceMap", route->u.st.asset.source_map);
-            }
         } break;
 
         case Route::Type::Function: {

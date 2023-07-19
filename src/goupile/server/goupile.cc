@@ -276,10 +276,6 @@ static void AttachStatic(const AssetInfo &asset, int max_age, const char *etag,
 
         io->AttachBinary(200, asset.data, mimetype, asset.compression_type);
         io->AddCachingHeaders(max_age, etag);
-
-        if (asset.source_map) {
-            io->AddHeader("SourceMap", asset.source_map);
-        }
     }
 }
 

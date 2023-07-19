@@ -16,6 +16,33 @@
 
 namespace RG {
 
+enum class MergeMode {
+    Naive,
+    CSS,
+    JS
+};
+
+struct MergeRule {
+    const char *name;
+
+    HeapArray<const char *> sources;
+
+    bool override_compression;
+    CompressionType compression_type;
+
+    MergeMode merge_mode;
+};
+
+static const char *StripDirectoryComponents(Span<const char> filename, int strip_count)
+{
+    const char *name = filename.ptr;
+    for (int i = 0; filename.len && i <= strip_count; i++) {
+        name = SplitStrAny(filename, RG_PATH_SEPARATORS, &filename).ptr;
+    }
+
+    return name;
+}
+
 static MergeMode FindDefaultMergeMode(const char *filename)
 {
     Span<const char> extension = GetPathExtension(filename);
@@ -29,9 +56,9 @@ static MergeMode FindDefaultMergeMode(const char *filename)
     }
 }
 
-bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_set)
+static bool LoadMergeRules(const char *filename, BlockAllocator *alloc, HeapArray<MergeRule> *out_rules)
 {
-    RG_DEFER_NC(out_guard, len = out_set->rules.len) { out_set->rules.RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = out_rules->len) { out_rules->RemoveFrom(len); };
 
     StreamReader st(filename);
     if (!st.IsValid())
@@ -50,8 +77,8 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
                 return false;
             }
 
-            MergeRule *rule = out_set->rules.AppendDefault();
-            rule->name = DuplicateString(prop.section, &out_set->str_alloc).ptr;
+            MergeRule *rule = out_rules->AppendDefault();
+            rule->name = DuplicateString(prop.section, alloc).ptr;
             rule->merge_mode = FindDefaultMergeMode(rule->name);
 
             bool changed_merge_mode = false;
@@ -76,51 +103,13 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
                     }
 
                     changed_merge_mode = true;
-                } else if (prop.key == "SourceMap") {
-                    if (prop.value == "None") {
-                        rule->source_map_type = SourceMapType::None;
-                    } else if (prop.value == "JSv3") {
-                        rule->source_map_type = SourceMapType::JSv3;
-                    } else {
-                        LogError("Invalid SourceMap value '%1'", prop.value);
-                        valid = false;
-                    }
-
-                    if (!(flags & (int)MergeFlag::SourceMap)) {
-                        rule->source_map_type = SourceMapType::None;
-                    }
-                } else if (prop.key == "TransformCommand") {
-                    if (flags & (int)MergeFlag::RunTransform) {
-                        rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
-                    }
-                } else if (prop.key == "TransformCommand_Win32") {
-#ifdef _WIN32
-                    if (flags & (int)MergeFlag::RunTransform) {
-                        rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
-                    }
-#endif
-                } else if (prop.key == "TransformCommand_POSIX") {
-#ifndef _WIN32
-                    if (flags & (int)MergeFlag::RunTransform) {
-                        rule->transform_cmd = DuplicateString(prop.value, &out_set->str_alloc).ptr;
-                    }
-#endif
-                } else if (prop.key == "Include") {
+                } else if (prop.key == "File") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
 
                         if (part.len) {
-                            const char *copy = DuplicateString(part, &out_set->str_alloc).ptr;
-                            rule->include.Append(copy);
-                        }
-                    }
-                } else if (prop.key == "Exclude") {
-                    while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-
-                        if (part.len) {
-                            const char *copy = DuplicateString(part, &out_set->str_alloc).ptr;
-                            rule->exclude.Append(copy);
+                            const char *copy = DuplicateString(part, alloc).ptr;
+                            rule->sources.Append(copy);
                         }
                     }
                 } else {
@@ -141,19 +130,7 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
     return true;
 }
 
-static void FindMergeRules(Span<const MergeRule> rules, const char *filename,
-                           HeapArray<const MergeRule *> *out_rules)
-{
-    const auto test_pattern = [&](const char *pattern) { return MatchPathSpec(filename, pattern); };
-
-    for (const MergeRule &rule: rules) {
-        if (std::any_of(rule.include.begin(), rule.include.end(), test_pattern) &&
-                !std::any_of(rule.exclude.begin(), rule.exclude.end(), test_pattern))
-            out_rules->Append(&rule);
-    }
-}
-
-static void InitSourceMergeData(PackSourceInfo *src, MergeMode merge_mode, Allocator *alloc)
+static void InitSourceMergeData(PackSource *src, MergeMode merge_mode, Allocator *alloc)
 {
     RG_ASSERT(alloc);
 
@@ -173,75 +150,44 @@ static void InitSourceMergeData(PackSourceInfo *src, MergeMode merge_mode, Alloc
     }
 }
 
-static const char *StripDirectoryComponents(Span<const char> filename, int strip_count)
-{
-    const char *name = filename.ptr;
-    for (int i = 0; filename.len && i <= strip_count; i++) {
-        name = SplitStrAny(filename, RG_PATH_SEPARATORS, &filename).ptr;
-    }
-
-    return name;
-}
-
-void ResolveAssets(Span<const char *const> filenames, int strip_count, Span<const MergeRule> rules,
+bool ResolveAssets(Span<const char *const> filenames, int strip_count,
                    CompressionType compression_type, PackAssetSet *out_set)
 {
-    HashMap<const void *, Size> merge_map;
-
     // Reuse for performance
-    HeapArray<const MergeRule *> file_rules;
+    HeapArray<MergeRule> rules;
 
     for (const char *filename: filenames) {
-        PackSourceInfo src = {};
-        src.filename = filename;
-        src.name = StripDirectoryComponents(filename, strip_count);
+        if (StartsWith(filename, "@")) {
+            rules.RemoveFrom(0);
 
-        file_rules.RemoveFrom(0);
-        FindMergeRules(rules, filename, &file_rules);
+            if (!LoadMergeRules(filename + 1, &out_set->str_alloc, &rules))
+                return false;
 
-        bool include_raw_file = !file_rules.len;
+            for (const MergeRule &rule: rules) {
+                PackAsset *asset = out_set->assets.AppendDefault();
 
-        for (const MergeRule *rule: file_rules) {
-            InitSourceMergeData(&src, rule->merge_mode, &out_set->str_alloc);
+                asset->name = StripDirectoryComponents(rule.name, strip_count);
+                asset->compression_type = rule.override_compression ? rule.compression_type : compression_type;
 
-            Size asset_idx = merge_map.FindValue(rule, -1);
-            if (asset_idx >= 0) {
-                PackAssetInfo *asset = &out_set->assets[asset_idx];
-                asset->sources.Append(src);
+                for (const char *src_filename: rule.sources) {
+                    PackSource *src = asset->sources.AppendDefault();
 
-                include_raw_file |= (asset->source_map_type != SourceMapType::None);
-            } else {
-                merge_map.Set(rule, out_set->assets.len);
-
-                PackAssetInfo asset = {};
-                asset.name = rule->name;
-                asset.compression_type = rule->override_compression ? rule->compression_type : compression_type;
-                if (rule->source_map_type != SourceMapType::None) {
-                    if (!rule->transform_cmd) {
-                        asset.source_map_type = rule->source_map_type;
-                        asset.source_map_name = Fmt(&out_set->str_alloc, "%1.map", rule->name).ptr;
-                    } else {
-                        LogError("Ignoring source map for transformed asset '%1'", asset.name);
-                    }
+                    src->filename = src_filename;
+                    InitSourceMergeData(src, rule.merge_mode, &out_set->str_alloc);
                 }
-                if (rule->transform_cmd) {
-                    asset.transform_cmd = DuplicateString(rule->transform_cmd, &out_set->str_alloc).ptr;
-                }
-                out_set->assets.Append(asset)->sources.Append(src);
-
-                include_raw_file |= (asset.source_map_type != SourceMapType::None);
             }
-        }
+        } else {
+            PackAsset *asset = out_set->assets.AppendDefault();
+            PackSource *src = asset->sources.AppendDefault();
 
-        if (include_raw_file) {
-            InitSourceMergeData(&src, MergeMode::Naive, &out_set->str_alloc);
+            asset->name = StripDirectoryComponents(filename, strip_count);
+            asset->compression_type = compression_type;
 
-            PackAssetInfo asset = {};
-            asset.name = src.name;
-            asset.compression_type = compression_type;
-            out_set->assets.Append(asset)->sources.Append(src);
+            src->filename = filename;
         }
     }
+
+    return true;
 }
 
 }

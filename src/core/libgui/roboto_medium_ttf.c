@@ -51,8 +51,6 @@ typedef struct AssetInfo {
     const char *name;
     int compression_type; // CompressionType
     Span data;
-
-    const char *source_map;
 } AssetInfo;
 
 static const uint8_t raw_data[] = {
@@ -61,4 +59,4 @@ static const uint8_t raw_data[] = {
 };
 
 EXPORT_SYMBOL EXTERN_SYMBOL const AssetInfo RobotoMediumTtf;
-const AssetInfo RobotoMediumTtf = {"Roboto-Medium.ttf", 0, {raw_data + 0, 162588}, 0};
+const AssetInfo RobotoMediumTtf = {"Roboto-Medium.ttf", 0, {raw_data + 0, 162588}};

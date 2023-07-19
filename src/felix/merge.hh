@@ -17,72 +17,25 @@
 
 namespace RG {
 
-enum class MergeFlag {
-    SourceMap = 1 << 0,
-    RunTransform = 1 << 1
-};
-static const char *const MergeFlagNames[] = {
-    "SourceMap",
-    "RunTransform"
-};
-
-enum class MergeMode {
-    Naive,
-    CSS,
-    JS
-};
-
-enum class SourceMapType {
-    None,
-    JSv3
-};
-
-struct MergeRule {
-    const char *name;
-
-    HeapArray<const char *> include;
-    HeapArray<const char *> exclude;
-
-    bool override_compression;
-    CompressionType compression_type;
-
-    MergeMode merge_mode;
-    SourceMapType source_map_type;
-    const char *transform_cmd;
-};
-
-struct MergeRuleSet {
-    HeapArray<MergeRule> rules;
-    BlockAllocator str_alloc;
-};
-
-struct PackSourceInfo {
+struct PackSource {
     const char *filename;
-    const char *name;
 
     const char *prefix;
     const char *suffix;
 };
 
-struct PackAssetInfo {
+struct PackAsset {
     const char *name;
-    HeapArray<PackSourceInfo> sources;
+    HeapArray<PackSource> sources;
 
     CompressionType compression_type;
-
-    const char *transform_cmd;
-    SourceMapType source_map_type;
-    const char *source_map_name;
 };
 
 struct PackAssetSet {
-    HeapArray<PackAssetInfo> assets;
+    HeapArray<PackAsset> assets;
     BlockAllocator str_alloc;
 };
 
-bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_set);
-
-void ResolveAssets(Span<const char *const> filenames, int strip_count, Span<const MergeRule> rules,
-                   CompressionType compression_type, PackAssetSet *out_set);
+bool ResolveAssets(Span<const char *const> filenames, int strip_count, CompressionType compression_type, PackAssetSet *out_set);
 
 }

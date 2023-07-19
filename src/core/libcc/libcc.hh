@@ -4700,8 +4700,6 @@ struct AssetInfo {
     CompressionType compression_type;
     Span<const uint8_t> data;
 
-    const char *source_map;
-
     RG_HASHTABLE_HANDLER(AssetInfo, name);
 };
 

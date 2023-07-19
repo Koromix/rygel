@@ -58,8 +58,8 @@ static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *
     }
 }
 
-static void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
-                            bool use_arrays, const char *pack_options, const char *dest_filename,
+static void MakePackCommand(Span<const char *const> pack_filenames, bool use_arrays,
+                            const char *pack_options, const char *dest_filename,
                             Allocator *alloc, Command *out_cmd)
 {
     RG_ASSERT(alloc);
@@ -68,12 +68,11 @@ static void MakePackCommand(Span<const char *const> pack_filenames, bool optimiz
 
     Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
 
-    Fmt(&buf, optimize ? " -mRunTransform" : " -mSourceMap");
     Fmt(&buf, use_arrays ? "" : " -fUseLiterals");
-
     if (pack_options) {
         Fmt(&buf, " %1", pack_options);
     }
+
     for (const char *pack_filename: pack_filenames) {
         Fmt(&buf, " \"%1\"", pack_filename);
     }
@@ -337,13 +336,12 @@ public:
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
 
-    void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
+    void MakePackCommand(Span<const char *const> pack_filenames,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakePackCommand(pack_filenames, optimize, false, pack_options,
-                            dest_filename, alloc, out_cmd);
+        RG::MakePackCommand(pack_filenames, false, pack_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -814,13 +812,12 @@ public:
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
 
-    void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
+    void MakePackCommand(Span<const char *const> pack_filenames,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakePackCommand(pack_filenames, optimize, false, pack_options,
-                            dest_filename, alloc, out_cmd);
+        RG::MakePackCommand(pack_filenames, false, pack_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -1199,15 +1196,14 @@ public:
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
 
-    void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
+    void MakePackCommand(Span<const char *const> pack_filenames,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
         // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
-        RG::MakePackCommand(pack_filenames, optimize, true, pack_options,
-                            dest_filename, alloc, out_cmd);
+        RG::MakePackCommand(pack_filenames, true, pack_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -1559,15 +1555,14 @@ public:
         return true;
     }
 
-    void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
+    void MakePackCommand(Span<const char *const> pack_filenames,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
         // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
-        RG::MakePackCommand(pack_filenames, optimize, true, pack_options,
-                            dest_filename, alloc, out_cmd);
+        RG::MakePackCommand(pack_filenames, true, pack_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
@@ -1861,13 +1856,12 @@ public:
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
 
-    void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
+    void MakePackCommand(Span<const char *const> pack_filenames,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakePackCommand(pack_filenames, optimize, false, pack_options,
-                            dest_filename, alloc, out_cmd);
+        RG::MakePackCommand(pack_filenames, false, pack_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,

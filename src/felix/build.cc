@@ -325,8 +325,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         // Make C file
         {
             Command cmd = {};
-            build.compiler->MakePackCommand(target.pack_filenames, !module,
-                                            target.pack_options, src_filename, &str_alloc, &cmd);
+            build.compiler->MakePackCommand(target.pack_filenames, target.pack_options, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Pack %!..+%1%!0 assets", target.name).ptr;
             AppendNode(text, src_filename, cmd, target.pack_filenames, ns);
