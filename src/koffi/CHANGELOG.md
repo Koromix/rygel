@@ -4,6 +4,12 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.6
+
+**Main changes:**
+
+- Increase limit of output parameters from 16 to 32
+
 #### Koffi 2.5.5
 
 **Main changes:**
