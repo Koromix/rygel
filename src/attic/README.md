@@ -39,7 +39,7 @@ git clone --depth 1 https://github.com/Koromix/rygel.git
 cd rygel
 
 bootstrap.bat
-felix -pFast seatsh
+felix -pFast serf
 ```
 
 The binaries are then available in the `bin/Fast` directory.
@@ -51,7 +51,7 @@ git clone --depth 1 https://github.com/Koromix/rygel.git
 cd rygel
 
 ./bootstrap.sh
-./felix -pFast seatsh
+./felix -pFast serf
 ```
 
 The binaries are then available in the `bin/Fast` directory.
