@@ -59,8 +59,8 @@ struct TargetInfo {
     unsigned int platforms;
     bool enable_by_default;
 
-    const char *version_str = nullptr;
-    const char *icon_filename = nullptr;
+    const char *version_str;
+    const char *icon_filename;
 
     HeapArray<const TargetInfo *> imports;
 
@@ -78,6 +78,8 @@ struct TargetInfo {
     HeapArray<const char *> pchs;
 
     HeapArray<const SourceFileInfo *> sources;
+
+    const char *bundle_options;
 
     HeapArray<const char *> pack_filenames;
     const char *pack_options;

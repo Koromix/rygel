@@ -123,13 +123,16 @@ public:
     Builder(const BuildSettings &build);
 
     bool AddTarget(const TargetInfo &target);
-    const char *AddSource(const SourceFileInfo &src, const char *ns = nullptr);
+    bool AddSource(const SourceFileInfo &src);
 
     bool Build(int jobs, bool verbose);
 
 private:
     void SaveCache();
     void LoadCache();
+
+    const char *AddCppSource(const SourceFileInfo &src, const char *ns);
+    const char *AddEsbuildSource(const SourceFileInfo &src, const char *ns);
 
     bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
                     Span<const char *const> src_filenames, const char *ns);

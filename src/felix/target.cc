@@ -55,6 +55,8 @@ struct TargetConfig {
     uint32_t enable_features;
     uint32_t disable_features;
 
+    const char *bundle_options;
+
     FileSet pack_file_set;
     const char *pack_options;
 
@@ -321,6 +323,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         valid &= ParseFeatureString(prop.value, &target_config.enable_features, &target_config.disable_features);
                     } else if (prop.key == "Link") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
+                    } else if (prop.key == "BundleOptions") {
+                        target_config.bundle_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "AssetDirectory") {
                         AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.pack_file_set.directories);
                     } else if (prop.key == "AssetDirectoryRec") {
@@ -406,6 +410,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->libraries, target_config->libraries);
     target->enable_features = target_config->enable_features;
     target->disable_features = target_config->disable_features;
+    target->bundle_options = target_config->bundle_options;
     target->pack_options = target_config->pack_options;
 
     // Resolve imported targets

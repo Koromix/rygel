@@ -81,7 +81,6 @@ static bool LoadMergeRules(const char *filename, BlockAllocator *alloc, HeapArra
             rule->name = DuplicateString(prop.section, alloc).ptr;
             rule->merge_mode = FindDefaultMergeMode(rule->name);
 
-            bool changed_merge_mode = false;
             do {
                 if (prop.key == "CompressionType") {
                     if (OptionToEnum(CompressionTypeNames, prop.value, &rule->compression_type)) {
@@ -101,8 +100,6 @@ static bool LoadMergeRules(const char *filename, BlockAllocator *alloc, HeapArra
                         LogError("Invalid MergeMode value '%1'", prop.value);
                         valid = false;
                     }
-
-                    changed_merge_mode = true;
                 } else if (prop.key == "File") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
@@ -117,10 +114,6 @@ static bool LoadMergeRules(const char *filename, BlockAllocator *alloc, HeapArra
                     valid = false;
                 }
             } while (ini.NextInSection(&prop));
-
-            if (rule->merge_mode == MergeMode::Naive && !changed_merge_mode) {
-                LogError("Using naive merge method for '%1'", filename);
-            }
         }
     }
     if (!ini.IsValid() || !valid)

@@ -12,6 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/libcc/libcc.hh"
+#include "src/core/libwrap/json.hh"
 #include "build.hh"
 #include "vendor/pugixml/src/pugixml.hpp"
 
@@ -255,6 +256,7 @@ static const char *GetLastDirectoryAndName(const char *filename)
 bool Builder::AddTarget(const TargetInfo &target)
 {
     HeapArray<const char *> obj_filenames;
+    HeapArray<const char *> pack_filenames;
 
     // Core platform source files (e.g. Teensy core)
     TargetInfo *core = nullptr;
@@ -296,24 +298,45 @@ bool Builder::AddTarget(const TargetInfo &target)
         }
     }
 
-    // Object commands
+    // Core object files (e.g. Teensy core)
     if (core) {
         for (const SourceFileInfo *src: core->sources) {
-            const char *obj_filename = AddSource(*src, core->name);
+            RG_ASSERT(src->type == SourceType::C || src->type == SourceType::CXX);
+
+            const char *obj_filename = AddCppSource(*src, core->name);
             if (!obj_filename)
                 return false;
             obj_filenames.Append(obj_filename);
         }
     }
+
+    // User object files
     for (const SourceFileInfo *src: target.sources) {
-        const char *obj_filename = AddSource(*src, ns);
-        if (!obj_filename)
-            return false;
-        obj_filenames.Append(obj_filename);
+        switch (src->type) {
+            case SourceType::C:
+            case SourceType::CXX: {
+                const char *obj_filename = AddCppSource(*src, ns);
+                if (!obj_filename)
+                    return false;
+                obj_filenames.Append(obj_filename);
+            } break;
+
+            case SourceType::Esbuild: {
+                const char *meta_filename = AddEsbuildSource(*src, ns);
+                if (!meta_filename)
+                    return false;
+
+                meta_filename = Fmt(&str_alloc, "@%1", meta_filename).ptr;
+                pack_filenames.Append(meta_filename);
+            } break;
+        }
     }
 
+    // User assets
+    pack_filenames.Append(target.pack_filenames);
+
     // Assets
-    if (target.pack_filenames.len) {
+    if (pack_filenames.len) {
         const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_assets.c",
                                        cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
@@ -325,10 +348,10 @@ bool Builder::AddTarget(const TargetInfo &target)
         // Make C file
         {
             Command cmd = {};
-            build.compiler->MakePackCommand(target.pack_filenames, target.pack_options, src_filename, &str_alloc, &cmd);
+            build.compiler->MakePackCommand(pack_filenames, target.pack_options, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Pack %!..+%1%!0 assets", target.name).ptr;
-            AppendNode(text, src_filename, cmd, target.pack_filenames, ns);
+            AppendNode(text, src_filename, cmd, pack_filenames, ns);
         }
 
         // Build object file
@@ -459,8 +482,21 @@ bool Builder::AddTarget(const TargetInfo &target)
     return true;
 }
 
-const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
+bool Builder::AddSource(const SourceFileInfo &src)
 {
+    switch (src.type) {
+        case SourceType::C:
+        case SourceType::CXX: return AddCppSource(src, nullptr);
+        case SourceType::Esbuild: return AddEsbuildSource(src, nullptr);
+    }
+
+    RG_UNREACHABLE();
+}
+
+const char *Builder::AddCppSource(const SourceFileInfo &src, const char *ns)
+{
+    RG_ASSERT(src.type == SourceType::C || src.type == SourceType::CXX);
+
     // Precompiled header (if any)
     const char *pch_filename = nullptr;
     if (build.features & (int)CompileFeature::PCH) {
@@ -475,6 +511,8 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
                 pch = src.target->cxx_pch_src;
                 pch_ext = ".cc";
             } break;
+
+            case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
 
         if (pch) {
@@ -514,7 +552,7 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
                 const char *text = Fmt(&str_alloc, "Precompile %!..+%1%!0", pch->filename).ptr;
                 if (AppendNode(text, pch_filename, cmd, pch->filename, ns)) {
                     if (!build.fake && !CreatePrecompileHeader(pch->filename, pch_filename))
-                        return (const char *)nullptr;
+                        return nullptr;
                 }
             }
         }
@@ -546,6 +584,58 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
     }
 
     return obj_filename;
+}
+
+const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
+{
+    RG_ASSERT(src.type == SourceType::Esbuild);
+
+    const char *meta_filename = build_map.FindValue({ ns, src.filename }, nullptr);
+
+    // Build web bundle
+    if (!meta_filename) {
+        const char *bundle_filename = BuildObjectPath(ns, src.filename, cache_directory, "", &str_alloc);
+
+        meta_filename = Fmt(&str_alloc, "%1.meta", bundle_filename).ptr;
+
+        uint32_t features = build.features;
+        features = src.target->CombineFeatures(features);
+        features = src.CombineFeatures(features);
+
+        Command cmd = {};
+
+        // Assemble esbuild command
+        {
+            HeapArray<char> buf(&str_alloc);
+
+            Fmt(&buf, "esbuild \"%1\" --bundle --platform=browser --format=iife --global-name=app", src.filename);
+            Fmt(&buf, "  --log-level=warning --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
+
+            if (features & (int)CompileFeature::DebugInfo) {
+                Fmt(&buf, " --sourcemap=inline");
+            } else {
+                Fmt(&buf, " --minify");
+            }
+            if (src.target->bundle_options) {
+                Fmt(&buf, " %1", src.target->bundle_options);
+            }
+
+            cmd.cache_len = buf.len;
+            Fmt(&buf, " --color=%1", FileIsVt100(stdout) ? "true" : "false");
+            cmd.cmd_line = buf.TrimAndLeak(1);
+
+            cmd.deps_mode = Command::DependencyMode::EsbuildMeta;
+            cmd.deps_filename = meta_filename;
+        }
+
+        const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", src.filename).ptr;
+        if (AppendNode(text, meta_filename, cmd, src.filename, ns)) {
+            if (!build.fake && !EnsureDirectoryExists(bundle_filename))
+                return nullptr;
+        }
+    }
+
+    return meta_filename;
 }
 
 bool Builder::Build(int jobs, bool verbose)
@@ -774,12 +864,17 @@ void Builder::LoadCache()
     clear_guard.Disable();
 }
 
+static inline const char *CleanFileName(const char *str)
+{
+    return str + (str[0] == '@');
+}
+
 bool Builder::AppendNode(const char *text, const char *dest_filename, const Command &cmd,
                          Span<const char *const> src_filenames, const char *ns)
 {
     RG_ASSERT(src_filenames.len >= 1);
 
-    build_map.Set({ ns, src_filenames[0] }, dest_filename);
+    build_map.Set({ ns, CleanFileName(src_filenames[0]) }, dest_filename);
     total++;
 
     if (NeedsRebuild(dest_filename, cmd, src_filenames)) {
@@ -792,6 +887,8 @@ bool Builder::AppendNode(const char *text, const char *dest_filename, const Comm
 
         // Add triggers to source file nodes
         for (const char *src_filename: src_filenames) {
+            src_filename = CleanFileName(src_filename);
+
             Size src_idx = nodes_map.FindValue(src_filename, -1);
 
             if (src_idx >= 0) {
@@ -842,6 +939,8 @@ bool Builder::IsFileUpToDate(const char *dest_filename, Span<const char *const> 
         return false;
 
     for (const char *src_filename: src_filenames) {
+        src_filename = CleanFileName(src_filename);
+
         int64_t src_time = GetFileModificationTime(src_filename);
         if (src_time < 0 || src_time > dest_time)
             return false;
@@ -1007,6 +1106,93 @@ static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<cons
     return new_buf.len;
 }
 
+static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<const char *> *out_filenames)
+{
+    RG_ASSERT(alloc);
+
+    RG_DEFER_NC(err_guard, len = out_filenames->len) {
+        out_filenames->RemoveFrom(len);
+        UnlinkFile(filename);
+    };
+
+    StreamReader reader(filename);
+    if (!reader.IsValid())
+        return false;
+    json_Parser parser(&reader, alloc);
+
+    StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
+    if (!writer.IsValid())
+        return false;
+
+    parser.ParseObject();
+    while (parser.InObject()) {
+        Span<const char> key = {};
+        parser.ParseKey(&key);
+
+        if (key == "inputs") {
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> filename = {};
+                parser.ParseKey(&filename);
+
+                const char *dep_filename = NormalizePath(filename, alloc).ptr;
+                out_filenames->Append(dep_filename);
+
+                parser.Skip();
+            }
+        } else if (key == "outputs") {
+            Size prefix_len = -1;
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> filename = {};
+                parser.ParseKey(&filename);
+
+                // The first entry contrains entryPoint which we need to fix all paths
+                if (prefix_len < 0) {
+                    parser.ParseObject();
+                    while (parser.InObject()) {
+                        Span<const char> key = {};
+                        parser.ParseKey(&key);
+
+                        if (key == "entryPoint") {
+                            Span<const char> entry_point = {};
+                            parser.ParseString(&entry_point);
+
+                            prefix_len = filename.len - entry_point.len;
+                        } else {
+                            parser.Skip();
+                        }
+                    }
+
+                    if (prefix_len < 0) {
+                        LogError("Failed to read output files from esbuild meta file");
+                        return false;
+                    }
+                } else {
+                    parser.Skip();
+                }
+
+                if (filename.len > prefix_len) {
+                    PrintLn(&writer, "[%1]", filename.Take(prefix_len, filename.len - prefix_len));
+                    PrintLn(&writer, "File = %1", filename);
+                }
+            }
+        } else {
+            parser.Skip();
+        }
+    }
+    if (!parser.IsValid())
+        return false;
+    reader.Close();
+
+    if (!writer.Close())
+        return true;
+
+    err_guard.Disable();
+    return true;
+}
+
 bool Builder::RunNode(Async *async, Node *node, bool verbose)
 {
     if (WaitForInterrupt(0) == WaitForResult::Interrupt)
@@ -1063,14 +1249,17 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
                 case Command::DependencyMode::None: {} break;
                 case Command::DependencyMode::MakeLike: {
                     if (TestFile(cmd.deps_filename)) {
-                        started &= ParseMakeRule(cmd.deps_filename, &worker->str_alloc,
-                                                 &worker->dependencies);
+                        started &= ParseMakeRule(cmd.deps_filename, &worker->str_alloc, &worker->dependencies);
                         UnlinkFile(cmd.deps_filename);
                     }
                 } break;
                 case Command::DependencyMode::ShowIncludes: {
-                    output.len = ExtractShowIncludes(output, &worker->str_alloc,
-                                                     &worker->dependencies);
+                    output.len = ExtractShowIncludes(output, &worker->str_alloc, &worker->dependencies);
+                } break;
+                case Command::DependencyMode::EsbuildMeta: {
+                    if (TestFile(cmd.deps_filename)) {
+                        started &= ParseEsbuildMeta(cmd.deps_filename, &worker->str_alloc, &worker->dependencies);
+                    }
                 } break;
             }
             entry.deps_len = worker->dependencies.len - entry.deps_offset;

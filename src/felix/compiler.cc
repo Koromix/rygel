@@ -381,6 +381,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -388,6 +389,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { Fmt(&buf, " -x c-header -Xclang -fno-pch-timestamp"); } break;
                 case SourceType::CXX: { Fmt(&buf, " -x c++-header -Xclang -fno-pch-timestamp"); } break;
+                case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
@@ -537,6 +539,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -857,6 +860,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -864,6 +868,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { Fmt(&buf, " -x c-header"); } break;
                 case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
+                case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
         Fmt(&buf, " -I. -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
@@ -983,6 +988,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -1245,6 +1251,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" /nologo", cl); } break;
             case SourceType::CXX: { Fmt(&buf, "\"%1\" /nologo /std:c++20 /Zc:__cplusplus", cl); } break;
+            case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " \"/Fo%1\"", dest_filename);
@@ -1328,6 +1335,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -1531,10 +1539,14 @@ public:
             if (TestStr(basename, "Blink.cc"))
                 return true;
 
-            if (DetermineSourceType(basename)) {
-                const char *src_filename = NormalizePath(basename, dirname, alloc).ptr;
-                out_filenames->Append(src_filename);
-            }
+            SourceType src_type;
+            if (!DetermineSourceType(basename, &src_type))
+                return true;
+            if (src_type != SourceType::C && src_type != SourceType::CXX)
+                return true;
+
+            const char *src_filename = NormalizePath(basename, dirname, alloc).ptr;
+            out_filenames->Append(src_filename);
 
             return true;
         });
@@ -1584,6 +1596,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++14", cxx); } break;
+            case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         RG_ASSERT(dest_filename); // No PCH
         Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -1676,6 +1689,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -1884,6 +1898,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         RG_ASSERT(dest_filename); // No PCH
         Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -1929,6 +1944,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -2232,6 +2248,11 @@ bool DetermineSourceType(const char *filename, SourceType *out_type)
     } else if (extension == ".cc" || extension == ".cpp") {
         if (out_type) {
             *out_type = SourceType::CXX;
+        }
+        return true;
+    } else if (extension == ".js" || extension == ".css") {
+        if (out_type) {
+            *out_type = SourceType::Esbuild;
         }
         return true;
     } else {

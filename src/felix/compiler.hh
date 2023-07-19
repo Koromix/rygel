@@ -162,7 +162,8 @@ static const OptionDesc CompileFeatureOptions[] = {
 
 enum class SourceType {
     C,
-    CXX
+    CXX,
+    Esbuild
 };
 
 enum class LinkType {
@@ -174,7 +175,8 @@ struct Command {
     enum class DependencyMode {
         None,
         MakeLike,
-        ShowIncludes
+        ShowIncludes,
+        EsbuildMeta
     };
 
     Span<const char> cmd_line; // Must be C safe (NULL termination)
@@ -182,7 +184,7 @@ struct Command {
     Size rsp_offset;
     int skip_lines;
     DependencyMode deps_mode;
-    const char *deps_filename; // Used by MakeLike mode
+    const char *deps_filename; // Used by MakeLike and EsbuildMeta modes
 };
 
 class Compiler {
