@@ -1,0 +1,1242 @@
+TestBase64ImportURLInCSS
+---------- /out/entry.css ----------
+/* entry.css */
+a {
+  background: url(data:image/png;base64,iVBORw0KGgo=);
+}
+
+================================================================================
+TestBinaryImportURLInCSS
+---------- /out/entry.css ----------
+/* entry.css */
+a {
+  background: url(data:application/octet-stream;base64,iVBORw0KGgo=);
+}
+
+================================================================================
+TestCSSAndJavaScriptCodeSplittingIssue1064
+---------- /out/a.js ----------
+import {
+  shared_default
+} from "./chunk-XTGNVFM6.js";
+
+// a.js
+console.log(shared_default() + 1);
+
+---------- /out/b.js ----------
+import {
+  shared_default
+} from "./chunk-XTGNVFM6.js";
+
+// b.js
+console.log(shared_default() + 2);
+
+---------- /out/chunk-XTGNVFM6.js ----------
+// shared.js
+function shared_default() {
+  return 3;
+}
+
+export {
+  shared_default
+};
+
+---------- /out/c.css ----------
+/* shared.css */
+body {
+  background: black;
+}
+
+/* c.css */
+body {
+  color: red;
+}
+
+---------- /out/d.css ----------
+/* shared.css */
+body {
+  background: black;
+}
+
+/* d.css */
+body {
+  color: blue;
+}
+
+================================================================================
+TestCSSAtImport
+---------- /out.css ----------
+/* a.css */
+.a {
+  color: green;
+}
+
+/* shared.css */
+.shared {
+  color: black;
+}
+
+/* b.css */
+.b {
+  color: blue;
+}
+
+/* entry.css */
+.entry {
+  color: red;
+}
+
+================================================================================
+TestCSSAtImportConditionsBundleExternal
+---------- /out.css ----------
+@import "https://example.com/print.css" print;
+
+/* entry.css */
+
+================================================================================
+TestCSSAtImportConditionsBundleExternalConditionWithURL
+---------- /out.css ----------
+@import "https://example.com/foo.css" (foo: url(foo.png)) and (bar: url(bar.png));
+
+/* entry.css */
+
+================================================================================
+TestCSSAtImportConditionsNoBundle
+---------- /out.css ----------
+@import "./print.css" print;
+
+================================================================================
+TestCSSAtImportExtensionOrderCollision
+---------- /out.css ----------
+/* test.css */
+.css {
+  color: red;
+}
+
+/* entry.css */
+
+================================================================================
+TestCSSAtImportExternal
+---------- /out/entry.css ----------
+@charset "UTF-8";
+@import "../external1.css";
+@import "../external2.css";
+@import "../external4.css";
+@import "../external5.css";
+@import "https://www.example.com/style2.css";
+@import "../external3.css";
+@import "https://www.example.com/style1.css";
+@import "https://www.example.com/style3.css";
+@import "../external5.css" screen;
+
+/* internal.css */
+.before {
+  color: red;
+}
+
+/* charset1.css */
+.middle {
+  color: green;
+}
+
+/* charset2.css */
+.after {
+  color: blue;
+}
+
+/* entry.css */
+
+================================================================================
+TestCSSEntryPoint
+---------- /out.css ----------
+/* entry.css */
+body {
+  background: white;
+  color: black;
+}
+
+================================================================================
+TestCSSExternalQueryAndHashMatchIssue1822
+---------- /out.css ----------
+/* entry.css */
+a {
+  background: url(foo/bar.png?baz);
+}
+b {
+  background: url(foo/bar.png#baz);
+}
+
+================================================================================
+TestCSSFromJSMissingStarImport
+---------- /out/entry.js ----------
+// entry.js
+console.log(void 0);
+
+---------- /out/entry.css ----------
+/* a.css */
+.a {
+  color: red;
+}
+
+================================================================================
+TestCSSNestingOldBrowser
+---------- /out/nested-@layer.css ----------
+/* nested-@layer.css */
+@layer base {
+  a {
+    color: red;
+  }
+}
+
+---------- /out/nested-@media.css ----------
+/* nested-@media.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+
+---------- /out/nested-ampersand-twice.css ----------
+/* nested-ampersand-twice.css */
+a,
+a {
+  color: red;
+}
+
+---------- /out/nested-ampersand-first.css ----------
+/* nested-ampersand-first.css */
+a,
+a b {
+  color: red;
+}
+
+---------- /out/nested-attribute.css ----------
+/* nested-attribute.css */
+a [href] {
+  color: red;
+}
+
+---------- /out/nested-colon.css ----------
+/* nested-colon.css */
+a :hover {
+  color: red;
+}
+
+---------- /out/nested-dot.css ----------
+/* nested-dot.css */
+a .cls {
+  color: red;
+}
+
+---------- /out/nested-greaterthan.css ----------
+/* nested-greaterthan.css */
+a > b {
+  color: red;
+}
+
+---------- /out/nested-hash.css ----------
+/* nested-hash.css */
+a #id {
+  color: red;
+}
+
+---------- /out/nested-plus.css ----------
+/* nested-plus.css */
+a + b {
+  color: red;
+}
+
+---------- /out/nested-tilde.css ----------
+/* nested-tilde.css */
+a ~ b {
+  color: red;
+}
+
+---------- /out/toplevel-ampersand-twice.css ----------
+/* toplevel-ampersand-twice.css */
+:scope,
+:scope {
+  color: red;
+}
+
+---------- /out/toplevel-ampersand-first.css ----------
+/* toplevel-ampersand-first.css */
+:scope,
+a {
+  color: red;
+}
+
+---------- /out/toplevel-ampersand-second.css ----------
+/* toplevel-ampersand-second.css */
+a,
+:scope {
+  color: red;
+}
+
+---------- /out/toplevel-attribute.css ----------
+/* toplevel-attribute.css */
+[href] {
+  color: red;
+}
+
+---------- /out/toplevel-colon.css ----------
+/* toplevel-colon.css */
+:hover {
+  color: red;
+}
+
+---------- /out/toplevel-dot.css ----------
+/* toplevel-dot.css */
+.cls {
+  color: red;
+}
+
+---------- /out/toplevel-greaterthan.css ----------
+/* toplevel-greaterthan.css */
+> b {
+  color: red;
+}
+
+---------- /out/toplevel-hash.css ----------
+/* toplevel-hash.css */
+#id {
+  color: red;
+}
+
+---------- /out/toplevel-plus.css ----------
+/* toplevel-plus.css */
++ b {
+  color: red;
+}
+
+---------- /out/toplevel-tilde.css ----------
+/* toplevel-tilde.css */
+~ b {
+  color: red;
+}
+
+---------- /out/media-ampersand-twice.css ----------
+/* media-ampersand-twice.css */
+@media screen {
+  :scope,
+  :scope {
+    color: red;
+  }
+}
+
+---------- /out/media-ampersand-first.css ----------
+/* media-ampersand-first.css */
+@media screen {
+  :scope,
+  a {
+    color: red;
+  }
+}
+
+---------- /out/media-ampersand-second.css ----------
+/* media-ampersand-second.css */
+@media screen {
+  a,
+  :scope {
+    color: red;
+  }
+}
+
+---------- /out/media-attribute.css ----------
+/* media-attribute.css */
+@media screen {
+  [href] {
+    color: red;
+  }
+}
+
+---------- /out/media-colon.css ----------
+/* media-colon.css */
+@media screen {
+  :hover {
+    color: red;
+  }
+}
+
+---------- /out/media-dot.css ----------
+/* media-dot.css */
+@media screen {
+  .cls {
+    color: red;
+  }
+}
+
+---------- /out/media-greaterthan.css ----------
+/* media-greaterthan.css */
+@media screen {
+  > b {
+    color: red;
+  }
+}
+
+---------- /out/media-hash.css ----------
+/* media-hash.css */
+@media screen {
+  #id {
+    color: red;
+  }
+}
+
+---------- /out/media-plus.css ----------
+/* media-plus.css */
+@media screen {
+  + b {
+    color: red;
+  }
+}
+
+---------- /out/media-tilde.css ----------
+/* media-tilde.css */
+@media screen {
+  ~ b {
+    color: red;
+  }
+}
+
+---------- /out/page-no-warning.css ----------
+/* page-no-warning.css */
+@page {
+  @top-left {
+    background: red;
+  }
+}
+
+================================================================================
+TestDataURLImportURLInCSS
+---------- /out/entry.css ----------
+/* entry.css */
+a {
+  background: url(data:image/png;base64,iVBORw0KGgo=);
+}
+
+================================================================================
+TestDeduplicateRules
+---------- /out/yes0.css ----------
+/* yes0.css */
+a {
+  color: green;
+  color: red;
+}
+
+---------- /out/yes1.css ----------
+/* yes1.css */
+a {
+  color: green;
+}
+a {
+  color: red;
+}
+
+---------- /out/yes2.css ----------
+/* yes2.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+
+---------- /out/yes3.css ----------
+/* yes3.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+
+---------- /out/no0.css ----------
+/* no0.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  b a& {
+    color: red;
+  }
+}
+
+---------- /out/no1.css ----------
+/* no1.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  a[x] {
+    color: red;
+  }
+}
+
+---------- /out/no2.css ----------
+/* no2.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  a.x {
+    color: red;
+  }
+}
+
+---------- /out/no3.css ----------
+/* no3.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  a#x {
+    color: red;
+  }
+}
+
+---------- /out/no4.css ----------
+/* no4.css */
+@media screen {
+  a {
+    color: red;
+  }
+}
+@media screen {
+  a:x {
+    color: red;
+  }
+}
+
+---------- /out/no5.css ----------
+/* no5.css */
+@media screen {
+  a:x {
+    color: red;
+  }
+}
+@media screen {
+  a:x(y) {
+    color: red;
+  }
+}
+
+---------- /out/no6.css ----------
+/* no6.css */
+@media screen {
+  a b {
+    color: red;
+  }
+}
+@media screen {
+  a + b {
+    color: red;
+  }
+}
+
+---------- /out/across-files.css ----------
+/* across-files-0.css */
+/* across-files-1.css */
+a {
+  color: green;
+}
+
+/* across-files-2.css */
+a {
+  color: red;
+}
+
+/* across-files.css */
+
+---------- /out/across-files-url.css ----------
+@import "http://example.com/some.css";
+
+/* across-files-url-0.css */
+
+/* across-files-url-1.css */
+@font-face {
+  src: url(http://example.com/some.other.font);
+}
+
+/* across-files-url-2.css */
+@font-face {
+  src: url(http://example.com/some.font);
+}
+
+/* across-files-url.css */
+
+================================================================================
+TestExternalImportURLInCSS
+---------- /out/entry.css ----------
+/* src/entry.css */
+div:after {
+  content: 'If this is recognized, the path should become "../src/external.png"';
+  background: url(../src/external.png);
+}
+a {
+  background: url(http://example.com/images/image.png);
+}
+b {
+  background: url(https://example.com/images/image.png);
+}
+c {
+  background: url(//example.com/images/image.png);
+}
+d {
+  background: url(data:image/png;base64,iVBORw0KGgo=);
+}
+path {
+  fill: url(#filter);
+}
+
+================================================================================
+TestFileImportURLInCSS
+---------- /out/example-GDKWWYFY.data ----------
+This is some data.
+---------- /out/entry.css ----------
+/* one.css */
+a {
+  background: url(./example-GDKWWYFY.data);
+}
+
+/* two.css */
+b {
+  background: url(./example-GDKWWYFY.data);
+}
+
+/* entry.css */
+
+================================================================================
+TestIgnoreURLsInAtRulePrelude
+---------- /out/entry.css ----------
+/* entry.css */
+@supports (background: url(ignored.png)) {
+  a {
+    color: red;
+  }
+}
+
+================================================================================
+TestImportCSSFromJSLocalVsGlobal
+---------- /out/entry.js ----------
+// normal.css
+var normal_default = {};
+
+// LOCAL.global-css
+var LOCAL_default = {
+  local: "LOCAL_local",
+  local_a: "LOCAL_local_a",
+  local_b: "LOCAL_local_b",
+  local_c: "LOCAL_local_c"
+};
+
+// LOCAL.local-css
+var LOCAL_default2 = {
+  top_level: "LOCAL_top_level",
+  local: "LOCAL_local2",
+  local_a: "LOCAL_local_a2",
+  local_b: "LOCAL_local_b2",
+  local_c: "LOCAL_local_c2",
+  nested: "LOCAL_nested"
+};
+
+// entry.js
+console.log("should be empty:", normal_default);
+console.log("fewer local names:", LOCAL_default);
+console.log("more local names:", LOCAL_default2);
+
+---------- /out/entry.css ----------
+/* normal.css */
+.top_level {
+  color: #000;
+}
+:global(.GLOBAL) {
+  color: #001;
+}
+:local(.local) {
+  color: #002;
+}
+div:global(.GLOBAL) {
+  color: #003;
+}
+div:local(.local) {
+  color: #004;
+}
+.top_level:global(div) {
+  color: #005;
+}
+.top_level:local(div) {
+  color: #006;
+}
+:global(div.GLOBAL) {
+  color: #007;
+}
+:local(div.local) {
+  color: #008;
+}
+div:global(span.GLOBAL) {
+  color: #009;
+}
+div:local(span.local) {
+  color: #00A;
+}
+div:global(#GLOBAL_A.GLOBAL_B.GLOBAL_C):local(.local_a.local_b#local_c) {
+  color: #00B;
+}
+div:global(#GLOBAL_A .GLOBAL_B .GLOBAL_C):local(.local_a .local_b #local_c) {
+  color: #00C;
+}
+.nested {
+  :global(&.GLOBAL) {
+    color: #00D;
+  }
+  :local(&.local) {
+    color: #00E;
+  }
+  &:global(.GLOBAL) {
+    color: #00F;
+  }
+  &:local(.local) {
+    color: #010;
+  }
+}
+:global(.GLOBAL_A .GLOBAL_B) {
+  color: #011;
+}
+:local(.local_a .local_b) {
+  color: #012;
+}
+div:global(.GLOBAL_A .GLOBAL_B):hover {
+  color: #013;
+}
+div:local(.local_a .local_b):hover {
+  color: #014;
+}
+div :global(.GLOBAL_A .GLOBAL_B) span {
+  color: #015;
+}
+div :local(.local_a .local_b) span {
+  color: #016;
+}
+div > :global(.GLOBAL_A ~ .GLOBAL_B) + span {
+  color: #017;
+}
+div > :local(.local_a ~ .local_b) + span {
+  color: #018;
+}
+div:global(+ .GLOBAL_A):hover {
+  color: #019;
+}
+div:local(+ .local_a):hover {
+  color: #01A;
+}
+:global.GLOBAL:local.local {
+  color: #01B;
+}
+:global .GLOBAL :local .local {
+  color: #01C;
+}
+:global {
+  .GLOBAL {
+    :local {
+      .local {
+        color: #01D;
+      }
+    }
+  }
+}
+
+/* LOCAL.global-css */
+.top_level {
+  color: #000;
+}
+.GLOBAL {
+  color: #001;
+}
+.LOCAL_local {
+  color: #002;
+}
+div.GLOBAL {
+  color: #003;
+}
+div.LOCAL_local {
+  color: #004;
+}
+div.top_level {
+  color: #005;
+}
+div.top_level {
+  color: #006;
+}
+div.GLOBAL {
+  color: #007;
+}
+div.LOCAL_local {
+  color: #008;
+}
+div:is(span).GLOBAL {
+  color: #009;
+}
+div:is(span).LOCAL_local {
+  color: #00A;
+}
+div#GLOBAL_A.GLOBAL_B.GLOBAL_C.LOCAL_local_a.LOCAL_local_b#LOCAL_local_c {
+  color: #00B;
+}
+div#GLOBAL_A .GLOBAL_B .GLOBAL_C.LOCAL_local_a .LOCAL_local_b #LOCAL_local_c {
+  color: #00C;
+}
+.nested {
+  &.GLOBAL {
+    color: #00D;
+  }
+  &.LOCAL_local {
+    color: #00E;
+  }
+  &.GLOBAL {
+    color: #00F;
+  }
+  &.LOCAL_local {
+    color: #010;
+  }
+}
+.GLOBAL_A .GLOBAL_B {
+  color: #011;
+}
+.LOCAL_local_a .LOCAL_local_b {
+  color: #012;
+}
+div.GLOBAL_A .GLOBAL_B:hover {
+  color: #013;
+}
+div.LOCAL_local_a .LOCAL_local_b:hover {
+  color: #014;
+}
+div .GLOBAL_A .GLOBAL_B span {
+  color: #015;
+}
+div .LOCAL_local_a .LOCAL_local_b span {
+  color: #016;
+}
+div > .GLOBAL_A ~ .GLOBAL_B + span {
+  color: #017;
+}
+div > .LOCAL_local_a ~ .LOCAL_local_b + span {
+  color: #018;
+}
+div + .GLOBAL_A:hover {
+  color: #019;
+}
+div + .LOCAL_local_a:hover {
+  color: #01A;
+}
+.GLOBAL.LOCAL_local {
+  color: #01B;
+}
+.GLOBAL .LOCAL_local {
+  color: #01C;
+}
+& {
+  .GLOBAL {
+    & {
+      .LOCAL_local {
+        color: #01D;
+      }
+    }
+  }
+}
+
+/* LOCAL.local-css */
+.LOCAL_top_level {
+  color: #000;
+}
+.GLOBAL {
+  color: #001;
+}
+.LOCAL_local2 {
+  color: #002;
+}
+div.GLOBAL {
+  color: #003;
+}
+div.LOCAL_local2 {
+  color: #004;
+}
+div.LOCAL_top_level {
+  color: #005;
+}
+div.LOCAL_top_level {
+  color: #006;
+}
+div.GLOBAL {
+  color: #007;
+}
+div.LOCAL_local2 {
+  color: #008;
+}
+div:is(span).GLOBAL {
+  color: #009;
+}
+div:is(span).LOCAL_local2 {
+  color: #00A;
+}
+div#GLOBAL_A.GLOBAL_B.GLOBAL_C.LOCAL_local_a2.LOCAL_local_b2#LOCAL_local_c2 {
+  color: #00B;
+}
+div#GLOBAL_A .GLOBAL_B .GLOBAL_C.LOCAL_local_a2 .LOCAL_local_b2 #LOCAL_local_c2 {
+  color: #00C;
+}
+.LOCAL_nested {
+  &.GLOBAL {
+    color: #00D;
+  }
+  &.LOCAL_local2 {
+    color: #00E;
+  }
+  &.GLOBAL {
+    color: #00F;
+  }
+  &.LOCAL_local2 {
+    color: #010;
+  }
+}
+.GLOBAL_A .GLOBAL_B {
+  color: #011;
+}
+.LOCAL_local_a2 .LOCAL_local_b2 {
+  color: #012;
+}
+div.GLOBAL_A .GLOBAL_B:hover {
+  color: #013;
+}
+div.LOCAL_local_a2 .LOCAL_local_b2:hover {
+  color: #014;
+}
+div .GLOBAL_A .GLOBAL_B span {
+  color: #015;
+}
+div .LOCAL_local_a2 .LOCAL_local_b2 span {
+  color: #016;
+}
+div > .GLOBAL_A ~ .GLOBAL_B + span {
+  color: #017;
+}
+div > .LOCAL_local_a2 ~ .LOCAL_local_b2 + span {
+  color: #018;
+}
+div + .GLOBAL_A:hover {
+  color: #019;
+}
+div + .LOCAL_local_a2:hover {
+  color: #01A;
+}
+.GLOBAL.LOCAL_local2 {
+  color: #01B;
+}
+.GLOBAL .LOCAL_local2 {
+  color: #01C;
+}
+& {
+  .GLOBAL {
+    & {
+      .LOCAL_local2 {
+        color: #01D;
+      }
+    }
+  }
+}
+
+================================================================================
+TestImportCSSFromJSLowerBareLocalAndGlobal
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {
+  before: "styles_before",
+  button: "styles_button",
+  after: "styles_after"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* styles.css */
+.styles_before {
+  color: #000;
+}
+:scope .styles_button {
+  color: #000;
+}
+.styles_after {
+  color: #000;
+}
+.styles_before {
+  color: #001;
+}
+:scope .button {
+  color: #001;
+}
+.styles_after {
+  color: #001;
+}
+div .styles_button {
+  color: #002;
+}
+div .button {
+  color: #003;
+}
+:scope {
+  color: #004;
+}
+:scope {
+  color: #005;
+}
+:scope .styles_button {
+  color: #006;
+}
+:scope .styles_button {
+  color: #007;
+}
+
+================================================================================
+TestImportGlobalCSSFromJS
+---------- /out/entry.js ----------
+// a.css
+var a_default = {};
+
+// a.js
+console.log("a", void 0, a_default.a);
+
+// b.css
+var b_default = {};
+
+// b.js
+console.log("b", void 0, b_default.b);
+
+---------- /out/entry.css ----------
+/* a.css */
+.a {
+  color: red;
+}
+
+/* b.css */
+.b {
+  color: blue;
+}
+
+================================================================================
+TestImportLocalCSSFromJS
+---------- /out/entry.js ----------
+// dir1/style.css
+var button = "style_button";
+var style_default = {
+  a: "style_a",
+  button
+};
+
+// a.js
+console.log("file 1", button, style_default.a);
+
+// dir2/style.css
+var button2 = "style_button2";
+var style_default2 = {
+  b: "style_b",
+  button: button2
+};
+
+// b.js
+console.log("file 2", button2, style_default2.b);
+
+---------- /out/entry.css ----------
+/* dir1/style.css */
+.style_a {
+  color: red;
+}
+.style_button {
+  display: none;
+}
+
+/* dir2/style.css */
+.style_b {
+  color: blue;
+}
+.style_button2 {
+  display: none;
+}
+
+================================================================================
+TestImportLocalCSSFromJSMinifyIdentifiers
+---------- /out/entry.js ----------
+// dir1/style.css
+var t = "l";
+var l = {
+  a: "o",
+  button: t
+};
+
+// a.js
+console.log("file 1", t, l.a);
+
+// dir2/style.css
+var e = "n";
+var f = {
+  b: "e",
+  button: e
+};
+
+// b.js
+console.log("file 2", e, f.b);
+
+---------- /out/entry.css ----------
+/* dir1/style.css */
+.o {
+  color: red;
+}
+.l {
+  display: none;
+}
+
+/* dir2/style.css */
+.e {
+  color: blue;
+}
+.n {
+  display: none;
+}
+
+================================================================================
+TestImportLocalCSSFromJSMinifyIdentifiersAvoidGlobalNames
+---------- /out/entry.js ----------
+
+---------- /out/entry.css ----------
+/* global.css */
+:is(.a, .b, .c, .d, .e, .f, .g, .h, .i, .j, .k, .l, .m, .n, .o, .p, .q, .r, .s, .t, .u, .v, .w, .x, .y, .z),
+:is(.A, .B, .C, .D, .E, .F, .G, .H, .I, .J, .K, .L, .M, .N, .O, .P, .Q, .R, .S, .T, .U, .V, .W, .X, .Y, .Z),
+._ {
+  color: red;
+}
+
+/* local.module.css */
+.oo {
+  color: blue;
+}
+
+================================================================================
+TestMetafileCSSBundleTwoToOne
+---------- /out/js/UOATE6K4.js ----------
+// foo/entry.js
+console.log("foo");
+
+---------- /out/css/DIO3TRUB.css ----------
+/* common.css */
+body {
+  color: red;
+}
+
+---------- /out/js/6ZCNL5VY.js ----------
+// bar/entry.js
+console.log("bar");
+---------- metafile.json ----------
+{
+  "inputs": {
+    "common.css": {
+      "bytes": 28,
+      "imports": []
+    },
+    "foo/entry.js": {
+      "bytes": 54,
+      "imports": [
+        {
+          "path": "common.css",
+          "kind": "import-statement",
+          "original": "../common.css"
+        }
+      ],
+      "format": "esm"
+    },
+    "bar/entry.js": {
+      "bytes": 54,
+      "imports": [
+        {
+          "path": "common.css",
+          "kind": "import-statement",
+          "original": "../common.css"
+        }
+      ],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    "out/js/UOATE6K4.js": {
+      "imports": [],
+      "exports": [],
+      "entryPoint": "foo/entry.js",
+      "cssBundle": "out/css/DIO3TRUB.css",
+      "inputs": {
+        "common.css": {
+          "bytesInOutput": 0
+        },
+        "foo/entry.js": {
+          "bytesInOutput": 20
+        }
+      },
+      "bytes": 36
+    },
+    "out/css/DIO3TRUB.css": {
+      "imports": [],
+      "inputs": {
+        "common.css": {
+          "bytesInOutput": 23
+        }
+      },
+      "bytes": 40
+    },
+    "out/js/6ZCNL5VY.js": {
+      "imports": [],
+      "exports": [],
+      "entryPoint": "bar/entry.js",
+      "cssBundle": "out/css/DIO3TRUB.css",
+      "inputs": {
+        "common.css": {
+          "bytesInOutput": 0
+        },
+        "bar/entry.js": {
+          "bytesInOutput": 20
+        }
+      },
+      "bytes": 36
+    }
+  }
+}
+
+================================================================================
+TestPackageURLsInCSS
+---------- /out/entry.css ----------
+/* test.css */
+.css {
+  color: red;
+}
+
+/* entry.css */
+a {
+  background: url(data:image/png;base64,YS0x);
+}
+b {
+  background: url(data:image/png;base64,Yi0yLW5vZGVfbW9kdWxlcw==);
+}
+c {
+  background: url(data:image/png;base64,Yy0z);
+}
+
+================================================================================
+TestTextImportURLInCSSText
+---------- /out/entry.css ----------
+/* entry.css */
+a {
+  background: url(data:text/plain;base64,VGhpcyBpcyBzb21lIHRleHQu);
+}

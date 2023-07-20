@@ -1,0 +1,432 @@
+<!-- This is a simple playground to try out esbuild in your browser -->
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf8">
+  <title>Try esbuild live</title>
+  <style>
+    body {
+      font: 15px/120% sans-serif;
+      overflow: hidden;
+    }
+
+    h2,
+    p {
+      cursor: default;
+      user-select: none;
+    }
+
+    textarea {
+      resize: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    textarea,
+    #output .outer {
+      box-sizing: border-box;
+      padding: 4px;
+      color: inherit;
+      font-size: 13px;
+      line-height: 110%;
+      font-family: monospace;
+      cursor: text;
+      tab-size: 2;
+    }
+
+    #output .outer {
+      white-space: pre-wrap;
+      overflow-y: auto;
+    }
+
+    .minified {
+      word-break: break-all;
+    }
+
+    textarea:focus {
+      outline: none;
+      border: 1px solid #999;
+    }
+
+    hr {
+      border: 1px solid #999;
+      margin: 1em 0;
+    }
+
+    section {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      padding: 0 20px;
+      box-sizing: border-box;
+    }
+
+    section p {
+      line-height: 26px;
+    }
+
+    #input {
+      left: 0;
+      width: 50%;
+    }
+
+    #output {
+      right: 0;
+      width: 50%;
+    }
+
+    .outer {
+      position: absolute;
+      left: 20px;
+      top: 120px;
+      right: 20px;
+      bottom: 20px;
+    }
+
+    #input .outer {
+      right: 10px;
+    }
+
+    #output .outer {
+      left: 10px;
+    }
+
+    label {
+      white-space: nowrap;
+    }
+
+    body {
+      background: #EEE;
+      color: #333;
+    }
+
+    textarea,
+    #output .outer {
+      background: #FFF;
+      border: 1px solid #CCC;
+    }
+
+    .terminal-1 {
+      font-weight: bold;
+    }
+
+    .terminal-37 {
+      color: #999;
+    }
+
+    .terminal-4 {
+      text-decoration: underline;
+    }
+
+    .terminal-31 {
+      color: #D00;
+    }
+
+    .terminal-32 {
+      color: #0D0;
+    }
+
+    .terminal-33 {
+      color: #CC0;
+    }
+
+    .terminal-35 {
+      color: #D0D;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #333;
+        color: #DDD;
+      }
+
+      textarea,
+      #output .outer {
+        background: #111;
+        border: 1px solid #555;
+      }
+
+      .terminal-37 {
+        color: #777;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+  <section id="input">
+    <h2>Input</h2>
+    <p>
+      <label for="target">
+        Target: <select id="target">
+          <option>ES5</option>
+          <option>ES2015</option>
+          <option>ES2016</option>
+          <option>ES2017</option>
+          <option>ES2018</option>
+          <option>ES2019</option>
+          <option>ES2020</option>
+          <option>ES2021</option>
+          <option selected>ESNext</option>
+
+          <option>Chrome70</option>
+          <option>Chrome71</option>
+          <option>Chrome72</option>
+          <option>Chrome73</option>
+          <option>Chrome74</option>
+          <option>Chrome75</option>
+          <option>Chrome76</option>
+          <option>Chrome77</option>
+          <option>Chrome78</option>
+          <option>Chrome79</option>
+
+          <option>Chrome80</option>
+          <option>Chrome81</option>
+          <option>Chrome82</option>
+          <option>Chrome83</option>
+          <option>Chrome84</option>
+          <option>Chrome85</option>
+          <option>Chrome86</option>
+          <option>Chrome87</option>
+          <option>Chrome88</option>
+          <option>Chrome89</option>
+        </select>
+      </label>
+      &nbsp; &nbsp;
+      <label for="loader">
+        Loader: <select id="loader">
+          <option selected>JS</option>
+          <option>JSX</option>
+          <option>TS</option>
+          <option>TSX</option>
+          <option>CSS</option>
+          <option>JSON</option>
+          <option>Text</option>
+          <option>Base64</option>
+          <option>DataURL</option>
+          <option>Binary</option>
+        </select>
+      </label>
+      &nbsp; &nbsp;
+      <label for="format">
+        Format: <select id="format">
+          <option selected>Preserve</option>
+          <option>IIFE</option>
+          <option>CJS</option>
+          <option>ESM</option>
+        </select>
+      </label>
+      <br>
+      <label for="bundle">
+        <input id="bundle" type="checkbox">
+        Bundle
+      </label>
+      &nbsp; &nbsp;
+      <label for="ascii">
+        <input id="ascii" type="checkbox">
+        ASCII
+      </label>
+      &nbsp; &nbsp;
+      <label for="keepNames">
+        <input id="keepNames" type="checkbox">
+        Keep Names
+      </label>
+      &nbsp; &nbsp;
+      <label for="mangleProps">
+        <input id="mangleProps" type="checkbox">
+        Mangle Props
+      </label>
+      &nbsp; &nbsp;
+      Minify:
+      <label for="minify-syntax"><input id="minify-syntax" type="checkbox"> Syntax</label>
+      <label for="minify-idents"><input id="minify-idents" type="checkbox"> Identifiers</label>
+      <label for="minify-spaces"><input id="minify-spaces" type="checkbox"> Whitespace</label>
+    </p>
+    <div class="outer"><textarea autofocus spellcheck="false"></textarea></div>
+  </section>
+  <section id="output">
+    <h2>Output</h2>
+    <div class="outer"></div>
+  </section>
+  <script src="../npm/esbuild-wasm/lib/browser.js"></script>
+  <script>
+    const input = document.querySelector('#input textarea')
+    const target = document.querySelector('#target')
+    const loader = document.querySelector('#loader')
+    const format = document.querySelector('#format')
+    const minifySyntax = document.querySelector('#minify-syntax')
+    const minifyIdents = document.querySelector('#minify-idents')
+    const minifySpaces = document.querySelector('#minify-spaces')
+    const ascii = document.querySelector('#ascii')
+    const bundle = document.querySelector('#bundle')
+    const keepNames = document.querySelector('#keepNames')
+    const mangleProps = document.querySelector('#mangleProps')
+    let runIfIdle
+
+    function persistValue(el, key) {
+      el.onchange = () => {
+        runIfIdle()
+        try {
+          sessionStorage.setItem(key, el.value)
+        } catch (e) {
+        }
+      }
+      try {
+        const old = sessionStorage.getItem(key)
+        if (old !== null) el.value = old
+      } catch (e) {
+      }
+    }
+
+    function persistChecked(el, key) {
+      el.onchange = () => {
+        runIfIdle()
+        try {
+          sessionStorage.setItem(key, el.checked)
+        } catch (e) {
+        }
+      }
+      try {
+        const old = sessionStorage.getItem(key)
+        if (old !== null) el.checked = old === 'true'
+      } catch (e) {
+      }
+    }
+
+    persistValue(target, 'target')
+    persistValue(loader, 'loader')
+    persistValue(format, 'format')
+    persistChecked(minifySyntax, 'minifySyntax')
+    persistChecked(minifyIdents, 'minifyIdents')
+    persistChecked(minifySpaces, 'minifySpaces')
+    persistChecked(ascii, 'ascii')
+    persistChecked(bundle, 'bundle')
+    persistChecked(keepNames, 'keepNames')
+    persistChecked(mangleProps, 'mangleProps')
+
+    try {
+      const old = sessionStorage.getItem('input')
+      if (old !== null) input.value = old
+    } catch (e) {
+    }
+
+    esbuild.initialize({
+      wasmURL: '../npm/esbuild-wasm/esbuild.wasm',
+    }).then(() => {
+      const output = document.querySelector('#output .outer')
+      let debounceTimeout = 0
+      let isRunning = false
+      let needsRun = false
+
+      input.oninput = () => {
+        clearTimeout(debounceTimeout)
+        debounceTimeout = setTimeout(runIfIdle, 50)
+      }
+
+      runIfIdle = async () => {
+        clearTimeout(debounceTimeout)
+
+        if (isRunning) {
+          needsRun = true
+          return
+        }
+
+        isRunning = true
+        needsRun = false
+
+        const inputValue = input.value
+        var code, warnings, errors
+        try {
+          if (bundle.checked) {
+            const results = await esbuild.build({
+              stdin: {
+                contents: inputValue,
+                loader: loader.value.toLowerCase(),
+              },
+              bundle: true,
+              target: target.value.toLowerCase(),
+              format: format.value === 'Preserve' ? void 0 : format.value.toLowerCase(),
+              minifySyntax: minifySyntax.checked,
+              minifyIdentifiers: minifyIdents.checked,
+              minifyWhitespace: minifySpaces.checked,
+              charset: ascii.checked ? 'ascii' : 'utf8',
+              keepNames: keepNames.checked,
+              mangleProps: mangleProps.checked ? /_$/ : void 0,
+              plugins: [{
+                name: 'external-all',
+                setup(build) {
+                  build.onResolve({ filter: /.*/ }, args => {
+                    return { path: args.path, external: true }
+                  })
+                },
+              }],
+            })
+            code = results.outputFiles[0].text
+            warnings = results.warnings
+          } else {
+            ({ code, warnings } = await esbuild.transform(inputValue, {
+              target: target.value.toLowerCase(),
+              loader: loader.value.toLowerCase(),
+              format: format.value === 'Preserve' ? void 0 : format.value.toLowerCase(),
+              minifySyntax: minifySyntax.checked,
+              minifyIdentifiers: minifyIdents.checked,
+              minifyWhitespace: minifySpaces.checked,
+              charset: ascii.checked ? 'ascii' : 'utf8',
+              keepNames: keepNames.checked,
+              mangleProps: mangleProps.checked ? /_$/ : void 0,
+            }))
+          }
+        } catch (error) {
+          ({ errors, warnings } = error)
+          if (!errors) {
+            output.textContent = (error && error.message) || (error + '')
+            isRunning = false
+            if (needsRun) runIfIdle()
+            return
+          }
+        }
+        if (warnings) warnings = await esbuild.formatMessages(warnings, { kind: 'warning', color: true })
+        if (errors) errors = await esbuild.formatMessages(errors, { kind: 'error', color: true })
+        const html = (errors || []).concat(warnings || []).map(messageToHTML).join('')
+        if (code) code = textToHTML(code)
+        if (code && minifySpaces.checked) code = `<span class="minified">${code}</span>`
+        output.innerHTML = (html && html + '<hr>' || '') + (code || '')
+
+        try {
+          sessionStorage.setItem('input', inputValue)
+        } catch (e) {
+        }
+
+        isRunning = false
+        if (needsRun) runIfIdle()
+      }
+
+      function textToHTML(text) {
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      }
+
+      function messageToHTML(text) {
+        let reset = ''
+        text = textToHTML(text)
+        text = text.replace(/\033\[([^m]+)m/g, (_, value) => {
+          if (value === '0') {
+            value = reset
+            reset = ''
+          } else {
+            reset += '</span>'
+            value = `<span class="terminal-${value}">`
+          }
+          return value
+        })
+        text += reset
+        return text
+      }
+
+      runIfIdle()
+    })
+  </script>
+</body>
+
+</html>
