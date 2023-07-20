@@ -17,6 +17,7 @@ import { Sha256 } from '../../web/libjs/crypto.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
+import { exportRecords } from './data_export.js';
 import { ApplicationInfo, ApplicationBuilder } from './instance_app.js';
 import { FormState, FormModel, FormBuilder } from './form.js';
 import { MagicData } from './form_data.js';

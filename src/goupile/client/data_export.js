@@ -11,9 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import { Util, Log, Net, Mutex } from '../../web/libjs/common.js';
+import { Base64 } from '../../web/libjs/crypto.js';
+import * as goupile from './goupile.js';
+import { profile } from './goupile.js';
+import * as UI from './ui.js';
+
 async function exportRecords(stores) {
     if (typeof XSLX === 'undefined')
-        await net.loadScript(`${ENV.urls.static}sheetjs/xlsx.mini.min.js`);
+        await Net.loadScript(`${ENV.urls.static}sheetjs/xlsx.mini.min.js`);
 
     let definitions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'label', 'type']]);
     let propositions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'prop', 'label']]);
@@ -204,8 +210,8 @@ async function walkThreads(method, func) {
     let from = 0;
 
     do {
-        let url = util.pasteURL(`${ENV.urls.instance}api/export/${method}`, { from: from });
-        let json = await net.get(url);
+        let url = Util.pasteURL(`${ENV.urls.instance}api/export/${method}`, { from: from });
+        let json = await Net.get(url);
 
         for (let thread of json.threads)
             func(thread);
