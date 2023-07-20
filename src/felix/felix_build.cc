@@ -120,7 +120,7 @@ static Size BuildGitVersionString(Span<const char> target_name, Span<char> out_v
         Fmt(cmd, "git describe --always --match='%1/*' --dirty", target_name);
 
         int exit_code;
-        if (!ExecuteCommandLine(cmd, MakeSpan<const uint8_t>(nullptr, (Size)0), append_buf, &exit_code))
+        if (!ExecuteCommandLine(cmd, nullptr, MakeSpan<const uint8_t>(nullptr, (Size)0), append_buf, &exit_code))
             return -1;
         if (exit_code) {
             LogError("Command 'git log' failed");

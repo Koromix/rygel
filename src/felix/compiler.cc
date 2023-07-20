@@ -84,7 +84,7 @@ static void MakePackCommand(Span<const char *const> pack_filenames, bool use_arr
 static bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
 {
     int exit_code;
-    if (!ExecuteCommandLine(cmd_line, {}, Kilobytes(4), out_output, &exit_code))
+    if (!ExecuteCommandLine(cmd_line, nullptr, {}, Kilobytes(4), out_output, &exit_code))
         return false;
     if (exit_code) {
         LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);

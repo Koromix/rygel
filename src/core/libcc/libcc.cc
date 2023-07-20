@@ -3804,16 +3804,28 @@ struct PendingIO {
     }
 };
 
-bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
+bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+                        FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
     STARTUPINFOW si = {};
 
+    BlockAllocator temp_alloc;
+
     // Convert command line
-    Span<wchar_t> cmd_line_w = AllocateSpan<wchar_t>(nullptr, 2 * strlen(cmd_line) + 1);
-    RG_DEFER { ReleaseSpan(nullptr, cmd_line_w); };
+    Span<wchar_t> cmd_line_w = AllocateSpan<wchar_t>(&temp_alloc, 2 * strlen(cmd_line) + 1);
     if (ConvertUtf8ToWin32Wide(cmd_line, cmd_line_w) < 0)
         return false;
+
+    // Convert work directory
+    Span<wchar_t> work_dir_w;
+    if (work_dir) {
+        work_dir_w = AllocateSpan<wchar_t>(&temp_alloc, 2 * strlen(work_dir) + 1);
+        if (ConvertUtf8ToWin32Wide(work_dir, work_dir_w) < 0)
+            return false;
+    } else {
+        work_dir_w = {};
+    }
 
     // Detect CTRL+C and CTRL+BREAK events
     if (!InitConsoleCtrlHandler())
@@ -3887,7 +3899,7 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 
         PROCESS_INFORMATION pi = {};
         if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP,
-                            nullptr, nullptr, &si, &pi)) {
+                            nullptr, work_dir_w.ptr, &si, &pi)) {
             LogError("Failed to start process: %1", GetWin32ErrorString());
             return false;
         }
@@ -4096,7 +4108,8 @@ void CloseDescriptorSafe(int *fd_ptr)
     *fd_ptr = -1;
 }
 
-bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()> in_func,
+bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+                        FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
     // Create read pipes
@@ -4169,9 +4182,14 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
             return false;
         }
 
-        const char *argv[] = {"sh", "-c", cmd_line, nullptr};
-        if ((errno = posix_spawn(&pid, "/bin/sh", &file_actions, nullptr,
-                                 const_cast<char **>(argv), environ))) {
+        if (work_dir) {
+            const char *argv[] = {"env", "-C", work_dir, "sh", "-c", cmd_line, nullptr };
+            errno = posix_spawn(&pid, "/bin/env", &file_actions, nullptr, const_cast<char **>(argv), environ);
+        } else {
+            const char *argv[] = {"sh", "-c", cmd_line, nullptr};
+            errno = posix_spawn(&pid, "/bin/sh", &file_actions, nullptr, const_cast<char **>(argv), environ);
+        }
+        if (errno) {
             LogError("Failed to start process: %1", strerror(errno));
             return false;
         }
@@ -4311,7 +4329,8 @@ bool ExecuteCommandLine(const char *cmd_line, FunctionRef<Span<const uint8_t>()>
 
 #endif
 
-bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size max_len,
+bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+                        Span<const uint8_t> in_buf, Size max_len,
                         HeapArray<uint8_t> *out_buf, int *out_code)
 {
     Size start_len = out_buf->len;
@@ -4333,8 +4352,8 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size m
     // Don't f*ck up the log
     bool warned = false;
 
-    bool success = ExecuteCommandLine(cmd_line, [&]() { return in_buf; },
-                                                [&](Span<uint8_t> buf) {
+    bool success = ExecuteCommandLine(cmd_line, work_dir, [&]() { return in_buf; },
+                                                          [&](Span<uint8_t> buf) {
         if (out_buf->len - start_len <= max_len - buf.len) {
             out_buf->Append(buf);
         } else if (!warned) {
