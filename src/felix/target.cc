@@ -35,7 +35,7 @@ struct TargetConfig {
     unsigned int platforms;
     bool enable_by_default;
 
-    const char *version_str;
+    const char *version_tag;
     const char *icon_filename;
 
     FileSet src_file_set;
@@ -205,6 +205,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
             target_config.type = TargetType::Executable;
             target_config.platforms = ParseSupportedPlatforms("Desktop Emscripten");
             RG_ASSERT(target_config.platforms);
+            target_config.version_tag = target_config.name;
 
             // Type property must be specified first
             if (prop.key == "Type") {
@@ -243,8 +244,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
                     if (prop.key == "EnableByDefault") {
                         valid &= ParseBool(prop.value, &target_config.enable_by_default);
-                    } else if (prop.key == "VersionString") {
-                        target_config.version_str = DuplicateString(prop.value, &set.str_alloc).ptr;
+                    } else if (prop.key == "VersionTag") {
+                        target_config.version_tag = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "IconFile") {
                         target_config.icon_filename = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "SourceDirectory") {
@@ -401,7 +402,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     target->type = target_config->type;
     target->platforms = target_config->platforms;
     target->enable_by_default = target_config->enable_by_default;
-    target->version_str = target_config->version_str;
+    target->version_tag = target_config->version_tag;
     target->icon_filename = target_config->icon_filename;
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->export_definitions, target_config->export_definitions);

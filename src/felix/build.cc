@@ -60,10 +60,70 @@ static const char *BuildObjectPath(const char *ns, const char *src_filename, con
     return buf.TrimAndLeak(1).ptr;
 }
 
-static bool UpdateVersionSource(const char *target_name, const char *version_str,
-                                const BuildSettings &build, const char *dest_filename)
+static Size BuildGitVersionString(Span<const char> tag_name, Span<char> out_version)
 {
+    LocalArray<char, 2048> output;
+
+    const auto append_buf = [&](Span<uint8_t> buf) {
+        Size copy = std::min(output.Available(), buf.len);
+
+        memcpy_safe(output.end(), buf.ptr, (size_t)copy);
+        output.len += copy;
+    };
+
+    // Get tag and commit description from git
+    {
+        char cmd[512];
+        Fmt(cmd, "git describe --always --match='%1/*' --dirty", tag_name);
+
+        int exit_code;
+        if (!ExecuteCommandLine(cmd, nullptr, MakeSpan<const uint8_t>(nullptr, (Size)0), append_buf, &exit_code))
+            return -1;
+        if (exit_code) {
+            LogError("Command 'git log' failed");
+            return -1;
+        }
+
+        output.len = TrimStrRight(output.Take()).len;
+    }
+
+    if (output.len > tag_name.len && StartsWith(output, tag_name) && output[tag_name.len] == '/') {
+        Span<char> version = TrimStr(output.Take(tag_name.len + 1, output.len - tag_name.len - 1));
+
+        // Replace hyphen except for first one after sequence number
+        {
+            bool replace = false;
+
+            for (char &c: version) {
+                c = (replace && c == '-') ? '_' : c;
+                replace |= (c == '-');
+            }
+        }
+
+        Size len = Fmt(out_version, "%1", version).len;
+        return len;
+    } else {
+        Size len = Fmt(out_version, "0.0_%1", output).len;
+        return len;
+    }
+}
+
+static bool UpdateVersionSource(const TargetInfo &target, const BuildSettings &build, const char *dest_filename)
+{
+
     if (!build.fake && !EnsureDirectoryExists(dest_filename))
+        return false;
+
+    char version_str[128] = {};
+
+    static bool has_git = ([]() {
+        bool found = FindExecutableInPath("git");
+        if (!found) {
+            LogWarning("Cannot make dynamic version strings (missing git)");
+        }
+        return found;
+    })();
+    if (has_git && BuildGitVersionString(target.version_tag, version_str) < 0)
         return false;
 
     char code[1024];
@@ -71,7 +131,7 @@ static bool UpdateVersionSource(const char *target_name, const char *version_str
               "const char *FelixTarget = \"%1\";\n"
               "const char *FelixVersion = \"%2\";\n"
               "const char *FelixCompiler = \"%3 (%4)\";\n",
-        target_name, version_str ? version_str : "(unknown version)",
+        target.name, version_str[0] ? version_str : "(unknown version)",
         build.compiler->name, FmtFlags(build.features, CompileFeatureOptions));
 
     bool new_version;
@@ -409,7 +469,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
         uint32_t features = target.CombineFeatures(build.features);
 
-        if (!UpdateVersionSource(target.name, target.version_str, build, src_filename))
+        if (!UpdateVersionSource(target, build, src_filename))
             return false;
 
         Command cmd = {};
