@@ -236,7 +236,8 @@ Builder::Builder(const BuildSettings &build)
     const char *short_platform = SplitStrReverse(HostPlatformNames[(int)build.compiler->platform], '/').ptr;
 
     cache_directory = Fmt(&str_alloc, "%1%/%2_%3", build.output_directory, short_platform, build.compiler->name).ptr;
-    cache_filename = Fmt(&str_alloc, "%1%/Shared%/FelixCache.bin", build.output_directory).ptr;
+    shared_directory = Fmt(&str_alloc, "%1%/Shared", build.output_directory).ptr;
+    cache_filename = Fmt(&str_alloc, "%1%/FelixCache.bin", shared_directory).ptr;
 
     LoadCache();
 }
@@ -586,11 +587,81 @@ const char *Builder::AddCppSource(const SourceFileInfo &src, const char *ns)
     return obj_filename;
 }
 
+bool Builder::PrepareEsbuild()
+{
+    if (esbuild)
+        return true;
+
+    // Try embedded builds
+    {
+#if defined(_WIN64)
+        const char *binary = "vendor\\esbuild\\bin\\esbuild_windows_x64.exe";
+#elif defined(__linux__) && defined(__x86_64__)
+        const char *binary = "vendor/esbuild/bin/esbuild_linux_x64";
+#else
+        const char *binary = nullptr;
+#endif
+
+        if (binary && TestFile(binary)) {
+            esbuild = binary;
+            return true;
+        }
+    }
+
+    // Build it if Go compiler is available
+    {
+#ifdef _WIN32
+        const char *binary = Fmt(&str_alloc, "%1%/esbuild.exe", shared_directory).ptr;
+#else
+        const char *binary = Fmt(&str_alloc, "%1%/esbuild", shared_directory).ptr;
+#endif
+
+        if (TestFile(binary)) {
+            esbuild = binary;
+            return true;
+        }
+
+        if (FindExecutableInPath("go")) {
+            LogInfo("Building esbuild with Go compiler...");
+
+            const char *gocache_dir = Fmt(&str_alloc, "%1/Go", shared_directory).ptr;
+            SetEnvironmentVar("GOCACHE", gocache_dir);
+
+            const char *work_dir = "vendor/esbuild/src";
+            const char *cmd_line = Fmt(&str_alloc, "go build -o \"%1\" -buildvcs=false ./cmd/esbuild", binary).ptr;
+
+            HeapArray<char> output_buf;
+            int exit_code;
+            bool started = ExecuteCommandLine(cmd_line, work_dir, {}, Megabytes(4), &output_buf, &exit_code);
+
+            if (!started) {
+                return false;
+            } else if (exit_code) {
+                LogError("Failed to build esbuild %!..+(exit code %1)%!0", exit_code);
+                stderr_st.Write(output_buf);
+
+                return false;
+            }
+
+            esbuild = binary;
+        } else {
+            LogError("Install Go compiler to build esbuild tool");
+            return false;
+        }
+    }
+
+    RG_UNREACHABLE();
+}
+
 const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
 {
     RG_ASSERT(src.type == SourceType::Esbuild);
 
     const char *meta_filename = build_map.FindValue({ ns, src.filename }, nullptr);
+
+    // First, we need esbuild!
+    if (!meta_filename && !PrepareEsbuild())
+        return nullptr;
 
     // Build web bundle
     if (!meta_filename) {
@@ -608,7 +679,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
         {
             HeapArray<char> buf(&str_alloc);
 
-            Fmt(&buf, "esbuild \"%1\" --bundle --platform=browser --format=iife --global-name=app", src.filename);
+            Fmt(&buf, "\"%1\" \"%2\" --bundle --platform=browser --format=iife --global-name=app", esbuild, src.filename);
             Fmt(&buf, "  --log-level=warning --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
 
             if (features & (int)CompileFeature::DebugInfo) {

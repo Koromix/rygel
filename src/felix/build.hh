@@ -91,7 +91,11 @@ class Builder {
 
     BuildSettings build;
     const char *cache_directory;
+    const char *shared_directory;
     const char *cache_filename;
+
+    // Specific tools
+    const char *esbuild = nullptr;
 
     // Core host targets (if any)
     BucketArray<TargetInfo> core_targets;
@@ -133,6 +137,8 @@ private:
 
     const char *AddCppSource(const SourceFileInfo &src, const char *ns);
     const char *AddEsbuildSource(const SourceFileInfo &src, const char *ns);
+
+    bool PrepareEsbuild();
 
     bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
                     Span<const char *const> src_filenames, const char *ns);
