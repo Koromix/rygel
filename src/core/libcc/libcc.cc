@@ -5114,7 +5114,9 @@ restart:
 int GetRandomIntSafe(int min, int max)
 {
     int range = max - min;
-    RG_ASSERT(range >= 2);
+
+    if (range < 2) [[unlikely]]
+        return min;
 
     unsigned int treshold = (UINT_MAX - UINT_MAX % range);
 
