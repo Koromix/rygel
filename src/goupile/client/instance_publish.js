@@ -25,7 +25,7 @@ function InstancePublisher() {
 
         let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
 
-        return UI.runDialog(e, 'Publication', {}, (d, resolve, reject) => {
+        return UI.dialog(e, 'Publication', {}, (d, resolve, reject) => {
             dialog = d;
 
             d.output(html`
@@ -119,7 +119,7 @@ function InstancePublisher() {
     }
 
     function runAddFileDialog(e) {
-        return UI.runDialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
+        return UI.dialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
             d.file('*file', 'Fichier :');
             d.text('*filename', 'Chemin :', { value: d.values.file ? d.values.file.name : null });
 
@@ -163,7 +163,7 @@ function InstancePublisher() {
     }
 
     function runDeleteFileDialog(e, action) {
-        return UI.runConfirm(e, `Voulez-vous vraiment supprimer le fichier '${action.filename}' ?`,
+        return UI.confirm(e, `Voulez-vous vraiment supprimer le fichier '${action.filename}' ?`,
                                 'Supprimer', async () => {
             let url = Util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.to_sha256 });
             let response = await Net.fetch(url, { method: 'DELETE' });

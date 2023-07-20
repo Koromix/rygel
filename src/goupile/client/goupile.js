@@ -402,7 +402,7 @@ async function runLoginScreen(e, initial) {
 async function runPasswordScreen(e, initial) {
     let title = initial ? null : 'Confirmation d\'identité';
 
-    return UI.runDialog(e, title, { fixed: true }, (d, resolve, reject) => {
+    return UI.dialog(e, title, { fixed: true }, (d, resolve, reject) => {
         if (initial) {
             d.output(html`
                 <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
@@ -450,7 +450,7 @@ async function runConfirmScreen(e, initial, method) {
     let title = initial ? null : 'Confirmation d\'identité';
     let errors = 0;
 
-    return UI.runDialog(e, title, { fixed: true }, (d, resolve, reject) => {
+    return UI.dialog(e, title, { fixed: true }, (d, resolve, reject) => {
         d.output(html`
             ${initial ? html`
                 <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
@@ -523,7 +523,7 @@ function runChangePasswordDialog(e) { return runChangePassword(e, false); };
 function runChangePassword(e, forced) {
     let title = forced ? null : 'Changement de mot de passe';
 
-    return UI.runDialog(e, title, { fixed: forced }, (d, resolve, reject) => {
+    return UI.dialog(e, title, { fixed: forced }, (d, resolve, reject) => {
         if (forced) {
             d.output(html`
                 <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
@@ -582,7 +582,7 @@ async function runResetTOTP(e) {
 
     let errors = 0;
 
-    return UI.runDialog(e, 'Changement de codes TOTP', { fixed: true }, (d, resolve, reject) => {
+    return UI.dialog(e, 'Changement de codes TOTP', { fixed: true }, (d, resolve, reject) => {
         d.output(html`
             <p>Scannez ce QR code avec une <b>application d'authentification
             pour mobile</b> puis saississez le code donné par cette application.</p>
@@ -627,7 +627,7 @@ async function runResetTOTP(e) {
 };
 
 function runLockDialog(e, ctx) {
-    return UI.runDialog(e, 'Verrouillage', {}, (d, resolve, reject) => {
+    return UI.dialog(e, 'Verrouillage', {}, (d, resolve, reject) => {
         d.pin('*pin', 'Code de déverrouillage');
         if (d.values.pin != null && d.values.pin.length < 4)
             d.error('pin', 'Ce code est trop court', true);
@@ -636,7 +636,7 @@ function runLockDialog(e, ctx) {
 };
 
 function runUnlockDialog(e) {
-    return UI.runDialog(e, 'Déverrouillage', {}, (d, resolve, reject) => {
+    return UI.dialog(e, 'Déverrouillage', {}, (d, resolve, reject) => {
         d.pin('*pin', 'Code de déverrouillage');
         d.action('Déverrouiller', { disabled: !d.isValid() }, e => unlock(e, d.values.pin));
     });
@@ -915,7 +915,7 @@ function confirmDangerousAction(e) {
     if (controller.hasUnsavedData != null && !controller.hasUnsavedData())
         return;
 
-    return UI.runConfirm(e, html`Si vous continuez, vous <span style="color: red; font-weight: bold;">PERDREZ les modifications en cours</span>.
+    return UI.confirm(e, html`Si vous continuez, vous <span style="color: red; font-weight: bold;">PERDREZ les modifications en cours</span>.
                                  Voulez-vous continuer ?<br/>
                                  Si vous souhaitez les conserver, <b>annulez cette action</b> et cliquez sur le bouton d'enregistrement.`,
                             "Abandonner les modifications", () => {});

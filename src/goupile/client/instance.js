@@ -327,7 +327,7 @@ function renderMenu() {
 async function generateExportKey(e) {
     let export_key = await Net.post(`${ENV.urls.instance}api/change/export_key`);
 
-    await UI.runDialog(e, 'Clé d\'export', {}, (d, resolve, reject) => {
+    await UI.dialog(e, 'Clé d\'export', {}, (d, resolve, reject) => {
         d.text('export_key', 'Clé d\'export', {
             value: export_key,
             readonly: true
@@ -434,7 +434,7 @@ async function runHistoryDialog(e, filename) {
     // Don't trash the undo/redo buffer
     buffer.session = null;
 
-    let p = UI.runDialog(e, 'Historique du fichier', {}, (d, resolve, reject) => {
+    let p = UI.dialog(e, 'Historique du fichier', {}, (d, resolve, reject) => {
         d.output(html`
             <table class="ui_table">
                 <colgroup>
@@ -777,7 +777,7 @@ function addAutomaticActions(builder, model) {
         if (form_state.hasChanged()) {
             builder.action('-');
             builder.action('Oublier', { color: '#db0a0a', always: form_entry.anchor >= 0 }, async e => {
-                await UI.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
+                await UI.confirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                        'Oublier', () => {});
 
                 // Reload thread
@@ -1244,7 +1244,7 @@ async function go(e, url = null, options = {}) {
         if (context_change) {
             if (hasUnsavedData()) {
                 try {
-                    await UI.runDialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
+                    await UI.dialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
                         d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
 
                         d.enumRadio('save', 'Que souhaitez-vous faire avant de continuer ?', [
@@ -1634,7 +1634,7 @@ async function loadRecord(tid, anchor, page) {
 
     // Handle annotation form
     new_state.annotateHandler = (e, intf) => {
-        return UI.runDialog(e, intf.label, {}, (d, resolve, reject) => {
+        return UI.dialog(e, intf.label, {}, (d, resolve, reject) => {
             let note = form_data.getNote(intf.key.root, 'status', {});
             let status = note[intf.key.name];
 

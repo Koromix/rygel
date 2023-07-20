@@ -523,7 +523,7 @@ function FormBuilder(state, model) {
         if (!isModifiable(variables_map[key]))
             return;
 
-        return UI.runDialog(e, null, {}, (d, resolve, reject) => {
+        return UI.dialog(e, null, {}, (d, resolve, reject) => {
             let number = d.number('number', 'Valeur :', { min: min, max: max, value: value });
 
             d.action('Modifier', { disabled: !d.isValid() }, () => {

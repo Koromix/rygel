@@ -195,7 +195,7 @@ function hasTwoPanels() {
     return dual;
 }
 
-function runDialog(e, title, options, func) {
+function dialog(e, title, options, func) {
     if (e != null) {
         e.stopPropagation();
 
@@ -210,10 +210,10 @@ function runDialog(e, title, options, func) {
         options.type = (title != null) ? 'modal' : 'screen';
     }
 
-    return executeDialog(e, title, options, func);
+    return runDialog(e, title, options, func);
 }
 
-function executeDialog(e, title, options, func) {
+function runDialog(e, title, options, func) {
     if (e != null)
         closeOldDialogs(e);
 
@@ -436,10 +436,10 @@ function wrap(func) {
     };
 }
 
-function runConfirm(e, msg, action, func = null) {
+function confirm(e, msg, action, func = null) {
     let title = action + ' (confirmation)';
 
-    return runDialog(e, title, {}, (d, resolve, reject) => {
+    return dialog(e, title, {}, (d, resolve, reject) => {
         d.output(msg);
 
         d.action(action, { disabled: !d.isValid() }, async e => {
@@ -570,10 +570,9 @@ export {
     allowTwoPanels,
     hasTwoPanels,
 
-    runDialog,
-
     wrap,
-    runConfirm,
+    dialog,
+    confirm,
 
     deployMenu,
     expandMenu

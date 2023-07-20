@@ -278,7 +278,7 @@ async function createBackup() {
 }
 
 async function runUploadBackupDialog(e) {
-    return UI.runDialog(e, 'Envoi d\'archive', {}, (d, resolve, reject) => {
+    return UI.dialog(e, 'Envoi d\'archive', {}, (d, resolve, reject) => {
         d.file('*archive', 'Archive');
 
         d.action('Envoyer', { disabled: !d.isValid() }, async () => {
@@ -315,7 +315,7 @@ async function runUploadBackupDialog(e) {
 }
 
 async function runRestoreBackupDialog(e, filename) {
-    return UI.runDialog(e, `Restauration de '${filename}'`, {}, (d, resolve, reject) => {
+    return UI.dialog(e, `Restauration de '${filename}'`, {}, (d, resolve, reject) => {
         d.password('*key', 'Clé de restauration');
         d.boolean('*restore_users', 'Restaurer les utilisateurs et leurs droits', { value: false, untoggle: false });
 
@@ -348,7 +348,7 @@ async function runRestoreBackupDialog(e, filename) {
 }
 
 function runDeleteBackupDialog(e, filename) {
-    return UI.runConfirm(e, `Voulez-vous vraiment supprimer l'archive '${filename}' ?`,
+    return UI.confirm(e, `Voulez-vous vraiment supprimer l'archive '${filename}' ?`,
                             'Supprimer', async () => {
         await Net.post('/admin/api/archives/delete', { filename: filename });
 
@@ -460,7 +460,7 @@ async function go(e, url = null, options = {}) {
 }
 
 function runCreateInstanceDialog(e) {
-    return UI.runDialog(e, 'Création d\'un projet', {}, (d, resolve, reject) => {
+    return UI.dialog(e, 'Création d\'un projet', {}, (d, resolve, reject) => {
         d.text('*key', 'Clé du projet', {
             help: [
                 'Longueur maximale : 24 caractères',
@@ -495,7 +495,7 @@ function runCreateInstanceDialog(e) {
 }
 
 function runConfigureInstanceDialog(e, instance) {
-    return UI.runDialog(e, `Configuration de ${instance.key}`, {}, (d, resolve, reject) => {
+    return UI.dialog(e, `Configuration de ${instance.key}`, {}, (d, resolve, reject) => {
         d.pushOptions({ untoggle: false });
 
         if (instance.master == null) {
@@ -589,7 +589,7 @@ function checkCryptoKey(str) {
 }
 
 function runDeleteInstanceDialog(e, instance) {
-    return UI.runDialog(e, `Suppression de ${instance.key}`, {}, (d, resolve, reject) => {
+    return UI.dialog(e, `Suppression de ${instance.key}`, {}, (d, resolve, reject) => {
         d.output(`Voulez-vous vraiment supprimer le projet '${instance.key}' ?`);
 
         d.action('Supprimer', {}, async () => {
@@ -614,7 +614,7 @@ function runDeleteInstanceDialog(e, instance) {
 }
 
 function runSplitInstanceDialog(e, master) {
-    return UI.runDialog(e, `Division de ${master}`, {}, (d, resolve, reject) => {
+    return UI.dialog(e, `Division de ${master}`, {}, (d, resolve, reject) => {
         d.calc('instance', 'Projet', master);
         d.text('*key', 'Clé du sous-projet');
         d.text('name', 'Nom', { value: d.values.key });
@@ -645,7 +645,7 @@ function runSplitInstanceDialog(e, master) {
 }
 
 function runCreateUserDialog(e) {
-    return UI.runDialog(e, 'Création d\'un utilisateur', {}, (d, resolve, reject) => {
+    return UI.dialog(e, 'Création d\'un utilisateur', {}, (d, resolve, reject) => {
         let username = d.text('*username', 'Nom d\'utilisateur');
 
         d.password('*password', 'Mot de passe');
@@ -702,7 +702,7 @@ function runCreateUserDialog(e) {
 }
 
 function runAssignUserDialog(e, instance, user, prev_permissions) {
-    return UI.runDialog(e, `Droits de ${user.username} sur ${instance.key}`, {}, (d, resolve, reject) => {
+    return UI.dialog(e, `Droits de ${user.username} sur ${instance.key}`, {}, (d, resolve, reject) => {
         d.section('Projet', () => {
             let props = ENV.permissions.filter(perm => perm.startsWith('build_')).map(makePermissionProp);
             let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('build_')) : null;
@@ -766,7 +766,7 @@ function makePermissionProp(perm) {
 }
 
 function runEditUserDialog(e, user) {
-    return UI.runDialog(e, `Modification de ${user.username}`, {}, (d, resolve, reject) => {
+    return UI.dialog(e, `Modification de ${user.username}`, {}, (d, resolve, reject) => {
         d.pushOptions({ untoggle: false });
 
         d.tabs('tabs', () => {
@@ -842,7 +842,7 @@ function runEditUserDialog(e, user) {
 }
 
 function runDeleteUserDialog(e, user) {
-    return UI.runDialog(e, `Suppression de ${user.username}`, {}, (d, resolve, reject) => {
+    return UI.dialog(e, `Suppression de ${user.username}`, {}, (d, resolve, reject) => {
         d.output(`Voulez-vous vraiment supprimer l'utilisateur '${user.username}' ?`);
 
         d.action('Supprimer', {}, async () => {
