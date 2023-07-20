@@ -90,14 +90,9 @@ static Size BuildGitVersionString(Span<const char> tag_name, Span<char> out_vers
     if (output.len > tag_name.len && StartsWith(output, tag_name) && output[tag_name.len] == '/') {
         Span<char> version = TrimStr(output.Take(tag_name.len + 1, output.len - tag_name.len - 1));
 
-        // Replace hyphen except for first one after sequence number
-        {
-            bool replace = false;
-
-            for (char &c: version) {
-                c = (replace && c == '-') ? '_' : c;
-                replace |= (c == '-');
-            }
+        // Replace hyphens with '_'
+        for (char &c: version) {
+            c = (c != '-') ? c : '_';
         }
 
         Size len = Fmt(out_version, "%1", version).len;
@@ -110,7 +105,6 @@ static Size BuildGitVersionString(Span<const char> tag_name, Span<char> out_vers
 
 static bool UpdateVersionSource(const TargetInfo &target, const BuildSettings &build, const char *dest_filename)
 {
-
     if (!build.fake && !EnsureDirectoryExists(dest_filename))
         return false;
 
