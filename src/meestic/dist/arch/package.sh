@@ -3,9 +3,10 @@
 cd "$(dirname $0)/../../../.."
 
 ./bootstrap.sh
+./felix -pDebug meestic
 
-VERSION=$(./felix --version | awk '/^felix/ {print $2}' | sed -e 's/_.*//')
-DATE=$(echo $VERSION | sed 's/\./ /' | LANG=C xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
+VERSION=$(bin/Debug/meestic --version | awk '/^meestic/ {print $2}')
+DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 PACKAGE_DIR=bin/Packages/meestic/arch
 
 rm -rf $PACKAGE_DIR/pkg
