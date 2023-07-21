@@ -72,7 +72,7 @@ html_theme_options = {
 html_link_suffix = ''
 
 html_css_files = [
-    'opensans/OpenSans.css'
+    'opensans/OpenSans.css',
     'custom.css'
 ]
 
