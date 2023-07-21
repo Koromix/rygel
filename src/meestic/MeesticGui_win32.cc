@@ -28,9 +28,6 @@
 #include <commctrl.h>
 #include <wchar.h>
 
-// Allows some tests without the MSI Delta 15
-// #define FAKE_LIGHTS
-
 namespace RG {
 
 #define WM_APP_TRAY (WM_APP + 1)
@@ -91,27 +88,28 @@ static bool ApplyProfile(Size idx)
 {
     LogInfo("Applying profile %1", idx);
 
-#ifndef FAKE_LIGHTS
-    // Should work first time...
-    {
-        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-        RG_DEFER { PopLogFilter(); };
+    if (port) {
+        // Should work first time...
+        {
+            PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+            RG_DEFER { PopLogFilter(); };
 
-        if (ApplyLight(port, config.profiles[idx].settings)) {
-            profile_idx = idx;
-            return true;
+            if (ApplyLight(port, config.profiles[idx].settings)) {
+                profile_idx = idx;
+                return true;
+            }
         }
+
+        CloseLightDevice(port);
+        port = OpenLightDevice();
+        if (!port)
+            return false;
+        if (!ApplyLight(port, config.profiles[idx].settings))
+            return false;
     }
 
-    CloseLightDevice(port);
-    port = OpenLightDevice();
-    if (!port)
-        return false;
-    if (!ApplyLight(port, config.profiles[idx].settings))
-        return false;
-#endif
-
     profile_idx = idx;
+
     return true;
 }
 
@@ -414,13 +412,13 @@ By default, the first of the following config files will be used:
     }
     RG_DEFER { Shell_NotifyIconA(NIM_DELETE, &notify); };
 
-#ifndef FAKE_LIGHTS
     // Open the light MSI HID device ahead of time
-    port = OpenLightDevice();
-    if (!port)
-        return 1;
+    if (!GetDebugFlag("FAKE_LIGHTS")) {
+        port = OpenLightDevice();
+        if (!port)
+            return 1;
+    }
     RG_DEFER { CloseLightDevice(port); };
-#endif
 
     // Check that it works once, at least
     if (!ApplyProfile(config.default_idx))
