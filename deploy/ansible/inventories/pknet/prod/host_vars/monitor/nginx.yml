@@ -103,9 +103,8 @@ nginx_domains:
       location / {
           index index.html;
 
-          rewrite ^/en/$ /en/index.html;
-          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)$ $1.html;
-          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)/$ $1 permanent;
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)$ $1.html;
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)/$ $1 permanent;
           try_files $uri $uri/ =404;
 
           root /opt/static/live/koromix.dev/www;
@@ -158,9 +157,8 @@ nginx_domains:
       location / {
           index index.html;
 
-          rewrite ^/en/$ /en/index.html;
-          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)$ $1.html;
-          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)/$ $1 permanent;
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)$ $1.html;
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)/$ $1 permanent;
           try_files $uri $uri/ =404;
 
           root /opt/static/live/koffi.dev/www;
@@ -185,9 +183,8 @@ nginx_domains:
       location / {
           index index.html;
 
-          rewrite ^/en/$ /en/index.html;
-          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)$ $1.html;
-          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)/$ $1 permanent;
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)$ $1.html;
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)/$ $1 permanent;
           try_files $uri $uri/ =404;
 
           root /opt/static/live/demheter.fr/www;
@@ -216,9 +213,8 @@ nginx_domains:
       location / {
           index index.html;
 
-          rewrite ^/en/$ /en/index.html;
-          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)$ $1.html;
-          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)/$ $1 permanent;
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)$ $1.html;
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)/$ $1 permanent;
           try_files $uri $uri/ =404;
 
           root /opt/static/live/demheter.fr/beta;
