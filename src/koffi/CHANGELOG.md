@@ -577,11 +577,9 @@ This entry documents changes since version 1.1.0.
 
 The following features and improvements are planned, not necessarily in that order:
 
-- Optimize passing of structs and arrays (avoid setting named properties one by one? separate HFA-specific helper functions?)
+- Optimize passing of structs and arrays (with auto-generated JS)
 - Automate Windows/AArch64 (qemu) and macOS/AArch64 (how? ... thanks Apple) tests
 - Create a real-world example, using several libraries (Raylib, SQLite, libsodium) to illustrate various C API styles
 - Add simple struct type parser
-- Add more ways to manually encode and decode various types to and from byte arrays
-- Add support for unions
 - Port Koffi to PowerPC (POWER9+) ABI
 - Fix assembly unwind and CFI directives for better debugging experience
