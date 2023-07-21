@@ -12,8 +12,6 @@
         <link rel="stylesheet" href="{{ ASSET print.css }}" media="print">
         <link rel="stylesheet" href="{{ ASSET opensans/OpenSans.css }}">
 
-        <script type="text/javascript" src="{{ ASSET main.js }}" async></script>
-
         <style>
             #news {
                 display: grid;
@@ -114,6 +112,7 @@
             }
         </style>
     </head>
+
     <body class="nojs">
         <div id="deploy" onclick="deploy(); return false;"></div>
 
@@ -136,6 +135,7 @@
             </div>
         </footer>
 
+        <script type="text/javascript" src="{{ ASSET main.js }}"></script>
         <script>
             let news_timer = null;
 
@@ -179,6 +179,8 @@
                     clearTimeout(news_timer);
                 news_timer = setTimeout(() => toggleNews(1, false), explicit ? 14000 : 6000);
             }
+
+            init();
         </script>
     </body>
 </html>

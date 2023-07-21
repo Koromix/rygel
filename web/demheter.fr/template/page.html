@@ -11,9 +11,8 @@
         <link rel="stylesheet" href="{{ ASSET main.css }}">
         <link rel="stylesheet" href="{{ ASSET print.css }}" media="print">
         <link rel="stylesheet" href="{{ ASSET opensans/OpenSans.css }}">
-
-        <script type="text/javascript" src="{{ ASSET main.js }}" async></script>
     </head>
+
     <body class="nojs">
         <div id="deploy" onclick="deploy(); return false;"></div>
 
@@ -37,5 +36,10 @@
                 <a href="mailto:demheter@chu-lille.fr" style="font-weight: bold; color: inherit;">demheter@chu-lille.fr</a>
             </div>
         </footer>
+
+        <script type="text/javascript" src="{{ ASSET main.js }}"></script>
+        <script>
+            init();
+        </script>
     </body>
 </html>

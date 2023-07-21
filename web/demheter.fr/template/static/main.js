@@ -11,6 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+function init() {
+    initMenu();
+    initSide();
+    initScroll();
+
+    document.body.classList.remove('nojs');
+    document.body.classList.add('js');
+}
+
 function initMenu() {
     let items = document.querySelectorAll('nav#top li');
 
@@ -130,14 +139,3 @@ function deploy() {
     let top = document.querySelector('nav#top');
     top.classList.toggle('active');
 }
-
-document.addEventListener('readystatechange', () => {
-    if (document.readyState === 'complete') {
-        initMenu();
-        initSide();
-        initScroll();
-    }
-});
-
-document.body.classList.remove('nojs');
-document.body.classList.add('js');
