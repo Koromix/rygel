@@ -90,6 +90,31 @@ nginx_domains:
 
           proxy_pass http://127.0.0.1:9200;
       }
+  - name: doc.goupile.org
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          index index.html;
+
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)$ $1.html;
+          rewrite ^((?:/.+)*/[a-zA-Z0-9]+)/$ $1 permanent;
+          try_files $uri $uri/ =404;
+
+          root /opt/static/live/goupile.org/doc;
+
+          expires 1h;
+          add_header Cache-Control "public, no-transform";
+
+          gzip on;
+          gzip_vary on;
+          gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml image/svg+xml;
+          gzip_proxied no-cache no-store private expired auth;
+          gzip_min_length 1000;
+
+          location /_static/ {
+              expires 28d;
+          }
+      }
   - name: www.goupile.org
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |

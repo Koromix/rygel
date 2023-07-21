@@ -14,8 +14,19 @@
 static_deploys:
   - name: goupile.org/www
     repo: https://github.com/Koromix/rygel.git
+    version: goupile2
     path: web/goupile.org
   - name: goupile.org/files
+  - name: goupile.org/doc
+    repo: https://github.com/Koromix/rygel.git
+    path: web/goupile.org/fr/dist/html
+    build:
+      - cmd: '/root/.local/share/pypoetry/venv/bin/poetry install'
+        chdir: '{{ static_root_path }}/repo/goupile.org/doc/web/goupile.org/fr'
+      - cmd: '/root/.local/share/pypoetry/venv/bin/poetry run make clean'
+        chdir: '{{ static_root_path }}/repo/goupile.org/doc/web/goupile.org/fr'
+      - cmd: '/root/.local/share/pypoetry/venv/bin/poetry run make html'
+        chdir: '{{ static_root_path }}/repo/goupile.org/doc/web/goupile.org/fr'
 
   - name: koromix.dev/www
     repo: https://github.com/Koromix/rygel.git
