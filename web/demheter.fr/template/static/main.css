@@ -138,7 +138,9 @@ a:hover { color: var(--color, black); }
     display: block;
     padding: 1px;
     color: #383838;
+    text-decoration: none;
 }
+#side a:hover { text-decoration: underline; }
 #side a.active { font-weight: bold; }
 #side a.lv1 { padding-left: 12px; }
 #side a.lv2 { padding-left: 27px; }
