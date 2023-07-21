@@ -8,19 +8,19 @@ Goupile is an **open-source electronic data capture** application that strives t
 <p style="text-align: center;">
     <a href="https://goupile.org/static/screenshots/editor.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/editor.webp"
-             width="360" height="180" style="border: 1px solid #eee;"/>
+             width="360" height="180" alt=""/>
     </a>
     <a href="https://goupile.org/static/screenshots/data.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/data.webp"
-             width="360" height="180" style="border: 1px solid #eee;"/>
+             width="360" height="180" alt=""/>
     </a>
     <a href="https://goupile.org/static/screenshots/overview.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/overview.webp"
-             width="360" height="180" style="border: 1px solid #eee;"/>
+             width="360" height="180" alt=""/>
     </a>
     <a href="https://goupile.org/static/screenshots/tablet.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/tablet.webp"
-             width="360" height="180" style="border: 1px solid #eee;"/>
+             width="360" height="180" alt=""/>
    </a>
 </p>
 
