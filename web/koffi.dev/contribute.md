@@ -2,9 +2,9 @@
 
 ## Bugs and feature requests
 
-Use the official repository (named Rygel, because this is a monorepo containing multiple projects) for bugs, ideas and features requests.
+Use the official repository for bugs, ideas and features requests: https://github.com/Koromix/koffi
 
-Go here: https://github.com/Koromix/rygel/
+Please note that the source code is not in this repository, instead it lives in a monorepo: https://github.com/Koromix/rygel/ (in the *src/koffi* subdirectory).
 
 ## Build from source
 
