@@ -5,30 +5,28 @@
 
 Goupile is an **open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
 
-It is currently in development and there are no public builds yet.
-
-Find out more on the official website: [https://goupile.org/](https://goupile.org/)
-
-# Screenshots
-
 <p style="text-align: center;">
     <a href="https://goupile.org/static/screenshots/editor.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/editor.webp"
-             width="180" height="90" style="border: 1px solid #eee;"/>
+             width="360" height="180" style="border: 1px solid #eee;"/>
     </a>
     <a href="https://goupile.org/static/screenshots/data.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/data.webp"
-             width="180" height="90" style="border: 1px solid #eee;"/>
+             width="360" height="180" style="border: 1px solid #eee;"/>
     </a>
     <a href="https://goupile.org/static/screenshots/overview.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/overview.webp"
-             width="180" height="90" style="border: 1px solid #eee;"/>
+             width="360" height="180" style="border: 1px solid #eee;"/>
     </a>
     <a href="https://goupile.org/static/screenshots/tablet.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/tablet.webp"
-             width="180" height="90" style="border: 1px solid #eee;"/>
+             width="360" height="180" style="border: 1px solid #eee;"/>
    </a>
 </p>
+
+It is currently in development and there are no public builds yet.
+
+Find out more on the official website: [https://goupile.org/](https://goupile.org/)
 
 # License
 
