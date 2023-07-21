@@ -59,13 +59,13 @@ html_theme_options = {
         'font-stack': 'Open Sans',
         'color-content-foreground': '#383838',
         'color-brand-primary': '#383838',
-        'color-brand-content': '#FF6600'
+        'color-brand-content': '#e97713'
     },
     'dark_css_variables': {
         'font-stack': 'Open Sans',
-        'color-content-foreground': '#FFFFFFDD',
-        'color-brand-primary': '#FFFFFFDD',
-        'color-brand-content': '#FF6600'
+        'color-content-foreground': '#ffffffdd',
+        'color-brand-primary': '#ffffffdd',
+        'color-brand-content': '#e97713'
     }
 }
 

@@ -57,7 +57,7 @@ body {
 }
 #top a:hover {
     margin-bottom: -1px;
-    border-bottom: 2px solid #ff6600;
+    border-bottom: 2px solid #e97713;
 }
 #top a.active { font-weight: bold; }
 
@@ -117,7 +117,7 @@ h3 {
 }
 
 a {
-    color: #ff6000;
+    color: #e97713;
     cursor: pointer;
     text-decoration: none;
 }
