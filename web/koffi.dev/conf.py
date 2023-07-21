@@ -78,7 +78,7 @@ html_css_files = [
 
 html_sidebars = {
     "**": [
-        "sidebar/brand.html",
+        "logo.html",
         "sidebar/search.html",
         "sidebar/scroll-start.html",
         "sidebar/navigation.html",
