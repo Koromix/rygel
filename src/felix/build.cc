@@ -131,10 +131,7 @@ static bool UpdateVersionSource(const TargetInfo &target, const BuildSettings &b
     bool new_version;
     if (TestFile(dest_filename, FileType::File)) {
         char old_code[1024] = {};
-        {
-            StreamReader reader(dest_filename);
-            reader.Read(RG_SIZE(old_code) - 1, old_code);
-        }
+        ReadFile(dest_filename, MakeSpan(old_code, RG_SIZE(old_code) - 1));
 
         new_version = !TestStr(old_code, code);
     } else {
