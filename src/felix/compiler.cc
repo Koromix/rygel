@@ -81,19 +81,6 @@ static void MakePackCommand(Span<const char *const> pack_filenames, bool use_arr
     out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
-static bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
-{
-    int exit_code;
-    if (!ExecuteCommandLine(cmd_line, nullptr, {}, Kilobytes(4), out_output, &exit_code))
-        return false;
-    if (exit_code) {
-        LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);
-        return false;
-    }
-
-    return true;
-}
-
 static int ParseVersion(const char *cmd, Span<const char> output, const char *marker)
 {
     Span<const char> remain = output;

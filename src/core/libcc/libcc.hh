@@ -4061,6 +4061,9 @@ static inline bool ExecuteCommandLine(const char *cmd_line, const char *work_dir
                               (HeapArray<uint8_t> *)out_buf, out_code);
 }
 
+Size ReadCommandOutput(const char *cmd_line, Span<char> out_output);
+bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output);
+
 void WaitDelay(int64_t delay);
 
 enum class WaitForResult {

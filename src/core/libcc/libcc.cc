@@ -4368,6 +4368,40 @@ bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
     return true;
 }
 
+Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
+{
+    Size total_len = 0;
+    const auto write = [&](Span<uint8_t> buf) {
+        Size copy = std::min(out_output.len - total_len, buf.len);
+
+        memcpy_safe(out_output.ptr + total_len, buf.ptr, copy);
+        total_len += copy;
+    };
+
+    int exit_code;
+    if (!ExecuteCommandLine(cmd_line, nullptr, MakeSpan((const uint8_t *)nullptr, 0), write, &exit_code))
+        return -1;
+    if (exit_code) {
+        LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);
+        return -1;
+    }
+
+    return total_len;
+}
+
+bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
+{
+    int exit_code;
+    if (!ExecuteCommandLine(cmd_line, nullptr, {}, Kilobytes(4), out_output, &exit_code))
+        return false;
+    if (exit_code) {
+        LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);
+        return false;
+    }
+
+    return true;
+}
+
 #ifdef _WIN32
 
 static HANDLE wait_msg_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
