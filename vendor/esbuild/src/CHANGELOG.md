@@ -1,5 +1,129 @@
 # Changelog
 
+## 0.18.15
+
+* Add the `--serve-fallback=` option ([#2904](https://github.com/evanw/esbuild/issues/2904))
+
+    The web server built into esbuild serves the latest in-memory results of the configured build. If the requested path doesn't match any in-memory build result, esbuild also provides the `--servedir=` option to tell esbuild to serve the requested path from that directory instead. And if the requested path doesn't match either of those things, esbuild will either automatically generate a directory listing (for directories) or return a 404 error.
+
+    Starting with this release, that last step can now be replaced with telling esbuild to serve a specific HTML file using the `--serve-fallback=` option. This can be used to provide a "not found" page for missing URLs. It can also be used to implement a [single-page app](https://en.wikipedia.org/wiki/Single-page_application) that mutates the current URL and therefore requires the single app entry point to be served when the page is loaded regardless of whatever the current URL is.
+
+* Use the `tsconfig` field in `package.json` during `extends` resolution ([#3247](https://github.com/evanw/esbuild/issues/3247))
+
+     This release adds a feature from [TypeScript 3.2](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-2.html#tsconfigjson-inheritance-via-nodejs-packages) where if a `tsconfig.json` file specifies a package name in the `extends` field and that package's `package.json` file has a `tsconfig` field, the contents of that field are used in the search for the base `tsconfig.json` file.
+
+* Implement CSS nesting without `:is()` when possible ([#1945](https://github.com/evanw/esbuild/issues/1945))
+
+    Previously esbuild would always produce a warning when transforming nested CSS for a browser that doesn't support the `:is()` pseudo-class. This was because the nesting transform needs to generate an `:is()` in some complex cases which means the transformed CSS would then not work in that browser. However, the CSS nesting transform can often be done without generating an `:is()`. So with this release, esbuild will no longer warn when targeting browsers that don't support `:is()` in the cases where an `:is()` isn't needed to represent the nested CSS.
+
+    In addition, esbuild's nested CSS transform has been updated to avoid generating an `:is()` in cases where an `:is()` is preferable but there's a longer alternative that is also equivalent. This update means esbuild can now generate a combinatorial explosion of CSS for complex CSS nesting syntax when targeting browsers that don't support `:is()`. This combinatorial explosion is necessary to accurately represent the original semantics. For example:
+
+    ```css
+    /* Original code */
+    .first,
+    .second,
+    .third {
+      & > & {
+        color: red;
+      }
+    }
+
+    /* Old output (with --target=chrome80) */
+    :is(.first, .second, .third) > :is(.first, .second, .third) {
+      color: red;
+    }
+
+    /* New output (with --target=chrome80) */
+    .first > .first,
+    .first > .second,
+    .first > .third,
+    .second > .first,
+    .second > .second,
+    .second > .third,
+    .third > .first,
+    .third > .second,
+    .third > .third {
+      color: red;
+    }
+    ```
+
+    This change means you can now use CSS nesting with esbuild when targeting an older browser that doesn't support `:is()`. You'll now only get a warning from esbuild if you use complex CSS nesting syntax that esbuild can't represent in that older browser without using `:is()`. There are two such cases:
+
+    ```css
+    /* Case 1 */
+    a b {
+      .foo & {
+        color: red;
+      }
+    }
+
+    /* Case 2 */
+    a {
+      > b& {
+        color: red;
+      }
+    }
+    ```
+
+    These two cases still need to use `:is()`, both for different reasons, and cannot be used when targeting an older browser that doesn't support `:is()`:
+
+    ```css
+    /* Case 1 */
+    .foo :is(a b) {
+      color: red;
+    }
+
+    /* Case 2 */
+    a > a:is(b) {
+      color: red;
+    }
+    ```
+
+* Automatically lower `inset` in CSS for older browsers
+
+    With this release, esbuild will now automatically expand the `inset` property to the `top`, `right`, `bottom`, and `left` properties when esbuild's `target` is set to a browser that doesn't support `inset`:
+
+    ```css
+    /* Original code */
+    .app {
+      position: absolute;
+      inset: 10px 20px;
+    }
+
+    /* Old output (with --target=chrome80) */
+    .app {
+      position: absolute;
+      inset: 10px 20px;
+    }
+
+    /* New output (with --target=chrome80) */
+    .app {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      bottom: 10px;
+      left: 20px;
+    }
+    ```
+
+* Add support for the new [`@starting-style`](https://drafts.csswg.org/css-transitions-2/#defining-before-change-style-the-starting-style-rule) CSS rule ([#3249](https://github.com/evanw/esbuild/pull/3249))
+
+    This at rule allow authors to start CSS transitions on first style update. That is, you can now make the transition take effect when the `display` property changes from `none` to `block`.
+
+    ```css
+    /* Original code */
+    @starting-style {
+      h1 {
+        background-color: transparent;
+      }
+    }
+
+    /* Output */
+    @starting-style{h1{background-color:transparent}}
+    ```
+
+    This was contributed by [@yisibl](https://github.com/yisibl).
+
 ## 0.18.14
 
 * Implement local CSS names ([#20](https://github.com/evanw/esbuild/issues/20))

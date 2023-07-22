@@ -26,6 +26,7 @@ type parser struct {
 	symbols            []ast.Symbol
 	localSymbolMap     map[string]ast.Ref
 	globalSymbolMap    map[string]ast.Ref
+	nestingWarnings    map[logger.Loc]struct{}
 	tracker            logger.LineColumnTracker
 	index              int
 	end                int
@@ -419,8 +420,8 @@ loop:
 			}
 
 			// Lower CSS nesting if it's not supported (but only at the top level)
-			if context.isTopLevel && p.shouldLowerNesting {
-				rules = lowerNestingInRule(rule, rules)
+			if p.shouldLowerNesting && p.options.unsupportedCSSFeatures.Has(compat.Nesting) && context.isTopLevel {
+				rules = p.lowerNestingInRule(rule, rules)
 			} else {
 				rules = append(rules, rule)
 			}
@@ -447,8 +448,8 @@ loop:
 		}
 
 		// Lower CSS nesting if it's not supported (but only at the top level)
-		if context.isTopLevel && p.shouldLowerNesting {
-			rules = lowerNestingInRule(rule, rules)
+		if p.shouldLowerNesting && p.options.unsupportedCSSFeatures.Has(compat.Nesting) && context.isTopLevel {
+			rules = p.lowerNestingInRule(rule, rules)
 		} else {
 			rules = append(rules, rule)
 		}
@@ -505,7 +506,7 @@ func (p *parser) parseListOfDeclarations(opts listOfDeclarationsOpts) (list []cs
 
 		case css_lexer.TAtKeyword:
 			if p.inSelectorSubtree > 0 {
-				p.reportUseOfNesting(p.current().Range, false)
+				p.shouldLowerNesting = true
 			}
 			list = append(list, p.parseAtRule(atRuleContext{
 				isDeclarationList:    true,
@@ -523,7 +524,7 @@ func (p *parser) parseListOfDeclarations(opts listOfDeclarationsOpts) (list []cs
 			css_lexer.TDelimPlus,
 			css_lexer.TDelimGreaterThan,
 			css_lexer.TDelimTilde:
-			p.reportUseOfNesting(p.current().Range, false)
+			p.shouldLowerNesting = true
 			list = append(list, p.parseSelectorRuleFrom(p.index, false, parseSelectorOpts{isDeclarationContext: true}))
 			foundNesting = true
 
@@ -984,6 +985,10 @@ var specialAtRules = map[string]atRuleKind{
 	// Container Queries
 	// Reference: https://drafts.csswg.org/css-contain-3/#container-rule
 	"container": atRuleInheritContext,
+
+	// Defining before-change style: the @starting-style rule
+	// Reference: https://drafts.csswg.org/css-transitions-2/#defining-before-change-style-the-starting-style-rule
+	"starting-style": atRuleInheritContext,
 }
 
 var atKnownRuleCanBeRemovedIfEmpty = map[string]bool{
@@ -1471,19 +1476,6 @@ func (p *parser) expectValidLayerNameIdent() (string, bool) {
 		return "", false
 	}
 	return text, true
-}
-
-func (p *parser) reportUseOfNesting(r logger.Range, didWarnAlready bool) {
-	if p.options.unsupportedCSSFeatures.Has(compat.Nesting) {
-		p.shouldLowerNesting = true
-		if p.options.unsupportedCSSFeatures.Has(compat.IsPseudoClass) && !didWarnAlready {
-			text := "CSS nesting syntax is not supported in the configured target environment"
-			if p.options.originalTargetEnv != "" {
-				text = fmt.Sprintf("%s (%s)", text, p.options.originalTargetEnv)
-			}
-			p.log.AddID(logger.MsgID_CSS_UnsupportedCSSNesting, logger.Warning, &p.tracker, r, text)
-		}
-	}
 }
 
 func (p *parser) convertTokens(tokens []css_lexer.Token) []css_ast.Token {

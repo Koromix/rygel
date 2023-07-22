@@ -73,6 +73,13 @@ func expectPrintedLower(t *testing.T, contents string, expected string) {
 	})
 }
 
+func expectPrintedLowerUnsupported(t *testing.T, unsupportedCSSFeatures compat.CSSFeature, contents string, expected string) {
+	t.Helper()
+	expectPrintedCommon(t, contents+" [lower]", contents, expected, nil, config.Options{
+		UnsupportedCSSFeatures: unsupportedCSSFeatures,
+	})
+}
+
 func expectPrintedWithAllPrefixes(t *testing.T, contents string, expected string) {
 	t.Helper()
 	expectPrintedCommon(t, contents+" [prefixed]", contents, expected, nil, config.Options{
@@ -104,7 +111,7 @@ func expectPrintedMangle(t *testing.T, contents string, expected string) {
 
 func expectPrintedLowerMangle(t *testing.T, contents string, expected string) {
 	t.Helper()
-	expectPrintedCommon(t, contents+" [mangle]", contents, expected, nil, config.Options{
+	expectPrintedCommon(t, contents+" [lower, mangle]", contents, expected, nil, config.Options{
 		UnsupportedCSSFeatures: ^compat.CSSFeature(0),
 		MinifySyntax:           true,
 	})
@@ -115,6 +122,14 @@ func expectPrintedMangleMinify(t *testing.T, contents string, expected string) {
 	expectPrintedCommon(t, contents+" [mangle, minify]", contents, expected, nil, config.Options{
 		MinifySyntax:     true,
 		MinifyWhitespace: true,
+	})
+}
+
+func expectPrintedLowerMinify(t *testing.T, contents string, expected string) {
+	t.Helper()
+	expectPrintedCommon(t, contents+" [lower, minify]", contents, expected, nil, config.Options{
+		UnsupportedCSSFeatures: ^compat.CSSFeature(0),
+		MinifyWhitespace:       true,
 	})
 }
 
@@ -883,72 +898,96 @@ func TestNestedSelector(t *testing.T) {
 	expectPrintedMangle(t, "div, span::pseudo { @media screen { & { color: red } } }", "div,\nspan::pseudo {\n  @media screen {\n    & {\n      color: red;\n    }\n  }\n}\n")
 
 	// Lowering tests for nesting
-	expectPrintedLower(t, ".foo { .bar { color: red } }", ".foo .bar {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo { &.bar { color: red } }", ".foo.bar {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo { & .bar { color: red } }", ".foo .bar {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo .bar { .baz { color: red } }", ".foo .bar .baz {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo .bar { &.baz { color: red } }", ".foo .bar.baz {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo .bar { & .baz { color: red } }", ".foo .bar .baz {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo .bar { & > .baz { color: red } }", ".foo .bar > .baz {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo .bar { .baz & { color: red } }", ".baz :is(.foo .bar) {\n  color: red;\n}\n") // NOT the same as ".baz .foo .bar"
-	expectPrintedLower(t, ".foo .bar { & .baz & { color: red } }", ".foo .bar .baz :is(.foo .bar) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo, .bar { .baz & { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo, [bar~='abc'] { .baz { color: red } }", ":is(.foo, [bar~=abc]) .baz {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo, [bar~='a b c'] { .baz { color: red } }", ":is(.foo, [bar~=\"a b c\"]) .baz {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".baz { .foo, .bar { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".baz { .foo, & .bar { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".baz { & .foo, .bar { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".baz { & .foo, & .bar { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".baz { .foo, &.bar { color: red } }", ".baz .foo,\n.baz.bar {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".baz { &.foo, .bar { color: red } }", ".baz.foo,\n.baz .bar {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".baz { &.foo, &.bar { color: red } }", ".baz:is(.foo, .bar) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo { color: blue; & .bar { color: red } }", ".foo {\n  color: blue;\n}\n.foo .bar {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo { & .bar { color: red } color: blue }", ".foo {\n  color: blue;\n}\n.foo .bar {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo { color: blue; & .bar { color: red } zoom: 2 }", ".foo {\n  color: blue;\n  zoom: 2;\n}\n.foo .bar {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".a, .b { .c, .d { color: red } }", ":is(.a, .b) :is(.c, .d) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".a { color: red; > .b { color: green; > .c { color: blue } } }", ".a {\n  color: red;\n}\n.a > .b {\n  color: green;\n}\n.a > .b > .c {\n  color: blue;\n}\n")
-	expectPrintedLower(t, "> .a { color: red; > .b { color: green; > .c { color: blue } } }", "> .a {\n  color: red;\n}\n> .a > .b {\n  color: green;\n}\n> .a > .b > .c {\n  color: blue;\n}\n")
-	expectPrintedLower(t, ".foo, .bar, .foo:before, .bar:after { &:hover { color: red } }", ":is(.foo, .bar):hover {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo, .bar:before { &:hover { color: red } }", ".foo:hover {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo, .bar:before { :hover & { color: red } }", ":hover .foo {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".bar:before { &:hover { color: red } }", ":is():hover {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".bar:before { :hover & { color: red } }", ":hover :is() {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".xy { :where(&.foo) { color: red } }", ":where(.xy.foo) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "div { :where(&.foo) { color: red } }", ":where(div.foo) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".xy { :where(.foo&) { color: red } }", ":where(.xy.foo) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "div { :where(.foo&) { color: red } }", ":where(div.foo) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".xy { :where([href]&) { color: red } }", ":where(.xy[href]) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "div { :where([href]&) { color: red } }", ":where(div[href]) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".xy { :where(:hover&) { color: red } }", ":where(.xy:hover) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "div { :where(:hover&) { color: red } }", ":where(div:hover) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".xy { :where(:is(.foo)&) { color: red } }", ":where(.xy:is(.foo)) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "div { :where(:is(.foo)&) { color: red } }", ":where(div:is(.foo)) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".xy { :where(.foo + &) { color: red } }", ":where(.foo + .xy) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "div { :where(.foo + &) { color: red } }", ":where(.foo + div) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".xy { :where(&, span:is(.foo &)) { color: red } }", ":where(.xy, span:is(.foo .xy)) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "div { :where(&, span:is(.foo &)) { color: red } }", ":where(div, span:is(.foo div)) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "&, a { color: red }", ":scope,\na {\n  color: red;\n}\n")
-	expectPrintedLower(t, "&, a { .b { color: red } }", ":is(:scope, a) .b {\n  color: red;\n}\n")
-	expectPrintedLower(t, "&, a { .b { .c { color: red } } }", ":is(:scope, a) .b .c {\n  color: red;\n}\n")
-	expectPrintedLower(t, "a { > b, > c { color: red } }", "a > :is(b, c) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "a { > b, + c { color: red } }", "a > b,\na + c {\n  color: red;\n}\n")
-	expectPrintedLower(t, "a { & > b, & > c { color: red } }", "a > :is(b, c) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "a { & > b, & + c { color: red } }", "a > b,\na + c {\n  color: red;\n}\n")
-	expectPrintedLower(t, "a { > b&, > c& { color: red } }", "a > :is(a:is(b), a:is(c)) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "a { > b&, + c& { color: red } }", "a > a:is(b),\na + a:is(c) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "a { > &.b, > &.c { color: red } }", "a > :is(a.b, a.c) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "a { > &.b, + &.c { color: red } }", "a > a.b,\na + a.c {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".a { > b&, > c& { color: red } }", ".a > :is(b.a, c.a) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".a { > b&, + c& { color: red } }", ".a > b.a,\n.a + c.a {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".a { > &.b, > &.c { color: red } }", ".a > :is(.a.b, .a.c) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".a { > &.b, + &.c { color: red } }", ".a > .a.b,\n.a + .a.c {\n  color: red;\n}\n")
-	expectPrintedLower(t, "~ .a { > &.b, > &.c { color: red } }", "~ .a > :is(.a.b, .a.c) {\n  color: red;\n}\n")
-	expectPrintedLower(t, "~ .a { > &.b, + &.c { color: red } }", "~ .a > .a.b,\n~ .a + .a.c {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo .bar { > &.a, > &.b { color: red } }", ".foo .bar > :is(.foo .bar.a, .foo .bar.b) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".foo .bar { > &.a, + &.b { color: red } }", ".foo .bar > :is(.foo .bar).a,\n.foo .bar + :is(.foo .bar).b {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".demo { .lg { &.triangle, &.circle { color: red } } }", ".demo .lg:is(.triangle, .circle) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".demo { .lg { .triangle, .circle { color: red } } }", ".demo .lg :is(.triangle, .circle) {\n  color: red;\n}\n")
-	expectPrintedLower(t, ".card { .featured & & & { color: red } }", ".featured .card .card .card {\n  color: red;\n}\n")
+	nesting := compat.Nesting
+	everything := ^compat.CSSFeature(0)
+	expectPrintedLowerUnsupported(t, nesting, ".foo { .bar { color: red } }", ".foo .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo { &.bar { color: red } }", ".foo.bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo { & .bar { color: red } }", ".foo .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { .baz { color: red } }", ".foo .bar .baz {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { &.baz { color: red } }", ".foo .bar.baz {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { & .baz { color: red } }", ".foo .bar .baz {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { & > .baz { color: red } }", ".foo .bar > .baz {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { .baz & { color: red } }", ".baz :is(.foo .bar) {\n  color: red;\n}\n") // NOT the same as ".baz .foo .bar"
+	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { & .baz & { color: red } }", ".foo .bar .baz :is(.foo .bar) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo, .bar { .baz & { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".foo, .bar { .baz & { color: red } }", ".baz .foo,\n.baz .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo, [bar~='abc'] { .baz { color: red } }", ":is(.foo, [bar~=abc]) .baz {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".foo, [bar~='abc'] { .baz { color: red } }", ".foo .baz,\n[bar~=abc] .baz {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo, [bar~='a b c'] { .baz { color: red } }", ":is(.foo, [bar~=\"a b c\"]) .baz {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".foo, [bar~='a b c'] { .baz { color: red } }", ".foo .baz,\n[bar~=\"a b c\"] .baz {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".baz { .foo, .bar { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".baz { .foo, .bar { color: red } }", ".baz .foo,\n.baz .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".baz { .foo, & .bar { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".baz { .foo, & .bar { color: red } }", ".baz .foo,\n.baz .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".baz { & .foo, .bar { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".baz { & .foo, .bar { color: red } }", ".baz .foo,\n.baz .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".baz { & .foo, & .bar { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".baz { & .foo, & .bar { color: red } }", ".baz .foo,\n.baz .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".baz { .foo, &.bar { color: red } }", ".baz .foo,\n.baz.bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".baz { &.foo, .bar { color: red } }", ".baz.foo,\n.baz .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".baz { &.foo, &.bar { color: red } }", ".baz:is(.foo, .bar) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".baz { &.foo, &.bar { color: red } }", ".baz.foo,\n.baz.bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo { color: blue; & .bar { color: red } }", ".foo {\n  color: blue;\n}\n.foo .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo { & .bar { color: red } color: blue }", ".foo {\n  color: blue;\n}\n.foo .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo { color: blue; & .bar { color: red } zoom: 2 }", ".foo {\n  color: blue;\n  zoom: 2;\n}\n.foo .bar {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".a, .b { .c, .d { color: red } }", ":is(.a, .b) :is(.c, .d) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".a, .b { .c, .d { color: red } }", ".a .c,\n.a .d,\n.b .c,\n.b .d {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".a, .b { & > & { color: red } }", ":is(.a, .b) > :is(.a, .b) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".a, .b { & > & { color: red } }", ".a > .a,\n.a > .b,\n.b > .a,\n.b > .b {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".a { color: red; > .b { color: green; > .c { color: blue } } }", ".a {\n  color: red;\n}\n.a > .b {\n  color: green;\n}\n.a > .b > .c {\n  color: blue;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "> .a { color: red; > .b { color: green; > .c { color: blue } } }", "> .a {\n  color: red;\n}\n> .a > .b {\n  color: green;\n}\n> .a > .b > .c {\n  color: blue;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo, .bar, .foo:before, .bar:after { &:hover { color: red } }", ":is(.foo, .bar):hover {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".foo, .bar, .foo:before, .bar:after { &:hover { color: red } }", ".foo:hover,\n.bar:hover {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo, .bar:before { &:hover { color: red } }", ".foo:hover {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo, .bar:before { :hover & { color: red } }", ":hover .foo {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".bar:before { &:hover { color: red } }", ":is():hover {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".bar:before { :hover & { color: red } }", ":hover :is() {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".xy { :where(&.foo) { color: red } }", ":where(.xy.foo) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "div { :where(&.foo) { color: red } }", ":where(div.foo) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".xy { :where(.foo&) { color: red } }", ":where(.xy.foo) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "div { :where(.foo&) { color: red } }", ":where(div.foo) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".xy { :where([href]&) { color: red } }", ":where(.xy[href]) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "div { :where([href]&) { color: red } }", ":where(div[href]) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".xy { :where(:hover&) { color: red } }", ":where(.xy:hover) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "div { :where(:hover&) { color: red } }", ":where(div:hover) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".xy { :where(:is(.foo)&) { color: red } }", ":where(.xy:is(.foo)) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "div { :where(:is(.foo)&) { color: red } }", ":where(div:is(.foo)) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".xy { :where(.foo + &) { color: red } }", ":where(.foo + .xy) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "div { :where(.foo + &) { color: red } }", ":where(.foo + div) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".xy { :where(&, span:is(.foo &)) { color: red } }", ":where(.xy, span:is(.foo .xy)) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "div { :where(&, span:is(.foo &)) { color: red } }", ":where(div, span:is(.foo div)) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "&, a { color: red }", ":scope,\na {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "&, a { .b { color: red } }", ":is(:scope, a) .b {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, "&, a { .b { color: red } }", ":scope .b,\na .b {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "&, a { .b { .c { color: red } } }", ":is(:scope, a) .b .c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, "&, a { .b { .c { color: red } } }", ":scope .b .c,\na .b .c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "a { > b, > c { color: red } }", "a > :is(b, c) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, "a { > b, > c { color: red } }", "a > b,\na > c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "a { > b, + c { color: red } }", "a > b,\na + c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "a { & > b, & > c { color: red } }", "a > :is(b, c) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, "a { & > b, & > c { color: red } }", "a > b,\na > c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "a { & > b, & + c { color: red } }", "a > b,\na + c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "a { > b&, > c& { color: red } }", "a > :is(a:is(b), a:is(c)) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, "a { > b&, > c& { color: red } }", "a > a:is(b),\na > a:is(c) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "a { > b&, + c& { color: red } }", "a > a:is(b),\na + a:is(c) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "a { > &.b, > &.c { color: red } }", "a > :is(a.b, a.c) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, "a { > &.b, > &.c { color: red } }", "a > a.b,\na > a.c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "a { > &.b, + &.c { color: red } }", "a > a.b,\na + a.c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".a { > b&, > c& { color: red } }", ".a > :is(b.a, c.a) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".a { > b&, > c& { color: red } }", ".a > b.a,\n.a > c.a {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".a { > b&, + c& { color: red } }", ".a > b.a,\n.a + c.a {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".a { > &.b, > &.c { color: red } }", ".a > :is(.a.b, .a.c) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".a { > &.b, > &.c { color: red } }", ".a > .a.b,\n.a > .a.c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".a { > &.b, + &.c { color: red } }", ".a > .a.b,\n.a + .a.c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "~ .a { > &.b, > &.c { color: red } }", "~ .a > :is(.a.b, .a.c) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, "~ .a { > &.b, > &.c { color: red } }", "~ .a > .a.b,\n~ .a > .a.c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, "~ .a { > &.b, + &.c { color: red } }", "~ .a > .a.b,\n~ .a + .a.c {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { > &.a, > &.b { color: red } }", ".foo .bar > :is(.foo .bar.a, .foo .bar.b) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, everything, ".foo .bar { > &.a, > &.b { color: red } }", ".foo .bar > :is(.foo .bar).a,\n.foo .bar > :is(.foo .bar).b {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { > &.a, + &.b { color: red } }", ".foo .bar > :is(.foo .bar).a,\n.foo .bar + :is(.foo .bar).b {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".demo { .lg { &.triangle, &.circle { color: red } } }", ".demo .lg:is(.triangle, .circle) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".demo { .lg { .triangle, .circle { color: red } } }", ".demo .lg :is(.triangle, .circle) {\n  color: red;\n}\n")
+	expectPrintedLowerUnsupported(t, nesting, ".card { .featured & & & { color: red } }", ".featured .card .card .card {\n  color: red;\n}\n")
 
 	// These are invalid SASS-style nested suffixes
 	sassWarningStart := "NOTE: CSS nesting syntax does not allow the \"&\" selector to come before a type selector. "
@@ -961,7 +1000,7 @@ func TestNestedSelector(t *testing.T) {
 	expectPrintedLower(t, ".card { .nav &__header { color: red } }", ".card {\n  .nav &__header {\n    color: red;\n  }\n}\n")
 	expectParseError(t, ".card { &__header { color: red } }", ".card {\n  &__header {\n    color: red;\n  }\n}\n",
 		"<stdin>: WARNING: Cannot use type selector \"__header\" directly after nesting selector \"&\"\n"+
-			sassWarningStart+"You can wrap this selector in \":is()\" as a workaround. "+sassWarningEnd)
+			sassWarningStart+"You can wrap this selector in \":is(...)\" as a workaround. "+sassWarningEnd)
 	expectParseError(t, ".card { .nav &__header { color: red } }", ".card {\n  .nav &__header {\n    color: red;\n  }\n}\n",
 		"<stdin>: WARNING: Cannot use type selector \"__header\" directly after nesting selector \"&\"\n"+
 			sassWarningStart+"You can move the \"&\" to the end of this selector as a workaround. "+sassWarningEnd)
@@ -982,21 +1021,21 @@ func TestNestedSelector(t *testing.T) {
 	expectPrintedLower(t, ".foo { @media screen { &:hover { color: red } } }", "@media screen {\n  .foo:hover {\n    color: red;\n  }\n}\n")
 	expectPrintedLower(t, ".foo { @media screen { :hover { color: red } } }", "@media screen {\n  .foo :hover {\n    color: red;\n  }\n}\n")
 	expectPrintedLower(t, ".foo, .bar { @media screen { color: red } }", "@media screen {\n  .foo,\n  .bar {\n    color: red;\n  }\n}\n")
-	expectPrintedLower(t, ".foo, .bar { @media screen { &:hover { color: red } } }", "@media screen {\n  :is(.foo, .bar):hover {\n    color: red;\n  }\n}\n")
-	expectPrintedLower(t, ".foo, .bar { @media screen { :hover { color: red } } }", "@media screen {\n  :is(.foo, .bar) :hover {\n    color: red;\n  }\n}\n")
+	expectPrintedLower(t, ".foo, .bar { @media screen { &:hover { color: red } } }", "@media screen {\n  .foo:hover,\n  .bar:hover {\n    color: red;\n  }\n}\n")
+	expectPrintedLower(t, ".foo, .bar { @media screen { :hover { color: red } } }", "@media screen {\n  .foo :hover,\n  .bar :hover {\n    color: red;\n  }\n}\n")
 	expectPrintedLower(t, ".foo { @layer xyz {} }", "@layer xyz;\n")
 	expectPrintedLower(t, ".foo { @layer xyz { color: red } }", "@layer xyz {\n  .foo {\n    color: red;\n  }\n}\n")
 	expectPrintedLower(t, ".foo { @layer xyz { &:hover { color: red } } }", "@layer xyz {\n  .foo:hover {\n    color: red;\n  }\n}\n")
 	expectPrintedLower(t, ".foo { @layer xyz { :hover { color: red } } }", "@layer xyz {\n  .foo :hover {\n    color: red;\n  }\n}\n")
 	expectPrintedLower(t, ".foo, .bar { @layer xyz { color: red } }", "@layer xyz {\n  .foo,\n  .bar {\n    color: red;\n  }\n}\n")
-	expectPrintedLower(t, ".foo, .bar { @layer xyz { &:hover { color: red } } }", "@layer xyz {\n  :is(.foo, .bar):hover {\n    color: red;\n  }\n}\n")
-	expectPrintedLower(t, ".foo, .bar { @layer xyz { :hover { color: red } } }", "@layer xyz {\n  :is(.foo, .bar) :hover {\n    color: red;\n  }\n}\n")
+	expectPrintedLower(t, ".foo, .bar { @layer xyz { &:hover { color: red } } }", "@layer xyz {\n  .foo:hover,\n  .bar:hover {\n    color: red;\n  }\n}\n")
+	expectPrintedLower(t, ".foo, .bar { @layer xyz { :hover { color: red } } }", "@layer xyz {\n  .foo :hover,\n  .bar :hover {\n    color: red;\n  }\n}\n")
 	expectPrintedLower(t, "@media screen { @media (min-width: 900px) { a, b { &:hover { color: red } } } }",
-		"@media screen {\n  @media (min-width: 900px) {\n    :is(a, b):hover {\n      color: red;\n    }\n  }\n}\n")
+		"@media screen {\n  @media (min-width: 900px) {\n    a:hover,\n    b:hover {\n      color: red;\n    }\n  }\n}\n")
 	expectPrintedLower(t, "@supports (display: flex) { @supports selector(h2 > p) { a, b { &:hover { color: red } } } }",
-		"@supports (display: flex) {\n  @supports selector(h2 > p) {\n    :is(a, b):hover {\n      color: red;\n    }\n  }\n}\n")
+		"@supports (display: flex) {\n  @supports selector(h2 > p) {\n    a:hover,\n    b:hover {\n      color: red;\n    }\n  }\n}\n")
 	expectPrintedLower(t, "@layer foo { @layer bar { a, b { &:hover { color: red } } } }",
-		"@layer foo {\n  @layer bar {\n    :is(a, b):hover {\n      color: red;\n    }\n  }\n}\n")
+		"@layer foo {\n  @layer bar {\n    a:hover,\n    b:hover {\n      color: red;\n    }\n  }\n}\n")
 	expectPrintedLower(t, ".card { @supports (selector(&)) { &:hover { color: red } } }",
 		"@supports (selector(&)) {\n  .card:hover {\n    color: red;\n  }\n}\n")
 	expectPrintedLower(t, "html { @layer base { color: blue; @layer support { & body { color: red } } } }",
@@ -1159,6 +1198,36 @@ func TestAtRule(t *testing.T) {
 		}
 	}
 }`, "@supports (container-type: size){@container (width <= 150px){#inner{background-color:#87ceeb}}}")
+
+	// https://drafts.csswg.org/css-transitions-2/#defining-before-change-style-the-starting-style-rule
+	expectPrinted(t, `
+		@starting-style {
+			h1 {
+				background-color: transparent;
+			}
+			@layer foo {
+				div {
+					height: 100px;
+				}
+			}
+		}
+	`, `@starting-style {
+  h1 {
+    background-color: transparent;
+  }
+  @layer foo {
+    div {
+      height: 100px;
+    }
+  }
+}
+`)
+
+	expectPrintedMinify(t, `@starting-style {
+	h1 {
+		background-color: transparent;
+	}
+}`, "@starting-style{h1{background-color:transparent}}")
 
 	// https://drafts.csswg.org/css-counter-styles/#the-counter-style-rule
 	expectPrinted(t, `
@@ -1541,6 +1610,30 @@ func TestMarginAndPaddingAndInset(t *testing.T) {
 	expectPrintedMangle(t, "a { padding: inherit; padding-left: 1px }", "a {\n  padding: inherit;\n  padding-left: 1px;\n}\n")
 
 	expectPrintedLowerMangle(t, "a { top: 0; right: 0; bottom: 0; left: 0; }", "a {\n  top: 0;\n  right: 0;\n  bottom: 0;\n  left: 0;\n}\n")
+
+	// "inset" should be expanded when not supported
+	expectPrintedLower(t, "a { inset: 0; }", "a {\n  top: 0;\n  right: 0;\n  bottom: 0;\n  left: 0;\n}\n")
+	expectPrintedLower(t, "a { inset: 0px; }", "a {\n  top: 0px;\n  right: 0px;\n  bottom: 0px;\n  left: 0px;\n}\n")
+	expectPrintedLower(t, "a { inset: 1px 2px; }", "a {\n  top: 1px;\n  right: 2px;\n  bottom: 1px;\n  left: 2px;\n}\n")
+	expectPrintedLower(t, "a { inset: 1px 2px 3px; }", "a {\n  top: 1px;\n  right: 2px;\n  bottom: 3px;\n  left: 2px;\n}\n")
+	expectPrintedLower(t, "a { inset: 1px 2px 3px 4px; }", "a {\n  top: 1px;\n  right: 2px;\n  bottom: 3px;\n  left: 4px;\n}\n")
+
+	// When "inset" isn't supported, other mangling should still work
+	expectPrintedLowerMangle(t, "a { top: 0px; }", "a {\n  top: 0;\n}\n")
+	expectPrintedLowerMangle(t, "a { right: 0px; }", "a {\n  right: 0;\n}\n")
+	expectPrintedLowerMangle(t, "a { bottom: 0px; }", "a {\n  bottom: 0;\n}\n")
+	expectPrintedLowerMangle(t, "a { left: 0px; }", "a {\n  left: 0;\n}\n")
+	expectPrintedLowerMangle(t, "a { inset: 0px; }", "a {\n  top: 0;\n  right: 0;\n  bottom: 0;\n  left: 0;\n}\n")
+
+	// When "inset" isn't supported, whitespace minifying should still work
+	expectPrintedLowerMinify(t, "a { top: 0px; }", "a{top:0px}")
+	expectPrintedLowerMinify(t, "a { right: 0px; }", "a{right:0px}")
+	expectPrintedLowerMinify(t, "a { bottom: 0px; }", "a{bottom:0px}")
+	expectPrintedLowerMinify(t, "a { left: 0px; }", "a{left:0px}")
+	expectPrintedLowerMinify(t, "a { inset: 0px; }", "a{top:0px;right:0px;bottom:0px;left:0px}")
+	expectPrintedLowerMinify(t, "a { inset: 1px 2px; }", "a{top:1px;right:2px;bottom:1px;left:2px}")
+	expectPrintedLowerMinify(t, "a { inset: 1px 2px 3px; }", "a{top:1px;right:2px;bottom:3px;left:2px}")
+	expectPrintedLowerMinify(t, "a { inset: 1px 2px 3px 4px; }", "a{top:1px;right:2px;bottom:3px;left:4px}")
 }
 
 func TestBorderRadius(t *testing.T) {

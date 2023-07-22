@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/evanw/esbuild/internal/ast"
-	"github.com/evanw/esbuild/internal/compat"
 	"github.com/evanw/esbuild/internal/css_ast"
 	"github.com/evanw/esbuild/internal/css_lexer"
 	"github.com/evanw/esbuild/internal/logger"
@@ -211,9 +210,7 @@ func (p *parser) flattenLocalAndGlobalSelectors(list []css_ast.ComplexSelector, 
 			})
 
 			// Make sure we report that nesting is present so that it can be lowered
-			if p.options.unsupportedCSSFeatures.Has(compat.Nesting) {
-				p.shouldLowerNesting = true
-			}
+			p.shouldLowerNesting = true
 		}
 
 		sel.Selectors = selectors
@@ -261,10 +258,9 @@ type parseComplexSelectorOpts struct {
 
 func (p *parser) parseComplexSelector(opts parseComplexSelectorOpts) (result css_ast.ComplexSelector, ok bool) {
 	// This is an extension: https://drafts.csswg.org/css-nesting-1/
-	r := p.current().Range
 	combinator := p.parseCombinator()
 	if combinator.Byte != 0 {
-		p.reportUseOfNesting(r, opts.isDeclarationContext)
+		p.shouldLowerNesting = true
 		p.eat(css_lexer.TWhitespace)
 	}
 
@@ -325,7 +321,7 @@ func (p *parser) parseCompoundSelector(opts parseComplexSelectorOpts) (sel css_a
 	// This is an extension: https://drafts.csswg.org/css-nesting-1/
 	hasLeadingNestingSelector := p.peek(css_lexer.TDelimAmpersand)
 	if hasLeadingNestingSelector {
-		p.reportUseOfNesting(p.current().Range, opts.isDeclarationContext)
+		p.shouldLowerNesting = true
 		sel.NestingSelectorLoc = ast.MakeIndex32(uint32(startLoc.Start))
 		p.advance()
 	}
@@ -439,7 +435,7 @@ subclassSelectors:
 
 		case css_lexer.TDelimAmpersand:
 			// This is an extension: https://drafts.csswg.org/css-nesting-1/
-			p.reportUseOfNesting(subclassToken.Range, sel.HasNestingSelector())
+			p.shouldLowerNesting = true
 			sel.NestingSelectorLoc = ast.MakeIndex32(uint32(subclassToken.Range.Loc.Start))
 			p.advance()
 
@@ -468,7 +464,7 @@ subclassSelectors:
 		suggestion := p.source.TextForRange(r)
 		if opts.isFirst {
 			suggestion = fmt.Sprintf(":is(%s)", suggestion)
-			howToFix = "You can wrap this selector in \":is()\" as a workaround. "
+			howToFix = "You can wrap this selector in \":is(...)\" as a workaround. "
 		} else {
 			r = logger.Range{Loc: startLoc, Len: r.End() - startLoc.Start}
 			suggestion += "&"

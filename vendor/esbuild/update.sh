@@ -1,0 +1,32 @@
+#!/bin/sh -e
+
+cd $(dirname $0)
+
+REPOSITORY=https://github.com/evanw/esbuild.git
+VERSION=0.18.15
+
+rm -rf src
+git clone --depth 1 --branch v$VERSION $REPOSITORY src
+rm -rf src/.git src/.github
+
+SYS_REQUIRE=$(awk '/require golang.org\/x\/sys/ { print $2 " " $3 }' < src/go.mod)
+SYS_COMMIT=$(echo $SYS_REQUIRE | awk -F- '{ print $3 }')
+
+git clone https://go.googlesource.com/sys src/sys
+git -C src/sys checkout $SYS_COMMIT
+rm -rf src/sys/.git
+
+echo "replace $SYS_REQUIRE => ./sys" >> src/go.mod
+echo -n "" > src/go.sum
+
+curl -O https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-$VERSION.tgz
+tar zx --strip-components=1 -f win32-x64-$VERSION.tgz package/esbuild.exe
+mv esbuild.exe bin/esbuild_windows_x64.exe
+chmod -x bin/esbuild_windows_x64.exe
+
+curl -O https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-$VERSION.tgz
+tar zx --strip-components=2 -f linux-x64-$VERSION.tgz package/bin/esbuild
+mv esbuild bin/esbuild_linux_x64
+chmod +x bin/esbuild_linux_x64
+
+rm *.tgz

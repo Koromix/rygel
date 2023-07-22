@@ -180,6 +180,32 @@ console.log(void 0);
 
 ================================================================================
 TestCSSNestingOldBrowser
+---------- /out/two-type-selectors.css ----------
+/* two-type-selectors.css */
+.c a:is(b) {
+  color: red;
+}
+
+---------- /out/two-parent-selectors.css ----------
+/* two-parent-selectors.css */
+.c :is(a b) {
+  color: red;
+}
+
+---------- /out/only-one-warning.css ----------
+/* only-one-warning.css */
+.a > .a,
+.a > :is(.b .c),
+.a > .d,
+.b .c > .a,
+.b .c > :is(.b .c),
+.b .c > .d,
+.d > .a,
+.d > :is(.b .c),
+.d > .d {
+  color: red;
+}
+
 ---------- /out/nested-@layer.css ----------
 /* nested-@layer.css */
 @layer base {
@@ -1240,3 +1266,59 @@ TestTextImportURLInCSSText
 a {
   background: url(data:text/plain;base64,VGhpcyBpcyBzb21lIHRleHQu);
 }
+
+================================================================================
+TestUndefinedImportWarningCSS
+---------- /out/entry.js ----------
+// empty.js
+var require_empty = __commonJS({
+  "empty.js"() {
+  }
+});
+
+// node_modules/pkg/empty.js
+var require_empty2 = __commonJS({
+  "node_modules/pkg/empty.js"() {
+  }
+});
+
+// entry.js
+var empty_js2 = __toESM(require_empty());
+var pkg_empty_js = __toESM(require_empty2());
+
+// node_modules/pkg/index.js
+var empty_js = __toESM(require_empty2());
+console.log(
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0
+);
+
+// entry.js
+console.log(
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0
+);
+console.log(
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0,
+  void 0
+);
+
+---------- /out/entry.css ----------
+/* empty.css */
+/* empty.global-css */
+/* empty.local-css */
+/* node_modules/pkg/empty.css */
+/* node_modules/pkg/empty.global-css */
+/* node_modules/pkg/empty.local-css */
