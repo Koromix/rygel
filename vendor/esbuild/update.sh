@@ -3,7 +3,7 @@
 cd $(dirname $0)
 
 REPOSITORY=https://github.com/evanw/esbuild.git
-VERSION=0.18.15
+VERSION=$1
 
 rm -rf src
 git clone --depth 1 --branch v$VERSION $REPOSITORY src
