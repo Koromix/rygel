@@ -668,8 +668,19 @@ bool Builder::PrepareEsbuild()
 #endif
 
         if (TestFile(binary)) {
-            esbuild = binary;
-            return true;
+            LocalArray<char, 128> build_version;
+            LocalArray<char, 128> src_version;
+
+            const char *version_cmd = Fmt(&str_alloc, "\"%1\" --version", binary).ptr;
+            const char *version_txt = "vendor/esbuild/src/version.txt";
+
+            build_version.len = ReadCommandOutput(version_cmd, build_version.data);
+            src_version.len = ReadFile(version_txt, src_version.data);
+
+            if (build_version.len >= 0 && TestStr(build_version, src_version)) {
+                esbuild = binary;
+                return true;
+            }
         }
 
         if (FindExecutableInPath("go")) {
