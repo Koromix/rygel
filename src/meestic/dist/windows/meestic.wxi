@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Include xmlns="http://wixtoolset.org/schemas/v4/wxs">
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="MeesticIcon" SourceFile="meestic.ico" />
+    <Property Id="ARPPRODUCTICON" Value="MeesticIcon" />
+
+    <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+
+    <Feature Id="CLI" Title="Command-line version">
+        <ComponentRef Id="Binary" />
+    </Feature>
+    <Feature Id="GUI" Title="GUI version">
+        <ComponentRef Id="BinaryGui" />
+        <ComponentRef Id="AutostartGui" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="Meestic">
+            <Component Id="Binary">
+                <File Id="MeeticBinary" KeyPath="yes" Source="meestic.exe" ></File>
+            </Component>
+            <Component Id="BinaryGui">
+                <File Id="MeesticGuiBinary" KeyPath="yes" Source="MeesticGui.exe"></File>
+                <RegistryValue Id="AutoStart" Root="HKMU" Action="write"
+                               Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                               Name="MeesticGui"
+                               Value="[INSTALLFOLDER]MeesticGui.exe"
+                               Type="string" />
+            </Component>
+        </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="StartMenuFolder">
+        <Component Id="AutostartGui" Guid="051df8f0-e153-4e86-b58e-2d249a1c738f">
+            <Shortcut Id="MeesticShortcut"
+                      Name="MeesticGui"
+                      Target="[INSTALLFOLDER]MeesticGui.exe"
+                      WorkingDirectory="INSTALLFOLDER" />
+        </Component>
+    </StandardDirectory>
+
+    <CustomAction Id="LaunchMeesticGui" FileRef="MeesticGuiBinary" ExeCommand="" Return="asyncNoWait" />
+
+    <InstallExecuteSequence>
+        <Custom Action="LaunchMeesticGui" OnExit="success" />
+    </InstallExecuteSequence>
+</Include>
