@@ -342,15 +342,13 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp, 
-R"(Usage: %!..+%1 [options]%!0
+R"(Usage: %!..+%1 [options] [root]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
                                  %!D..(default: %2)%!0
 
-    %!..+-R, --root_dir <dir>%!0         Change root directory
-                                 %!D..(default: %3)%!0
-        %!..+--port <port>%!0            Change web server port
+    %!..+-p, --port <port>%!0            Change web server port
                                  %!D..(default: %4)%!0)",
                 FelixTarget, config_filename, config.root_directory, config.http.port);
     };
@@ -393,9 +391,7 @@ Options:
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
-            } else if (opt.Test("-R", "--root_dir", OptionType::Value)) {
-                config.root_directory = opt.current_value;
-            } else if (opt.Test("--port", OptionType::Value)) {
+            } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.http.port))
                     return 1;
             } else {
@@ -403,6 +399,9 @@ Options:
                 return 1;
             }
         }
+
+        const char *root_directory = opt.ConsumeNonOption();
+        config.root_directory = root_directory ? root_directory : config.root_directory;
 
         // We may have changed some stuff (such as HTTP port), so revalidate
         if (!config.Validate())
