@@ -706,6 +706,7 @@ bool Builder::PrepareEsbuild()
             }
 
             esbuild = binary;
+            return true;
         } else {
             LogError("Install Go compiler to build esbuild tool");
             return false;
