@@ -741,8 +741,8 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
         {
             HeapArray<char> buf(&str_alloc);
 
-            Fmt(&buf, "\"%1\" \"%2\" --bundle --platform=browser --format=iife --global-name=app", esbuild, src.filename);
-            Fmt(&buf, "  --log-level=warning --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
+            Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning", esbuild, src.filename);
+            Fmt(&buf, " --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
 
             if (features & (int)CompileFeature::DebugInfo) {
                 Fmt(&buf, " --sourcemap=inline");
