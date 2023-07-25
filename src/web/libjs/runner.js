@@ -1,4 +1,19 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see https://www.gnu.org/licenses/.
+
 import { Util, Log } from './common.js';
+
+let audio = null;
 
 function AppRunner(canvas) {
     let self = this;
@@ -67,6 +82,9 @@ function AppRunner(canvas) {
 
     let cursor = 'default';
     let ignore_new_cursor = false;
+
+    let old_sources = new Map;
+    let new_sources = new Map;
 
     Object.defineProperties(this,  {
         canvas: { value: canvas, writable: false, enumerable: true },
@@ -322,6 +340,13 @@ function AppRunner(canvas) {
         }
     }
 
+    function computeDistance(p1, p2) {
+        let dx = p1.x - p2.x;
+        let dy = p1.y - p2.y;
+
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
     // ------------------------------------------------------------------------
     // Main loop
     // ------------------------------------------------------------------------
@@ -365,6 +390,15 @@ function AppRunner(canvas) {
                 if (mouse_state.right)
                     mouse_state.right++;
                 mouse_state.wheel = 0;
+
+                if (audio != null) {
+                    for (let sfx of old_sources.values()) {
+                        sfx.gain.gain.linearRampToValueAtTime(0, audio.currentTime + 0.5);
+                        setTimeout(() => sfx.src.stop(), 2000);
+                    }
+                    old_sources = new_sources;
+                    new_sources = new Map;
+                }
 
                 ignore_new_cursor = false;
             }
@@ -437,12 +471,82 @@ function AppRunner(canvas) {
         }
     };
 
-    function computeDistance(p1, p2) {
-        let dx = p1.x - p2.x;
-        let dy = p1.y - p2.y;
+    // ------------------------------------------------------------------------
+    // Sound
+    // ------------------------------------------------------------------------
 
-        return Math.sqrt(dx * dx + dy * dy);
-    }
+    this.playSound = function(asset, options = {}) {
+        if (audio == null)
+            audio = new AudioContext;
+
+        let sfx = old_sources.get(asset) || new_sources.get(asset);
+
+        if (options.loop == null)
+            options.loop = false;
+        if (options.start == null)
+            options.start = true;
+
+        if (sfx == null && options.start) {
+            sfx = {
+                src: audio.createBufferSource(),
+                gain: audio.createGain()
+            };
+
+            sfx.gain.connect(audio.destination);
+            sfx.src.buffer = asset;
+            sfx.src.loop = options.loop;
+            sfx.src.connect(sfx.gain);
+
+            sfx.gain.gain.setValueAtTime(0, audio.currentTime);
+            sfx.gain.gain.linearRampToValueAtTime(1, audio.currentTime + 0.2);
+
+            sfx.src.start();
+        }
+
+        old_sources.delete(asset);
+        if (sfx != null)
+            new_sources.set(asset, sfx);
+    };
+
+    this.play = function(asset) {
+        self.playSound(asset, { loop: true });
+    };
+
+    this.playOnce = function(asset, start = true) {
+        self.playSound(asset, { loop: false, start: start });
+    };
 }
 
-export { AppRunner }
+async function loadTexture(url) {
+    let texture = await new Promise((resolve, reject) => {
+        let img = new Image();
+
+        img.src = url;
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Failed to load texture '${url}'`));
+    });
+
+    // Fix latency spikes caused by image decoding
+    if (typeof createImageBitmap != 'undefined')
+        texture = await createImageBitmap(texture);
+
+    return texture;
+}
+
+async function loadSound(url) {
+    if (audio == null)
+        audio = new AudioContext;
+
+    let response = await fetch(url);
+    let buf = await response.arrayBuffer();
+    let sound = await audio.decodeAudioData(buf);
+
+    return sound;
+}
+
+export {
+    AppRunner,
+
+    loadTexture,
+    loadSound
+}
