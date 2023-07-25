@@ -1,6 +1,8 @@
-<!-- Title: Cohérence cardiaque
-     Menu: Pour les psychologues / Cohérence cardiaque
-     Description: Fiche sur la cohérence cardiaque -->
+---
+title: Cohérence cardiaque
+menu: Pour les psychologues / Cohérence cardiaque
+description: Fiche sur la cohérence cardiaque
+---
 
 # Cohérence cardiaque
 

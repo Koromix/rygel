@@ -1,5 +1,7 @@
-<!-- Title: koromix.dev — Koffi
-     Menu: Koffi -->
+---
+title: koromix.dev — Koffi
+menu: Koffi
+---
 
 # Overview
 

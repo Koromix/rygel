@@ -1,6 +1,8 @@
-<!-- Title: Affirmation de soi
-     Menu: Pour les psychologues / Affirmation de soi
-     Description: Fiche sur l'affirmation de soi -->
+---
+title: Affirmation de soi
+menu: Pour les psychologues / Affirmation de soi
+description: Fiche sur l'affirmation de soi
+---
 
 # Affirmation de soi
 

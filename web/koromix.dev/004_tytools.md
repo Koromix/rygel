@@ -1,5 +1,7 @@
-<!-- Title: koromix.dev — TyTools
-     Menu: TyTools -->
+---
+title: koromix.dev — TyTools
+menu: TyTools
+---
 
 # Overview
 
@@ -47,24 +49,29 @@ You can learn about the various commands using `tycmd help`. Get specific help f
 
 `tycmd list` lists plugged Teensy devices. Here is how it looks:
 
-    add 34130@usb-1-2 Teensy 3.1
-    add 29460@usb-4-2 Teensy
-    add 32250@usb-4-3 Teensy 3.0
-
+```
+add 34130@usb-1-2 Teensy 3.1
+add 29460@usb-4-2 Teensy
+add 32250@usb-4-3 Teensy 3.0
+```
 
 Use `--verbose` if you want detailed information about available devices:
 
-    add 32250@usb-4-3 Teensy 3.0
-      + capabilities:
-        - upload
-        - reset
-      + interfaces:
-        - HalfKay Bootloader: /dev/hidraw2
+```
+add 32250@usb-4-3 Teensy 3.0
+  + capabilities:
+    - upload
+    - reset
+  + interfaces:
+    - HalfKay Bootloader: /dev/hidraw2
+```
 
 If you need to read structured information in your scripts, you can set the output to JSON with `--output json`:
 
-    {"action": "add", "tag": "714230@usb-6-3", "serial": 714230, "location": "usb-6-3", "model": "Teensy", "capabilities": ["reboot", "serial"], "interfaces": [["Seremu", "/dev/hidraw4"]]}
-    {"action": "add", "tag": "1126140@usb-6-2", "serial": 1126140, "location": "usb-6-2", "model": "Teensy LC", "capabilities": ["upload", "reset"], "interfaces": [["HalfKay Bootloader", "/dev/hidraw3"]]}
+```json
+{"action": "add", "tag": "714230@usb-6-3", "serial": 714230, "location": "usb-6-3", "model": "Teensy", "capabilities": ["reboot", "serial"], "interfaces": [["Seremu", "/dev/hidraw4"]]}
+{"action": "add", "tag": "1126140@usb-6-2", "serial": 1126140, "location": "usb-6-2", "model": "Teensy LC", "capabilities": ["upload", "reset"], "interfaces": [["HalfKay Bootloader", "/dev/hidraw3"]]}
+```
 
 You can also watch device changes with `--watch`, both in plain and JSON mode.
 
@@ -128,11 +135,13 @@ are two options to enable Qt in TyTools:
 To build TyTools with MSVC 2015 32-bit, launch _VS2015 x86 Native Tools Command Prompt_,
 navigate to the project directory and execute CMake:
 
-    REM You can of course use another build directory if you prefer.
-    mkdir build
-    mkdir build/win32
-    cd build/win32
-    cmake ../..
+```batch
+REM You can of course use another build directory if you prefer.
+mkdir build
+mkdir build/win32
+cd build/win32
+cmake ../..
+```
 
 This will create Visual Studio project and solution files in _build/win32_. You can then open
 the _solution TyTools.sln_.
@@ -155,14 +164,18 @@ are two options to enable Qt in TyTools:
 After Qt is ready, you can build TyTools by executing the following commands in the
 project directory:
 
-    # You can of course use another directory if you prefer.
-    mkdir -p build/darwin && cd build/darwin
-    cd build/darwin
-    cmake ../..
+```sh
+# You can of course use another directory if you prefer.
+mkdir -p build/darwin && cd build/darwin
+cd build/darwin
+cmake ../..
+```
 
 If you want to build debug binaries instead, you should specify the build type:
 
-    cmake -DCMAKE_BUILD_TYPE=Debug ../..
+```sh
+cmake -DCMAKE_BUILD_TYPE=Debug ../..
+```
 
 ## Build on Linux
 
@@ -172,24 +185,32 @@ TyTools can be built with GCC or Clang.
 
 To install the dependencies on Debian or Ubuntu execute:
 
-    sudo apt-get install build-essential cmake libudev-dev qtbase5-dev
+```sh
+sudo apt-get install build-essential cmake libudev-dev qtbase5-dev
+```
 
 On Arch Linux you can do so (as root):
 
-    pacman -S --needed base-devel cmake udev qt5-base
+```sh
+pacman -S --needed base-devel cmake udev qt5-base
+```
 
 ### Compilation
 
 Open the project directory in a terminal and execute:
 
-    # You can of course use another directory if you prefer.
-    mkdir -p build/linux && cd build/linux
-    cmake ../..
-    make
+```sh
+# You can of course use another directory if you prefer.
+mkdir -p build/linux && cd build/linux
+cmake ../..
+make
+```
 
 If you want to build debug binaries instead, you should specify the build type:
 
-    cmake -DCMAKE_BUILD_TYPE=Debug ../..
+```sh
+cmake -DCMAKE_BUILD_TYPE=Debug ../..
+```
 
 # License
 

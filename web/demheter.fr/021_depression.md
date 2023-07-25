@@ -1,6 +1,8 @@
-<!-- Title: Dépression
-     Menu: Pour les médecins / Dépression
-     Description: Fiche d'information sur la dépression -->
+---
+title: Dépression
+menu: Pour les médecins / Dépression
+description: Fiche d'information sur la dépression
+---
 
 # Épidémiologie
 

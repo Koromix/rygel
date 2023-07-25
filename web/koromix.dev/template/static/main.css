@@ -171,7 +171,7 @@ pre .line:before {
     color: #333;
     counter-increment: line;
     content: counter(line);
-    -webkit-user-select: none;
+    user-select: none;
 }
 code {
     padding: 0.1em 0.5em;

@@ -1,6 +1,8 @@
-<!-- Title: Activation comportementale
-     Menu: Pour les psychologues / Activation comportementale
-     Description: Fiche sur l'activation comportementale -->
+---
+title: Activation comportementale
+menu: Pour les psychologues / Activation comportementale
+description: Fiche sur l'activation comportementale
+---
 
 # Activation comportementale
 

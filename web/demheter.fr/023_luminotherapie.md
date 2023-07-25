@@ -1,6 +1,8 @@
-<!-- Title: Luminothérapie
-     Menu: Pour les médecins / Luminothérapie
-     Description: Fiche d'information sur la luminothérapie -->
+---
+title: Luminothérapie
+menu: Pour les médecins / Luminothérapie
+description: Fiche d'information sur la luminothérapie
+---
 
 # Indications
 

@@ -1,6 +1,8 @@
-<!-- Title: Traitement au lithium
-     Menu: Pour les médecins / Lithium
-     Description: Fiche d'information sur le traitement par le lithium -->
+---
+title: Traitement au lithium
+menu: Pour les médecins / Lithium
+description: Fiche d'information sur le traitement par le lithium
+---
 
 # Indications
 

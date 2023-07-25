@@ -1,5 +1,7 @@
-<!-- Title: koromix.dev
-     Menu: Home -->
+---
+title: koromix.dev
+menu: Home
+---
 
 # Introduction
 
@@ -35,7 +37,7 @@ Find out more on the [page dedicated to Koffi](koffi).
 TyTools is a collection of independent tools to manage, flash and communicate with **[Teensy](https://www.pjrc.com/teensy/) microcontrollers**.
 
 Tool        | Type                      | Description
------------ | --------------------------------------------------------------------------------
+----------- | ------------------------- | ----------------------------------------------------
 TyCommander | Qt GUI (static)           | Upload, monitor and communicate with multiple boards
 TyUpdater   | Qt GUI (static)           | Simple firmware / sketch uploader
 tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boards

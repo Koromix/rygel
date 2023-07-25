@@ -1,6 +1,8 @@
-<!-- Title: Carte DEMHETER
-     Menu: Orienter un patient / Carte interactive
-     Description: Carte interactive du projet DEMHETER -->
+---
+title: Carte DEMHETER
+menu: Orienter un patient / Carte interactive
+description: Carte interactive du projet DEMHETER
+---
 
 # Carte des ressources
 

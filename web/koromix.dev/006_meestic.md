@@ -1,5 +1,7 @@
-<!-- Title: koromix.dev — Meestic
-     Menu: Meestic -->
+---
+title: koromix.dev — Meestic
+menu: Meestic
+---
 
 # Overview
 
@@ -37,49 +39,55 @@ If you are using GNOME, please install an extension such as `Tray Icons: Reloade
 
 Customize `/etc/meestic.ini` to edit default profiles. Restart the daemon after each change to load the new profiles with:
 
-    sudo systemctl restart meestic
+```sh
+sudo systemctl restart meestic
+```
 
 ## Example configuration
 
 Here is an example:
 
-    # The profile set with Default will run when the GUI starts
-    Default = Disabled
+```ini
+# The profile set with Default will run when the GUI starts
+Default = Disabled
 
-    [Static Blue]
-    Mode = Static
-    Colors = MsiBlue
+[Static Blue]
+Mode = Static
+Colors = MsiBlue
 
-    [Breathe Slow]
-    Mode = Breathe
-    Speed = 0
-    Colors = #FFA100 MsiBlue
+[Breathe Slow]
+Mode = Breathe
+Speed = 0
+Colors = #FFA100 MsiBlue
 
-    [Disabled]
-    Mode = Disabled
+[Disabled]
+Mode = Disabled
 
-    # [Example]
-    # Intensity = 0 to 10
-    # Speed = 0 to 2
-    # Mode = Disabled, Static, Breathe or Transition
-    # Colors = list of Colors (only one for Static, 1 to 7 for Breathe or Transition), use name or CSS-like hexadecimal
-    # ManualOnly = Yes or No (if Yes, the option must be used from the context menu and won't be used when cycling modes with the function keys)
+# [Example]
+# Intensity = 0 to 10
+# Speed = 0 to 2
+# Mode = Disabled, Static, Breathe or Transition
+# Colors = list of Colors (only one for Static, 1 to 7 for Breathe or Transition), use name or CSS-like hexadecimal
+# ManualOnly = Yes or No (if Yes, the option must be used from the context menu and won't be used when cycling modes with the function keys)
+```
 
 # Command-line version
 
 Here are a few examples on how to use it:
 
-    # Disable lighting
-    meestic -m Disabled
+```sh
+# Disable lighting
+meestic -m Disabled
 
-    # Set default static MSI blue
-    meestic -m Static MsiBlue
+# Set default static MSI blue
+meestic -m Static MsiBlue
 
-    # Slowly breathe between Orange and MsiBlue
-    meestic -m Breathe -s 0 "#FFA100" MsiBlue
+# Slowly breathe between Orange and MsiBlue
+meestic -m Breathe -s 0 "#FFA100" MsiBlue
 
-    # Quickly transition between Magenta, Orange and MsiBlue colors
-    meestic -m Transition -s 2 Magenta Orange MsiBlue
+# Quickly transition between Magenta, Orange and MsiBlue colors
+meestic -m Transition -s 2 Magenta Orange MsiBlue
+```
 
 Use `meestic --help` for a list of available options.
 
@@ -91,8 +99,10 @@ Be careful, color names and most options are **case-sensitive**.
 
 In order to build Meestic on Windows, clone the repository and run these commands from the root directory in a *Visual Studio command prompt* (x64 or x86, as you prefer):
 
-    bootstrap.bat
-    felix -pFast meestic MeesticGui
+```batch
+bootstrap.bat
+felix -pFast meestic MeesticGui
+```
 
 After that, the binaries will be available in the `bin/Fast` directory.
 
@@ -100,12 +110,14 @@ After that, the binaries will be available in the `bin/Fast` directory.
 
 In order to build Meestic on Linux, clone the repository and run these commands from the root directory:
 
-    # Install required dependencies on Debian or Ubuntu:
-    sudo apt install git build-essential libudev-dev
+```sh
+# Install required dependencies on Debian or Ubuntu:
+sudo apt install git build-essential libudev-dev
 
-    # Build binaries
-    ./bootstrap.sh
-    ./felix -pFast meestic MeesticGui
+# Build binaries
+./bootstrap.sh
+./felix -pFast meestic MeesticGui
+```
 
 After that, the binaries will be available in the `bin/Fast` directory.
 

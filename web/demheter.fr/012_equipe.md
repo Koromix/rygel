@@ -1,6 +1,8 @@
-<!-- Title: Équipe DEMHETER
-     Menu: Qui sommes-nous ? / Notre équipe
-     Description: Membres de l'équipe DEMHETER -->
+---
+title: Équipe DEMHETER
+menu: Qui sommes-nous ? / Notre équipe
+description: Membres de l'équipe DEMHETER
+---
 
 # L'équipe DEMHETER
 

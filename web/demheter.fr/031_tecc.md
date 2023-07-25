@@ -1,6 +1,8 @@
-<!-- Title: Thérapies Émotionnelles, Comportementales et Cognitives
-     Menu: Pour les psychologues / TECC
-     Description: Fiche sur les thérapies émotionnelles, comportementales et cognitives -->
+---
+title: Thérapies Émotionnelles, Comportementales et Cognitives
+menu: Pour les psychologues / TECC
+description: Fiche sur les thérapies émotionnelles, comportementales et cognitives
+---
 
 # Thérapies Émotionnelles, Comportementales et Cognitives
 

@@ -1,5 +1,7 @@
-<!-- Title: koromix.dev — Goupile
-     Menu: Goupile -->
+---
+title: koromix.dev — Goupile
+menu: Goupile
+---
 
 # Overview
 

@@ -1,5 +1,7 @@
-<!-- Title: koromix.dev — Misc
-     Menu: Other -->
+---
+title: koromix.dev — Misc
+menu: Other
+---
 
 # Rekord
 
@@ -23,27 +25,29 @@ Serf is a **small HTTP server made for local testing**. It can serve static file
 
 Here is an example configuration file:
 
-    [HTTP]
-    # Set SocketType to Dual (IPv4 + IPv6), IPv4, IPv6 or Unix
-    SocketType = Dual
-    Port = 80
-    # UnixPath is ignored unless SocketType is set to Unix
-    UnixPath = /run/serf.sock
+```ini
+[HTTP]
+# Set SocketType to Dual (IPv4 + IPv6), IPv4, IPv6 or Unix
+SocketType = Dual
+Port = 80
+# UnixPath is ignored unless SocketType is set to Unix
+UnixPath = /run/serf.sock
 
-    [Files]
-    # Set directory to serve, relative to the location of the INI file
-    RootDirectory = .
-    # Enable AutoIndex to list content of directories without index.html
-    AutoIndex = On
-    # Maximum cache time in seconds
-    MaxAge = 0
-    # Generate E-tag based on file modification time and size
-    ETag = On
+[Files]
+# Set directory to serve, relative to the location of the INI file
+RootDirectory = .
+# Enable AutoIndex to list content of directories without index.html
+AutoIndex = On
+# Maximum cache time in seconds
+MaxAge = 0
+# Generate E-tag based on file modification time and size
+ETag = On
 
-    [Headers]
-    # List headers you want to add to all server responses
-    Cross-Origin-Embedder-Policy = require-corp
-    Cross-Origin-Opener-Policy = same-origin
+[Headers]
+# List headers you want to add to all server responses
+Cross-Origin-Embedder-Policy = require-corp
+Cross-Origin-Opener-Policy = same-origin
+```
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/attic#serf).
 
@@ -65,7 +69,9 @@ CNoke is a **Javascript NPM package designed to build native Node addons based o
 
 Install it like this:
 
-    npm install cnoke
+```sh
+npm install cnoke
+```
 
 It obviously requires [CMake](http://www.cmake.org/download/) and a proper C/C++ toolchain:
 
@@ -74,12 +80,14 @@ It obviously requires [CMake](http://www.cmake.org/download/) and a proper C/C++
 
 Once everything is in place, get started with your addon with the CMakeLists.txt template:
 
-    cmake_minimum_required(VERSION 3.11)
-    project(hello C CXX)
+```cmake
+cmake_minimum_required(VERSION 3.11)
+project(hello C CXX)
 
-    find_package(CNoke)
+find_package(CNoke)
 
-    add_node_addon(NAME hello SOURCES hello.cc)
+add_node_addon(NAME hello SOURCES hello.cc)
+```
 
 You can find out more [in the NPM repository](https://www.npmjs.com/package/cnoke).
 

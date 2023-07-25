@@ -1,6 +1,8 @@
-<!-- Title: Orienter vers DEMHETER
-     Menu: Orienter un patient / Courrier d'adressage
-     Description: Courrier d'adressage pour prise en charge -->
+---
+title: Orienter vers DEMHETER
+menu: Orienter un patient / Courrier d'adressage
+description: Courrier d'adressage pour prise en charge
+---
 
 # Courrier d'adressage
 

@@ -1,6 +1,8 @@
-<!-- Title: Estime de soi
-     Menu: Pour les psychologues / Estime de soi
-     Description: Fiche sur l'estime de soi -->
+---
+title: Estime de soi
+menu: Pour les psychologues / Estime de soi
+description: Fiche sur l'estime de soi
+---
 
 # Estime de soi
 

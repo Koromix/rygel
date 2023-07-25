@@ -1,6 +1,8 @@
-<!-- Title: Nos partenaires
-     Menu: Qui sommes-nous ? / Nos partenaires
-     Description: Partenaires affiliés au projet DEMHETER -->
+---
+title: Nos partenaires
+menu: Qui sommes-nous ? / Nos partenaires
+description: Partenaires affiliés au projet DEMHETER
+---
 
 # Nos partenaires
 

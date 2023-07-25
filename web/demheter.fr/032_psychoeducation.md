@@ -1,6 +1,8 @@
-<!-- Title: Psycho-éducation de la dépression
-     Menu: Pour les psychologues / Psycho-éducation
-     Description: Fiche sur la psycho-éducation dans la dépression -->
+---
+title: Psycho-éducation de la dépression
+menu: Pour les psychologues / Psycho-éducation
+description: Fiche sur la psycho-éducation dans la dépression
+---
 
 # Psycho-éducation de la dépression
 

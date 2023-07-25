@@ -5,7 +5,9 @@
 #include "src/core/libcc/libcc.hh"
 #include "src/core/libnet/libnet.hh"
 extern "C" {
-    #include "vendor/libsoldout/soldout.h"
+    #include "vendor/cmark-gfm/src/cmark-gfm.h"
+    #include "vendor/cmark-gfm/extensions/cmark-gfm-core-extensions.h"
+    #include "vendor/cmark-gfm/extensions/table.h"
 }
 #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
@@ -215,24 +217,76 @@ static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8
 // XXX: Resolve page links in content
 static bool RenderPageContent(PageData *page, const HashTable<const char *, const FileHash *> &assets, Allocator *alloc)
 {
-    buf *ib = bufnew(1024);
-    RG_DEFER { bufrelease(ib); };
 
-    // Load the file, struct buf is used by libsoldout
+    HeapArray<char> content;
+    if (ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
+        return false;
+    Span<const char> remain = TrimStr(content.As());
+
+    // Parse pseudo-YAML intro
+    if (StartsWith(remain, "---\n") || StartsWith(remain, "---\r\n")) {
+        SplitStrLine(remain, &remain);
+
+        while (remain.len) {
+            Span<const char> line = SplitStrLine(remain, &remain);
+            if (line == "---")
+                break;
+            line = TrimStr(line);
+
+            Span<const char> value;
+            Span<const char> key = TrimStr(SplitStr(line, ':', &value));
+            value = TrimStr(value);
+
+            if (key == "title") {
+                page->title = DuplicateString(value, alloc).ptr;
+            } else if (key == "description") {
+                page->description = DuplicateString(value, alloc).ptr;
+            } else if (key == "menu") {
+                page->menu = DuplicateString(value, alloc).ptr;
+            } else {
+                LogError("%1: Unknown attribute '%2'", page->src_filename, key);
+            }
+        }
+    }
+
+    cmark_gfm_core_extensions_ensure_registered();
+
+    // Prepare markdown parser
+    cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
+    RG_DEFER { cmark_parser_free(parser); };
+
+    // Enable syntax extensions
+    {
+        static const char *const extensions[] = {
+            "table",
+            "strikethrough"
+        };
+
+        for (const char *name: extensions) {
+            cmark_syntax_extension *ext = cmark_find_syntax_extension(name);
+
+            if (!ext) {
+                LogError("Cannot find Markdown extension '%1'", name);
+                return false;
+            }
+            if (!cmark_parser_attach_syntax_extension(parser, ext)) {
+                LogError("Failed to enable Markdown extension '%1'", name);
+                return false;
+            }
+        }
+    }
+
+    // Parse markdown
     {
         const auto write = [&](Span<const uint8_t> buf) {
-            bufgrow(ib, ib->size + (size_t)buf.len);
-
-            memcpy_safe(ib->data + ib->size, buf.ptr, (size_t)buf.len);
-            ib->size += (size_t)buf.len;
-
+            cmark_parser_feed(parser, (const char *)buf.ptr, buf.len);
             return true;
         };
 
-        StreamReader reader(page->src_filename);
         StreamWriter writer(write, "<buffer>");
 
-        bool success = PatchFile(&reader, &writer, [&](Span<const char> expr, StreamWriter *writer) {
+        bool success = PatchFile(remain.As<const uint8_t>(), &writer,
+                                 [&](Span<const char> expr, StreamWriter *writer) {
             Span<const char> key = TrimStr(expr);
 
             if (key == "RANDOM") {
@@ -258,129 +312,88 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
             return false;
     }
 
-    struct RenderContext {
-        Allocator *alloc;
-        PageData *page;
-        bool has_main = false;
-    };
+    // Finalize parsing
+    cmark_node *root = cmark_parser_finish(parser);
+    RG_DEFER { cmark_node_free(root); };
 
-    mkd_renderer renderer = discount_html;
-    RenderContext ctx = {};
-    ctx.page = page;
-    ctx.alloc = alloc;
-    renderer.opaque = &ctx;
-
-    // Get page sections from the parser
-    renderer.header = [](buf *ob, buf *text, int level, void *udata) {
-        RenderContext *ctx = (RenderContext *)udata;
-
-        if (!ctx->has_main) {
-            BUFPUTSL(ob, "<main>");
-            ctx->has_main = true;
-        }
-
-        if (level < 3) {
-            PageSection sec = {};
-
-            sec.level = level;
-            sec.title = DuplicateString(MakeSpan(text->data, text->size), ctx->alloc).ptr;
-            sec.id = TextToID(sec.title, ctx->alloc);
-
-            if (sec.id) {
-                // XXX: Detect duplicate sections
-                ctx->page->sections.Append(sec);
-                bufprintf(ob, "<h%d id=\"%s\">%s</h%d>", level, sec.id, sec.title, level);
-            } else {
-                bufprintf(ob, "<h%d>%.*s</h%d>", level, (int)text->size, text->data, level);
-            }
-        } else {
-            bufprintf(ob, "<h%d>%.*s</h%d>", level, (int)text->size, text->data, level);
-        }
-    };
-
-    // We use HTML comments for metadata (creation date, etc.), such as '<!-- Title: foobar -->'
-    renderer.blockhtml = [](buf *ob, buf *text, void *udata) {
-        RenderContext *ctx = (RenderContext *)udata;
-
-        Size size = text->size;
-        while (size && text->data[size - 1] == '\n') {
-            size--;
-        }
-        if (size >= 7 && !memcmp(text->data, "<!--", 4) &&
-                         !memcmp(text->data + size - 3, "-->", 3)) {
-            Span<const char> comment = MakeSpan(text->data + 4, size - 7);
-
-            while (comment.len) {
-                Span<const char> line = SplitStr(comment, '\n', &comment);
-
-                Span<const char> value;
-                Span<const char> name = TrimStr(SplitStr(line, ':', &value));
-                value = TrimStr(value);
-
-                if (value.ptr == name.end())
-                    break;
-
-                const char **attr_ptr;
-                if (name == "Title") {
-                    attr_ptr = &ctx->page->title;
-                } else if (name == "Menu") {
-                    attr_ptr = &ctx->page->menu;
-                } else if (name == "Description") {
-                    attr_ptr = &ctx->page->description;
-                } else {
-                    LogError("%1: Unknown attribute '%2'", ctx->page->src_filename, name);
-                    continue;
-                }
-
-                if (*attr_ptr) {
-                    LogError("%1: Overwriting attribute '%2' (already set)",
-                            ctx->page->src_filename, name);
-                }
-                *attr_ptr = DuplicateString(value, ctx->alloc).ptr;
-            }
-        } else {
-            discount_html.blockhtml(ob, text, udata);
-        }
-    };
-
-    // We need <span> tags around code lines for CSS line numbering
-    renderer.blockcode = [](buf *ob, buf *text, void *) {
-        if (ob->size) {
-            bufputc(ob, '\n');
-        }
-
-        BUFPUTSL(ob, "<pre>");
-        if (text) {
-            size_t start, end = 0;
-            for (;;) {
-                start = end;
-                while (end < text->size && text->data[end] != '\n') {
-                    end++;
-                }
-                if (end == text->size)
-                    break;
-
-                BUFPUTSL(ob, "<span class=\"line\">");
-                lus_body_escape(ob, text->data + start, end - start);
-                BUFPUTSL(ob, "</span>\n");
-
-                end++;
-            }
-        }
-        BUFPUTSL(ob, "</pre>\n");
-    };
-
-    // Convert Markdown to HTML
+    // Customize rendered tree
     {
-        buf *ob = bufnew(64);
-        RG_DEFER { free(ob); };
+        cmark_iter *iter = cmark_iter_new(root);
+        RG_DEFER { cmark_iter_free(iter); };
 
-        markdown(ob, ib, &renderer);
-        bufprintf(ob, ctx.has_main ? "</main>" : "");
+        bool has_main = false;
 
-        page->html_buf.reset(ob->data, free);
-        page->html = MakeSpan(ob->data, ob->size);
+        cmark_event_type event;
+        while ((event = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+            cmark_node *node = cmark_iter_get_node(iter);
+            cmark_node_type type = cmark_node_get_type(node);
+
+            // We want everything before the first title to live outside main
+            if (!has_main && event == CMARK_EVENT_ENTER && cmark_node_get_type(node) == CMARK_NODE_HEADING) {
+                cmark_node *frag = cmark_node_new(CMARK_NODE_HTML_BLOCK);
+                cmark_node_set_literal(frag, "<main>");
+                cmark_node_insert_before(node, frag);
+
+                has_main = true;
+            }
+
+            // List sections and add anchors
+            if (event == CMARK_EVENT_EXIT && type == CMARK_NODE_HEADING) {
+                int level = cmark_node_get_heading_level(node);
+                cmark_node *child = cmark_node_first_child(node);
+
+                if (level < 3 && cmark_node_get_type(child) == CMARK_NODE_TEXT) {
+                    PageSection sec = {};
+
+                    sec.level = level;
+                    sec.title = DuplicateString(cmark_node_get_literal(child), alloc).ptr;
+                    sec.id = TextToID(sec.title, alloc);
+
+                    page->sections.Append(sec);
+
+                    cmark_node *frag = cmark_node_new(CMARK_NODE_HTML_INLINE);
+                    cmark_node_set_literal(frag, Fmt(alloc, "<a id=\"%1\"></a>", sec.id).ptr);
+                    cmark_node_prepend_child(node, frag);
+                }
+            }
+
+            // Format our own code blocks
+            if (event == CMARK_EVENT_ENTER && type == CMARK_NODE_CODE_BLOCK) {
+                Span<const char> remain = TrimStr(cmark_node_get_literal(node));
+
+                HeapArray<char> code;
+
+                Fmt(&code, "<pre>\n");
+                while (remain.len) {
+                    Span<const char> line = SplitStrLine(remain, &remain);
+                    Fmt(&code, "<span class=\"line\">%1</span>\n", line);
+                }
+                Fmt(&code, "</pre>\n");
+
+                cmark_node *block = cmark_node_new(CMARK_NODE_CUSTOM_BLOCK);
+                cmark_node_set_on_enter(block, code.ptr);
+
+                if (cmark_node_replace(node, block)) {
+                    cmark_node_free(node);
+                } else {
+                    cmark_node_free(block);
+
+                    LogError("Failed to replace code block");
+                    return false;
+                }
+            }
+        }
+
+        if (has_main) {
+            cmark_node *frag = cmark_node_new(CMARK_NODE_HTML_BLOCK);
+            cmark_node_set_literal(frag, "</main>");
+            cmark_node_append_child(root, frag);
+        }
     }
+
+    // Render to HTML
+    page->html = cmark_render_html(root, CMARK_OPT_UNSAFE, nullptr);
+    page->html_buf.reset((char *)page->html.ptr, free);
 
     return true;
 }

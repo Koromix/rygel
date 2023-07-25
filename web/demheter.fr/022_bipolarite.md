@@ -1,6 +1,8 @@
-<!-- Title: Trouble bipolaire
-     Menu: Pour les médecins / Trouble bipolaire
-     Description: Fiche d'information sur le trouble bipolaire -->
+---
+title: Trouble bipolaire
+menu: Pour les médecins / Trouble bipolaire
+description: Fiche d'information sur le trouble bipolaire
+---
 
 # Épidémiologie
 

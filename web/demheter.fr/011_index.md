@@ -1,6 +1,8 @@
-<!-- Title: DEMHETER
-     Menu: Qui sommes-nous ? / Missions et objectifs
-     Description: Présentation du projet DEMHETER -->
+---
+title: DEMHETER
+menu: Qui sommes-nous ? / Missions et objectifs
+description: Présentation du projet DEMHETER
+---
 
 <div id="news">
     <img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />

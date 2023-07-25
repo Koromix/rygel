@@ -1,6 +1,8 @@
-<!-- Title: Restructuration cognitive
-     Menu: Pour les psychologues / Restructuration cognitive
-     Description: Fiche sur la restructuration cognitive -->
+---
+title: Restructuration cognitive
+menu: Pour les psychologues / Restructuration cognitive
+description: Fiche sur la restructuration cognitive
+---
 
 # Restructuration cognitive
 
