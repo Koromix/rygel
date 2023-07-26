@@ -24,6 +24,7 @@ type parser struct {
 	stack              []css_lexer.T
 	importRecords      []ast.ImportRecord
 	symbols            []ast.Symbol
+	defineLocs         map[ast.Ref]logger.Loc
 	localSymbolMap     map[string]ast.Ref
 	globalSymbolMap    map[string]ast.Ref
 	nestingWarnings    map[logger.Loc]struct{}
@@ -125,6 +126,7 @@ func Parse(log logger.Log, source logger.Source, options Options) css_ast.AST {
 		allComments:      result.AllComments,
 		legalComments:    result.LegalComments,
 		prevError:        logger.Loc{Start: -1},
+		defineLocs:       make(map[ast.Ref]logger.Loc),
 		localSymbolMap:   make(map[string]ast.Ref),
 		globalSymbolMap:  make(map[string]ast.Ref),
 		makeLocalSymbols: options.symbolMode == symbolModeLocal,
@@ -142,6 +144,7 @@ func Parse(log logger.Log, source logger.Source, options Options) css_ast.AST {
 		ImportRecords:        p.importRecords,
 		ApproximateLineCount: result.ApproximateLineCount,
 		SourceMapComment:     result.SourceMapComment,
+		DefineLocs:           p.defineLocs,
 	}
 }
 
@@ -301,7 +304,7 @@ func (p *parser) unexpected() {
 	}
 }
 
-func (p *parser) symbolForName(name string) ast.Ref {
+func (p *parser) symbolForName(loc logger.Loc, name string) ast.Ref {
 	var kind ast.SymbolKind
 	var scope map[string]ast.Ref
 
@@ -325,6 +328,7 @@ func (p *parser) symbolForName(name string) ast.Ref {
 			Link:         ast.InvalidRef,
 		})
 		scope[name] = ref
+		p.defineLocs[ref] = loc
 	}
 
 	p.symbols[ref.InnerIndex].UseCountEstimate++
@@ -442,9 +446,9 @@ loop:
 
 		var rule css_ast.Rule
 		if context.parseSelectors {
-			rule = p.parseSelectorRuleFrom(p.index, context.isTopLevel, parseSelectorOpts{})
+			rule = p.parseSelectorRule(context.isTopLevel, parseSelectorOpts{})
 		} else {
-			rule = p.parseQualifiedRuleFrom(p.index, parseQualifiedRuleOpts{isTopLevel: context.isTopLevel})
+			rule = p.parseQualifiedRule(parseQualifiedRuleOpts{isTopLevel: context.isTopLevel})
 		}
 
 		// Lower CSS nesting if it's not supported (but only at the top level)
@@ -525,7 +529,7 @@ func (p *parser) parseListOfDeclarations(opts listOfDeclarationsOpts) (list []cs
 			css_lexer.TDelimGreaterThan,
 			css_lexer.TDelimTilde:
 			p.shouldLowerNesting = true
-			list = append(list, p.parseSelectorRuleFrom(p.index, false, parseSelectorOpts{isDeclarationContext: true}))
+			list = append(list, p.parseSelectorRule(false, parseSelectorOpts{isDeclarationContext: true}))
 			foundNesting = true
 
 		default:
@@ -1826,11 +1830,12 @@ func mangleNumber(t string) (string, bool) {
 	return t, t != original
 }
 
-func (p *parser) parseSelectorRuleFrom(preludeStart int, isTopLevel bool, opts parseSelectorOpts) css_ast.Rule {
+func (p *parser) parseSelectorRule(isTopLevel bool, opts parseSelectorOpts) css_ast.Rule {
 	// Save and restore the local symbol state in case there are any bare
 	// ":global" or ":local" annotations. The effect of these should be scoped
 	// to within the selector rule.
 	local := p.makeLocalSymbols
+	preludeStart := p.index
 
 	// Try parsing the prelude as a selector list
 	if list, ok := p.parseSelectorList(opts); ok {
@@ -1864,22 +1869,27 @@ func (p *parser) parseSelectorRuleFrom(preludeStart int, isTopLevel bool, opts p
 			return css_ast.Rule{Loc: p.tokens[preludeStart].Range.Loc, Data: &selector}
 		}
 	}
+
 	p.makeLocalSymbols = local
+	p.index = preludeStart
 
 	// Otherwise, parse a generic qualified rule
-	return p.parseQualifiedRuleFrom(preludeStart, parseQualifiedRuleOpts{
-		isAlreadyInvalid: true,
-		isTopLevel:       isTopLevel,
+	return p.parseQualifiedRule(parseQualifiedRuleOpts{
+		isAlreadyInvalid:     true,
+		isTopLevel:           isTopLevel,
+		isDeclarationContext: opts.isDeclarationContext,
 	})
 }
 
 type parseQualifiedRuleOpts struct {
-	isAlreadyInvalid bool
-	isTopLevel       bool
+	isAlreadyInvalid     bool
+	isTopLevel           bool
+	isDeclarationContext bool
 }
 
-func (p *parser) parseQualifiedRuleFrom(preludeStart int, opts parseQualifiedRuleOpts) css_ast.Rule {
-	preludeLoc := p.tokens[preludeStart].Range.Loc
+func (p *parser) parseQualifiedRule(opts parseQualifiedRuleOpts) css_ast.Rule {
+	preludeStart := p.index
+	preludeLoc := p.current().Range.Loc
 
 loop:
 	for {
@@ -1891,11 +1901,16 @@ loop:
 			if !opts.isTopLevel {
 				break loop
 			}
-			p.parseComponentValue()
 
-		default:
-			p.parseComponentValue()
+		case css_lexer.TSemicolon:
+			if opts.isDeclarationContext {
+				return css_ast.Rule{Loc: preludeLoc, Data: &css_ast.RBadDeclaration{
+					Tokens: p.convertTokens(p.tokens[preludeStart:p.index]),
+				}}
+			}
 		}
+
+		p.parseComponentValue()
 	}
 
 	qualified := css_ast.RQualified{

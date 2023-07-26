@@ -603,7 +603,7 @@ func TestDeclaration(t *testing.T) {
 	// See http://browserhacks.com/
 	expectPrinted(t, ".selector { (;property: value;); }", ".selector {\n  (;property: value;);\n}\n",
 		"<stdin>: WARNING: Expected identifier but found \"(\"\n")
-	expectPrinted(t, ".selector { [;property: value;]; }", ".selector {\n  [;property: value;]; {\n  }\n}\n",
+	expectPrinted(t, ".selector { [;property: value;]; }", ".selector {\n  [;property: value;];\n}\n",
 		"<stdin>: WARNING: Expected identifier but found \";\"\n") // Note: This now overlaps with CSS nesting syntax
 	expectPrinted(t, ".selector, {}", ".selector, {\n}\n", "<stdin>: WARNING: Unexpected \"{\"\n")
 	expectPrinted(t, ".selector\\ {}", ".selector\\  {\n}\n", "")
@@ -1032,6 +1032,7 @@ func TestNestedSelector(t *testing.T) {
 
 func TestBadQualifiedRules(t *testing.T) {
 	expectPrinted(t, "$bad: rule;", "$bad: rule; {\n}\n", "<stdin>: WARNING: Unexpected \"$\"\n")
+	expectPrinted(t, "$bad: rule; div { color: red }", "$bad: rule; div {\n  color: red;\n}\n", "<stdin>: WARNING: Unexpected \"$\"\n")
 	expectPrinted(t, "$bad { color: red }", "$bad {\n  color: red;\n}\n", "<stdin>: WARNING: Unexpected \"$\"\n")
 	expectPrinted(t, "a { div.major { color: blue } color: red }", "a {\n  div.major { color: blue } color: red;\n}\n",
 		"<stdin>: WARNING: A nested style rule cannot start with \"div\" because it looks like the start of a declaration\n"+
@@ -1040,6 +1041,9 @@ func TestBadQualifiedRules(t *testing.T) {
 	expectPrinted(t, "a { div:hover { color: blue }; color: red }", "a {\n  div: hover { color: blue };\n  color: red;\n}\n", "")
 	expectPrinted(t, "a { div:hover { color: blue } ; color: red }", "a {\n  div: hover { color: blue };\n  color: red;\n}\n", "")
 	expectPrinted(t, "! { x: {} }", "! {\n  x: {};\n}\n", "<stdin>: WARNING: Unexpected \"!\"\n")
+	expectPrinted(t, "a { *width: 100%; height: 1px }", "a {\n  *width: 100%;\n  height: 1px;\n}\n", "<stdin>: WARNING: Unexpected \"width\"\n")
+	expectPrinted(t, "a { garbage; height: 1px }", "a {\n  garbage;\n  height: 1px;\n}\n", "<stdin>: WARNING: Expected \":\"\n")
+	expectPrinted(t, "a { !; height: 1px }", "a {\n  !;\n  height: 1px;\n}\n", "<stdin>: WARNING: Expected identifier but found \"!\"\n")
 }
 
 func TestAtRule(t *testing.T) {
@@ -2290,4 +2294,103 @@ func TestPrefixInsertion(t *testing.T) {
 	expectPrintedWithAllPrefixes(t,
 		"a { before: value; -ms-text-size-adjust: 2; text-size-adjust: 3; after: value }",
 		"a {\n  before: value;\n  -ms-text-size-adjust: 2;\n  -webkit-text-size-adjust: 3;\n  text-size-adjust: 3;\n  after: value;\n}\n", "")
+}
+
+func TestNthChild(t *testing.T) {
+	for _, nth := range []string{"nth-child", "nth-last-child"} {
+		expectPrinted(t, ":"+nth+"(x) {}", ":"+nth+"(x) {\n}\n", "<stdin>: WARNING: Unexpected \"x\"\n")
+		expectPrinted(t, ":"+nth+"(1e2) {}", ":"+nth+"(1e2) {\n}\n", "<stdin>: WARNING: Unexpected \"1e2\"\n")
+		expectPrinted(t, ":"+nth+"(-n-) {}", ":"+nth+"(-n-) {\n}\n", "<stdin>: WARNING: Expected number but found \")\"\n")
+		expectPrinted(t, ":"+nth+"(-nn) {}", ":"+nth+"(-nn) {\n}\n", "<stdin>: WARNING: Unexpected \"-nn\"\n")
+		expectPrinted(t, ":"+nth+"(-n-n) {}", ":"+nth+"(-n-n) {\n}\n", "<stdin>: WARNING: Unexpected \"-n-n\"\n")
+		expectPrinted(t, ":"+nth+"(-2n-) {}", ":"+nth+"(-2n-) {\n}\n", "<stdin>: WARNING: Expected number but found \")\"\n")
+		expectPrinted(t, ":"+nth+"(-2n-2n) {}", ":"+nth+"(-2n-2n) {\n}\n", "<stdin>: WARNING: Unexpected \"-2n-2n\"\n")
+		expectPrinted(t, ":"+nth+"(+) {}", ":"+nth+"(+) {\n}\n", "<stdin>: WARNING: Unexpected \")\"\n")
+		expectPrinted(t, ":"+nth+"(-) {}", ":"+nth+"(-) {\n}\n", "<stdin>: WARNING: Unexpected \"-\"\n")
+		expectPrinted(t, ":"+nth+"(+ 2) {}", ":"+nth+"(+ 2) {\n}\n", "<stdin>: WARNING: Unexpected whitespace\n")
+		expectPrinted(t, ":"+nth+"(- 2) {}", ":"+nth+"(- 2) {\n}\n", "<stdin>: WARNING: Unexpected \"-\"\n")
+
+		expectPrinted(t, ":"+nth+"(0) {}", ":"+nth+"(0) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(0 ) {}", ":"+nth+"(0) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( 0) {}", ":"+nth+"(0) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(00) {}", ":"+nth+"(0) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(01) {}", ":"+nth+"(1) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(0n) {}", ":"+nth+"(0n) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(n) {}", ":"+nth+"(n) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(-n) {}", ":"+nth+"(-n) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(1n) {}", ":"+nth+"(n) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(-1n) {}", ":"+nth+"(-n) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n) {}", ":"+nth+"(2n) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(-2n) {}", ":"+nth+"(-2n) {\n}\n", "")
+
+		expectPrinted(t, ":"+nth+"(odd) {}", ":"+nth+"(odd) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(odd ) {}", ":"+nth+"(odd) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( odd) {}", ":"+nth+"(odd) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(even) {}", ":"+nth+"(even) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(even ) {}", ":"+nth+"(even) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( even) {}", ":"+nth+"(even) {\n}\n", "")
+
+		expectPrinted(t, ":"+nth+"(n+3) {}", ":"+nth+"(n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(n-3) {}", ":"+nth+"(n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(n +3) {}", ":"+nth+"(n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(n -3) {}", ":"+nth+"(n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(n+ 3) {}", ":"+nth+"(n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(n- 3) {}", ":"+nth+"(n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( n + 3 ) {}", ":"+nth+"(n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( n - 3 ) {}", ":"+nth+"(n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(+n+3) {}", ":"+nth+"(n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(+n-3) {}", ":"+nth+"(n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(-n+3) {}", ":"+nth+"(-n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(-n-3) {}", ":"+nth+"(-n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( +n + 3 ) {}", ":"+nth+"(n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( +n - 3 ) {}", ":"+nth+"(n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( -n + 3 ) {}", ":"+nth+"(-n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( -n - 3 ) {}", ":"+nth+"(-n-3) {\n}\n", "")
+
+		expectPrinted(t, ":"+nth+"(2n+3) {}", ":"+nth+"(2n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n-3) {}", ":"+nth+"(2n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n +3) {}", ":"+nth+"(2n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n -3) {}", ":"+nth+"(2n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n+ 3) {}", ":"+nth+"(2n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n- 3) {}", ":"+nth+"(2n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( 2n + 3 ) {}", ":"+nth+"(2n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( 2n - 3 ) {}", ":"+nth+"(2n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(+2n+3) {}", ":"+nth+"(2n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(+2n-3) {}", ":"+nth+"(2n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(-2n+3) {}", ":"+nth+"(-2n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(-2n-3) {}", ":"+nth+"(-2n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( +2n + 3 ) {}", ":"+nth+"(2n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( +2n - 3 ) {}", ":"+nth+"(2n-3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( -2n + 3 ) {}", ":"+nth+"(-2n+3) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"( -2n - 3 ) {}", ":"+nth+"(-2n-3) {\n}\n", "")
+
+		expectPrinted(t, ":"+nth+"(2n of + .foo) {}", ":"+nth+"(2n of + .foo) {\n}\n", "<stdin>: WARNING: Unexpected \"+\"\n")
+		expectPrinted(t, ":"+nth+"(2n of .foo, ~.bar) {}", ":"+nth+"(2n of .foo, ~.bar) {\n}\n", "<stdin>: WARNING: Unexpected \"~\"\n")
+		expectPrinted(t, ":"+nth+"(2n of .foo) {}", ":"+nth+"(2n of .foo) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n of.foo+.bar) {}", ":"+nth+"(2n of .foo + .bar) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n of[href]) {}", ":"+nth+"(2n of [href]) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n of.foo,.bar) {}", ":"+nth+"(2n of .foo, .bar) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n of .foo, .bar) {}", ":"+nth+"(2n of .foo, .bar) {\n}\n", "")
+		expectPrinted(t, ":"+nth+"(2n of .foo , .bar ) {}", ":"+nth+"(2n of .foo, .bar) {\n}\n", "")
+
+		expectPrintedMinify(t, ":"+nth+"(2n of [foo] , [bar] ) {}", ":"+nth+"(2n of[foo],[bar]){}", "")
+		expectPrintedMinify(t, ":"+nth+"(2n of .foo , .bar ) {}", ":"+nth+"(2n of.foo,.bar){}", "")
+		expectPrintedMinify(t, ":"+nth+"(2n of #foo , #bar ) {}", ":"+nth+"(2n of#foo,#bar){}", "")
+		expectPrintedMinify(t, ":"+nth+"(2n of :foo , :bar ) {}", ":"+nth+"(2n of:foo,:bar){}", "")
+		expectPrintedMinify(t, ":"+nth+"(2n of div , span ) {}", ":"+nth+"(2n of div,span){}", "")
+
+		expectPrintedMangle(t, ":"+nth+"(even) { color: red }", ":"+nth+"(2n) {\n  color: red;\n}\n", "")
+		expectPrintedMangle(t, ":"+nth+"(2n+1) { color: red }", ":"+nth+"(odd) {\n  color: red;\n}\n", "")
+		expectPrintedMangle(t, ":"+nth+"(0n) { color: red }", ":"+nth+"(0) {\n  color: red;\n}\n", "")
+		expectPrintedMangle(t, ":"+nth+"(0n+0) { color: red }", ":"+nth+"(0) {\n  color: red;\n}\n", "")
+		expectPrintedMangle(t, ":"+nth+"(1n+0) { color: red }", ":"+nth+"(n) {\n  color: red;\n}\n", "")
+		expectPrintedMangle(t, ":"+nth+"(0n-2) { color: red }", ":"+nth+"(-2) {\n  color: red;\n}\n", "")
+		expectPrintedMangle(t, ":"+nth+"(0n+2) { color: red }", ":"+nth+"(2) {\n  color: red;\n}\n", "")
+	}
+
+	for _, nth := range []string{"nth-of-type", "nth-last-of-type"} {
+		expectPrinted(t, ":"+nth+"(2n of .foo) {}", ":"+nth+"(2n of .foo) {\n}\n",
+			"<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
+		expectPrinted(t, ":"+nth+"(+2n + 1) {}", ":"+nth+"(2n+1) {\n}\n", "")
+	}
 }

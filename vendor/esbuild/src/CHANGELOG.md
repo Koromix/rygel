@@ -1,5 +1,104 @@
 # Changelog
 
+## 0.18.17
+
+* Support `An+B` syntax and `:nth-*()` pseudo-classes in CSS
+
+    This adds support for the `:nth-child()`, `:nth-last-child()`, `:nth-of-type()`, and `:nth-last-of-type()` pseudo-classes to esbuild, which has the following consequences:
+
+    * The [`An+B` syntax](https://drafts.csswg.org/css-syntax-3/#anb-microsyntax) is now parsed, so parse errors are now reported
+    * `An+B` values inside these pseudo-classes are now pretty-printed (e.g. a leading `+` will be stripped because it's not in the AST)
+    * When minification is enabled, `An+B` values are reduced to equivalent but shorter forms (e.g. `2n+0` => `2n`, `2n+1` => `odd`)
+    * Local CSS names in an `of` clause are now detected (e.g. in `:nth-child(2n of :local(.foo))` the name `foo` is now renamed)
+
+    ```css
+    /* Original code */
+    .foo:nth-child(+2n+1 of :local(.bar)) {
+      color: red;
+    }
+
+    /* Old output (with --loader=local-css) */
+    .stdin_foo:nth-child(+2n + 1 of :local(.bar)) {
+      color: red;
+    }
+
+    /* New output (with --loader=local-css) */
+    .stdin_foo:nth-child(2n+1 of .stdin_bar) {
+      color: red;
+    }
+    ```
+
+* Adjust CSS nesting parser for IE7 hacks ([#3272](https://github.com/evanw/esbuild/issues/3272))
+
+    This fixes a regression with esbuild's treatment of IE7 hacks in CSS. CSS nesting allows selectors to be used where declarations are expected. There's an IE7 hack where prefixing a declaration with a `*` causes that declaration to only be applied in IE7 due to a bug in IE7's CSS parser. However, it's valid for nested CSS selectors to start with `*`. So esbuild was incorrectly parsing these declarations and anything following it up until the next `{` as a selector for a nested CSS rule. This release changes esbuild's parser to terminate the parsing of selectors for nested CSS rules when a `;` is encountered to fix this edge case:
+
+    ```css
+    /* Original code */
+    .item {
+      *width: 100%;
+      height: 1px;
+    }
+
+    /* Old output */
+    .item {
+      *width: 100%; height: 1px; {
+      }
+    }
+
+    /* New output */
+    .item {
+      *width: 100%;
+      height: 1px;
+    }
+    ```
+
+    Note that the syntax for CSS nesting is [about to change again](https://github.com/w3c/csswg-drafts/issues/7961), so esbuild's CSS parser may still not be completely accurate with how browsers do and/or will interpret CSS nesting syntax. Expect additional updates to esbuild's CSS parser in the future to deal with upcoming CSS specification changes.
+
+* Adjust esbuild's warning about undefined imports for TypeScript `import` equals declarations ([#3271](https://github.com/evanw/esbuild/issues/3271))
+
+    In JavaScript, accessing a missing property on an import namespace object is supposed to result in a value of `undefined` at run-time instead of an error at compile-time. This is something that esbuild warns you about by default because doing this can indicate a bug with your code. For example:
+
+    ```js
+    // app.js
+    import * as styles from './styles'
+    console.log(styles.buton)
+    ```
+
+    ```js
+    // styles.js
+    export let button = {}
+    ```
+
+    If you bundle `app.js` with esbuild you will get this:
+
+    ```
+    ▲ [WARNING] Import "buton" will always be undefined because there is no matching export in "styles.js" [import-is-undefined]
+
+        app.js:2:19:
+          2 │ console.log(styles.buton)
+            │                    ~~~~~
+            ╵                    button
+
+      Did you mean to import "button" instead?
+
+        styles.js:1:11:
+          1 │ export let button = {}
+            ╵            ~~~~~~
+    ```
+
+    However, there is TypeScript-only syntax for `import` equals declarations that can represent either a type import (which esbuild should ignore) or a value import (which esbuild should respect). Since esbuild doesn't have a type system, it tries to only respect `import` equals declarations that are actually used as values. Previously esbuild always generated this warning for unused imports referenced within `import` equals declarations even when the reference could be a type instead of a value. Starting with this release, esbuild will now only warn in this case if the import is actually used. Here is an example of some code that no longer causes an incorrect warning:
+
+    ```ts
+    // app.ts
+    import * as styles from './styles'
+    import ButtonType = styles.Button
+    ```
+
+    ```ts
+    // styles.ts
+    export interface Button {}
+    ```
+
 ## 0.18.16
 
 * Fix a regression with whitespace inside `:is()` ([#3265](https://github.com/evanw/esbuild/issues/3265))
