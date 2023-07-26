@@ -4,6 +4,13 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.8
+
+**Main changes:**
+
+- Add more search paths for native Koffi modules
+- Add section [about bundling](start.md#bundling-koffi) to documentation
+
 #### Koffi 2.5.7
 
 **Main changes:**
