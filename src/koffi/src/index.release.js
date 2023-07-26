@@ -38,12 +38,24 @@ if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
 }
 
 let arch = cnoke.determine_arch();
-let filenames = [__dirname + `/../build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`];
+
+let filenames = [
+    __dirname + `/../build/${pkg.version}/${process.platform}_${arch}/koffi.node`,
+    __dirname + `/build/koffi/${pkg.version}/${process.platform}_${arch}/koffi.node`,
+    __dirname + `/koffi/${pkg.version}/${process.platform}_${arch}/koffi.node`,
+    __dirname + `/../build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
+    __dirname + `/build/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
+    __dirname + `/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`
+];
 
 if (process.resourcesPath != null) {
     filenames.push(
-        process.resourcesPath + `/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
-        process.resourcesPath + `/build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`
+        process.resourcesPath + `/build/${pkg.version}/${process.platform}_${arch}/koffi.node`,
+        process.resourcesPath + `/build/koffi/${pkg.version}/${process.platform}_${arch}/koffi.node`,
+        process.resourcesPath + `/koffi/${pkg.version}/${process.platform}_${arch}/koffi.node`,
+        process.resourcesPath + `/build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
+        process.resourcesPath + `/build/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
+        process.resourcesPath + `/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`
     );
 }
 

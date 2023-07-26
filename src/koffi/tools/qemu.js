@@ -352,7 +352,7 @@ async function prepare() {
         for (let suite in machine.builds) {
             let build = machine.builds[suite];
 
-            let binary_filename = root_dir + `/src/koffi/build/qemu/${version}/koffi_${machine.platform}_${build.arch}/koffi.node`;
+            let binary_filename = root_dir + `/src/koffi/build/qemu/${version}/${machine.platform}_${build.arch}/koffi.node`;
 
             if (fs.existsSync(binary_filename)) {
                 log(machine, `${suite} > Status`, chalk.bold.green(`[ok]`));
@@ -433,7 +433,7 @@ async function prepare() {
                     let build = machine.builds[suite];
 
                     let src_dir = build.directory + '/src/koffi/build';
-                    let dest_dir = build_dir + `/${version}/koffi_${machine.platform}_${build.arch}`;
+                    let dest_dir = build_dir + `/${version}/${machine.platform}_${build.arch}`;
 
                     artifacts.push(dest_dir);
 
@@ -513,7 +513,7 @@ async function prepare() {
             install: 'node src/cnoke/cnoke.js --prebuild -d src/koffi'
         };
         delete pkg.devDependencies;
-        pkg.cnoke.output = 'build/{{version}}/koffi_{{platform}}_{{arch}}';
+        pkg.cnoke.output = 'build/{{version}}/{{platform}}_{{arch}}';
         pkg.cnoke.require = pkg.cnoke.require.replace('.dev.js', '.js');
 
         fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
