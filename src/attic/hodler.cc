@@ -6,8 +6,8 @@
 #include "src/core/libnet/libnet.hh"
 extern "C" {
     #include "vendor/cmark-gfm/src/cmark-gfm.h"
+    #include "vendor/cmark-gfm/src/node.h"
     #include "vendor/cmark-gfm/extensions/cmark-gfm-core-extensions.h"
-    #include "vendor/cmark-gfm/extensions/table.h"
 }
 #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
@@ -358,17 +358,19 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
             }
 
             // Format our own code blocks
-            if (event == CMARK_EVENT_ENTER && type == CMARK_NODE_CODE_BLOCK) {
+            /*if (event == CMARK_EVENT_ENTER && type == CMARK_NODE_CODE_BLOCK) {
                 Span<const char> remain = TrimStr(cmark_node_get_literal(node));
 
                 HeapArray<char> code;
 
-                Fmt(&code, "<pre>\n");
+                Fmt(&code, "<pre><code class=\"language-%1\">\n", MakeSpan((const char *)node->as.code.info.data, node->as.code.info.len));
                 while (remain.len) {
                     Span<const char> line = SplitStrLine(remain, &remain);
-                    Fmt(&code, "<span class=\"line\">%1</span>\n", line);
+
+                    // Fmt(&code, "<span class=\"line\">%1</span>\n", line);
+                    Fmt(&code, "%1\n", line);
                 }
-                Fmt(&code, "</pre>\n");
+                Fmt(&code, "</code></pre>\n");
 
                 cmark_node *block = cmark_node_new(CMARK_NODE_CUSTOM_BLOCK);
                 cmark_node_set_on_enter(block, code.ptr);
@@ -381,7 +383,7 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
                     LogError("Failed to replace code block");
                     return false;
                 }
-            }
+            }*/
         }
 
         if (has_main) {

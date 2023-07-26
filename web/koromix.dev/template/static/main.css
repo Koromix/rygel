@@ -155,29 +155,10 @@ pre {
     border: 1px solid #ebebeb;
     background: #ffffff;
     overflow: auto;
-    counter-reset: line;
     font-size: 12px;
     z-index: 0;
 }
-pre .line:before {
-    display: inline-block;
-    position: sticky;
-    left: 0;
-    width: 2em;
-    padding-left: 0.6em;
-    margin-right: 0.6em;
-    background: #f8f8f8;
-    border-right: 1px solid #ebebeb;
-    color: #333;
-    counter-increment: line;
-    content: counter(line);
-    user-select: none;
-}
-code {
-    padding: 0.1em 0.5em;
-    background: #ebebeb;
-    color: #383838;
-}
+.nojs pre { padding: 6px; }
 
 @media screen and (max-width: 1300px) {
     #side menu {

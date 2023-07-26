@@ -135,7 +135,7 @@ are two options to enable Qt in TyTools:
 To build TyTools with MSVC 2015 32-bit, launch _VS2015 x86 Native Tools Command Prompt_,
 navigate to the project directory and execute CMake:
 
-```batch
+```bat
 REM You can of course use another build directory if you prefer.
 mkdir build
 mkdir build/win32

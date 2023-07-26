@@ -8,6 +8,10 @@
 
         <link rel="stylesheet" href="{{ ASSET main.css }}">
         <link rel="stylesheet" href="{{ ASSET opensans/OpenSans.css }}">
+        <link rel="stylesheet" href="{{ ASSET highlight.min.css }}" async>
+
+        <script type="text/javascript" src="{{ ASSET main.js }}" async></script>
+        <script type="text/javascript" src="{{ ASSET highlight.min.js }}" async></script>
     </head>
 
     <body class="nojs">
@@ -28,9 +32,11 @@
 
         {{ CONTENT }}
 
-        <script type="text/javascript" src="{{ ASSET main.js }}"></script>
         <script>
-            init();
+            window.addEventListener('load', () => {
+                init();
+                hljs.highlightAll();
+            });
         </script>
     </body>
 </html>
