@@ -5,17 +5,9 @@ description: Présentation du projet DEMHETER
 ---
 
 <div id="news">
-    <img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />
-    <img style="right: 16px;" src="/static/img/right.png" alt="" onclick="toggleNews(1, true)" />
+    <!--<img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />
+    <img style="right: 16px;" src="/static/img/right.png" alt="" onclick="toggleNews(1, true)" />-->
     <div class="active">
-        <img src="{{ ASSET misc/leaves.webp }}" alt="" />
-        <div>
-            <p class="title">Nous recrutons !</p>
-            <p>L'équipe DEMHETER recherche un.e psychologue prêt.e à s'investir dans des projets de recherche clinique portant sur les troubles de l'humeur. Temps plein, CDD d'1 an (renouvellement possible). Lisez la <a href="/static/misc/poste_psychologue_2023.pdf" target="_blank">fiche de poste</a> pour plus d'informations.
-            <p>Adressez votre candidature, CV et lettre de motivation, au Pr Ali AMAD : <a href="mailto:ali.amad@chu-lille.fr">ali.amad@chu-lille.fr</a>
-        </div>
-    </div>
-    <div>
         <img src="https://www.f2rsmpsy.fr/cache/fichs_declinaison/30999_2.png" alt="" />
         <div>
             <p class="title">Journée scientifique de la F2RSM Psy</p>
