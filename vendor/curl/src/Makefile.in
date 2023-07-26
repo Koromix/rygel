@@ -574,7 +574,7 @@ NM = @NM@
 NMEDIT = @NMEDIT@
 # Use the C locale to ensure that only ASCII characters appear in the
 # embedded text.
-NROFF = env LC_ALL=C @NROFF@ @MANOPT@ # figured out by the configure script
+NROFF = env LC_ALL=C @NROFF@ @MANOPT@ 2>/dev/null # figured out by the configure script
 NSS_LIBS = @NSS_LIBS@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@

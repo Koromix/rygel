@@ -26262,7 +26262,7 @@ if test "$HAVE_PROTO_BSDSOCKET_H" = "1"; then
 int main (void)
 {
 
-        #if defined(AMISSL_CURRENT_VERSION) && (AMISSL_CURRENT_VERSION >= AMISSL_V303) && \
+        #if defined(AMISSL_CURRENT_VERSION) && defined(AMISSL_V3xx) && \
             defined(OPENSSL_VERSION_MAJOR) && (OPENSSL_VERSION_MAJOR >= 3) && \
             defined(PROTO_AMISSL_H)
         return 0;
@@ -31179,11 +31179,11 @@ printf "%s\n" "$as_me: -L is $LD_H2" >&6;}
   CPPFLAGS="$CPPFLAGS $CPP_H2"
   LIBS="$LIB_H2 $LIBS"
 
-  # use nghttp2_session_set_local_window_size to require nghttp2
-  # >= 1.12.0
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for nghttp2_session_set_local_window_size in -lnghttp2" >&5
-printf %s "checking for nghttp2_session_set_local_window_size in -lnghttp2... " >&6; }
-if test ${ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size+y}
+  # use nghttp2_session_get_stream_local_window_size to require nghttp2
+  # >= 1.15.0
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for nghttp2_session_get_stream_local_window_size in -lnghttp2" >&5
+printf %s "checking for nghttp2_session_get_stream_local_window_size in -lnghttp2... " >&6; }
+if test ${ac_cv_lib_nghttp2_nghttp2_session_get_stream_local_window_size+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
@@ -31196,27 +31196,27 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char nghttp2_session_set_local_window_size ();
+char nghttp2_session_get_stream_local_window_size ();
 int main (void)
 {
-return nghttp2_session_set_local_window_size ();
+return nghttp2_session_get_stream_local_window_size ();
  ;
  return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size=yes
+  ac_cv_lib_nghttp2_nghttp2_session_get_stream_local_window_size=yes
 else $as_nop
-  ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size=no
+  ac_cv_lib_nghttp2_nghttp2_session_get_stream_local_window_size=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size" >&5
-printf "%s\n" "$ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size" >&6; }
-if test "x$ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nghttp2_nghttp2_session_get_stream_local_window_size" >&5
+printf "%s\n" "$ac_cv_lib_nghttp2_nghttp2_session_get_stream_local_window_size" >&6; }
+if test "x$ac_cv_lib_nghttp2_nghttp2_session_get_stream_local_window_size" = xyes
 then :
 
             for ac_header in nghttp2/nghttp2.h
