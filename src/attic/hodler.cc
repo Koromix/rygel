@@ -6,7 +6,6 @@
 #include "src/core/libnet/libnet.hh"
 extern "C" {
     #include "vendor/cmark-gfm/src/cmark-gfm.h"
-    #include "vendor/cmark-gfm/src/node.h"
     #include "vendor/cmark-gfm/extensions/cmark-gfm-core-extensions.h"
 }
 #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
