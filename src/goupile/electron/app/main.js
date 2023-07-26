@@ -51,7 +51,6 @@ function customizeMenu(win) {
     win.setMenu(menu);
 
     win.webContents.on('did-create-window', (win, details) => {
-        console.log('z');
         customizeMenu(win);
     });
 }
