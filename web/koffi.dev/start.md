@@ -1,4 +1,4 @@
-# Quick start
+# Get started
 
 ## Install Koffi
 
@@ -18,12 +18,14 @@ const koffi = require('koffi');
 import koffi from 'koffi';
 ```
 
+## Simple examples
+
 Below you can find three examples:
 
 * The first one runs on Linux. The functions are declared with the C-like prototype language.
 * The second one runs on Windows, and uses the node-ffi like syntax to declare functions.
 
-## Small Linux example
+### For Linux
 
 This is a small example for Linux systems, which uses `gettimeofday()`, `localtime_r()` and `printf()` to print the current time.
 
@@ -74,7 +76,7 @@ printf('Hello World!\n');
 printf('Local time: %02d:%02d:%02d\n', 'int', now.tm_hour, 'int', now.tm_min, 'int', now.tm_sec);
 ```
 
-## Small Windows example
+### For Windows
 
 This is a small example targeting the Win32 API, using `MessageBox()` to show a *Hello World!* message to the user.
 
@@ -104,3 +106,42 @@ let ret = MessageBoxA(null, 'Do you want another message box?', 'Koffi', MB_YESN
 if (ret == IDYES)
     MessageBoxW(null, 'Hello World!', 'Koffi', MB_ICONINFORMATION);
 ```
+
+## Bundling Koffi
+
+*Improved in Koffi 2.5.8*
+
+Koffi uses native modules to work. The NPM package contains binaries for various platforms and architectures, and the appropriate module is selected at runtime.
+
+If you use a bundler, you must make sure that the {{ "`node_modules/koffi/build/" ~ stable ~ "`" }} directory is available in your bundled script.
+
+Here is an example that would work:
+
+```{eval-rst}
+.. parsed-literal::
+    koffi/
+        |version|/
+            win32_x64/
+                koffi.node
+            linux_x64/
+                koffi.node
+            ...
+    MyBundle.js
+```
+
+When running in Electron, Koffi will also try to find the native module in `process.resourcesPath`. For an Electron app you could do something like this
+
+```{eval-rst}
+.. parsed-literal::
+    locales/
+    resources/
+        koffi/
+            |version|/
+                darwin_arm64/
+                    koffi.node
+                darwin_x64/
+                    koffi.node
+    MyApp.exe
+```
+
+You must configure your bundler and/or your packager to make this work.
