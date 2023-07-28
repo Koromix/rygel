@@ -39,15 +39,7 @@ When running in Electron, Koffi will also try to find the native module in `proc
 
 ### Electron with electron-builder
 
-Make sure electron-builder packages the native Koffi modules correctly with the following piece of configuration in `package.json`:
-
-```json
-  "build": {
-    "extraResources": [
-      { "from": "node_modules/koffi/build", "to": "koffi" }
-    ]
-  }
-```
+Packaging with electron-builder should work as-is:
 
 You can also go take a look at the full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron-builder).
 

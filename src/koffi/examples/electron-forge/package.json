@@ -1,8 +1,7 @@
 {
-  "name": "my-new-app",
-  "productName": "my-new-app",
+  "name": "KoffiConfig",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Koffi Electron Example",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
@@ -33,6 +32,6 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
-    "koffi": "^2.5.8"
+    "koffi": "^2.5.9"
   }
 }

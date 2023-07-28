@@ -16,5 +16,5 @@ You can also use nw-builder to package the app directly:
 ```sh
 cd examples/nwjs
 npm install
-npm run dist
+npm run pack
 ```

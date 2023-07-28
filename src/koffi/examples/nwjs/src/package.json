@@ -1,9 +1,10 @@
 {
-  "name": "Hello World",
+  "name": "KoffiConfig",
+  "version": "1.0.0",
   "main": "index.html",
   "author": "Niels Martignène <niels.martignene@protonmail.com>",
   "license": "MIT",
   "dependencies": {
-    "koffi": "^2.5.8"
+    "koffi": "^2.5.9"
   }
 }
