@@ -4,6 +4,18 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.9
+
+**Main changes:**
+
+- Use bundler-friendly static require calls in Koffi
+- Add packaging examples to documentation
+
+**Other changes:**
+
+- Add missing unload() export to TS file
+- Add export for koffi.types in TS file
+
 #### Koffi 2.5.8
 
 - Add more search paths for native Koffi modules
