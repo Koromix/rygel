@@ -6,58 +6,36 @@
 
 #### Koffi 2.5.8
 
-**Main changes:**
-
 - Add more search paths for native Koffi modules
 - Add section [about bundling](start.md#bundling-koffi) to documentation
 
 #### Koffi 2.5.7
 
-**Main changes:**
-
 - Point package to new repository
 
 #### Koffi 2.5.6
-
-**Main changes:**
 
 - Increase limit of output parameters from 16 to 32
 
 #### Koffi 2.5.5
 
-**Main changes:**
-
 - Support decoding non-char null-terminated arrays
 
 #### Koffi 2.5.4
 
-**Main changes:**
-
 - Fix `koffi.pointer()` not accepting disposable types
-
-**Other changes:**
-
 - Fix potential issues when making pointers to anonymous types
 
 #### Koffi 2.5.3
 
-**Main changes:**
-
 - Add missing union exports in TS definition file
-
-**Other changes:**
-
 - Fix some parameter names in TS definition file
 
 #### Koffi 2.5.2
 
-**Main changes:**
-
 - Default initialize unset object/struct members
 
 #### Koffi 2.5.1
-
-**Main changes:**
 
 - Fix crash with some struct types in System V 64 ABI
 - Always use direct passthrough for buffer arguments
@@ -77,12 +55,7 @@
 
 #### Koffi 2.4.2
 
-**Main changes:**
-
 - Support calling variadic function pointers
-
-**Other changes:**
-
 - Add documentation for function pointers
 
 #### Koffi 2.4.1
@@ -104,63 +77,42 @@
 
 #### Koffi 2.3.20
 
-**Main fixes:**
-
 - Support explicit library unloading with `lib.unload()`
 
 #### Koffi 2.3.19
-
-**Main fixes:**
 
 - Actually allow non-ambiguous [string] values for `void *` arguments
 
 #### Koffi 2.3.18
 
-**Main fixes:**
-
 - Fix possible crash on exit caused by unregistered callbacks
 
 #### Koffi 2.3.17
-
-**Main changes:**
 
 - Allow strings for input `void *`, `int8_t *` and `int16_t *` pointer arguments
 - Support using `[string]` (single-element string arrays) for polymorphic input/output arguments
 
 #### Koffi 2.3.16
 
-**Main changes:**
-
 - Fix Windows ARM64 build to work with official Node.js version
 - Compile Windows builds with Visual Studio 2022 17.5.3
-
-**Other changes:**
-
 - Support null in `koffi.free()` and `koffi.address()`
 
 #### Koffi 2.3.15
-
-**Main changes:**
 
 - Improve manual decoding of 0-terminated strings
 - Add checks around array conversion hints
 
 #### Koffi 2.3.14
 
-**Main changes:**
-
 - Add `koffi.errno()` function to get and set current errno value
 - Add `koffi.os.errno` object with valid errno codes
 
 #### Koffi 2.3.13
 
-**Main changes:**
-
 - Add `koffi.address()` to get the raw value of a wrapper pointer
 
 #### Koffi 2.3.12
-
-**Main fixes:**
 
 - Fix broken syntax in TS definition file
 - Add missing exported properties in TS file
@@ -179,13 +131,9 @@
 
 #### Koffi 2.3.9
 
-**Main changes:**
-
 - Relicense under MIT license
 
 #### Koffi 2.3.8
-
-**Main fixes:**
 
 - Disable non-ready union support
 - Simplify Windows stack allocation and drop NOACCESS and GUARD pages
@@ -193,14 +141,10 @@
 
 #### Koffi 2.3.7
 
-**Main fixes:**
-
 - Fix missing require in index.js ([@gastonFrecceroNapse](https://github.com/gastonFrecceroNapse))
 - Reduce NPM package bloat (from 65 MB to 20 MB) caused by changes in 2.3.6
 
 #### Koffi 2.3.6
-
-**Main changes:**
 
 - Fix broken TS definition file
 - Keep all prebuilt binaries and load correct one at runtime
@@ -223,8 +167,6 @@
 
 #### Koffi 2.3.4
 
-**Main fixes:**
-
 - Fix error when installing Koffi on Windows (2.3.2)
 
 #### Koffi 2.3.2
@@ -241,8 +183,6 @@
 - Clear out development dependencies from package.json
 
 #### Koffi 2.3.1
-
-**Main changes:**
 
 - Error out when trying to use ambiguous `void *` arguments (input and/or output)
 - Adjust TypeScript definitions ([@insraq](https://github.com/insraq))
@@ -269,28 +209,16 @@
 
 #### Koffi 2.2.5
 
-**Main changes:**
-
 - Relicense Koffi under LGPL 3.0
 
 #### Koffi 2.2.4
 
-**Main fixes:**
-
 - Fix memory leak on Windows (in Koffi 2.2.3) when running many async calls
-
-**Other changes:**
-
 - Reorganize documentation pages
 
 #### Koffi 2.2.3
 
-**Main fixes:**
-
 - Support native code that uses [Structured Exception Handling (SEH)](https://learn.microsoft.com/en-us/cpp/cpp/structured-exception-handling-c-cpp) on Windows (x86, x64 and ARM64)
-
-**Other changes:**
-
 - Try to use ebp/rbp as frame pointer in x86/x64 ASM code
 
 #### Koffi 2.2.2
@@ -308,8 +236,6 @@
 - Optimize callback unregistration
 
 #### Koffi 2.2.1
-
-**Main fixes:**
 
 - Fix crash when [calling callback again after FFI call inside previous callback](https://github.com/Koromix/rygel/issues/15)
 
@@ -331,8 +257,6 @@
 
 #### Koffi 2.1.5
 
-**Main fixes:**
-
 - Add missing README.md file to NPM package
 
 #### Koffi 2.1.4
@@ -348,19 +272,13 @@
 
 #### Koffi 2.1.3
 
-**Main changes:**
-
 - Support up to 16 output parameters (instead of 8)
 
 #### Koffi 2.1.2
 
-**Main changes:**
-
 - Support up to 8 output parameters (instead of 4)
 
 #### Koffi 2.1.1
-
-**Main fixes:**
 
 - Fix potential memory allocation bugs
 
@@ -385,8 +303,6 @@
 ### Koffi 2.0
 
 #### Koffi 2.0.1
-
-**Main changes:**
 
 - Return `undefined` (instead of null) for `void` functions
 
@@ -418,13 +334,9 @@ Consult the [migration guide](migration.md) for more information.
 
 #### Koffi 1.3.12
 
-**Main fixes:**
-
 - Fix support for Yarn package manager
 
 #### Koffi 1.3.11
-
-**Main fixes:**
 
 - Fix broken parsing of `void *` when used for first parameter
 
@@ -441,8 +353,6 @@ Consult the [migration guide](migration.md) for more information.
 - Various documentation fixes and improvements
 
 #### Koffi 1.3.9
-
-**Main fixes:**
 
 - Fix prebuild compatibility with Electron on Windows x64
 
@@ -496,8 +406,6 @@ Consult the [migration guide](migration.md) for more information.
 
 #### Koffi 1.3.4
 
-**Main fixes:**
-
 - Fix possible OpenBSD i386 crash with `(void)` functions
 
 #### Koffi 1.3.3
@@ -514,14 +422,10 @@ Consult the [migration guide](migration.md) for more information.
 
 #### Koffi 1.3.2
 
-**Main fixes:**
-
 - Support compilation in C++14 mode (graceful degradation)
 - Support older toolchains on Linux (tested on Debian 9)
 
 #### Koffi 1.3.1
-
-**Main fixes:**
 
 - The prebuilt binary is tested when Koffi is installed, and a rebuild happens if it fails to load
 
@@ -545,13 +449,9 @@ Consult the [migration guide](migration.md) for more information.
 
 #### Koffi 1.2.4
 
-**New features:**
-
 - Windows ARM64 is now supported
 
 #### Koffi 1.2.3
-
-**New features:**
 
 - A prebuilt binary for macOS ARM64 (M1) is now included
 
