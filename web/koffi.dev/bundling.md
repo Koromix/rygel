@@ -54,3 +54,7 @@ Make sure electron-builder packages the native Koffi modules correctly with the 
 ```
 
 You can also go take a look at the [fully-working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron).
+
+### NW.js
+
+Packagers such as nw-builder should work as-is. You can find a [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/nwjs).

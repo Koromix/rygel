@@ -1,0 +1,9 @@
+{
+  "name": "Hello World",
+  "main": "index.html",
+  "author": "Niels Martignène <niels.martignene@protonmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "koffi": "^2.5.8"
+  }
+}
