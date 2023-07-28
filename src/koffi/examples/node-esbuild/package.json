@@ -1,0 +1,15 @@
+{
+  "name": "KoffiConfig",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "bundle": "esbuild index.js --platform=node --bundle --loader:.node=copy --outdir=dist/"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "esbuild": "^0.18.17",
+    "koffi": "^2.5.9"
+  }
+}

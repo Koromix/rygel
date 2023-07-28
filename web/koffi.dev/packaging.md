@@ -58,3 +58,13 @@ Take a look at the full [working example in the repository](https://github.com/K
 Packagers such as nw-builder should work as-is.
 
 You can find a full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/nwjs).
+
+### Node.js and esbuild
+
+You can easily tell esbuild to copy the native files with the copy loader and things should just work. Use something like:
+
+```sh
+esbuild index.js --platform=node --bundle --loader:.node=copy --outdir=dist/
+```
+
+You can find a full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/node-esbuild).
