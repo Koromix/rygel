@@ -79,6 +79,8 @@ declare module 'koffi' {
 
         thiscall(definition: string): KoffiFunction;
         thiscall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+
+        unload(): void;
     }
 
     export function struct(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
