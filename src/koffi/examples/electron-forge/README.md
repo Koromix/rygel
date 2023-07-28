@@ -1,4 +1,10 @@
-This is a simple example based on electron-forge that uses Koffi.
+This is a simple example based on electron-forge coupled with webpack, and using Koffi.
+
+The initial structure was generated with the following command:
+
+```sh
+npm init electron-app@latest my-app -- --template=webpack
+```
 
 To run the app, execute the following:
 

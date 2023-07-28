@@ -51,9 +51,13 @@ Make sure electron-builder packages the native Koffi modules correctly with the 
 
 You can also go take a look at the full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron-builder).
 
-### Electron with electron-forge
+### Electron Forge
 
-Packaging with electron-forge should work as-is.
+Packaging with Electron Force should work as-is, even when using webpack as configured initially when you run:
+
+```sh
+npm init electron-app@latest my-app -- --template=webpack
+```
 
 You can also go take a look at the full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron-forge).
 

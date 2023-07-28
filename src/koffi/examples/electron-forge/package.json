@@ -1,9 +1,9 @@
 {
-  "name": "electron-forge",
-  "productName": "electron-forge",
+  "name": "my-new-app",
+  "productName": "my-new-app",
   "version": "1.0.0",
   "description": "My Electron application description",
-  "main": "src/index.js",
+  "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
@@ -17,10 +17,6 @@
     "email": "niels.martignene@protonmail.com"
   },
   "license": "MIT",
-  "dependencies": {
-    "electron-squirrel-startup": "^1.0.0",
-    "koffi": "^2.5.8"
-  },
   "devDependencies": {
     "@electron-forge/cli": "^6.2.1",
     "@electron-forge/maker-deb": "^6.2.1",
@@ -28,6 +24,15 @@
     "@electron-forge/maker-squirrel": "^6.2.1",
     "@electron-forge/maker-zip": "^6.2.1",
     "@electron-forge/plugin-auto-unpack-natives": "^6.2.1",
-    "electron": "25.3.2"
+    "@electron-forge/plugin-webpack": "^6.2.1",
+    "@vercel/webpack-asset-relocator-loader": "^1.7.3",
+    "css-loader": "^6.8.1",
+    "electron": "25.3.2",
+    "node-loader": "^2.0.0",
+    "style-loader": "^3.3.3"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.0",
+    "koffi": "^2.5.8"
   }
 }
