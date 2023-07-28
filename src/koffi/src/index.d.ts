@@ -149,4 +149,6 @@ declare module 'koffi' {
     export const os: {
         errno: Record<string, number>
     };
+
+    export const types: Record<string, IKoffiCType>;
 }
