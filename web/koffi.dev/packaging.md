@@ -1,43 +1,39 @@
 # Packaging
 
-## Native modules
+## Bundling and native modules
 
-*Improved in Koffi 2.5.8*
+*Simplified in Koffi 2.5.9*
 
 Koffi uses native modules to work. The NPM package contains binaries for various platforms and architectures, and the appropriate module is selected at runtime.
 
-If you use a bundler, you must make sure that the {{ "`node_modules/koffi/build/" ~ stable ~ "`" }} directory is available in your bundled script.
+In theory, the bundlers should be able to find recorgnize all native modules because they are explictly listed in the Javascript file, as static strings.
+
+If that is not the case, you can manually arrange to copy the `node_modules/koffi/build/koffi` directory next to your bundled script.
 
 Here is an example that would work:
 
-```{eval-rst}
-.. parsed-literal::
+```
     koffi/
-        |version|/
-            win32_x64/
-                koffi.node
-            linux_x64/
-                koffi.node
-            ...
+        win32_x64/
+            koffi.node
+        linux_x64/
+            koffi.node
+        ...
     MyBundle.js
 ```
 
 When running in Electron, Koffi will also try to find the native module in `process.resourcesPath`. For an Electron app you could do something like this
 
-```{eval-rst}
-.. parsed-literal::
+```
     locales/
     resources/
         koffi/
-            |version|/
-                darwin_arm64/
-                    koffi.node
-                darwin_x64/
-                    koffi.node
+            darwin_arm64/
+                koffi.node
+            darwin_x64/
+                koffi.node
     MyApp.exe
 ```
-
-You must configure your bundler and/or your packager to make this work.
 
 ## Packaging examples
 

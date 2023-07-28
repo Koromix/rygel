@@ -47,6 +47,12 @@ endif()
 
 # ---- Koffi ----
 
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/package.json PKG)
+string(REGEX MATCH "\"version\": \"([^\"]+)\"" XX "${PKG}")
+set(KOFFI_VERSION ${CMAKE_MATCH_1})
+
+set_source_files_properties(src/ffi.cc PROPERTIES COMPILE_DEFINITIONS VERSION=${KOFFI_VERSION})
+
 set(KOFFI_SRC
     src/call.cc
     src/ffi.cc

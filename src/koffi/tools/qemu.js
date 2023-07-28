@@ -474,7 +474,7 @@ async function prepare() {
 
     console.log('>> Prepare NPM package');
     {
-        let build_dir = dist_dir + '/build/' + version;
+        let build_dir = dist_dir + '/build/koffi';
 
         unlink_recursive(dist_dir);
         fs.mkdirSync(dist_dir, { mode: 0o755, recursive: true });

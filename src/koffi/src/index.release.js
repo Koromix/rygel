@@ -38,32 +38,61 @@ if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
 }
 
 let arch = cnoke.determine_arch();
+let triplet = `${process.platform}_${arch}`;
 
-let filenames = [
-    __dirname + `/../build/${pkg.version}/${process.platform}_${arch}/koffi.node`,
-    __dirname + `/build/koffi/${pkg.version}/${process.platform}_${arch}/koffi.node`,
-    __dirname + `/koffi/${pkg.version}/${process.platform}_${arch}/koffi.node`,
-    __dirname + `/../build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
-    __dirname + `/build/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
-    __dirname + `/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`
-];
+let native = null;
 
-if (process.resourcesPath != null) {
-    filenames.push(
-        process.resourcesPath + `/build/${pkg.version}/${process.platform}_${arch}/koffi.node`,
-        process.resourcesPath + `/build/koffi/${pkg.version}/${process.platform}_${arch}/koffi.node`,
-        process.resourcesPath + `/koffi/${pkg.version}/${process.platform}_${arch}/koffi.node`,
-        process.resourcesPath + `/build/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
-        process.resourcesPath + `/build/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`,
-        process.resourcesPath + `/koffi/${pkg.version}/koffi_${process.platform}_${arch}/koffi.node`
-    );
+// Try an explicit list with static strings to help bundlers
+try {
+    switch (triplet) {
+        case 'darwin_arm64': { native = require('../build/koffi/darwin_arm64/koffi.node'); } break;
+        case 'darwin_x64': { native = require('../build/koffi/darwin_x64/koffi.node'); } break;
+        case 'freebsd_arm46': { native = require('../build/koffi/freebsd_arm46/koffi.node'); } break;
+        case 'freebsd_ia32': { native = require('../build/koffi/freebsd_ia32/koffi.node'); } break;
+        case 'freebsd_x64': { native = require('../build/koffi/freebsd_x64/koffi.node'); } break;
+        case 'linux_arm32hf': { native = require('../build/koffi/linux_arm32hf/koffi.node'); } break;
+        case 'linux_arm64': { native = require('../build/koffi/linux_arm64/koffi.node'); } break;
+        case 'linux_ia32': { native = require('../build/koffi/linux_ia32/koffi.node'); } break;
+        case 'linux_risc64hf64': { native = require('../build/koffi/linux_risc64hf64/koffi.node'); } break;
+        case 'linux_x64': { native = require('../build/koffi/linux_x64/koffi.node'); } break;
+        case 'openbsd_ia32': { native = require('../build/koffi/openbsd_ia32/koffi.node'); } break;
+        case 'openbsd_x64': { native = require('../build/koffi/openbsd_x64/koffi.node'); } break;
+        case 'win32_arm64': { native = require('../build/koffi/win32_arm64/koffi.node'); } break;
+        case 'win32_ia32': { native = require('../build/koffi/win32_ia32/koffi.node'); } break;
+        case 'win32_x64': { native = require('../build/koffi/win32_x64/koffi.node'); } break;
+    }
+} catch (err) {
+    // Go on!
 }
 
-let filename = filenames.find(filename => fs.existsSync(filename));
-if (filename == null)
-    throw new Error('Cannot find the native Koffi module; did you bundle it correctly?');
+// And now, search everywhere we know
+if (native == null) {
+    let names = [
+        `/koffi/${process.platform}_${arch}/koffi.node`,
+        `/node_modules/koffi/build/koffi/${process.platform}_${arch}/koffi.node`
+    ];
 
-let native = require(filename);
+    for (let name of names) {
+        if (fs.existsSync(__dirname + name)) {
+            native = require(__dirname + name);
+            break;
+        }
+    }
+
+    if (native == null && process.resourcesPath != null) {
+        for (let name of names) {
+            if (fs.existsSync(process.resourcesPath + name)) {
+                native = require(process.resourcesPath + name);
+                break;
+            }
+        }
+    }
+}
+
+if (native == null)
+    throw new Error('Cannot find the native Koffi module; did you bundle it correctly?');
+if (native.version != pkg.version)
+    throw new Error('Mismatched native Koffi modules');
 
 module.exports = {
     ...native,
