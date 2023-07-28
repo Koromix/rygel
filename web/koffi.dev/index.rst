@@ -30,6 +30,7 @@ Table of contents
    parameters
    callbacks
    misc
+   bundling
    benchmarks
    contribute
    changelog

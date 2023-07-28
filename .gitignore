@@ -19,6 +19,7 @@ FelixBuild.ini.user
 node_modules
 package-lock.json
 
+/src/koffi/**/dist/
 /web/**/dist/
 
 /src/napka/data/*

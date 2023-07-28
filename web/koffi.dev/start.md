@@ -109,39 +109,4 @@ if (ret == IDYES)
 
 ## Bundling Koffi
 
-*Improved in Koffi 2.5.8*
-
-Koffi uses native modules to work. The NPM package contains binaries for various platforms and architectures, and the appropriate module is selected at runtime.
-
-If you use a bundler, you must make sure that the {{ "`node_modules/koffi/build/" ~ stable ~ "`" }} directory is available in your bundled script.
-
-Here is an example that would work:
-
-```{eval-rst}
-.. parsed-literal::
-    koffi/
-        |version|/
-            win32_x64/
-                koffi.node
-            linux_x64/
-                koffi.node
-            ...
-    MyBundle.js
-```
-
-When running in Electron, Koffi will also try to find the native module in `process.resourcesPath`. For an Electron app you could do something like this
-
-```{eval-rst}
-.. parsed-literal::
-    locales/
-    resources/
-        koffi/
-            |version|/
-                darwin_arm64/
-                    koffi.node
-                darwin_x64/
-                    koffi.node
-    MyApp.exe
-```
-
-You must configure your bundler and/or your packager to make this work.
+Please read the [dedicated page](bundling.md) for information about bundling and packaging applications using Koffi.
