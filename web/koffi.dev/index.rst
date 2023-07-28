@@ -30,7 +30,7 @@ Table of contents
    parameters
    callbacks
    misc
-   bundling
+   packaging
    benchmarks
    contribute
    changelog

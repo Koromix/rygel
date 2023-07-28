@@ -41,7 +41,7 @@ You must configure your bundler and/or your packager to make this work.
 
 ## Packaging examples
 
-### Electron and electron-builder
+### Electron with electron-builder
 
 Make sure electron-builder packages the native Koffi modules correctly with the following piece of configuration in `package.json`:
 
@@ -53,8 +53,16 @@ Make sure electron-builder packages the native Koffi modules correctly with the 
   }
 ```
 
-You can also go take a look at the [fully-working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron).
+You can also go take a look at the full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron-builder).
+
+### Electron with electron-forge
+
+Packaging with electron-forge should work as-is.
+
+You can also go take a look at the full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron-forge).
 
 ### NW.js
 
-Packagers such as nw-builder should work as-is. You can find a [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/nwjs).
+Packagers such as nw-builder should work as-is.
+
+You can find a full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/nwjs).

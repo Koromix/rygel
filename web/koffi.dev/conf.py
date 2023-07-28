@@ -112,5 +112,6 @@ myst_number_code_blocks = ['c', 'js', 'sh', 'batch']
 # -- Redirections -------------------------------------------------
 
 rediraffe_redirects = {
-    "changes.md": "changelog.md"
+    "changes.md": "changelog.md",
+    "bundling.md": "packaging.md"
 }

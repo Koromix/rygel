@@ -109,4 +109,4 @@ if (ret == IDYES)
 
 ## Bundling Koffi
 
-Please read the [dedicated page](bundling.md) for information about bundling and packaging applications using Koffi.
+Please read the [dedicated page](packaging.md) for information about bundling and packaging applications using Koffi.
