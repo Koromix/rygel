@@ -74,6 +74,7 @@ bool CheckLightSettings(const LightSettings &settings)
 hs_port *OpenLightDevice()
 {
     hs_match_spec specs[] = {
+        HS_MATCH_TYPE_VID_PID(HS_DEVICE_TYPE_HID, 0x1462, 0x1562, nullptr),
         HS_MATCH_TYPE_VID_PID(HS_DEVICE_TYPE_HID, 0x1462, 0x1563, nullptr),
         HS_MATCH_TYPE_VID_PID(HS_DEVICE_TYPE_HID, 0x1462, 0x1564, nullptr)
     };
@@ -83,7 +84,7 @@ hs_port *OpenLightDevice()
     if (ret < 0)
         return nullptr;
     if (!ret) {
-        LogError("Cannot find Mystic Light HID device (1462:1563 or 1462:1564)");
+        LogError("Cannot find Mystic Light HID device (1462:1562, 1462:1563 or 1462:1564)");
         return nullptr;
     }
     RG_DEFER { hs_device_unref(dev); };
