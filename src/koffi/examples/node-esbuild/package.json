@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "bundle": "esbuild index.js --platform=node --bundle --loader:.node=copy --outdir=dist/"
   },
   "author": "",
