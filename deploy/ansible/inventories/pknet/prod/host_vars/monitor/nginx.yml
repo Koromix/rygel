@@ -175,6 +175,15 @@ nginx_domains:
       location / {
           return 301 https://koromix.dev$request_uri;
       }
+  - name: stat.koromix.dev
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          root /opt/goaccess/html/koromix.dev/;
+
+          auth_basic "stat.koromix.dev";
+          auth_basic_user_file /opt/goaccess/html/koromix.dev.htpasswd;
+      }
 
   - name: koffi.dev
     ssl_certbot_email: niels.martignene@protonmail.com
@@ -200,6 +209,15 @@ nginx_domains:
           location /_static/ {
               expires 28d;
           }
+      }
+  - name: stat.koffi.dev
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          root /opt/goaccess/html/koffi.dev/;
+
+          auth_basic "stat.koffi.dev";
+          auth_basic_user_file /opt/goaccess/html/koffi.dev.htpasswd;
       }
 
   - name: demheter.fr
@@ -257,6 +275,15 @@ nginx_domains:
               gzip_min_length 1000;
               gzip_static on;
           }
+      }
+  - name: stat.demheter.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          root /opt/goaccess/html/demheter.fr/;
+
+          auth_basic "stat.demheter.fr";
+          auth_basic_user_file /opt/goaccess/html/demheter.fr.htpasswd;
       }
 
   - name: carto.cn2r.fr

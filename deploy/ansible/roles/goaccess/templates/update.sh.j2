@@ -1,0 +1,22 @@
+#!/bin/sh -e
+
+cd "$(dirname $0)"
+{% for domain in goaccess_domains %}
+
+# ---- {{ domain.name }} ----
+
+rm -rf tmp
+mkdir tmp
+cp /var/log/nginx/{{ domain.name }}.access.log* tmp/
+gunzip tmp/*.gz
+cat tmp/* | grep -v HetrixTools | grep -E -v "\.[a-zA-Z0-9]+(\?[^/]*)? HTTP" > tmp/access.log
+
+mkdir -p {{ goaccess_root_path }}/html/{{ domain.name }}
+{{ goaccess_root_path }}/goaccess \
+    --ignore-crawlers --log-format=COMBINED --anonymize-ip --no-query-string \
+    --ignore-panel=REQUESTS_STATIC --ignore-panel=NOT_FOUND --ignore-panel=HOSTS \
+    --ignore-panel=VISIT_TIMES --ignore-panel=VIRTUAL_HOSTS --ignore-panel=REFERRERS --ignore-panel=REFERRING_SITES \
+    --ignore-panel=KEYPHRASES --ignore-panel=STATUS_CODES --ignore-panel=REMOTE_USER \
+    -f tmp/access.log -o {{ goaccess_root_path }}/html/{{ domain.name }}/index.html
+rm -rf tmp
+{% endfor %}

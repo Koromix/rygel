@@ -19,6 +19,10 @@
     - name: base
       tags:
         - base
+    - name: goaccess
+      when: 'goaccess_domains is defined'
+      tags:
+        - goaccess
     - name: nginx
       when: 'nginx_domains is defined'
       tags:
