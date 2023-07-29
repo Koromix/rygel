@@ -28,10 +28,11 @@ When running in Electron, Koffi will also try to find the native module in `proc
 locales/
 resources/
     koffi/
-        darwin_arm64/
+        win32_ia32/
             koffi.node
-        darwin_x64/
+        win32_x64/
             koffi.node
+        ...
 MyApp.exe
 ```
 
