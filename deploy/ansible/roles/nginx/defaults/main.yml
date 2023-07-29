@@ -18,3 +18,6 @@ nginx_mode: single
 
 # List of domains to serve
 nginx_domains:
+
+# Custom number of days kept for logrotate
+nginx_keep_logs: 180

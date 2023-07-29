@@ -73,6 +73,12 @@
   include_tasks: ssl_certbot.yml
   when: 'nginx_mode == "single" or nginx_mode == "front"'
 
+- name: Extend duration of NGINX logs
+  template:
+    src: logrotate.conf.j2
+    dest: /etc/logrotate.d/nginx
+  become: yes 
+
 - name: Reload NGINX
   service:
     name: nginx
