@@ -33,7 +33,7 @@ echo ^<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"^> >> %PACKAGE_DIR%\meest
 echo     ^<Package Language="1033" >> %PACKAGE_DIR%\meestic.wxs
 echo              Scope="perMachine" >> %PACKAGE_DIR%\meestic.wxs
 echo              Manufacturer="Niels Martignène" Name="Meestic" Version="%VERSION%" >> %PACKAGE_DIR%\meestic.wxs
-echo              ProductCode="c476e82c-b2ec-4820-8609-515e5e1dc304" >> %PACKAGE_DIR%\meestic.wxs
+echo              ProductCode="*" >> %PACKAGE_DIR%\meestic.wxs
 echo              UpgradeCode="92bca6b0-7814-433e-af50-603ad948758e"^> >> %PACKAGE_DIR%\meestic.wxs
 echo         ^<?include meestic.wxi ?^> >> %PACKAGE_DIR%\meestic.wxs
 echo     ^</Package^> >> %PACKAGE_DIR%\meestic.wxs
