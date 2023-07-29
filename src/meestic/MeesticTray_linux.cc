@@ -257,7 +257,7 @@ static int GetIconComplexProperty(sd_bus *, const char *, const char *, const ch
         IconInfo icons = InitIcons();
 
         CALL_SDBUS(sd_bus_message_open_container(reply, 'r', "sa(iiay)ss"), ReplyError, -1);
-        CALL_SDBUS(sd_bus_message_append(reply, "s", "MeesticGui"), ReplyError, -1);
+        CALL_SDBUS(sd_bus_message_append(reply, "s", FelixTarget), ReplyError, -1);
         CALL_SDBUS(sd_bus_message_open_container(reply, 'a', "(iiay)"), ReplyError, -1);
         for (Size i = 0; i < RG_LEN(IconSizes); i++) {
             Vec2<int> size = IconSizes[i];

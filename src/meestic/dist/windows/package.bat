@@ -5,7 +5,7 @@ setlocal EnableDelayedExpansion
 cd %~dp0
 cd ..\..\..\..
 
-felix -pFast meestic MeesticGui
+felix -pFast meestic MeesticTray
 
 for /f "tokens=2 delims= " %%i in ('bin\Fast\meestic.exe --version') do (
     set RAW_VERSION=%%i
@@ -24,7 +24,7 @@ set PACKAGE_DIR=bin\Packages\meestic\windows
 mkdir %PACKAGE_DIR%
 
 copy bin\Fast\meestic.exe %PACKAGE_DIR%\meestic.exe
-copy bin\Fast\MeesticGui.exe %PACKAGE_DIR%\MeesticGui.exe
+copy bin\Fast\MeesticTray.exe %PACKAGE_DIR%\MeesticTray.exe
 copy src\meestic\images\meestic.ico %PACKAGE_DIR%\meestic.ico
 copy src\meestic\dist\windows\meestic.wxi %PACKAGE_DIR%\meestic.wxi
 

@@ -16,10 +16,10 @@ docker build -t rygel/debian10 deploy/docker/debian10
 docker run -t -i --rm -v $(pwd):/io rygel/debian10 /io/src/meestic/dist/debian/build.sh
 
 install -D -m0755 bin/Packages/meestic/debian/bin/meestic $PACKAGE_DIR/pkg/meestic
-install -D -m0755 bin/Packages/meestic/debian/bin/MeesticGui $PACKAGE_DIR/pkg/MeesticGui
+install -D -m0755 bin/Packages/meestic/debian/bin/MeesticTray $PACKAGE_DIR/pkg/MeesticTray
 install -D -m0644 src/meestic/dist/debian/meestic.ini $PACKAGE_DIR/pkg/meestic.ini
-install -D -m0644 src/meestic/dist/debian/MeesticGui.desktop $PACKAGE_DIR/pkg/MeesticGui.desktop
-install -D -m0644 src/meestic/images/meestic.png $PACKAGE_DIR/pkg/MeesticGui.png
+install -D -m0644 src/meestic/dist/debian/MeesticTray.desktop $PACKAGE_DIR/pkg/MeesticTray.desktop
+install -D -m0644 src/meestic/images/meestic.png $PACKAGE_DIR/pkg/MeesticTray.png
 
 install -D -m0644 src/meestic/dist/debian/meestic.service $PACKAGE_DIR/pkg/debian/meestic.service
 install -D -m0755 src/meestic/dist/debian/rules $PACKAGE_DIR/pkg/debian/rules

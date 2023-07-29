@@ -4114,7 +4114,8 @@ const char *GetUserCachePath(const char *name, Allocator *alloc); // Can return 
 const char *GetSystemConfigPath(const char *name, Allocator *alloc);
 const char *GetTemporaryDirectory();
 
-const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const char *, 4> *out_possibilities = nullptr);
+const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
+                           LocalArray<const char *, 4> *out_possibilities = nullptr);
 
 const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
                              Allocator *alloc, FILE **out_fp = nullptr);

@@ -10,14 +10,14 @@ license=('AGPL3')
 depends=('libudev.so')
 makedepends=('git')
 provides=('meestic')
-source=('meestic' 'MeesticGui' 'meestic.service' 'meestic.ini' 'MeesticGui.desktop' 'MeesticGui.png')
+source=('meestic' 'MeesticTray' 'meestic.service' 'meestic.ini' 'MeesticTray.desktop' 'MeesticTray.png')
 sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
 
 package() {
     install -D -m0755 meestic "${pkgdir}/usr/bin/meestic"
-    install -D -m0755 MeesticGui "${pkgdir}/usr/bin/MeesticGui"
+    install -D -m0755 MeesticTray "${pkgdir}/usr/bin/MeesticTray"
     install -D -m0644 meestic.service "${pkgdir}/usr/lib/systemd/system/meestic.service"
     install -D -m0644 meestic.ini "${pkgdir}/etc/meestic.ini"
-    install -D -m0644 MeesticGui.desktop "${pkgdir}/usr/share/applications/MeesticGui.desktop"
-    install -D -m0644 MeesticGui.png "${pkgdir}/usr/share/icons/hicolor/512x512/apps/MeesticGui.png"
+    install -D -m0644 MeesticTray.desktop "${pkgdir}/usr/share/applications/MeesticTray.desktop"
+    install -D -m0644 MeesticTray.png "${pkgdir}/usr/share/icons/hicolor/512x512/apps/MeesticTray.png"
 }

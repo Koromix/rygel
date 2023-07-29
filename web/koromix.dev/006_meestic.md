@@ -18,24 +18,24 @@ It was made by looking at the HID packets sent by the Windows tool with Wireshar
 
 # Graphical interface
 
-MeesticGui runs in the **system tray**, and provides customizable profiles that you can cycle through with the tray icon or with the keyboard light function key.
+MeesticTray runs in the **system tray**, and provides customizable profiles that you can cycle through with the tray icon or with the keyboard light function key.
 
 ## Windows
 
-Simply download and run `MeesticGui.exe` manually, or set it up to run when Windows starts. It provides a system tray icon, you can left click on it to switch to the next profile or right click to get a list of configured profiles.
+Simply download and run `MeesticTray.exe` manually, or set it up to run when Windows starts. It provides a system tray icon, you can left click on it to switch to the next profile or right click to get a list of configured profiles.
 
-Create a file named `MeesticGui.ini` to customize the profiles, and put it either:
+Create a file named `MeesticTray.ini` (or `MeesticGui.ini`) to customize the profiles, and put it either:
 
-- Next to `MeesticGui.exe`
-- Or at `<ProfileDir>\AppData\MeesticGui.ini` (e.g. _C:\Users\JohnDoe\AppData\MeesticGui.ini_)
+- Next to `MeesticTray.exe`
+- Or at `<ProfileDir>\AppData\MeesticTray.ini` (e.g. _C:\Users\JohnDoe\AppData\MeesticTray.ini_)
 
-Restart MeesticGui to apply changes made to the file.
+Restart MeesticTray to apply changes made to the file.
 
 ## Linux
 
 Install the Debian package to configure the system daemon (which is necessary to manage access to the HID device) and the GUI application. Both will start automatically but you may need to restart your session to see the system tray icon.
 
-If you are using GNOME, please install an extension such as `Tray Icons: Reloaded` or the MeesticGui tray icon may not be visible.
+If you are using GNOME, please install an extension such as `Tray Icons: Reloaded` or the MeesticTray tray icon may not be visible.
 
 Customize `/etc/meestic.ini` to edit default profiles. Restart the daemon after each change to load the new profiles with:
 
@@ -101,7 +101,7 @@ In order to build Meestic on Windows, clone the repository and run these command
 
 ```batch
 bootstrap.bat
-felix -pFast meestic MeesticGui
+felix -pFast meestic MeesticTray
 ```
 
 After that, the binaries will be available in the `bin/Fast` directory.
@@ -116,7 +116,7 @@ sudo apt install git build-essential libudev-dev
 
 # Build binaries
 ./bootstrap.sh
-./felix -pFast meestic MeesticGui
+./felix -pFast meestic MeesticTray
 ```
 
 After that, the binaries will be available in the `bin/Fast` directory.

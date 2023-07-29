@@ -21,11 +21,11 @@
                 <File Id="MeeticBinary" KeyPath="yes" Source="meestic.exe" ></File>
             </Component>
             <Component Id="BinaryGui">
-                <File Id="MeesticGuiBinary" KeyPath="yes" Source="MeesticGui.exe"></File>
+                <File Id="MeesticTrayBinary" KeyPath="yes" Source="MeesticTray.exe"></File>
                 <RegistryValue Id="AutoStart" Root="HKMU" Action="write"
                                Key="Software\Microsoft\Windows\CurrentVersion\Run"
-                               Name="MeesticGui"
-                               Value="[INSTALLFOLDER]MeesticGui.exe"
+                               Name="MeesticTray"
+                               Value="[INSTALLFOLDER]MeesticTray.exe"
                                Type="string" />
             </Component>
         </Directory>
@@ -34,15 +34,15 @@
     <StandardDirectory Id="StartMenuFolder">
         <Component Id="AutostartGui" Guid="051df8f0-e153-4e86-b58e-2d249a1c738f">
             <Shortcut Id="MeesticShortcut"
-                      Name="MeesticGui"
-                      Target="[INSTALLFOLDER]MeesticGui.exe"
+                      Name="MeesticTray"
+                      Target="[INSTALLFOLDER]MeesticTray.exe"
                       WorkingDirectory="INSTALLFOLDER" />
         </Component>
     </StandardDirectory>
 
-    <CustomAction Id="LaunchMeesticGui" FileRef="MeesticGuiBinary" ExeCommand="" Return="asyncNoWait" />
+    <CustomAction Id="LaunchMeesticTray" FileRef="MeesticTrayBinary" ExeCommand="" Return="asyncNoWait" />
 
     <InstallExecuteSequence>
-        <Custom Action="LaunchMeesticGui" OnExit="success" />
+        <Custom Action="LaunchMeesticTray" OnExit="success" />
     </InstallExecuteSequence>
 </Include>

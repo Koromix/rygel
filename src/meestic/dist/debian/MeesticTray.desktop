@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type = Application
-Name = MeesticGui
-Exec = MeesticGui
-Icon = MeesticGui
+Name = MeesticTray
+Exec = MeesticTray
+Icon = MeesticTray
 Terminal = false
 Categories = Utility

@@ -1,6 +1,6 @@
 meestic usr/bin
-MeesticGui usr/bin
+MeesticTray usr/bin
 meestic.ini etc
-MeesticGui.desktop usr/share/applications
-MeesticGui.desktop etc/xdg/autostart
-MeesticGui.png usr/share/icons/hicolor/512x512/apps
+MeesticTray.desktop usr/share/applications
+MeesticTray.desktop etc/xdg/autostart
+MeesticTray.png usr/share/icons/hicolor/512x512/apps

@@ -34,10 +34,10 @@ Be careful, color names and most options are **case-sensitive**.
 
 ### Windows
 
-Create a file named `MeesticGui.ini` to customize the profiles, and put it either:
+Create a file named `MeesticTray.ini` (or `MeesticGui.ini`) to customize the profiles, and put it either:
 
-- Next to `MeesticGui.exe`
-- Or at `<ProfileDir>\AppData\MeesticGui.ini` (e.g. _C:\Users\JohnDoe\AppData\MeesticGui.ini_)
+- Next to `MeesticTray.exe`
+- Or at `<ProfileDir>\AppData\MeesticTray.ini` (e.g. _C:\Users\JohnDoe\AppData\MeesticTray.ini_)
 
 Restart the GUI to apply each change.
 

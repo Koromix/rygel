@@ -16,11 +16,11 @@ docker build -t rygel/arch deploy/docker/arch
 docker run -t -i --rm -v $(pwd):/io rygel/arch /io/src/meestic/dist/arch/build.sh
 
 install -D -m0755 bin/Packages/meestic/arch/bin/meestic $PACKAGE_DIR/pkg/meestic
-install -D -m0755 bin/Packages/meestic/arch/bin/MeesticGui $PACKAGE_DIR/pkg/MeesticGui
+install -D -m0755 bin/Packages/meestic/arch/bin/MeesticTray $PACKAGE_DIR/pkg/MeesticTray
 install -D -m0644 src/meestic/dist/arch/meestic.service $PACKAGE_DIR/pkg/meestic.service
 install -D -m0644 src/meestic/dist/arch/meestic.ini $PACKAGE_DIR/pkg/meestic.ini
-install -D -m0644 src/meestic/dist/arch/MeesticGui.desktop $PACKAGE_DIR/pkg/MeesticGui.desktop
-install -D -m0644 src/meestic/images/meestic.png $PACKAGE_DIR/pkg/MeesticGui.png
+install -D -m0644 src/meestic/dist/arch/MeesticTray.desktop $PACKAGE_DIR/pkg/MeesticTray.desktop
+install -D -m0644 src/meestic/images/meestic.png $PACKAGE_DIR/pkg/MeesticTray.png
 
 sed -e "s/VERSION/$VERSION/" src/meestic/dist/arch/PKGBUILD > $PACKAGE_DIR/pkg/PKGBUILD
 

@@ -4832,7 +4832,8 @@ const char *GetTemporaryDirectory()
 
 #endif
 
-const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const char *, 4> *out_possibilities)
+const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
+                           LocalArray<const char *, 4> *out_possibilities)
 {
     decltype(GetUserConfigPath) *funcs[] = {
         [](const char *name, Allocator *alloc) {
@@ -4850,16 +4851,19 @@ const char *FindConfigFile(const char *name, Allocator *alloc, LocalArray<const 
     const char *filename = nullptr;
 
     for (const auto &func: funcs) {
-        const char *path = func(name, alloc);
+        for (const char *name: names) {
+            const char *path = func(name, alloc);
 
-        if (!path)
-            continue;
+            if (!path)
+                continue;
 
-        if (TestFile(path, FileType::File)) {
-            filename = path;
-        }
-        if (out_possibilities) {
-            out_possibilities->Append(path);
+            if (TestFile(path, FileType::File)) {
+                filename = path;
+            }
+            if (out_possibilities) {
+                out_possibilities->Append(path);
+                break;
+            }
         }
     }
 
