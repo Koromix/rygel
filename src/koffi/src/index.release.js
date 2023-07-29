@@ -21,14 +21,14 @@
 
 'use strict';
 
-const cnoke = require('./cnoke/src/index.js');
 const util = require('util');
 const fs = require('fs');
+const { get_napi_version, determine_arch } = require('./cnoke/src/tools.js');
 const pkg = require('../package.json');
 
 if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
     let major = parseInt(process.versions.node, 10);
-    let required = cnoke.get_napi_version(pkg.cnoke.napi, major);
+    let required = get_napi_version(pkg.cnoke.napi, major);
 
     if (required != null) {
         throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= ${pkg.cnoke.napi})`);
@@ -37,7 +37,7 @@ if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
     }
 }
 
-let arch = cnoke.determine_arch();
+let arch = determine_arch();
 let triplet = `${process.platform}_${arch}`;
 
 let native = null;
