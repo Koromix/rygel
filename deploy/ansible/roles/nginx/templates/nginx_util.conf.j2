@@ -4,8 +4,8 @@
         listen 80;
         listen [::]:80;
 
-        access_log /var/log/nginx/{{ name }}.access.log;
-        error_log /var/log/nginx/{{ name }}.error.log error;
+        access_log /var/log/nginx/http.{{ name }}.access.log;
+        error_log /var/log/nginx/http.{{ name }}.error.log error;
 {%- endmacro %}
 
 {% macro configure_https(name) -%}
