@@ -372,6 +372,8 @@ bool Builder::AddTarget(const TargetInfo &target)
         }
     }
 
+    Size prev_obj_filenames = obj_filenames.len;
+
     // Deal with user source files
     for (const SourceFileInfo *src: target.sources) {
         switch (src->type) {
@@ -398,23 +400,21 @@ bool Builder::AddTarget(const TargetInfo &target)
     }
 
     // Make sure C/C++ source files must depend on generated headers
-    for (const SourceFileInfo *src: target.sources) {
-        if (src->type == SourceType::C || src->type == SourceType::Cxx) {
-            const char *obj_filename = build_map.FindValue({ ns, src->filename }, nullptr);
-            Size node_idx = nodes_map.FindValue(obj_filename, -1);
+    for (Size i = prev_obj_filenames; i < obj_filenames.len; i++) {
+        const char *obj_filename = obj_filenames[i];
+        Size node_idx = nodes_map.FindValue(obj_filename, -1);
 
-            if (node_idx >= 0) {
-                Node *node = &nodes[node_idx];
+        if (node_idx >= 0) {
+            Node *node = &nodes[node_idx];
 
-                for (const char *predep_filename: predep_filenames) {
-                    Size src_idx = nodes_map.FindValue(predep_filename, -1);
+            for (const char *predep_filename: predep_filenames) {
+                Size src_idx = nodes_map.FindValue(predep_filename, -1);
 
-                    if (src_idx >= 0) {
-                        Node *src = &nodes[src_idx];
+                if (src_idx >= 0) {
+                    Node *src = &nodes[src_idx];
 
-                        src->triggers.Append(node_idx);
-                        node->semaphore++;
-                    }
+                    src->triggers.Append(node_idx);
+                    node->semaphore++;
                 }
             }
         }
