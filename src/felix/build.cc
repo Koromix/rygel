@@ -790,7 +790,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
 
                     // Assemble moc command
                     {
-                        Fmt(&buf, "\"%1\" \"%2\" -o \"%3\"", moc_binary, header_filename, moc_filename);
+                        Fmt(&buf, "\"%1\" \"%2\" --no-notes -o \"%3\"", moc_binary, header_filename, moc_filename);
 
                         cmd.cache_len = buf.len;
                         cmd.cmd_line = buf.TrimAndLeak(1);
@@ -923,7 +923,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src, const char *ns)
         {
             HeapArray<char> buf(&str_alloc);
 
-            Fmt(&buf, "\"%1\" -n -o \"%2\" \"%3\"", uic_binary, header_filename, src.filename);
+            Fmt(&buf, "\"%1\" -o \"%2\" \"%3\"", uic_binary, header_filename, src.filename);
 
             cmd.cache_len = buf.len;
             cmd.cmd_line = buf.TrimAndLeak(1);
