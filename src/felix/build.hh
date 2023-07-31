@@ -98,9 +98,15 @@ class Builder {
     const char *shared_directory;
     const char *cache_filename;
 
+    // Platform-specific
+    const char *lib_prefix = nullptr;
+    const char *archive_filter = nullptr;
+    const char *import_extension = nullptr;
+
     // Qt stuff
     const char *qmake_binary = nullptr;
     const char *moc_binary = nullptr;
+    const char *qt_binaries = nullptr;
     const char *qt_headers = nullptr;
     const char *qt_libraries = nullptr;
     const char *qt_plugins = nullptr;

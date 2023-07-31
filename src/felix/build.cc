@@ -290,6 +290,16 @@ Builder::Builder(const BuildSettings &build)
     shared_directory = Fmt(&str_alloc, "%1%/Shared", build.output_directory).ptr;
     cache_filename = Fmt(&str_alloc, "%1%/FelixCache.bin", shared_directory).ptr;
 
+    if (build.compiler->platform == HostPlatform::Windows) {
+        archive_filter = "*.lib";
+        lib_prefix = "";
+        import_extension = ".lib";
+    } else {
+        archive_filter = "*.a";
+        lib_prefix = "lib";
+        import_extension = ".so";
+    }
+
     LoadCache();
 }
 
@@ -494,27 +504,17 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Link with required Qt libraries
     if (target.qt_components.len && qt_libraries) {
-#ifdef _WIN32
-        static const char *const ArchiveFilter = "*.lib";
-        static const char *const LibPrefix = "";
-        static const char *const ImportExtension = ".lib";
-#else
-        static const char *const ArchiveFilter = "*.a";
-        static const char *const LibPrefix = "lib";
-        static const char *const ImportExtension = ".so";
-#endif
-
         if (qt_static) {
             const char *obj_filename = CompileStaticQtHelper(target);
             obj_filenames.Append(obj_filename);
 
             Span<const char *const> libraries = CacheList(&target.libraries, [&](HeapArray<const char *> *out_libraries) {
-                EnumerateFiles(qt_plugins, ArchiveFilter, 3, 512, &str_alloc, out_libraries);
+                EnumerateFiles(qt_plugins, archive_filter, 3, 512, &str_alloc, out_libraries);
 
                 for (Size i = 0, end = out_libraries->len; i < end; i++) {
                     const char *library = (*out_libraries)[i];
 
-                    Span<const char> base = MakeSpan(library, strlen(library) - strlen(ArchiveFilter) + 1);
+                    Span<const char> base = MakeSpan(library, strlen(library) - strlen(archive_filter) + 1);
                     const char *prl_filename = Fmt(&str_alloc, "%1.prl", base).ptr;
 
                     if (TestFile(prl_filename)) {
@@ -523,7 +523,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                 }
 
                 for (const char *component: target.qt_components) {
-                    const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt_libraries, LibPrefix, qt_major, component).ptr;
+                    const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt_libraries, lib_prefix, qt_major, component).ptr;
 
                     if (!TestFile(prl_filename)) {
                         LogError("Cannot find PRL file for Qt compoment '%1'", component);
@@ -543,6 +543,11 @@ bool Builder::AddTarget(const TargetInfo &target)
 
                     (*out_libraries)[j] = library;
 
+#ifdef _WIN32
+                    if (TestStr(basename, "qdirect2d.lib"))
+                        continue;
+#endif
+
                     bool inserted;
                     prev_libraries.TrySet(basename, &inserted);
 
@@ -554,7 +559,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             link_libraries.Append(libraries);
         } else {
             for (const char *component: target.qt_components) {
-                const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt_libraries, LibPrefix, qt_major, component, ImportExtension).ptr;
+                const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt_libraries, lib_prefix, qt_major, component, import_extension).ptr;
                 obj_filenames.Append(library);
             }
         }
@@ -953,9 +958,15 @@ bool Builder::PrepareQtSdk()
 
             if (key == "QT_HOST_BINS" || key == "QT_HOST_LIBEXECS") {
                 if (!moc_binary) {
+#ifdef _WIN32
+                    const char *binary = Fmt(&str_alloc, "%1%/moc.exe", value).ptr;
+#else
                     const char *binary = Fmt(&str_alloc, "%1%/moc", value).ptr;
+#endif
                     moc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
                 }
+            } else if (key == "QT_INSTALL_BINS") {
+                qt_binaries = DuplicateString(value, &str_alloc).ptr;
             } else if (key == "QT_INSTALL_HEADERS") {
                 qt_headers = DuplicateString(value, &str_alloc).ptr;
             } else if (key == "QT_INSTALL_LIBS") {
@@ -971,7 +982,8 @@ bool Builder::PrepareQtSdk()
                 }
             }
 
-            valid = moc_binary && qt_headers && qt_libraries && qt_plugins && qt_major;
+            valid = moc_binary && qt_binaries && qt_headers &&
+                    qt_libraries && qt_plugins && qt_major;
         }
     }
 
@@ -981,9 +993,14 @@ bool Builder::PrepareQtSdk()
     }
 
     // Determine if Qt is built statically
-    {
+    if (build.compiler->platform == HostPlatform::Windows) {
         char library0[4046];
-        Fmt(library0, "%1%/libQt%2Core%3", qt_libraries, qt_major, RG_SHARED_LIBRARY_EXTENSION);
+        Fmt(library0, "%1%/Qt%2Core.dll", qt_binaries, qt_major);
+
+        qt_static = !TestFile(library0);
+    } else {
+        char library0[4046];
+        Fmt(library0, "%1%/libQt%2Core.so", qt_libraries, qt_major);
 
         qt_static = !TestFile(library0);
     }
