@@ -15,8 +15,8 @@
 #include <QIcon>
 #include <QMutex>
 #include <QStringList>
-#include <QTextCodec>
-#include <QTextDecoder>
+#include <QStringConverter>
+#include <QStringDecoder>
 #include <QTextDocument>
 #include <QThread>
 #include <QTimer>
@@ -58,8 +58,8 @@ class Board : public QObject, public std::enable_shared_from_this<Board> {
 
     ty_board_interface *serial_iface_ = nullptr;
     DescriptorNotifier serial_notifier_;
-    QTextCodec *serial_codec_;
-    std::unique_ptr<QTextDecoder> serial_decoder_;
+    QStringConverter::Encoding serial_codec_;
+    std::unique_ptr<QStringDecoder> serial_decoder_;
     QMutex serial_lock_;
     char serial_buf_[262144];
     size_t serial_buf_len_ = 0;
@@ -128,7 +128,7 @@ public:
     bool resetAfter() const { return reset_after_; }
     unsigned int serialRate() const { return serial_rate_; }
     QString serialCodecName() const { return serial_codec_name_; }
-    QTextCodec *serialCodec() const { return serial_codec_; }
+    QStringConverter::Encoding serialCodec() const { return serial_codec_; }
     bool clearOnReset() const { return clear_on_reset_; }
     unsigned int scrollBackLimit() const { return serial_document_.maximumBlockCount(); }
     bool enableSerial() const { return enable_serial_; }

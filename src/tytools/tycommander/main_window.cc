@@ -8,11 +8,12 @@
 
    See the LICENSE file for more details. */
 
+#include <QActionGroup>
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QScrollBar>
 #include <QShortcut>
-#include <QTextCodec>
+#include <QStringConverter>
 #include <QToolButton>
 #include <QUrl>
 
@@ -654,13 +655,14 @@ void MainWindow::initCodecList()
     if (!codecs_.isEmpty())
         return;
 
-    auto mibs = QTextCodec::availableMibs();
-
-    codecs_.reserve(mibs.count());
-    for (auto mib: mibs)
-        codecs_.append(QTextCodec::codecForMib(mib)->name());
-    codecs_.sort(Qt::CaseInsensitive);
-    codecs_.removeDuplicates();
+    codecs_.append("UTF-8");
+    codecs_.append("UTF-16");
+    codecs_.append("UTF-16BE");
+    codecs_.append("UTF-16LE");
+    codecs_.append("UTF-32");
+    codecs_.append("UTF-32BE");
+    codecs_.append("UTF-32LE");
+    codecs_.append("Latin-1");
 
     codec_indexes_.reserve(codecs_.count());
     int index = 0;

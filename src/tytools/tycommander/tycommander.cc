@@ -14,7 +14,7 @@
 #include <QProcess>
 #include <QSettings>
 #include <QStandardPaths>
-#include <QTextCodec>
+#include <QStringConverter>
 #include <QThread>
 
 #ifdef _WIN32
@@ -507,7 +507,6 @@ void TyCommander::initDatabase(const QString &name, SettingsDatabase &db)
 {
     auto settings = new QSettings(QSettings::IniFormat, QSettings::UserScope,
                                   organizationName(), name, this);
-    settings->setIniCodec(QTextCodec::codecForName("UTF-8"));
     db.setSettings(settings);
 }
 
@@ -524,7 +523,6 @@ void TyCommander::initCache(const QString &name, SettingsDatabase &cache)
                 .arg(QStandardPaths::writableLocation(QStandardPaths::CacheLocation), name);
 #endif
     auto settings = new QSettings(path, QSettings::IniFormat, this);
-    settings->setIniCodec(QTextCodec::codecForName("UTF-8"));
     cache.setSettings(settings);
 }
 

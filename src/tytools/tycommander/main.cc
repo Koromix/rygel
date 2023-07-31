@@ -134,8 +134,6 @@ int main(int argc, char *argv[])
     qRegisterMetaType<uint64_t>("uint64_t");
     qRegisterMetaType<RtcMode>("RtcMode");
 
-    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-
     TyCommander app(argc, argv);
 #ifdef _WIN32
     app.setClientConsole(open_tycommanderc_bridge());

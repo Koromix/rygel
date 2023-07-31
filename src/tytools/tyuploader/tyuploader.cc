@@ -101,8 +101,6 @@ int main(int argc, char *argv[])
     qRegisterMetaType<ty_descriptor>("ty_descriptor");
     qRegisterMetaType<uint64_t>("uint64_t");
 
-    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-
     TyUploader app(argc, argv);
     return app.exec();
 }

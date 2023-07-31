@@ -81,12 +81,13 @@ void Board::loadSettings(Monitor *monitor)
                                 recent_firmwares_.end());
     reset_after_ = db_.get("resetAfter", true).toBool();
     serial_codec_name_ = db_.get("serialCodec", "UTF-8").toString();
-    serial_codec_ = QTextCodec::codecForName(serial_codec_name_.toUtf8());
-    if (!serial_codec_) {
+    if (auto opt = QStringConverter::encodingForName(serial_codec_name_.toUtf8()); opt) {
+        serial_codec_ = opt.value();
+    } else {
         serial_codec_name_ = "UTF-8";
-        serial_codec_ = QTextCodec::codecForName("UTF-8");
+        serial_codec_ = QStringConverter::Encoding::Utf8;
     }
-    serial_decoder_.reset(serial_codec_->makeDecoder());
+    serial_decoder_.reset(new QStringDecoder(serial_codec_));
     clear_on_reset_ = db_.get("clearOnReset", false).toBool();
     serial_document_.setMaximumBlockCount(db_.get("scrollBackLimit", 200000).toInt());
     {
@@ -389,7 +390,7 @@ TaskInterface Board::sendSerial(const QByteArray &buf)
 
 TaskInterface Board::sendSerial(const QString &s)
 {
-    return sendSerial(serial_codec_->fromUnicode(s));
+    return sendSerial(QStringEncoder(serial_codec_).encode(s));
 }
 
 TaskInterface Board::sendFile(const QString &filename)
@@ -408,7 +409,7 @@ TaskInterface Board::sendFile(const QString &filename)
 void Board::appendFakeSerialRead(const QString &s)
 {
     if (serial_log_file_.isOpen()) {
-        auto buf = serial_codec_->fromUnicode(s);
+        QByteArray buf = QStringEncoder(serial_codec_).encode(s);
         QMutexLocker locker(&serial_lock_);
         writeToSerialLog(buf.constData(), buf.size());
         locker.unlock();
@@ -488,13 +489,13 @@ void Board::setSerialCodecName(QString codec_name)
     if (codec_name == serial_codec_name_)
         return;
 
-    auto codec = QTextCodec::codecForName(codec_name.toUtf8());
-    if (!codec)
+    auto opt = QStringConverter::encodingForName(codec_name.toUtf8());
+    if (!opt)
         return;
 
     serial_codec_name_ = codec_name;
-    serial_codec_ = codec;
-    serial_decoder_.reset(serial_codec_->makeDecoder());
+    serial_codec_ = opt.value();
+    serial_decoder_.reset(new QStringDecoder(serial_codec_));
 
     db_.put("serialCodec", codec_name);
     emit settingsChanged();
@@ -714,7 +715,7 @@ void Board::writeToSerialLog(const char *buf, size_t len)
 void Board::appendBufferToSerialDocument()
 {
     QMutexLocker locker(&serial_lock_);
-    auto str = serial_decoder_->toUnicode(serial_buf_, static_cast<int>(serial_buf_len_));
+    QString str = serial_decoder_->decode(QByteArrayView(serial_buf_, static_cast<int>(serial_buf_len_)));
     serial_buf_len_ = 0;
     locker.unlock();
 
