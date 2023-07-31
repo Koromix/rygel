@@ -17,7 +17,7 @@ felix QtApp
 wget https://ftp.nluug.nl/languages/qt/archive/qt/6.5/6.5.2/submodules/qtbase-everywhere-src-6.5.2.tar.xz
 tar xvf qtbase-everywhere-src-6.5.2.tar.xz
 cd qtbase-everywhere-src-6.5.2
-./configure -release -static -prefix $HOME/Qt/Static/6.5.2 -qt-pcre -qt-zlib -qt-libpng -qt-libjpeg -xcb -fontconfig
+./configure -release -static -prefix $HOME/Qt/Static/6.5.2 -no-icu -no-cups -qt-pcre -qt-zlib -qt-libpng -qt-libjpeg -xcb -fontconfig
 cmake --build . --parallel
 cmake --install .
 ```
