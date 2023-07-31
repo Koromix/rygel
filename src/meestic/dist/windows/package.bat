@@ -1,5 +1,4 @@
 @echo off
-
 setlocal EnableDelayedExpansion
 
 cd %~dp0
@@ -39,5 +38,9 @@ echo         ^<?include meestic.wxi ?^> >> %PACKAGE_DIR%\meestic.wxs
 echo     ^</Package^> >> %PACKAGE_DIR%\meestic.wxs
 echo ^</Wix^> >> %PACKAGE_DIR%\meestic.wxs
 
+REM Create MSI package
 cd %PACKAGE_DIR%
 wix build meestic.wxs -o meestic_%VERSION%_win64.msi
+
+REM Create ZIP file
+tar.exe -a -c -f meestic_%VERSION%_win64.zip meestic.exe MeesticTray.exe
