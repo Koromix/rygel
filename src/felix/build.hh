@@ -30,6 +30,9 @@ struct BuildSettings {
     uint32_t features = 0;
     bool env = false;
     bool fake = false;
+
+    // Tools (optional)
+    const char *esbuild = nullptr;
 };
 
 class Builder {

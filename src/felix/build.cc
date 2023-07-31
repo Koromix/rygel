@@ -643,6 +643,18 @@ bool Builder::PrepareEsbuild()
     if (esbuild)
         return true;
 
+    if (build.esbuild) {
+        esbuild = build.esbuild;
+        return true;
+    } else {
+        const char *str = getenv("ESBUILD_PATH");
+
+        if (str && str[0]) {
+            esbuild = str;
+            return true;
+        }
+    }
+
     // Try embedded builds
     {
 #if defined(_WIN64)

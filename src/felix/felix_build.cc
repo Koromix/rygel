@@ -313,7 +313,10 @@ Options:
     %!..+-f, --features <features>%!0    Override compilation features
                                  %!D..(start with -All to reset and set only new flags)%!0
 
+        %!..+--esbuild_path <path>%!0    Set explicit path to esbuild binary
+
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
+
 
     %!..+-j, --jobs <count>%!0           Set maximum number of parallel jobs
                                  %!D..(default: %2)%!0
@@ -505,6 +508,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("-f", "--features", OptionType::Value)) {
                 if (!ParseFeatureString(opt.current_value, &build.features, &maybe_features))
                     return 1;
+            } else if (opt.Test("--esbuild_path", OptionType::Value)) {
+                build.esbuild = opt.current_value;
             } else if (opt.Test("-e", "--environment")) {
                 build.env = true;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
