@@ -320,6 +320,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     HeapArray<const char *> obj_filenames;
     HeapArray<const char *> pack_filenames;
     HeapArray<const char *> link_libraries;
+    HeapArray<const char *> predep_filenames;
 
     // Core platform source files (e.g. Teensy core)
     TargetInfo *core = nullptr;
@@ -371,7 +372,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         }
     }
 
-    // User object files
+    // Deal with user source files
     for (const SourceFileInfo *src: target.sources) {
         switch (src->type) {
             case SourceType::C:
@@ -388,6 +389,34 @@ bool Builder::AddTarget(const TargetInfo &target)
                 meta_filename = Fmt(&str_alloc, "@%1", meta_filename).ptr;
                 pack_filenames.Append(meta_filename);
             } break;
+
+            case SourceType::QtUi: {
+                const char *header_filename = AddQtUiSource(*src, ns);
+                predep_filenames.Append(header_filename);
+            } break;
+        }
+    }
+
+    // Make sure C/C++ source files must depend on generated headers
+    for (const SourceFileInfo *src: target.sources) {
+        if (src->type == SourceType::C || src->type == SourceType::Cxx) {
+            const char *obj_filename = build_map.FindValue({ ns, src->filename }, nullptr);
+            Size node_idx = nodes_map.FindValue(obj_filename, -1);
+
+            if (node_idx >= 0) {
+                Node *node = &nodes[node_idx];
+
+                for (const char *predep_filename: predep_filenames) {
+                    Size src_idx = nodes_map.FindValue(predep_filename, -1);
+
+                    if (src_idx >= 0) {
+                        Node *src = &nodes[src_idx];
+
+                        src->triggers.Append(node_idx);
+                        node->semaphore++;
+                    }
+                }
+            }
         }
     }
 
@@ -607,8 +636,9 @@ bool Builder::AddSource(const SourceFileInfo &src)
 {
     switch (src.type) {
         case SourceType::C:
-        case SourceType::Cxx: return AddCppSource(src, nullptr);
+        case SourceType::Cxx: return AddCppSource(src, nullptr, nullptr);
         case SourceType::Esbuild: return AddEsbuildSource(src, nullptr);
+        case SourceType::QtUi: return AddQtUiSource(src, nullptr);
     }
 
     RG_UNREACHABLE();
@@ -633,7 +663,8 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
                 pch_ext = ".cc";
             } break;
 
-            case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
+            case SourceType::Esbuild:
+            case SourceType::QtUi: { RG_UNREACHABLE(); } break;
         }
 
         if (pch) {
@@ -685,67 +716,6 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
     features = src.target->CombineFeatures(features);
     features = src.CombineFeatures(features);
 
-    // Run MOC if needed
-    if (src.target->qt_components.len) {
-        static const char *const HeaderExtensions[] = { ".h", ".hh", ".hpp", ".hxx", ".H" };
-
-        const char *moc_filename = build_map.FindValue({ "moc", src.filename }, nullptr);
-
-        if (!moc_filename && !PrepareQtSdk())
-            return false;
-
-        if (!moc_filename) {
-            const char *end = GetPathExtension(src.filename).ptr;
-            Span<const char> base = MakeSpan(src.filename, end - src.filename);
-
-            HeapArray<char> buf(&str_alloc);
-
-            for (const char *ext: HeaderExtensions) {
-                buf.RemoveFrom(0);
-                Fmt(&buf, "%1%2", base, ext);
-
-                if (TestFile(buf.ptr, FileType::File)) {
-                    const char *header_filename = buf.TrimAndLeak(1).ptr;
-
-                    moc_filename = BuildObjectPath("moc", header_filename, cache_directory,
-                                                   ".moc.cpp", &str_alloc);
-
-                    Command cmd = {};
-
-                    Fmt(&buf, "\"%1\" \"%2\" -o \"%3\"", moc_binary, header_filename, moc_filename);
-
-                    cmd.cache_len = buf.len;
-                    cmd.cmd_line = buf.TrimAndLeak(1);
-
-                    const char *text = Fmt(&str_alloc, "Run MOC on %!..+%1%!0", header_filename).ptr;
-                    if (AppendNode(text, moc_filename, cmd, { src.filename, header_filename, moc_binary }, "moc")) {
-                        if (!build.fake && !EnsureDirectoryExists(moc_filename))
-                            return false;
-                    }
-
-                    break;
-                }
-            }
-        }
-
-        if (moc_filename) {
-            const char *obj_filename = build_map.FindValue({ ns, moc_filename }, nullptr);
-
-            if (obj_filename) {
-                obj_filenames->Append(obj_filename);
-            } else {
-                SourceFileInfo moc = {};
-
-                moc.target = src.target;
-                moc.filename = moc_filename;
-                moc.type = SourceType::Cxx;
-
-                if (!AddCppSource(moc, ns, obj_filenames))
-                    return false;
-            }
-        }
-    }
-
     // Build main object
     if (!obj_filename) {
         obj_filename = BuildObjectPath(ns, src.filename, cache_directory,
@@ -756,15 +726,22 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
         Span<const char *const> system_directories = {};
 
         if (src.target->qt_components.len) {
-            RG_ASSERT(qt_headers);
+            if (!PrepareQtSdk())
+                return false;
 
             system_directories = CacheList(&src.target->include_directories, [&](HeapArray<const char *> *out_list) {
                 out_list->Append(qt_headers);
+
+                const char *src_directory = DuplicateString(GetPathDirectory(src.filename), &str_alloc).ptr;
+                out_list->Append(src_directory);
 
                 for (const char *component: src.target->qt_components) {
                     const char *dirname = Fmt(&str_alloc, "%1%/Qt%2", qt_headers, component).ptr;
                     out_list->Append(dirname);
                 }
+
+                const char *target_includes = GetTargetIncludeDirectory(*src.target);
+                out_list->Append(target_includes);
             });
         }
 
@@ -783,6 +760,82 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
     }
     if (obj_filenames) {
         obj_filenames->Append(obj_filename);
+    }
+
+    // Run MOC if needed
+    if (src.target->qt_components.len) {
+        static const char *const HeaderExtensions[] = { ".h", ".hh", ".hpp", ".hxx", ".H" };
+
+        const char *moc_filename = build_map.FindValue({ "moc", src.filename }, nullptr);
+
+        if (!moc_filename) {
+            RG_ASSERT(moc_binary);
+
+            const char *end = GetPathExtension(src.filename).ptr;
+            Span<const char> base = MakeSpan(src.filename, end - src.filename);
+
+            HeapArray<char> buf(&str_alloc);
+
+            for (const char *ext: HeaderExtensions) {
+                buf.RemoveFrom(0);
+                Fmt(&buf, "%1%2", base, ext);
+
+                if (TestFile(buf.ptr, FileType::File)) {
+                    const char *header_filename = buf.TrimAndLeak(1).ptr;
+
+                    moc_filename = BuildObjectPath("moc", header_filename, cache_directory,
+                                                   ".cpp", &str_alloc);
+
+                    Command cmd = {};
+
+                    // Assemble moc command
+                    {
+                        Fmt(&buf, "\"%1\" \"%2\" -o \"%3\"", moc_binary, header_filename, moc_filename);
+
+                        cmd.cache_len = buf.len;
+                        cmd.cmd_line = buf.TrimAndLeak(1);
+                    }
+
+                    const char *text = Fmt(&str_alloc, "Run MOC on %!..+%1%!0", header_filename).ptr;
+                    if (AppendNode(text, moc_filename, cmd, { src.filename, header_filename, moc_binary }, "moc")) {
+                        if (!build.fake && !EnsureDirectoryExists(moc_filename))
+                            return false;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        if (moc_filename) {
+            const char *obj_filename = build_map.FindValue({ ns, moc_filename }, nullptr);
+
+            if (!obj_filename) {
+                obj_filename = BuildObjectPath("moc", moc_filename, cache_directory,
+                                               build.compiler->GetObjectExtension(), &str_alloc);
+
+
+                HeapArray<const char *> *list = cache_lists.Find(&src.target->include_directories);
+                Span<const char *> system_directories = list ? list->As() : MakeSpan((const char **)nullptr, 0);
+
+                Command cmd = {};
+                build.compiler->MakeObjectCommand(moc_filename, SourceType::Cxx,
+                                                  nullptr, src.target->definitions,
+                                                  src.target->include_directories, system_directories,
+                                                  {}, features, build.env,
+                                                  obj_filename, &str_alloc, &cmd);
+
+                const char *text = Fmt(&str_alloc, "Build MOC for %!..+%1%!0", src.filename).ptr;
+                if (AppendNode(text, obj_filename, cmd, moc_filename, ns)) {
+                    if (!build.fake && !EnsureDirectoryExists(obj_filename))
+                        return false;
+                }
+            }
+
+            if (obj_filenames) {
+                obj_filenames->Append(obj_filename);
+            }
+        }
     }
 
     return true;
@@ -842,6 +895,48 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
     }
 
     return meta_filename;
+}
+
+const char *Builder::AddQtUiSource(const SourceFileInfo &src, const char *ns)
+{
+    RG_ASSERT(src.type == SourceType::QtUi);
+
+    const char *header_filename = build_map.FindValue({ ns, src.filename }, nullptr);
+
+    // First, we need Qt!
+    if (!header_filename && !PrepareQtSdk())
+        return nullptr;
+
+    // Run Qt UI builder
+    if (!header_filename) {
+        const char *target_includes = GetTargetIncludeDirectory(*src.target);
+
+        // Get basename without extension
+        Span<const char> basename = SplitStrReverseAny(src.filename, RG_PATH_SEPARATORS);
+        SplitStrReverse(basename, '.', &basename);
+
+        header_filename = Fmt(&str_alloc, "%1%/ui_%2.h", target_includes, basename).ptr;
+
+        Command cmd = {};
+
+        // Assemble uic command
+        {
+            HeapArray<char> buf(&str_alloc);
+
+            Fmt(&buf, "\"%1\" -n -o \"%2\" \"%3\"", uic_binary, header_filename, src.filename);
+
+            cmd.cache_len = buf.len;
+            cmd.cmd_line = buf.TrimAndLeak(1);
+        }
+
+        const char *text = Fmt(&str_alloc, "Build UI %!..+%1%!0", src.filename).ptr;
+        if (AppendNode(text, header_filename, cmd, { src.filename, uic_binary }, ns)) {
+            if (!build.fake && !EnsureDirectoryExists(header_filename))
+                return nullptr;
+        }
+    }
+
+    return header_filename;
 }
 
 const char *Builder::CompileStaticQtHelper(const TargetInfo &target)
@@ -958,12 +1053,12 @@ bool Builder::PrepareQtSdk()
 
             if (key == "QT_HOST_BINS" || key == "QT_HOST_LIBEXECS") {
                 if (!moc_binary) {
-#ifdef _WIN32
-                    const char *binary = Fmt(&str_alloc, "%1%/moc.exe", value).ptr;
-#else
-                    const char *binary = Fmt(&str_alloc, "%1%/moc", value).ptr;
-#endif
+                    const char *binary = Fmt(&str_alloc, "%1%/moc%2", value, build.compiler->GetLinkExtension()).ptr;
                     moc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
+                }
+                if (!uic_binary) {
+                    const char *binary = Fmt(&str_alloc, "%1%/uic%2", value, build.compiler->GetLinkExtension()).ptr;
+                    uic_binary = TestFile(binary, FileType::File) ? binary : nullptr;
                 }
             } else if (key == "QT_INSTALL_BINS") {
                 qt_binaries = DuplicateString(value, &str_alloc).ptr;
@@ -982,7 +1077,7 @@ bool Builder::PrepareQtSdk()
                 }
             }
 
-            valid = moc_binary && qt_binaries && qt_headers &&
+            valid = moc_binary && uic_binary && qt_binaries && qt_headers &&
                     qt_libraries && qt_plugins && qt_major;
         }
     }
@@ -1101,13 +1196,25 @@ bool Builder::PrepareEsbuild()
 Span<const char *const> Builder::CacheList(const void *mark, FunctionRef<void(HeapArray<const char *> *)> func)
 {
     bool inserted;
-    auto it = cache_lists.TrySetDefault(mark, &inserted);
+    auto bucket = cache_lists.TrySetDefault(mark, &inserted);
 
     if (inserted) {
-        func(&it->value);
+        func(&bucket->value);
     }
 
-    return it->value.As();
+    return bucket->value.As();
+}
+
+const char *Builder::GetTargetIncludeDirectory(const TargetInfo &target)
+{
+    bool inserted;
+    const char **ptr = target_headers.TrySet(target.name, "", &inserted);
+
+    if (inserted) {
+        *ptr = Fmt(&str_alloc, "%1%/Headers/%2", cache_directory, target.name).ptr;
+    }
+
+    return *ptr;
 }
 
 bool Builder::Build(int jobs, bool verbose)

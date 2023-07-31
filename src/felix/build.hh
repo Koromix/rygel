@@ -106,6 +106,7 @@ class Builder {
     // Qt stuff
     const char *qmake_binary = nullptr;
     const char *moc_binary = nullptr;
+    const char *uic_binary = nullptr;
     const char *qt_binaries = nullptr;
     const char *qt_headers = nullptr;
     const char *qt_libraries = nullptr;
@@ -128,6 +129,7 @@ class Builder {
     HashMap<BuildKey, const char *> build_map;
     HashMap<const char *, int64_t> mtime_map;
     HashMap<const void *, HeapArray<const char *>> cache_lists;
+    HashMap<const void *, const char *> target_headers;
 
     // Build
     std::mutex out_mutex;
@@ -157,6 +159,7 @@ private:
 
     bool AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<const char *> *obj_filenames = nullptr);
     const char *AddEsbuildSource(const SourceFileInfo &src, const char *ns);
+    const char *AddQtUiSource(const SourceFileInfo &src, const char *ns);
 
     const char *CompileStaticQtHelper(const TargetInfo &target);
     void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);
@@ -165,6 +168,7 @@ private:
     bool PrepareEsbuild();
 
     Span<const char *const> CacheList(const void *mark, FunctionRef<void(HeapArray<const char *> *)> func);
+    const char *GetTargetIncludeDirectory(const TargetInfo &target);
 
     bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
                     Span<const char *const> src_filenames, const char *ns);

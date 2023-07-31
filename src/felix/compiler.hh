@@ -165,7 +165,8 @@ static const OptionDesc CompileFeatureOptions[] = {
 enum class SourceType {
     C,
     Cxx,
-    Esbuild
+    Esbuild,
+    QtUi
 };
 
 enum class LinkType {
