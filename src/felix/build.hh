@@ -31,8 +31,8 @@ struct BuildSettings {
     bool env = false;
     bool fake = false;
 
-    // Tools (optional)
-    const char *esbuild = nullptr;
+    // Tools
+    const char *esbuild_binary = nullptr;
 };
 
 class Builder {
@@ -98,7 +98,7 @@ class Builder {
     const char *cache_filename;
 
     // Specific tools
-    const char *esbuild = nullptr;
+    const char *esbuild_binary = nullptr;
 
     // Core host targets (if any)
     BucketArray<TargetInfo> core_targets;

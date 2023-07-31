@@ -640,17 +640,17 @@ const char *Builder::AddCppSource(const SourceFileInfo &src, const char *ns)
 
 bool Builder::PrepareEsbuild()
 {
-    if (esbuild)
+    if (esbuild_binary)
         return true;
 
-    if (build.esbuild) {
-        esbuild = build.esbuild;
+    if (build.esbuild_binary) {
+        esbuild_binary = build.esbuild_binary;
         return true;
     } else {
         const char *str = getenv("ESBUILD_PATH");
 
         if (str && str[0]) {
-            esbuild = str;
+            esbuild_binary = str;
             return true;
         }
     }
@@ -666,7 +666,7 @@ bool Builder::PrepareEsbuild()
 #endif
 
         if (binary && TestFile(binary)) {
-            esbuild = binary;
+            esbuild_binary = binary;
             return true;
         }
     }
@@ -690,7 +690,7 @@ bool Builder::PrepareEsbuild()
             src_version.len = ReadFile(version_txt, src_version.data);
 
             if (build_version.len >= 0 && TestStr(build_version, src_version)) {
-                esbuild = binary;
+                esbuild_binary = binary;
                 return true;
             }
         }
@@ -717,7 +717,7 @@ bool Builder::PrepareEsbuild()
                 return false;
             }
 
-            esbuild = binary;
+            esbuild_binary = binary;
             return true;
         } else {
             LogError("Install Go compiler to build esbuild tool");
@@ -754,7 +754,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
         {
             HeapArray<char> buf(&str_alloc);
 
-            Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning", esbuild, src.filename);
+            Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning", esbuild_binary, src.filename);
             Fmt(&buf, " --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
 
             if (features & (int)CompileFeature::DebugInfo) {
@@ -775,7 +775,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
         }
 
         const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", src.filename).ptr;
-        if (AppendNode(text, meta_filename, cmd, { esbuild, src.filename }, ns)) {
+        if (AppendNode(text, meta_filename, cmd, { esbuild_binary, src.filename }, ns)) {
             if (!build.fake && !EnsureDirectoryExists(bundle_filename))
                 return nullptr;
         }

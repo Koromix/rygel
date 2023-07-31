@@ -509,7 +509,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 if (!ParseFeatureString(opt.current_value, &build.features, &maybe_features))
                     return 1;
             } else if (opt.Test("--esbuild_path", OptionType::Value)) {
-                build.esbuild = opt.current_value;
+                build.esbuild_binary = opt.current_value;
             } else if (opt.Test("-e", "--environment")) {
                 build.env = true;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
