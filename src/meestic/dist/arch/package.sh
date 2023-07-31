@@ -18,7 +18,7 @@ docker run -t -i --rm -v $(pwd):/io rygel/arch /io/src/meestic/dist/arch/build.s
 install -D -m0755 bin/Packages/meestic/arch/bin/meestic $PACKAGE_DIR/pkg/meestic
 install -D -m0755 bin/Packages/meestic/arch/bin/MeesticTray $PACKAGE_DIR/pkg/MeesticTray
 install -D -m0644 src/meestic/dist/arch/meestic.service $PACKAGE_DIR/pkg/meestic.service
-install -D -m0644 src/meestic/dist/arch/meestic.ini $PACKAGE_DIR/pkg/meestic.ini
+install -D -m0644 src/meestic/MeesticTray.ini $PACKAGE_DIR/pkg/meestic.ini
 install -D -m0644 src/meestic/dist/arch/MeesticTray.desktop $PACKAGE_DIR/pkg/MeesticTray.desktop
 install -D -m0644 src/meestic/images/meestic.png $PACKAGE_DIR/pkg/MeesticTray.png
 

@@ -48,7 +48,9 @@ sudo systemctl restart meestic
 Here is an example:
 
 ```ini
-# The profile set with Default will run when the GUI starts
+# The profile set with the "Default" will run when the GUI starts
+# Read the commented out section at the end for possible profile values
+
 Default = Disabled
 
 [Static Blue]
@@ -59,6 +61,11 @@ Colors = MsiBlue
 Mode = Breathe
 Speed = 0
 Colors = #FFA100 MsiBlue
+
+[Epilepsy]
+Mode = Transition
+Speed = 2
+Colors = #ff0000 #ffa500 #ffff00 #008000 #0000ff #4b0082 #ee82ee
 
 [Disabled]
 Mode = Disabled

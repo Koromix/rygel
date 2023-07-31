@@ -24,6 +24,7 @@ mkdir %PACKAGE_DIR%
 
 copy bin\Fast\meestic.exe %PACKAGE_DIR%\meestic.exe
 copy bin\Fast\MeesticTray.exe %PACKAGE_DIR%\MeesticTray.exe
+copy src\meestic\MeesticTray.ini %PACKAGE_DIR%\MeesticTray.ini.example
 copy src\meestic\images\meestic.ico %PACKAGE_DIR%\meestic.ico
 copy src\meestic\dist\windows\meestic.wxi %PACKAGE_DIR%\meestic.wxi
 
@@ -43,4 +44,4 @@ cd %PACKAGE_DIR%
 wix build meestic.wxs -o meestic_%VERSION%_win64.msi
 
 REM Create ZIP file
-tar.exe -a -c -f meestic_%VERSION%_win64.zip meestic.exe MeesticTray.exe
+tar.exe -a -c -f meestic_%VERSION%_win64.zip meestic.exe MeesticTray.exe MeesticTray.ini.example

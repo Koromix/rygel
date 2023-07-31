@@ -12,7 +12,8 @@
     </Feature>
     <Feature Id="GUI" Title="GUI version">
         <ComponentRef Id="BinaryGui" />
-        <ComponentRef Id="AutostartGui" />
+        <ComponentRef Id="MenuShortcut" />
+        <ComponentRef Id="IniExample" />
     </Feature>
 
     <StandardDirectory Id="ProgramFilesFolder">
@@ -28,11 +29,14 @@
                                Value="[INSTALLFOLDER]MeesticTray.exe"
                                Type="string" />
             </Component>
+            <Component Id="IniExample">
+                <File Id="MeesticTrayExemple" KeyPath="yes" Source="MeesticTray.ini.example"></File>
+            </Component>
         </Directory>
     </StandardDirectory>
 
     <StandardDirectory Id="StartMenuFolder">
-        <Component Id="AutostartGui" Guid="051df8f0-e153-4e86-b58e-2d249a1c738f">
+        <Component Id="MenuShortcut" Guid="051df8f0-e153-4e86-b58e-2d249a1c738f">
             <Shortcut Id="MeesticShortcut"
                       Name="MeesticTray"
                       Target="[INSTALLFOLDER]MeesticTray.exe"
