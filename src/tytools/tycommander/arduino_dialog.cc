@@ -28,7 +28,7 @@ ArduinoDialog::ArduinoDialog(QWidget *parent, Qt::WindowFlags f)
 
     connect(closeButton, &QPushButton::clicked, this, &ArduinoDialog::close);
     connect(arduinoPath, &QLineEdit::editingFinished, this,
-            [=]() { install_.setPath(arduinoPath->text()); });
+            [this]() { install_.setPath(arduinoPath->text()); });
     connect(browseButton, &QPushButton::clicked, this, &ArduinoDialog::browseForArduino);
     connect(integrateButton, &QPushButton::clicked, this, &ArduinoDialog::integrate);
     connect(restoreButton, &QPushButton::clicked, this, &ArduinoDialog::restore);

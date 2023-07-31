@@ -453,11 +453,11 @@ void Monitor::handleAddedEvent(ty_board *board)
     board_wrapper->setThreadPool(pool_);
     board_wrapper->serial_notifier_.moveToThread(&serial_thread_);
 
-    connect(board_wrapper, &Board::infoChanged, this, [=]() {
+    connect(board_wrapper, &Board::infoChanged, this, [=, this]() {
         refreshBoardItem(findBoardIterator(board));
     });
     // Don't capture board_wrapper_ptr, this should be obvious but I made the mistake once
-    connect(board_wrapper, &Board::interfacesChanged, this, [=]() {
+    connect(board_wrapper, &Board::interfacesChanged, this, [=, this]() {
         if (db_.isValid() && !board_wrapper->database().isValid() &&
                 board_wrapper->hasCapability(TY_BOARD_CAPABILITY_UNIQUE)) {
             configureBoardDatabase(*board_wrapper);
@@ -465,13 +465,13 @@ void Monitor::handleAddedEvent(ty_board *board)
         }
         refreshBoardItem(findBoardIterator(board));
     });
-    connect(board_wrapper, &Board::statusChanged, this, [=]() {
+    connect(board_wrapper, &Board::statusChanged, this, [=, this]() {
         refreshBoardItem(findBoardIterator(board));
     });
-    connect(board_wrapper, &Board::progressChanged, this, [=]() {
+    connect(board_wrapper, &Board::progressChanged, this, [=, this]() {
         refreshBoardItem(findBoardIterator(board));
     });
-    connect(board_wrapper, &Board::dropped, this, [=]() {
+    connect(board_wrapper, &Board::dropped, this, [=, this]() {
         removeBoardItem(findBoardIterator(board));
     });
 

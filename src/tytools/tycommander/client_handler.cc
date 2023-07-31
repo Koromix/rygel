@@ -205,7 +205,7 @@ void ClientHandler::upload(const QStringList &filenames)
                client disconnects. We want to complete the task even if that happens, so use
                QPointer to detect it. */
             QPointer<ClientHandler> this_ptr = this;
-            connect(dialog, &SelectorDialog::accepted, [=]() {
+            connect(dialog, &SelectorDialog::accepted, [=, this]() {
                 if (this_ptr) {
                     auto tasks = makeUploadTasks(dialog->selectedBoards(), filenames2, delegate_);
                     for (auto &task: tasks)
@@ -217,7 +217,7 @@ void ClientHandler::upload(const QStringList &filenames)
                         task.start();
                 }
             });
-            connect(dialog, &SelectorDialog::rejected, this, [=]() {
+            connect(dialog, &SelectorDialog::rejected, this, [this]() {
                 notifyLog(TY_LOG_ERROR, "Upload was canceled");
                 notifyFinished(false);
             });

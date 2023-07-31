@@ -340,7 +340,7 @@ TaskInterface Board::upload(const vector<shared_ptr<Firmware>> &fws, int flags)
     auto task2 = make_task<TyTask>(task);
     watchTask(task2);
     connect(&task_watcher_, &TaskWatcher::finished, this,
-            [=](bool success, shared_ptr<void> result) {
+            [this](bool success, shared_ptr<void> result) {
         if (success)
             addUploadedFirmware(static_cast<ty_firmware *>(result.get()));
     });

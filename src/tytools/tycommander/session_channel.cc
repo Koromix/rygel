@@ -199,11 +199,11 @@ SessionPeer::SessionPeer(QLocalSocket *socket)
     socket_->setParent(nullptr);
 
     QObject::connect(socket, &QLocalSocket::readyRead, this, &SessionPeer::dataReceived);
-    QObject::connect(socket, &QLocalSocket::disconnected, this, [=]() {
+    QObject::connect(socket, &QLocalSocket::disconnected, this, [this]() {
         close(RemoteClose);
     });
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    QObject::connect(socket, &QLocalSocket::errorOccurred, this, [=]() {
+    QObject::connect(socket, &QLocalSocket::errorOccurred, this, [this]() {
 #else
     QObject::connect(socket, static_cast<void(QLocalSocket::*)(QLocalSocket::LocalSocketError)>(&QLocalSocket::error), this, [=]() {
 #endif

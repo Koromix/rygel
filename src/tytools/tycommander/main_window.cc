@@ -95,7 +95,7 @@ MainWindow::MainWindow(QWidget *parent)
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);
     splitter->setCollapsible(1, false);
-    connect(splitter, &QSplitter::splitterMoved, this, [=](int pos) {
+    connect(splitter, &QSplitter::splitterMoved, this, [this](int pos) {
         bool collapsed = !pos;
         if (collapsed != compact_mode_)
             setCompactMode(collapsed);
@@ -129,7 +129,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(actionArduinoTool, &QAction::triggered, this, &MainWindow::openArduinoTool);
     connect(actionResetApp, &QAction::triggered, tyCommander, &TyCommander::resetMonitor);
     connect(actionResetSettingsApp, &QAction::triggered, this,
-            [=]() { tyCommander->clearSettingsAndResetWithConfirmation(this); });
+            [this]() { tyCommander->clearSettingsAndResetWithConfirmation(this); });
     connect(actionPreferences, &QAction::triggered, this, &MainWindow::openPreferences);
 
     // About menu
@@ -180,7 +180,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(boardList, &QListView::clicked, this, &MainWindow::autoFocusBoardWidgets);
     // The blue selection frame displayed on OSX looks awful
     boardList->setAttribute(Qt::WA_MacShowFocusRect, false);
-    connect(actionRenameBoard, &QAction::triggered, this, [=]() {
+    connect(actionRenameBoard, &QAction::triggered, this, [this]() {
         boardList->edit(boardList->currentIndex());
     });
 
@@ -201,7 +201,7 @@ MainWindow::MainWindow(QWidget *parent)
     actionBoardComboBox = toolBar->addWidget(boardComboBox);
 #endif
     connect(boardComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::activated),
-            this, [=](int index) { boardList->setCurrentIndex(monitor_->index(index)); });
+            this, [this](int index) { boardList->setCurrentIndex(monitor_->index(index)); });
 
     // Task progress bar (compact mode)
     statusProgressBar = new QProgressBar();
@@ -211,7 +211,7 @@ MainWindow::MainWindow(QWidget *parent)
     statusProgressBar->hide();
 
     // Serial tab
-    connect(tabWidget, &QTabWidget::currentChanged, this, [=]() {
+    connect(tabWidget, &QTabWidget::currentChanged, this, [this]() {
         // Focus the serial input widget if we can, but don't be a jerk to keyboard users
         if (!tabWidget->hasFocus())
             autoFocusBoardWidgets();
@@ -223,7 +223,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(sendButton, &QToolButton::clicked, serialEdit, &EnhancedLineInput::commit);
     serialEdit->lineEdit()->setPlaceholderText(tr("Send data..."));
 
-    auto add_eol_action = [=](const QString &title, const QString &eol) {
+    auto add_eol_action = [this](const QString &title, const QString &eol) {
         auto action = new QAction(title, actionSerialEOLGroup);
         action->setCheckable(true);
         action->setProperty("EOL", eol);
@@ -249,11 +249,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(firmwareBrowseButton, &QToolButton::clicked, this, &MainWindow::browseForFirmware);
     firmwareBrowseButton->setMenu(menuBrowseFirmware);
     connect(resetAfterCheck, &QCheckBox::clicked, this, &MainWindow::setResetAfterForSelection);
-    connect(rtcComboBox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, [=](int idx) {
+    connect(rtcComboBox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, [this](int idx) {
         RtcMode mode = (RtcMode)idx;
         setRtcModeForSelection(mode);
     });
-    connect(rateComboBox, &QComboBox::currentTextChanged, this, [=](const QString &str) {
+    connect(rateComboBox, &QComboBox::currentTextChanged, this, [this](const QString &str) {
         unsigned int rate = str.toUInt();
         setSerialRateForSelection(rate);
     });
@@ -279,7 +279,7 @@ MainWindow::MainWindow(QWidget *parent)
             /* We set StrongFocus in the Designer to put them in the correct tab position. The
                policy is set to StrongFocus when the group is made collapsible in Compact Mode. */
             group_box->setFocusPolicy(Qt::NoFocus);
-            connect(group_box, &EnhancedGroupBox::clicked, this, [=](bool checked) {
+            connect(group_box, &EnhancedGroupBox::clicked, this, [=, this](bool checked) {
                 if (checked && group_box != lastOpenOptionBox) {
                     lastOpenOptionBox->collapse();
                     lastOpenOptionBox = group_box;
@@ -602,7 +602,7 @@ void MainWindow::openArduinoTool()
         /* We don't want to open multiple dialogs (for each main window anyway), hence why
            we need to keep the pointer around. Unfortunately QPointer is broken with forward
            declarations, so we can't use that + WA_DeleteOnClose. */
-        connect(arduino_dialog_, &QDialog::finished, this, [=]() {
+        connect(arduino_dialog_, &QDialog::finished, this, [this]() {
             arduino_dialog_->deleteLater();
             arduino_dialog_ = nullptr;
         });
@@ -622,7 +622,7 @@ void MainWindow::openAboutDialog()
         about_dialog_ = new AboutDialog(this);
 
         // WA_DeleteOnClose is not enough, see openArduinoTool() for details
-        connect(about_dialog_, &QDialog::finished, this, [=]() {
+        connect(about_dialog_, &QDialog::finished, this, [this]() {
             about_dialog_->deleteLater();
             about_dialog_ = nullptr;
         });
@@ -763,11 +763,11 @@ void MainWindow::updateFirmwareMenus()
 
             action = menuRecentFirmwares->addAction(tr("Upload '%1'").arg(QFileInfo(firmware).fileName()));
             connect(action, &QAction::triggered, current_board_,
-                    [=]() { current_board_->startUpload(firmware); });
+                    [=, this]() { current_board_->startUpload(firmware); });
             action->setEnabled(actionUpload->isEnabled());
             action = menuBrowseFirmware->addAction(tr("Set to '%1'").arg(firmware));
             connect(action, &QAction::triggered, current_board_,
-                    [=]() { current_board_->setFirmware(firmware); });
+                    [=, this]() { current_board_->setFirmware(firmware); });
         }
     }
 

@@ -16,9 +16,9 @@
 #include "system.h"
 
 static const ty_model_info default_models[] = {
-    {0, "Generic"},
+    {0, "Generic", NULL},
 
-    {1, "Teensy"},
+    {1, "Teensy", NULL},
     {1, "Teensy++ 1.0", "at90usb646"},
     {1, "Teensy 2.0", "atmega32u4"},
     {1, "Teensy++ 2.0", "at90usb1286"},

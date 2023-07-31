@@ -52,7 +52,7 @@ static const ClientCommand commands[] = {
     {"restore",   &TyCommander::integrateArduino,     NULL,                        NULL},
     // Hidden command for Arduino 1.0.6 integration
     {"avrdude",   &TyCommander::fakeAvrdudeUpload,    NULL,                        NULL},
-    {0}
+    {}
 };
 
 using namespace std;
@@ -385,7 +385,7 @@ int TyCommander::executeRemoteCommand(int argc, char *argv[])
         command_arglist.append(opt);
     client->send(command_arglist);
 
-    connect(client.get(), &SessionPeer::closed, this, [=](SessionPeer::CloseReason reason) {
+    connect(client.get(), &SessionPeer::closed, this, [this](SessionPeer::CloseReason reason) {
         if (reason != SessionPeer::LocalClose) {
             showClientError(tr("Main instance closed the connection"));
             exit(1);

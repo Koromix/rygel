@@ -27,7 +27,7 @@ class Task : public std::enable_shared_from_this<Task> {
     bool success_ = false;
     std::shared_ptr<void> result_;
 
-    QMutex listeners_lock_{QMutex::Recursive};
+    QRecursiveMutex listeners_lock_;
     std::vector<class TaskListener *> listeners_;
 
 protected:
