@@ -162,7 +162,7 @@ static const OptionDesc CompileFeatureOptions[] = {
 
 enum class SourceType {
     C,
-    CXX,
+    Cxx,
     Esbuild
 };
 
@@ -220,7 +220,9 @@ public:
 
     virtual void MakeObjectCommand(const char *src_filename, SourceType src_type,
                                    const char *pch_filename, Span<const char *const> definitions,
-                                   Span<const char *const> include_directories, Span<const char *const> include_files,
+                                   Span<const char *const> include_directories,
+                                   Span<const char *const> system_directories,
+                                   Span<const char *const> include_files,
                                    uint32_t features, bool env_flags, const char *dest_filename,
                                    Allocator *alloc, Command *out_cmd) const = 0;
     virtual void MakeResourceCommand(const char *rc_filename, const char *dest_filename,

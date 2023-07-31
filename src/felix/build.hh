@@ -32,6 +32,7 @@ struct BuildSettings {
     bool fake = false;
 
     // Tools
+    const char *qmake_binary = nullptr;
     const char *esbuild_binary = nullptr;
 };
 
@@ -97,7 +98,14 @@ class Builder {
     const char *shared_directory;
     const char *cache_filename;
 
-    // Specific tools
+    // Qt stuff
+    const char *qmake_binary = nullptr;
+    const char *moc_binary = nullptr;
+    const char *qt_headers = nullptr;
+    const char *qt_libraries = nullptr;
+    int qt_major = 0;
+
+    // Javascript bundler
     const char *esbuild_binary = nullptr;
 
     // Core host targets (if any)
@@ -111,6 +119,7 @@ class Builder {
     HashMap<const char *, Size> nodes_map;
     HashMap<BuildKey, const char *> build_map;
     HashMap<const char *, int64_t> mtime_map;
+    HashMap<const void *, HeapArray<const char *>> cache_lists;
 
     // Build
     std::mutex out_mutex;
@@ -138,10 +147,13 @@ private:
     void SaveCache();
     void LoadCache();
 
-    const char *AddCppSource(const SourceFileInfo &src, const char *ns);
+    bool AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<const char *> *obj_filenames = nullptr);
     const char *AddEsbuildSource(const SourceFileInfo &src, const char *ns);
 
+    bool PrepareQtSdk();
     bool PrepareEsbuild();
+
+    Span<const char *const> CacheList(const void *mark, FunctionRef<void(HeapArray<const char *> *)> func);
 
     bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
                     Span<const char *const> src_filenames, const char *ns);

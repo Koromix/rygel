@@ -49,6 +49,7 @@ struct TargetConfig {
     HeapArray<const char *> include_directories;
     HeapArray<const char *> include_files;
     HeapArray<const char *> libraries;
+    HeapArray<const char *> qt_components;
 
     HashMap<const char *, SourceFeatures> src_features;
 
@@ -305,7 +306,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         if (features.enable_features || features.disable_features) {
                             target_config.src_features.TrySet(target_config.c_pch_filename, features);
                         }
-                    } else if (prop.key == "PrecompileCXX") {
+                    } else if (prop.key == "PrecompileCxx" || prop.key == "PrecompileCXX") {
                         Span<const char> path = SplitStr(prop.value, ' ', &prop.value);
 
                         target_config.cxx_pch_filename = NormalizePath(path, &set.str_alloc).ptr;
@@ -324,6 +325,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         valid &= ParseFeatureString(prop.value, &target_config.enable_features, &target_config.disable_features);
                     } else if (prop.key == "Link") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
+                    } else if (prop.key == "QtComponents") {
+                        AppendListValues(prop.value, &set.str_alloc, &target_config.qt_components);
                     } else if (prop.key == "BundleOptions") {
                         target_config.bundle_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "AssetDirectory") {
@@ -409,6 +412,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->include_directories, target_config->include_directories);
     std::swap(target->include_files, target_config->include_files);
     std::swap(target->libraries, target_config->libraries);
+    std::swap(target->qt_components, target_config->qt_components);
     target->enable_features = target_config->enable_features;
     target->disable_features = target_config->disable_features;
     target->bundle_options = target_config->bundle_options;
@@ -483,7 +487,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     if (target_config->cxx_pch_filename) {
         const SourceFeatures *features = target_config->src_features.Find(target_config->cxx_pch_filename);
 
-        target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::CXX, features);
+        target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::Cxx, features);
         target->pchs.Append(target->cxx_pch_src->filename);
     }
 

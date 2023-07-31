@@ -337,7 +337,7 @@ public:
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories,
+        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
                           include_files, features, env_flags, nullptr, alloc, out_cmd);
     }
 
@@ -352,9 +352,9 @@ public:
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> include_files,
-                           uint32_t features, bool env_flags, const char *dest_filename,
-                           Allocator *alloc, Command *out_cmd) const override
+                           Span<const char *const> include_directories, Span<const char *const> system_directories,
+                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -367,7 +367,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
             case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         if (dest_filename) {
@@ -375,7 +375,7 @@ public:
         } else {
             switch (src_type) {
                 case SourceType::C: { Fmt(&buf, " -x c-header -Xclang -fno-pch-timestamp"); } break;
-                case SourceType::CXX: { Fmt(&buf, " -x c++-header -Xclang -fno-pch-timestamp"); } break;
+                case SourceType::Cxx: { Fmt(&buf, " -x c++-header -Xclang -fno-pch-timestamp"); } break;
                 case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
@@ -460,7 +460,7 @@ public:
         }
         if (platform == HostPlatform::Windows) {
             if (features & (int)CompileFeature::StaticLink) {
-                if (src_type == SourceType::CXX) {
+                if (src_type == SourceType::Cxx) {
                     Fmt(&buf, " -Xclang -flto-visibility-public-std -D_SILENCE_CLANG_CONCEPTS_MESSAGE");
                 }
             } else {
@@ -519,6 +519,9 @@ public:
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
         }
+        for (const char *system_directory: system_directories) {
+            Fmt(&buf, " -isystem \"%1\"", system_directory);
+        }
         for (const char *include_file: include_files) {
             Fmt(&buf, " -include \"%1\"", include_file);
         }
@@ -526,7 +529,7 @@ public:
         if (env_flags) {
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
@@ -817,8 +820,8 @@ public:
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, nullptr, definitions,
-                          include_directories, include_files, features, env_flags, nullptr, alloc, out_cmd);
+        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
+                          include_files, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -832,9 +835,9 @@ public:
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> include_files,
-                           uint32_t features, bool env_flags, const char *dest_filename,
-                           Allocator *alloc, Command *out_cmd) const override
+                           Span<const char *const> include_directories, Span<const char *const> system_directories,
+                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -847,7 +850,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
             case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         if (dest_filename) {
@@ -855,7 +858,7 @@ public:
         } else {
             switch (src_type) {
                 case SourceType::C: { Fmt(&buf, " -x c-header"); } break;
-                case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
+                case SourceType::Cxx: { Fmt(&buf, " -x c++-header"); } break;
                 case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
@@ -879,7 +882,7 @@ public:
         }
         if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-cast-function-type");
-            if (src_type == SourceType::CXX) {
+            if (src_type == SourceType::Cxx) {
                 Fmt(&buf, " -Wno-init-list-lifetime");
             }
             Fmt(&buf, " -Wreturn-type -Werror=return-type");
@@ -969,6 +972,9 @@ public:
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
         }
+        for (const char *system_directory: system_directories) {
+            Fmt(&buf, " -isystem \"%1\"", system_directory);
+        }
         for (const char *include_file: include_files) {
             Fmt(&buf, " -include \"%1\"", include_file);
         }
@@ -976,7 +982,7 @@ public:
         if (env_flags) {
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
@@ -1207,7 +1213,7 @@ public:
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories,
+        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
                           include_files, features, env_flags, nullptr, alloc, out_cmd);
     }
 
@@ -1228,9 +1234,9 @@ public:
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> include_files,
-                           uint32_t features, bool env_flags, const char *dest_filename,
-                           Allocator *alloc, Command *out_cmd) const override
+                           Span<const char *const> include_directories, Span<const char *const> system_directories,
+                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -1239,7 +1245,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" /nologo", cl); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" /nologo /std:c++20 /Zc:__cplusplus", cl); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" /nologo /std:c++20 /Zc:__cplusplus", cl); } break;
             case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         if (dest_filename) {
@@ -1311,6 +1317,9 @@ public:
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"/I%1\"", include_directory);
         }
+        for (const char *system_directory: system_directories) {
+            Fmt(&buf, " \"/I%1\"", system_directory);
+        }
         for (const char *include_file: include_files) {
             if (PathIsAbsolute(include_file)) {
                 Fmt(&buf, " \"/FI%1\"", include_file);
@@ -1323,7 +1332,7 @@ public:
         if (env_flags) {
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
@@ -1531,7 +1540,7 @@ public:
             SourceType src_type;
             if (!DetermineSourceType(basename, &src_type))
                 return true;
-            if (src_type != SourceType::C && src_type != SourceType::CXX)
+            if (src_type != SourceType::C && src_type != SourceType::Cxx)
                 return true;
 
             const char *src_filename = NormalizePath(basename, dirname, alloc).ptr;
@@ -1568,14 +1577,15 @@ public:
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
                         Span<const char *const>, uint32_t, bool, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+
     const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> include_files,
-                           uint32_t features, bool env_flags, const char *dest_filename,
-                           Allocator *alloc, Command *out_cmd) const override
+                           Span<const char *const> include_directories, Span<const char *const> system_directories,
+                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -1584,7 +1594,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++14", cxx); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++14", cxx); } break;
             case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         RG_ASSERT(dest_filename); // No PCH
@@ -1642,7 +1652,7 @@ public:
             case Model::Teensy41: { Fmt(&buf, " -DARDUINO_TEENSY41 -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mthumb -mfloat-abi=hard"
                                               " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
         }
-        if (src_type == SourceType::CXX) {
+        if (src_type == SourceType::Cxx) {
             Fmt(&buf, " -felide-constructors -fno-exceptions -fno-rtti");
         }
         if (set_usb) {
@@ -1671,6 +1681,9 @@ public:
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
         }
+        for (const char *system_directory: system_directories) {
+            Fmt(&buf, " -isystem \"%1\"", system_directory);
+        }
         for (const char *include_file: include_files) {
             Fmt(&buf, " -include \"%1\"", include_file);
         }
@@ -1678,7 +1691,7 @@ public:
         if (env_flags) {
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
@@ -1876,9 +1889,9 @@ public:
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> include_files,
-                           uint32_t features, bool env_flags, const char *dest_filename,
-                           Allocator *alloc, Command *out_cmd) const override
+                           Span<const char *const> include_directories, Span<const char *const> system_directories,
+                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -1887,7 +1900,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
             case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
         }
         RG_ASSERT(dest_filename); // No PCH
@@ -1927,6 +1940,9 @@ public:
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
         }
+        for (const char *system_directory: system_directories) {
+            Fmt(&buf, " -isystem \"%1\"", system_directory);
+        }
         for (const char *include_file: include_files) {
             Fmt(&buf, " -include \"%1\"", include_file);
         }
@@ -1934,7 +1950,7 @@ public:
         if (env_flags) {
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild: { RG_UNREACHABLE(); } break;
             }
         }
@@ -2238,7 +2254,7 @@ bool DetermineSourceType(const char *filename, SourceType *out_type)
         return true;
     } else if (extension == ".cc" || extension == ".cpp") {
         if (out_type) {
-            *out_type = SourceType::CXX;
+            *out_type = SourceType::Cxx;
         }
         return true;
     } else if (extension == ".js" || extension == ".css") {

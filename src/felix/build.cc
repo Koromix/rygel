@@ -353,12 +353,10 @@ bool Builder::AddTarget(const TargetInfo &target)
     // Core object files (e.g. Teensy core)
     if (core) {
         for (const SourceFileInfo *src: core->sources) {
-            RG_ASSERT(src->type == SourceType::C || src->type == SourceType::CXX);
+            RG_ASSERT(src->type == SourceType::C || src->type == SourceType::Cxx);
 
-            const char *obj_filename = AddCppSource(*src, core->name);
-            if (!obj_filename)
+            if (!AddCppSource(*src, core->name, &obj_filenames))
                 return false;
-            obj_filenames.Append(obj_filename);
         }
     }
 
@@ -366,11 +364,9 @@ bool Builder::AddTarget(const TargetInfo &target)
     for (const SourceFileInfo *src: target.sources) {
         switch (src->type) {
             case SourceType::C:
-            case SourceType::CXX: {
-                const char *obj_filename = AddCppSource(*src, ns);
-                if (!obj_filename)
+            case SourceType::Cxx: {
+                if (!AddCppSource(*src, ns, &obj_filenames))
                     return false;
-                obj_filenames.Append(obj_filename);
             } break;
 
             case SourceType::Esbuild: {
@@ -411,11 +407,11 @@ bool Builder::AddTarget(const TargetInfo &target)
             Command cmd = {};
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  nullptr, {"EXPORT"}, {}, {}, features, build.env,
+                                                  nullptr, {"EXPORT"}, {}, {}, {}, features, build.env,
                                                   obj_filename, &str_alloc, &cmd);
             } else {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  nullptr, {}, {}, {}, features, build.env,
+                                                  nullptr, {}, {}, {}, {}, features, build.env,
                                                   obj_filename,  &str_alloc, &cmd);
             }
 
@@ -465,7 +461,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         Command cmd = {};
         build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                          nullptr, {}, {}, {}, features, build.env,
+                                          nullptr, {}, {}, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 version file", target.name).ptr;
@@ -494,6 +490,19 @@ bool Builder::AddTarget(const TargetInfo &target)
         }
 
         obj_filenames.Append(res_filename);
+    }
+
+    // Link with required Qt libraries
+    if (target.qt_components.len && qt_libraries) {
+        for (const char *component: target.qt_components) {
+#ifdef _WIN32
+            const char *library = Fmt(&str_alloc, "%1%/Qt%2%3.lib", qt_libraries, qt_major, component).ptr;
+            obj_filenames.Append(library);
+#else
+            const char *library = Fmt(&str_alloc, "%1%/libQt%2%3.so", qt_libraries, qt_major, component).ptr;
+            obj_filenames.Append(library);
+#endif
+        }
     }
 
     // Link commands
@@ -538,16 +547,16 @@ bool Builder::AddSource(const SourceFileInfo &src)
 {
     switch (src.type) {
         case SourceType::C:
-        case SourceType::CXX: return AddCppSource(src, nullptr);
+        case SourceType::Cxx: return AddCppSource(src, nullptr);
         case SourceType::Esbuild: return AddEsbuildSource(src, nullptr);
     }
 
     RG_UNREACHABLE();
 }
 
-const char *Builder::AddCppSource(const SourceFileInfo &src, const char *ns)
+bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<const char *> *obj_filenames)
 {
-    RG_ASSERT(src.type == SourceType::C || src.type == SourceType::CXX);
+    RG_ASSERT(src.type == SourceType::C || src.type == SourceType::Cxx);
 
     // Precompiled header (if any)
     const char *pch_filename = nullptr;
@@ -559,7 +568,7 @@ const char *Builder::AddCppSource(const SourceFileInfo &src, const char *ns)
                 pch = src.target->c_pch_src;
                 pch_ext = ".c";
             } break;
-            case SourceType::CXX: {
+            case SourceType::Cxx: {
                 pch = src.target->cxx_pch_src;
                 pch_ext = ".cc";
             } break;
@@ -604,7 +613,7 @@ const char *Builder::AddCppSource(const SourceFileInfo &src, const char *ns)
                 const char *text = Fmt(&str_alloc, "Precompile %!..+%1%!0", pch->filename).ptr;
                 if (AppendNode(text, pch_filename, cmd, pch->filename, ns)) {
                     if (!build.fake && !CreatePrecompileHeader(pch->filename, pch_filename))
-                        return nullptr;
+                        return false;
                 }
             }
         }
@@ -612,30 +621,235 @@ const char *Builder::AddCppSource(const SourceFileInfo &src, const char *ns)
 
     const char *obj_filename = build_map.FindValue({ ns, src.filename }, nullptr);
 
-    // Build object
+    uint32_t features = build.features;
+    features = src.target->CombineFeatures(features);
+    features = src.CombineFeatures(features);
+
+    // Run MOC if needed
+    if (src.target->qt_components.len) {
+        static const char *const HeaderExtensions[] = { ".h", ".hh", ".hpp", ".hxx", ".H" };
+
+        const char *moc_filename = build_map.FindValue({ "moc", src.filename }, nullptr);
+
+        if (!moc_filename && !PrepareQtSdk())
+            return false;
+
+        if (!moc_filename) {
+            const char *end = GetPathExtension(src.filename).ptr;
+            Span<const char> base = MakeSpan(src.filename, end - src.filename);
+
+            HeapArray<char> buf(&str_alloc);
+
+            for (const char *ext: HeaderExtensions) {
+                buf.RemoveFrom(0);
+                Fmt(&buf, "%1%2", base, ext);
+
+                if (TestFile(buf.ptr, FileType::File)) {
+                    const char *header_filename = buf.TrimAndLeak(1).ptr;
+
+                    moc_filename = BuildObjectPath("moc", header_filename, cache_directory,
+                                                   ".moc.cpp", &str_alloc);
+
+                    Command cmd = {};
+
+                    Fmt(&buf, "\"%1\" \"%2\" -o \"%3\"", moc_binary, header_filename, moc_filename);
+
+                    cmd.cache_len = buf.len;
+                    cmd.cmd_line = buf.TrimAndLeak(1);
+
+                    const char *text = Fmt(&str_alloc, "Run MOC on %!..+%1%!0", header_filename).ptr;
+                    if (AppendNode(text, moc_filename, cmd, { src.filename, header_filename, moc_binary }, "moc")) {
+                        if (!build.fake && !EnsureDirectoryExists(moc_filename))
+                            return false;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        if (moc_filename) {
+            const char *obj_filename = build_map.FindValue({ ns, moc_filename }, nullptr);
+
+            if (obj_filename) {
+                obj_filenames->Append(obj_filename);
+            } else {
+                SourceFileInfo moc = {};
+
+                moc.target = src.target;
+                moc.filename = moc_filename;
+                moc.type = SourceType::Cxx;
+
+                if (!AddCppSource(moc, ns, obj_filenames))
+                    return false;
+            }
+        }
+    }
+
+    // Build main object
     if (!obj_filename) {
         obj_filename = BuildObjectPath(ns, src.filename, cache_directory,
                                        build.compiler->GetObjectExtension(), &str_alloc);
+
+        Command cmd = {};
+
+        Span<const char *const> system_directories = {};
+
+        if (src.target->qt_components.len) {
+            RG_ASSERT(qt_headers);
+
+            system_directories = CacheList(src.target, [&](HeapArray<const char *> *out_list) {
+                out_list->Append(qt_headers);
+
+                for (const char *component: src.target->qt_components) {
+                    const char *dirname = Fmt(&str_alloc, "%1%/Qt%2", qt_headers, component).ptr;
+                    out_list->Append(dirname);
+                }
+            });
+        }
+
+        build.compiler->MakeObjectCommand(src.filename, src.type,
+                                          pch_filename, src.target->definitions,
+                                          src.target->include_directories, system_directories,
+                                          src.target->include_files, features, build.env,
+                                          obj_filename, &str_alloc, &cmd);
+        const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", src.filename).ptr;
+        if (pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename }, ns)
+                         : AppendNode(text, obj_filename, cmd, src.filename, ns)) {
+            if (!build.fake && !EnsureDirectoryExists(obj_filename))
+                return false;
+        }
+    }
+    if (obj_filenames) {
+        obj_filenames->Append(obj_filename);
+    }
+
+    return true;
+}
+
+const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
+{
+    RG_ASSERT(src.type == SourceType::Esbuild);
+
+    const char *meta_filename = build_map.FindValue({ ns, src.filename }, nullptr);
+
+    // First, we need esbuild!
+    if (!meta_filename && !PrepareEsbuild())
+        return nullptr;
+
+    // Build web bundle
+    if (!meta_filename) {
+        const char *bundle_filename = BuildObjectPath(ns, src.filename, cache_directory, "", &str_alloc);
+
+        meta_filename = Fmt(&str_alloc, "%1.meta", bundle_filename).ptr;
 
         uint32_t features = build.features;
         features = src.target->CombineFeatures(features);
         features = src.CombineFeatures(features);
 
         Command cmd = {};
-        build.compiler->MakeObjectCommand(src.filename, src.type,
-                                          pch_filename, src.target->definitions, src.target->include_directories,
-                                          src.target->include_files, features, build.env,
-                                          obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", src.filename).ptr;
-        if (pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename }, ns)
-                         : AppendNode(text, obj_filename, cmd, src.filename, ns)) {
-            if (!build.fake && !EnsureDirectoryExists(obj_filename))
+        // Assemble esbuild command
+        {
+            HeapArray<char> buf(&str_alloc);
+
+            Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning", esbuild_binary, src.filename);
+            Fmt(&buf, " --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
+
+            if (features & (int)CompileFeature::DebugInfo) {
+                Fmt(&buf, " --sourcemap=inline");
+            } else {
+                Fmt(&buf, " --minify");
+            }
+            if (src.target->bundle_options) {
+                Fmt(&buf, " %1", src.target->bundle_options);
+            }
+
+            cmd.cache_len = buf.len;
+            Fmt(&buf, " --color=%1", FileIsVt100(stdout) ? "true" : "false");
+            cmd.cmd_line = buf.TrimAndLeak(1);
+
+            cmd.deps_mode = Command::DependencyMode::EsbuildMeta;
+            cmd.deps_filename = meta_filename;
+        }
+
+        const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", src.filename).ptr;
+        if (AppendNode(text, meta_filename, cmd, { src.filename, esbuild_binary }, ns)) {
+            if (!build.fake && !EnsureDirectoryExists(bundle_filename))
                 return nullptr;
         }
     }
 
-    return obj_filename;
+    return meta_filename;
+}
+
+bool Builder::PrepareQtSdk()
+{
+    if (qmake_binary)
+        return true;
+
+    if (build.qmake_binary) {
+        qmake_binary = build.qmake_binary;
+    } else if (getenv("QMAKE_PATH")) {
+        const char *str = getenv("QMAKE_PATH");
+
+        if (str && str[0]) {
+            qmake_binary = str;
+        }
+    } else if (!FindExecutableInPath("qmake", &str_alloc, &qmake_binary)) {
+        LogInfo("Cannot find QMake binary for Qt");
+        return false;
+    }
+
+    HeapArray<char> specs;
+    {
+        const char *cmd_line = Fmt(&str_alloc, "\"%1\" -query", qmake_binary).ptr;
+
+        if (!ReadCommandOutput(cmd_line, &specs))
+            return false;
+    }
+
+    bool valid = false;
+
+    // Parse specs to find moc, include paths, library path
+    {
+        StreamReader st(specs.As<const uint8_t>(), "<qmake>");
+        LineReader reader(&st);
+
+        Span<const char> line;
+        while (!valid && reader.Next(&line)) {
+            Span<const char> value = {};
+            Span<const char> key = TrimStr(SplitStr(line, ':', &value));
+            value = TrimStr(value);
+
+            if (key == "QT_HOST_BINS" || key == "QT_HOST_LIBEXECS") {
+                if (!moc_binary) {
+                    const char *binary = Fmt(&str_alloc, "%1%/moc", value).ptr;
+                    moc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
+                }
+            } else if (key == "QT_INSTALL_HEADERS") {
+                qt_headers = DuplicateString(value, &str_alloc).ptr;
+            } else if (key == "QT_INSTALL_LIBS") {
+                qt_libraries = DuplicateString(value, &str_alloc).ptr;
+            } else if (key == "QT_VERSION") {
+                Span<const char> major = SplitStr(value, '.');
+
+                if (!ParseInt(major, &qt_major) || qt_major < 5 || qt_major > 6) {
+                    LogError("Only Qt5 and Qt6 are supported");
+                    return false;
+                }
+            }
+
+            valid = moc_binary && qt_headers && qt_libraries && qt_major;
+        }
+    }
+
+    if (!valid) {
+        LogError("Cannot find required Qt tools");
+        return false;
+    }
+
+    return true;
 }
 
 bool Builder::PrepareEsbuild()
@@ -728,60 +942,16 @@ bool Builder::PrepareEsbuild()
     RG_UNREACHABLE();
 }
 
-const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
+Span<const char *const> Builder::CacheList(const void *mark, FunctionRef<void(HeapArray<const char *> *)> func)
 {
-    RG_ASSERT(src.type == SourceType::Esbuild);
+    bool inserted;
+    auto it = cache_lists.TrySetDefault(mark, &inserted);
 
-    const char *meta_filename = build_map.FindValue({ ns, src.filename }, nullptr);
-
-    // First, we need esbuild!
-    if (!meta_filename && !PrepareEsbuild())
-        return nullptr;
-
-    // Build web bundle
-    if (!meta_filename) {
-        const char *bundle_filename = BuildObjectPath(ns, src.filename, cache_directory, "", &str_alloc);
-
-        meta_filename = Fmt(&str_alloc, "%1.meta", bundle_filename).ptr;
-
-        uint32_t features = build.features;
-        features = src.target->CombineFeatures(features);
-        features = src.CombineFeatures(features);
-
-        Command cmd = {};
-
-        // Assemble esbuild command
-        {
-            HeapArray<char> buf(&str_alloc);
-
-            Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning", esbuild_binary, src.filename);
-            Fmt(&buf, " --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
-
-            if (features & (int)CompileFeature::DebugInfo) {
-                Fmt(&buf, " --sourcemap=inline");
-            } else {
-                Fmt(&buf, " --minify");
-            }
-            if (src.target->bundle_options) {
-                Fmt(&buf, " %1", src.target->bundle_options);
-            }
-
-            cmd.cache_len = buf.len;
-            Fmt(&buf, " --color=%1", FileIsVt100(stdout) ? "true" : "false");
-            cmd.cmd_line = buf.TrimAndLeak(1);
-
-            cmd.deps_mode = Command::DependencyMode::EsbuildMeta;
-            cmd.deps_filename = meta_filename;
-        }
-
-        const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", src.filename).ptr;
-        if (AppendNode(text, meta_filename, cmd, { src.filename, esbuild_binary }, ns)) {
-            if (!build.fake && !EnsureDirectoryExists(bundle_filename))
-                return nullptr;
-        }
+    if (inserted) {
+        func(&it->value);
     }
 
-    return meta_filename;
+    return it->value.As();
 }
 
 bool Builder::Build(int jobs, bool verbose)

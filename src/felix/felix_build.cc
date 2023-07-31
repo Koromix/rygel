@@ -313,6 +313,7 @@ Options:
     %!..+-f, --features <features>%!0    Override compilation features
                                  %!D..(start with -All to reset and set only new flags)%!0
 
+        %!..+--qmake_path <path>%!0      Set explicit path to QMake
         %!..+--esbuild_path <path>%!0    Set explicit path to esbuild binary
 
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
@@ -508,6 +509,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("-f", "--features", OptionType::Value)) {
                 if (!ParseFeatureString(opt.current_value, &build.features, &maybe_features))
                     return 1;
+            } else if (opt.Test("--qmake_path", OptionType::Value)) {
+                build.qmake_binary = opt.current_value;
             } else if (opt.Test("--esbuild_path", OptionType::Value)) {
                 build.esbuild_binary = opt.current_value;
             } else if (opt.Test("-e", "--environment")) {

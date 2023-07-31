@@ -69,6 +69,7 @@ struct TargetInfo {
     HeapArray<const char *> include_directories;
     HeapArray<const char *> include_files;
     HeapArray<const char *> libraries;
+    HeapArray<const char *> qt_components;
 
     uint32_t enable_features;
     uint32_t disable_features;
