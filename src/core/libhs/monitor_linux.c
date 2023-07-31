@@ -44,7 +44,8 @@ struct udev_aggregate {
 
 static struct device_subsystem device_subsystems[] = {
     {"hidraw", HS_DEVICE_TYPE_HID},
-    {"tty",    HS_DEVICE_TYPE_SERIAL}
+    {"tty",    HS_DEVICE_TYPE_SERIAL},
+    {NULL}
 };
 
 static pthread_mutex_t udev_init_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -419,7 +420,7 @@ static int enumerate(_hs_match_helper *match_helper, hs_enumerate_func *f, void 
     }
 
     udev_enumerate_add_match_is_initialized(enumerate);
-    for (unsigned int i = 0; i < _HS_COUNTOF(device_subsystems); i++) {
+    for (unsigned int i = 0; device_subsystems[i].subsystem; i++) {
         if (_hs_match_helper_has_type(match_helper, device_subsystems[i].type)) {
             r = udev_enumerate_add_match_subsystem(enumerate, device_subsystems[i].subsystem);
             if (r < 0) {
@@ -587,7 +588,7 @@ int hs_monitor_start(hs_monitor *monitor)
         goto error;
     }
 
-    for (unsigned int i = 0; i < _HS_COUNTOF(device_subsystems); i++) {
+    for (unsigned int i = 0; device_subsystems[i].subsystem; i++) {
         if (_hs_match_helper_has_type(&monitor->match_helper, device_subsystems[i].type)) {
             r = udev_monitor_filter_add_match_subsystem_devtype(monitor->udev_mon, device_subsystems[i].subsystem, NULL);
             if (r < 0) {

@@ -13,7 +13,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "light.hh"
-#include "vendor/libhs/libhs.h"
+#include "src/core/libhs/libhs.h"
 
 namespace RG {
 

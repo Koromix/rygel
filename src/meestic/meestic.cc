@@ -14,9 +14,9 @@
 #include "src/core/libcc/libcc.hh"
 #include "config.hh"
 #include "light.hh"
+#include "src/core/libhs/libhs.h"
 #include "src/core/libsandbox/libsandbox.hh"
 #include "src/core/libwrap/json.hh"
-#include "vendor/libhs/libhs.h"
 
 #ifdef __linux__
     #include <sys/types.h>
