@@ -270,6 +270,7 @@ public:
             supported |= (int)CompileFeature::SafeStack;
         }
         if (platform == HostPlatform::Windows) {
+            supported |= (int)CompileFeature::DynamicRuntime;
             supported |= (int)CompileFeature::NoConsole;
         }
         supported |= (int)CompileFeature::SSE41;
@@ -459,12 +460,12 @@ public:
             Fmt(&buf, " -g");
         }
         if (platform == HostPlatform::Windows) {
-            if (features & (int)CompileFeature::StaticLink) {
+            if (features & (int)CompileFeature::DynamicRuntime) {
+                Fmt(&buf, " -D_DLL");
+            } else {
                 if (src_type == SourceType::Cxx) {
                     Fmt(&buf, " -Xclang -flto-visibility-public-std -D_SILENCE_CLANG_CONCEPTS_MESSAGE");
                 }
-            } else {
-                Fmt(&buf, " -D_DLL");
             }
         }
         if (features & (int)CompileFeature::ASan) {
@@ -614,10 +615,10 @@ public:
 
                 Fmt(&buf, " -Wl,/NODEFAULTLIB:libcmt -Wl,/NODEFAULTLIB:msvcrt -Wl,setargv.obj -Wl,oldnames.lib");
 
-                if (features & (int)CompileFeature::StaticLink) {
-                    Fmt(&buf, " -Wl,libcmt%1.lib", suffix);
-                } else {
+                if (features & (int)CompileFeature::DynamicRuntime) {
                     Fmt(&buf, " -Wl,msvcrt%1.lib", suffix);
+                } else {
+                    Fmt(&buf, " -Wl,libcmt%1.lib", suffix);
                 }
 
                 if (features & (int)CompileFeature::DebugInfo) {
@@ -647,7 +648,7 @@ public:
         // Features
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
-            if (platform == HostPlatform::Windows && !(features & (int)CompileFeature::StaticLink)) {
+            if (platform == HostPlatform::Windows && (features & (int)CompileFeature::DynamicRuntime)) {
                 Fmt(&buf, " -shared-libasan");
             }
         }
@@ -769,6 +770,7 @@ public:
             supported |= (int)CompileFeature::CFI;
         }
         if (platform == HostPlatform::Windows) {
+            supported |= (int)CompileFeature::DynamicRuntime;
             supported |= (int)CompileFeature::NoConsole;
         }
         supported |= (int)CompileFeature::SSE41;
@@ -1180,6 +1182,7 @@ public:
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::CFI;
         if (platform == HostPlatform::Windows) {
+            supported |= (int)CompileFeature::DynamicRuntime;
             supported |= (int)CompileFeature::NoConsole;
         }
         supported |= (int)CompileFeature::SSE41;
@@ -1301,10 +1304,10 @@ public:
         if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " /Z7 /Zo");
         }
-        if (features & (int)CompileFeature::StaticLink) {
-            Fmt(&buf, " /MT");
-        } else {
+        if (features & (int)CompileFeature::DynamicRuntime) {
             Fmt(&buf, " /MD");
+        } else {
+            Fmt(&buf, " /MT");
         }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " /fsanitize=address");
