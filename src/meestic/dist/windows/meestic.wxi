@@ -15,9 +15,15 @@
         <ComponentRef Id="MenuShortcut" />
         <ComponentRef Id="IniExample" />
     </Feature>
+    <Feature Id="Readme" Title="Help file">
+        <ComponentRef Id="README" />
+    </Feature>
 
     <StandardDirectory Id="ProgramFilesFolder">
         <Directory Id="INSTALLFOLDER" Name="Meestic">
+            <Component Id="README">
+                <File Id="README.md" KeyPath="yes" Source="README.md" ></File>
+            </Component>
             <Component Id="Binary">
                 <File Id="MeeticBinary" KeyPath="yes" Source="meestic.exe" ></File>
             </Component>
