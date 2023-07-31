@@ -257,6 +257,45 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     return DefWindowProcA(hwnd, msg, wparam, lparam);
 }
 
+static void RedirectErrors() {
+    static wchar_t title[1024];
+    ConvertUtf8ToWin32Wide(FelixTarget, title);
+
+    SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
+        UINT flags = 0;
+        LocalArray<wchar_t, 8192> buf_w;
+
+        switch (level)  {
+            case LogLevel::Debug:
+            case LogLevel::Info: return;
+
+            case LogLevel::Warning: { flags |= MB_ICONWARNING; } break;
+            case LogLevel::Error: { flags |= MB_ICONERROR; } break;
+        }
+        flags |= MB_OK;
+
+        // Append context
+        if (ctx) {
+            Size len = ConvertUtf8ToWin32Wide(ctx, buf_w.Take(0, RG_LEN(buf_w.data) / 2));
+            if (len < 0)
+                return;
+            wcscpy(buf_w.data + len, L": ");
+            buf_w.len += len + 2;
+        }
+
+        // Append message
+        {
+            Size len = ConvertUtf8ToWin32Wide(msg, buf_w.TakeAvailable());
+            if (len < 0)
+                return;
+            buf_w.len += len;
+        }
+
+        const wchar_t *ptr = buf_w.data;
+        MessageBoxW(nullptr, ptr, title, flags);
+    });
+}
+
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
@@ -265,10 +304,9 @@ int Main(int argc, char **argv)
 
     InitCommonControls();
 
-    // Redirect log when /subsystem:windows is used
+    // Use message boxes when /subsystem:windows is used
     if (GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == FILE_TYPE_UNKNOWN) {
-        if (!RedirectLogToWindowsEvents(FelixTarget))
-            return 1;
+        RedirectErrors();
     }
 
     // Default config filename
