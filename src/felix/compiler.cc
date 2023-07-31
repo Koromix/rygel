@@ -590,7 +590,9 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         if (libraries.len) {
-            Fmt(&buf, " -Wl,--start-group");
+            if (platform != HostPlatform::Windows) {
+                Fmt(&buf, " -Wl,--start-group");
+            }
             for (const char *lib: libraries) {
                 if (platform == HostPlatform::macOS && lib[0] == '!') {
                     Fmt(&buf, " -framework %1", lib + 1);
@@ -600,7 +602,9 @@ public:
                     Fmt(&buf, " -l%1", lib);
                 }
             }
-            Fmt(&buf, " -Wl,--end-group");
+            if (platform != HostPlatform::Windows) {
+                Fmt(&buf, " -Wl,--end-group");
+            }
         }
 
         // Platform flags
@@ -1046,7 +1050,9 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         if (libraries.len) {
-            Fmt(&buf, " -Wl,--start-group");
+            if (platform != HostPlatform::Windows) {
+                Fmt(&buf, " -Wl,--start-group");
+            }
             for (const char *lib: libraries) {
                 if (platform == HostPlatform::macOS && lib[0] == '!') {
                     Fmt(&buf, " -framework %1", lib + 1);
@@ -1056,7 +1062,9 @@ public:
                     Fmt(&buf, " -l%1", lib);
                 }
             }
-            Fmt(&buf, " -Wl,--end-group");
+            if (platform != HostPlatform::Windows) {
+                Fmt(&buf, " -Wl,--end-group");
+            }
         }
 
         // Platform flags and libraries
