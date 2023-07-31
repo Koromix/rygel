@@ -309,6 +309,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 {
     HeapArray<const char *> obj_filenames;
     HeapArray<const char *> pack_filenames;
+    HeapArray<const char *> link_libraries;
 
     // Core platform source files (e.g. Teensy core)
     TargetInfo *core = nullptr;
@@ -380,15 +381,14 @@ bool Builder::AddTarget(const TargetInfo &target)
         }
     }
 
-    // User assets
+    // User assets and libraries
     pack_filenames.Append(target.pack_filenames);
+    link_libraries.Append(target.libraries);
 
     // Assets
     if (pack_filenames.len) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_assets.c",
-                                       cache_directory, target.name).ptr;
-        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
-                                       build.compiler->GetObjectExtension()).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_assets.c", cache_directory, target.name).ptr;
+        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
         bool module = (features & (int)CompileFeature::HotAssets);
@@ -399,7 +399,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             build.compiler->MakePackCommand(pack_filenames, target.pack_options, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Pack %!..+%1%!0 assets", target.name).ptr;
-            AppendNode(text, src_filename, cmd, pack_filenames, ns);
+            AppendNode(text, src_filename, cmd, pack_filenames, nullptr);
         }
 
         // Build object file
@@ -416,7 +416,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             }
 
             const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 assets", target.name).ptr;
-            AppendNode(text, obj_filename, cmd, src_filename, ns);
+            AppendNode(text, obj_filename, cmd, src_filename, nullptr);
         }
 
         // Build module if needed
@@ -429,7 +429,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                                             features, build.env, module_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(module_filename)).ptr;
-            AppendNode(text, module_filename, cmd, obj_filename, ns);
+            AppendNode(text, module_filename, cmd, obj_filename, nullptr);
         } else {
             obj_filenames.Append(obj_filename);
         }
@@ -494,14 +494,69 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Link with required Qt libraries
     if (target.qt_components.len && qt_libraries) {
-        for (const char *component: target.qt_components) {
 #ifdef _WIN32
-            const char *library = Fmt(&str_alloc, "%1%/Qt%2%3.lib", qt_libraries, qt_major, component).ptr;
-            obj_filenames.Append(library);
+        static const char *const ArchiveFilter = "*.lib";
+        static const char *const LibPrefix = "";
+        static const char *const ImportExtension = ".lib";
 #else
-            const char *library = Fmt(&str_alloc, "%1%/libQt%2%3.so", qt_libraries, qt_major, component).ptr;
-            obj_filenames.Append(library);
+        static const char *const ArchiveFilter = "*.a";
+        static const char *const LibPrefix = "lib";
+        static const char *const ImportExtension = ".so";
 #endif
+
+        if (qt_static) {
+            const char *obj_filename = CompileStaticQtHelper(target);
+            obj_filenames.Append(obj_filename);
+
+            Span<const char *const> libraries = CacheList(&target.libraries, [&](HeapArray<const char *> *out_libraries) {
+                EnumerateFiles(qt_plugins, ArchiveFilter, 3, 512, &str_alloc, out_libraries);
+
+                for (Size i = 0, end = out_libraries->len; i < end; i++) {
+                    const char *library = (*out_libraries)[i];
+
+                    Span<const char> base = MakeSpan(library, strlen(library) - strlen(ArchiveFilter) + 1);
+                    const char *prl_filename = Fmt(&str_alloc, "%1.prl", base).ptr;
+
+                    if (TestFile(prl_filename)) {
+                        ParsePrlFile(prl_filename, out_libraries);
+                    }
+                }
+
+                for (const char *component: target.qt_components) {
+                    const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt_libraries, LibPrefix, qt_major, component).ptr;
+
+                    if (!TestFile(prl_filename)) {
+                        LogError("Cannot find PRL file for Qt compoment '%1'", component);
+                        return;
+                    }
+
+                    ParsePrlFile(prl_filename, out_libraries);
+                }
+
+                HashSet<const char *> prev_libraries;
+
+                // Remove pseudo-duplicates (same base name)
+                Size j = 0;
+                for (Size i = 0; i < out_libraries->len; i++) {
+                    const char *library = (*out_libraries)[i];
+                    const char *basename = SplitStrReverseAny(library, RG_PATH_SEPARATORS).ptr;
+
+                    (*out_libraries)[j] = library;
+
+                    bool inserted;
+                    prev_libraries.TrySet(basename, &inserted);
+
+                    j += inserted;
+                }
+                out_libraries->len = j;
+            });
+
+            link_libraries.Append(libraries);
+        } else {
+            for (const char *component: target.qt_components) {
+                const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt_libraries, LibPrefix, qt_major, component, ImportExtension).ptr;
+                obj_filenames.Append(library);
+            }
         }
     }
 
@@ -517,7 +572,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             uint32_t features = target.CombineFeatures(build.features);
 
             Command cmd = {};
-            build.compiler->MakeLinkCommand(obj_filenames, target.libraries, LinkType::Executable,
+            build.compiler->MakeLinkCommand(obj_filenames, link_libraries, LinkType::Executable,
                                             features, build.env, link_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(link_filename)).ptr;
@@ -698,7 +753,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
         if (src.target->qt_components.len) {
             RG_ASSERT(qt_headers);
 
-            system_directories = CacheList(src.target, [&](HeapArray<const char *> *out_list) {
+            system_directories = CacheList(&src.target->include_directories, [&](HeapArray<const char *> *out_list) {
                 out_list->Append(qt_headers);
 
                 for (const char *component: src.target->qt_components) {
@@ -713,6 +768,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
                                           src.target->include_directories, system_directories,
                                           src.target->include_files, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
+
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", src.filename).ptr;
         if (pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename }, ns)
                          : AppendNode(text, obj_filename, cmd, src.filename, ns)) {
@@ -783,6 +839,79 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src, const char *ns)
     return meta_filename;
 }
 
+const char *Builder::CompileStaticQtHelper(const TargetInfo &target)
+{
+    static const char *const StaticCode =
+R"(#include <QtCore/QtPlugin>
+
+#if defined(_WIN32)
+    Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
+    Q_IMPORT_PLUGIN(QWindowsVistaStylePlugin)
+#elif defined(__APPLE__)
+    Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
+#else
+    Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
+#endif
+)";
+
+    const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qt.cc", cache_directory, target.name).ptr;
+    const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
+
+    if (!TestFile(src_filename) && !WriteFile(StaticCode, src_filename))
+        return nullptr;
+
+    uint32_t features = target.CombineFeatures(build.features);
+
+    // Build object file
+    Command cmd = {};
+    build.compiler->MakeObjectCommand(src_filename, SourceType::Cxx,
+                                      nullptr, {}, {}, qt_headers, {}, features, build.env,
+                                      obj_filename,  &str_alloc, &cmd);
+
+    const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 static Qt helper", target.name).ptr;
+    AppendNode(text, obj_filename, cmd, src_filename, nullptr);
+
+    return obj_filename;
+}
+
+void Builder::ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries)
+{
+    StreamReader st(filename);
+    LineReader reader(&st);
+
+    Span<const char> line = {};
+    while (reader.Next(&line)) {
+        Span<const char> value;
+        Span<const char> key = TrimStr(SplitStr(line, '=', &value));
+        value = TrimStr(value);
+
+        if (key == "QMAKE_PRL_LIBS_FOR_CMAKE") {
+            while (value.len) {
+                Span<const char> part = TrimStr(SplitStr(value, ';', &value));
+
+                if (StartsWith(part, "-l")) {
+                    const char *library = DuplicateString(part.Take(2, part.len - 2), &str_alloc).ptr;
+                    out_libraries->Append(library);
+                } else if (StartsWith(part, "$$[QT_INSTALL_PREFIX]/lib/") || StartsWith(part, "$$[QT_INSTALL_PREFIX]\\lib\\")) {
+                    const char *library = Fmt(&str_alloc, "%1%/%2", qt_libraries, part.Take(26, part.len - 26)).ptr;
+                    out_libraries->Append(library);
+                } else if (StartsWith(part, "$$[QT_INSTALL_LIBS]/") || StartsWith(part, "$$[QT_INSTALL_PREFIX]\\")) {
+                    const char *library = Fmt(&str_alloc, "%1%/%2", qt_libraries, part.Take(20, part.len - 20)).ptr;
+                    out_libraries->Append(library);
+                } else if (StartsWith(part, "$$[QT_INSTALL_PREFIX]/plugins/") || StartsWith(part, "$$[QT_INSTALL_PREFIX]\\plugins\\")) {
+                    const char *library = Fmt(&str_alloc, "%1%/%2", qt_libraries, part.Take(30, part.len - 30)).ptr;
+                    out_libraries->Append(library);
+                } else if (StartsWith(part, "$$[QT_INSTALL_PLUGINS]/") || StartsWith(part, "$$[QT_INSTALL_PLUGINS]\\")) {
+                    const char *library = Fmt(&str_alloc, "%1%/%2", qt_libraries, part.Take(23, part.len - 23)).ptr;
+                    out_libraries->Append(library);
+                }
+            }
+
+            break;
+        }
+    }
+}
+
 bool Builder::PrepareQtSdk()
 {
     if (qmake_binary)
@@ -797,7 +926,7 @@ bool Builder::PrepareQtSdk()
             qmake_binary = str;
         }
     } else if (!FindExecutableInPath("qmake", &str_alloc, &qmake_binary)) {
-        LogInfo("Cannot find QMake binary for Qt");
+        LogError("Cannot find QMake binary for Qt");
         return false;
     }
 
@@ -831,6 +960,8 @@ bool Builder::PrepareQtSdk()
                 qt_headers = DuplicateString(value, &str_alloc).ptr;
             } else if (key == "QT_INSTALL_LIBS") {
                 qt_libraries = DuplicateString(value, &str_alloc).ptr;
+            } else if (key == "QT_INSTALL_PLUGINS") {
+                qt_plugins = DuplicateString(value, &str_alloc).ptr;
             } else if (key == "QT_VERSION") {
                 Span<const char> major = SplitStr(value, '.');
 
@@ -840,13 +971,21 @@ bool Builder::PrepareQtSdk()
                 }
             }
 
-            valid = moc_binary && qt_headers && qt_libraries && qt_major;
+            valid = moc_binary && qt_headers && qt_libraries && qt_plugins && qt_major;
         }
     }
 
     if (!valid) {
         LogError("Cannot find required Qt tools");
         return false;
+    }
+
+    // Determine if Qt is built statically
+    {
+        char library0[4046];
+        Fmt(library0, "%1%/libQt%2Core%3", qt_libraries, qt_major, RG_SHARED_LIBRARY_EXTENSION);
+
+        qt_static = !TestFile(library0);
     }
 
     return true;

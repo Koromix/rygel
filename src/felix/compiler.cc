@@ -589,14 +589,18 @@ public:
         for (const char *obj_filename: obj_filenames) {
             Fmt(&buf, " \"%1\"", obj_filename);
         }
-        for (const char *lib: libraries) {
-            if (platform == HostPlatform::macOS && lib[0] == '!') {
-                Fmt(&buf, " -framework %1", lib + 1);
-            } else if (GetPathExtension(lib).len) {
-                Fmt(&buf, " %1", lib);
-            } else {
-                Fmt(&buf, " -l%1", lib);
+        if (libraries.len) {
+            Fmt(&buf, " -Wl,--start-group");
+            for (const char *lib: libraries) {
+                if (platform == HostPlatform::macOS && lib[0] == '!') {
+                    Fmt(&buf, " -framework %1", lib + 1);
+                } else if (strpbrk(lib, RG_PATH_SEPARATORS)) {
+                    Fmt(&buf, " %1", lib);
+                } else {
+                    Fmt(&buf, " -l%1", lib);
+                }
             }
+            Fmt(&buf, " -Wl,--end-group");
         }
 
         // Platform flags
@@ -1041,14 +1045,18 @@ public:
         for (const char *obj_filename: obj_filenames) {
             Fmt(&buf, " \"%1\"", obj_filename);
         }
-        for (const char *lib: libraries) {
-            if (platform == HostPlatform::macOS && lib[0] == '!') {
-                Fmt(&buf, " -framework %1", lib + 1);
-            } else if (GetPathExtension(lib).len) {
-                Fmt(&buf, " %1", lib);
-            } else {
-                Fmt(&buf, " -l%1", lib);
+        if (libraries.len) {
+            Fmt(&buf, " -Wl,--start-group");
+            for (const char *lib: libraries) {
+                if (platform == HostPlatform::macOS && lib[0] == '!') {
+                    Fmt(&buf, " -framework %1", lib + 1);
+                } else if (strpbrk(lib, RG_PATH_SEPARATORS)) {
+                    Fmt(&buf, " %1", lib);
+                } else {
+                    Fmt(&buf, " -l%1", lib);
+                }
             }
+            Fmt(&buf, " -Wl,--end-group");
         }
 
         // Platform flags and libraries
@@ -1740,12 +1748,16 @@ public:
         for (const char *obj_filename: obj_filenames) {
             Fmt(&buf, " \"%1\"", obj_filename);
         }
-        for (const char *lib: libraries) {
-            if (GetPathExtension(lib).len) {
-                Fmt(&buf, " %1", lib);
-            } else {
-                Fmt(&buf, " -l%1", lib);
+        if (libraries.len) {
+            Fmt(&buf, " -Wl,--start-group");
+            for (const char *lib: libraries) {
+                if (strpbrk(lib, RG_PATH_SEPARATORS)) {
+                    Fmt(&buf, " %1", lib);
+                } else {
+                    Fmt(&buf, " -l%1", lib);
+                }
             }
+            Fmt(&buf, " -Wl,--end-group");
         }
 
         // Platform flags and libraries
@@ -1991,12 +2003,16 @@ public:
         for (const char *obj_filename: obj_filenames) {
             Fmt(&buf, " \"%1\"", obj_filename);
         }
-        for (const char *lib: libraries) {
-            if (GetPathExtension(lib).len) {
-                Fmt(&buf, " %1", lib);
-            } else {
-                Fmt(&buf, " -l%1", lib);
+        if (libraries.len) {
+            Fmt(&buf, " -Wl,--start-group");
+            for (const char *lib: libraries) {
+                if (strpbrk(lib, RG_PATH_SEPARATORS)) {
+                    Fmt(&buf, " %1", lib);
+                } else {
+                    Fmt(&buf, " -l%1", lib);
+                }
             }
+            Fmt(&buf, " -Wl,--end-group");
         }
 
         // Features

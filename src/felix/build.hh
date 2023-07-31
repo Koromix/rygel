@@ -103,7 +103,9 @@ class Builder {
     const char *moc_binary = nullptr;
     const char *qt_headers = nullptr;
     const char *qt_libraries = nullptr;
+    const char *qt_plugins = nullptr;
     int qt_major = 0;
+    bool qt_static = false;
 
     // Javascript bundler
     const char *esbuild_binary = nullptr;
@@ -149,6 +151,9 @@ private:
 
     bool AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<const char *> *obj_filenames = nullptr);
     const char *AddEsbuildSource(const SourceFileInfo &src, const char *ns);
+
+    const char *CompileStaticQtHelper(const TargetInfo &target);
+    void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);
 
     bool PrepareQtSdk();
     bool PrepareEsbuild();
