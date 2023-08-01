@@ -112,6 +112,7 @@ class Builder {
     const char *qt_headers = nullptr;
     const char *qt_libraries = nullptr;
     const char *qt_plugins = nullptr;
+    int64_t qt_version = 0;
     int qt_major = 0;
     bool qt_static = false;
 
@@ -166,7 +167,7 @@ private:
     const char *CompileStaticQtHelper(const TargetInfo &target);
     void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);
 
-    bool PrepareQtSdk();
+    bool PrepareQtSdk(int64_t version);
     bool PrepareEsbuild();
 
     Span<const char *const> CacheList(const void *mark, FunctionRef<void(HeapArray<const char *> *)> func);

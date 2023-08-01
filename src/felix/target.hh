@@ -69,7 +69,9 @@ struct TargetInfo {
     HeapArray<const char *> include_directories;
     HeapArray<const char *> include_files;
     HeapArray<const char *> libraries;
+
     HeapArray<const char *> qt_components;
+    int64_t qt_version;
 
     uint32_t enable_features;
     uint32_t disable_features;
@@ -136,6 +138,7 @@ private:
 };
 
 unsigned int ParseSupportedPlatforms(Span<const char> str);
+int64_t ParseVersionString(Span<const char> str, int components);
 
 bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, HostArchitecture architecture, TargetSet *out_set);
 

@@ -49,7 +49,9 @@ struct TargetConfig {
     HeapArray<const char *> include_directories;
     HeapArray<const char *> include_files;
     HeapArray<const char *> libraries;
+
     HeapArray<const char *> qt_components;
+    int64_t qt_version;
 
     HashMap<const char *, SourceFeatures> src_features;
 
@@ -327,6 +329,9 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
                     } else if (prop.key == "QtComponents") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.qt_components);
+                    } else if (prop.key == "QtVersion") {
+                        target_config.qt_version = ParseVersionString(prop.value, 3);
+                        valid &= (target_config.qt_version >= 0);
                     } else if (prop.key == "BundleOptions") {
                         target_config.bundle_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "AssetDirectory") {
@@ -413,6 +418,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->include_files, target_config->include_files);
     std::swap(target->libraries, target_config->libraries);
     std::swap(target->qt_components, target_config->qt_components);
+    target->qt_version = target_config->qt_version;
     target->enable_features = target_config->enable_features;
     target->disable_features = target_config->disable_features;
     target->bundle_options = target_config->bundle_options;
@@ -646,6 +652,38 @@ unsigned int ParseSupportedPlatforms(Span<const char> str)
     }
 
     return platforms;
+}
+
+int64_t ParseVersionString(Span<const char> str, int components)
+{
+    RG_ASSERT(components >= 0 && components < 6);
+
+    int64_t version = 0;
+
+    Span<const char> remain = str;
+
+    while (remain.len && components) {
+        int component = 0;
+        if (!ParseInt(remain, &component, 0, &remain)) {
+            LogError("Malformed version string '%1'", str);
+            return -1;
+        }
+
+        version = (version * 1000) + component;
+        components--;
+
+        if (!remain.len || remain[0] != '.')
+            break;
+        remain.ptr++;
+        remain.len--;
+    }
+
+    while (components) {
+        version *= 1000;
+        components--;
+    }
+
+    return version;
 }
 
 bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, HostArchitecture architecture, TargetSet *out_set)

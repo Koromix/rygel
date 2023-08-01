@@ -743,7 +743,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
         Span<const char *const> system_directories = {};
 
         if (src.target->qt_components.len) {
-            if (!PrepareQtSdk())
+            if (!PrepareQtSdk(src.target->qt_version))
                 return false;
 
             system_directories = CacheList(&src.target->include_directories, [&](HeapArray<const char *> *out_list) {
@@ -916,7 +916,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src, const char *ns)
     const char *header_filename = build_map.FindValue({ ns, src.filename }, nullptr);
 
     // First, we need Qt!
-    if (!header_filename && !PrepareQtSdk())
+    if (!header_filename && !PrepareQtSdk(src.target->qt_version))
         return nullptr;
 
     // Run Qt UI builder
@@ -1069,96 +1069,128 @@ void Builder::ParsePrlFile(const char *filename, HeapArray<const char *> *out_li
     }
 }
 
-bool Builder::PrepareQtSdk()
+static FmtArg FormatVersion(int64_t version, int components)
 {
-    if (qmake_binary)
-        return true;
+    RG_ASSERT(components > 0);
 
-    if (build.qmake_binary) {
-        qmake_binary = build.qmake_binary;
-    } else if (getenv("QMAKE_PATH")) {
-        const char *str = getenv("QMAKE_PATH");
+    FmtArg arg = {};
 
-        if (str && str[0]) {
-            qmake_binary = str;
+    arg.type = FmtType::Buffer;
+
+    Size len = 0;
+    while (components--) {
+        Span<char> buf = MakeSpan(arg.u.buf + len, RG_SIZE(arg.u.buf) - len);
+
+        int divisor = 1;
+        for (int i = 0; i < components; i++) {
+            divisor *= 1000;
         }
-    } else if (!FindExecutableInPath("qmake", &str_alloc, &qmake_binary)) {
-        LogError("Cannot find QMake binary for Qt");
-        return false;
+        int component = (version / divisor) % 1000;
+
+        len += Fmt(buf, "%1.", component).len;
     }
+    arg.u.buf[len - 1] = 0;
 
-    HeapArray<char> specs;
-    {
-        const char *cmd_line = Fmt(&str_alloc, "\"%1\" -query", qmake_binary).ptr;
+    return arg;
+}
 
-        if (!ReadCommandOutput(cmd_line, &specs))
-            return false;
-    }
+bool Builder::PrepareQtSdk(int64_t min_version)
+{
+    if (!qmake_binary) {
+        if (build.qmake_binary) {
+            qmake_binary = build.qmake_binary;
+        } else if (getenv("QMAKE_PATH")) {
+            const char *str = getenv("QMAKE_PATH");
 
-    bool valid = false;
-
-    // Parse specs to find moc, include paths, library path
-    {
-        StreamReader st(specs.As<const uint8_t>(), "<qmake>");
-        LineReader reader(&st);
-
-        Span<const char> line;
-        while (!valid && reader.Next(&line)) {
-            Span<const char> value = {};
-            Span<const char> key = TrimStr(SplitStr(line, ':', &value));
-            value = TrimStr(value);
-
-            if (key == "QT_HOST_BINS" || key == "QT_HOST_LIBEXECS") {
-                if (!moc_binary) {
-                    const char *binary = Fmt(&str_alloc, "%1%/moc%2", value, build.compiler->GetLinkExtension()).ptr;
-                    moc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
-                }
-                if (!rcc_binary) {
-                    const char *binary = Fmt(&str_alloc, "%1%/rcc%2", value, build.compiler->GetLinkExtension()).ptr;
-                    rcc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
-                }
-                if (!uic_binary) {
-                    const char *binary = Fmt(&str_alloc, "%1%/uic%2", value, build.compiler->GetLinkExtension()).ptr;
-                    uic_binary = TestFile(binary, FileType::File) ? binary : nullptr;
-                }
-            } else if (key == "QT_INSTALL_BINS") {
-                qt_binaries = DuplicateString(value, &str_alloc).ptr;
-            } else if (key == "QT_INSTALL_HEADERS") {
-                qt_headers = DuplicateString(value, &str_alloc).ptr;
-            } else if (key == "QT_INSTALL_LIBS") {
-                qt_libraries = DuplicateString(value, &str_alloc).ptr;
-            } else if (key == "QT_INSTALL_PLUGINS") {
-                qt_plugins = DuplicateString(value, &str_alloc).ptr;
-            } else if (key == "QT_VERSION") {
-                Span<const char> major = SplitStr(value, '.');
-
-                if (!ParseInt(major, &qt_major) || qt_major < 5 || qt_major > 6) {
-                    LogError("Only Qt5 and Qt6 are supported");
-                    return false;
-                }
+            if (str && str[0]) {
+                qmake_binary = str;
             }
+        } else if (FindExecutableInPath("qmake6", &str_alloc, &qmake_binary)) {
+            // Done
+        } else if (!FindExecutableInPath("qmake", &str_alloc, &qmake_binary)) {
+            LogError("Cannot find QMake binary for Qt");
+            return false;
+        }
 
-            valid = moc_binary && rcc_binary && uic_binary &&
-                    qt_binaries && qt_headers && qt_libraries && qt_plugins && qt_major;
+        HeapArray<char> specs;
+        {
+            const char *cmd_line = Fmt(&str_alloc, "\"%1\" -query", qmake_binary).ptr;
+
+            if (!ReadCommandOutput(cmd_line, &specs))
+                return false;
+        }
+
+        bool valid = false;
+
+        // Parse specs to find moc, include paths, library path
+        {
+            StreamReader st(specs.As<const uint8_t>(), "<qmake>");
+            LineReader reader(&st);
+
+            Span<const char> line;
+            while (!valid && reader.Next(&line)) {
+                Span<const char> value = {};
+                Span<const char> key = TrimStr(SplitStr(line, ':', &value));
+                value = TrimStr(value);
+
+                if (key == "QT_HOST_BINS" || key == "QT_HOST_LIBEXECS") {
+                    if (!moc_binary) {
+                        const char *binary = Fmt(&str_alloc, "%1%/moc%2", value, build.compiler->GetLinkExtension()).ptr;
+                        moc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
+                    }
+                    if (!rcc_binary) {
+                        const char *binary = Fmt(&str_alloc, "%1%/rcc%2", value, build.compiler->GetLinkExtension()).ptr;
+                        rcc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
+                    }
+                    if (!uic_binary) {
+                        const char *binary = Fmt(&str_alloc, "%1%/uic%2", value, build.compiler->GetLinkExtension()).ptr;
+                        uic_binary = TestFile(binary, FileType::File) ? binary : nullptr;
+                    }
+                } else if (key == "QT_INSTALL_BINS") {
+                    qt_binaries = DuplicateString(value, &str_alloc).ptr;
+                } else if (key == "QT_INSTALL_HEADERS") {
+                    qt_headers = DuplicateString(value, &str_alloc).ptr;
+                } else if (key == "QT_INSTALL_LIBS") {
+                    qt_libraries = DuplicateString(value, &str_alloc).ptr;
+                } else if (key == "QT_INSTALL_PLUGINS") {
+                    qt_plugins = DuplicateString(value, &str_alloc).ptr;
+                } else if (key == "QT_VERSION") {
+                    qt_version = ParseVersionString(value, 3);
+
+                    if (qt_version < 5000000 || qt_version >= 7000000) {
+                        LogError("Only Qt5 and Qt6 are supported");
+                        return false;
+                    }
+                    qt_major = qt_version / 1000000;
+                }
+
+                valid = moc_binary && rcc_binary && uic_binary &&
+                        qt_binaries && qt_headers && qt_libraries && qt_plugins && qt_major;
+            }
+        }
+
+        if (!valid) {
+            LogError("Cannot find required Qt tools");
+            return false;
+        }
+
+        // Determine if Qt is built statically
+        if (build.compiler->platform == HostPlatform::Windows) {
+            char library0[4046];
+            Fmt(library0, "%1%/Qt%2Core.dll", qt_binaries, qt_major);
+
+            qt_static = !TestFile(library0);
+        } else {
+            char library0[4046];
+            Fmt(library0, "%1%/libQt%2Core.so", qt_libraries, qt_major);
+
+            qt_static = !TestFile(library0);
         }
     }
 
-    if (!valid) {
-        LogError("Cannot find required Qt tools");
+    if (qt_version < min_version) {
+        LogError("Found Qt %1 but %2 is required", FormatVersion(qt_version, 3), FormatVersion(min_version, 3));
         return false;
-    }
-
-    // Determine if Qt is built statically
-    if (build.compiler->platform == HostPlatform::Windows) {
-        char library0[4046];
-        Fmt(library0, "%1%/Qt%2Core.dll", qt_binaries, qt_major);
-
-        qt_static = !TestFile(library0);
-    } else {
-        char library0[4046];
-        Fmt(library0, "%1%/libQt%2Core.so", qt_libraries, qt_major);
-
-        qt_static = !TestFile(library0);
     }
 
     return true;
