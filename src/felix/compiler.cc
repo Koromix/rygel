@@ -370,7 +370,8 @@ public:
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
             case SourceType::Esbuild:
-            case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+            case SourceType::QtUi:
+            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -379,7 +380,8 @@ public:
                 case SourceType::C: { Fmt(&buf, " -x c-header -Xclang -fno-pch-timestamp"); } break;
                 case SourceType::Cxx: { Fmt(&buf, " -x c++-header -Xclang -fno-pch-timestamp"); } break;
                 case SourceType::Esbuild:
-                case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+                case SourceType::QtUi:
+                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
             }
         }
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
@@ -534,7 +536,8 @@ public:
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild:
-                case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+                case SourceType::QtUi:
+                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -865,7 +868,8 @@ public:
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
             case SourceType::Esbuild:
-            case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+            case SourceType::QtUi:
+            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -874,7 +878,8 @@ public:
                 case SourceType::C: { Fmt(&buf, " -x c-header"); } break;
                 case SourceType::Cxx: { Fmt(&buf, " -x c++-header"); } break;
                 case SourceType::Esbuild:
-                case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+                case SourceType::QtUi:
+                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
             }
         }
         Fmt(&buf, " -I. -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
@@ -999,7 +1004,8 @@ public:
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild:
-                case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+                case SourceType::QtUi:
+                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -1272,7 +1278,8 @@ public:
             case SourceType::C: { Fmt(&buf, "\"%1\" /nologo", cl); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" /nologo /std:c++20 /Zc:__cplusplus", cl); } break;
             case SourceType::Esbuild:
-            case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+            case SourceType::QtUi:
+            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " \"/Fo%1\"", dest_filename);
@@ -1360,7 +1367,8 @@ public:
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild:
-                case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+                case SourceType::QtUi:
+                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -1623,7 +1631,8 @@ public:
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++14", cxx); } break;
             case SourceType::Esbuild:
-            case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+            case SourceType::QtUi:
+            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
         }
         RG_ASSERT(dest_filename); // No PCH
         Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -1721,7 +1730,8 @@ public:
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild:
-                case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+                case SourceType::QtUi:
+                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -1935,7 +1945,8 @@ public:
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
             case SourceType::Esbuild:
-            case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+            case SourceType::QtUi:
+            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
         }
         RG_ASSERT(dest_filename); // No PCH
         Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -1986,7 +1997,8 @@ public:
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
                 case SourceType::Esbuild:
-                case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+                case SourceType::QtUi:
+                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -2304,6 +2316,11 @@ bool DetermineSourceType(const char *filename, SourceType *out_type)
     } else if (extension == ".ui") {
         if (out_type) {
             *out_type = SourceType::QtUi;
+        }
+        return true;
+    } else if (extension == ".qrc") {
+        if (out_type) {
+            *out_type = SourceType::QtResources;
         }
         return true;
     } else {

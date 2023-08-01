@@ -106,6 +106,7 @@ class Builder {
     // Qt stuff
     const char *qmake_binary = nullptr;
     const char *moc_binary = nullptr;
+    const char *rcc_binary = nullptr;
     const char *uic_binary = nullptr;
     const char *qt_binaries = nullptr;
     const char *qt_headers = nullptr;
@@ -160,6 +161,7 @@ private:
     bool AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<const char *> *obj_filenames = nullptr);
     const char *AddEsbuildSource(const SourceFileInfo &src, const char *ns);
     const char *AddQtUiSource(const SourceFileInfo &src, const char *ns);
+    const char *AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames, const char *ns);
 
     const char *CompileStaticQtHelper(const TargetInfo &target);
     void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);

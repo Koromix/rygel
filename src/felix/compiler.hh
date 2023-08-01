@@ -166,7 +166,8 @@ enum class SourceType {
     C,
     Cxx,
     Esbuild,
-    QtUi
+    QtUi,
+    QtResources
 };
 
 enum class LinkType {

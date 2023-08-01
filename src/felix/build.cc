@@ -321,6 +321,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     HeapArray<const char *> pack_filenames;
     HeapArray<const char *> link_libraries;
     HeapArray<const char *> predep_filenames;
+    HeapArray<const char *> qrc_filenames;
 
     // Core platform source files (e.g. Teensy core)
     TargetInfo *core = nullptr;
@@ -396,7 +397,17 @@ bool Builder::AddTarget(const TargetInfo &target)
                 const char *header_filename = AddQtUiSource(*src, ns);
                 predep_filenames.Append(header_filename);
             } break;
+
+            case SourceType::QtResources: {
+                qrc_filenames.Append(src->filename);
+            } break;
         }
+    }
+
+    // Build Qt resource file
+    if (qrc_filenames.len) {
+        const char *obj_filename = AddQtResource(target, qrc_filenames, ns);
+        obj_filenames.Append(obj_filename);
     }
 
     // Make sure C/C++ source files must depend on generated headers
@@ -639,6 +650,11 @@ bool Builder::AddSource(const SourceFileInfo &src)
         case SourceType::Cxx: return AddCppSource(src, nullptr, nullptr);
         case SourceType::Esbuild: return AddEsbuildSource(src, nullptr);
         case SourceType::QtUi: return AddQtUiSource(src, nullptr);
+
+        case SourceType::QtResources: {
+            LogInfo("You cannot build QRC files directly");
+            return false;
+        }
     }
 
     RG_UNREACHABLE();
@@ -664,7 +680,8 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
             } break;
 
             case SourceType::Esbuild:
-            case SourceType::QtUi: { RG_UNREACHABLE(); } break;
+            case SourceType::QtUi:
+            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
         }
 
         if (pch) {
@@ -811,9 +828,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
             const char *obj_filename = build_map.FindValue({ ns, moc_filename }, nullptr);
 
             if (!obj_filename) {
-                obj_filename = BuildObjectPath("moc", moc_filename, cache_directory,
-                                               build.compiler->GetObjectExtension(), &str_alloc);
-
+                obj_filename = Fmt(&str_alloc, "%1%2", moc_filename, build.compiler->GetObjectExtension()).ptr;
 
                 HeapArray<const char *> *list = cache_lists.Find(&src.target->include_directories);
                 Span<const char *> system_directories = list ? list->As() : MakeSpan((const char **)nullptr, 0);
@@ -826,10 +841,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
                                                   obj_filename, &str_alloc, &cmd);
 
                 const char *text = Fmt(&str_alloc, "Build MOC for %!..+%1%!0", src.filename).ptr;
-                if (AppendNode(text, obj_filename, cmd, moc_filename, ns)) {
-                    if (!build.fake && !EnsureDirectoryExists(obj_filename))
-                        return false;
-                }
+                AppendNode(text, obj_filename, cmd, moc_filename, ns);
             }
 
             if (obj_filenames) {
@@ -937,6 +949,51 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src, const char *ns)
     }
 
     return header_filename;
+}
+
+const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames, const char *ns)
+{
+    const char *cpp_filename = build_map.FindValue({ ns, qrc_filenames[0] }, nullptr);
+
+    if (!cpp_filename) {
+        cpp_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qrc.cc", cache_directory, target.name).ptr;
+
+        Command cmd = {};
+
+        // Prepare QRC build command
+        {
+            HeapArray<char> buf(&str_alloc);
+
+            Fmt(&buf, "\"%1\" -o \"%2\"", rcc_binary, cpp_filename);
+            for (const char *qrc_filename: qrc_filenames) {
+                Fmt(&buf, " \"%1\"", qrc_filename);
+            }
+
+            cmd.cache_len = buf.len;
+            cmd.cmd_line = buf.TrimAndLeak(1);
+        }
+
+        const char *text = Fmt(&str_alloc, "Assemble %!..+%1%!0 resource file", target.name).ptr;
+        AppendNode(text, cpp_filename, cmd, qrc_filenames, nullptr);
+    }
+
+    const char *obj_filename = build_map.FindValue({ ns, cpp_filename }, nullptr);
+
+    if (!obj_filename) {
+        obj_filename = Fmt(&str_alloc, "%1%2", cpp_filename, build.compiler->GetObjectExtension()).ptr;
+
+        uint32_t features = target.CombineFeatures(build.features);
+
+        Command cmd = {};
+        build.compiler->MakeObjectCommand(cpp_filename, SourceType::Cxx,
+                                          nullptr, {}, {}, {}, {}, features, build.env,
+                                          obj_filename, &str_alloc, &cmd);
+
+        const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", cpp_filename).ptr;
+        AppendNode(text, obj_filename, cmd, cpp_filename, ns);
+    }
+
+    return obj_filename;
 }
 
 const char *Builder::CompileStaticQtHelper(const TargetInfo &target)
@@ -1056,6 +1113,10 @@ bool Builder::PrepareQtSdk()
                     const char *binary = Fmt(&str_alloc, "%1%/moc%2", value, build.compiler->GetLinkExtension()).ptr;
                     moc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
                 }
+                if (!rcc_binary) {
+                    const char *binary = Fmt(&str_alloc, "%1%/rcc%2", value, build.compiler->GetLinkExtension()).ptr;
+                    rcc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
+                }
                 if (!uic_binary) {
                     const char *binary = Fmt(&str_alloc, "%1%/uic%2", value, build.compiler->GetLinkExtension()).ptr;
                     uic_binary = TestFile(binary, FileType::File) ? binary : nullptr;
@@ -1077,8 +1138,8 @@ bool Builder::PrepareQtSdk()
                 }
             }
 
-            valid = moc_binary && uic_binary && qt_binaries && qt_headers &&
-                    qt_libraries && qt_plugins && qt_major;
+            valid = moc_binary && rcc_binary && uic_binary &&
+                    qt_binaries && qt_headers && qt_libraries && qt_plugins && qt_major;
         }
     }
 
