@@ -47,7 +47,11 @@ endif()
 
 # ---- Koffi ----
 
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/package.json PKG)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/package.json)
+    file(READ ${CMAKE_CURRENT_SOURCE_DIR}/package.json PKG)
+else()
+    file(READ ${CMAKE_CURRENT_SOURCE_DIR}/../../package.json PKG)
+endif()
 string(REGEX MATCH "\"version\": \"([^\"]+)\"" XX "${PKG}")
 set(KOFFI_VERSION ${CMAKE_MATCH_1})
 
