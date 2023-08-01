@@ -80,7 +80,7 @@ static Size BuildGitVersionString(Span<const char> tag_name, Span<char> out_vers
         if (!ExecuteCommandLine(cmd, nullptr, MakeSpan<const uint8_t>(nullptr, (Size)0), append_buf, &exit_code))
             return -1;
         if (exit_code) {
-            LogError("Command 'git log' failed");
+            LogError("Command 'git describe' failed");
             return -1;
         }
 
