@@ -74,7 +74,7 @@ static Size BuildGitVersionString(Span<const char> tag_name, Span<char> out_vers
     // Get tag and commit description from git
     {
         char cmd[512];
-        Fmt(cmd, "git describe --always --match=\"%1/*\" --dirty", tag_name);
+        Fmt(cmd, "git describe --always --match=\"%1/*\"", tag_name);
 
         int exit_code;
         if (!ExecuteCommandLine(cmd, nullptr, MakeSpan<const uint8_t>(nullptr, (Size)0), append_buf, &exit_code))
