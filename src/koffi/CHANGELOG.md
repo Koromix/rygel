@@ -4,6 +4,10 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.10
+
+- Fix CMake regression when client has to build Koffi
+
 #### Koffi 2.5.9
 
 **Main changes:**
