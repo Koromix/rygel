@@ -223,7 +223,7 @@ bool Builder::PrepareQtSdk(int64_t min_version)
                         LogError("Only Qt5 and Qt6 are supported");
                         return false;
                     }
-                    qt_major = qt_version / 1000000;
+                    qt_major = (int)(qt_version / 1000000);
                 }
 
                 valid = moc_binary && rcc_binary && uic_binary &&

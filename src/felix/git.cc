@@ -52,9 +52,9 @@ static inline int ParseHexadecimalChar(char c)
 static inline char FormatHexadecimalChar(int value)
 {
     if (value < 10) {
-        return '0' + value;
+        return (char)('0' + value);
     } else {
-        return ('a' - 10) + value;
+        return (char)(('a' - 10) + value);
     }
 }
 
@@ -498,7 +498,7 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
 
     FILE *fp = OpenFile(pack_filename, (int)OpenFlag::Read);
     if (!fp)
-        return -1;
+        return false;
     RG_DEFER { fclose(fp); };
 
     // Check PACK header
