@@ -160,7 +160,7 @@ bool GitVersioneer::Prepare(const char *root_directory)
         if (!EnumerateFiles(unpacked_directory, nullptr, 3, 4096, &str_alloc, &filenames))
             return false;
 
-        Size prefix_len = strlen(unpacked_directory) + 1;
+        Size prefix_len = strlen(repo_directory) + 1;
 
         for (const char *filename: filenames) {
             LocalArray<char, 512> buf;
@@ -173,10 +173,24 @@ bool GitVersioneer::Prepare(const char *root_directory)
             GitHash hash = {};
             if (!ReadAttribute(id, "object", &hash))
                 return false;
-            const char *tag = filename + prefix_len;
 
-            ref_map.Set(tag, hash);
-            hash_map.Set(hash, tag);
+#ifdef _WIN32
+            Span<char> tag = DuplicateString(filename + prefix_len, &str_alloc);
+
+            for (char &c: tag) {
+                c = (c == '\\' ? '/' : c);
+            }
+#else
+            Span<const char> tag = filename + prefix_len;
+#endif
+
+            if (StartsWith(tag, "refs/tags/")) {
+                ref_map.Set(tag.ptr, hash);
+                hash_map.Set(hash, tag.ptr);
+
+                Span<const char> prefix = SplitStr(tag.Take(10, tag.len - 10), '/');
+                prefix_set.Set(prefix);
+            }
         }
     }
 
