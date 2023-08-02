@@ -6760,6 +6760,16 @@ bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)
     return true;
 }
 
+bool IsCompressorAvailable(CompressionType compression_type)
+{
+    return CompressorFunctions[(int)compression_type];
+}
+
+bool IsDecompressorAvailable(CompressionType compression_type)
+{
+    return DecompressorFunctions[(int)compression_type];
+}
+
 // ------------------------------------------------------------------------
 // INI
 // ------------------------------------------------------------------------

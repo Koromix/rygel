@@ -95,6 +95,11 @@ bool GitVersioneer::Prepare(const char *root_directory)
 {
     RG_ASSERT(!repo_directory);
 
+    if (!IsDecompressorAvailable(CompressionType::Zlib)) {
+        LogError("Cannot use git versioning without zlib support");
+        return false;
+    }
+
     repo_directory = Fmt(&str_alloc, "%1%/.git", root_directory).ptr;
 
     const char *packed_filename = Fmt(&str_alloc, "%1%/packed-refs", repo_directory).ptr;

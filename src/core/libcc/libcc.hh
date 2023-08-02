@@ -4655,6 +4655,9 @@ public:
 
 bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer);
 
+bool IsCompressorAvailable(CompressionType compression_type);
+bool IsDecompressorAvailable(CompressionType compression_type);
+
 // For convenience, don't close them
 extern StreamReader stdin_st;
 extern StreamWriter stdout_st;
