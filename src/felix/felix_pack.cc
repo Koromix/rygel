@@ -12,7 +12,6 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/libcc/libcc.hh"
-#include "merge.hh"
 #include "pack.hh"
 
 namespace RG {

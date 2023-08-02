@@ -14,9 +14,27 @@
 #pragma once
 
 #include "src/core/libcc/libcc.hh"
-#include "merge.hh"
 
 namespace RG {
+
+struct PackSource {
+    const char *filename;
+
+    const char *prefix;
+    const char *suffix;
+};
+
+struct PackAsset {
+    const char *name;
+    HeapArray<PackSource> sources;
+
+    CompressionType compression_type;
+};
+
+struct PackAssetSet {
+    HeapArray<PackAsset> assets;
+    BlockAllocator str_alloc;
+};
 
 enum class PackFlag {
     UseLiterals = 1 << 0,
@@ -28,6 +46,8 @@ static const char *const PackFlagNames[] = {
     "NoSymbols",
     "NoArray"
 };
+
+bool ResolveAssets(Span<const char *const> filenames, int strip_count, CompressionType compression_type, PackAssetSet *out_set);
 
 bool PackAssets(Span<const PackAsset> assets, unsigned int flags, const char *output_path);
 
