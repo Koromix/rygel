@@ -176,7 +176,7 @@ void ArduinoDialog::installWithUAC(const QString &command)
     addLog("Trying with elevated rights");
     QCoreApplication::processEvents(QEventLoop::AllEvents | QEventLoop::WaitForMoreEvents, 1000);
 
-    SHELLEXECUTEINFO info = {};
+    SHELLEXECUTEINFOA info = {};
     info.cbSize = sizeof(info);
     info.fMask = SEE_MASK_NOCLOSEPROCESS;
     info.lpVerb = "runas";
@@ -188,7 +188,7 @@ void ArduinoDialog::installWithUAC(const QString &command)
                            QDir::toNativeSeparators(install_.absolutePath())).toLocal8Bit();
     info.lpParameters = parameters.constData();
 
-    BOOL success = ShellExecuteEx(&info);
+    BOOL success = ShellExecuteExA(&info);
     if (!success) {
         addLog("Cannot execute with Administrator rights");
         return;

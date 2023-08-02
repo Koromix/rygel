@@ -517,7 +517,7 @@ void TyCommander::initCache(const QString &name, SettingsDatabase &cache)
        AppData/Local/organizationName()/applicationName()/cache so we need to special case that. */
 #ifdef _WIN32
     auto path = QString("%1/../%2.ini")
-                .arg(QStandardPaths::writableLocation(QStandardPaths::DataLocation), name);
+                .arg(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation), name);
 #else
     auto path = QString("%1/../%2.ini")
                 .arg(QStandardPaths::writableLocation(QStandardPaths::CacheLocation), name);
@@ -587,7 +587,7 @@ void TyCommander::trayActivated(QSystemTrayIcon::ActivationReason reason)
 void TyCommander::acceptClient()
 {
     auto peer = channel_.nextPendingConnection();
-    auto client = new ClientHandler(move(peer), this);
+    auto client = new ClientHandler(std::move(peer), this);
     connect(client, &ClientHandler::closed, client, &ClientHandler::deleteLater);
 }
 

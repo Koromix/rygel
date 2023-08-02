@@ -8,10 +8,13 @@
 
    See the LICENSE file for more details. */
 
-#include <unistd.h>
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
+    #include <io.h>
+    #include <process.h>
+#else
+    #include <unistd.h>
 #endif
 #include "src/core/libhs/device.h"
 #include "src/core/libhs/serial.h"
@@ -35,6 +38,7 @@ static bool monitor_reconnect = false;
 static int monitor_timeout_eof = 200;
 
 #ifdef _WIN32
+
 static bool monitor_fake_echo;
 
 static bool monitor_input_run = true;
@@ -45,6 +49,7 @@ static HANDLE monitor_input_processed;
 
 static char monitor_input_line[BUFFER_SIZE];
 static ssize_t monitor_input_ret;
+
 #endif
 
 static void print_monitor_usage(FILE *f)
@@ -82,6 +87,11 @@ static void print_monitor_usage(FILE *f)
 static int redirect_stdout(int *routfd)
 {
     int outfd, r;
+
+#ifdef _WIN32
+    int STDOUT_FILENO = _fileno(GetStdHandle(STD_OUTPUT_HANDLE));
+    int STDERR_FILENO = _fileno(GetStdHandle(STD_ERROR_HANDLE));
+#endif
 
     outfd = dup(STDOUT_FILENO);
     if (outfd < 0)
@@ -331,7 +341,8 @@ restart:
                     ResetEvent(monitor_input_available);
                     SetEvent(monitor_input_processed);
                 } else {
-                    r = read(STDIN_FILENO, buf, sizeof(buf));
+                    int fd = _fileno(GetStdHandle(STD_INPUT_HANDLE));
+                    r = read(fd, buf, sizeof(buf));
                 }
 #else
                 r = read(STDIN_FILENO, buf, sizeof(buf));

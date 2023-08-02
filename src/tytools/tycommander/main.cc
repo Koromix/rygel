@@ -31,21 +31,21 @@ using namespace std;
 static void make_minidump(EXCEPTION_POINTERS *ex)
 {
     auto MiniDumpWriteDump_ =
-        reinterpret_cast<decltype(MiniDumpWriteDump) *>(GetProcAddress(LoadLibrary("dbghelp"),
+        reinterpret_cast<decltype(MiniDumpWriteDump) *>(GetProcAddress(LoadLibraryW(L"dbghelp"),
                                                                        "MiniDumpWriteDump"));
-    auto SHGetFolderPath_ =
-        reinterpret_cast<decltype(SHGetFolderPath) *>(GetProcAddress(LoadLibrary("shell32"),
-                                                                     "SHGetFolderPathA"));
-    if (!MiniDumpWriteDump_ || !SHGetFolderPath_)
+    auto SHGetFolderPathA_ =
+        reinterpret_cast<decltype(SHGetFolderPathA) *>(GetProcAddress(LoadLibraryW(L"shell32"),
+                                                                      "SHGetFolderPathA"));
+    if (!MiniDumpWriteDump_ || !SHGetFolderPathA_)
         return;
 
     char dmp_path[MAX_PATH + 256];
     {
         // Crash dump directory
-        if (SHGetFolderPath_(0, CSIDL_LOCAL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, dmp_path) != S_OK)
+        if (SHGetFolderPathA_(0, CSIDL_LOCAL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, dmp_path) != S_OK)
             return;
         strcat(dmp_path, "\\CrashDumps");
-        CreateDirectory(dmp_path, nullptr);
+        CreateDirectoryA(dmp_path, nullptr);
 
         // Executable name
         char module_path[MAX_PATH];
@@ -66,8 +66,8 @@ static void make_minidump(EXCEPTION_POINTERS *ex)
                  module_name, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     }
 
-    HANDLE h = CreateFile(dmp_path, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS,
-                          FILE_ATTRIBUTE_NORMAL, 0);
+    HANDLE h = CreateFileA(dmp_path, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS,
+                           FILE_ATTRIBUTE_NORMAL, 0);
     if(h == INVALID_HANDLE_VALUE)
         return;
 
