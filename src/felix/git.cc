@@ -302,7 +302,7 @@ bool GitVersioneer::ReadLooseAttribute(const char *filename, const char *attr, G
     StreamReader st(filename, CompressionType::Zlib);
     LineReader reader(&st);
 
-    Span<const char> line = {};
+    Span<char> line = {};
 
     // Skip NUL character in first line
     if (reader.Next(&line)) {
@@ -315,6 +315,8 @@ bool GitVersioneer::ReadLooseAttribute(const char *filename, const char *attr, G
     }
 
     do {
+        line.len = strnlen(line.ptr, line.len);
+
         Span<const char> value;
         Span<const char> key = TrimStr(SplitStr(line, ' ', &value));
         value = TrimStr(value);
