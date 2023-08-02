@@ -1595,7 +1595,7 @@ public:
                 hash ^= HashTraits<const char *>::Hash(definition);
             }
         }
-        *out_ns = Fmt(alloc, "%1", FmtHex(hash).Pad0(-16)).ptr;
+        *out_ns = Fmt(alloc, "teensy/%1", FmtHex(hash).Pad0(-16)).ptr;
 
         return true;
     }

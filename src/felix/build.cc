@@ -891,7 +891,7 @@ const char *Builder::BuildObjectPath(const char *ns, const char *src_filename,
 
     Size offset;
     if (ns) {
-        offset = Fmt(&buf, "%1%/Objects%/%2%/", output_directory, ns).len;
+        offset = Fmt(&buf, "%1%/Objects%/@%2%/", output_directory, ns).len;
     } else {
         offset = Fmt(&buf, "%1%/Objects%/", output_directory).len;
     }
