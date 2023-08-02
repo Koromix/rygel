@@ -3315,41 +3315,38 @@ static inline int CmpStr(const char *str1, Span<const char> str2)
 static inline int CmpStr(const char *str1, const char *str2)
     { return strcmp(str1, str2); }
 
-static inline Size StartsWith(Span<const char> str, Span<const char> prefix)
+static inline bool StartsWith(Span<const char> str, Span<const char> prefix)
 {
     Size i = 0;
     while (i < str.len && i < prefix.len) {
         if (str[i] != prefix[i])
-            return 0;
-
+            return false;
         i++;
     }
 
-    return (i == prefix.len) ? i : 0;
+    return (i == prefix.len);
 }
-static inline Size StartsWith(Span<const char> str, const char *prefix)
+static inline bool StartsWith(Span<const char> str, const char *prefix)
 {
     Size i = 0;
     while (i < str.len && prefix[i]) {
         if (str[i] != prefix[i])
-            return 0;
-
+            return false;
         i++;
     }
 
-    return !prefix[i] ? i : 0;
+    return !prefix[i];
 }
-static inline Size StartsWith(const char *str, const char *prefix)
+static inline bool StartsWith(const char *str, const char *prefix)
 {
     Size i = 0;
     while (str[i] && prefix[i]) {
         if (str[i] != prefix[i])
-            return 0;
-
+            return false;
         i++;
     }
 
-    return !prefix[i] ? i : 0;
+    return !prefix[i];
 }
 
 static inline bool EndsWith(Span<const char> str, const char *suffix)

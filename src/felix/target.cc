@@ -635,11 +635,11 @@ unsigned int ParseSupportedPlatforms(Span<const char> str)
                 Span<const char> name = HostPlatformNames[i];
 
                 while (name.len) {
-                    Size len = StartsWith(name, part);
-
-                    if (len == name.len || name[len] == '/') {
-                        platforms |= 1u << i;
-                        break;
+                    if (StartsWith(name, part)) {
+                        if (part.len == name.len || name[part.len] == '/') {
+                            platforms |= 1u << i;
+                            break;
+                        }
                     }
 
                     SplitStr(name, '/', &name);
