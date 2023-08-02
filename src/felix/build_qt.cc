@@ -378,57 +378,63 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
         const char *obj_filename = CompileStaticQtHelper(target);
         obj_filenames->Append(obj_filename);
 
-        Span<const char *const> libraries = CacheList(&target, [&](HeapArray<const char *> *out_libraries) {
-            EnumerateFiles(qt_plugins, archive_filter, 3, 512, &str_alloc, out_libraries);
+        // Use marker to sort and deduplicate our libraries after
+        Size prev_len = link_libraries->len;
 
-            for (Size i = 0, end = out_libraries->len; i < end; i++) {
-                const char *library = (*out_libraries)[i];
+        bool link_plugins =
+            std::find_if(target.qt_components.begin(), target.qt_components.end(),
+                         [](const char *component) { return !TestStr(component, "Core") && !TestStr(component, "Network"); });
+
+        // Add all plugins for simplicity unless only Core or Network are used
+        if (link_plugins) {
+            EnumerateFiles(qt_plugins, archive_filter, 3, 512, &str_alloc, link_libraries);
+
+            // Read plugin PRL files to add missing libraries
+            for (Size i = 0, end = link_libraries->len; i < end; i++) {
+                const char *library = (*link_libraries)[i];
 
                 Span<const char> base = MakeSpan(library, strlen(library) - strlen(archive_filter) + 1);
                 const char *prl_filename = Fmt(&str_alloc, "%1.prl", base).ptr;
 
                 if (TestFile(prl_filename)) {
-                    ParsePrlFile(prl_filename, out_libraries);
+                    ParsePrlFile(prl_filename, link_libraries);
                 }
             }
+        }
 
-            for (const char *component: target.qt_components) {
-                const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt_libraries, lib_prefix, qt_major, component).ptr;
+        // Add explicit component libraries
+        for (const char *component: target.qt_components) {
+            const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt_libraries, lib_prefix, qt_major, component).ptr;
 
-                if (!TestFile(prl_filename)) {
-                    LogError("Cannot find PRL file for Qt compoment '%1'", component);
-                    return false;
-                }
-
-                ParsePrlFile(prl_filename, out_libraries);
+            if (!TestFile(prl_filename)) {
+                LogError("Cannot find PRL file for Qt compoment '%1'", component);
+                return false;
             }
 
-            HashSet<const char *> prev_libraries;
+            ParsePrlFile(prl_filename, link_libraries);
+        }
 
-            // Remove pseudo-duplicates (same base name)
-            Size j = 0;
-            for (Size i = 0; i < out_libraries->len; i++) {
-                const char *library = (*out_libraries)[i];
-                const char *basename = SplitStrReverseAny(library, RG_PATH_SEPARATORS).ptr;
+        HashSet<const char *> prev_libraries;
 
-                (*out_libraries)[j] = library;
+        // Remove pseudo-duplicates (same base name)
+        Size j = prev_len;
+        for (Size i = prev_len; i < link_libraries->len; i++) {
+            const char *library = (*link_libraries)[i];
+            const char *basename = SplitStrReverseAny(library, RG_PATH_SEPARATORS).ptr;
+
+            (*link_libraries)[j] = library;
 
 #ifdef _WIN32
-                if (TestStr(basename, "qdirect2d.lib"))
-                    continue;
+            if (TestStr(basename, "qdirect2d.lib"))
+                continue;
 #endif
 
-                bool inserted;
-                prev_libraries.TrySet(basename, &inserted);
+            bool inserted;
+            prev_libraries.TrySet(basename, &inserted);
 
-                j += inserted;
-            }
-            out_libraries->len = j;
-
-            return true;
-        });
-
-        link_libraries->Append(libraries);
+            j += inserted;
+        }
+        link_libraries->len = j;
     } else {
         for (const char *component: target.qt_components) {
             const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt_libraries, lib_prefix,
@@ -440,7 +446,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
     return true;
 }
 
-bool Builder::CompileMocHelper(const SourceFileInfo &src, uint32_t features, HeapArray<const char *> *out_objects)
+bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const> system_directories, uint32_t features)
 {
     if (!PrepareQtSdk(src.target->qt_version))
         return false;
@@ -455,26 +461,16 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, uint32_t features, Hea
         const char *end = GetPathExtension(src.filename).ptr;
         Span<const char> base = MakeSpan(src.filename, end - src.filename);
 
-        HeapArray<char> buf(&str_alloc);
-
         for (const char *ext: HeaderExtensions) {
-            buf.RemoveFrom(0);
-            Fmt(&buf, "%1%2", base, ext);
+            const char *header_filename = Fmt(&str_alloc, "%1%2", base, ext).ptr;
 
-            if (TestFile(buf.ptr, FileType::File)) {
-                const char *header_filename = buf.TrimAndLeak(1).ptr;
-
+            if (TestFile(header_filename, FileType::File)) {
                 moc_filename = BuildObjectPath("moc", header_filename, cache_directory, ".cpp");
 
                 Command cmd = {};
 
-                // Assemble moc command
-                {
-                    Fmt(&buf, "\"%1\" \"%2\" --no-notes -o \"%3\"", moc_binary, header_filename, moc_filename);
-
-                    cmd.cache_len = buf.len;
-                    cmd.cmd_line = buf.TrimAndLeak(1);
-                }
+                cmd.cmd_line = Fmt(&str_alloc, "\"%1\" \"%2\" --no-notes -o \"%3\"", moc_binary, header_filename, moc_filename);
+                cmd.cache_len = cmd.cmd_line.len;
 
                 const char *text = Fmt(&str_alloc, "Run MOC on %!..+%1%!0", header_filename).ptr;
                 if (AppendNode(text, moc_filename, cmd, { src.filename, header_filename, moc_binary }, "moc")) {
@@ -488,13 +484,10 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, uint32_t features, Hea
     }
 
     if (moc_filename) {
-        const char *obj_filename = build_map.FindValue({ nullptr, moc_filename }, nullptr);
+        const char *obj_filename = build_map.FindValue({ "moc", moc_filename }, nullptr);
 
         if (!obj_filename) {
             obj_filename = Fmt(&str_alloc, "%1%2", moc_filename, build.compiler->GetObjectExtension()).ptr;
-
-            HeapArray<const char *> *list = cache_lists.Find(&src);
-            Span<const char *> system_directories = list ? list->As() : MakeSpan((const char **)nullptr, 0);
 
             Command cmd = {};
             build.compiler->MakeObjectCommand(moc_filename, SourceType::Cxx,
@@ -504,12 +497,10 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, uint32_t features, Hea
                                               obj_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Build MOC for %!..+%1%!0", src.filename).ptr;
-            AppendNode(text, obj_filename, cmd, moc_filename, nullptr);
+            AppendNode(text, obj_filename, cmd, moc_filename, "moc");
         }
 
-        if (out_objects) {
-            out_objects->Append(obj_filename);
-        }
+        moc_map.Set(src.filename, obj_filename);
     }
 
     return true;

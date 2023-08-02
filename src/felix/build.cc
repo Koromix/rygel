@@ -600,22 +600,19 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
 
     const char *obj_filename = build_map.FindValue({ ns, src.filename }, nullptr);
 
-    uint32_t features = build.features;
-    features = src.target->CombineFeatures(features);
-    features = src.CombineFeatures(features);
-
     // Build main object
     if (!obj_filename) {
         obj_filename = BuildObjectPath(ns, src.filename, cache_directory, build.compiler->GetObjectExtension());
 
+        uint32_t features = build.features;
+        features = src.target->CombineFeatures(features);
+        features = src.CombineFeatures(features);
+
+        HeapArray<const char *> system_directories;
+        if (src.target->qt_components.len && !AddQtDirectories(src, &system_directories))
+            return false;
+
         Command cmd = {};
-
-        Span<const char *const> system_directories = CacheList(&src, [&](HeapArray<const char *> *out_list) {
-            if (src.target->qt_components.len && !AddQtDirectories(src, out_list))
-                return false;
-            return true;
-        });
-
         build.compiler->MakeObjectCommand(src.filename, src.type,
                                           pch_filename, src.target->definitions,
                                           src.target->include_directories, system_directories,
@@ -628,28 +625,24 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
             if (!build.fake && !EnsureDirectoryExists(obj_filename))
                 return false;
         }
+
+        if (src.target->qt_components.len && !CompileMocHelper(src, system_directories, features))
+            return false;
     }
+
     if (out_objects) {
         out_objects->Append(obj_filename);
-    }
 
-    // Run MOC if needed
-    if (src.target->qt_components.len && !CompileMocHelper(src, features, out_objects))
-        return false;
+        if (src.target->qt_components.len) {
+            const char *moc_obj = moc_map.FindValue(src.filename, nullptr);
+
+            if (moc_obj) {
+                out_objects->Append(moc_obj);
+            }
+        }
+    }
 
     return true;
-}
-
-Span<const char *const> Builder::CacheList(const void *mark, FunctionRef<bool(HeapArray<const char *> *)> func)
-{
-    bool inserted;
-    auto bucket = cache_lists.TrySetDefault(mark, &inserted);
-
-    if (inserted && !func(&bucket->value)) {
-        bucket->value.Clear();
-    }
-
-    return bucket->value.As();
 }
 
 const char *Builder::GetTargetIncludeDirectory(const TargetInfo &target)

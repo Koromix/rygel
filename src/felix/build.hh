@@ -129,8 +129,8 @@ class Builder {
     Size total = 0;
     HashMap<const char *, Size> nodes_map;
     HashMap<BuildKey, const char *> build_map;
+    HashMap<const char *, const char *> moc_map;
     HashMap<const char *, int64_t> mtime_map;
-    HashMap<const void *, HeapArray<const char *>> cache_lists;
     HashMap<const void *, const char *> target_headers;
 
     // Build
@@ -171,12 +171,11 @@ private:
     bool AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *obj_filenames,
                                                   HeapArray<const char *> *link_libraries);
 
-    bool CompileMocHelper(const SourceFileInfo &src, uint32_t features, HeapArray<const char *> *out_objects);
+    bool CompileMocHelper(const SourceFileInfo &src, Span<const char *const> system_directories, uint32_t features);
     const char *CompileStaticQtHelper(const TargetInfo &target);
 
     void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);
 
-    Span<const char *const> CacheList(const void *mark, FunctionRef<bool(HeapArray<const char *> *)> func);
     const char *GetTargetIncludeDirectory(const TargetInfo &target);
 
     const char *BuildObjectPath(const char *ns, const char *src_filename,
