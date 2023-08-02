@@ -473,7 +473,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
                 cmd.cache_len = cmd.cmd_line.len;
 
                 const char *text = Fmt(&str_alloc, "Run MOC on %!..+%1%!0", header_filename).ptr;
-                if (AppendNode(text, moc_filename, cmd, { src.filename, header_filename, moc_binary }, "moc")) {
+                if (AppendNode(text, moc_filename, cmd, { header_filename, moc_binary }, "moc")) {
                     if (!build.fake && !EnsureDirectoryExists(moc_filename))
                         return false;
                 }
