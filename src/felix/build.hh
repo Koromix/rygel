@@ -159,19 +159,28 @@ private:
     void SaveCache();
     void LoadCache();
 
-    bool AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<const char *> *obj_filenames = nullptr);
-    const char *AddEsbuildSource(const SourceFileInfo &src, const char *ns);
-    const char *AddQtUiSource(const SourceFileInfo &src, const char *ns);
-    const char *AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames, const char *ns);
-
-    const char *CompileStaticQtHelper(const TargetInfo &target);
-    void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);
-
     bool PrepareQtSdk(int64_t version);
     bool PrepareEsbuild();
 
-    Span<const char *const> CacheList(const void *mark, FunctionRef<void(HeapArray<const char *> *)> func);
+    bool AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<const char *> *obj_filenames = nullptr);
+    const char *AddEsbuildSource(const SourceFileInfo &src);
+    const char *AddQtUiSource(const SourceFileInfo &src);
+    const char *AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames);
+
+    bool AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *> *out_list);
+    bool AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *obj_filenames,
+                                                  HeapArray<const char *> *link_libraries);
+
+    bool CompileMocHelper(const SourceFileInfo &src, uint32_t features, HeapArray<const char *> *out_objects);
+    const char *CompileStaticQtHelper(const TargetInfo &target);
+
+    void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);
+
+    Span<const char *const> CacheList(const void *mark, FunctionRef<bool(HeapArray<const char *> *)> func);
     const char *GetTargetIncludeDirectory(const TargetInfo &target);
+
+    const char *BuildObjectPath(const char *ns, const char *src_filename,
+                                const char *output_directory, const char *suffix);
 
     bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
                     Span<const char *const> src_filenames, const char *ns);
