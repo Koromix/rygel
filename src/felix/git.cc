@@ -515,7 +515,7 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
         return false;
     }
 
-    int type;
+    int type = -1;
     HeapArray<uint8_t> obj;
     HeapArray<DeltaInfo> deltas;
 
@@ -541,7 +541,10 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
             PackLocation location = {};
             if (!FindInIndexes(idx, hash, &location))
                 return false;
-            idx = location.idx;
+            if (location.idx != idx) [[unlikely]] {
+                LogError("Cannot resolve delta with other file");
+                return false;
+            }
             offset = location.offset;
 
             remain = obj.Take(20, obj.len - 20);
@@ -646,32 +649,32 @@ bool GitVersioneer::ReadPackObject(FILE *fp, int64_t offset, int *out_type, Heap
     int type = 0;
     Size len = 0;
     {
-        uint8_t info[4];
-        if (!ReadSection(fp, offset, RG_SIZE(info), info))
+        uint8_t chunk[6] = {};
+        if (!ReadSection(fp, offset, RG_SIZE(chunk), chunk))
             return false;
 
-        type = (info[0] >> 4) & 0x7;
-        len = info[0] & 0xF;
+        type = (chunk[0] >> 4) & 0x7;
+        len = chunk[0] & 0xF;
 
         Size used = 1;
-        if (info[0] & 0x80) {
+        if (chunk[0] & 0x80) {
             int shift = 4;
             do {
-                len |= (Size)(info[used] << shift);
+                len |= (Size)(chunk[used] << shift);
                 shift += 7;
-            } while ((info[used++] & 0x80) && used < RG_LEN(info));
+            } while ((chunk[used++] & 0x80) && used < RG_LEN(chunk));
         }
         offset += used;
     }
 
     // Deal with delta encoding
     if (type == 6) { // OBJ_OFS_DELTA
-        uint8_t info[4] = {};
-        if (!ReadSection(fp, offset, RG_SIZE(info), info))
+        uint8_t chunk[6] = {};
+        if (!ReadSection(fp, offset, RG_SIZE(chunk), chunk))
             return false;
 
         int64_t negative = 0;
-        offset += ParseOffset(info, &negative).len;
+        offset += ParseOffset(chunk, &negative).ptr - chunk;
         negative = base - negative;
 
         out_obj->Append(MakeSpan((const uint8_t *)&negative, RG_SIZE(negative)));
@@ -689,8 +692,15 @@ bool GitVersioneer::ReadPackObject(FILE *fp, int64_t offset, int *out_type, Heap
         return false;
 
     StreamReader reader(fp, "<pack>", CompressionType::Zlib);
-    if (reader.ReadAll(Mebibytes(2), out_obj) < 0)
-        return false;
+    {
+        Size prev_len = out_obj->len;
+        if (reader.ReadAll(Mebibytes(2), out_obj) < 0)
+            return false;
+        if (len != out_obj->len - prev_len) [[unlikely]] {
+            LogError("Packed object size mismatch");
+            return false;
+        }
+    }
     *out_type = type;
 
     return true;
