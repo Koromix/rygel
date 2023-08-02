@@ -1121,7 +1121,7 @@ static bool ParseMakeRule(const char *filename, Allocator *alloc, HeapArray<cons
 
 static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    RG_ASSERT(alloc);
+    RG_ASSERT(alloc || !out_filenames);
 
     // We need to strip include notes from the output
     Span<char> new_buf = MakeSpan(buf.ptr, 0);
@@ -1350,7 +1350,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
         // Even through we don't care about dependencies, we still want to
         // remove include notes from the output buffer.
         if (cmd.deps_mode == Command::DependencyMode::ShowIncludes) {
-            output.len = ExtractShowIncludes(output, &str_alloc, nullptr);
+            output.len = ExtractShowIncludes(output, nullptr, nullptr);
         }
 
         cache_map.Remove(node->dest_filename);
