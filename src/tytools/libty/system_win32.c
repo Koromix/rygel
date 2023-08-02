@@ -83,15 +83,15 @@ unsigned int ty_standard_get_paths(ty_standard_path std_path, const char *suffix
 #define ADD_SHELL_DIRECTORY(Id) \
         do { \
             if (paths_count < max_paths) { \
-                if (SHGetFolderPath(NULL, (Id), NULL, SHGFP_TYPE_CURRENT, \
-                                    rpaths[paths_count++]) != S_OK) \
+                if (SHGetFolderPathA(NULL, (Id), NULL, SHGFP_TYPE_CURRENT, \
+                                     rpaths[paths_count++]) != S_OK) \
                     goto overflow; \
             } \
         } while (false)
 
     switch (std_path) {
         case TY_PATH_EXECUTABLE_DIRECTORY: {
-            DWORD len = GetModuleFileName(NULL, rpaths[0], TY_PATH_MAX_SIZE);
+            DWORD len = GetModuleFileNameA(NULL, rpaths[0], TY_PATH_MAX_SIZE);
             if (len == TY_PATH_MAX_SIZE)
                 goto overflow;
             while (len && !strchr(TY_PATH_SEPARATORS, rpaths[0][--len]))

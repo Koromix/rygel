@@ -39,7 +39,7 @@ const QHash<QString, void (ClientHandler::*)(const QStringList &)> ClientHandler
 };
 
 ClientHandler::ClientHandler(unique_ptr<SessionPeer> peer, QObject *parent)
-    : QObject(parent), peer_(move(peer))
+    : QObject(parent), peer_(std::move(peer))
 {
     connect(peer_.get(), &SessionPeer::closed, this, &ClientHandler::closed);
     connect(peer_.get(), &SessionPeer::received, this, &ClientHandler::execute);

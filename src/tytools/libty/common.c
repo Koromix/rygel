@@ -310,7 +310,7 @@ void ty_libhs_log_handler(hs_log_level level, int err, const char *log, void *ud
 void _ty_refcount_increase(unsigned int *rrefcount)
 {
 #ifdef _MSC_VER
-    InterlockedIncrement(rrefcount);
+    InterlockedIncrement((volatile long *)rrefcount);
 #else
     __atomic_add_fetch(rrefcount, 1, __ATOMIC_RELAXED);
 #endif
@@ -319,7 +319,7 @@ void _ty_refcount_increase(unsigned int *rrefcount)
 unsigned int _ty_refcount_decrease(unsigned int *rrefcount)
 {
 #ifdef _MSC_VER
-    return InterlockedDecrement(rrefcount);
+    return InterlockedDecrement((volatile long *)rrefcount);
 #else
     unsigned int refcount = __atomic_sub_fetch(rrefcount, 1, __ATOMIC_RELEASE);
     if (refcount)

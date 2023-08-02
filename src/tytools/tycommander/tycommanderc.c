@@ -79,8 +79,8 @@ static bool start_echo_thread(HANDLE desc, echo_direction dir, char *path, size_
         rand_s(&rnd);
         snprintf(path, path_size, "\\\\.\\pipe\\tycommanderc-pipe-%04x", rnd);
 
-        ctx->pipe = CreateNamedPipe(path, PIPE_ACCESS_DUPLEX | FILE_FLAG_FIRST_PIPE_INSTANCE,
-                                    PIPE_TYPE_BYTE | PIPE_READMODE_BYTE, 1, 512, 512, 0, NULL);
+        ctx->pipe = CreateNamedPipeA(path, PIPE_ACCESS_DUPLEX | FILE_FLAG_FIRST_PIPE_INSTANCE,
+                                     PIPE_TYPE_BYTE | PIPE_READMODE_BYTE, 1, 512, 512, 0, NULL);
     }
     if (!handle_is_valid(ctx->pipe))
         goto error;
@@ -136,13 +136,13 @@ static bool setup_pipes(void)
     return true;
 }
 
-static bool execute_tycommander(LPSTR cmdline, const STARTUPINFO *si, DWORD *rret)
+static bool execute_tycommander(LPSTR cmdline, const STARTUPINFOA *si, DWORD *rret)
 {
     char path[MAX_PATH + 1], *ptr;
     PROCESS_INFORMATION proc;
     BOOL success;
 
-    GetModuleFileName(NULL, path, sizeof(path));
+    GetModuleFileNameA(NULL, path, sizeof(path));
     path[MAX_PATH] = 0;
     ptr = strrchr(path, '\\');
     if (!ptr)
@@ -150,7 +150,7 @@ static bool execute_tycommander(LPSTR cmdline, const STARTUPINFO *si, DWORD *rre
     strncpy(ptr, "\\tycommander.exe", (size_t)(path + sizeof(path) - ptr));
     path[MAX_PATH] = 0;
 
-    success = CreateProcess(path, cmdline, NULL, NULL, TRUE, 0, NULL, NULL, (STARTUPINFO *)si, &proc);
+    success = CreateProcessA(path, cmdline, NULL, NULL, TRUE, 0, NULL, NULL, (STARTUPINFOA *)si, &proc);
     if (!success)
         return false;
     CloseHandle(proc.hThread);
@@ -167,15 +167,15 @@ static bool execute_tycommander(LPSTR cmdline, const STARTUPINFO *si, DWORD *rre
 
 int main(void)
 {
-    STARTUPINFO si;
+    STARTUPINFOA si;
     DWORD ret;
 
     si.cb = sizeof(si);
-    GetStartupInfo(&si);
+    GetStartupInfoA(&si);
 
     if (!setup_pipes())
         goto error;
-    if (!execute_tycommander(GetCommandLine(), &si, &ret))
+    if (!execute_tycommander(GetCommandLineA(), &si, &ret))
         goto error;
 
     // Small delay to avoid dropping unread output/error data
