@@ -16,6 +16,118 @@
 
 namespace RG {
 
+static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const char **out_qmake)
+{
+    BlockAllocator temp_alloc;
+
+    struct TestPath {
+        const char *env;
+        const char *path;
+    };
+
+    static const TestPath test_paths[] = {
+#if defined(_WIN32)
+        { nullptr, "C:/Qt"},
+        { "SystemDrive", "Qt" }
+#else
+        { "HOME",  "Qt" }
+#endif
+    };
+
+    // Enumerate possible candidates
+    HeapArray<Span<const char>> sdk_candidates;
+    for (const TestPath &test: test_paths) {
+        const char *directory = nullptr;
+
+        if (test.env) {
+            Span<const char> prefix = getenv(test.env);
+
+            if (!prefix.len)
+                continue;
+
+            while (prefix.len && IsPathSeparator(prefix[prefix.len - 1])) {
+                prefix.len--;
+            }
+
+            directory = Fmt(&temp_alloc, "%1%/%2", prefix, test.path).ptr;
+        } else {
+            directory = Fmt(&temp_alloc, "%1", test.path).ptr;
+        }
+
+        if (TestFile(directory, FileType::Directory)) {
+            EnumerateDirectory(directory, nullptr, 128, [&](const char *basename, FileType file_type) {
+                if (file_type != FileType::Directory)
+                    return true;
+                if (!StartsWith(basename, "5.") && !StartsWith(basename, "6."))
+                    return true;
+
+                Span<const char> candidate = NormalizePath(basename, directory, &temp_alloc);
+                sdk_candidates.Append(candidate);
+
+                return true;
+            });
+        }
+    }
+
+    // Sort by decreasing version
+    std::sort(sdk_candidates.begin(), sdk_candidates.end(), [](Span<const char> path1, Span<const char> path2) {
+        const char *basename1 = SplitStrReverseAny(path1, RG_PATH_SEPARATORS).ptr;
+        const char *basename2 = SplitStrReverseAny(path2, RG_PATH_SEPARATORS).ptr;
+
+        return CmpStr(basename1, basename2) > 0;
+    });
+
+    // Find first suitable candidate
+    for (Span<const char> candidate: sdk_candidates) {
+        const char *qmake_binary = nullptr;
+
+        EnumerateDirectory(candidate.ptr, nullptr, 32, [&](const char *basename, FileType file_type) {
+            if (file_type != FileType::Directory)
+                return true;
+
+            bool matches = true;
+
+            // There are multiple ABIs on Windows (the official one, and MinGW stuff)
+            if (compiler->platform == HostPlatform::Windows) {
+                const char *prefix = TestStr(compiler->name, "GCC") ? "mingw" : "msvc";
+                matches &= StartsWith(basename, prefix);
+            } else {
+                matches &= StartsWith(basename, "gcc") || StartsWith(basename, "clang");
+            }
+
+            switch (compiler->architecture) {
+                case HostArchitecture::x86: { matches &= EndsWith(basename, "_32"); } break;
+                case HostArchitecture::x64: { matches &= EndsWith(basename, "_64"); } break;
+                case HostArchitecture::ARM64: { matches &= EndsWith(basename, "_arm32"); } break;
+
+                case HostArchitecture::ARM32:
+                case HostArchitecture::RISCV64:
+                case HostArchitecture::AVR:
+                case HostArchitecture::Web: { matches = false; } break;
+            }
+
+            if (matches) {
+                const char *binary = Fmt(alloc, "%1%/%2%/bin%/qmake%3", candidate, basename, compiler->GetLinkExtension()).ptr;
+
+                if (TestFile(binary, FileType::File)) {
+                    // Interrupt enumeration, we're done!
+                    qmake_binary = binary;
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        if (qmake_binary) {
+            *out_qmake = qmake_binary;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static FmtArg FormatVersion(int64_t version, int components)
 {
     RG_ASSERT(components > 0);
@@ -50,16 +162,16 @@ bool Builder::PrepareQtSdk(int64_t min_version)
         if (build.qmake_binary) {
             qmake_binary = build.qmake_binary;
         } else if (getenv("QMAKE_PATH")) {
-            const char *str = getenv("QMAKE_PATH");
+            qmake_binary = getenv("QMAKE_PATH");
+        } else {
+            bool success = FindExecutableInPath("qmake6", &str_alloc, &qmake_binary) ||
+                           FindExecutableInPath("qmake", &str_alloc, &qmake_binary) ||
+                           LocateSdkQmake(build.compiler, &str_alloc, &qmake_binary);
 
-            if (str && str[0]) {
-                qmake_binary = str;
+            if (!success) {
+                LogError("Cannot find QMake binary for Qt");
+                return false;
             }
-        } else if (FindExecutableInPath("qmake6", &str_alloc, &qmake_binary)) {
-            // Done
-        } else if (!FindExecutableInPath("qmake", &str_alloc, &qmake_binary)) {
-            LogError("Cannot find QMake binary for Qt");
-            return false;
         }
 
         HeapArray<char> specs;
