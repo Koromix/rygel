@@ -4093,11 +4093,11 @@ bool NotifySystemd();
         })()
 #endif
 
+void InitRG();
+int Main(int argc, char **argv);
+
 static inline int RunApp(int argc, char **argv)
 {
-    void InitRG();
-    int Main(int argc, char **argv);
-
     InitRG();
     return Main(argc, argv);
 }
