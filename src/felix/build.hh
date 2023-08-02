@@ -15,6 +15,7 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "compiler.hh"
+#include "git.hh"
 #include "target.hh"
 
 namespace RG {
@@ -133,6 +134,9 @@ class Builder {
     HashMap<const char *, int64_t> mtime_map;
     HashMap<const void *, const char *> target_headers;
 
+    // Reuse for performance
+    GitVersioneer versioneer;
+
     // Build
     std::mutex out_mutex;
     HeapArray<const char *> clear_filenames;
@@ -173,8 +177,10 @@ private:
 
     bool CompileMocHelper(const SourceFileInfo &src, Span<const char *const> system_directories, uint32_t features);
     const char *CompileStaticQtHelper(const TargetInfo &target);
-
     void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);
+
+    bool UpdateVersionSource(const TargetInfo &target, const char *dest_filename);
+    bool BuildGitVersion(Span<const char> tag_name, Span<char> out_version);
 
     const char *GetTargetIncludeDirectory(const TargetInfo &target);
 

@@ -54,6 +54,8 @@ class GitVersioneer {
 public:
     bool Prepare(const char *root_directory);
 
+    bool IsValid() const { return commits.len; }
+
     // String remains valid until object is destroyed
     const char *Version(Span<const char> key);
 
