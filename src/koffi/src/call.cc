@@ -1102,6 +1102,22 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             }
         } break;
 
+        case napi_function: {
+            if (type->primitive != PrimitiveKind::Callback) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Cannot pass function to type %1", type->name);
+                return false;
+            }
+
+            Napi::Function func = value.As<Napi::Function>();
+
+            void *ptr = ReserveTrampoline(type->ref.proto, func);
+            if (!ptr) [[unlikely]]
+                return false;
+
+            *out_ptr = (void *)ptr;
+            return true;
+        } break;
+
         case napi_number: {
             Napi::Number number = value.As<Napi::Number>();
             intptr_t ptr = (intptr_t)number.Int32Value();

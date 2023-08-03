@@ -85,7 +85,7 @@ async function test() {
     const CallIndirect = lib.func('int CallIndirect(int x)');
     const CallThreaded = lib.func('int CallThreaded(IntCallback *func, int x)');
     const MakeVectors = lib.func('int MakeVectors(int len, VectorCallback *func)');
-    const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, SortCallback *cb)');
+    const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, void *cb)');
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
 
@@ -234,12 +234,12 @@ async function test() {
     {
         let array = ['foo', 'bar', '123', 'foobar'];
 
-        CallQSort(koffi.as(array, 'char **'), array.length, koffi.sizeof('void *'), (ptr1, ptr2) => {
+        CallQSort(koffi.as(array, 'char **'), array.length, koffi.sizeof('void *'), koffi.as((ptr1, ptr2) => {
             let str1 = koffi.decode(ptr1, 'char *');
             let str2 = koffi.decode(ptr2, 'char *');
 
             return str1.localeCompare(str2);
-        });
+        }, 'SortCallback *'));
 
         assert.deepEqual(array, ['123', 'bar', 'foo', 'foobar']);
     }

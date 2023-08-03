@@ -1775,8 +1775,9 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     if (!type) [[unlikely]]
         return env.Null();
     if (type->primitive != PrimitiveKind::Pointer &&
+            type->primitive != PrimitiveKind::Callback &&
             type->primitive != PrimitiveKind::String &&
-            type->primitive != PrimitiveKind::String16) {
+            type->primitive != PrimitiveKind::String16) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Only pointer or string types can be used for casting");
         return env.Null();
     }
