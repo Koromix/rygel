@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Include xmlns="http://wixtoolset.org/schemas/v4/wxs">
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="TyToolsIcon" SourceFile="tytools.ico" />
+    <Property Id="ARPPRODUCTICON" Value="TyToolsIcon" />
+
+    <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+
+    <Feature Id="CliFeatures" Title="Command-line version">
+        <ComponentRef Id="CliBinaries" />
+    </Feature>
+    <Feature Id="GuiFeature" Title="GUI version">
+        <ComponentRef Id="GuiBinaries" />
+        <ComponentRef Id="GuiShortcuts" />
+    </Feature>
+    <Feature Id="ReadmeFeature" Title="Help files">
+        <ComponentRef Id="TextFiles" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="TyTools">
+            <Component Id="CliBinaries" Guid="224300d3-842d-462c-ac13-572db04e5d26">
+                <File Id="TyCmdBinary" Source="tycmd.exe" ></File>
+            </Component>
+            <Component Id="GuiBinaries" Guid="0ec927f0-734a-4f79-8f29-282ffa31d165">
+                <File Id="TyCommanderBinary" Source="TyCommander.exe" ></File>
+                <File Id="TyCommanderCBinary" Source="TyCommanderC.exe" ></File>
+                <File Id="TyUploaderBinary" Source="TyUploader.exe" ></File>
+            </Component>
+            <Component Id="TextFiles" Guid="cccbccf8-f054-4f6f-b285-8502b00078f3">
+                <File Id="README.md" Source="README.md" ></File>
+                <File Id="LICENSE.txt" Source="LICENSE.txt" ></File>
+            </Component>
+        </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="StartMenuFolder">
+        <Component Id="GuiShortcuts" Guid="cf81c2b8-8877-40ea-a810-807e0fdfb315">
+            <Shortcut Id="TyCommanderShortcut"
+                      Name="TyCommander"
+                      Target="[INSTALLFOLDER]TyCommander.exe"
+                      WorkingDirectory="INSTALLFOLDER" />
+            <Shortcut Id="TyUploaderShortcut"
+                      Name="TyUploader"
+                      Target="[INSTALLFOLDER]TyUploader.exe"
+                      WorkingDirectory="INSTALLFOLDER" />
+        </Component>
+    </StandardDirectory>
+</Include>

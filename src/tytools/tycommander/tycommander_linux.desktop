@@ -1,10 +1,9 @@
 [Desktop Entry]
-Version=@VERSION@
-Name=@CONFIG_TYCOMMANDER_NAME@
+Name=TyCommander
 Comment=GUI tool to manage Teensy devices
-TryExec=@CONFIG_TYCOMMANDER_EXECUTABLE@
+TryExec=tycommander
 Icon=tycommander
-Exec=@CONFIG_TYCOMMANDER_EXECUTABLE@
+Exec=tycommander
 Terminal=false
 Type=Application
 Categories=Development;

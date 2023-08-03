@@ -1,10 +1,9 @@
 [Desktop Entry]
-Version=@VERSION@
-Name=@CONFIG_TYUPLOADER_NAME@
+Name=TyUploader
 Comment=GUI tool to flash Teensy devices
-TryExec=@CONFIG_TYUPLOADER_EXECUTABLE@
+TryExec=tyuploader
 Icon=tyuploader
-Exec=@CONFIG_TYUPLOADER_EXECUTABLE@
+Exec=tyuploader
 Terminal=false
 Type=Application
 Categories=Development;
