@@ -32,12 +32,7 @@ static const char *capability_names[] = {
     "serial"
 };
 
-#ifdef _WIN32
-    #define MANUAL_REBOOT_DELAY 16000
-#else
-    #define MANUAL_REBOOT_DELAY 8000
-#endif
-#define FINAL_TASK_TIMEOUT 16000
+#define USB_CHANGE_TIMEOUT 16000
 
 const char *ty_board_capability_get_name(ty_board_capability cap)
 {
@@ -683,7 +678,7 @@ static int run_upload(ty_task *task)
 
 wait:
     r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_UPLOAD,
-                          flags & TY_UPLOAD_WAIT ? -1 : MANUAL_REBOOT_DELAY);
+                          (flags & TY_UPLOAD_WAIT) ? -1 : USB_CHANGE_TIMEOUT);
     if (r < 0)
         return r;
     if (!r) {
@@ -724,7 +719,7 @@ wait:
 
         }
 
-        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RUN, FINAL_TASK_TIMEOUT);
+        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RUN, USB_CHANGE_TIMEOUT);
         if (r < 0)
             return r;
         if (!r)
@@ -804,7 +799,7 @@ static int run_reset(ty_task *task)
         if (r < 0)
             return r;
 
-        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RESET, MANUAL_REBOOT_DELAY);
+        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RESET, USB_CHANGE_TIMEOUT);
         if (r <= 0)
             return ty_error(TY_ERROR_TIMEOUT, "Failed to reboot board '%s'", board->tag);
     }
@@ -814,7 +809,7 @@ static int run_reset(ty_task *task)
     if (r < 0)
         return r;
 
-    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RUN, FINAL_TASK_TIMEOUT);
+    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RUN, USB_CHANGE_TIMEOUT);
     if (r < 0)
         return r;
     if (!r)
@@ -863,7 +858,7 @@ static int run_reboot(ty_task *task)
     if (r < 0)
         return r;
 
-    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_UPLOAD, FINAL_TASK_TIMEOUT);
+    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_UPLOAD, USB_CHANGE_TIMEOUT);
     if (r < 0)
         return r;
     if (!r)

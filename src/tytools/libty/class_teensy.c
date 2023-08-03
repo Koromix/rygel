@@ -760,14 +760,12 @@ static int teensy_upload(ty_board_interface *iface, ty_firmware *fw,
             // The first write takes longer because it triggers a complete erase of all blocks.
             bool first = (address == min_address);
 
-            r = halfkay_send(iface->port, halfkay_version, block_size, address, buf, buf_len,
-                             250, first ? 100 : 20);
+            r = halfkay_send(iface->port, halfkay_version, block_size, address, buf, buf_len, 250, 100);
             if (r < 0)
                 return r;
             uploaded_len += buf_len;
 
-            if (first)
-                hs_delay(500);
+            hs_delay(first ? 500 : 1);
 
             if (pf) {
                 r = (*pf)(iface->board, fw, uploaded_len, max_address - min_address, udata);
