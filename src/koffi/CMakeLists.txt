@@ -28,7 +28,7 @@ include(CheckCXXCompilerFlag)
 
 find_package(CNoke)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
