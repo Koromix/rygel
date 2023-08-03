@@ -30,7 +30,7 @@ struct Config {
     HeapArray<HttpHeader> headers;
 
     bool set_etag = true;
-    int max_age = 0;
+    int64_t max_age = 0;
 
     BlockAllocator str_alloc;
 
@@ -80,7 +80,7 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                     } else if (prop.key == "AutoHtml") {
                         valid &= ParseBool(prop.value, &config.auto_html);
                     } else if (prop.key == "MaxAge") {
-                        valid &= ParseInt(prop.value, &config.max_age);
+                        valid &= ParseDuration(prop.value, &config.max_age);
                     } else if (prop.key == "ETag") {
                         valid &= ParseBool(prop.value, &config.set_etag);
                     } else {

@@ -79,7 +79,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                         valid = false;
                     }
                 } else if (TestStr(setting, "MaxFileSize")) {
-                    valid &= ParseInt(value, &config.max_file_size);
+                    valid &= ParseSize(value, &config.max_file_size);
                 } else if (TestStr(setting, "TokenKey")) {
                     size_t key_len;
                     int ret = sodium_base642bin(config.token_skey, RG_SIZE(config.token_skey),

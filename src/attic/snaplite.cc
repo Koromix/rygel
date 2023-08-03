@@ -405,7 +405,7 @@ Options:
             } else if (opt.Test("-S", "--snapshot_dir", OptionType::Value)) {
                 snapshot_directory = opt.current_value;
             } else if (opt.Test("-d", "--duration", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &duration))
+                if (!ParseDuration(opt.current_value, &duration))
                     return 1;
                 if (duration < 0 || duration > INT64_MAX / 1000) {
                     LogError("Duration value cannot be negative or too big");
@@ -414,7 +414,7 @@ Options:
 
                 duration *= 1000;
             } else if (opt.Test("--full_delay", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &full_delay))
+                if (!ParseDuration(opt.current_value, &full_delay))
                     return 1;
                 if (full_delay < 0 || full_delay > INT64_MAX / 1000) {
                     LogError("Full snapshot delay cannot be negative or too big");

@@ -55,7 +55,7 @@ struct http_Config {
     const char *unix_path = nullptr;
 
     int max_connections = 2048;
-    int idle_timeout = 60;
+    int64_t idle_timeout = 60000;
     int threads = std::max(GetCoreCount(), 4);
     int async_threads = std::max(GetCoreCount() * 4, 16);
     http_ClientAddressMode client_addr_mode = http_ClientAddressMode::Socket;
@@ -217,7 +217,7 @@ public:
     void AddEncodingHeader(CompressionType encoding);
     void AddCookieHeader(const char *path, const char *name, const char *value,
                          bool http_only = false);
-    void AddCachingHeaders(int max_age, const char *etag = nullptr);
+    void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);
 
     void AttachResponse(int code, MHD_Response *new_response);
     void AttachText(int code, Span<const char> str, const char *mime_type = "text/plain");

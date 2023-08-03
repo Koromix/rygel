@@ -3700,6 +3700,31 @@ overflow:
 bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
                Span<const char> *out_remaining = nullptr);
 
+bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+               Span<const char> *out_remaining = nullptr);
+#if RG_SIZE_MAX < INT64_MAX
+static inline bool ParseSize(Span<const char> str, Size *out_size,
+                             unsigned int flags = RG_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr)
+{
+    int64_t size = 0;
+    if (!ParseSize(str, &size, flags, out_remaining))
+        return false;
+
+    if (size > RG_SIZE_MAX) [[unlikely]] {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Size value is too high");
+        }
+        return false;
+    }
+
+    *out_size = (Size)size;
+    return true;
+}
+#endif
+
+bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                   Span<const char> *out_remaining = nullptr);
+
 static inline Size EncodeUtf8(int32_t c, char out_buf[4])
 {
     if (c < 0x80) {

@@ -801,6 +801,108 @@ bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags,
     return false;
 }
 
+bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags, Span<const char> *out_remaining)
+{
+    uint64_t size = 0;
+
+    if (!ParseInt(str, &size, flags & ~(int)ParseFlag::End, &str))
+        return false;
+    if (size > INT64_MAX) [[unlikely]]
+        goto overflow;
+
+    if (str.len) {
+        uint64_t multiplier = 1;
+        int next = 1;
+
+        switch (str[0]) {
+            case 'B': { multiplier = 1; } break;
+            case 'k': { multiplier = 1000; } break;
+            case 'M': { multiplier = 1000000; } break;
+            case 'G': { multiplier = 1000000000; } break;
+            case 'T': { multiplier = 1000000000000; } break;
+            default: { next = 0; } break;
+        }
+
+        if ((flags & (int)ParseFlag::End) && str.len > next) [[unlikely]] {
+            if (flags & (int)ParseFlag::Log) {
+                LogError("Unknown size unit '%1'", str[0]);
+            }
+            return false;
+        }
+        str = str.Take(next, str.len - next);
+
+        uint64_t total = size * multiplier;
+        if ((size && total / size != multiplier) || total > INT64_MAX) [[unlikely]]
+            goto overflow;
+        size = total;
+    }
+
+    *out_size = (int64_t)size;
+    if (out_remaining) {
+        *out_remaining = str;
+    }
+    return true;
+
+overflow:
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Size value is too high");
+    }
+    return false;
+}
+
+bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags, Span<const char> *out_remaining)
+{
+    uint64_t duration = 0;
+
+    if (!ParseInt(str, &duration, flags & ~(int)ParseFlag::End, &str))
+        return false;
+    if (duration > INT64_MAX) [[unlikely]]
+        goto overflow;
+
+    if (str.len) {
+        uint64_t multiplier = 1;
+        int next = 1;
+
+        switch (str[0]) {
+            case 's': { multiplier = 1000; } break;
+            case 'm': { multiplier = 60000; } break;
+            case 'h': { multiplier = 3600000; } break;
+            case 'd': { multiplier = 86400000; } break;
+            default: { next = 0; } break;
+        }
+
+        if ((flags & (int)ParseFlag::End) && str.len > next) [[unlikely]] {
+            if (flags & (int)ParseFlag::Log) {
+                LogError("Unknown duration unit '%1'", str[0]);
+            }
+            return false;
+        }
+        str = str.Take(next, str.len - next);
+
+        uint64_t total = duration * multiplier;
+        if ((duration && total / duration != multiplier) || total > INT64_MAX) [[unlikely]]
+            goto overflow;
+        duration = total;
+    } else {
+        uint64_t total = duration * 1000;
+        if ((duration && total / duration != 1000) || total > INT64_MAX) [[unlikely]]
+            goto overflow;
+        duration = total;
+    }
+
+    *out_duration = (int64_t)duration;
+    if (out_remaining) {
+        *out_remaining = str;
+    }
+    return true;
+
+overflow:
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Duration value is too high");
+    }
+    return false;
+}
+
 // ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------

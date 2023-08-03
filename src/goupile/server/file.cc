@@ -168,7 +168,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             return true;
         }
 
-        io->AddCachingHeaders(explicit_version && fs_version > 0 ? (365 * 86400) : 0, sha256);
+        int64_t max_age = (explicit_version && fs_version > 0) ? (365 * 86400000) : 0;
+        io->AddCachingHeaders(max_age, sha256);
     }
 
     // Negociate content encoding

@@ -50,7 +50,7 @@ public:
         const char *name = nullptr;
         bool use_offline = false;
         SyncMode sync_mode = SyncMode::Online;
-        int max_file_size = (int)Megabytes(16);
+        int64_t max_file_size = Megabytes(16);
         const char *lock_key = nullptr;
         const char *token_key = nullptr;
         uint8_t token_skey[32];

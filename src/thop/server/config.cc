@@ -102,7 +102,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     if (prop.key == "BaseUrl") {
                         config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "MaxAge") {
-                        valid &= ParseInt(prop.value, &config.max_age);
+                        valid &= ParseDuration(prop.value, &config.max_age);
                     } else if (prop.key == "RequireHost") {
                         config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {

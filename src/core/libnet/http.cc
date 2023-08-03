@@ -65,7 +65,7 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
     } else if (key == "MaxConnections") {
         return ParseInt(value, &max_connections);
     } else if (key == "IdleTimeout") {
-        return ParseInt(value, &idle_timeout);
+        return ParseDuration(value, &idle_timeout);
     } else if (key == "Threads") {
         return ParseInt(value, &threads);
     } else if (key == "AsyncThreads") {
@@ -183,7 +183,7 @@ bool http_Daemon::Start(const http_Config &config,
     if (config.max_connections) {
         mhd_options.Append({ MHD_OPTION_CONNECTION_LIMIT, config.max_connections, nullptr });
     }
-    mhd_options.Append({ MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout, nullptr });
+    mhd_options.Append({ MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout / 1000, nullptr });
     mhd_options.Append({ MHD_OPTION_END, 0, nullptr });
     client_addr_mode = config.client_addr_mode;
 
@@ -636,7 +636,7 @@ void http_IO::AddCookieHeader(const char *path, const char *name, const char *va
     AddHeader("Set-Cookie", buf.data);
 }
 
-void http_IO::AddCachingHeaders(int max_age, const char *etag)
+void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
 {
     RG_ASSERT(max_age >= 0);
 
@@ -647,7 +647,7 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
     if (max_age || etag) {
         char buf[128];
 
-        AddHeader("Cache-Control", max_age ? Fmt(buf, "max-age=%1", max_age).ptr : "no-store");
+        AddHeader("Cache-Control", max_age ? Fmt(buf, "max-age=%1", max_age / 1000).ptr : "no-store");
         if (etag) {
             AddHeader("ETag", etag);
         }

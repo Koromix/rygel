@@ -263,7 +263,7 @@ static void InitAssets()
     }
 }
 
-static void AttachStatic(const AssetInfo &asset, int max_age, const char *etag,
+static void AttachStatic(const AssetInfo &asset, int64_t max_age, const char *etag,
                          const http_RequestInfo &request, http_IO *io)
 {
     const char *client_etag = request.GetHeaderValue("If-None-Match");
@@ -429,7 +429,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
 
             if (asset) {
-                int max_age = StartsWith(admin_url, "/static/") ? (365 * 86400) : 0;
+                int64_t max_age = StartsWith(admin_url, "/static/") ? (365 * 86400000) : 0;
                 AttachStatic(*asset, max_age, shared_etag, request, io);
 
                 return;
@@ -632,7 +632,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
 
             return;
         } else if (asset) {
-            int max_age = StartsWith(instance_url, "/static/") ? (365 * 86400) : 0;
+            int64_t max_age = StartsWith(instance_url, "/static/") ? (365 * 86400000) : 0;
             AttachStatic(*asset, max_age, shared_etag, request, io);
 
             return;
