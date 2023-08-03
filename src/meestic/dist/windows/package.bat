@@ -12,12 +12,15 @@ for /f "tokens=2 delims= " %%i in ('bin\Fast\meestic.exe --version') do (
 )
 :out
 
-for /f "tokens=1,2 delims=_" %%i in ("%RAW_VERSION%") do (
+for /f "tokens=1,2 delims=-_" %%i in ("%RAW_VERSION%") do (
     set version=%%i
     set part=%%j
 )
-if "%part%" == ""; set part=0
-set VERSION=%version%.%part%
+if "%part%"=="" (
+    set VERSION=%version%
+) else (
+    set VERSION=%version%.%part%
+)
 
 set PACKAGE_DIR=bin\Packages\meestic\windows
 mkdir %PACKAGE_DIR%
