@@ -429,7 +429,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
 
             if (asset) {
-                int64_t max_age = StartsWith(admin_url, "/static/") ? (365 * 86400000) : 0;
+                int64_t max_age = StartsWith(admin_url, "/static/") ? (365ll * 86400000) : 0;
                 AttachStatic(*asset, max_age, shared_etag, request, io);
 
                 return;
@@ -632,7 +632,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
 
             return;
         } else if (asset) {
-            int64_t max_age = StartsWith(instance_url, "/static/") ? (365 * 86400000) : 0;
+            int64_t max_age = StartsWith(instance_url, "/static/") ? (365ll * 86400000) : 0;
             AttachStatic(*asset, max_age, shared_etag, request, io);
 
             return;
