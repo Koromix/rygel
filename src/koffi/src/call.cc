@@ -1043,12 +1043,6 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 out_kind = OutArgument::Kind::Buffer;
             } else if (type->ref.type->primitive == PrimitiveKind::Record ||
                        type->ref.type->primitive == PrimitiveKind::Union) [[likely]] {
-                if (!type->ref.type->size) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to %2, use koffi.as()",
-                                                type->ref.type != instance->void_type ? "opaque" : "ambiguous", type->name);
-                    return false;
-                }
-
                 Napi::Object obj = value.As<Napi::Object>();
                 RG_ASSERT(IsObject(value));
 
