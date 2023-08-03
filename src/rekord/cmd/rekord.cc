@@ -12,11 +12,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
-#include "config.hh"
-#include "disk.hh"
-#include "repository.hh"
 #include "src/core/libnet/curl.hh"
 #include "src/core/libpasswd/libpasswd.hh"
+#include "src/rekord/librekord/librekord.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #ifndef _WIN32
     #include <sys/time.h>
@@ -41,20 +39,6 @@ static bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_confi
         return false;
 
     return true;
-}
-
-static std::unique_ptr<rk_Disk> OpenRepository(rk_Config &config, bool require_password)
-{
-    if (!config.Validate(require_password))
-        return nullptr;
-
-    switch (config.type) {
-        case rk_DiskType::Local: return rk_OpenLocalDisk(config.repository, config.username, config.password, config.threads);
-        case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, config.username, config.password, config.threads);
-        case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, config.username, config.password, config.threads);
-    }
-
-    RG_UNREACHABLE();
 }
 
 static int RunInit(Span<const char *> arguments)
@@ -127,7 +111,7 @@ Options:
     if (!config.Complete(false))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(config, false);
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
     if (!disk)
         return 1;
     if (!disk->Init(full_pwd, write_pwd))
@@ -196,7 +180,7 @@ Options:
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
 
@@ -301,7 +285,7 @@ Options:
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
 
@@ -420,7 +404,7 @@ Options:
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
 
@@ -512,7 +496,7 @@ Options:
     if (!config.Complete(true))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = OpenRepository(config, true);
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
 

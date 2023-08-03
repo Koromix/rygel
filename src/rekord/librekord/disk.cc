@@ -12,6 +12,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
+#include "config.hh"
 #include "disk.hh"
 #include "lz4.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
@@ -737,6 +738,20 @@ bool rk_Disk::RebuildCache()
         return false;
 
     return true;
+}
+
+std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool require_password)
+{
+    if (!config.Validate(require_password))
+        return nullptr;
+
+    switch (config.type) {
+        case rk_DiskType::Local: return rk_OpenLocalDisk(config.repository, config.username, config.password, config.threads);
+        case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, config.username, config.password, config.threads);
+        case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, config.username, config.password, config.threads);
+    }
+
+    RG_UNREACHABLE();
 }
 
 }

@@ -19,6 +19,7 @@
 
 namespace RG {
 
+class rk_Config;
 struct s3_Config;
 struct ssh_Config;
 
@@ -134,6 +135,8 @@ private:
     void ClearCache();
     bool RebuildCache();
 };
+
+std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool require_password);
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads = -1);
 std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, int threads = -1);
