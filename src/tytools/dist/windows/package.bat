@@ -4,7 +4,7 @@ setlocal EnableDelayedExpansion
 cd %~dp0
 cd ..\..\..\..
 
-felix -pFast tycmd tycommander tyuploader
+felix -pFast tycmd tycommander tycommanderc tyuploader
 
 for /f "tokens=2 delims= " %%i in ('bin\Fast\tycmd.exe --version') do (
     set RAW_VERSION=%%i
@@ -12,12 +12,15 @@ for /f "tokens=2 delims= " %%i in ('bin\Fast\tycmd.exe --version') do (
 )
 :out
 
-for /f "tokens=1,2 delims=_" %%i in ("%RAW_VERSION%") do (
+for /f "tokens=1,2 delims=-_" %%i in ("%RAW_VERSION%") do (
     set version=%%i
     set part=%%j
 )
-if "%part%" == ""; set part=0
-set VERSION=%version%.%part%
+if "%part%"=="" (
+    set VERSION=%version%
+) else (
+    set VERSION=%version%.%part%
+)
 
 set PACKAGE_DIR=bin\Packages\tytools\windows
 mkdir %PACKAGE_DIR%
@@ -29,12 +32,13 @@ copy bin\Fast\tyuploader.exe %PACKAGE_DIR%\TyUploader.exe
 copy src\tytools\README.md %PACKAGE_DIR%\README.md
 copy src\tytools\LICENSE.txt %PACKAGE_DIR%\LICENSE.txt
 copy src\tytools\dist\windows\tytools.wxi %PACKAGE_DIR%\tytools.wxi
-copy src\tytools\assets\img\tycommander.ico %PACKAGE_DIR%\tycommander.ico
+copy src\tytools\assets\images\tycommander.ico %PACKAGE_DIR%\tytools.ico
 copy src\tytools\dist\windows\banner.jpg %PACKAGE_DIR%\banner.jpg
 copy src\tytools\dist\windows\dialog.jpg %PACKAGE_DIR%\dialog.jpg
 
 echo ^<?xml version="1.0" encoding="utf-8"?^> > %PACKAGE_DIR%\tytools.wxs
-echo ^<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"^> >> %PACKAGE_DIR%\tytools.wxs
+echo ^<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" >> %PACKAGE_DIR%\tytools.wxs
+echo      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"^> >> %PACKAGE_DIR%\tytools.wxs
 echo     ^<Package Language="1033" >> %PACKAGE_DIR%\tytools.wxs
 echo              Scope="perMachine" >> %PACKAGE_DIR%\tytools.wxs
 echo              Manufacturer="Niels Martignène" Name="TyTools" Version="%VERSION%" >> %PACKAGE_DIR%\tytools.wxs
@@ -49,4 +53,4 @@ cd %PACKAGE_DIR%
 wix build tytools.wxs -o TyTools_%VERSION%_win64.msi
 
 REM Create ZIP file
-tar.exe -a -c -f TyTools_%VERSION%_win64.zip README.md LICENSE.txt tycmd.cmd TyCommander.exe TyCommanderC.exe TyUploader.exe
+tar.exe -a -c -f TyTools_%VERSION%_win64.zip README.md LICENSE.txt tycmd.exe TyCommander.exe TyCommanderC.exe TyUploader.exe
