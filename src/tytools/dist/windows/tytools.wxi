@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Include xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Include xmlns="http://wixtoolset.org/schemas/v4/wxs"
+         xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
     <MediaTemplate EmbedCab="yes" />
+
+    <WixVariable Id="WixUILicenseRtf" Value="LICENSE.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="banner.jpg" />
+    <WixVariable Id="WixUIDialogBmp" Value="dialog.jpg" />
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
 
     <Icon Id="TyToolsIcon" SourceFile="tytools.ico" />
     <Property Id="ARPPRODUCTICON" Value="TyToolsIcon" />

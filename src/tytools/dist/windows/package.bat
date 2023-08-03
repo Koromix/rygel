@@ -32,13 +32,13 @@ copy bin\Fast\tyuploader.exe %PACKAGE_DIR%\TyUploader.exe
 copy src\tytools\README.md %PACKAGE_DIR%\README.md
 copy src\tytools\LICENSE.txt %PACKAGE_DIR%\LICENSE.txt
 copy src\tytools\dist\windows\tytools.wxi %PACKAGE_DIR%\tytools.wxi
+copy src\tytools\LICENSE.rtf %PACKAGE_DIR%\LICENSE.rtf
 copy src\tytools\assets\images\tycommander.ico %PACKAGE_DIR%\tytools.ico
 copy src\tytools\dist\windows\banner.jpg %PACKAGE_DIR%\banner.jpg
 copy src\tytools\dist\windows\dialog.jpg %PACKAGE_DIR%\dialog.jpg
 
 echo ^<?xml version="1.0" encoding="utf-8"?^> > %PACKAGE_DIR%\tytools.wxs
-echo ^<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" >> %PACKAGE_DIR%\tytools.wxs
-echo      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"^> >> %PACKAGE_DIR%\tytools.wxs
+echo ^<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"^> >> %PACKAGE_DIR%\tytools.wxs
 echo     ^<Package Language="1033" >> %PACKAGE_DIR%\tytools.wxs
 echo              Scope="perMachine" >> %PACKAGE_DIR%\tytools.wxs
 echo              Manufacturer="Niels Martignène" Name="TyTools" Version="%VERSION%" >> %PACKAGE_DIR%\tytools.wxs
@@ -50,7 +50,8 @@ echo ^</Wix^> >> %PACKAGE_DIR%\tytools.wxs
 
 REM Create MSI package
 cd %PACKAGE_DIR%
-wix build tytools.wxs -o TyTools_%VERSION%_win64.msi
+wix extension add -g WixToolset.UI.wixext
+wix build tytools.wxs -o TyTools_%VERSION%_win64.msi -ext WixToolset.UI.wixext
 
 REM Create ZIP file
 tar.exe -a -c -f TyTools_%VERSION%_win64.zip README.md LICENSE.txt tycmd.exe TyCommander.exe TyCommanderC.exe TyUploader.exe
