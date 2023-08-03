@@ -5,7 +5,7 @@ cd "$(dirname $0)/../../../.."
 ./bootstrap.sh
 ./felix -pDebug meestic
 
-VERSION=$(bin/Debug/meestic --version | awk '/^meestic/ {print $2}')
+VERSION=$(bin/Debug/meestic --version | awk -F'[ _]' '/^meestic/ {print $2}')
 DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 PACKAGE_DIR=bin/Packages/meestic/debian
 
