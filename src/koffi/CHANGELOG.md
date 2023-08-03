@@ -4,6 +4,11 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.11
+
+- Support casting function pointers with [koffi.as()](parameters.md#input-polymorphism)
+- Build in C++20 mode
+
 #### Koffi 2.5.10
 
 - Fix CMake regression when client has to build Koffi
