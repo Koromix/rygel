@@ -178,8 +178,10 @@ bool Builder::PrepareQtSdk(int64_t min_version)
         {
             const char *cmd_line = Fmt(&str_alloc, "\"%1\" -query", qmake_binary).ptr;
 
-            if (!ReadCommandOutput(cmd_line, &specs))
+            if (!ReadCommandOutput(cmd_line, &specs)) {
+                LogError("Failed to get qmake specs: %1", specs.As());
                 return false;
+            }
         }
 
         bool valid = false;
