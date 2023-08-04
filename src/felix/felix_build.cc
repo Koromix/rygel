@@ -361,9 +361,14 @@ Supported compiler features:)");
             PrintLn(fp, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
         }
 
-        PrintLn(fp, R"(
+        Print(fp, R"(
 Felix can also run the following special commands:
-    %!..+build%!0                        Build C and C++ projects %!D..(default)%!0
+    %!..+build%!0                        Build C and C++ projects %!D..(default)%!0)");
+#ifndef _WIN32
+        Print(fp, R"(
+    %!..+macify%!0                       Create macOS bundle app from binary)");
+#endif
+        PrintLn(fp, R"(
     %!..+pack%!0                         Pack assets to C source file and other formats
 
 For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget);

@@ -14,6 +14,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "src/core/libwrap/json.hh"
 #include "build.hh"
+#include "locate.hh"
 #include "vendor/pugixml/src/pugixml.hpp"
 
 namespace RG {
@@ -455,6 +456,31 @@ bool Builder::AddTarget(const TargetInfo &target)
             AppendNode(text, target_filename, cmd, link_filename, ns);
         } else {
             target_filename = link_filename;
+        }
+
+        // Bundle macOS GUI apps
+        if (build.compiler->platform == HostPlatform::macOS && target.qt_components.len) {
+            const char *bundle_filename = Fmt(&str_alloc, "%1.app", target_filename).ptr;
+
+            Command cmd = {};
+
+            {
+                HeapArray<char> buf(&str_alloc);
+
+                Fmt(&buf, "\"%1\" macify -f \"%2\" -O \"%3\"", GetApplicationExecutable(), target_filename, bundle_filename);
+                if (target.icon_filename) {
+                    Fmt(&buf, " --icon_file \"%1\"", target.icon_filename);
+                }
+                Fmt(&buf, " --qmake_path \"%1\"", qt->qmake);
+
+                cmd.cache_len = buf.len;
+                cmd.cmd_line = buf.TrimAndLeak(1);
+            }
+
+            const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", GetLastDirectoryAndName(bundle_filename)).ptr;
+            AppendNode(text, bundle_filename, cmd, target_filename, ns);
+
+            target_filename = bundle_filename;
         }
 
         target_filenames.Set(target.name, target_filename);

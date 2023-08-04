@@ -2678,14 +2678,12 @@ bool TestFile(const char *filename)
 
 bool TestFile(const char *filename, FileType type)
 {
-    RG_ASSERT(type != FileType::Link);
-
     FileInfo file_info;
     if (StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info) != StatResult::Success)
         return false;
 
     // Don't follow, but don't warn if we just wanted a file
-    if (file_info.type == FileType::Link) {
+    if (type != FileType::Link && file_info.type == FileType::Link) {
         file_info.type = FileType::File;
     }
 
@@ -4494,7 +4492,7 @@ Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
 bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
 {
     int exit_code;
-    if (!ExecuteCommandLine(cmd_line, nullptr, {}, Kilobytes(4), out_output, &exit_code))
+    if (!ExecuteCommandLine(cmd_line, nullptr, {}, Mebibytes(1), out_output, &exit_code))
         return false;
     if (exit_code) {
         LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);

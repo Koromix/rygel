@@ -13,120 +13,12 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "build.hh"
+#include "locate.hh"
+#ifndef _WIN32
+    #include <unistd.h>
+#endif
 
 namespace RG {
-
-static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const char **out_qmake)
-{
-    BlockAllocator temp_alloc;
-
-    struct TestPath {
-        const char *env;
-        const char *path;
-    };
-
-    static const TestPath test_paths[] = {
-#if defined(_WIN32)
-        { nullptr, "C:/Qt"},
-        { "SystemDrive", "Qt" }
-#else
-        { "HOME",  "Qt" }
-#endif
-    };
-
-    // Enumerate possible candidates
-    HeapArray<Span<const char>> sdk_candidates;
-    for (const TestPath &test: test_paths) {
-        const char *directory = nullptr;
-
-        if (test.env) {
-            Span<const char> prefix = getenv(test.env);
-
-            if (!prefix.len)
-                continue;
-
-            while (prefix.len && IsPathSeparator(prefix[prefix.len - 1])) {
-                prefix.len--;
-            }
-
-            directory = Fmt(&temp_alloc, "%1%/%2", prefix, test.path).ptr;
-        } else {
-            directory = Fmt(&temp_alloc, "%1", test.path).ptr;
-        }
-
-        if (TestFile(directory, FileType::Directory)) {
-            EnumerateDirectory(directory, nullptr, 128, [&](const char *basename, FileType file_type) {
-                if (file_type != FileType::Directory)
-                    return true;
-                if (!StartsWith(basename, "5.") && !StartsWith(basename, "6."))
-                    return true;
-
-                Span<const char> candidate = NormalizePath(basename, directory, &temp_alloc);
-                sdk_candidates.Append(candidate);
-
-                return true;
-            });
-        }
-    }
-
-    // Sort by decreasing version
-    std::sort(sdk_candidates.begin(), sdk_candidates.end(), [](Span<const char> path1, Span<const char> path2) {
-        const char *basename1 = SplitStrReverseAny(path1, RG_PATH_SEPARATORS).ptr;
-        const char *basename2 = SplitStrReverseAny(path2, RG_PATH_SEPARATORS).ptr;
-
-        return CmpStr(basename1, basename2) > 0;
-    });
-
-    // Find first suitable candidate
-    for (Span<const char> candidate: sdk_candidates) {
-        const char *qmake_binary = nullptr;
-
-        EnumerateDirectory(candidate.ptr, nullptr, 32, [&](const char *basename, FileType file_type) {
-            if (file_type != FileType::Directory)
-                return true;
-
-            bool matches = true;
-
-            // There are multiple ABIs on Windows (the official one, and MinGW stuff)
-            if (compiler->platform == HostPlatform::Windows) {
-                const char *prefix = TestStr(compiler->name, "GCC") ? "mingw" : "msvc";
-                matches &= StartsWith(basename, prefix);
-            } else {
-                matches &= StartsWith(basename, "gcc") || StartsWith(basename, "clang");
-            }
-
-            switch (compiler->architecture) {
-                case HostArchitecture::x86: { matches &= EndsWith(basename, "_32"); } break;
-                case HostArchitecture::x64: { matches &= EndsWith(basename, "_64"); } break;
-                case HostArchitecture::ARM64: { matches &= EndsWith(basename, "_arm32"); } break;
-
-                case HostArchitecture::ARM32:
-                case HostArchitecture::RISCV64:
-                case HostArchitecture::AVR:
-                case HostArchitecture::Web: { matches = false; } break;
-            }
-
-            if (matches) {
-                const char *binary = Fmt(alloc, "%1%/%2%/bin%/qmake%3", candidate, basename, compiler->GetLinkExtension()).ptr;
-
-                if (TestFile(binary, FileType::File)) {
-                    // Interrupt enumeration, we're done!
-                    qmake_binary = binary;
-                    return false;
-                }
-            }
-
-            return true;
-        });
-
-        if (qmake_binary) {
-            *out_qmake = qmake_binary;
-            return true;
-        }
-    }
-
-    return false;
-}
 
 static FmtArg FormatVersion(int64_t version, int components)
 {
@@ -155,107 +47,19 @@ static FmtArg FormatVersion(int64_t version, int components)
 
 bool Builder::PrepareQtSdk(int64_t min_version)
 {
-    if (qt_version < 0)
-        return false;
+    if (!qt) {
+        qt = std::make_unique<QtInfo>();
 
-    if (!qmake_binary) {
-        if (build.qmake_binary) {
-            qmake_binary = build.qmake_binary;
-        } else if (getenv("QMAKE_PATH")) {
-            qmake_binary = getenv("QMAKE_PATH");
-        } else {
-            bool success = FindExecutableInPath("qmake6", &str_alloc, &qmake_binary) ||
-                           FindExecutableInPath("qmake", &str_alloc, &qmake_binary) ||
-                           LocateSdkQmake(build.compiler, &str_alloc, &qmake_binary);
-
-            if (!success) {
-                LogError("Cannot find QMake binary for Qt");
-                return false;
-            }
-        }
-
-        HeapArray<char> specs;
-        {
-            const char *cmd_line = Fmt(&str_alloc, "\"%1\" -query", qmake_binary).ptr;
-
-            if (!ReadCommandOutput(cmd_line, &specs)) {
-                LogError("Failed to get qmake specs: %1", specs.As());
-                return false;
-            }
-        }
-
-        bool valid = false;
-
-        // Parse specs to find moc, include paths, library path
-        {
-            StreamReader st(specs.As<const uint8_t>(), "<qmake>");
-            LineReader reader(&st);
-
-            Span<const char> line;
-            while (!valid && reader.Next(&line)) {
-                Span<const char> value = {};
-                Span<const char> key = TrimStr(SplitStr(line, ':', &value));
-                value = TrimStr(value);
-
-                if (key == "QT_HOST_BINS" || key == "QT_HOST_LIBEXECS") {
-                    if (!moc_binary) {
-                        const char *binary = Fmt(&str_alloc, "%1%/moc%2", value, build.compiler->GetLinkExtension()).ptr;
-                        moc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
-                    }
-                    if (!rcc_binary) {
-                        const char *binary = Fmt(&str_alloc, "%1%/rcc%2", value, build.compiler->GetLinkExtension()).ptr;
-                        rcc_binary = TestFile(binary, FileType::File) ? binary : nullptr;
-                    }
-                    if (!uic_binary) {
-                        const char *binary = Fmt(&str_alloc, "%1%/uic%2", value, build.compiler->GetLinkExtension()).ptr;
-                        uic_binary = TestFile(binary, FileType::File) ? binary : nullptr;
-                    }
-                } else if (key == "QT_INSTALL_BINS") {
-                    qt_binaries = DuplicateString(value, &str_alloc).ptr;
-                } else if (key == "QT_INSTALL_HEADERS") {
-                    qt_headers = DuplicateString(value, &str_alloc).ptr;
-                } else if (key == "QT_INSTALL_LIBS") {
-                    qt_libraries = DuplicateString(value, &str_alloc).ptr;
-                } else if (key == "QT_INSTALL_PLUGINS") {
-                    qt_plugins = DuplicateString(value, &str_alloc).ptr;
-                } else if (key == "QT_VERSION") {
-                    qt_version = ParseVersionString(value, 3);
-
-                    if (qt_version < 5000000 || qt_version >= 7000000) {
-                        LogError("Only Qt5 and Qt6 are supported");
-                        return false;
-                    }
-                    qt_major = (int)(qt_version / 1000000);
-                }
-
-                valid = moc_binary && rcc_binary && uic_binary &&
-                        qt_binaries && qt_headers && qt_libraries && qt_plugins && qt_major;
-            }
-        }
-
-        if (!valid) {
-            LogError("Cannot find required Qt tools");
-
-            qt_version = -1;
+        if (!FindQtSdk(build.compiler, build.qmake_binary, &str_alloc, qt.get())) {
+            qt.reset(nullptr);
             return false;
         }
-
-        // Determine if Qt is built statically
-        if (build.compiler->platform == HostPlatform::Windows) {
-            char library0[4046];
-            Fmt(library0, "%1%/Qt%2Core.dll", qt_binaries, qt_major);
-
-            qt_static = !TestFile(library0);
-        } else {
-            char library0[4046];
-            Fmt(library0, "%1%/libQt%2Core.so", qt_libraries, qt_major);
-
-            qt_static = !TestFile(library0);
-        }
     }
+    if (!qt->qmake)
+        return false;
 
-    if (qt_version < min_version) {
-        LogError("Found Qt %1 but %2 is required", FormatVersion(qt_version, 3), FormatVersion(min_version, 3));
+    if (qt->version < min_version) {
+        LogError("Found Qt %1 but %2 is required", FormatVersion(qt->version, 3), FormatVersion(min_version, 3));
         return false;
     }
 
@@ -288,14 +92,14 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
         {
             HeapArray<char> buf(&str_alloc);
 
-            Fmt(&buf, "\"%1\" -o \"%2\" \"%3\"", uic_binary, header_filename, src.filename);
+            Fmt(&buf, "\"%1\" -o \"%2\" \"%3\"", qt->uic, header_filename, src.filename);
 
             cmd.cache_len = buf.len;
             cmd.cmd_line = buf.TrimAndLeak(1);
         }
 
         const char *text = Fmt(&str_alloc, "Build UI %!..+%1%!0", src.filename).ptr;
-        if (AppendNode(text, header_filename, cmd, { src.filename, uic_binary }, nullptr)) {
+        if (AppendNode(text, header_filename, cmd, { src.filename, qt->uic }, nullptr)) {
             if (!build.fake && !EnsureDirectoryExists(header_filename))
                 return nullptr;
         }
@@ -308,6 +112,10 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
 {
     const char *cpp_filename = build_map.FindValue({ nullptr, qrc_filenames[0] }, nullptr);
 
+    // First, we need Qt!
+    if (!cpp_filename && !PrepareQtSdk(target.qt_version))
+        return nullptr;
+
     if (!cpp_filename) {
         cpp_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qrc.cc", cache_directory, target.name).ptr;
 
@@ -317,7 +125,7 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
         {
             HeapArray<char> buf(&str_alloc);
 
-            Fmt(&buf, "\"%1\" -o \"%2\"", rcc_binary, cpp_filename);
+            Fmt(&buf, "\"%1\" -o \"%2\"", qt->rcc, cpp_filename);
             for (const char *qrc_filename: qrc_filenames) {
                 Fmt(&buf, " \"%1\"", qrc_filename);
             }
@@ -354,18 +162,43 @@ bool Builder::AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *
     if (!PrepareQtSdk(src.target->qt_version))
         return false;
 
-    out_list->Append(qt_headers);
+    const char *target_includes = GetTargetIncludeDirectory(*src.target);
+    out_list->Append(target_includes);
 
     const char *src_directory = DuplicateString(GetPathDirectory(src.filename), &str_alloc).ptr;
     out_list->Append(src_directory);
 
+    out_list->Append(qt->headers);
+
     for (const char *component: src.target->qt_components) {
-        const char *dirname = Fmt(&str_alloc, "%1%/Qt%2", qt_headers, component).ptr;
+#ifdef _WIN32
+        // Probably never gonna be possible...
+        RG_ASSERT(build.compiler->platform != HostPlatform::macOS);
+#else
+        if (build.compiler->platform == HostPlatform::macOS) {
+            const char *dirname = Fmt(&str_alloc, "%1%/Qt%2.framework/Versions/Current/Headers", qt->libraries, component).ptr;
+
+            if (TestFile(dirname, FileType::Directory)) {
+                const char *linkname = Fmt(&str_alloc, "%1%/Qt%2", target_includes, component).ptr;
+
+                if (!build.fake && !TestFile(linkname, FileType::Link)) {
+                    if (!MakeDirectoryRec(target_includes))
+                        return false;
+                    if (symlink(dirname, linkname) < 0) {
+                        LogError("Failed to create symbolic link '%1': %2", linkname, strerror(errno));
+                        return false;
+                    }
+                }
+
+                out_list->Append(dirname);
+                continue;
+            }
+        }
+#endif
+
+        const char *dirname = Fmt(&str_alloc, "%1%/Qt%2", qt->headers, component).ptr;
         out_list->Append(dirname);
     }
-
-    const char *target_includes = GetTargetIncludeDirectory(*src.target);
-    out_list->Append(target_includes);
 
     return true;
 }
@@ -376,12 +209,51 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
     if (!PrepareQtSdk(target.qt_version))
         return false;
 
-    if (qt_static) {
+    // Use marker to sort and deduplicate our libraries after
+    Size prev_len = link_libraries->len;
+
+    if (qt->shared) {
+        for (const char *component: target.qt_components) {
+            if (build.compiler->platform == HostPlatform::macOS) {
+                Span<char> framework = Fmt(&str_alloc, "!%1%/Qt%2.framework", qt->libraries, component);
+                const char *prl_filename = Fmt(&str_alloc, "%1%/Resources/Qt%2.prl", framework.ptr + 1, component).ptr;
+
+                if (TestFile(framework.ptr + 1, FileType::File)) {
+                    // Mask .framework extension
+                    framework.ptr[framework.len - 10] = 0;
+
+                    link_libraries->Append(framework.ptr);
+
+                    if (TestFile(prl_filename)) {
+                        ParsePrlFile(prl_filename, link_libraries);
+                    }
+
+                    continue;
+                }
+            }
+
+            const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt->libraries, lib_prefix,
+                                                                    qt->version_major, component, import_extension).ptr;
+            obj_filenames->Append(library);
+        }
+
+        // Fix quirk: QtGui depends on QtDBus but it's not listed correctly
+        // and macdeployqt does not handle it.
+        for (Size i = prev_len; i < link_libraries->len; i++) {
+            const char *library = (*link_libraries)[i];
+
+            if (library[0] == '!') {
+                Span<const char> name = SplitStrReverseAny(library + 1, RG_PATH_SEPARATORS);
+
+                if (name == "QtGui") {
+                    link_libraries->Append("!QtDBus");
+                    break;
+                }
+            }
+        }
+    } else {
         const char *obj_filename = CompileStaticQtHelper(target);
         obj_filenames->Append(obj_filename);
-
-        // Use marker to sort and deduplicate our libraries after
-        Size prev_len = link_libraries->len;
 
         bool link_plugins =
             std::find_if(target.qt_components.begin(), target.qt_components.end(),
@@ -389,7 +261,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
 
         // Add all plugins for simplicity unless only Core or Network are used
         if (link_plugins) {
-            EnumerateFiles(qt_plugins, archive_filter, 3, 512, &str_alloc, link_libraries);
+            EnumerateFiles(qt->plugins, archive_filter, 3, 512, &str_alloc, link_libraries);
 
             // Read plugin PRL files to add missing libraries
             for (Size i = 0, end = link_libraries->len; i < end; i++) {
@@ -406,7 +278,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
 
         // Add explicit component libraries
         for (const char *component: target.qt_components) {
-            const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt_libraries, lib_prefix, qt_major, component).ptr;
+            const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt->libraries, lib_prefix, qt->version_major, component).ptr;
 
             if (!TestFile(prl_filename)) {
                 LogError("Cannot find PRL file for Qt compoment '%1'", component);
@@ -415,10 +287,12 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
 
             ParsePrlFile(prl_filename, link_libraries);
         }
+    }
 
+    // Remove pseudo-duplicate libraries (same base name)
+    {
         HashSet<const char *> prev_libraries;
 
-        // Remove pseudo-duplicates (same base name)
         Size j = prev_len;
         for (Size i = prev_len; i < link_libraries->len; i++) {
             const char *library = (*link_libraries)[i];
@@ -426,10 +300,12 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
 
             (*link_libraries)[j] = library;
 
-#ifdef _WIN32
-            if (TestStr(basename, "qdirect2d.lib"))
-                continue;
-#endif
+            if (build.compiler->platform == HostPlatform::Windows) {
+                if (TestStr(basename, "qdirect2d.lib"))
+                    continue;
+            } else if (build.compiler->platform == HostPlatform::macOS) {
+                basename += (basename[0] == '!');
+            }
 
             bool inserted;
             prev_libraries.TrySet(basename, &inserted);
@@ -437,12 +313,6 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
             j += inserted;
         }
         link_libraries->len = j;
-    } else {
-        for (const char *component: target.qt_components) {
-            const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt_libraries, lib_prefix,
-                                                                    qt_major, component, import_extension).ptr;
-            obj_filenames->Append(library);
-        }
     }
 
     return true;
@@ -458,8 +328,6 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
     const char *moc_filename = build_map.FindValue({ "moc", src.filename }, nullptr);
 
     if (!moc_filename) {
-        RG_ASSERT(moc_binary);
-
         const char *end = GetPathExtension(src.filename).ptr;
         Span<const char> base = MakeSpan(src.filename, end - src.filename);
 
@@ -471,11 +339,11 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
 
                 Command cmd = {};
 
-                cmd.cmd_line = Fmt(&str_alloc, "\"%1\" \"%2\" --no-notes -o \"%3\"", moc_binary, header_filename, moc_filename);
+                cmd.cmd_line = Fmt(&str_alloc, "\"%1\" \"%2\" --no-notes -o \"%3\"", qt->moc, header_filename, moc_filename);
                 cmd.cache_len = cmd.cmd_line.len;
 
                 const char *text = Fmt(&str_alloc, "Run MOC on %!..+%1%!0", header_filename).ptr;
-                if (AppendNode(text, moc_filename, cmd, { header_filename, moc_binary }, "moc")) {
+                if (AppendNode(text, moc_filename, cmd, { header_filename, qt->moc }, "moc")) {
                     if (!build.fake && !EnsureDirectoryExists(moc_filename))
                         return false;
                 }
@@ -523,7 +391,7 @@ R"(#include <QtCore/QtPlugin>
 #endif
 )";
 
-    const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qt.cc", cache_directory, target.name).ptr;
+    const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qt->cc", cache_directory, target.name).ptr;
     const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
     if (!TestFile(src_filename) && !WriteFile(StaticCode, src_filename))
@@ -534,7 +402,7 @@ R"(#include <QtCore/QtPlugin>
     // Build object file
     Command cmd = {};
     build.compiler->MakeObjectCommand(src_filename, SourceType::Cxx,
-                                      nullptr, {}, {}, qt_headers, {}, features, build.env,
+                                      nullptr, {}, {}, qt->headers, {}, features, build.env,
                                       obj_filename,  &str_alloc, &cmd);
 
     const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 static Qt helper", target.name).ptr;
@@ -562,17 +430,26 @@ void Builder::ParsePrlFile(const char *filename, HeapArray<const char *> *out_li
                     const char *library = DuplicateString(part.Take(2, part.len - 2), &str_alloc).ptr;
                     out_libraries->Append(library);
                 } else if (StartsWith(part, "$$[QT_INSTALL_PREFIX]/lib/") || StartsWith(part, "$$[QT_INSTALL_PREFIX]\\lib\\")) {
-                    const char *library = Fmt(&str_alloc, "%1%/%2", qt_libraries, part.Take(26, part.len - 26)).ptr;
+                    const char *library = Fmt(&str_alloc, "%1%/%2", qt->libraries, part.Take(26, part.len - 26)).ptr;
                     out_libraries->Append(library);
                 } else if (StartsWith(part, "$$[QT_INSTALL_LIBS]/") || StartsWith(part, "$$[QT_INSTALL_PREFIX]\\")) {
-                    const char *library = Fmt(&str_alloc, "%1%/%2", qt_libraries, part.Take(20, part.len - 20)).ptr;
+                    const char *library = Fmt(&str_alloc, "%1%/%2", qt->libraries, part.Take(20, part.len - 20)).ptr;
                     out_libraries->Append(library);
                 } else if (StartsWith(part, "$$[QT_INSTALL_PREFIX]/plugins/") || StartsWith(part, "$$[QT_INSTALL_PREFIX]\\plugins\\")) {
-                    const char *library = Fmt(&str_alloc, "%1%/%2", qt_libraries, part.Take(30, part.len - 30)).ptr;
+                    const char *library = Fmt(&str_alloc, "%1%/%2", qt->libraries, part.Take(30, part.len - 30)).ptr;
                     out_libraries->Append(library);
                 } else if (StartsWith(part, "$$[QT_INSTALL_PLUGINS]/") || StartsWith(part, "$$[QT_INSTALL_PLUGINS]\\")) {
-                    const char *library = Fmt(&str_alloc, "%1%/%2", qt_libraries, part.Take(23, part.len - 23)).ptr;
+                    const char *library = Fmt(&str_alloc, "%1%/%2", qt->libraries, part.Take(23, part.len - 23)).ptr;
                     out_libraries->Append(library);
+                } else if (build.compiler->platform == HostPlatform::macOS && StartsWith(part, "-framework")) {
+                    Span<const char> framework = TrimStr(part.Take(10, part.len - 10));
+
+                    if (!framework.len) {
+                        framework = TrimStr(SplitStr(value, ';', &value));
+                    }
+
+                    const char *copy = Fmt(&str_alloc, "!%1", framework).ptr;
+                    out_libraries->Append(copy);
                 }
             }
 

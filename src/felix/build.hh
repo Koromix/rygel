@@ -16,6 +16,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "compiler.hh"
 #include "git.hh"
+#include "locate.hh"
 #include "target.hh"
 
 namespace RG {
@@ -105,17 +106,7 @@ class Builder {
     const char *import_extension = nullptr;
 
     // Qt stuff
-    const char *qmake_binary = nullptr;
-    const char *moc_binary = nullptr;
-    const char *rcc_binary = nullptr;
-    const char *uic_binary = nullptr;
-    const char *qt_binaries = nullptr;
-    const char *qt_headers = nullptr;
-    const char *qt_libraries = nullptr;
-    const char *qt_plugins = nullptr;
-    int64_t qt_version = 0;
-    int qt_major = 0;
-    bool qt_static = false;
+    std::unique_ptr<QtInfo> qt;
 
     // Javascript bundler
     const char *esbuild_binary = nullptr;

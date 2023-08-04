@@ -29,7 +29,7 @@ int RunPack(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 pack <filename> ...%!0
+R"(Usage: %!..+%1 pack [options] <filename> ...%!0
 
 Options:
     %!..+-O, --output_file <file>%!0     Redirect output to file or directory

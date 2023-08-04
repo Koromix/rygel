@@ -12,8 +12,8 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/libcc/libcc.hh"
-#include "arduino.hh"
 #include "compiler.hh"
+#include "locate.hh"
 
 namespace RG {
 
@@ -589,12 +589,29 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         if (libraries.len) {
+            HashSet<Span<const char>> framework_paths;
+
             if (platform != HostPlatform::Windows && platform != HostPlatform::macOS) {
                 Fmt(&buf, " -Wl,--start-group");
             }
             for (const char *lib: libraries) {
                 if (platform == HostPlatform::macOS && lib[0] == '!') {
-                    Fmt(&buf, " -framework %1", lib + 1);
+                    Span<const char> directory = {};
+                    Span<const char> basename = SplitStrReverse(lib + 1, '/', &directory);
+
+                    if (EndsWith(basename, ".framework")) {
+                        basename = basename.Take(0, basename.len - 10);
+                    }
+
+                    if (directory.len) {
+                        bool inserted = false;
+                        framework_paths.TrySet(directory, &inserted);
+
+                        if (inserted) {
+                            Fmt(&buf, " -F \"%1\"", directory);
+                        }
+                    }
+                    Fmt(&buf, " -framework %1", basename);
                 } else if (strpbrk(lib, RG_PATH_SEPARATORS)) {
                     Fmt(&buf, " %1", lib);
                 } else {
@@ -626,6 +643,7 @@ public:
 
             case HostPlatform::macOS: {
                 Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
+                Fmt(&buf, " -rpath \"@executable_path/../Frameworks\"");
             } break;
 
             default: {
@@ -933,6 +951,7 @@ public:
 
             case HostPlatform::macOS: {
                 Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition");
+                Fmt(&buf, " -rpath \"@executable_path/../Frameworks\"");
             } break;
 
             default: {
@@ -1056,12 +1075,29 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         if (libraries.len) {
+            HashSet<Span<const char>> framework_paths;
+
             if (platform != HostPlatform::Windows) {
                 Fmt(&buf, " -Wl,--start-group");
             }
             for (const char *lib: libraries) {
                 if (platform == HostPlatform::macOS && lib[0] == '!') {
-                    Fmt(&buf, " -framework %1", lib + 1);
+                    Span<const char> directory = {};
+                    Span<const char> basename = SplitStrReverse(lib + 1, '/', &directory);
+
+                    if (EndsWith(basename, ".framework")) {
+                        basename = basename.Take(0, basename.len - 10);
+                    }
+
+                    if (directory.len) {
+                        bool inserted = false;
+                        framework_paths.TrySet(directory, &inserted);
+
+                        if (inserted) {
+                            Fmt(&buf, " -F \"%1\"", directory);
+                        }
+                    }
+                    Fmt(&buf, " -framework %1", basename);
                 } else if (strpbrk(lib, RG_PATH_SEPARATORS)) {
                     Fmt(&buf, " %1", lib);
                 } else {

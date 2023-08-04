@@ -17,6 +17,24 @@
 
 namespace RG {
 
-void FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_cc);
+struct QtInfo {
+    const char *qmake = nullptr;
+    const char *moc = nullptr;
+    const char *rcc = nullptr;
+    const char *uic = nullptr;
+
+    const char *binaries = nullptr;
+    const char *headers = nullptr;
+    const char *libraries = nullptr;
+    const char *plugins = nullptr;
+
+    int64_t version = 0;
+    int version_major = 0;
+    bool shared = false;
+};
+
+bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *alloc, QtInfo *out_qt);
+
+bool FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_cc);
 
 }

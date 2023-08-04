@@ -3828,10 +3828,12 @@ static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
 #ifdef _WIN32
     #define RG_PATH_SEPARATORS "\\/"
     #define RG_PATH_DELIMITER ';'
+    #define RG_EXECUTABLE_EXTENSION ".exe"
     #define RG_SHARED_LIBRARY_EXTENSION ".dll"
 #else
     #define RG_PATH_SEPARATORS "/"
     #define RG_PATH_DELIMITER ':'
+    #define RG_EXECUTABLE_EXTENSION ""
     #define RG_SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
