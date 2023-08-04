@@ -4,16 +4,16 @@
 
 ### Koffi 2.5
 
-#### Koffi 2.5.11
+#### Koffi 2.5.11 (2023-08-03)
 
 - Support casting function pointers with [koffi.as()](parameters.md#input-polymorphism)
 - Build in C++20 mode
 
-#### Koffi 2.5.10
+#### Koffi 2.5.10 (2023-08-01)
 
 - Fix CMake regression when client has to build Koffi
 
-#### Koffi 2.5.9
+#### Koffi 2.5.9 (2023-07-28)
 
 **Main changes:**
 
@@ -25,43 +25,43 @@
 - Add missing unload() export to TS file
 - Add export for koffi.types in TS file
 
-#### Koffi 2.5.8
+#### Koffi 2.5.8 (2023-07-26)
 
 - Add more search paths for native Koffi modules
 - Add section [about bundling](start.md#bundling-koffi) to documentation
 
-#### Koffi 2.5.7
+#### Koffi 2.5.7 (2023-07-19)
 
 - Point package to new repository
 
-#### Koffi 2.5.6
+#### Koffi 2.5.6 (2023-07-19)
 
 - Increase limit of output parameters from 16 to 32
 
-#### Koffi 2.5.5
+#### Koffi 2.5.5 (2023-07-17)
 
 - Support decoding non-char null-terminated arrays
 
-#### Koffi 2.5.4
+#### Koffi 2.5.4 (2023-07-14)
 
 - Fix `koffi.pointer()` not accepting disposable types
 - Fix potential issues when making pointers to anonymous types
 
-#### Koffi 2.5.3
+#### Koffi 2.5.3 (2023-07-05)
 
 - Add missing union exports in TS definition file
 - Fix some parameter names in TS definition file
 
-#### Koffi 2.5.2
+#### Koffi 2.5.2 (2023-07-04)
 
 - Default initialize unset object/struct members
 
-#### Koffi 2.5.1
+#### Koffi 2.5.1 (2023-06-20)
 
 - Fix crash with some struct types in System V 64 ABI
 - Always use direct passthrough for buffer arguments
 
-#### Koffi 2.5.0
+#### Koffi 2.5.0 (2023-06-20)
 
 **New features:**
 
@@ -74,12 +74,12 @@
 
 ### Koffi 2.4
 
-#### Koffi 2.4.2
+#### Koffi 2.4.2 (2023-06-04)
 
 - Support calling variadic function pointers
 - Add documentation for function pointers
 
-#### Koffi 2.4.1
+#### Koffi 2.4.1 (2023-06-03)
 
 **Main changes:**
 
@@ -96,49 +96,49 @@
 
 ### Koffi 2.3
 
-#### Koffi 2.3.20
+#### Koffi 2.3.20 (2023-05-15)
 
 - Support explicit library unloading with `lib.unload()`
 
-#### Koffi 2.3.19
+#### Koffi 2.3.19 (2023-04-21)
 
 - Actually allow non-ambiguous [string] values for `void *` arguments
 
-#### Koffi 2.3.18
+#### Koffi 2.3.18 (2023-04-21)
 
 - Fix possible crash on exit caused by unregistered callbacks
 
-#### Koffi 2.3.17
+#### Koffi 2.3.17 (2023-04-20)
 
 - Allow strings for input `void *`, `int8_t *` and `int16_t *` pointer arguments
 - Support using `[string]` (single-element string arrays) for polymorphic input/output arguments
 
-#### Koffi 2.3.16
+#### Koffi 2.3.16 (2023-04-11)
 
 - Fix Windows ARM64 build to work with official Node.js version
 - Compile Windows builds with Visual Studio 2022 17.5.3
 - Support null in `koffi.free()` and `koffi.address()`
 
-#### Koffi 2.3.15
+#### Koffi 2.3.15 (2023-04-10)
 
 - Improve manual decoding of 0-terminated strings
 - Add checks around array conversion hints
 
-#### Koffi 2.3.14
+#### Koffi 2.3.14 (2023-04-05)
 
 - Add `koffi.errno()` function to get and set current errno value
 - Add `koffi.os.errno` object with valid errno codes
 
-#### Koffi 2.3.13
+#### Koffi 2.3.13 (2023-03-30)
 
 - Add `koffi.address()` to get the raw value of a wrapper pointer
 
-#### Koffi 2.3.12
+#### Koffi 2.3.12 (2023-03-30)
 
 - Fix broken syntax in TS definition file
 - Add missing exported properties in TS file
 
-#### Koffi 2.3.11
+#### Koffi 2.3.11 (2023-03-30)
 
 **Main changes:**
 
@@ -150,27 +150,27 @@
 - Avoid using `statx()` to allow compilation with glibc < 2.28
 - Reorganize NPM package files to be less convoluted
 
-#### Koffi 2.3.9
+#### Koffi 2.3.9 (2023-03-10)
 
 - Relicense under MIT license
 
-#### Koffi 2.3.8
+#### Koffi 2.3.8 (2023-02-28)
 
 - Disable non-ready union support
 - Simplify Windows stack allocation and drop NOACCESS and GUARD pages
 - Adjust Windows TEB SEH chain and GuaranteedStackBytes for Koffi calls
 
-#### Koffi 2.3.7
+#### Koffi 2.3.7 (2023-02-27)
 
 - Fix missing require in index.js ([@gastonFrecceroNapse](https://github.com/gastonFrecceroNapse))
 - Reduce NPM package bloat (from 65 MB to 20 MB) caused by changes in 2.3.6
 
-#### Koffi 2.3.6
+#### Koffi 2.3.6 (2023-02-26)
 
 - Fix broken TS definition file
 - Keep all prebuilt binaries and load correct one at runtime
 
-#### Koffi 2.3.5
+#### Koffi 2.3.5 (2023-02-24)
 
 **Main fixes:**
 
@@ -186,11 +186,11 @@
 - Mark optional properties in TS TypeInfo class
 - Minor performance improvements
 
-#### Koffi 2.3.4
+#### Koffi 2.3.4 (2023-01-31)
 
 - Fix error when installing Koffi on Windows (2.3.2)
 
-#### Koffi 2.3.2
+#### Koffi 2.3.2 (2023-01-30)
 
 **Main changes:**
 
@@ -203,13 +203,13 @@
 - Avoid CNoke dependency
 - Clear out development dependencies from package.json
 
-#### Koffi 2.3.1
+#### Koffi 2.3.1 (2023-01-3O)
 
 - Error out when trying to use ambiguous `void *` arguments (input and/or output)
 - Adjust TypeScript definitions ([@insraq](https://github.com/insraq))
 - Fix possible crash when parsing invalid prototype
 
-#### Koffi 2.3.0
+#### Koffi 2.3.0 (2023-01-25)
 
 **Main changes:**
 
@@ -228,21 +228,21 @@
 
 ### Koffi 2.2
 
-#### Koffi 2.2.5
+#### Koffi 2.2.5 (2023-01-23)
 
 - Relicense Koffi under LGPL 3.0
 
-#### Koffi 2.2.4
+#### Koffi 2.2.4 (2023-01-19)
 
 - Fix memory leak on Windows (in Koffi 2.2.3) when running many async calls
 - Reorganize documentation pages
 
-#### Koffi 2.2.3
+#### Koffi 2.2.3 (2023-01-17)
 
 - Support native code that uses [Structured Exception Handling (SEH)](https://learn.microsoft.com/en-us/cpp/cpp/structured-exception-handling-c-cpp) on Windows (x86, x64 and ARM64)
 - Try to use ebp/rbp as frame pointer in x86/x64 ASM code
 
-#### Koffi 2.2.2
+#### Koffi 2.2.2 (2023-01-14)
 
 **Main fixes:**
 
@@ -256,11 +256,11 @@
 - Check N-API version when module is loaded
 - Optimize callback unregistration
 
-#### Koffi 2.2.1
+#### Koffi 2.2.1 (2022-12-21)
 
 - Fix crash when [calling callback again after FFI call inside previous callback](https://github.com/Koromix/rygel/issues/15)
 
-#### Koffi 2.2.0
+#### Koffi 2.2.0 (2022-12-20)
 
 **New features:**
 
@@ -276,11 +276,11 @@
 
 ### Koffi 2.1
 
-#### Koffi 2.1.5
+#### Koffi 2.1.5 (2022-11-27)
 
 - Add missing README.md file to NPM package
 
-#### Koffi 2.1.4
+#### Koffi 2.1.4 (2022-11-25)
 
 **Main changes:**
 
@@ -291,19 +291,19 @@
 
 - Moved Koffi to a new repository: https://github.com/Koromix/rygel/
 
-#### Koffi 2.1.3
+#### Koffi 2.1.3 (2022-10-31)
 
 - Support up to 16 output parameters (instead of 8)
 
-#### Koffi 2.1.2
+#### Koffi 2.1.2 (2022-10-31)
 
 - Support up to 8 output parameters (instead of 4)
 
-#### Koffi 2.1.1
+#### Koffi 2.1.1 (2022-08-16)
 
 - Fix potential memory allocation bugs
 
-#### Koffi 2.1.0
+#### Koffi 2.1.0 (2022-08-13)
 
 **Main changes:**
 
@@ -323,11 +323,11 @@
 
 ### Koffi 2.0
 
-#### Koffi 2.0.1
+#### Koffi 2.0.1 (2022-07-30)
 
 - Return `undefined` (instead of null) for `void` functions
 
-#### Koffi 2.0.0
+#### Koffi 2.0.0 (2022-07-29)
 
 **Major new features:**
 
