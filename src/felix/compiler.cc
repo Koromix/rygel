@@ -381,7 +381,7 @@ public:
 
         // Build options
         Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks");
-        if (clang_ver >= 120000) {
+        if (clang_ver >= 130000) {
             Fmt(&buf, " -fno-finite-loops");
         }
         if (features & (int)CompileFeature::OptimizeSpeed) {
