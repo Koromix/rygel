@@ -353,15 +353,15 @@ Consult the [migration guide](migration.md) for more information.
 
 ### Koffi 1.3
 
-#### Koffi 1.3.12
+#### Koffi 1.3.12 (2022-07-27)
 
 - Fix support for Yarn package manager
 
-#### Koffi 1.3.11
+#### Koffi 1.3.11 (2022-07-26)
 
 - Fix broken parsing of `void *` when used for first parameter
 
-#### Koffi 1.3.10
+#### Koffi 1.3.10 (2022-07-25)
 
 **Main fixes:**
 
@@ -373,11 +373,11 @@ Consult the [migration guide](migration.md) for more information.
 
 - Various documentation fixes and improvements
 
-#### Koffi 1.3.9
+#### Koffi 1.3.9 (2022-07-15)
 
 - Fix prebuild compatibility with Electron on Windows x64
 
-#### Koffi 1.3.8
+#### Koffi 1.3.8 (2022-07-12)
 
 **Main changes:**
 
@@ -388,7 +388,7 @@ Consult the [migration guide](migration.md) for more information.
 
 - Fix and harmonize a few error messages
 
-#### Koffi 1.3.7
+#### Koffi 1.3.7 (2022-07-07)
 
 **Main fixes:**
 
@@ -401,7 +401,7 @@ Consult the [migration guide](migration.md) for more information.
 - Add str/str16 type aliases for string/string16
 - Various documentation fixes and improvements
 
-#### Koffi 1.3.6
+#### Koffi 1.3.6 (2022-07-01)
 
 **Main fixes:**
 
@@ -413,7 +413,7 @@ Consult the [migration guide](migration.md) for more information.
 - Prebuild with Clang for Windows x64 and Linux x64 binaries
 - Various documentation improvements
 
-#### Koffi 1.3.5
+#### Koffi 1.3.5 (2022-06-25)
 
 **Main changes:**
 
@@ -425,11 +425,11 @@ Consult the [migration guide](migration.md) for more information.
 - Reduce default async memory stack and heap size
 - Various documentation improvements
 
-#### Koffi 1.3.4
+#### Koffi 1.3.4 (2022-06-24)
 
 - Fix possible OpenBSD i386 crash with `(void)` functions
 
-#### Koffi 1.3.3
+#### Koffi 1.3.3 (2022-06-24)
 
 **Main fixes:**
 
@@ -441,16 +441,16 @@ Consult the [migration guide](migration.md) for more information.
 - Disable unsafe compiler optimizations
 - Various documentation improvements
 
-#### Koffi 1.3.2
+#### Koffi 1.3.2 (2022-06-23)
 
 - Support compilation in C++14 mode (graceful degradation)
 - Support older toolchains on Linux (tested on Debian 9)
 
-#### Koffi 1.3.1
+#### Koffi 1.3.1 (2022-06-22)
 
 - The prebuilt binary is tested when Koffi is installed, and a rebuild happens if it fails to load
 
-#### Koffi 1.3.0
+#### Koffi 1.3.0 (2022-06-22)
 
 **Major changes:**
 
@@ -468,15 +468,15 @@ Consult the [migration guide](migration.md) for more information.
 
 ### Koffi 1.2
 
-#### Koffi 1.2.4
+#### Koffi 1.2.4 (2022-06-12)
 
 - Windows ARM64 is now supported
 
-#### Koffi 1.2.3
+#### Koffi 1.2.3 (2022-06-11)
 
 - A prebuilt binary for macOS ARM64 (M1) is now included
 
-#### Koffi 1.2.1
+#### Koffi 1.2.1 (2022-06-11)
 
 This entry documents changes since version 1.1.0.
 
