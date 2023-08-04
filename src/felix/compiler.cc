@@ -589,7 +589,7 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         if (libraries.len) {
-            if (platform != HostPlatform::Windows) {
+            if (platform != HostPlatform::Windows && platform != HostPlatform::macOS) {
                 Fmt(&buf, " -Wl,--start-group");
             }
             for (const char *lib: libraries) {
@@ -601,7 +601,7 @@ public:
                     Fmt(&buf, " -l%1", lib);
                 }
             }
-            if (platform != HostPlatform::Windows) {
+            if (platform != HostPlatform::Windows && platform != HostPlatform::macOS) {
                 Fmt(&buf, " -Wl,--end-group");
             }
         }
