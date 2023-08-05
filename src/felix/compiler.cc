@@ -433,9 +433,6 @@ public:
 
             case HostPlatform::macOS: {
                 Fmt(&buf, " -pthread -fPIC");
-                if (clang_ver >= 110000) {
-                    Fmt(&buf, " -fno-semantic-interposition");
-                }
             } break;
 
             default: {
@@ -950,8 +947,7 @@ public:
             } break;
 
             case HostPlatform::macOS: {
-                Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition");
-                Fmt(&buf, " -rpath \"@executable_path/../Frameworks\"");
+                Fmt(&buf, " -pthread -fPIC");
             } break;
 
             default: {
@@ -1125,6 +1121,7 @@ public:
 
             case HostPlatform::macOS: {
                 Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
+                Fmt(&buf, " -rpath \"@executable_path/../Frameworks\"");
             } break;
 
             default: {
