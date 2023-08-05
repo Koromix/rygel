@@ -1,5 +1,5 @@
 ---
-title: koromix.dev — Koffi
+title: Koffi
 menu: Koffi
 ---
 

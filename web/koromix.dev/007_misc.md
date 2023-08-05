@@ -1,5 +1,5 @@
 ---
-title: koromix.dev — Misc
+title: Misc
 menu: Other
 ---
 

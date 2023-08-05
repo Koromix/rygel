@@ -1,5 +1,5 @@
 ---
-title: koromix.dev — Goupile
+title: Goupile
 menu: Goupile
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: koromix.dev — Meestic
+title: Meestic
 menu: Meestic
 ---
 

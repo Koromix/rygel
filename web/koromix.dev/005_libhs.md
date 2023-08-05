@@ -1,5 +1,5 @@
 ---
-title: koromix.dev — libhs
+title: libhs
 menu: libhs
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: koromix.dev — TyTools
+title: TyTools
 menu: TyTools
 ---
 
