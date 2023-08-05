@@ -17,7 +17,11 @@
     "url": "https://github.com/Koromix/koffi"
   },
   "homepage": "https://koffi.dev/",
-  "author": "Niels Martignène <niels.martignene@protonmail.com>",
+  "author": {
+    "name": "Niels Martignène",
+    "email": "niels.martignene@protonmail.com",
+    "url": "https://koromix.dev/"
+  },
   "main": "src/index.dev.js",
   "types": "src/index.d.ts",
   "scripts": {
