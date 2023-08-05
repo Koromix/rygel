@@ -208,11 +208,12 @@ func (p *parser) flattenLocalAndGlobalSelectors(list []css_ast.ComplexSelector, 
 		if len(selectors) == 0 {
 			// Treat a bare ":global" or ":local" as a bare "&" nesting selector
 			selectors = append(selectors, css_ast.CompoundSelector{
-				NestingSelectorLoc: ast.MakeIndex32(uint32(sel.Selectors[0].FirstLoc().Start)),
+				NestingSelectorLoc:        ast.MakeIndex32(uint32(sel.Selectors[0].FirstLoc().Start)),
+				WasEmptyFromLocalOrGlobal: true,
 			})
 
 			// Make sure we report that nesting is present so that it can be lowered
-			p.shouldLowerNesting = true
+			p.nestingIsPresent = true
 		}
 
 		sel.Selectors = selectors
@@ -264,7 +265,7 @@ func (p *parser) parseComplexSelector(opts parseComplexSelectorOpts) (result css
 	if !opts.noLeadingCombinator {
 		combinator = p.parseCombinator()
 		if combinator.Byte != 0 {
-			p.shouldLowerNesting = true
+			p.nestingIsPresent = true
 			p.eat(css_lexer.TWhitespace)
 		}
 	}
@@ -326,7 +327,7 @@ func (p *parser) parseCompoundSelector(opts parseComplexSelectorOpts) (sel css_a
 	// This is an extension: https://drafts.csswg.org/css-nesting-1/
 	hasLeadingNestingSelector := p.peek(css_lexer.TDelimAmpersand)
 	if hasLeadingNestingSelector {
-		p.shouldLowerNesting = true
+		p.nestingIsPresent = true
 		sel.NestingSelectorLoc = ast.MakeIndex32(uint32(startLoc.Start))
 		p.advance()
 	}
@@ -371,7 +372,7 @@ subclassSelectors:
 			sel.SubclassSelectors = append(sel.SubclassSelectors, css_ast.SubclassSelector{
 				Loc: subclassToken.Range.Loc,
 				Data: &css_ast.SSHash{
-					Name: ast.LocRef{Loc: nameLoc, Ref: p.symbolForName(nameLoc, name)},
+					Name: p.symbolForName(nameLoc, name),
 				},
 			})
 			p.advance()
@@ -383,7 +384,7 @@ subclassSelectors:
 			sel.SubclassSelectors = append(sel.SubclassSelectors, css_ast.SubclassSelector{
 				Loc: subclassToken.Range.Loc,
 				Data: &css_ast.SSClass{
-					Name: ast.LocRef{Loc: nameLoc, Ref: p.symbolForName(nameLoc, name)},
+					Name: p.symbolForName(nameLoc, name),
 				},
 			})
 			if !p.expect(css_lexer.TIdent) {
@@ -440,7 +441,7 @@ subclassSelectors:
 
 		case css_lexer.TDelimAmpersand:
 			// This is an extension: https://drafts.csswg.org/css-nesting-1/
-			p.shouldLowerNesting = true
+			p.nestingIsPresent = true
 			sel.NestingSelectorLoc = ast.MakeIndex32(uint32(subclassToken.Range.Loc.Start))
 			p.advance()
 

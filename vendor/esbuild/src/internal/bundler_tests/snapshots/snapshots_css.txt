@@ -179,6 +179,24 @@ console.log(void 0);
 }
 
 ================================================================================
+TestCSSMalformedAtImport
+---------- /out/entry.css ----------
+@import "https://example.com/url-token-eof.css";
+@import "https://example.com/url-token-whitespace-eof.css";
+@import "https://example.com/function-token-eof.css";
+@import "https://example.com/function-token-whitespace-eof.css";
+
+/* url-token-eof.css */
+
+/* url-token-whitespace-eof.css */
+
+/* function-token-eof.css */
+
+/* function-token-whitespace-eof.css */
+
+/* entry.css */
+
+================================================================================
 TestCSSNestingOldBrowser
 ---------- /out/two-type-selectors.css ----------
 /* two-type-selectors.css */
@@ -597,6 +615,54 @@ a {
 /* across-files-url.css */
 
 ================================================================================
+TestDeduplicateRulesGlobalVsLocalNames
+---------- /out/entry.css ----------
+/* a.css */
+b {
+  color: green;
+}
+.bar {
+  color: green;
+}
+.a_foo {
+  color: red;
+}
+.a_bar {
+  color: green;
+}
+div {
+  animation-name: a_anim_local;
+}
+
+/* b.css */
+a {
+  color: red;
+}
+b {
+  color: #00f;
+}
+.foo {
+  color: red;
+}
+.bar {
+  color: #00f;
+}
+.b_foo {
+  color: red;
+}
+.b_bar {
+  color: #00f;
+}
+div {
+  animation-name: anim_global;
+}
+div {
+  animation-name: b_anim_local;
+}
+
+/* entry.css */
+
+================================================================================
 TestExternalImportURLInCSS
 ---------- /out/entry.css ----------
 /* src/entry.css */
@@ -645,6 +711,304 @@ TestIgnoreURLsInAtRulePrelude
   a {
     color: red;
   }
+}
+
+================================================================================
+TestImportCSSFromJSLocalAtContainer
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {
+  local: "styles_local",
+  local1: "styles_local1",
+  local2: "styles_local2"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* styles.css */
+@container not (max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local (max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local not (max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local (max-width: 100px) or (min-height: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local (max-width: 100px) and (min-height: 100px) {
+  div {
+    color: red;
+  }
+}
+@container general_enclosed(max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+@container styles_local general_enclosed(max-width: 100px) {
+  div {
+    color: red;
+  }
+}
+div {
+  container-name: NONE initial;
+}
+div {
+  container-name: none INITIAL;
+}
+div {
+  container-name: GLOBAL1 GLOBAL2;
+}
+div {
+  container-name: styles_local1 styles_local2;
+}
+div {
+  container: none;
+}
+div {
+  container: NONE;
+}
+div {
+  container: NONE / size;
+}
+div {
+  container: none / size;
+}
+div {
+  container: GLOBAL1 GLOBAL2;
+}
+div {
+  container: styles_local1 styles_local2;
+}
+div {
+  container: GLOBAL1 GLOBAL2 / size;
+}
+div {
+  container: styles_local1 styles_local2 / size;
+}
+
+================================================================================
+TestImportCSSFromJSLocalAtCounterStyle
+---------- /out/entry.js ----------
+// list_style_type.css
+var list_style_type_default = {
+  local: "list_style_type_local",
+  INITIAL: "list_style_type_INITIAL",
+  decimal: "list_style_type_decimal",
+  disc: "list_style_type_disc",
+  SQUARE: "list_style_type_SQUARE",
+  circle: "list_style_type_circle",
+  "disclosure-OPEN": "list_style_type_disclosure-OPEN",
+  "DISCLOSURE-closed": "list_style_type_DISCLOSURE-closed"
+};
+
+// list_style.css
+var list_style_default = {
+  local: "list_style_local",
+  inside: "list_style_inside",
+  outside: "list_style_outside"
+};
+
+// entry.js
+console.log(list_style_type_default, list_style_default);
+
+---------- /out/entry.css ----------
+/* list_style_type.css */
+@counter-style list_style_type_local {
+  symbols: A B C;
+}
+div {
+  list-style-type: GLOBAL;
+}
+div {
+  list-style-type: list_style_type_local;
+}
+div {
+  list-style-type: list_style_type_INITIAL;
+}
+div {
+  list-style-type: list_style_type_decimal;
+}
+div {
+  list-style-type: list_style_type_disc;
+}
+div {
+  list-style-type: list_style_type_SQUARE;
+}
+div {
+  list-style-type: list_style_type_circle;
+}
+div {
+  list-style-type: list_style_type_disclosure-OPEN;
+}
+div {
+  list-style-type: list_style_type_DISCLOSURE-closed;
+}
+
+/* list_style.css */
+@counter-style list_style_local {
+  symbols: A B C;
+}
+div {
+  list-style: GLOBAL;
+}
+div {
+  list-style: list_style_local;
+}
+div {
+  list-style: list_style_local none;
+}
+div {
+  list-style: list_style_local url(http://);
+}
+div {
+  list-style: list_style_local linear-gradient(red, green);
+}
+div {
+  list-style: list_style_local inside;
+}
+div {
+  list-style: list_style_local outside;
+}
+div {
+  list-style: none list_style_local;
+}
+div {
+  list-style: url(http://) list_style_local;
+}
+div {
+  list-style: linear-gradient(red, green) list_style_local;
+}
+div {
+  list-style: list_style_local inside;
+}
+div {
+  list-style: list_style_local outside;
+}
+div {
+  list-style: inside list_style_inside;
+}
+div {
+  list-style: inside list_style_outside;
+}
+div {
+  list-style: outside list_style_inside;
+}
+div {
+  list-style: outside list_style_outside;
+}
+div {
+  list-style: url(http://) none invalid;
+}
+div {
+  list-style: linear-gradient(red, green) none invalid;
+}
+div {
+  list-style: INITIAL;
+}
+div {
+  list-style: decimal;
+}
+div {
+  list-style: disc;
+}
+div {
+  list-style: SQUARE;
+}
+div {
+  list-style: circle;
+}
+div {
+  list-style: disclosure-OPEN;
+}
+div {
+  list-style: DISCLOSURE-closed;
+}
+
+================================================================================
+TestImportCSSFromJSLocalAtKeyframes
+---------- /out/entry.js ----------
+// styles.css
+var styles_default = {
+  local_name: "styles_local_name",
+  local_name1: "styles_local_name1",
+  local_name2: "styles_local_name2",
+  none: "styles_none"
+};
+
+// entry.js
+console.log(styles_default);
+
+---------- /out/entry.css ----------
+/* styles.css */
+@keyframes styles_local_name {
+  to {
+    color: red;
+  }
+}
+div {
+  animation-name: none;
+}
+div {
+  animation-name: none;
+}
+div {
+  animation-name: global_name;
+}
+div {
+  animation-name: styles_local_name;
+}
+div {
+  animation-name:
+    global_name1,
+    none,
+    global_name2,
+    Inherit,
+    INITIAL,
+    revert,
+    revert-layer,
+    unset;
+}
+div {
+  animation-name:
+    styles_local_name1,
+    none,
+    styles_local_name2,
+    Inherit,
+    INITIAL,
+    revert,
+    revert-layer,
+    unset;
+}
+div {
+  animation: 2s infinite global_name;
+}
+div {
+  animation: 2s infinite styles_local_name;
+}
+@keyframes styles_none {
+  to {
+    color: red;
+  }
+}
+div {
+  animation-name: "none";
+}
+div {
+  animation-name: styles_none;
 }
 
 ================================================================================
@@ -769,11 +1133,15 @@ div:local(+ .local_a):hover {
 }
 :global {
   .GLOBAL {
+    before: outer;
     :local {
+      before: inner;
       .local {
         color: #01D;
       }
+      after: inner;
     }
+    after: outer;
   }
 }
 
@@ -869,11 +1237,13 @@ div + .LOCAL_local_a:hover {
 }
 & {
   .GLOBAL {
-    & {
-      .LOCAL_local {
-        color: #01D;
-      }
+    before: outer;
+    before: inner;
+    .LOCAL_local {
+      color: #01D;
     }
+    after: inner;
+    after: outer;
   }
 }
 
@@ -969,11 +1339,13 @@ div + .LOCAL_local_a2:hover {
 }
 & {
   .GLOBAL {
-    & {
-      .LOCAL_local2 {
-        color: #01D;
-      }
+    before: outer;
+    before: inner;
+    .LOCAL_local2 {
+      color: #01D;
     }
+    after: inner;
+    after: outer;
   }
 }
 

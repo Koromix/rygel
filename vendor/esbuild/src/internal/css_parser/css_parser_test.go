@@ -1287,10 +1287,10 @@ func TestAtImport(t *testing.T) {
 	expectPrinted(t, "@import;", "@import;\n", "<stdin>: WARNING: Expected URL token but found \";\"\n")
 	expectPrinted(t, "@import ;", "@import;\n", "<stdin>: WARNING: Expected URL token but found \";\"\n")
 	expectPrinted(t, "@import \"foo.css\"", "@import \"foo.css\";\n", "<stdin>: WARNING: Expected \";\" but found end of file\n")
-	expectPrinted(t, "@import url(\"foo.css\";", "@import url(foo.css);\n", "<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
+	expectPrinted(t, "@import url(\"foo.css\";", "@import \"foo.css\";\n", "<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
 	expectPrinted(t, "@import noturl(\"foo.css\");", "@import noturl(\"foo.css\");\n", "<stdin>: WARNING: Expected URL token but found \"noturl(\"\n")
-	expectPrinted(t, "@import url(", "@import url(;\n", `<stdin>: WARNING: Expected URL token but found bad URL token
-<stdin>: ERROR: Expected ")" to end URL token
+	expectPrinted(t, "@import url(foo.css", "@import \"foo.css\";\n", `<stdin>: WARNING: Expected ")" to end URL token
+<stdin>: NOTE: The unbalanced "(" is here:
 <stdin>: WARNING: Expected ";" but found end of file
 `)
 
@@ -1320,7 +1320,6 @@ func TestLegalComment(t *testing.T) {
 
 func TestAtKeyframes(t *testing.T) {
 	expectPrinted(t, "@keyframes {}", "@keyframes {}\n", "<stdin>: WARNING: Expected identifier but found \"{\"\n")
-	expectPrinted(t, "@keyframes 'name' {}", "@keyframes \"name\" {}\n", "")
 	expectPrinted(t, "@keyframes name{}", "@keyframes name {\n}\n", "")
 	expectPrinted(t, "@keyframes name {}", "@keyframes name {\n}\n", "")
 	expectPrinted(t, "@keyframes name{0%,50%{color:red}25%,75%{color:blue}}",
@@ -1331,6 +1330,23 @@ func TestAtKeyframes(t *testing.T) {
 		"@keyframes name {\n  from {\n    color: red;\n  }\n  to {\n    color: blue;\n  }\n}\n", "")
 	expectPrinted(t, "@keyframes name { from { color: red } to { color: blue } }",
 		"@keyframes name {\n  from {\n    color: red;\n  }\n  to {\n    color: blue;\n  }\n}\n", "")
+
+	// Note: Strings as names is allowed in the CSS specification and works in
+	// Firefox and Safari but Chrome has strangely decided to deliberately not
+	// support this. We always turn all string names into identifiers to avoid
+	// them silently breaking in Chrome.
+	expectPrinted(t, "@keyframes 'name' {}", "@keyframes name {\n}\n", "")
+	expectPrinted(t, "@keyframes 'name 2' {}", "@keyframes name\\ 2 {\n}\n", "")
+	expectPrinted(t, "@keyframes 'none' {}", "@keyframes \"none\" {}\n", "")
+	expectPrinted(t, "@keyframes 'None' {}", "@keyframes \"None\" {}\n", "")
+	expectPrinted(t, "@keyframes 'unset' {}", "@keyframes \"unset\" {}\n", "")
+	expectPrinted(t, "@keyframes 'revert' {}", "@keyframes \"revert\" {}\n", "")
+	expectPrinted(t, "@keyframes None {}", "@keyframes None {}\n",
+		"<stdin>: WARNING: Cannot use \"None\" as a name for \"@keyframes\" without quotes\n"+
+			"NOTE: You can put \"None\" in quotes to prevent it from becoming a CSS keyword.\n")
+	expectPrinted(t, "@keyframes REVERT {}", "@keyframes REVERT {}\n",
+		"<stdin>: WARNING: Cannot use \"REVERT\" as a name for \"@keyframes\" without quotes\n"+
+			"NOTE: You can put \"REVERT\" in quotes to prevent it from becoming a CSS keyword.\n")
 
 	expectPrinted(t, "@keyframes name { from { color: red } }", "@keyframes name {\n  from {\n    color: red;\n  }\n}\n", "")
 	expectPrinted(t, "@keyframes name { 100% { color: red } }", "@keyframes name {\n  100% {\n    color: red;\n  }\n}\n", "")
@@ -1343,7 +1359,6 @@ func TestAtKeyframes(t *testing.T) {
 	expectPrinted(t, "@-o-keyframes name {}", "@-o-keyframes name {\n}\n", "")
 
 	expectPrinted(t, "@keyframes {}", "@keyframes {}\n", "<stdin>: WARNING: Expected identifier but found \"{\"\n")
-	expectPrinted(t, "@keyframes 'name' {}", "@keyframes \"name\" {}\n", "") // This is allowed as it's technically possible to use in Firefox (but in no other browser)
 	expectPrinted(t, "@keyframes name { 0% 100% {} }", "@keyframes name { 0% 100% {} }\n", "<stdin>: WARNING: Expected \",\" but found \"100%\"\n")
 	expectPrinted(t, "@keyframes name { {} 0% {} }", "@keyframes name { {} 0% {} }\n", "<stdin>: WARNING: Expected percentage but found \"{\"\n")
 	expectPrinted(t, "@keyframes name { 100 {} }", "@keyframes name { 100 {} }\n", "<stdin>: WARNING: Expected percentage but found \"100\"\n")
@@ -1369,6 +1384,22 @@ func TestAtKeyframes(t *testing.T) {
 	expectPrinted(t, "@keyframes x { 1% {", "@keyframes x { 1% {} }\n", "<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
 	expectPrinted(t, "@keyframes x { 1%", "@keyframes x { 1% }\n", "<stdin>: WARNING: Expected \"{\" but found end of file\n")
 	expectPrinted(t, "@keyframes x {", "@keyframes x {}\n", "<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
+}
+
+func TestAnimationName(t *testing.T) {
+	// Note: Strings as names is allowed in the CSS specification and works in
+	// Firefox and Safari but Chrome has strangely decided to deliberately not
+	// support this. We always turn all string names into identifiers to avoid
+	// them silently breaking in Chrome.
+	expectPrinted(t, "div { animation-name: 'name' }", "div {\n  animation-name: name;\n}\n", "")
+	expectPrinted(t, "div { animation-name: 'name 2' }", "div {\n  animation-name: name\\ 2;\n}\n", "")
+	expectPrinted(t, "div { animation-name: 'none' }", "div {\n  animation-name: \"none\";\n}\n", "")
+	expectPrinted(t, "div { animation-name: 'None' }", "div {\n  animation-name: \"None\";\n}\n", "")
+	expectPrinted(t, "div { animation-name: 'unset' }", "div {\n  animation-name: \"unset\";\n}\n", "")
+	expectPrinted(t, "div { animation-name: 'revert' }", "div {\n  animation-name: \"revert\";\n}\n", "")
+	expectPrinted(t, "div { animation-name: none }", "div {\n  animation-name: none;\n}\n", "")
+	expectPrinted(t, "div { animation-name: unset }", "div {\n  animation-name: unset;\n}\n", "")
+	expectPrinted(t, "div { animation: 2s linear 'name 2', 3s infinite 'name 3' }", "div {\n  animation: 2s linear name\\ 2, 3s infinite name\\ 3;\n}\n", "")
 }
 
 func TestAtRuleValidation(t *testing.T) {
@@ -2207,10 +2238,14 @@ func TestParseErrorRecovery(t *testing.T) {
 	expectPrinted(t, "x { y: {", "x {\n  y: {};\n}\n", "<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
 	expectPrinted(t, "x { y: z(", "x {\n  y: z();\n}\n", "<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
 	expectPrinted(t, "x { y: z(abc", "x {\n  y: z(abc);\n}\n", "<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
-	expectPrinted(t, "x { y: url(", "x {\n  y: url(;\n}\n",
-		"<stdin>: ERROR: Expected \")\" to end URL token\n<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
-	expectPrinted(t, "x { y: url(abc", "x {\n  y: url(abc;\n}\n",
-		"<stdin>: ERROR: Expected \")\" to end URL token\n<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
+	expectPrinted(t, "x { y: url(", "x {\n  y: url();\n}\n",
+		"<stdin>: WARNING: Expected \")\" to end URL token\n<stdin>: NOTE: The unbalanced \"(\" is here:\n<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
+	expectPrinted(t, "x { y: url(abc", "x {\n  y: url(abc);\n}\n",
+		"<stdin>: WARNING: Expected \")\" to end URL token\n<stdin>: NOTE: The unbalanced \"(\" is here:\n<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
+	expectPrinted(t, "x { y: url(; }", "x {\n  y: url(; };\n}\n",
+		"<stdin>: WARNING: Expected \")\" to end URL token\n<stdin>: NOTE: The unbalanced \"(\" is here:\n<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
+	expectPrinted(t, "x { y: url(abc;", "x {\n  y: url(abc;);\n}\n",
+		"<stdin>: WARNING: Expected \")\" to end URL token\n<stdin>: NOTE: The unbalanced \"(\" is here:\n<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
 	expectPrinted(t, "/* @license */ x {} /* @preserve", "/* @license */\nx {\n}\n",
 		"<stdin>: ERROR: Expected \"*/\" to terminate multi-line comment\n<stdin>: NOTE: The multi-line comment starts here:\n")
 	expectPrinted(t, "a { b: c; d: 'e\n f: g; h: i }", "a {\n  b: c;\n  d: 'e\n  f: g;\n  h: i;\n}\n", "<stdin>: WARNING: Unterminated string token\n")

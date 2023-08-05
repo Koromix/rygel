@@ -16,27 +16,27 @@ import (
 // support for parsing https://drafts.csswg.org/css-nesting-1/.
 
 type parser struct {
-	log                logger.Log
-	source             logger.Source
-	tokens             []css_lexer.Token
-	allComments        []logger.Range
-	legalComments      []css_lexer.Comment
-	stack              []css_lexer.T
-	importRecords      []ast.ImportRecord
-	symbols            []ast.Symbol
-	defineLocs         map[ast.Ref]logger.Loc
-	localSymbolMap     map[string]ast.Ref
-	globalSymbolMap    map[string]ast.Ref
-	nestingWarnings    map[logger.Loc]struct{}
-	tracker            logger.LineColumnTracker
-	index              int
-	end                int
-	legalCommentIndex  int
-	inSelectorSubtree  int
-	prevError          logger.Loc
-	options            Options
-	shouldLowerNesting bool
-	makeLocalSymbols   bool
+	log               logger.Log
+	source            logger.Source
+	tokens            []css_lexer.Token
+	allComments       []logger.Range
+	legalComments     []css_lexer.Comment
+	stack             []css_lexer.T
+	importRecords     []ast.ImportRecord
+	symbols           []ast.Symbol
+	defineLocs        map[ast.Ref]logger.Loc
+	localSymbolMap    map[string]ast.Ref
+	globalSymbolMap   map[string]ast.Ref
+	nestingWarnings   map[logger.Loc]struct{}
+	tracker           logger.LineColumnTracker
+	index             int
+	end               int
+	legalCommentIndex int
+	inSelectorSubtree int
+	prevError         logger.Loc
+	options           Options
+	nestingIsPresent  bool
+	makeLocalSymbols  bool
 }
 
 type Options struct {
@@ -304,7 +304,7 @@ func (p *parser) unexpected() {
 	}
 }
 
-func (p *parser) symbolForName(loc logger.Loc, name string) ast.Ref {
+func (p *parser) symbolForName(loc logger.Loc, name string) ast.LocRef {
 	var kind ast.SymbolKind
 	var scope map[string]ast.Ref
 
@@ -332,7 +332,7 @@ func (p *parser) symbolForName(loc logger.Loc, name string) ast.Ref {
 	}
 
 	p.symbols[ref.InnerIndex].UseCountEstimate++
-	return ref
+	return ast.LocRef{Loc: loc, Ref: ref}
 }
 
 type ruleContext struct {
@@ -353,7 +353,7 @@ func (p *parser) parseListOfRules(context ruleContext) []css_ast.Rule {
 loop:
 	for {
 		if context.isTopLevel {
-			p.shouldLowerNesting = false
+			p.nestingIsPresent = false
 		}
 
 		// If there are any legal comments immediately before the current token,
@@ -424,7 +424,7 @@ loop:
 			}
 
 			// Lower CSS nesting if it's not supported (but only at the top level)
-			if p.shouldLowerNesting && p.options.unsupportedCSSFeatures.Has(compat.Nesting) && context.isTopLevel {
+			if p.nestingIsPresent && p.options.unsupportedCSSFeatures.Has(compat.Nesting) && context.isTopLevel {
 				rules = p.lowerNestingInRule(rule, rules)
 			} else {
 				rules = append(rules, rule)
@@ -452,7 +452,7 @@ loop:
 		}
 
 		// Lower CSS nesting if it's not supported (but only at the top level)
-		if p.shouldLowerNesting && p.options.unsupportedCSSFeatures.Has(compat.Nesting) && context.isTopLevel {
+		if p.nestingIsPresent && p.options.unsupportedCSSFeatures.Has(compat.Nesting) && context.isTopLevel {
 			rules = p.lowerNestingInRule(rule, rules)
 		} else {
 			rules = append(rules, rule)
@@ -510,7 +510,7 @@ func (p *parser) parseListOfDeclarations(opts listOfDeclarationsOpts) (list []cs
 
 		case css_lexer.TAtKeyword:
 			if p.inSelectorSubtree > 0 {
-				p.shouldLowerNesting = true
+				p.nestingIsPresent = true
 			}
 			list = append(list, p.parseAtRule(atRuleContext{
 				isDeclarationList:    true,
@@ -528,9 +528,25 @@ func (p *parser) parseListOfDeclarations(opts listOfDeclarationsOpts) (list []cs
 			css_lexer.TDelimPlus,
 			css_lexer.TDelimGreaterThan,
 			css_lexer.TDelimTilde:
-			p.shouldLowerNesting = true
-			list = append(list, p.parseSelectorRule(false, parseSelectorOpts{isDeclarationContext: true}))
+			p.nestingIsPresent = true
 			foundNesting = true
+			rule := p.parseSelectorRule(false, parseSelectorOpts{isDeclarationContext: true})
+
+			// If this rule was a single ":global" or ":local", inline it here. This
+			// is handled differently than a bare "&" with normal CSS nesting because
+			// that would be inlined at the end of the parent rule's body instead,
+			// which is probably unexpected (e.g. it would trip people up when trying
+			// to write rules in a specific order).
+			if sel, ok := rule.Data.(*css_ast.RSelector); ok && len(sel.Selectors) == 1 {
+				if first := sel.Selectors[0]; len(first.Selectors) == 1 {
+					if first := first.Selectors[0]; first.WasEmptyFromLocalOrGlobal && first.IsSingleAmpersand() {
+						list = append(list, sel.Rules...)
+						continue
+					}
+				}
+			}
+
+			list = append(list, rule)
 
 		default:
 			list = append(list, p.parseDeclaration())
@@ -624,8 +640,8 @@ func (p *parser) mangleRules(rules []css_ast.Rule, isTopLevel bool) []css_ast.Ru
 	// Mangle non-top-level rules using a back-to-front pass. Top-level rules
 	// will be mangled by the linker instead for cross-file rule mangling.
 	if !isTopLevel {
-		remover := MakeDuplicateRuleMangler()
-		rules = remover.RemoveDuplicateRulesInPlace(rules, p.importRecords)
+		remover := MakeDuplicateRuleMangler(ast.SymbolMap{})
+		rules = remover.RemoveDuplicateRulesInPlace(p.source.Index, rules, p.importRecords)
 	}
 
 	return rules
@@ -640,22 +656,31 @@ type hashEntry struct {
 	rules []ruleEntry
 }
 
+type callEntry struct {
+	importRecords []ast.ImportRecord
+	sourceIndex   uint32
+}
+
 type DuplicateRuleRemover struct {
+	symbols ast.SymbolMap
 	entries map[uint32]hashEntry
-	calls   [][]ast.ImportRecord
+	calls   []callEntry
 	check   css_ast.CrossFileEqualityCheck
 }
 
-func MakeDuplicateRuleMangler() DuplicateRuleRemover {
-	return DuplicateRuleRemover{entries: make(map[uint32]hashEntry)}
+func MakeDuplicateRuleMangler(symbols ast.SymbolMap) DuplicateRuleRemover {
+	return DuplicateRuleRemover{
+		entries: make(map[uint32]hashEntry),
+		check:   css_ast.CrossFileEqualityCheck{Symbols: symbols},
+	}
 }
 
-func (remover *DuplicateRuleRemover) RemoveDuplicateRulesInPlace(rules []css_ast.Rule, importRecords []ast.ImportRecord) []css_ast.Rule {
+func (remover *DuplicateRuleRemover) RemoveDuplicateRulesInPlace(sourceIndex uint32, rules []css_ast.Rule, importRecords []ast.ImportRecord) []css_ast.Rule {
 	// The caller may call this function multiple times, each with a different
 	// set of import records. Remember each set of import records for equality
 	// checks later.
 	callCounter := uint32(len(remover.calls))
-	remover.calls = append(remover.calls, importRecords)
+	remover.calls = append(remover.calls, callEntry{importRecords, sourceIndex})
 
 	// Remove duplicate rules, scanning from the back so we keep the last
 	// duplicate. Note that the linker calls this, so we do not want to do
@@ -681,8 +706,11 @@ skipRule:
 				if current.callCounter != callCounter {
 					// Reuse the same memory allocation
 					check = &remover.check
+					call := remover.calls[current.callCounter]
 					check.ImportRecordsA = importRecords
-					check.ImportRecordsB = remover.calls[current.callCounter]
+					check.ImportRecordsB = call.importRecords
+					check.SourceIndexA = sourceIndex
+					check.SourceIndexB = call.sourceIndex
 				}
 
 				if rule.Data.Equal(current.data, check) {
@@ -883,7 +911,8 @@ func (p *parser) parseURLOrString() (string, logger.Range, bool) {
 			p.advance()
 			t = p.current()
 			text := p.decoded()
-			if p.expect(css_lexer.TString) && p.expectWithMatchingLoc(css_lexer.TCloseParen, matchingLoc) {
+			if p.expect(css_lexer.TString) {
+				p.expectWithMatchingLoc(css_lexer.TCloseParen, matchingLoc)
 				return text, t.Range, true
 			}
 		}
@@ -1139,17 +1168,33 @@ abortRuleParser:
 
 	case "keyframes", "-webkit-keyframes", "-moz-keyframes", "-ms-keyframes", "-o-keyframes":
 		p.eat(css_lexer.TWhitespace)
+		nameLoc := p.current().Range.Loc
 		var name string
 
 		if p.peek(css_lexer.TIdent) {
 			name = p.decoded()
+			if isInvalidAnimationName(name) {
+				msg := logger.Msg{
+					ID:    logger.MsgID_CSS_CSSSyntaxError,
+					Kind:  logger.Warning,
+					Data:  p.tracker.MsgData(p.current().Range, fmt.Sprintf("Cannot use %q as a name for \"@keyframes\" without quotes", name)),
+					Notes: []logger.MsgData{{Text: fmt.Sprintf("You can put %q in quotes to prevent it from becoming a CSS keyword.", name)}},
+				}
+				msg.Data.Location.Suggestion = fmt.Sprintf("%q", name)
+				p.log.AddMsg(msg)
+				break
+			}
 			p.advance()
-		} else if p.eat(css_lexer.TString) {
-			// Consider string names to be an unknown rule even though they are allowed
-			// by the specification and they work in Firefox because they do not work in
-			// Chrome or Safari. We don't take the effort to support this Firefox-only
-			// feature natively. Instead, we just pass the syntax through unmodified.
-			break
+		} else if p.peek(css_lexer.TString) {
+			// Note: Strings as names is allowed in the CSS specification and works in
+			// Firefox and Safari but Chrome has strangely decided to deliberately not
+			// support this. We always turn all string names into identifiers to avoid
+			// them silently breaking in Chrome.
+			name = p.decoded()
+			p.advance()
+			if !p.makeLocalSymbols && isInvalidAnimationName(name) {
+				break
+			}
 		} else if !p.expect(css_lexer.TIdent) {
 			break
 		}
@@ -1173,7 +1218,7 @@ abortRuleParser:
 					p.advance()
 					return css_ast.Rule{Loc: atRange.Loc, Data: &css_ast.RAtKeyframes{
 						AtToken:       atToken,
-						Name:          name,
+						Name:          p.symbolForName(nameLoc, name),
 						Blocks:        blocks,
 						CloseBraceLoc: closeBraceLoc,
 					}}
@@ -1422,6 +1467,15 @@ prelude:
 		if !p.expectWithMatchingLoc(css_lexer.TCloseBrace, matchingLoc) {
 			closeBraceLoc = logger.Loc{}
 		}
+
+		// Handle local names for "@counter-style"
+		if len(prelude) == 1 && atToken == "counter-style" {
+			if t := &prelude[0]; t.Kind == css_lexer.TIdent {
+				t.Kind = css_lexer.TSymbol
+				t.PayloadIndex = p.symbolForName(t.Loc, t.Text).Ref.InnerIndex
+			}
+		}
+
 		return css_ast.Rule{Loc: atRange.Loc, Data: &css_ast.RKnownAt{AtToken: atToken, Prelude: prelude, Rules: rules, CloseBraceLoc: closeBraceLoc}}
 
 	case atRuleInheritContext:
@@ -1442,6 +1496,15 @@ prelude:
 		if !p.expectWithMatchingLoc(css_lexer.TCloseBrace, matchingLoc) {
 			closeBraceLoc = logger.Loc{}
 		}
+
+		// Handle local names for "@container"
+		if len(prelude) >= 1 && atToken == "container" {
+			if t := &prelude[0]; t.Kind == css_lexer.TIdent && strings.ToLower(t.Text) != "not" {
+				t.Kind = css_lexer.TSymbol
+				t.PayloadIndex = p.symbolForName(t.Loc, t.Text).Ref.InnerIndex
+			}
+		}
+
 		return css_ast.Rule{Loc: atRange.Loc, Data: &css_ast.RKnownAt{AtToken: atToken, Prelude: prelude, Rules: rules, CloseBraceLoc: closeBraceLoc}}
 
 	case atRuleQualifiedOrEmpty:
@@ -1604,7 +1667,7 @@ loop:
 			}
 
 		case css_lexer.TURL:
-			token.ImportRecordIndex = uint32(len(p.importRecords))
+			token.PayloadIndex = uint32(len(p.importRecords))
 			var flags ast.ImportRecordFlags
 			if !opts.allowImports {
 				flags |= ast.IsUnused
@@ -1641,7 +1704,7 @@ loop:
 				token.Kind = css_lexer.TURL
 				token.Text = ""
 				token.Children = nil
-				token.ImportRecordIndex = uint32(len(p.importRecords))
+				token.PayloadIndex = uint32(len(p.importRecords))
 				var flags ast.ImportRecordFlags
 				if !opts.allowImports {
 					flags |= ast.IsUnused

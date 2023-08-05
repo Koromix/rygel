@@ -1,5 +1,111 @@
 # Changelog
 
+## 0.18.18
+
+* Fix asset references with the `--line-limit` flag ([#3286](https://github.com/evanw/esbuild/issues/3286))
+
+    The recently-released `--line-limit` flag tells esbuild to terminate long lines after they pass this length limit. This includes automatically wrapping long strings across multiple lines using escaped newline syntax. However, using this could cause esbuild to generate incorrect code for references from generated output files to assets in the bundle (i.e. files loaded with the `file` or `copy` loaders). This is because esbuild implements asset references internally using find-and-replace with a randomly-generated string, but the find operation fails if the string is split by an escaped newline due to line wrapping. This release fixes the problem by not wrapping these strings. This issue affected asset references in both JS and CSS files.
+
+* Support local names in CSS for `@keyframe`, `@counter-style`, and `@container` ([#20](https://github.com/evanw/esbuild/issues/20))
+
+    This release extends support for local names in CSS files loaded with the `local-css` loader to cover the `@keyframe`, `@counter-style`, and `@container` rules (and also `animation`, `list-style`, and `container` declarations). Here's an example:
+
+    ```css
+    @keyframes pulse {
+      from, to { opacity: 1 }
+      50% { opacity: 0.5 }
+    }
+    @counter-style moon {
+      system: cyclic;
+      symbols: 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔;
+    }
+    @container squish {
+      li { float: left }
+    }
+    ul {
+      animation: 2s ease-in-out infinite pulse;
+      list-style: inside moon;
+      container: squish / size;
+    }
+    ```
+
+    With the `local-css` loader enabled, that CSS will be turned into something like this (with the local name mapping exposed to JS):
+
+    ```css
+    @keyframes stdin_pulse {
+      from, to {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+    @counter-style stdin_moon {
+      system: cyclic;
+      symbols: 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔;
+    }
+    @container stdin_squish {
+      li {
+        float: left;
+      }
+    }
+    ul {
+      animation: 2s ease-in-out infinite stdin_pulse;
+      list-style: inside stdin_moon;
+      container: stdin_squish / size;
+    }
+    ```
+
+    If you want to use a global name within a file loaded with the `local-css` loader, you can use a `:global` selector to do that:
+
+    ```css
+    div {
+      /* All symbols are global inside this scope (i.e.
+       * "pulse", "moon", and "squish" are global below) */
+      :global {
+        animation: 2s ease-in-out infinite pulse;
+        list-style: inside moon;
+        container: squish / size;
+      }
+    }
+    ```
+
+    If you want to use `@keyframes`, `@counter-style`, or `@container` with a global name, make sure it's in a file that uses the `css` or `global-css` loader instead of the `local-css` loader. For example, you can configure `--loader:.module.css=local-css` so that the `local-css` loader only applies to `*.module.css` files.
+
+* Support strings as keyframe animation names in CSS ([#2555](https://github.com/evanw/esbuild/issues/2555))
+
+    With this release, esbuild will now parse animation names that are specified as strings and will convert them to identifiers. The CSS specification allows animation names to be specified using either identifiers or strings but Chrome only understands identifiers, so esbuild will now always convert string names to identifier names for Chrome compatibility:
+
+    ```css
+    /* Original code */
+    @keyframes "hide menu" {
+      from { opacity: 1 }
+      to { opacity: 0 }
+    }
+    menu.hide {
+      animation: 0.5s ease-in-out "hide menu";
+    }
+
+    /* Old output */
+    @keyframes "hide menu" { from { opacity: 1 } to { opacity: 0 } }
+    menu.hide {
+      animation: 0.5s ease-in-out "hide menu";
+    }
+
+    /* New output */
+    @keyframes hide\ menu {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+    menu.hide {
+      animation: 0.5s ease-in-out hide\ menu;
+    }
+    ```
+
 ## 0.18.17
 
 * Support `An+B` syntax and `:nth-*()` pseudo-classes in CSS

@@ -349,7 +349,20 @@ func TestImportCSSFromJSLocalVsGlobal(t *testing.T) {
 
 		:global.GLOBAL:local.local { color: #01B }
 		:global .GLOBAL :local .local { color: #01C }
-		:global { .GLOBAL { :local { .local { color: #01D } } } }
+
+		:global {
+			.GLOBAL {
+				before: outer;
+				:local {
+					before: inner;
+					.local {
+						color: #01D;
+					}
+					after: inner;
+				}
+				after: outer;
+			}
+		}
 	`
 
 	css_suite.expectBundled(t, bundled{
@@ -405,6 +418,167 @@ func TestImportCSSFromJSLowerBareLocalAndGlobal(t *testing.T) {
 
 				:local(:global) { .button { color: #006 } }
 				:global(:local) { .button { color: #007 } }
+			`,
+		},
+		entryPaths: []string{"/entry.js"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+			ExtensionToLoader: map[string]config.Loader{
+				".js":  config.LoaderJS,
+				".css": config.LoaderLocalCSS,
+			},
+			UnsupportedCSSFeatures: compat.Nesting,
+		},
+	})
+}
+
+func TestImportCSSFromJSLocalAtKeyframes(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.js": `
+				import styles from "./styles.css"
+				console.log(styles)
+			`,
+			"/styles.css": `
+				@keyframes local_name { to { color: red } }
+
+				div :global { animation-name: none }
+				div :local { animation-name: none }
+
+				div :global { animation-name: global_name }
+				div :local { animation-name: local_name }
+
+				div :global { animation-name: global_name1, none, global_name2, Inherit, INITIAL, revert, revert-layer, unset }
+				div :local { animation-name: local_name1, none, local_name2, Inherit, INITIAL, revert, revert-layer, unset }
+
+				div :global { animation: 2s infinite global_name }
+				div :local { animation: 2s infinite local_name }
+
+				/* Someone wanted to be able to name their animations "none" */
+				@keyframes "none" { to { color: red } }
+				div :global { animation-name: "none" }
+				div :local { animation-name: "none" }
+			`,
+		},
+		entryPaths: []string{"/entry.js"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+			ExtensionToLoader: map[string]config.Loader{
+				".js":  config.LoaderJS,
+				".css": config.LoaderLocalCSS,
+			},
+			UnsupportedCSSFeatures: compat.Nesting,
+		},
+	})
+}
+
+func TestImportCSSFromJSLocalAtCounterStyle(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.js": `
+				import list_style_type from "./list_style_type.css"
+				import list_style from "./list_style.css"
+				console.log(list_style_type, list_style)
+			`,
+			"/list_style_type.css": `
+				@counter-style local { symbols: A B C }
+
+				div :global { list-style-type: GLOBAL }
+				div :local { list-style-type: local }
+
+				/* Must not accept invalid type values */
+				div :local { list-style-type: INITIAL }
+				div :local { list-style-type: decimal }
+				div :local { list-style-type: disc }
+				div :local { list-style-type: SQUARE }
+				div :local { list-style-type: circle }
+				div :local { list-style-type: disclosure-OPEN }
+				div :local { list-style-type: DISCLOSURE-closed }
+			`,
+
+			"/list_style.css": `
+				@counter-style local { symbols: A B C }
+
+				div :global { list-style: GLOBAL }
+				div :local { list-style: local }
+
+				/* The first one is the type */
+				div :local { list-style: local none }
+				div :local { list-style: local url(http://) }
+				div :local { list-style: local linear-gradient(red, green) }
+				div :local { list-style: local inside }
+				div :local { list-style: local outside }
+
+				/* The second one is the type */
+				div :local { list-style: none local }
+				div :local { list-style: url(http://) local }
+				div :local { list-style: linear-gradient(red, green) local }
+				div :local { list-style: local inside }
+				div :local { list-style: local outside }
+				div :local { list-style: inside inside }
+				div :local { list-style: inside outside }
+				div :local { list-style: outside inside }
+				div :local { list-style: outside outside }
+
+				/* The type is set to "none" here */
+				div :local { list-style: url(http://) none invalid }
+				div :local { list-style: linear-gradient(red, green) none invalid }
+
+				/* Must not accept invalid type values */
+				div :local { list-style: INITIAL }
+				div :local { list-style: decimal }
+				div :local { list-style: disc }
+				div :local { list-style: SQUARE }
+				div :local { list-style: circle }
+				div :local { list-style: disclosure-OPEN }
+				div :local { list-style: DISCLOSURE-closed }
+			`,
+		},
+		entryPaths: []string{"/entry.js"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+			ExtensionToLoader: map[string]config.Loader{
+				".js":  config.LoaderJS,
+				".css": config.LoaderLocalCSS,
+			},
+			UnsupportedCSSFeatures: compat.Nesting,
+		},
+	})
+}
+
+func TestImportCSSFromJSLocalAtContainer(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.js": `
+				import styles from "./styles.css"
+				console.log(styles)
+			`,
+			"/styles.css": `
+				@container not (max-width: 100px) { div { color: red } }
+				@container local (max-width: 100px) { div { color: red } }
+				@container local not (max-width: 100px) { div { color: red } }
+				@container local (max-width: 100px) or (min-height: 100px) { div { color: red } }
+				@container local (max-width: 100px) and (min-height: 100px) { div { color: red } }
+				@container general_enclosed(max-width: 100px) { div { color: red } }
+				@container local general_enclosed(max-width: 100px) { div { color: red } }
+
+				div :global { container-name: NONE initial }
+				div :local { container-name: none INITIAL }
+				div :global { container-name: GLOBAL1 GLOBAL2 }
+				div :local { container-name: local1 local2 }
+
+				div :global { container: none }
+				div :local { container: NONE }
+				div :global { container: NONE / size }
+				div :local { container: none / size }
+
+				div :global { container: GLOBAL1 GLOBAL2 }
+				div :local { container: local1 local2 }
+				div :global { container: GLOBAL1 GLOBAL2 / size }
+				div :local { container: local1 local2 / size }
 			`,
 		},
 		entryPaths: []string{"/entry.js"},
@@ -1148,6 +1322,52 @@ func TestDeduplicateRules(t *testing.T) {
 	})
 }
 
+func TestDeduplicateRulesGlobalVsLocalNames(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.css": `
+				@import "a.css";
+				@import "b.css";
+			`,
+			"/a.css": `
+				a { color: red } /* SHOULD BE REMOVED */
+				b { color: green }
+
+				:global(.foo) { color: red } /* SHOULD BE REMOVED */
+				:global(.bar) { color: green }
+
+				:local(.foo) { color: red }
+				:local(.bar) { color: green }
+
+				div :global { animation-name: anim_global } /* SHOULD BE REMOVED */
+				div :local { animation-name: anim_local }
+			`,
+			"/b.css": `
+				a { color: red }
+				b { color: blue }
+
+				:global(.foo) { color: red }
+				:global(.bar) { color: blue }
+
+				:local(.foo) { color: red }
+				:local(.bar) { color: blue }
+
+				div :global { animation-name: anim_global }
+				div :local { animation-name: anim_local }
+			`,
+		},
+		entryPaths: []string{"entry.css"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+			MinifySyntax: true,
+			ExtensionToLoader: map[string]config.Loader{
+				".css": config.LoaderLocalCSS,
+			},
+		},
+	})
+}
+
 // This test makes sure JS files that import local CSS names using the
 // wrong name (e.g. a typo) get a warning so that the problem is noticed.
 func TestUndefinedImportWarningCSS(t *testing.T) {
@@ -1246,6 +1466,43 @@ entry.js: WARNING: Import "foo" will always be undefined because there is no mat
 entry.js: WARNING: Import "foo" will always be undefined because there is no matching export in "node_modules/pkg/empty.css"
 entry.js: WARNING: Import "foo" will always be undefined because there is no matching export in "node_modules/pkg/empty.global-css"
 entry.js: WARNING: Import "foo" will always be undefined because there is no matching export in "node_modules/pkg/empty.local-css"
+`,
+	})
+}
+
+func TestCSSMalformedAtImport(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.css": `
+				@import "./url-token-eof.css";
+				@import "./url-token-whitespace-eof.css";
+				@import "./function-token-eof.css";
+				@import "./function-token-whitespace-eof.css";
+			`,
+			"/url-token-eof.css": `@import url(https://example.com/url-token-eof.css`,
+			"/url-token-whitespace-eof.css": `
+				@import url(https://example.com/url-token-whitespace-eof.css
+			`,
+			"/function-token-eof.css": `@import url("https://example.com/function-token-eof.css"`,
+			"/function-token-whitespace-eof.css": `
+				@import url("https://example.com/function-token-whitespace-eof.css"
+			`,
+		},
+		entryPaths: []string{"/entry.css"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+		},
+		expectedScanLog: `function-token-eof.css: WARNING: Expected ")" to go with "("
+function-token-eof.css: NOTE: The unbalanced "(" is here:
+function-token-whitespace-eof.css: WARNING: Expected ")" to go with "("
+function-token-whitespace-eof.css: NOTE: The unbalanced "(" is here:
+url-token-eof.css: WARNING: Expected ")" to end URL token
+url-token-eof.css: NOTE: The unbalanced "(" is here:
+url-token-eof.css: WARNING: Expected ";" but found end of file
+url-token-whitespace-eof.css: WARNING: Expected ")" to end URL token
+url-token-whitespace-eof.css: NOTE: The unbalanced "(" is here:
+url-token-whitespace-eof.css: WARNING: Expected ";" but found end of file
 `,
 	})
 }
