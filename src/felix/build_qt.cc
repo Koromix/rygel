@@ -278,7 +278,10 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
 
         // Add explicit component libraries
         for (const char *component: target.qt_components) {
+            const char *library_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.a", qt->libraries, lib_prefix, qt->version_major, component).ptr;
             const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt->libraries, lib_prefix, qt->version_major, component).ptr;
+
+            obj_filenames->Append(library_filename);
 
             if (!TestFile(prl_filename)) {
                 LogError("Cannot find PRL file for Qt compoment '%1'", component);
@@ -448,8 +451,10 @@ void Builder::ParsePrlFile(const char *filename, HeapArray<const char *> *out_li
                         framework = TrimStr(SplitStr(value, ';', &value));
                     }
 
-                    const char *copy = Fmt(&str_alloc, "!%1", framework).ptr;
-                    out_libraries->Append(copy);
+                    if (qt->shared || !StartsWith(framework, "Qt")) {
+                        const char *copy = Fmt(&str_alloc, "!%1", framework).ptr;
+                        out_libraries->Append(copy);
+                    }
                 }
             }
 

@@ -237,9 +237,9 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
         qt.shared = TestFile(library0);
     } else if (compiler->platform == HostPlatform::macOS) {
         char library0[4046];
-        Fmt(library0, "%1%/QtCore.framework", qt.libraries);
+        Fmt(library0, "%1%/libQt%2Core.a", qt.libraries, qt.version_major);
 
-        qt.shared = TestFile(library0);
+        qt.shared = !TestFile(library0);
     } else {
         char library0[4046];
         Fmt(library0, "%1%/libQt%2Core.so", qt.libraries, qt.version_major);
