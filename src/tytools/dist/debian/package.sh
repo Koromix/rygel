@@ -3,9 +3,9 @@
 cd "$(dirname $0)/../../../.."
 
 ./bootstrap.sh
-./felix -pDebug tycommander
+./felix -pDebug TyCommander
 
-VERSION=$(bin/Debug/tycommander --version | awk -F'[ _]' '/^TyCommander/ {print $2}')
+VERSION=$(bin/Debug/TyCommander --version | awk -F'[ _]' '/^TyCommander/ {print $2}')
 DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 PACKAGE_DIR=bin/Packages/tytools/debian
 
@@ -16,12 +16,12 @@ docker build -t rygel/debian12 deploy/docker/debian12
 docker run -t -i --rm -v $(pwd):/io rygel/debian12 /io/src/tytools/dist/debian/build.sh
 
 install -D -m0755 bin/Packages/tytools/debian/bin/tycmd $PACKAGE_DIR/pkg/tycmd
-install -D -m0755 bin/Packages/tytools/debian/bin/tycommander $PACKAGE_DIR/pkg/tycommander
-install -D -m0755 bin/Packages/tytools/debian/bin/tyuploader $PACKAGE_DIR/pkg/tyuploader
-install -D -m0644 src/tytools/tycommander/tycommander_linux.desktop $PACKAGE_DIR/pkg/tycommander.desktop
-install -D -m0644 src/tytools/tyuploader/tyuploader_linux.desktop $PACKAGE_DIR/pkg/tyuploader.desktop
-install -D -m0644 src/tytools/assets/images/tycommander.png $PACKAGE_DIR/pkg/tycommander.png
-install -D -m0644 src/tytools/assets/images/tyuploader.png $PACKAGE_DIR/pkg/tyuploader.png
+install -D -m0755 bin/Packages/tytools/debian/bin/TyCommander $PACKAGE_DIR/pkg/TyCommander
+install -D -m0755 bin/Packages/tytools/debian/bin/TyUploader $PACKAGE_DIR/pkg/TyUploader
+install -D -m0644 src/tytools/tycommander/TyCommander_linux.desktop $PACKAGE_DIR/pkg/TyCommander.desktop
+install -D -m0644 src/tytools/tyuploader/TyUploader_linux.desktop $PACKAGE_DIR/pkg/TyUploader.desktop
+install -D -m0644 src/tytools/assets/images/TyCommander.png $PACKAGE_DIR/pkg/TyCommander.png
+install -D -m0644 src/tytools/assets/images/TyUploader.png $PACKAGE_DIR/pkg/TyUploader.png
 install -D -m0644 src/tytools/dist/debian/teensy.rules $PACKAGE_DIR/pkg/00-teensy.rules
 
 install -D -m0755 src/tytools/dist/debian/rules $PACKAGE_DIR/pkg/debian/rules

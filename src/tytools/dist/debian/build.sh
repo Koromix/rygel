@@ -8,4 +8,4 @@ apt install -y libudev-dev qt6-base-dev qt6-base-dev-tools pkg-config gdb
 git config --global safe.directory '*'
 
 ./bootstrap.sh --no_user
-./felix -pFast --no_user -O bin/Packages/tytools/debian/bin tycmd tycommander tyuploader
+./felix -pFast --no_user -O bin/Packages/tytools/debian/bin tycmd TyCommander TyUploader

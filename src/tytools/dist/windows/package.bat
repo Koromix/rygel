@@ -4,7 +4,7 @@ setlocal EnableDelayedExpansion
 cd %~dp0
 cd ..\..\..\..
 
-felix -pFast tycmd tycommander tycommanderc tyuploader
+felix -pFast tycmd TyCommaner TyCommanderC TyUploader
 
 for /f "tokens=2 delims= " %%i in ('bin\Fast\tycmd.exe --version') do (
     set RAW_VERSION=%%i
@@ -26,9 +26,9 @@ set PACKAGE_DIR=bin\Packages\tytools\windows
 mkdir %PACKAGE_DIR%
 
 copy bin\Fast\tycmd.exe %PACKAGE_DIR%\tycmd.exe
-copy bin\Fast\tycommander.exe %PACKAGE_DIR%\TyCommander.exe
-copy bin\Fast\tycommanderc.exe %PACKAGE_DIR%\TyCommanderC.exe
-copy bin\Fast\tyuploader.exe %PACKAGE_DIR%\TyUploader.exe
+copy bin\Fast\TyCommander.exe %PACKAGE_DIR%\TyCommander.exe
+copy bin\Fast\TyCommanderC.exe %PACKAGE_DIR%\TyCommanderC.exe
+copy bin\Fast\TyUploader.exe %PACKAGE_DIR%\TyUploader.exe
 copy src\tytools\README.md %PACKAGE_DIR%\README.md
 copy src\tytools\LICENSE.txt %PACKAGE_DIR%\LICENSE.txt
 copy src\tytools\dist\windows\tytools.wxi %PACKAGE_DIR%\tytools.wxi
