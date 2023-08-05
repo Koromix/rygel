@@ -61,6 +61,8 @@ static bool WriteInfoPlist(const char *name, const char *icon_filename, const ch
     <string>True</string>
     <key>NSRequiresAquaSystemAppearance</key>
     <true/>
+    <key>UIUserInterfaceStyle</key>
+    <string>Light</string>
 </dict>
 </plist>
 )";

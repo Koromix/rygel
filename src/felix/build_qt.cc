@@ -389,6 +389,7 @@ R"(#include <QtCore/QtPlugin>
     Q_IMPORT_PLUGIN(QWindowsVistaStylePlugin)
 #elif defined(__APPLE__)
     Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
+    Q_IMPORT_PLUGIN(QMacStylePlugin)
 #else
     Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 #endif
