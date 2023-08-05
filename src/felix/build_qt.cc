@@ -391,7 +391,7 @@ R"(#include <QtCore/QtPlugin>
 #endif
 )";
 
-    const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qt->cc", cache_directory, target.name).ptr;
+    const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qt.cc", cache_directory, target.name).ptr;
     const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
     if (!TestFile(src_filename) && !WriteFile(StaticCode, src_filename))
