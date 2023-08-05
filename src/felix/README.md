@@ -2,7 +2,9 @@
 
 ## Dynamic Qt
 
-Install Qt and set the environment variable QMAKE_PATH to point to the `qmake` binary.
+If Qt in installed globally (Linux package) or in a standard location such as `C:/Qt` (Windows) or `/Users/<user>/Qt` (macOS), felix will find it aumatically.
+
+If it does not, set the environment variable QMAKE_PATH to point to the `qmake` binary.
 
 ```sh
 export QMAKE_PATH=/path/to/qmake
