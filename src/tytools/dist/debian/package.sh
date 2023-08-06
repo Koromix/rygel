@@ -51,4 +51,4 @@ tytools ($VERSION) unstable; urgency=low
 " > $PACKAGE_DIR/pkg/debian/changelog
 
 (cd $PACKAGE_DIR/pkg && dpkg-buildpackage -uc -us)
-cp $PACKAGE_DIR/*.deb $PACKAGE_DIR/../
+cp $PACKAGE_DIR/tytools_*.deb $PACKAGE_DIR/..

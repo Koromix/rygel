@@ -7,7 +7,7 @@ cd "$(dirname $0)/../../../.."
 
 VERSION=$(bin/Fast/TyCommander --version | awk -F'[ _]' '/^TyCommander/ {print $2}')
 PACKAGE_DIR=bin/Packages/tytools/macos
-DMG_FILENAME=$PACKAGE_DIR/TyTools_${VERSION}_osx.dmg
+DMG_FILENAME=$PACKAGE_DIR/tytools_${VERSION}_osx.dmg
 
 rm -rf $PACKAGE_DIR/pkg
 mkdir -p $PACKAGE_DIR $PACKAGE_DIR/pkg
