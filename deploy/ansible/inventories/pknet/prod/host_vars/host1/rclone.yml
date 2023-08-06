@@ -20,6 +20,8 @@ rclone_directories:
     dest: 'pknet/prod/host1{{ goupile_archive_path }}'
   - src: '{{ goupile_snapshot_path }}/'
     dest: 'pknet/prod/host1{{ goupile_snapshot_path }}'
+  - src: /opt/old
+    dest: 'pknet/prod/host1/opt/old'
 
 rclone_key: !vault |
   $ANSIBLE_VAULT;1.1;AES256
