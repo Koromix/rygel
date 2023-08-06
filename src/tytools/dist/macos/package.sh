@@ -3,9 +3,9 @@
 cd "$(dirname $0)/../../../.."
 
 ./bootstrap.sh
-./felix -pFast TyCommander TyUploader tycmd
+./felix -pFast tycommander tyuploader tycmd
 
-VERSION=$(bin/Fast/TyCommander --version | awk -F'[ _]' '/^TyCommander/ {print $2}')
+VERSION=$(bin/Fast/tycmd --version | awk -F'[ _]' '/^tycmd/ {print $2}')
 PACKAGE_DIR=bin/Packages/tytools/macos
 DMG_FILENAME=$PACKAGE_DIR/tytools_${VERSION}_osx.dmg
 

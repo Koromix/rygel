@@ -21,7 +21,8 @@
 
 namespace RG {
 
-static bool WriteInfoPlist(const char *name, const char *icon_filename, const char *dest_filename) {
+static bool WriteInfoPlist(const char *name, const char *title,
+                           const char *icon_filename, const char *dest_filename) {
     static const char *const plist = R"(
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -73,14 +74,11 @@ static bool WriteInfoPlist(const char *name, const char *icon_filename, const ch
 
     pugi::xml_node executable_node = doc.select_node("/plist/dict/key[text()='CFBundleExecutable']/following-sibling::string[1]").node();
     pugi::xml_node icon_node = doc.select_node("/plist/dict/key[text()='CFBundleIconFile']/following-sibling::string[1]").node();
-    pugi::xml_node name_node = doc.select_node("/plist/dict/key[text()='CFBundleName']/following-sibling::string[1]").node();
-
-    char icon[256];
-    Fmt(icon, "%1.icns", name);
+    pugi::xml_node title_node = doc.select_node("/plist/dict/key[text()='CFBundleName']/following-sibling::string[1]").node();
 
     executable_node.text().set(name);
     icon_node.text().set(icon_filename ? SplitStrReverseAny(icon_filename, RG_PATH_SEPARATORS).ptr : "");
-    name_node.text().set(name);
+    title_node.text().set(title ? title : name);
 
     class StaticWriter: public pugi::xml_writer {
         StreamWriter writer;
@@ -192,6 +190,7 @@ int RunMacify(Span<const char *> arguments)
 
     // Options
     const char *output_bundle = nullptr;
+    const char *title = nullptr;
     const char *icon_filename = nullptr;
     bool force = false;
     const char *qmake_binary = nullptr;
@@ -203,7 +202,9 @@ R"(Usage: %!..+%1 macify [options] <binary>%!0
 
 Options:
     %!..+-O, --output_dir <dir>%!0       Set application bundle directory
-    %!..+-I, --icon_file <file>%!0       Set bundle icon (ICNS)
+
+       %!..+--title <title>%!0           Set bundle name
+       %!..+--icon <icon>%!0             Set bundle icon (ICNS)
 
     %!..+-f, --force%!0                  Overwrite destination files
 
@@ -221,7 +222,9 @@ Options:
                 return 0;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_bundle = opt.current_value;
-            } else if (opt.Test("-I", "--icon_file", OptionType::Value)) {
+            } else if (opt.Test("--title", OptionType::Value)) {
+                title = opt.current_value;
+            } else if (opt.Test("--icon", OptionType::Value)) {
                 icon_filename = opt.current_value;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
@@ -303,7 +306,7 @@ Options:
     }
 
     // Write metadata file
-    if (!WriteInfoPlist(name, icon_filename, plist_filename))
+    if (!WriteInfoPlist(name, title, icon_filename, plist_filename))
         return 1;
 
     // Run macdeployqt file

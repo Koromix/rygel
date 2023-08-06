@@ -5,7 +5,12 @@
 - Tolerate longer delays in Teensy code
 - Port TyTools to Qt 6
 
-**Other changes :**
+**Platform support:**
+
+- Only macOS 11, 12, 13 are supported
+- Only Windows 10 and 11 (64-bit) are supported
+
+**Repository change :**
 
 - This repository does not contain any code anymore because I host [everything in my monorepo](https://github.com/Koromix/rygel)
 - For reasons explained here: https://github.com/Koromix/rygel#mono-repository

@@ -1,6 +1,6 @@
 tycmd usr/bin
-TyCommander usr/bin
-TyUploader usr/bin
+tycommander usr/bin
+tyuploader usr/bin
 TyCommander.desktop usr/share/applications
 TyUploader.desktop usr/share/applications
 tycommander.png usr/share/icons/hicolor/512x512/apps

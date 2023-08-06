@@ -434,7 +434,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         // Generate linked output
         const char *link_filename;
         {
-            link_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory, target.name, link_ext).ptr;
+            link_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory, target.title, link_ext).ptr;
             uint32_t features = target.CombineFeatures(build.features);
 
             Command cmd = {};
@@ -447,7 +447,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         const char *target_filename;
         if (post_ext) {
-            target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory, target.name, post_ext).ptr;
+            target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory, target.title, post_ext).ptr;
 
             Command cmd = {};
             build.compiler->MakePostCommand(link_filename, target_filename, &str_alloc, &cmd);
@@ -469,9 +469,9 @@ bool Builder::AddTarget(const TargetInfo &target)
 
                 Fmt(&buf, "\"%1\" macify -f \"%2\" -O \"%3\"", GetApplicationExecutable(), target_filename, bundle_filename);
                 if (target.icon_filename) {
-                    Fmt(&buf, " --icon_file \"%1\"", target.icon_filename);
+                    Fmt(&buf, " --icon \"%1\"", target.icon_filename);
                 }
-                Fmt(&buf, " --qmake_path \"%1\"", qt->qmake);
+                Fmt(&buf, " --title \"%1\" --qmake_path \"%2\"", target.title, qt->qmake);
 
                 cmd.cache_len = buf.len;
                 cmd.cmd_line = buf.TrimAndLeak(1);
