@@ -264,7 +264,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
             EnumerateFiles(qt->plugins, archive_filter, 3, 512, &str_alloc, link_libraries);
 
             // Read plugin PRL files to add missing libraries
-            for (Size i = 0, end = link_libraries->len; i < end; i++) {
+            for (Size i = prev_len, end = link_libraries->len; i < end; i++) {
                 const char *library = (*link_libraries)[i];
 
                 Span<const char> base = MakeSpan(library, strlen(library) - strlen(archive_filter) + 1);
@@ -278,7 +278,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
 
         // Add explicit component libraries
         for (const char *component: target.qt_components) {
-            const char *library_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.a", qt->libraries, lib_prefix, qt->version_major, component).ptr;
+            const char *library_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt->libraries, lib_prefix, qt->version_major, component, archive_filter + 1).ptr;
             const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt->libraries, lib_prefix, qt->version_major, component).ptr;
 
             obj_filenames->Append(library_filename);
