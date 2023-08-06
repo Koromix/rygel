@@ -12,8 +12,8 @@ PACKAGE_DIR=bin/Packages/tytools/debian
 rm -rf $PACKAGE_DIR/pkg
 mkdir -p $PACKAGE_DIR $PACKAGE_DIR/pkg $PACKAGE_DIR/pkg/debian
 
-docker build -t rygel/debian12 deploy/docker/debian12
-docker run -t -i --rm -v $(pwd):/io rygel/debian12 /io/src/tytools/dist/debian/build.sh
+docker build -t rygel/ubuntu22.04 deploy/docker/ubuntu22.04
+docker run -t -i --rm -v $(pwd):/io rygel/ubuntu22.04 /io/src/tytools/dist/debian/build.sh
 
 install -D -m0755 bin/Packages/tytools/debian/bin/tycmd $PACKAGE_DIR/pkg/tycmd
 install -D -m0755 bin/Packages/tytools/debian/bin/TyCommander $PACKAGE_DIR/pkg/TyCommander
