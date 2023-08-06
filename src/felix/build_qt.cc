@@ -218,7 +218,7 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
                 Span<char> framework = Fmt(&str_alloc, "!%1%/Qt%2.framework", qt->libraries, component);
                 const char *prl_filename = Fmt(&str_alloc, "%1%/Resources/Qt%2.prl", framework.ptr + 1, component).ptr;
 
-                if (TestFile(framework.ptr + 1, FileType::File)) {
+                if (TestFile(framework.ptr + 1)) {
                     // Mask .framework extension
                     framework.ptr[framework.len - 10] = 0;
 
