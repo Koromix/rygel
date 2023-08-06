@@ -18,10 +18,10 @@ docker run -t -i --rm -v $(pwd):/io rygel/debian12 /io/src/tytools/dist/debian/b
 install -D -m0755 bin/Packages/tytools/debian/bin/tycmd $PACKAGE_DIR/pkg/tycmd
 install -D -m0755 bin/Packages/tytools/debian/bin/TyCommander $PACKAGE_DIR/pkg/TyCommander
 install -D -m0755 bin/Packages/tytools/debian/bin/TyUploader $PACKAGE_DIR/pkg/TyUploader
-install -D -m0644 src/tytools/tycommander/TyCommander_linux.desktop $PACKAGE_DIR/pkg/TyCommander.desktop
-install -D -m0644 src/tytools/tyuploader/TyUploader_linux.desktop $PACKAGE_DIR/pkg/TyUploader.desktop
-install -D -m0644 src/tytools/assets/images/TyCommander.png $PACKAGE_DIR/pkg/TyCommander.png
-install -D -m0644 src/tytools/assets/images/TyUploader.png $PACKAGE_DIR/pkg/TyUploader.png
+install -D -m0644 src/tytools/tycommander/tycommander_linux.desktop $PACKAGE_DIR/pkg/TyCommander.desktop
+install -D -m0644 src/tytools/tyuploader/tyuploader_linux.desktop $PACKAGE_DIR/pkg/TyUploader.desktop
+install -D -m0644 src/tytools/assets/images/tycommander.png $PACKAGE_DIR/pkg/TyCommander.png
+install -D -m0644 src/tytools/assets/images/tyuploader.png $PACKAGE_DIR/pkg/TyUploader.png
 install -D -m0644 src/tytools/dist/debian/teensy.rules $PACKAGE_DIR/pkg/00-teensy.rules
 
 install -D -m0755 src/tytools/dist/debian/rules $PACKAGE_DIR/pkg/debian/rules
