@@ -20,8 +20,8 @@ install -D -m0755 bin/Packages/tytools/debian/bin/TyCommander $PACKAGE_DIR/pkg/T
 install -D -m0755 bin/Packages/tytools/debian/bin/TyUploader $PACKAGE_DIR/pkg/TyUploader
 install -D -m0644 src/tytools/tycommander/tycommander_linux.desktop $PACKAGE_DIR/pkg/TyCommander.desktop
 install -D -m0644 src/tytools/tyuploader/tyuploader_linux.desktop $PACKAGE_DIR/pkg/TyUploader.desktop
-install -D -m0644 src/tytools/assets/images/tycommander.png $PACKAGE_DIR/pkg/TyCommander.png
-install -D -m0644 src/tytools/assets/images/tyuploader.png $PACKAGE_DIR/pkg/TyUploader.png
+install -D -m0644 src/tytools/assets/images/tycommander.png $PACKAGE_DIR/pkg/tycommander.png
+install -D -m0644 src/tytools/assets/images/tyuploader.png $PACKAGE_DIR/pkg/tyuploader.png
 install -D -m0644 src/tytools/dist/debian/teensy.rules $PACKAGE_DIR/pkg/00-teensy.rules
 
 install -D -m0755 src/tytools/dist/debian/rules $PACKAGE_DIR/pkg/debian/rules
