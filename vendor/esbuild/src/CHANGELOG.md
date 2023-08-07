@@ -1,5 +1,124 @@
 # Changelog
 
+## 0.18.19
+
+* Implement `composes` from CSS modules ([#20](https://github.com/evanw/esbuild/issues/20))
+
+    This release implements the `composes` annotation from the [CSS modules specification](https://github.com/css-modules/css-modules#composition). It provides a way for class selectors to reference other class selectors (assuming you are using the `local-css` loader). And with the `from` syntax, this can even work with local names across CSS files. For example:
+
+    ```js
+    // app.js
+    import { submit } from './style.css'
+    const div = document.createElement('div')
+    div.className = submit
+    document.body.appendChild(div)
+    ```
+
+    ```css
+    /* style.css */
+    .button {
+      composes: pulse from "anim.css";
+      display: inline-block;
+    }
+    .submit {
+      composes: button;
+      font-weight: bold;
+    }
+    ```
+
+    ```css
+    /* anim.css */
+    @keyframes pulse {
+      from, to { opacity: 1 }
+      50% { opacity: 0.5 }
+    }
+    .pulse {
+      animation: 2s ease-in-out infinite pulse;
+    }
+    ```
+
+    Bundling this with esbuild using `--bundle --outdir=dist --loader:.css=local-css` now gives the following:
+
+    ```js
+    (() => {
+      // style.css
+      var submit = "anim_pulse style_button style_submit";
+
+      // app.js
+      var div = document.createElement("div");
+      div.className = submit;
+      document.body.appendChild(div);
+    })();
+    ```
+
+    ```css
+    /* anim.css */
+    @keyframes anim_pulse {
+      from, to {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+    .anim_pulse {
+      animation: 2s ease-in-out infinite anim_pulse;
+    }
+
+    /* style.css */
+    .style_button {
+      display: inline-block;
+    }
+    .style_submit {
+      font-weight: bold;
+    }
+    ```
+
+    Import paths in the `composes: ... from` syntax are resolved using the new `composes-from` import kind, which can be intercepted by plugins during import path resolution when bundling is enabled.
+
+    Note that the order in which composed CSS classes from separate files appear in the bundled output file is deliberately _**undefined**_ by design (see [the specification](https://github.com/css-modules/css-modules#composing-from-other-files) for details). You are not supposed to declare the same CSS property in two separate class selectors and then compose them together. You are only supposed to compose CSS class selectors that declare non-overlapping CSS properties.
+
+    Issue [#20](https://github.com/evanw/esbuild/issues/20) (the issue tracking CSS modules) is esbuild's most-upvoted issue! With this change, I now consider esbuild's implementation of CSS modules to be complete. There are still improvements to make and there may also be bugs with the current implementation, but these can be tracked in separate issues.
+
+* Fix non-determinism with `tsconfig.json` and symlinks ([#3284](https://github.com/evanw/esbuild/issues/3284))
+
+    This release fixes an issue that could cause esbuild to sometimes emit incorrect build output in cases where a file under the effect of `tsconfig.json` is inconsistently referenced through a symlink. It can happen when using `npm link` to create a symlink within `node_modules` to an unpublished package. The build result was non-deterministic because esbuild runs module resolution in parallel and the result of the `tsconfig.json` lookup depended on whether the import through the symlink or not through the symlink was resolved first. This problem was fixed by moving the `realpath` operation before the `tsconfig.json` lookup.
+
+* Add a `hash` property to output files ([#3084](https://github.com/evanw/esbuild/issues/3084), [#3293](https://github.com/evanw/esbuild/issues/3293))
+
+    As a convenience, every output file in esbuild's API now includes a `hash` property that is a hash of the `contents` field. This is the hash that's used internally by esbuild to detect changes between builds for esbuild's live-reload feature. You may also use it to detect changes between your own builds if its properties are sufficient for your use case.
+
+    This feature has been added directly to output file objects since it's just a hash of the `contents` field, so it makes conceptual sense to store it in the same location. Another benefit of putting it there instead of including it as a part of the watch mode API is that it can be used without watch mode enabled. You can use it to compare the output of two independent builds that were done at different times.
+
+    The hash algorithm (currently [XXH64](https://xxhash.com/)) is implementation-dependent and may be changed at any time in between esbuild versions. If you don't like esbuild's choice of hash algorithm then you are welcome to hash the contents yourself instead. As with any hash algorithm, note that while two different hashes mean that the contents are different, two equal hashes do not necessarily mean that the contents are equal. You may still want to compare the contents in addition to the hashes to detect with certainty when output files have been changed.
+
+* Avoid generating duplicate prefixed declarations in CSS ([#3292](https://github.com/evanw/esbuild/issues/3292))
+
+    There was a request for esbuild's CSS prefixer to avoid generating a prefixed declaration if a declaration by that name is already present in the same rule block. So with this release, esbuild will now avoid doing this:
+
+    ```css
+    /* Original code */
+    body {
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(45px);
+    }
+
+    /* Old output (with --target=safari12) */
+    body {
+      -webkit-backdrop-filter: blur(30px);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(45px);
+    }
+
+    /* New output (with --target=safari12) */
+    body {
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(45px);
+    }
+    ```
+
+    This can result in a visual difference in certain cases (for example if the browser understands `blur(30px)` but not `blur(45px)`, it will be able to fall back to `blur(30px)`). But this change means esbuild now matches the behavior of [Autoprefixer](https://autoprefixer.github.io/) which is probably a good representation of how people expect this feature to work.
+
 ## 0.18.18
 
 * Fix asset references with the `--line-limit` flag ([#3286](https://github.com/evanw/esbuild/issues/3286))
