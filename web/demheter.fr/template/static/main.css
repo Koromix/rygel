@@ -310,7 +310,7 @@ footer {
         background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAOUlEQVQ4T2O0sLD4z0ADwDhqMCxUGWkQvGAjRw2GhyztgmI0HcPTMc2CYjSDDOGygmapYtRgWKoAAGrCE+uzrIQ5AAAAAElFTkSuQmCC");
         background-repeat: no-repeat;
         background-position: center;
-        z-index: 3;
+        z-index: 999;
         cursor: pointer;
     }
 
