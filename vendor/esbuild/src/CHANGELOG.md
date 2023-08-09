@@ -1,5 +1,74 @@
 # Changelog
 
+## 0.19.0
+
+**This release deliberately contains backwards-incompatible changes.** To avoid automatically picking up releases like this, you should either be pinning the exact version of `esbuild` in your `package.json` file (recommended) or be using a version range syntax that only accepts patch upgrades such as `^0.18.0` or `~0.18.0`. See npm's documentation about [semver](https://docs.npmjs.com/cli/v6/using-npm/semver/) for more information.
+
+* Handle import paths containing wildcards ([#56](https://github.com/evanw/esbuild/issues/56), [#700](https://github.com/evanw/esbuild/issues/700), [#875](https://github.com/evanw/esbuild/issues/875), [#976](https://github.com/evanw/esbuild/issues/976), [#2221](https://github.com/evanw/esbuild/issues/2221), [#2515](https://github.com/evanw/esbuild/issues/2515))
+
+    This release introduces wildcards in import paths in two places:
+
+    * **Entry points**
+
+        You can now pass a string containing glob-style wildcards such as `./src/*.ts` as an entry point and esbuild will search the file system for files that match the pattern. This can be used to easily pass esbuild all files with a certain extension on the command line in a cross-platform way. Previously you had to rely on the shell to perform glob expansion, but that is obviously shell-dependent and didn't work at all on Windows. Note that to use this feature on the command line you will have to quote the pattern so it's passed verbatim to esbuild without any expansion by the shell. Here's an example:
+
+        ```sh
+        esbuild --minify "./src/*.ts" --outdir=out
+        ```
+
+        Specifically the `*` character will match any character except for the `/` character, and the `/**/` character sequence will match a path separator followed by zero or more path elements. Other wildcard operators found in glob patterns such as `?` and `[...]` are not supported.
+
+    * **Run-time import paths**
+
+        Import paths that are evaluated at run-time can now be bundled in certain limited situations. The import path expression must be a form of string concatenation and must start with either `./` or `../`. Each non-string expression in the string concatenation chain becomes a wildcard. The `*` wildcard is chosen unless the previous character is a `/`, in which case the `/**/*` character sequence is used. Some examples:
+
+        ```js
+        // These two forms are equivalent
+        const json1 = await import('./data/' + kind + '.json')
+        const json2 = await import(`./data/${kind}.json`)
+        ```
+
+        This feature works with `require(...)` and `import(...)` because these can all accept run-time expressions. It does not work with `import` and `export` statements because these cannot accept run-time expressions. If you want to prevent esbuild from trying to bundle these imports, you should move the string concatenation expression outside of the `require(...)` or `import(...)`. For example:
+
+        ```js
+        // This will be bundled
+        const json1 = await import('./data/' + kind + '.json')
+
+        // This will not be bundled
+        const path = './data/' + kind + '.json'
+        const json2 = await import(path)
+        ```
+
+        Note that using this feature means esbuild will potentially do a lot of file system I/O to find all possible files that might match the pattern. This is by design, and is not a bug. If this is a concern, I recommend either avoiding the `/**/` pattern (e.g. by not putting a `/` before a wildcard) or using this feature only in directory subtrees which do not have many files that don't match the pattern (e.g. making a subdirectory for your JSON files and explicitly including that subdirectory in the pattern).
+
+* Path aliases in `tsconfig.json` no longer count as packages ([#2792](https://github.com/evanw/esbuild/issues/2792), [#3003](https://github.com/evanw/esbuild/issues/3003), [#3160](https://github.com/evanw/esbuild/issues/3160), [#3238](https://github.com/evanw/esbuild/issues/3238))
+
+    Setting `--packages=external` tells esbuild to make all import paths external when they look like a package path. For example, an import of `./foo/bar` is not a package path and won't be external while an import of `foo/bar` is a package path and will be external. However, the [`paths` field](https://www.typescriptlang.org/tsconfig#paths) in `tsconfig.json` allows you to create import paths that look like package paths but that do not resolve to packages. People do not want these paths to count as package paths. So with this release, the behavior of `--packages=external` has been changed to happen after the `tsconfig.json` path remapping step.
+
+* Use the `local-css` loader for `.module.css` files by default ([#20](https://github.com/evanw/esbuild/issues/20))
+
+    With this release the `css` loader is still used for `.css` files except that `.module.css` files now use the `local-css` loader. This is a common convention in the web development community. If you need `.module.css` files to use the `css` loader instead, then you can override this behavior with `--loader:.module.css=css`.
+
+## 0.18.20
+
+* Support advanced CSS `@import` rules ([#953](https://github.com/evanw/esbuild/issues/953), [#3137](https://github.com/evanw/esbuild/issues/3137))
+
+    CSS `@import` statements have been extended to allow additional trailing tokens after the import path. These tokens sort of make the imported file behave as if it were wrapped in a `@layer`, `@supports`, and/or `@media` rule. Here are some examples:
+
+    ```css
+    @import url(foo.css);
+    @import url(foo.css) layer;
+    @import url(foo.css) layer(bar);
+    @import url(foo.css) layer(bar) supports(display: flex);
+    @import url(foo.css) layer(bar) supports(display: flex) print;
+    @import url(foo.css) layer(bar) print;
+    @import url(foo.css) supports(display: flex);
+    @import url(foo.css) supports(display: flex) print;
+    @import url(foo.css) print;
+    ```
+
+    You can read more about this advanced syntax [here](https://developer.mozilla.org/en-US/docs/Web/CSS/@import). With this release, esbuild will now bundle `@import` rules with these trailing tokens and will wrap the imported files in the corresponding rules. Note that this now means a given imported file can potentially appear in multiple places in the bundle. However, esbuild will still only load it once (e.g. on-load plugins will only run once per file, not once per import).
+
 ## 0.18.19
 
 * Implement `composes` from CSS modules ([#20](https://github.com/evanw/esbuild/issues/20))

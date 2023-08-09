@@ -7845,7 +7845,7 @@ tests.push(
   }),
 )
 
-// Test CSS-related warning ranges
+// Tests for CSS modules
 tests.push(
   test(['in.js', '--outfile=node.js', '--bundle', '--loader:.css=local-css'], {
     'in.js': `
@@ -7870,6 +7870,42 @@ tests.push(
         ╵        ~~~~~~~~~
 
 `,
+  }),
+  test(['in.js', '--outfile=node.js', '--bundle'], {
+    'in.js': `
+      import * as foo_styles from "./foo.css"
+      import * as bar_styles from "./bar"
+      const { foo } = foo_styles
+      const { bar } = bar_styles
+      if (foo !== void 0) throw 'fail: foo=' + foo
+      if (bar !== void 0) throw 'fail: bar=' + bar
+    `,
+    'foo.css': `.foo { color: red }`,
+    'bar.css': `.bar { color: green }`,
+  }),
+  test(['in.js', '--outfile=node.js', '--bundle'], {
+    'in.js': `
+      import * as foo_styles from "./foo.module.css"
+      import * as bar_styles from "./bar.module"
+      const { foo } = foo_styles
+      const { bar } = bar_styles
+      if (foo !== 'foo_foo') throw 'fail: foo=' + foo
+      if (bar !== 'bar_bar') throw 'fail: bar=' + bar
+    `,
+    'foo.module.css': `.foo { color: red }`,
+    'bar.module.css': `.bar { color: green }`,
+  }),
+  test(['in.js', '--outfile=node.js', '--bundle', '--loader:.module.css=css'], {
+    'in.js': `
+      import * as foo_styles from "./foo.module.css"
+      import * as bar_styles from "./bar.module"
+      const { foo } = foo_styles
+      const { bar } = bar_styles
+      if (foo !== void 0) throw 'fail: foo=' + foo
+      if (bar !== void 0) throw 'fail: bar=' + bar
+    `,
+    'foo.module.css': `.foo { color: red }`,
+    'bar.module.css': `.bar { color: green }`,
   }),
 )
 
@@ -8017,6 +8053,68 @@ if (process.platform === 'darwin' || process.platform === 'win32') {
     }),
   )
 }
+
+// Test glob import behavior
+tests.push(
+  test(['./src/*.ts', '--outdir=out', '--bundle', '--format=cjs'], {
+    'node.js': `
+      if (require('./out/a.js') !== 10) throw 'fail: a'
+      if (require('./out/b.js') !== 11) throw 'fail: b'
+      if (require('./out/c.js') !== 12) throw 'fail: c'
+    `,
+    'src/a.ts': `module.exports = 10 as number`,
+    'src/b.ts': `module.exports = 11 as number`,
+    'src/c.ts': `module.exports = 12 as number`,
+  }),
+  test(['in.js', '--outfile=node.js', '--bundle'], {
+    'in.js': `
+      for (let i = 0; i < 3; i++) {
+        const value = require('./' + i + '.js')
+        if (value !== i + 10) throw 'fail: ' + i
+      }
+    `,
+    '0.js': `module.exports = 10`,
+    '1.js': `module.exports = 11`,
+    '2.js': `module.exports = 12`,
+  }),
+  test(['in.js', '--outfile=node.js', '--bundle'], {
+    'in.js': `
+      for (let i = 0; i < 3; i++) {
+        const value = require(\`./\${i}.js\`)
+        if (value !== i + 10) throw 'fail: ' + i
+      }
+    `,
+    '0.js': `module.exports = 10`,
+    '1.js': `module.exports = 11`,
+    '2.js': `module.exports = 12`,
+  }),
+  test(['in.js', '--outfile=node.js', '--bundle'], {
+    'in.js': `
+      export let async = async () => {
+        for (let i = 0; i < 3; i++) {
+          const { default: value } = await import('./' + i + '.js')
+          if (value !== i + 10) throw 'fail: ' + i
+        }
+      }
+    `,
+    '0.js': `export default 10`,
+    '1.js': `export default 11`,
+    '2.js': `export default 12`,
+  }, { async: true }),
+  test(['in.js', '--outfile=node.js', '--bundle'], {
+    'in.js': `
+      export let async = async () => {
+        for (let i = 0; i < 3; i++) {
+          const { default: value } = await import(\`./\${i}.js\`)
+          if (value !== i + 10) throw 'fail: ' + i
+        }
+      }
+    `,
+    '0.js': `export default 10`,
+    '1.js': `export default 11`,
+    '2.js': `export default 12`,
+  }, { async: true }),
+)
 
 // Test "using" declarations
 for (const flags of [[], '--supported:async-await=false']) {
