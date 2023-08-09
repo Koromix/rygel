@@ -1,4 +1,4 @@
-# Packaging
+# Bundlers and Koffi
 
 ## Bundling and native modules
 

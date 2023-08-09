@@ -1,4 +1,4 @@
-# Data types
+# Input parameters
 
 ## Primitive types
 
@@ -142,14 +142,14 @@ const Function2 = lib.func('Function', A, [A]);
 
 Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque `FILE *` pointer. You can open and close files with `fopen()` and `fclose()`, and manipule the opaque pointer with other functions such as `fread()` or `ftell()`.
 
-In Koffi, you can manage this with opaque types. Declare the opaque type with `koffi.opaque(name)`, and use a pointer to this type either as a return type or some kind of [output parameter](parameters.md#output-parameters) (with a double pointer).
+In Koffi, you can manage this with opaque types. Declare the opaque type with `koffi.opaque(name)`, and use a pointer to this type either as a return type or some kind of [output parameter](output.md) (with a double pointer).
 
 ```{note}
 Opaque types **have changed in version 2.0, and again in version 2.1**.
 
 In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
 
-Now, you must use them through a pointer, and use an array for output parameters. This is shown in the example below (look for the call to `ConcatNewOut` in the JS part), and is described in the section on [output parameters](parameters.md#output-parameters).
+Now, you must use them through a pointer, and use an array for output parameters. This is shown in the example below (look for the call to `ConcatNewOut` in the JS part), and is described in the section on [output parameters](output.md).
 
 In addition to this, you should use `koffi.opaque()` (introduced in Koffi 2.1) instead of `koffi.handle()` which is deprecated, and will be removed eventually in Koffi 3.0.
 
@@ -376,6 +376,10 @@ Koffi can also convert JS strings to fixed-sized arrays in the following cases:
 
 The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16 and char16_t arrays, but you can also explicitly ask for this with the `String` array hint (e.g. `koffi.array('char', 8, 'String')`).
 
-### Array pointers (dynamic arrays)
+### Dynamic arrays (pointers)
 
 In C, dynamically-sized arrays are usually passed around as pointers. Read more about [array pointers](pointers.md#array-pointers-dynamic-arrays) in the relevant section.
+
+## Union types
+
+The declaration and use of [unions types](unions.md) will be explained in a later section, they are only briefly mentioned here if you need them.

@@ -1,4 +1,4 @@
-# Callbacks
+# Javascript callbacks
 
 *Changed in Koffi 2.4*
 

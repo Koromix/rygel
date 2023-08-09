@@ -217,3 +217,14 @@ let delta = substract(100, 58);
 
 console.log(sum, delta); // Prints 9 and 42
 ```
+
+## Conversion of parameters
+
+By default, Koffi will only forward and translate arguments from Javascript to C. However, many C functions use pointer arguments for output values, or input/output values.
+
+Among other thing, in the the following pages you will learn more about:
+
+- How Koffi translates [input parameters](input.md) to C
+- How you can [define and use pointers](pointers.md)
+- How to deal with [output parameters](output.md)
+- How to handle [polymorphic API](polymorphism.md)

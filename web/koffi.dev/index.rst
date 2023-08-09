@@ -15,6 +15,8 @@ Koffi requires a recent `Node.js <https://nodejs.org/>`_ version with N-API vers
 
 The source code is available here: https://github.com/Koromix/rygel/ (in the *src/koffi* subdirectory).
 
+New releases are frequent, look at the :ref:`changelog<changelog>` for more information.
+
 Table of contents
 -----------------
 
@@ -24,10 +26,11 @@ Table of contents
    platforms
    start
    functions
-   types
+   input
    pointers
+   output
+   polymorphism
    unions
-   parameters
    callbacks
    misc
    packaging

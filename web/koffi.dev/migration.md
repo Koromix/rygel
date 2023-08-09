@@ -10,7 +10,7 @@ You may need to change your code if you use:
 - Opaque types
 - `koffi.introspect()`
 
-### Callback types
+### Callback type changes
 
 In Koffi 1.x, callbacks were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer. Now, you must use them through a pointer: `void CallIt(CallbackType func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version 2.0 and newer.
 
@@ -61,13 +61,13 @@ let ret = TransferToJS('Niels', 27, (str, age) => {
 console.log(ret);
 ```
 
-Koffi 1.x only supported [transient callbacks](callbacks.md#callbacks), you must use Koffi 2.x for registered callbacks.
+Koffi 1.x only supported [transient callbacks](callbacks.md#javascript-callbacks), you must use Koffi 2.x for registered callbacks.
 
 ```{note}
 The function `koffi.proto()` was introduced in Koffi 2.4, it was called `koffi.callback()` in earlier versions.
 ```
 
-### Opaque types
+### Opaque type changes
 
 In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer. Now, in Koffi 2.0, you must use them through a pointer, and use an array for output parameters.
 
@@ -145,7 +145,7 @@ db = ptr[0];
 sqlite3_close_v2(db);
 ```
 
-### koffi.introspect()
+### New koffi.introspect()
 
 In Koffi 1.x, `koffi.introspect()` would only work with struct types, and return the object passed to `koffi.struct()` to initialize the type. Now this function works with all types.
 
