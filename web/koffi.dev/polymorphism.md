@@ -1,4 +1,4 @@
-# Polymorphic parameters
+# Polymorphic arguments
 
 ## Input polymorphism
 
