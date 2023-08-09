@@ -6,47 +6,47 @@
 
 While the C standard allows for variation in the size of most integer types, Koffi enforces the same definition for most primitive types, listed below:
 
-JS type          | C type                        | Bytes | Signedness | Note
----------------- | ----------------------------- | ----- | ---------- | ---------------------------
-Undefined        | void                          | 0     |            | Only valid as a return type
-Number (integer) | int8, int8_t                  | 1     | Signed     |
-Number (integer) | uint8, uint8_t                | 1     | Unsigned   |
-Number (integer) | char                          | 1     | Signed     |
-Number (integer) | uchar, unsigned char          | 1     | Unsigned   |
-Number (integer) | char16, char16_t              | 2     | Signed     |
-Number (integer) | int16, int16_t                | 2     | Signed     |
-Number (integer) | uint16, uint16_t              | 2     | Unsigned   |
-Number (integer) | short                         | 2     | Signed     |
-Number (integer) | ushort, unsigned short        | 2     | Unsigned   |
-Number (integer) | int32, int32_t                | 4     | Signed     |
-Number (integer) | uint32, uint32_t              | 4     | Unsigned   |
-Number (integer) | int                           | 4     | Signed     |
-Number (integer) | uint, unsigned int            | 4     | Unsigned   |
-Number (integer) | int64, int64_t                | 8     | Signed     |
-Number (integer) | uint64, uint64_t              | 8     | Unsigned   |
-Number (integer) | longlong, long long           | 8     | Signed     |
-Number (integer) | ulonglong, unsigned long long | 8     | Unsigned   |
-Number (float)   | float32                       | 4     |            |
-Number (float)   | float64                       | 8     |            |
-Number (float)   | float                         | 4     |            |
-Number (float)   | double                        | 8     |            |
+C type                        | JS type          | Bytes | Signedness | Note
+----------------------------- | ---------------- | ----- | ---------- | ---------------------------
+void                          | Undefined        | 0     |            | Only valid as a return type
+int8, int8_t                  | Number (integer) | 1     | Signed     |
+uint8, uint8_t                | Number (integer) | 1     | Unsigned   |
+char                          | Number (integer) | 1     | Signed     |
+uchar, unsigned char          | Number (integer) | 1     | Unsigned   |
+char16, char16_t              | Number (integer) | 2     | Signed     |
+int16, int16_t                | Number (integer) | 2     | Signed     |
+uint16, uint16_t              | Number (integer) | 2     | Unsigned   |
+short                         | Number (integer) | 2     | Signed     |
+ushort, unsigned short        | Number (integer) | 2     | Unsigned   |
+int32, int32_t                | Number (integer) | 4     | Signed     |
+uint32, uint32_t              | Number (integer) | 4     | Unsigned   |
+int                           | Number (integer) | 4     | Signed     |
+uint, unsigned int            | Number (integer) | 4     | Unsigned   |
+int64, int64_t                | Number (integer) | 8     | Signed     |
+uint64, uint64_t              | Number (integer) | 8     | Unsigned   |
+longlong, long long           | Number (integer) | 8     | Signed     |
+ulonglong, unsigned long long | Number (integer) | 8     | Unsigned   |
+float32                       | Number (float)   | 4     |            |
+float64                       | Number (float)   | 8     |            |
+float                         | Number (float)   | 4     |            |
+double                        | Number (float)   | 8     |            |
 
 Koffi also accepts BigInt values when converting from JS to C integers. If the value exceeds the range of the C type, Koffi will convert the number to an undefined value. In the reverse direction, BigInt values are automatically used when needed for big 64-bit integers.
 
 Koffi defines a few more types that can change size depending on the OS and the architecture:
 
-JS type          | C type           | Signedness | Note
+C type           | JS type          | Signedness | Note
 ---------------- | ---------------- | ---------- | ------------------------------------------------
-Boolean          | bool             |            | Usually one byte
-Number (integer) | long             | Signed     | 4 or 8 bytes depending on platform (LP64, LLP64)
-Number (integer) | ulong            | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
-Number (integer) | unsigned long    | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
-Number (integer) | intptr           | Signed     | 4 or 8 bytes depending on register width
-Number (integer) | intptr_t         | Signed     | 4 or 8 bytes depending on register width
-Number (integer) | uintptr          | Unsigned   | 4 or 8 bytes depending on register width
-Number (integer) | uintptr_t        | Unsigned   | 4 or 8 bytes depending on register width
-String           | str, string      |            | JS strings are converted to and from UTF-8
-String           | str16, string16  |            | JS strings are converted to and from UTF-16 (LE)
+bool             | Boolean          |            | Usually one byte
+long             | Number (integer) | Signed     | 4 or 8 bytes depending on platform (LP64, LLP64)
+ulong            | Number (integer) | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
+unsigned long    | Number (integer) | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
+intptr           | Number (integer) | Signed     | 4 or 8 bytes depending on register width
+intptr_t         | Number (integer) | Signed     | 4 or 8 bytes depending on register width
+uintptr          | Number (integer) | Unsigned   | 4 or 8 bytes depending on register width
+uintptr_t        | Number (integer) | Unsigned   | 4 or 8 bytes depending on register width
+str, string      | String           |            | JS strings are converted to and from UTF-8
+str16, string16  | String           |            | JS strings are converted to and from UTF-16 (LE)
 
 Primitive types can be specified by name (in a string) or through `koffi.types`:
 
