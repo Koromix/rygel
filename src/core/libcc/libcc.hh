@@ -272,6 +272,7 @@ constexpr Size Kilobytes(Size len) { return len * 1000; }
 #define RG_SIZE(Type) ((RG::Size)sizeof(Type))
 template <typename T, unsigned N>
 char (&ComputeArraySize(T const (&)[N]))[N];
+#define RG_BITS(Type) (8 * RG_SIZE(Type))
 #define RG_LEN(Array) RG_SIZE(RG::ComputeArraySize(Array))
 #define RG_OFFSET_OF(Type, Member) ((Size)__builtin_offsetof(Type, Member))
 
@@ -1856,7 +1857,7 @@ public:
     typedef Iterator<Bitset> iterator_type;
 
     static constexpr Size Bits = N;
-    size_t data[(N + RG_SIZE(size_t) - 1) / RG_SIZE(size_t)] = {};
+    size_t data[(N + RG_BITS(size_t) - 1) / RG_BITS(size_t)] = {};
 
     void Clear()
     {
