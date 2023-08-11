@@ -233,7 +233,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     Napi::Array keys = obj.GetPropertyNames();
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<type_%1>", instance->types.len).ptr;
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
 
     type->primitive = PrimitiveKind::Record;
     type->align = 1;
@@ -362,7 +362,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     Napi::Array keys = obj.GetPropertyNames();
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<type_%1>", instance->types.len).ptr;
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
 
     type->primitive = PrimitiveKind::Union;
     type->align = 1;
@@ -493,7 +493,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<type_%1>", instance->types.len).ptr;
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
 
     type->primitive = PrimitiveKind::Void;
     type->size = 0;
@@ -699,7 +699,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     type->members.allocator = GetNullAllocator();
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<type_%1>", instance->types.len).ptr;
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
 
     type->dispose = dispose;
     type->dispose_ref = Napi::Persistent(dispose_func);
