@@ -4,6 +4,11 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.12 (2023-08-21)
+
+- Fix native module bundling for FreeBSD ARM64 and Linux RISC-V 64
+- Increase maximum number of parameters to 64
+
 #### Koffi 2.5.11 (2023-08-03)
 
 - Support casting function pointers with [koffi.as()](polymorphism.md#input-polymorphism)
