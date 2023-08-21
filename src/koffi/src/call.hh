@@ -81,7 +81,7 @@ class alignas(8) CallData {
     uint8_t *return_ptr = nullptr;
 
     LocalArray<int16_t, 16> used_trampolines;
-    LocalArray<OutArgument, MaxParameters> out_arguments;
+    HeapArray<OutArgument> out_arguments;
 
     BlockAllocator call_alloc;
 
