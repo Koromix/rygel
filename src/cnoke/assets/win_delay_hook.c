@@ -31,9 +31,19 @@
 
 static FARPROC WINAPI self_exe_hook(unsigned int event, DelayLoadInfo *info)
 {
+    static const wchar_t *const NodeLibraries[] = {
+        L"node.dll",
+        NULL
+    };
+
     if (event == dliNotePreLoadLibrary && !stricmp(info->szDll, "node.exe")) {
-        HMODULE h = GetModuleHandle(NULL);
-        return (FARPROC)h;
+        for (int i = 0; i < sizeof(NodeLibraries) / sizeof(*NodeLibraries); i++) {
+            const wchar_t *name = NodeLibraries[i];
+            HMODULE h = GetModuleHandleW(name);
+
+            if (h)
+                return (FARPROC)h;
+        }
     }
 
     return NULL;
