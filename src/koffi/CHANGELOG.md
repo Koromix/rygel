@@ -4,7 +4,7 @@
 
 ### Koffi 2.5
 
-#### Koffi 2.5.13 (2023-08-23)
+#### Koffi 2.5.14 (2023-08-23)
 
 - Fix DLL error when using Koffi from NW.js on Windows
 - Simplify NW.js Koffi example
