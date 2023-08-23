@@ -4,6 +4,11 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.13 (2023-08-23)
+
+- Fix DLL error when using Koffi from NW.js on Windows
+- Simplify NW.js Koffi example
+
 #### Koffi 2.5.12 (2023-08-21)
 
 - Fix native module bundling for FreeBSD ARM64 and Linux RISC-V 64
