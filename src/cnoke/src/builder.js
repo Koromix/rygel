@@ -437,7 +437,7 @@ function Builder(config = {}) {
     }
 
     function expand_path(str) {
-        let ret = str.replace(/{{([a-zA-Z_][a-zA-Z_0-9]*)}}/g, (match, p1) => {
+        let ret = str.replace(/{{ *([a-zA-Z_][a-zA-Z_0-9]*) *}}/g, (match, p1) => {
             switch (p1) {
                 case 'version': {
                     let pkg = read_package_json();
