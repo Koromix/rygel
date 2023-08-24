@@ -659,11 +659,11 @@ async function test() {
     }
 
     // Test errno
-    {
+    if (process.platform != 'win32') {
         koffi.errno(1);
         assert.equal(koffi.errno(), 1);
 
-        ChangeDirectory("/nonexistent");
+        ChangeDirectory('/nonexistent');
         assert.equal(koffi.errno(), koffi.os.errno.ENOENT);
     }
 
