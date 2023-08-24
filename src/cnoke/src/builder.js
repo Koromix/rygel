@@ -36,7 +36,6 @@ function Builder(config = {}) {
 
     let app_dir = config.app_dir;
     let project_dir = config.project_dir;
-    let package_dir = null;
 
     if (app_dir == null)
         app_dir = __dirname.replace(/\\/g, '/') + '/..';
@@ -44,7 +43,6 @@ function Builder(config = {}) {
         project_dir = process.cwd();
     app_dir = app_dir.replace(/\\/g, '/');
     project_dir = project_dir.replace(/\\/g, '/');
-    package_dir = find_parent_directory(project_dir, 'package.json');
 
     let runtime_version = config.runtime_version;
     let arch = config.arch;
@@ -70,14 +68,15 @@ function Builder(config = {}) {
         let pkg = read_package_json();
 
         if (pkg.cnoke.output != null) {
-            build_dir = expand_path(pkg.cnoke.output);
+            build_dir = pkg.cnoke.output;
 
             if (!tools.path_is_absolute(build_dir))
-                build_dir = package_dir + '/' + build_dir;
+                build_dir = project_dir + '/' + build_dir;
         } else {
             build_dir = project_dir + '/build';
         }
     }
+    build_dir = expand_path(build_dir);
     work_dir = build_dir + `/v${runtime_version}_${arch}`;
 
     let cmake_bin = null;
@@ -286,7 +285,7 @@ function Builder(config = {}) {
                     archive_filename = url;
 
                     if (!tools.path_is_absolute(archive_filename))
-                        archive_filename = path.join(package_dir, archive_filename);
+                        archive_filename = path.join(project_dir, archive_filename);
 
                     if (!fs.existsSync(archive_filename))
                         throw new Error('Cannot find local prebuilt archive');
@@ -303,7 +302,7 @@ function Builder(config = {}) {
             let require_filename = expand_path(pkg.cnoke.require);
 
             if (!tools.path_is_absolute(require_filename))
-                require_filename = path.join(package_dir, require_filename);
+                require_filename = path.join(project_dir, require_filename);
 
             if (fs.existsSync(require_filename)) {
                 let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
@@ -320,21 +319,6 @@ function Builder(config = {}) {
     this.clean = function() {
         tools.unlink_recursive(build_dir);
     };
-
-    function find_parent_directory(dirname, basename)
-    {
-        if (process.platform == 'win32')
-            dirname = dirname.replace(/\\/g, '/');
-
-        do {
-            if (fs.existsSync(dirname + '/' + basename))
-                return dirname;
-
-            dirname = path.dirname(dirname);
-        } while (!dirname.endsWith('/'));
-
-        return null;
-    }
 
     function get_cache_directory() {
         if (process.platform == 'win32') {
@@ -420,14 +404,12 @@ function Builder(config = {}) {
     function read_package_json() {
         let pkg = {};
 
-        if (package_dir != null) {
-            try {
-                let json = fs.readFileSync(package_dir + '/package.json', { encoding: 'utf-8' });
-                pkg = JSON.parse(json);
-            } catch (err) {
-                if (err.code != 'ENOENT')
-                    throw err;
-            }
+        try {
+            let json = fs.readFileSync(project_dir + '/package.json', { encoding: 'utf-8' });
+            pkg = JSON.parse(json);
+        } catch (err) {
+            if (err.code != 'ENOENT')
+                throw err;
         }
 
         if (pkg.cnoke == null)
