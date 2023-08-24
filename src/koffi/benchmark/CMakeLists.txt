@@ -27,12 +27,7 @@ find_package(CNoke)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-if(NOT TARGET koffi)
-    add_subdirectory(.. koffi)
-endif()
-add_subdirectory(../test test)
-
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 if(MSVC)
     add_compile_options(/W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201 /wd4324)
 else()

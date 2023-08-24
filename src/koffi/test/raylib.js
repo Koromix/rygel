@@ -21,7 +21,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-const koffi = require('./build/koffi.node');
+const koffi = require('../../koffi');
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');

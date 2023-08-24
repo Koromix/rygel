@@ -22,10 +22,6 @@
 cmake_minimum_required(VERSION 3.6)
 project(koffi_test C CXX)
 
-if(NOT TARGET koffi)
-    add_subdirectory(.. koffi)
-endif()
-
 # ---- Raylib ----
 
 add_library(raylib SHARED

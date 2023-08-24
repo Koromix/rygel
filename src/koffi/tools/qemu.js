@@ -32,6 +32,7 @@ const { spawn, spawnSync, execFileSync } = require('child_process');
 const { NodeSSH } = require('node-ssh');
 const chalk = require('chalk');
 const minimatch = require('minimatch');
+const esbuild = require('esbuild');
 const tar = require('tar');
 
 // Globals
@@ -310,7 +311,7 @@ async function start(detach = true) {
 
 async function pack() {
     let pack_dir = script_dir + '/../build';
-    let dist_dir = await prepare(dist_dir);
+    let dist_dir = await prepare();
 
     if (dist_dir == null)
         return false;
@@ -381,45 +382,7 @@ async function prepare() {
             success &= await upload(snapshot_dir, machine => Object.values(machine.builds).map(build => build.directory));
 
             console.log('>> Run build commands...');
-            await Promise.all(machines.map(async machine => {
-                if (ignore.has(machine))
-                    return;
-
-                await Promise.all(Object.keys(machine.builds).map(async suite => {
-                    let build = machine.builds[suite];
-
-                    let cmd = build.build;
-                    let cwd = build.directory + '/src/koffi';
-
-                    let start = process.hrtime.bigint();
-                    let ret = await exec_remote(machine, cmd, cwd);
-                    let time = Number((process.hrtime.bigint() - start) / 1000000n);
-
-                    if (ret.code == 0) {
-                        log(machine, `${suite} > Build`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
-                    } else {
-                        log(machine, `${suite} > Build`, chalk.bold.red('[error]'));
-
-                        if (ret.stdout || ret.stderr)
-                            console.error('');
-
-                        let align = log.align + 9;
-                        if (ret.stdout) {
-                            let str = ' '.repeat(align) + 'Standard output:\n' +
-                                      chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                            console.error(str);
-                        }
-                        if (ret.stderr) {
-                            let str = ' '.repeat(align) + 'Standard error:\n' +
-                                      chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                            console.error(str);
-                        }
-
-                        ignore.add(machine);
-                        success = false;
-                    }
-                }));
-            }));
+            await build();
         }
 
         console.log('>> Get build artifacts');
@@ -432,7 +395,7 @@ async function prepare() {
                 await Promise.all(Object.keys(machine.builds).map(async suite => {
                     let build = machine.builds[suite];
 
-                    let src_dir = build.directory + '/src/koffi/build';
+                    let src_dir = build.directory + `/src/koffi/build/koffi/${machine.platform}_${build.arch}`;
                     let dest_dir = build_dir + `/${version}/${machine.platform}_${build.arch}`;
 
                     artifacts.push(dest_dir);
@@ -513,13 +476,20 @@ async function prepare() {
             install: 'node src/cnoke/cnoke.js --prebuild -d src/koffi'
         };
         delete pkg.devDependencies;
-        pkg.cnoke.output = 'build/{{version}}/{{platform}}_{{arch}}';
         pkg.cnoke.require = pkg.cnoke.require.replace('.dev.js', '.js');
+
+        esbuild.buildSync({
+            entryPoints: [dist_dir + '/src/koffi/src/index.js'],
+            bundle: true,
+            minify: false,
+            write: true,
+            platform: 'node',
+            outfile: dist_dir + '/src/index.js'
+        });
 
         fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
         fs.unlinkSync(dist_dir + '/src/koffi/package.json');
-        fs.unlinkSync(dist_dir + '/src/koffi/src/index.dev.js');
-        fs.renameSync(dist_dir + '/src/koffi/src/index.release.js', dist_dir + '/src/index.js');
+        fs.unlinkSync(dist_dir + '/src/koffi/src/index.js');
         fs.renameSync(dist_dir + '/src/koffi/src/index.d.ts', dist_dir + '/src/index.d.ts');
         fs.unlinkSync(dist_dir + '/src/koffi/.gitignore');
         fs.renameSync(dist_dir + '/src/koffi/README.md', dist_dir + '/README.md');
@@ -530,6 +500,52 @@ async function prepare() {
     }
 
     return dist_dir;
+}
+
+async function build(debug = false) {
+    let success = true;
+
+    await Promise.all(machines.map(async machine => {
+        if (ignore.has(machine))
+            return;
+
+        await Promise.all(Object.keys(machine.builds).map(async suite => {
+            let build = machine.builds[suite];
+
+            let cmd = build.build + (debug ? ' --debug' : ' --config release');
+            let cwd = build.directory + '/src/koffi';
+
+            let start = process.hrtime.bigint();
+            let ret = await exec_remote(machine, cmd, cwd);
+            let time = Number((process.hrtime.bigint() - start) / 1000000n);
+
+            if (ret.code == 0) {
+                log(machine, `${suite} > Build`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
+            } else {
+                log(machine, `${suite} > Build`, chalk.bold.red('[error]'));
+
+                if (ret.stdout || ret.stderr)
+                    console.error('');
+
+                let align = log.align + 9;
+                if (ret.stdout) {
+                    let str = ' '.repeat(align) + 'Standard output:\n' +
+                              chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                    console.error(str);
+                }
+                if (ret.stderr) {
+                    let str = ' '.repeat(align) + 'Standard error:\n' +
+                              chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                    console.error(str);
+                }
+
+                ignore.add(machine);
+                success = false;
+            }
+        }));
+    }));
+
+    return success;
 }
 
 function snapshot() {
@@ -619,6 +635,9 @@ async function test(debug = false) {
     success &= await start(false);
     success &= await upload(snapshot_dir, machine => Object.values(machine.tests).map(test => test.directory));
 
+    console.log('>> Run build commands...');
+    await build(debug);
+
     console.log('>> Run test commands...');
     await Promise.all(machines.map(async machine => {
         if (ignore.has(machine))
@@ -627,7 +646,7 @@ async function test(debug = false) {
         await Promise.all(Object.keys(machine.tests).map(async suite => {
             let test = machine.tests[suite];
             let commands = {
-                'Build': test.build + (debug ? ' --debug' : ''),
+                'Build': test.build + (debug ? ' --debug' : ' --config release'),
                 ...test.commands
             };
 

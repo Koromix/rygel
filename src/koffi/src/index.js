@@ -23,7 +23,7 @@
 
 const util = require('util');
 const fs = require('fs');
-const { get_napi_version, determine_arch } = require('./cnoke/src/tools.js');
+const { get_napi_version, determine_arch } = require('../../cnoke/src/tools.js');
 const pkg = require('../package.json');
 
 if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {

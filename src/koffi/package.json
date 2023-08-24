@@ -22,7 +22,7 @@
     "email": "niels.martignene@protonmail.com",
     "url": "https://koromix.dev/"
   },
-  "main": "src/index.dev.js",
+  "main": "src/index.js",
   "types": "src/index.d.ts",
   "scripts": {
     "test": "node tools/qemu.js test",
@@ -33,6 +33,7 @@
   "license": "MIT",
   "devDependencies": {
     "chalk": "^4.1.2",
+    "esbuild": "^0.19.2",
     "ffi-napi": "^4.0.3",
     "minimatch": "^5.0.1",
     "node-ssh": "^12.0.3",
@@ -42,7 +43,8 @@
     "tar": "^6.1.11"
   },
   "cnoke": {
+    "output": "build/koffi/{{ platform }}_{{ arch }}",
     "napi": 8,
-    "require": "./src/index.dev.js"
+    "require": "./src/index.js"
   }
 }

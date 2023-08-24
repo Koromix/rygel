@@ -24,7 +24,7 @@
 const ref = require('ref-napi');
 const ffi = require('ffi-napi');
 const struct = require('ref-struct-di')(ref);
-const koffi = require('./build/koffi.node');
+const koffi = require('../../koffi');
 const { performance } = require('perf_hooks');
 
 const Color = struct({
