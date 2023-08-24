@@ -4,6 +4,10 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.15 (2023-08-24)
+
+- Run Koffi tests through usual index.js entry point
+
 #### Koffi 2.5.14 (2023-08-23)
 
 - Fix DLL error when using Koffi from NW.js on Windows
