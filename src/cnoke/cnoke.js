@@ -77,6 +77,11 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 config.project_dir = fs.realpathSync(value);
+            } else if (arg == '-o' || arg == '--output') {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                config.output_directory = value;
             } else if ((command == 'build' || command == 'configure') && (arg == '-v' || arg == '--runtime-version')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -150,6 +155,8 @@ Commands:
 Options:
     -d, --directory <DIR>                Change project directory
                                          (default: current working directory)
+    -O, --output <DIR>                   Change explicit output directory
+                                         (default: ./build)
 
     -B, --config <CONFIG>                Change build type: RelWithDebInfo, Debug, Release
                                          (default: ${cnoke.DefaultOptions.mode})
