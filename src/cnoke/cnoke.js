@@ -77,6 +77,11 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 config.project_dir = fs.realpathSync(value);
+            } else if (arg == '-p' || arg == '--package') {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                config.package_dir = fs.realpathSync(value);
             } else if (arg == '-O' || arg == '--out') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
@@ -153,9 +158,12 @@ Commands:
     clean                                Clean build files
 
 Options:
-    -d, --directory <DIR>                Change project directory
+    -d, --directory <DIR>                Change source directory
                                          (default: current working directory)
-    -O, --out <DIR>                      Change explicit output directory
+    -p, --package <DIR>                  Change package directory
+                                         (default: current working directory)
+
+    -O, --out <DIR>                      Set explicit output directory
                                          (default: ./build)
 
     -B, --config <CONFIG>                Change build type: RelWithDebInfo, Debug, Release

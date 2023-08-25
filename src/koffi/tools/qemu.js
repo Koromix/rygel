@@ -473,7 +473,7 @@ async function prepare() {
 
         pkg.main = pkg.main.replace('.dev.js', '.js');
         pkg.scripts = {
-            install: 'node src/cnoke/cnoke.js --prebuild -d src/koffi'
+            install: 'node src/cnoke/cnoke.js -p . -d src/koffi --prebuild'
         };
         delete pkg.devDependencies;
 
